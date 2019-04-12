@@ -335,7 +335,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     httpServer = new StorageContainerManagerHttpServer(conf);
 
     chillModeHandler = new ChillModeHandler(configuration,
-        clientProtocolServer, scmBlockManager, replicationManager);
+        clientProtocolServer, scmBlockManager, replicationManager,
+        pipelineManager);
 
     eventQueue.addHandler(SCMEvents.DATANODE_COMMAND, scmNodeManager);
     eventQueue.addHandler(SCMEvents.RETRIABLE_DATANODE_COMMAND, scmNodeManager);
@@ -1075,6 +1076,16 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   @VisibleForTesting
   public ChillModeHandler getChillModeHandler() {
     return chillModeHandler;
+  }
+
+  @VisibleForTesting
+  public SCMChillModeManager getScmChillModeManager() {
+    return scmChillModeManager;
+  }
+
+  @VisibleForTesting
+  public ReplicationManager getReplicationManager() {
+    return replicationManager;
   }
 
   public void checkAdminAccess(String remoteUser) throws IOException {

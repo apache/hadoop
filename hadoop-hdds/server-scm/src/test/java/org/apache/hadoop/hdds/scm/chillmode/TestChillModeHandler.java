@@ -27,6 +27,8 @@ import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -49,6 +51,7 @@ public class TestChillModeHandler {
   private ChillModeHandler chillModeHandler;
   private EventQueue eventQueue;
   private SCMChillModeManager.ChillModeStatus chillModeStatus;
+  private PipelineManager scmPipelineManager;
 
   public void setup(boolean enabled) {
     configuration = new OzoneConfiguration();
@@ -66,10 +69,11 @@ public class TestChillModeHandler {
     replicationManager = new ReplicationManager(configuration,
         containerManager, Mockito.mock(ContainerPlacementPolicy.class),
         eventQueue);
+    scmPipelineManager = Mockito.mock(SCMPipelineManager.class);
     blockManager = Mockito.mock(BlockManagerImpl.class);
     chillModeHandler =
         new ChillModeHandler(configuration, scmClientProtocolServer,
-            blockManager, replicationManager);
+            blockManager, replicationManager, scmPipelineManager);
 
     eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
     chillModeStatus = new SCMChillModeManager.ChillModeStatus(false);

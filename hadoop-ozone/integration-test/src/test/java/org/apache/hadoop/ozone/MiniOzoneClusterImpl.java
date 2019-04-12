@@ -250,14 +250,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartStorageContainerManager()
+  public void restartStorageContainerManager(boolean waitForDatanode)
       throws TimeoutException, InterruptedException, IOException,
       AuthenticationException {
     scm.stop();
     scm.join();
     scm = StorageContainerManager.createSCM(null, conf);
     scm.start();
-    waitForClusterToBeReady();
+    if (waitForDatanode) {
+      waitForClusterToBeReady();
+    }
   }
 
   @Override
