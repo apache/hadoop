@@ -107,6 +107,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
     Preconditions.checkNotNull(volumeChoosingPolicy, "VolumeChoosingPolicy " +
         "cannot be null");
     Preconditions.checkNotNull(volumeSet, "VolumeSet cannot be null");
+    Preconditions.checkNotNull(scmId, "scmId cannot be null");
 
     File containerMetaDataPath = null;
     //acquiring volumeset read lock
