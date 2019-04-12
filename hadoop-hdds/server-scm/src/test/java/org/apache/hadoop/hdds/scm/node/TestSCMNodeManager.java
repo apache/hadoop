@@ -132,7 +132,7 @@ public class TestSCMNodeManager {
 
   /**
    * Tests that Node manager handles heartbeats correctly, and comes out of
-   * chill Mode.
+   * safe Mode.
    *
    * @throws IOException
    * @throws InterruptedException
@@ -160,7 +160,7 @@ public class TestSCMNodeManager {
   }
 
   /**
-   * asserts that if we send no heartbeats node manager stays in chillmode.
+   * asserts that if we send no heartbeats node manager stays in safemode.
    *
    * @throws IOException
    * @throws InterruptedException

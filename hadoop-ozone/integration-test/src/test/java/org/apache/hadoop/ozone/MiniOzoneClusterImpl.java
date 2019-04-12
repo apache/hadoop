@@ -159,17 +159,17 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   /**
-   * Waits for SCM to be out of Chill Mode. Many tests can be run iff we are out
-   * of Chill mode.
+   * Waits for SCM to be out of Safe Mode. Many tests can be run iff we are out
+   * of Safe mode.
    *
    * @throws TimeoutException
    * @throws InterruptedException
    */
   @Override
-  public void waitTobeOutOfChillMode()
+  public void waitTobeOutOfSafeMode()
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      if (!scm.isInChillMode()) {
+      if (!scm.isInSafeMode()) {
         return true;
       }
       LOG.info("Waiting for cluster to be ready. No datanodes found");

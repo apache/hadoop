@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
@@ -158,8 +158,8 @@ public class TestSCMPipelineManager {
     pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
         mockRatisProvider);
 
-    SCMChillModeManager scmChillModeManager =
-        new SCMChillModeManager(new OzoneConfiguration(),
+    SCMSafeModeManager scmSafeModeManager =
+        new SCMSafeModeManager(new OzoneConfiguration(),
             new ArrayList<>(), pipelineManager, eventQueue);
 
     // create a pipeline in allocated state with no dns yet reported
@@ -173,7 +173,7 @@ public class TestSCMPipelineManager {
 
     // get pipeline report from each dn in the pipeline
     PipelineReportHandler pipelineReportHandler =
-        new PipelineReportHandler(scmChillModeManager, pipelineManager, conf);
+        new PipelineReportHandler(scmSafeModeManager, pipelineManager, conf);
     for (DatanodeDetails dn: pipeline.getNodes()) {
       PipelineReportFromDatanode pipelineReportFromDatanode =
           TestUtils.getPipelineReportFromDatanode(dn, pipeline.getId());

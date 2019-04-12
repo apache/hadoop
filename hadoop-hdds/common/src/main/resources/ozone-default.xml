@@ -1300,52 +1300,52 @@
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.threshold.pct</name>
+    <name>hdds.scm.safemode.threshold.pct</name>
     <value>0.99</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description> % of containers which should have at least one
-      reported replica before SCM comes out of chill mode.
+      reported replica before SCM comes out of safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.wait.time.after.chillmode.exit</name>
+    <name>hdds.scm.wait.time.after.safemode.exit</name>
     <value>5m</value>
     <tag>HDDS,SCM,OPERATION</tag>
-    <description> After exiting chillmode, wait for configured interval of
+    <description> After exiting safemode, wait for configured interval of
       time to start replication monitor and cleanup activities of unhealthy
       pipelines.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.enabled</name>
+    <name>hdds.scm.safemode.enabled</name>
     <value>true</value>
     <tag>HDDS,SCM,OPERATION</tag>
-    <description>Boolean value to enable or disable SCM chill mode.
+    <description>Boolean value to enable or disable SCM safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.min.datanode</name>
+    <name>hdds.scm.safemode.min.datanode</name>
     <value>1</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description>Minimum DataNodes which should be registered to get SCM out of
-      chill mode.
+      safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.pipeline-availability.check</name>
+    <name>hdds.scm.safemode.pipeline-availability.check</name>
     <value>false</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description>
-      Boolean value to enable pipeline availability check during SCM chill mode.
+      Boolean value to enable pipeline availability check during SCM safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.healthy.pipelie.pct</name>
+    <name>hdds.scm.safemode.healthy.pipelie.pct</name>
     <value>0.10</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description>
@@ -1355,7 +1355,7 @@
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.atleast.one.node.reported.pipeline.pct</name>
+    <name>hdds.scm.safemode.atleast.one.node.reported.pipeline.pct</name>
     <value>0.90</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description>

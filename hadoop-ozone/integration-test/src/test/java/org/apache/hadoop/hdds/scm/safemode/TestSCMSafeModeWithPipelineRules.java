@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -41,10 +41,10 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.Assert.fail;
 
 /**
- * This class tests SCM Chill mode with pipeline rules.
+ * This class tests SCM Safe mode with pipeline rules.
  */
 
-public class TestSCMChillModeWithPipelineRules {
+public class TestSCMSafeModeWithPipelineRules {
 
   private static MiniOzoneCluster cluster;
   private OzoneConfiguration conf = new OzoneConfiguration();
@@ -58,9 +58,9 @@ public class TestSCMChillModeWithPipelineRules {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         temporaryFolder.newFolder().toString());
     conf.setBoolean(
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK,
         true);
-    conf.set(HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT, "10s");
+    conf.set(HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT, "10s");
     conf.set(ScmConfigKeys.OZONE_SCM_PIPELINE_CREATION_INTERVAL, "10s");
     clusterBuilder = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(numDatanodes)
@@ -75,7 +75,7 @@ public class TestSCMChillModeWithPipelineRules {
 
 
   @Test
-  public void testScmChillMode() throws Exception {
+  public void testScmSafeMode() throws Exception {
 
     int datanodeCount = 6;
     setup(datanodeCount);
@@ -106,24 +106,24 @@ public class TestSCMChillModeWithPipelineRules {
     });
 
 
-    SCMChillModeManager scmChillModeManager =
-        cluster.getStorageContainerManager().getScmChillModeManager();
+    SCMSafeModeManager scmSafeModeManager =
+        cluster.getStorageContainerManager().getScmSafeModeManager();
 
 
     // Ceil(0.1 * 2) is 1, as one pipeline is healthy healthy pipeline rule is
     // satisfied
 
     GenericTestUtils.waitFor(() ->
-        scmChillModeManager.getHealthyPipelineChillModeRule()
+        scmSafeModeManager.getHealthyPipelineSafeModeRule()
             .validate(), 1000, 60000);
 
     // As Ceil(0.9 * 2) is 2, and from second pipeline no datanodes's are
     // reported this rule is not met yet.
     GenericTestUtils.waitFor(() ->
-        !scmChillModeManager.getOneReplicaPipelineChillModeRule()
+        !scmSafeModeManager.getOneReplicaPipelineSafeModeRule()
             .validate(), 1000, 60000);
 
-    Assert.assertTrue(cluster.getStorageContainerManager().isInChillMode());
+    Assert.assertTrue(cluster.getStorageContainerManager().isInSafeMode());
 
     DatanodeDetails restartedDatanode = pipelineList.get(1).getFirstNode();
     // Now restart one datanode from the 2nd pipeline
@@ -135,13 +135,13 @@ public class TestSCMChillModeWithPipelineRules {
 
 
     GenericTestUtils.waitFor(() ->
-        scmChillModeManager.getOneReplicaPipelineChillModeRule()
+        scmSafeModeManager.getOneReplicaPipelineSafeModeRule()
             .validate(), 1000, 60000);
 
-    GenericTestUtils.waitFor(() -> !scmChillModeManager.getInChillMode(), 1000,
+    GenericTestUtils.waitFor(() -> !scmSafeModeManager.getInSafeMode(), 1000,
         60000);
 
-    // As after chillmode wait time is not completed, we should have total
+    // As after safemode wait time is not completed, we should have total
     // pipeline's as original count 6(1 node pipelines) + 2 (3 node pipeline)
     Assert.assertEquals(totalPipelineCount,
         pipelineManager.getPipelines().size());

@@ -63,47 +63,47 @@ public final class HddsConfigKeys {
   public static final String HDDS_CONTAINER_CLOSE_THRESHOLD =
       "hdds.container.close.threshold";
   public static final float HDDS_CONTAINER_CLOSE_THRESHOLD_DEFAULT = 0.9f;
-  public static final String HDDS_SCM_CHILLMODE_ENABLED =
-      "hdds.scm.chillmode.enabled";
+  public static final String HDDS_SCM_SAFEMODE_ENABLED =
+      "hdds.scm.safemode.enabled";
   public static final String HDDS_CONTAINERSCRUB_ENABLED =
       "hdds.containerscrub.enabled";
   public static final boolean HDDS_CONTAINERSCRUB_ENABLED_DEFAULT = false;
-  public static final boolean HDDS_SCM_CHILLMODE_ENABLED_DEFAULT = true;
-  public static final String HDDS_SCM_CHILLMODE_MIN_DATANODE =
-      "hdds.scm.chillmode.min.datanode";
-  public static final int HDDS_SCM_CHILLMODE_MIN_DATANODE_DEFAULT = 1;
+  public static final boolean HDDS_SCM_SAFEMODE_ENABLED_DEFAULT = true;
+  public static final String HDDS_SCM_SAFEMODE_MIN_DATANODE =
+      "hdds.scm.safemode.min.datanode";
+  public static final int HDDS_SCM_SAFEMODE_MIN_DATANODE_DEFAULT = 1;
 
 
   public static final String
-      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT =
-      "hdds.scm.wait.time.after.chillmode.exit";
+      HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT =
+      "hdds.scm.wait.time.after.safemode.exit";
 
   public static final String
-      HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT = "5m";
+      HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT_DEFAULT = "5m";
 
-  public static final String HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK =
-      "hdds.scm.chillmode.pipeline-availability.check";
+  public static final String HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK =
+      "hdds.scm.safemode.pipeline-availability.check";
   public static final boolean
-      HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT = false;
+      HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT = false;
 
   // % of containers which should have at least one reported replica
-  // before SCM comes out of chill mode.
-  public static final String HDDS_SCM_CHILLMODE_THRESHOLD_PCT =
-      "hdds.scm.chillmode.threshold.pct";
-  public static final double HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT = 0.99;
+  // before SCM comes out of safe mode.
+  public static final String HDDS_SCM_SAFEMODE_THRESHOLD_PCT =
+      "hdds.scm.safemode.threshold.pct";
+  public static final double HDDS_SCM_SAFEMODE_THRESHOLD_PCT_DEFAULT = 0.99;
 
 
   // percentage of healthy pipelines, where all 3 datanodes are reported in the
   // pipeline.
-  public static final String HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT =
-      "hdds.scm.chillmode.healthy.pipelie.pct";
+  public static final String HDDS_SCM_SAFEMODE_HEALTHY_PIPELINE_THRESHOLD_PCT =
+      "hdds.scm.safemode.healthy.pipelie.pct";
   public static final double
-      HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT = 0.10;
+      HDDS_SCM_SAFEMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT = 0.10;
 
-  public static final String HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT =
-      "hdds.scm.chillmode.atleast.one.node.reported.pipeline.pct";
+  public static final String HDDS_SCM_SAFEMODE_ONE_NODE_REPORTED_PIPELINE_PCT =
+      "hdds.scm.safemode.atleast.one.node.reported.pipeline.pct";
   public static final double
-      HDDS_SCM_CHILLMODE_ONE_NODE_REPORTED_PIPELINE_PCT_DEFAULT = 0.90;
+      HDDS_SCM_SAFEMODE_ONE_NODE_REPORTED_PIPELINE_PCT_DEFAULT = 0.90;
 
   public static final String HDDS_LOCK_MAX_CONCURRENCY =
       "hdds.lock.max.concurrency";
