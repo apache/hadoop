@@ -24,7 +24,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.nio.file.Paths;
 import java.util.Calendar;
 import java.util.Collection;
 import java.util.HashSet;
@@ -50,7 +49,6 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
 
-import com.google.common.base.Strings;
 import com.google.common.net.HostAndPort;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_INTERFACE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DNS_NAMESERVER_KEY;
@@ -311,28 +309,6 @@ public final class HddsUtils {
     return conf.getBoolean(OZONE_ENABLED, OZONE_ENABLED_DEFAULT);
   }
 
-
-  /**
-   * Get the path for datanode id file.
-   *
-   * @param conf - Configuration
-   * @return the path of datanode id as string
-   */
-  public static String getDatanodeIdFilePath(Configuration conf) {
-    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-    if (dataNodeIDPath == null) {
-      String metaPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
-      if (Strings.isNullOrEmpty(metaPath)) {
-        // this means meta data is not found, in theory should not happen at
-        // this point because should've failed earlier.
-        throw new IllegalArgumentException("Unable to locate meta data" +
-            "directory when getting datanode id path");
-      }
-      dataNodeIDPath = Paths.get(metaPath,
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID_PATH_DEFAULT).toString();
-    }
-    return dataNodeIDPath;
-  }
 
   /**
    * Returns the hostname for this datanode. If the hostname is not

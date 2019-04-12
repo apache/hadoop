@@ -114,16 +114,6 @@ public final class OzoneUtils {
   }
 
   /**
-   * Get the path for datanode id file.
-   *
-   * @param conf - Configuration
-   * @return the path of datanode id as string
-   */
-  public static String getDatanodeIdFilePath(Configuration conf) {
-    return HddsUtils.getDatanodeIdFilePath(conf);
-  }
-
-  /**
    * Convert time in millisecond to a human readable format required in ozone.
    * @return a human readable string for the input time
    */
