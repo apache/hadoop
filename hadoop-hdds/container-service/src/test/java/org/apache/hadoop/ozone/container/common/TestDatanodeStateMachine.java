@@ -271,8 +271,8 @@ public class TestDatanodeStateMachine {
           }
         }
         return true;
-      },1000, 50000)
-      ;
+      }, 1000, 50000);
+
       // If we are in running state, we should be in running.
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
           newState);
