@@ -116,6 +116,10 @@ public class ITestDynamoDBMetadataStoreScale
     assumeTrue("Metadata store for " + fs.getUri() + " is " + store
             + " -not DynamoDBMetadataStore",
         store instanceof DynamoDBMetadataStore);
+    DDBCapacities capacities = DDBCapacities.extractCapacities(
+        store.getDiagnostics());
+    assumeTrue("DBB table is on-demand",
+        !capacities.isOnDemandTable());
 
     DynamoDBMetadataStore fsStore = (DynamoDBMetadataStore) store;
     Configuration conf = new Configuration(fs.getConf());
