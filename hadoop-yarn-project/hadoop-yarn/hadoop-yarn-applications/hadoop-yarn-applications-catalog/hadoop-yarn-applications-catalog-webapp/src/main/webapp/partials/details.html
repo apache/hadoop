@@ -14,8 +14,9 @@
 <div class="container content">
   <div class="row">
     <div class="col-xs-12 col-md-12 col-lg-12">
+      <a ng-click="restartApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-play"></span> Start</a>
       <a ng-click="stopApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-stop"></span> Stop</a>
-      <a ng-click="restartApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-refresh"></span> Start</a>
+      <a ng-click="upgradeApp(appName)" class="btn btn-secondary"><span class="glyphicon glyphicon-circle-arrow-up"></span> Upgrade</a>
       <div style="display:inline-block;" ng-repeat="(key, value) in details.yarnfile.quicklinks">
         <a href="{{value}}" class="btn btn-secondary" ng-hide="checkServiceLink()"><span class="glyphicon glyphicon-new-window"></span> {{key}}</a>
       </div>
