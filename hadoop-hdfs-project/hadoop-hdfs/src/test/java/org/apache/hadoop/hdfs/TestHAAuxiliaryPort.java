@@ -37,7 +37,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class TestHAAuxiliaryPort {
   @Test
-  public void testTest() throws Exception {
+  public void testHAAuxiliaryPort() throws Exception {
     Configuration conf = new Configuration();
     conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY, "0,0");
     conf.set(DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY + ".ha-nn-uri-0.nn1",
