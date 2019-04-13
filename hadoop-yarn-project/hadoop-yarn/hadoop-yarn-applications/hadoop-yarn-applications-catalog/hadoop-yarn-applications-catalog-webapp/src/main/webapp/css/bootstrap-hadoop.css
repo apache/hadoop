@@ -184,6 +184,11 @@
   background-color: #FFF;
   box-shadow: 0 0 2px 0 #1391c1;
 }
+.btn-secondary:visited {
+  color: #429929;
+  background-color: #FFF;
+  box-shadow: 0 0 2px 0 #1391c1;
+}
 .btn-secondary[disabled],
 .btn-secondary:focus[disabled],
 .btn-secondary.disabled,

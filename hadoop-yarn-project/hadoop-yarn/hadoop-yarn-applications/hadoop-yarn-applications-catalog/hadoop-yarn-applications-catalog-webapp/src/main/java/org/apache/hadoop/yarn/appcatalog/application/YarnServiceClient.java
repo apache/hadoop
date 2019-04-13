@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.appcatalog.model.AppEntry;
 import org.apache.hadoop.yarn.service.api.records.Service;
+import org.apache.hadoop.yarn.service.api.records.ServiceState;
 import org.apache.hadoop.yarn.service.api.records.KerberosPrincipal;
 import org.apache.hadoop.yarn.service.client.ApiServiceClient;
 
@@ -169,6 +170,27 @@ public class YarnServiceClient {
       entry.setYarnfile(app);
     } catch (UniformInterfaceException | IOException e) {
       LOG.error("Error in fetching application status: ", e);
+    }
+  }
+
+  public void upgradeApp(Service app) throws JsonProcessingException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    String appInstanceId = app.getName();
+    app.setState(ServiceState.EXPRESS_UPGRADING);
+    String yarnFile = mapper.writeValueAsString(app);
+    ClientResponse response;
+    try {
+      response = asc.getApiClient(asc.getServicePath(appInstanceId))
+          .put(ClientResponse.class, yarnFile);
+      if (response.getStatus() >= 299) {
+        String message = response.getEntity(String.class);
+        throw new RuntimeException("Failed : HTTP error code : "
+            + response.getStatus() + " error: " + message);
+      }
+    } catch (UniformInterfaceException | ClientHandlerException
+        | IOException e) {
+      LOG.error("Error in stopping application: ", e);
     }
   }
 }

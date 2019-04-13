@@ -135,4 +135,23 @@ public class AppDetailsControllerTest {
         is("/app_details"));
   }
 
+  @Test
+  public void testUpgradeApp() throws Exception {
+    String id = "application1";
+    AppDetailsController ac = Mockito.mock(AppDetailsController.class);
+
+    Service yarnfile = new Service();
+    yarnfile.setVersion("1.0");
+    Component comp = new Component();
+    Container c = new Container();
+    c.setId("container-1");
+    List<Container> containers = new ArrayList<Container>();
+    containers.add(c);
+    comp.setContainers(containers);
+    yarnfile.addComponent(comp);
+    Response expected = Response.ok().build();
+    when(ac.upgradeApp(id, yarnfile)).thenReturn(Response.ok().build());
+    final Response actual = ac.upgradeApp(id, yarnfile);
+    assertEquals(expected.getStatus(), actual.getStatus());
+  }
 }

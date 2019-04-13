@@ -127,6 +127,10 @@ controllers.controller("AppDetailsController", [ '$scope', '$interval', '$rootSc
         }, errorCallback);
       }
 
+      $scope.upgradeApp = function(id) {
+        window.location = '/#!/upgrade/' + id;
+      }
+
       $scope.canDeployApp = function() {
         return true;
       };
@@ -304,6 +308,56 @@ controllers.controller("DeployAppController", [ '$scope', '$rootScope', '$http',
       url : '/v1/app_store/get/' + $scope.id
     }).then(successCallback, errorCallback);
 
+}]);
+
+controllers.controller("UpgradeAppController", [ '$scope', '$rootScope', '$http',
+    '$routeParams', function($scope, $rootScope, $http, $routeParams) {
+    $scope.message = null;
+    $scope.error = null;
+    $scope.appName = $routeParams.id;
+    $scope.refreshAppDetails = function() {
+      $http({
+        method : 'GET',
+        url : '/v1/app_details/status/' + $scope.appName
+      }).then(successCallback, errorCallback);
+    }
+
+    $scope.upgradeApp = function(app) {
+      $rootScope.$emit("showLoadScreen", {});
+      $http({
+        method : 'PUT',
+        url : '/v1/app_details/upgrade/' + $scope.appName,
+        data : JSON.stringify($scope.details)
+      }).then(function(data, status, headers, config) {
+        $rootScope.$emit("RefreshAppList", {});
+        window.location = '/#!/app/' + data.data.id;
+      }, function(data, status, headers, config) {
+        $rootScope.$emit("hideLoadScreen", {});
+        $scope.error = data.data;
+        $('#error-message').html(data.data);
+        $('#myModal').modal('show');
+        console.log('error', data, status);
+      });
+    }
+
+    function successCallback(response) {
+      if (response.data.yarnfile.components.length!=0) {
+        $scope.details = response.data.yarnfile;
+      } else {
+        // When application is in accepted or failed state, it does not
+        // have components detail, hence we update states only.
+        $scope.details.state = response.data.yarnfile.state;
+      }
+    }
+
+    function errorCallback(response) {
+      $rootScope.$emit("hideLoadScreen", {});
+      $scope.error = "Error in getting application detail.";
+      $('#error-message').html($scope.error);
+      $('#myModal').modal('show');
+    }
+
+    $scope.refreshAppDetails();
 }]);
 
 controllers.controller("LoadScreenController", [ '$scope', '$rootScope', '$http', function($scope, $rootScope, $http) {
