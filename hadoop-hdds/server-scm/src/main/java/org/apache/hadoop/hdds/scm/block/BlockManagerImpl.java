@@ -34,7 +34,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmUtils;
-import org.apache.hadoop.hdds.scm.chillmode.ChillModePrecheck;
+import org.apache.hadoop.hdds.scm.safemode.SafeModePrecheck;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -78,7 +78,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   private final SCMBlockDeletingService blockDeletingService;
 
   private ObjectName mxBean;
-  private ChillModePrecheck chillModePrecheck;
+  private SafeModePrecheck safeModePrecheck;
 
   /**
    * Constructor.
@@ -116,7 +116,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
         new SCMBlockDeletingService(deletedBlockLog, containerManager,
             scm.getScmNodeManager(), scm.getEventQueue(), svcInterval,
             serviceTimeout, conf);
-    chillModePrecheck = new ChillModePrecheck(conf);
+    safeModePrecheck = new SafeModePrecheck(conf);
   }
 
   /**
@@ -154,7 +154,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
       ReplicationFactor factor, String owner, ExcludeList excludeList)
       throws IOException {
     LOG.trace("Size;{} , type : {}, factor : {} ", size, type, factor);
-    ScmUtils.preCheck(ScmOps.allocateBlock, chillModePrecheck);
+    ScmUtils.preCheck(ScmOps.allocateBlock, safeModePrecheck);
     if (size < 0 || size > containerSize) {
       LOG.warn("Invalid block size requested : {}", size);
       throw new SCMException("Unsupported block size: " + size,
@@ -254,7 +254,7 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
    */
   @Override
   public void deleteBlocks(List<BlockID> blockIDs) throws IOException {
-    ScmUtils.preCheck(ScmOps.deleteBlock, chillModePrecheck);
+    ScmUtils.preCheck(ScmOps.deleteBlock, safeModePrecheck);
 
     LOG.info("Deleting blocks {}", StringUtils.join(",", blockIDs));
     Map<Long, List<Long>> containerBlocks = new HashMap<>();
@@ -324,15 +324,15 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   }
 
   @Override
-  public void setChillModeStatus(boolean chillModeStatus) {
-    this.chillModePrecheck.setInChillMode(chillModeStatus);
+  public void setSafeModeStatus(boolean safeModeStatus) {
+    this.safeModePrecheck.setInSafeMode(safeModeStatus);
   }
 
   /**
-   * Returns status of scm chill mode determined by CHILL_MODE_STATUS event.
+   * Returns status of scm safe mode determined by SAFE_MODE_STATUS event.
    * */
-  public boolean isScmInChillMode() {
-    return this.chillModePrecheck.isInChillMode();
+  public boolean isScmInSafeMode() {
+    return this.safeModePrecheck.isInSafeMode();
   }
 
   /**

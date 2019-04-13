@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -23,31 +23,31 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 /**
- * Abstract class for ChillModeExitRules. When a new rule is added, the new
+ * Abstract class for SafeModeExitRules. When a new rule is added, the new
  * rule should extend this abstract class.
  *
  * Each rule Should do:
  * 1. Should add a handler for the event it is looking for during the
  * initialization of the rule.
- * 2. Add the rule in ScmChillModeManager to list of the rules.
+ * 2. Add the rule in ScmSafeModeManager to list of the rules.
  *
  *
  * @param <T>
  */
-public abstract class ChillModeExitRule<T> implements EventHandler<T> {
+public abstract class SafeModeExitRule<T> implements EventHandler<T> {
 
-  private final SCMChillModeManager chillModeManager;
+  private final SCMSafeModeManager safeModeManager;
   private final String ruleName;
 
-  public ChillModeExitRule(SCMChillModeManager chillModeManager,
+  public SafeModeExitRule(SCMSafeModeManager safeModeManager,
       String ruleName, EventQueue eventQueue) {
-    this.chillModeManager = chillModeManager;
+    this.safeModeManager = safeModeManager;
     this.ruleName = ruleName;
     eventQueue.addHandler(getEventType(), this);
   }
 
   /**
-   * Return's the name of this ChillModeExit Rule.
+   * Return's the name of this SafeModeExit Rule.
    * @return ruleName
    */
   public String getRuleName() {
@@ -55,7 +55,7 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
   }
 
   /**
-   * Return's the event type this chillMode exit rule handles.
+   * Return's the event type this safeMode exit rule handles.
    * @return TypedEvent
    */
   protected abstract TypedEvent<T> getEventType();
@@ -81,11 +81,11 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
   @Override
   public final void onMessage(T report, EventPublisher publisher) {
 
-    // TODO: when we have remove handlers, we can remove getInChillmode check
+    // TODO: when we have remove handlers, we can remove getInSafemode check
 
-    if (scmInChillMode()) {
+    if (scmInSafeMode()) {
       if (validate()) {
-        chillModeManager.validateChillModeExitRules(ruleName, publisher);
+        safeModeManager.validateSafeModeExitRules(ruleName, publisher);
         cleanup();
         return;
       }
@@ -93,18 +93,18 @@ public abstract class ChillModeExitRule<T> implements EventHandler<T> {
       process(report);
 
       if (validate()) {
-        chillModeManager.validateChillModeExitRules(ruleName, publisher);
+        safeModeManager.validateSafeModeExitRules(ruleName, publisher);
         cleanup();
       }
     }
   }
 
   /**
-   * Return true if SCM is in chill mode, else false.
+   * Return true if SCM is in safe mode, else false.
    * @return boolean
    */
-  protected boolean scmInChillMode() {
-    return chillModeManager.getInChillMode();
+  protected boolean scmInSafeMode() {
+    return safeModeManager.getInSafeMode();
   }
 
 }

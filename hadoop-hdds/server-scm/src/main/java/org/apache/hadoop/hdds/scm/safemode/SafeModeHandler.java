@@ -15,7 +15,7 @@
  * the License.
  */
 
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -24,7 +24,7 @@ import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager.SafeModeStatus;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.slf4j.Logger;
@@ -37,30 +37,30 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Class to handle the activities needed to be performed after exiting chill
+ * Class to handle the activities needed to be performed after exiting safe
  * mode.
  */
-public class ChillModeHandler implements EventHandler<ChillModeStatus> {
+public class SafeModeHandler implements EventHandler<SafeModeStatus> {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ChillModeHandler.class);
+      LoggerFactory.getLogger(SafeModeHandler.class);
 
   private final SCMClientProtocolServer scmClientProtocolServer;
   private final BlockManager scmBlockManager;
   private final long waitTime;
-  private final AtomicBoolean isInChillMode = new AtomicBoolean(true);
+  private final AtomicBoolean isInSafeMode = new AtomicBoolean(true);
   private final ReplicationManager replicationManager;
 
   private final PipelineManager scmPipelineManager;
 
   /**
-   * ChillModeHandler, to handle the logic once we exit chill mode.
+   * SafeModeHandler, to handle the logic once we exit safe mode.
    * @param configuration
    * @param clientProtocolServer
    * @param blockManager
    * @param replicationManager
    */
-  public ChillModeHandler(Configuration configuration,
+  public SafeModeHandler(Configuration configuration,
       SCMClientProtocolServer clientProtocolServer,
       BlockManager blockManager,
       ReplicationManager replicationManager, PipelineManager pipelineManager) {
@@ -73,43 +73,43 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
     Objects.requireNonNull(pipelineManager, "PipelineManager object cannot " +
         "be" + "null");
     this.waitTime = configuration.getTimeDuration(
-        HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT,
-        HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_CHILL_MODE_EXIT_DEFAULT,
+        HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
+        HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT_DEFAULT,
         TimeUnit.MILLISECONDS);
     this.scmClientProtocolServer = clientProtocolServer;
     this.scmBlockManager = blockManager;
     this.replicationManager = replicationManager;
     this.scmPipelineManager = pipelineManager;
 
-    final boolean chillModeEnabled = configuration.getBoolean(
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED,
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED_DEFAULT);
-    isInChillMode.set(chillModeEnabled);
+    final boolean safeModeEnabled = configuration.getBoolean(
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_ENABLED,
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_ENABLED_DEFAULT);
+    isInSafeMode.set(safeModeEnabled);
 
   }
 
 
 
   /**
-   * Set ChillMode status based on
-   * {@link org.apache.hadoop.hdds.scm.events.SCMEvents#CHILL_MODE_STATUS}.
+   * Set SafeMode status based on
+   * {@link org.apache.hadoop.hdds.scm.events.SCMEvents#SAFE_MODE_STATUS}.
    *
    * Inform BlockManager, ScmClientProtocolServer and replicationAcitivity
-   * status about chillMode status.
+   * status about safeMode status.
    *
-   * @param chillModeStatus
+   * @param safeModeStatus
    * @param publisher
    */
   @Override
-  public void onMessage(ChillModeStatus chillModeStatus,
+  public void onMessage(SafeModeStatus safeModeStatus,
       EventPublisher publisher) {
 
-    isInChillMode.set(chillModeStatus.getChillModeStatus());
-    scmClientProtocolServer.setChillModeStatus(isInChillMode.get());
-    scmBlockManager.setChillModeStatus(isInChillMode.get());
+    isInSafeMode.set(safeModeStatus.getSafeModeStatus());
+    scmClientProtocolServer.setSafeModeStatus(isInSafeMode.get());
+    scmBlockManager.setSafeModeStatus(isInSafeMode.get());
 
-    if (!isInChillMode.get()) {
-      final Thread chillModeExitThread = new Thread(() -> {
+    if (!isInSafeMode.get()) {
+      final Thread safeModeExitThread = new Thread(() -> {
         try {
           Thread.sleep(waitTime);
         } catch (InterruptedException e) {
@@ -119,8 +119,8 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
         cleanupPipelines();
       });
 
-      chillModeExitThread.setDaemon(true);
-      chillModeExitThread.start();
+      safeModeExitThread.setDaemon(true);
+      safeModeExitThread.start();
     }
 
   }
@@ -139,8 +139,8 @@ public class ChillModeHandler implements EventHandler<ChillModeStatus> {
     });
   }
 
-  public boolean getChillModeStatus() {
-    return isInChillMode.get();
+  public boolean getSafeModeStatus() {
+    return isInSafeMode.get();
   }
 
 

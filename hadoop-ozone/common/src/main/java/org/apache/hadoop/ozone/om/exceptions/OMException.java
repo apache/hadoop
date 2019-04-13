@@ -177,7 +177,7 @@ public class OMException extends IOException {
 
     LIST_MULTIPART_UPLOAD_PARTS_FAILED,
 
-    SCM_IN_CHILL_MODE,
+    SCM_IN_SAFE_MODE,
 
     INVALID_REQUEST,
 

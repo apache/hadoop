@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
@@ -47,16 +47,16 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * This class tests HealthyPipelineChillMode rule.
+ * This class tests HealthyPipelineSafeMode rule.
  */
-public class TestHealthyPipelineChillModeRule {
+public class TestHealthyPipelineSafeModeRule {
 
   @Test
-  public void testHealthyPipelineChillModeRuleWithNoPipelines()
+  public void testHealthyPipelineSafeModeRuleWithNoPipelines()
       throws Exception {
 
     String storageDir = GenericTestUtils.getTempPath(
-        TestHealthyPipelineChillModeRule.class.getName() + UUID.randomUUID());
+        TestHealthyPipelineSafeModeRule.class.getName() + UUID.randomUUID());
     try {
       EventQueue eventQueue = new EventQueue();
       List<ContainerInfo> containers = new ArrayList<>();
@@ -67,7 +67,7 @@ public class TestHealthyPipelineChillModeRule {
       config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
       // enable pipeline check
       config.setBoolean(
-          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
+          HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
       SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
@@ -77,14 +77,14 @@ public class TestHealthyPipelineChillModeRule {
               pipelineManager.getStateManager(), config);
       pipelineManager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
           mockRatisProvider);
-      SCMChillModeManager scmChillModeManager = new SCMChillModeManager(
+      SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
           config, containers, pipelineManager, eventQueue);
 
-      HealthyPipelineChillModeRule healthyPipelineChillModeRule =
-          scmChillModeManager.getHealthyPipelineChillModeRule();
+      HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
+          scmSafeModeManager.getHealthyPipelineSafeModeRule();
 
       // This should be immediately satisfied, as no pipelines are there yet.
-      Assert.assertTrue(healthyPipelineChillModeRule.validate());
+      Assert.assertTrue(healthyPipelineSafeModeRule.validate());
     } finally {
       FileUtil.fullyDelete(new File(storageDir));
     }
@@ -93,10 +93,10 @@ public class TestHealthyPipelineChillModeRule {
 
 
   @Test
-  public void testHealthyPipelineChillModeRuleWithPipelines() throws Exception {
+  public void testHealthyPipelineSafeModeRuleWithPipelines() throws Exception {
 
     String storageDir = GenericTestUtils.getTempPath(
-        TestHealthyPipelineChillModeRule.class.getName() + UUID.randomUUID());
+        TestHealthyPipelineSafeModeRule.class.getName() + UUID.randomUUID());
 
     try {
       EventQueue eventQueue = new EventQueue();
@@ -112,7 +112,7 @@ public class TestHealthyPipelineChillModeRule {
       config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
       // enable pipeline check
       config.setBoolean(
-          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
+          HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
       SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
@@ -136,15 +136,15 @@ public class TestHealthyPipelineChillModeRule {
               HddsProtos.ReplicationFactor.THREE);
 
 
-      SCMChillModeManager scmChillModeManager = new SCMChillModeManager(
+      SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
           config, containers, pipelineManager, eventQueue);
 
-      HealthyPipelineChillModeRule healthyPipelineChillModeRule =
-          scmChillModeManager.getHealthyPipelineChillModeRule();
+      HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
+          scmSafeModeManager.getHealthyPipelineSafeModeRule();
 
 
       // No datanodes have sent pipelinereport from datanode
-      Assert.assertFalse(healthyPipelineChillModeRule.validate());
+      Assert.assertFalse(healthyPipelineSafeModeRule.validate());
 
       // Fire pipeline report from all datanodes in first pipeline, as here we
       // have 3 pipelines, 10% is 0.3, when doing ceil it is 1. So, we should
@@ -157,7 +157,7 @@ public class TestHealthyPipelineChillModeRule {
       // manager in open state for test case simplicity.
 
       firePipelineEvent(pipeline1, eventQueue);
-      GenericTestUtils.waitFor(() -> healthyPipelineChillModeRule.validate(),
+      GenericTestUtils.waitFor(() -> healthyPipelineSafeModeRule.validate(),
           1000, 5000);
     } finally {
       FileUtil.fullyDelete(new File(storageDir));
@@ -167,11 +167,11 @@ public class TestHealthyPipelineChillModeRule {
 
 
   @Test
-  public void testHealthyPipelineChillModeRuleWithMixedPipelines()
+  public void testHealthyPipelineSafeModeRuleWithMixedPipelines()
       throws Exception {
 
     String storageDir = GenericTestUtils.getTempPath(
-        TestHealthyPipelineChillModeRule.class.getName() + UUID.randomUUID());
+        TestHealthyPipelineSafeModeRule.class.getName() + UUID.randomUUID());
 
     try {
       EventQueue eventQueue = new EventQueue();
@@ -187,7 +187,7 @@ public class TestHealthyPipelineChillModeRule {
       config.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
       // enable pipeline check
       config.setBoolean(
-          HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK, true);
+          HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK, true);
 
 
       SCMPipelineManager pipelineManager = new SCMPipelineManager(config,
@@ -210,20 +210,20 @@ public class TestHealthyPipelineChillModeRule {
               HddsProtos.ReplicationFactor.THREE);
 
 
-      SCMChillModeManager scmChillModeManager = new SCMChillModeManager(
+      SCMSafeModeManager scmSafeModeManager = new SCMSafeModeManager(
           config, containers, pipelineManager, eventQueue);
 
-      HealthyPipelineChillModeRule healthyPipelineChillModeRule =
-          scmChillModeManager.getHealthyPipelineChillModeRule();
+      HealthyPipelineSafeModeRule healthyPipelineSafeModeRule =
+          scmSafeModeManager.getHealthyPipelineSafeModeRule();
 
 
       // No datanodes have sent pipelinereport from datanode
-      Assert.assertFalse(healthyPipelineChillModeRule.validate());
+      Assert.assertFalse(healthyPipelineSafeModeRule.validate());
 
 
       GenericTestUtils.LogCapturer logCapturer =
           GenericTestUtils.LogCapturer.captureLogs(LoggerFactory.getLogger(
-              SCMChillModeManager.class));
+              SCMSafeModeManager.class));
 
       // fire event with pipeline report with ratis type and factor 1
       // pipeline, validate() should return false
@@ -232,12 +232,12 @@ public class TestHealthyPipelineChillModeRule {
       GenericTestUtils.waitFor(() -> logCapturer.getOutput().contains(
           "reported count is 0"),
           1000, 5000);
-      Assert.assertFalse(healthyPipelineChillModeRule.validate());
+      Assert.assertFalse(healthyPipelineSafeModeRule.validate());
 
       firePipelineEvent(pipeline2, eventQueue);
       firePipelineEvent(pipeline3, eventQueue);
 
-      GenericTestUtils.waitFor(() -> healthyPipelineChillModeRule.validate(),
+      GenericTestUtils.waitFor(() -> healthyPipelineSafeModeRule.validate(),
           1000, 5000);
 
     } finally {

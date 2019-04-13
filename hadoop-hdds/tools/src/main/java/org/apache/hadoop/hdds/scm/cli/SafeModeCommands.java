@@ -20,7 +20,7 @@ package org.apache.hadoop.hdds.scm.cli;
 import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
-import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.apache.hadoop.hdds.cli.MissingSubcommandException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,30 +28,33 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
 /**
- * This is the handler that process chill mode exit command.
+ * Subcommand to group safe mode related operations.
  */
 @Command(
-    name = "exit",
-    description = "Force SCM out of chill mode",
+    name = "safemode",
+    description = "Safe mode specific operations",
     mixinStandardHelpOptions = true,
-    versionProvider = HddsVersionProvider.class)
-public class ChillModeExitSubcommand implements Callable<Void> {
+    versionProvider = HddsVersionProvider.class,
+    subcommands = {
+        SafeModeCheckSubcommand.class,
+        SafeModeExitSubcommand.class,
+    })
+public class SafeModeCommands implements Callable<Void> {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(ChillModeExitSubcommand.class);
+      LoggerFactory.getLogger(SafeModeCommands.class);
 
   @ParentCommand
-  private ChillModeCommands parent;
+  private SCMCLI parent;
+
+  public SCMCLI getParent() {
+    return parent;
+  }
 
   @Override
   public Void call() throws Exception {
-    try (ScmClient scmClient = parent.getParent().createScmClient()) {
-
-      boolean execReturn = scmClient.forceExitChillMode();
-      if(execReturn){
-        LOG.info("SCM exit chill mode successfully.");
-      }
-      return null;
-    }
+    throw new MissingSubcommandException(
+        this.parent.getCmd().getSubcommands().get("safemode").
+        getUsageMessage());
   }
 }

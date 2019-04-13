@@ -23,7 +23,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.block.BlockManager;
 import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
-import org.apache.hadoop.hdds.scm.chillmode.ChillModeHandler;
+import org.apache.hadoop.hdds.scm.safemode.SafeModeHandler;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -53,10 +53,10 @@ public class TestSCMClientProtocolServer {
     ReplicationManager replicationManager =
         Mockito.mock(ReplicationManager.class);
     PipelineManager pipelineManager = Mockito.mock(SCMPipelineManager.class);
-    ChillModeHandler chillModeHandler = new ChillModeHandler(config,
+    SafeModeHandler safeModeHandler = new SafeModeHandler(config,
         scmClientProtocolServer, blockManager, replicationManager,
         pipelineManager);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, chillModeHandler);
+    eventQueue.addHandler(SCMEvents.SAFE_MODE_STATUS, safeModeHandler);
   }
 
   @After
@@ -64,9 +64,9 @@ public class TestSCMClientProtocolServer {
   }
 
   @Test
-  public void testAllocateContainerFailureInChillMode() throws Exception {
+  public void testAllocateContainerFailureInSafeMode() throws Exception {
     LambdaTestUtils.intercept(SCMException.class,
-        "hillModePrecheck failed for allocateContainer", () -> {
+        "SafeModePrecheck failed for allocateContainer", () -> {
           scmClientProtocolServer.allocateContainer(
               ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "");
         });

@@ -15,19 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import java.util.EnumSet;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
 
 /**
- * Operations restricted in SCM chill mode.
+ * Operations restricted in SCM safe mode.
  */
-public final class ChillModeRestrictedOps {
+public final class SafeModeRestrictedOps {
   private static EnumSet restrictedOps = EnumSet.noneOf(ScmOps.class);
 
-  private ChillModeRestrictedOps() {
+  private SafeModeRestrictedOps() {
   }
 
   static {
@@ -35,7 +35,7 @@ public final class ChillModeRestrictedOps {
     restrictedOps.add(ScmOps.allocateContainer);
   }
 
-  public static boolean isRestrictedInChillMode(ScmOps opName) {
+  public static boolean isRestrictedInSafeMode(ScmOps opName) {
     return restrictedOps.contains(opName);
   }
 }

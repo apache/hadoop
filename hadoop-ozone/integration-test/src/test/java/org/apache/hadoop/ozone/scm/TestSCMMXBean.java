@@ -116,12 +116,12 @@ public class TestSCMMXBean {
       assertEquals(stat.toJsonString(), value);
     }
 
-    boolean inChillMode = (boolean) mbs.getAttribute(bean,
-        "InChillMode");
-    assertEquals(scm.isInChillMode(), inChillMode);
+    boolean inSafeMode = (boolean) mbs.getAttribute(bean,
+        "InSafeMode");
+    assertEquals(scm.isInSafeMode(), inSafeMode);
 
     double containerThreshold = (double) mbs.getAttribute(bean,
-        "ChillModeCurrentContainerThreshold");
+        "SafeModeCurrentContainerThreshold");
     assertEquals(scm.getCurrentContainerThreshold(), containerThreshold, 0);
   }
 
