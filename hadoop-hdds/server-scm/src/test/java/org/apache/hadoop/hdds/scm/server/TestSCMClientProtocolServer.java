@@ -66,7 +66,7 @@ public class TestSCMClientProtocolServer {
   @Test
   public void testAllocateContainerFailureInSafeMode() throws Exception {
     LambdaTestUtils.intercept(SCMException.class,
-        "hillModePrecheck failed for allocateContainer", () -> {
+        "SafeModePrecheck failed for allocateContainer", () -> {
           scmClientProtocolServer.allocateContainer(
               ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "");
         });
