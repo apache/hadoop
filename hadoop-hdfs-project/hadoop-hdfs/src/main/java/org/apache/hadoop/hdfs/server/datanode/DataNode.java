@@ -1781,7 +1781,12 @@ public class DataNode extends ReconfigurableBase
   public int getXferPort() {
     return streamingAddr.getPort();
   }
-  
+
+  @VisibleForTesting
+  public SaslDataTransferServer getSaslServer() {
+    return saslServer;
+  }
+
   /**
    * @return name useful for logging
    */
