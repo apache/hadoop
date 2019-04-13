@@ -92,7 +92,7 @@ public class TestDataXceiverBackwardsCompat {
       doReturn(pair).when(saslClient).socketSend(
           any(Socket.class), any(OutputStream.class), any(InputStream.class),
           any(DataEncryptionKeyFactory.class), any(),
-          any(DatanodeID.class));
+          any(DatanodeID.class), any());
       doReturn(mock(ReplicaHandler.class)).when(data).createTemporary(
           any(StorageType.class), any(String.class), any(ExtendedBlock.class),
           anyBoolean());
