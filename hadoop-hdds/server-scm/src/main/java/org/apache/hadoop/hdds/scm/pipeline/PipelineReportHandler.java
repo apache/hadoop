@@ -26,7 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
@@ -48,20 +48,20 @@ public class PipelineReportHandler implements
       .getLogger(PipelineReportHandler.class);
   private final PipelineManager pipelineManager;
   private final Configuration conf;
-  private final SCMChillModeManager scmChillModeManager;
+  private final SCMSafeModeManager scmSafeModeManager;
   private final boolean pipelineAvailabilityCheck;
 
-  public PipelineReportHandler(SCMChillModeManager scmChillModeManager,
+  public PipelineReportHandler(SCMSafeModeManager scmSafeModeManager,
       PipelineManager pipelineManager,
       Configuration conf) {
     Preconditions.checkNotNull(pipelineManager);
-    Objects.requireNonNull(scmChillModeManager);
-    this.scmChillModeManager = scmChillModeManager;
+    Objects.requireNonNull(scmSafeModeManager);
+    this.scmSafeModeManager = scmSafeModeManager;
     this.pipelineManager = pipelineManager;
     this.conf = conf;
     this.pipelineAvailabilityCheck = conf.getBoolean(
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK,
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT);
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK,
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT);
 
   }
 
@@ -83,7 +83,7 @@ public class PipelineReportHandler implements
             report, dn, e);
       }
     }
-    if (pipelineAvailabilityCheck && scmChillModeManager.getInChillMode()) {
+    if (pipelineAvailabilityCheck && scmSafeModeManager.getInSafeMode()) {
       publisher.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
           pipelineReportFromDatanode);
     }

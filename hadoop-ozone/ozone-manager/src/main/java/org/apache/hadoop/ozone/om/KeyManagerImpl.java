@@ -331,8 +331,8 @@ public class KeyManagerImpl implements KeyManager {
               keyInfo.getFactor(), omId, excludeList);
     } catch (SCMException ex) {
       if (ex.getResult()
-          .equals(SCMException.ResultCodes.CHILL_MODE_EXCEPTION)) {
-        throw new OMException(ex.getMessage(), ResultCodes.SCM_IN_CHILL_MODE);
+          .equals(SCMException.ResultCodes.SAFE_MODE_EXCEPTION)) {
+        throw new OMException(ex.getMessage(), ResultCodes.SCM_IN_SAFE_MODE);
       }
       throw ex;
     }

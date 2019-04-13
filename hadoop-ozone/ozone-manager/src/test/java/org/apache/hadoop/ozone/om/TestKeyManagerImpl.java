@@ -85,7 +85,7 @@ public class TestKeyManagerImpl {
     configurator.setScmNodeManager(nodeManager);
     scm = TestUtils.getScm(conf, configurator);
     scm.start();
-    scm.exitChillMode();
+    scm.exitSafeMode();
     scmBlockSize = (long) conf
         .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
             StorageUnit.BYTES);
@@ -99,8 +99,8 @@ public class TestKeyManagerImpl {
             Mockito.any(ReplicationType.class),
             Mockito.any(ReplicationFactor.class), Mockito.anyString(),
             Mockito.any(ExcludeList.class))).thenThrow(
-        new SCMException("ChillModePrecheck failed for allocateBlock",
-            ResultCodes.CHILL_MODE_EXCEPTION));
+        new SCMException("SafeModePrecheck failed for allocateBlock",
+            ResultCodes.SAFE_MODE_EXCEPTION));
     createVolume(VOLUME_NAME);
     createBucket(VOLUME_NAME, BUCKET_NAME);
   }
@@ -133,7 +133,7 @@ public class TestKeyManagerImpl {
   }
 
   @Test
-  public void allocateBlockFailureInChillMode() throws Exception {
+  public void allocateBlockFailureInSafeMode() throws Exception {
     KeyManager keyManager1 = new KeyManagerImpl(mockScmBlockLocationProtocol,
         metadataManager, conf, "om1", null);
     OmKeyArgs keyArgs = createBuilder()
@@ -141,14 +141,14 @@ public class TestKeyManagerImpl {
         .build();
     OpenKeySession keySession = keyManager1.openKey(keyArgs);
     LambdaTestUtils.intercept(OMException.class,
-        "ChillModePrecheck failed for allocateBlock", () -> {
+        "SafeModePrecheck failed for allocateBlock", () -> {
           keyManager1
               .allocateBlock(keyArgs, keySession.getId(), new ExcludeList());
         });
   }
 
   @Test
-  public void openKeyFailureInChillMode() throws Exception {
+  public void openKeyFailureInSafeMode() throws Exception {
     KeyManager keyManager1 = new KeyManagerImpl(mockScmBlockLocationProtocol,
         metadataManager, conf, "om1", null);
     OmKeyArgs keyArgs = createBuilder()
@@ -156,7 +156,7 @@ public class TestKeyManagerImpl {
         .setDataSize(1000)
         .build();
     LambdaTestUtils.intercept(OMException.class,
-        "ChillModePrecheck failed for allocateBlock", () -> {
+        "SafeModePrecheck failed for allocateBlock", () -> {
           keyManager1.openKey(keyArgs);
         });
   }

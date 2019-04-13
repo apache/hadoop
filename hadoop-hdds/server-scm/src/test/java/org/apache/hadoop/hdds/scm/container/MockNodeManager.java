@@ -78,7 +78,7 @@ public class MockNodeManager implements NodeManager {
   private final List<DatanodeDetails> deadNodes;
   private final Map<DatanodeDetails, SCMNodeStat> nodeMetricMap;
   private final SCMNodeStat aggregateStat;
-  private boolean chillmode;
+  private boolean safemode;
   private final Map<UUID, List<SCMCommand>> commandMap;
   private final Node2PipelineMap node2PipelineMap;
   private final Node2ContainerMap node2ContainerMap;
@@ -98,7 +98,7 @@ public class MockNodeManager implements NodeManager {
         populateNodeMetric(dd, x);
       }
     }
-    chillmode = false;
+    safemode = false;
     this.commandMap = new HashMap<>();
   }
 
@@ -132,11 +132,11 @@ public class MockNodeManager implements NodeManager {
   }
 
   /**
-   * Sets the chill mode value.
-   * @param chillmode boolean
+   * Sets the safe mode value.
+   * @param safemode boolean
    */
-  public void setChillmode(boolean chillmode) {
-    this.chillmode = chillmode;
+  public void setSafemode(boolean safemode) {
+    this.safemode = safemode;
   }
 
   /**

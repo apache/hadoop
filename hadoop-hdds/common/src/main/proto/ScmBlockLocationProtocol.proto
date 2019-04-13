@@ -88,7 +88,7 @@ message DeleteKeyBlocksResultProto {
 message DeleteScmBlockResult {
   enum Result {
     success = 1;
-    chillMode = 2;
+    safeMode = 2;
     errorNotFound = 3;
     unknownFailure = 4;
   }

@@ -107,7 +107,7 @@ public class SCMNodeManager implements NodeManager {
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
     this.scmManager = scmManager;
-    LOG.info("Entering startup chill mode.");
+    LOG.info("Entering startup safe mode.");
     registerMXBean();
     this.metrics = SCMNodeMetrics.create(this);
   }

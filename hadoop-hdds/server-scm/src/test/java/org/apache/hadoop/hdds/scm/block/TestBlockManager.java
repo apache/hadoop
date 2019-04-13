@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager.ChillModeStatus;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager.SafeModeStatus;
 import org.apache.hadoop.hdds.scm.container.CloseContainerEventHandler;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.MockNodeManager;
@@ -71,7 +71,7 @@ public class TestBlockManager implements EventHandler<Boolean> {
   private static EventQueue eventQueue;
   private int numContainerPerOwnerInPipeline;
   private OzoneConfiguration conf;
-  private ChillModeStatus chillModeStatus = new ChillModeStatus(false);
+  private SafeModeStatus safeModeStatus = new SafeModeStatus(false);
 
   @Rule
   public ExpectedException thrown = ExpectedException.none();
@@ -101,8 +101,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     blockManager = (BlockManagerImpl) scm.getScmBlockManager();
 
     eventQueue = new EventQueue();
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS,
-        scm.getChillModeHandler());
+    eventQueue.addHandler(SCMEvents.SAFE_MODE_STATUS,
+        scm.getSafeModeHandler());
     eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, mapping);
@@ -124,9 +124,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
   @Test
   public void testAllocateBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils.waitFor(() -> {
-      return !blockManager.isScmInChillMode();
+      return !blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
     AllocatedBlock block = blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner, new ExcludeList());
@@ -135,9 +135,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
   @Test
   public void testAllocateOversizedBlock() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils.waitFor(() -> {
-      return !blockManager.isScmInChillMode();
+      return !blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
     long size = 6 * GB;
     thrown.expectMessage("Unsupported block size");
@@ -147,25 +147,25 @@ public class TestBlockManager implements EventHandler<Boolean> {
 
 
   @Test
-  public void testAllocateBlockFailureInChillMode() throws Exception {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS,
-        new ChillModeStatus(true));
+  public void testAllocateBlockFailureInSafeMode() throws Exception {
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS,
+        new SafeModeStatus(true));
     GenericTestUtils.waitFor(() -> {
-      return blockManager.isScmInChillMode();
+      return blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
-    // Test1: In chill mode expect an SCMException.
-    thrown.expectMessage("ChillModePrecheck failed for "
+    // Test1: In safe mode expect an SCMException.
+    thrown.expectMessage("SafeModePrecheck failed for "
         + "allocateBlock");
     blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner, new ExcludeList());
   }
 
   @Test
-  public void testAllocateBlockSucInChillMode() throws Exception {
-    // Test2: Exit chill mode and then try allocateBock again.
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+  public void testAllocateBlockSucInSafeMode() throws Exception {
+    // Test2: Exit safe mode and then try allocateBock again.
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils.waitFor(() -> {
-      return !blockManager.isScmInChillMode();
+      return !blockManager.isScmInSafeMode();
     }, 10, 1000 * 5);
     Assert.assertNotNull(blockManager.allocateBlock(DEFAULT_BLOCK_SIZE,
         type, factor, containerOwner, new ExcludeList()));
@@ -174,9 +174,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testMultipleBlockAllocation()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils
-        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+        .waitFor(() -> !blockManager.isScmInSafeMode(), 10, 1000 * 5);
 
     pipelineManager.createPipeline(type, factor);
     pipelineManager.createPipeline(type, factor);
@@ -216,9 +216,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testMultipleBlockAllocationWithClosedContainer()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils
-        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+        .waitFor(() -> !blockManager.isScmInSafeMode(), 10, 1000 * 5);
 
     // create pipelines
     for (int i = 0;
@@ -268,9 +268,9 @@ public class TestBlockManager implements EventHandler<Boolean> {
   @Test(timeout = 10000)
   public void testBlockAllocationWithNoAvailablePipelines()
       throws IOException, TimeoutException, InterruptedException {
-    eventQueue.fireEvent(SCMEvents.CHILL_MODE_STATUS, chillModeStatus);
+    eventQueue.fireEvent(SCMEvents.SAFE_MODE_STATUS, safeModeStatus);
     GenericTestUtils
-        .waitFor(() -> !blockManager.isScmInChillMode(), 10, 1000 * 5);
+        .waitFor(() -> !blockManager.isScmInSafeMode(), 10, 1000 * 5);
 
     for (Pipeline pipeline : pipelineManager.getPipelines()) {
       pipelineManager.finalizeAndDestroyPipeline(pipeline, false);

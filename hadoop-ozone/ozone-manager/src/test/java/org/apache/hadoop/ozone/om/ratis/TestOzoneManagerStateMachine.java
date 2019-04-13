@@ -206,8 +206,8 @@ public class TestOzoneManagerStateMachine {
       return OzoneManagerProtocolProtos.OMResponse.newBuilder().setSuccess(true)
           .setAllocateBlockResponse(resp)
           .setCmdType(OzoneManagerProtocolProtos.Type.AllocateBlock)
-          .setStatus(OzoneManagerProtocolProtos.Status.SCM_IN_CHILL_MODE)
-          .setMessage("Scm in Chill mode")
+          .setStatus(OzoneManagerProtocolProtos.Status.SCM_IN_SAFE_MODE)
+          .setMessage("Scm in Safe mode")
           .setSuccess(status).build();
     }
 
@@ -251,8 +251,8 @@ public class TestOzoneManagerStateMachine {
     // As the request failed, check for keyLocation and  the transaction
     // context error message
     Assert.assertFalse(newOmRequest.getAllocateBlockRequest().hasKeyLocation());
-    Assert.assertEquals("Scm in Chill mode " + OMException.STATUS_CODE
-            + OMException.ResultCodes.SCM_IN_CHILL_MODE,
+    Assert.assertEquals("Scm in Safe mode " + OMException.STATUS_CODE
+            + OMException.ResultCodes.SCM_IN_SAFE_MODE,
         transactionContext.getException().getMessage());
     Assert.assertTrue(transactionContext.getException() instanceof IOException);
 

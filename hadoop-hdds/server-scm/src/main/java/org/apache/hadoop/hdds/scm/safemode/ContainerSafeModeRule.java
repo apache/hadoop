@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import java.util.List;
 import java.util.Map;
@@ -36,30 +36,30 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 
 /**
- * Class defining Chill mode exit criteria for Containers.
+ * Class defining Safe mode exit criteria for Containers.
  */
-public class ContainerChillModeRule extends
-    ChillModeExitRule<NodeRegistrationContainerReport>{
+public class ContainerSafeModeRule extends
+    SafeModeExitRule<NodeRegistrationContainerReport>{
 
   // Required cutoff % for containers with at least 1 reported replica.
-  private double chillModeCutoff;
+  private double safeModeCutoff;
   // Containers read from scm db (excluding containers in ALLOCATED state).
   private Map<Long, ContainerInfo> containerMap;
   private double maxContainer;
 
   private AtomicLong containerWithMinReplicas = new AtomicLong(0);
 
-  public ContainerChillModeRule(String ruleName, EventQueue eventQueue,
+  public ContainerSafeModeRule(String ruleName, EventQueue eventQueue,
       Configuration conf,
-      List<ContainerInfo> containers, SCMChillModeManager manager) {
+      List<ContainerInfo> containers, SCMSafeModeManager manager) {
     super(manager, ruleName, eventQueue);
-    chillModeCutoff = conf.getDouble(
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
+    safeModeCutoff = conf.getDouble(
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT,
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT_DEFAULT);
 
     Preconditions.checkArgument(
-        (chillModeCutoff >= 0.0 && chillModeCutoff <= 1.0),
-        HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT  +
+        (safeModeCutoff >= 0.0 && safeModeCutoff <= 1.0),
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT  +
             " value should be >= 0.0 and <= 1.0");
 
     containerMap = new ConcurrentHashMap<>();
@@ -87,7 +87,7 @@ public class ContainerChillModeRule extends
 
   @Override
   protected boolean validate() {
-    return getCurrentContainerThreshold() >= chillModeCutoff;
+    return getCurrentContainerThreshold() >= safeModeCutoff;
   }
 
   @VisibleForTesting
@@ -109,9 +109,9 @@ public class ContainerChillModeRule extends
       }
     });
 
-    if (scmInChillMode()) {
-      SCMChillModeManager.getLogger().info(
-          "SCM in chill mode. {} % containers have at least one"
+    if (scmInSafeMode()) {
+      SCMSafeModeManager.getLogger().info(
+          "SCM in safe mode. {} % containers have at least one"
               + " reported replica.",
           (containerWithMinReplicas.doubleValue() / maxContainer) * 100);
     }

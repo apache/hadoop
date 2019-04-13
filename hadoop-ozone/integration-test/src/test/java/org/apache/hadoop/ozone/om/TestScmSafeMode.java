@@ -28,7 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleEvent;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
@@ -62,10 +62,10 @@ import static org.junit.Assert.fail;
 /**
  * Test Ozone Manager operation in distributed handler scenario.
  */
-public class TestScmChillMode {
+public class TestScmSafeMode {
 
   private final static Logger LOG = LoggerFactory
-      .getLogger(TestScmChillMode.class);
+      .getLogger(TestScmSafeMode.class);
   private static MiniOzoneCluster cluster = null;
   private static MiniOzoneCluster.Builder builder = null;
   private static OzoneConfiguration conf;
@@ -115,7 +115,7 @@ public class TestScmChillMode {
   }
 
   @Test(timeout = 300_000)
-  public void testChillModeOperations() throws Exception {
+  public void testSafeModeOperations() throws Exception {
     // Create {numKeys} random names keys.
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
@@ -164,23 +164,23 @@ public class TestScmChillMode {
     StorageContainerManager scm;
 
     scm = cluster.getStorageContainerManager();
-    Assert.assertTrue(scm.isInChillMode());
+    Assert.assertTrue(scm.isInSafeMode());
 
     om = cluster.getOzoneManager();
 
 // As cluster is restarted with out datanodes restart
     LambdaTestUtils.intercept(IOException.class,
-        "ChillModePrecheck failed for allocateBlock",
+        "SafeModePrecheck failed for allocateBlock",
         () -> om.openKey(keyArgs));
   }
 
   /**
-   * Tests inChillMode & forceExitChillMode api calls.
+   * Tests inSafeMode & forceExitSafeMode api calls.
    */
   @Test(timeout = 300_000)
-  public void testIsScmInChillModeAndForceExit() throws Exception {
-    // Test 1: SCM should be out of chill mode.
-    Assert.assertFalse(storageContainerLocationClient.inChillMode());
+  public void testIsScmInSafeModeAndForceExit() throws Exception {
+    // Test 1: SCM should be out of safe mode.
+    Assert.assertFalse(storageContainerLocationClient.inSafeMode());
     cluster.stop();
     // Restart the cluster with same metadata dir.
 
@@ -190,18 +190,18 @@ public class TestScmChillMode {
       Assert.fail("Cluster startup failed.");
     }
 
-    // Test 2: Scm should be in chill mode as datanodes are not started yet.
+    // Test 2: Scm should be in safe mode as datanodes are not started yet.
     storageContainerLocationClient = cluster
         .getStorageContainerLocationClient();
-    Assert.assertTrue(storageContainerLocationClient.inChillMode());
-    // Force scm out of chill mode.
+    Assert.assertTrue(storageContainerLocationClient.inSafeMode());
+    // Force scm out of safe mode.
     cluster.getStorageContainerManager().getClientProtocolServer()
-        .forceExitChillMode();
-    // Test 3: SCM should be out of chill mode.
+        .forceExitSafeMode();
+    // Test 3: SCM should be out of safe mode.
     GenericTestUtils.waitFor(() -> {
       try {
         return !cluster.getStorageContainerManager().getClientProtocolServer()
-            .inChillMode();
+            .inSafeMode();
       } catch (IOException e) {
         Assert.fail("Cluster");
         return false;
@@ -211,8 +211,8 @@ public class TestScmChillMode {
   }
 
   @Test(timeout = 300_000)
-  public void testSCMChillMode() throws Exception {
-    // Test1: Test chill mode  when there are no containers in system.
+  public void testSCMSafeMode() throws Exception {
+    // Test1: Test safe mode  when there are no containers in system.
     cluster.stop();
 
     try {
@@ -220,12 +220,12 @@ public class TestScmChillMode {
     } catch (IOException e) {
       Assert.fail("Cluster startup failed.");
     }
-    assertTrue(cluster.getStorageContainerManager().isInChillMode());
+    assertTrue(cluster.getStorageContainerManager().isInSafeMode());
     cluster.startHddsDatanodes();
     cluster.waitForClusterToBeReady();
-    assertFalse(cluster.getStorageContainerManager().isInChillMode());
+    assertFalse(cluster.getStorageContainerManager().isInSafeMode());
 
-    // Test2: Test chill mode  when containers are there in system.
+    // Test2: Test safe mode  when containers are there in system.
     // Create {numKeys} random names keys.
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
@@ -254,7 +254,7 @@ public class TestScmChillMode {
     cluster.stop();
 
     GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
-        .captureLogs(SCMChillModeManager.getLogger());
+        .captureLogs(SCMSafeModeManager.getLogger());
     logCapturer.clearOutput();
 
     try {
@@ -266,8 +266,8 @@ public class TestScmChillMode {
     StorageContainerManager scm;
 
     scm = cluster.getStorageContainerManager();
-    assertTrue(scm.isInChillMode());
-    assertFalse(logCapturer.getOutput().contains("SCM exiting chill mode."));
+    assertTrue(scm.isInSafeMode());
+    assertFalse(logCapturer.getOutput().contains("SCM exiting safe mode."));
     assertTrue(scm.getCurrentContainerThreshold() == 0);
     for (HddsDatanodeService dn : cluster.getHddsDatanodes()) {
       dn.start(null);
@@ -275,25 +275,25 @@ public class TestScmChillMode {
     GenericTestUtils
         .waitFor(() -> scm.getCurrentContainerThreshold() == 1.0, 100, 20000);
 
-    double chillModeCutoff = conf
-        .getDouble(HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT,
-            HddsConfigKeys.HDDS_SCM_CHILLMODE_THRESHOLD_PCT_DEFAULT);
-    assertTrue(scm.getCurrentContainerThreshold() >= chillModeCutoff);
-    assertTrue(logCapturer.getOutput().contains("SCM exiting chill mode."));
-    assertFalse(scm.isInChillMode());
+    double safeModeCutoff = conf
+        .getDouble(HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT,
+            HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT_DEFAULT);
+    assertTrue(scm.getCurrentContainerThreshold() >= safeModeCutoff);
+    assertTrue(logCapturer.getOutput().contains("SCM exiting safe mode."));
+    assertFalse(scm.isInSafeMode());
   }
 
   @Test(timeout = 300_000)
-  public void testSCMChillModeRestrictedOp() throws Exception {
+  public void testSCMSafeModeRestrictedOp() throws Exception {
     conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL,
         OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB);
     cluster.stop();
     cluster = builder.build();
     StorageContainerManager scm = cluster.getStorageContainerManager();
-    assertTrue(scm.isInChillMode());
+    assertTrue(scm.isInSafeMode());
 
     LambdaTestUtils.intercept(SCMException.class,
-        "ChillModePrecheck failed for allocateContainer", () -> {
+        "SafeModePrecheck failed for allocateContainer", () -> {
           scm.getClientProtocolServer()
               .allocateContainer(ReplicationType.STAND_ALONE,
                   ReplicationFactor.ONE, "");
@@ -301,48 +301,48 @@ public class TestScmChillMode {
 
     cluster.startHddsDatanodes();
     cluster.waitForClusterToBeReady();
-    assertFalse(scm.isInChillMode());
+    assertFalse(scm.isInSafeMode());
 
     TestStorageContainerManagerHelper helper =
         new TestStorageContainerManagerHelper(cluster, conf);
     helper.createKeys(10, 4096);
     SCMClientProtocolServer clientProtocolServer = cluster
         .getStorageContainerManager().getClientProtocolServer();
-    assertFalse((scm.getClientProtocolServer()).getChillModeStatus());
+    assertFalse((scm.getClientProtocolServer()).getSafeModeStatus());
     final List<ContainerInfo> containers = scm.getContainerManager()
         .getContainers();
-    scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS,
-        new SCMChillModeManager.ChillModeStatus(true));
+    scm.getEventQueue().fireEvent(SCMEvents.SAFE_MODE_STATUS,
+        new SCMSafeModeManager.SafeModeStatus(true));
     GenericTestUtils.waitFor(() -> {
-      return clientProtocolServer.getChillModeStatus();
+      return clientProtocolServer.getSafeModeStatus();
     }, 50, 1000 * 30);
-    assertTrue(clientProtocolServer.getChillModeStatus());
+    assertTrue(clientProtocolServer.getSafeModeStatus());
 
     LambdaTestUtils.intercept(SCMException.class,
         "Open container " + containers.get(0).getContainerID() + " "
-            + "doesn't have enough replicas to service this operation in Chill"
+            + "doesn't have enough replicas to service this operation in Safe"
             + " mode.", () -> clientProtocolServer
             .getContainerWithPipeline(containers.get(0).getContainerID()));
   }
 
   @Test(timeout = 300_000)
-  public void testSCMChillModeDisabled() throws Exception {
+  public void testSCMSafeModeDisabled() throws Exception {
     cluster.stop();
 
-    // If chill mode is disabled, cluster should not be in chill mode even if
+    // If safe mode is disabled, cluster should not be in safe mode even if
     // min number of datanodes are not started.
-    conf.setBoolean(HddsConfigKeys.HDDS_SCM_CHILLMODE_ENABLED, false);
-    conf.setInt(HddsConfigKeys.HDDS_SCM_CHILLMODE_MIN_DATANODE, 3);
+    conf.setBoolean(HddsConfigKeys.HDDS_SCM_SAFEMODE_ENABLED, false);
+    conf.setInt(HddsConfigKeys.HDDS_SCM_SAFEMODE_MIN_DATANODE, 3);
     builder = MiniOzoneCluster.newBuilder(conf)
         .setHbInterval(1000)
         .setHbProcessorInterval(500)
         .setNumDatanodes(1);
     cluster = builder.build();
     StorageContainerManager scm = cluster.getStorageContainerManager();
-    assertFalse(scm.isInChillMode());
+    assertFalse(scm.isInSafeMode());
 
-    // Even on SCM restart, cluster should be out of chill mode immediately.
+    // Even on SCM restart, cluster should be out of safe mode immediately.
     cluster.restartStorageContainerManager(true);
-    assertFalse(scm.isInChillMode());
+    assertFalse(scm.isInSafeMode());
   }
 }

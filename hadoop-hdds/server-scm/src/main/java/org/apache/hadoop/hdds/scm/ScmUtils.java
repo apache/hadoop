@@ -22,7 +22,7 @@ package org.apache.hadoop.hdds.scm;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.chillmode.Precheck;
+import org.apache.hadoop.hdds.scm.safemode.Precheck;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.slf4j.Logger;

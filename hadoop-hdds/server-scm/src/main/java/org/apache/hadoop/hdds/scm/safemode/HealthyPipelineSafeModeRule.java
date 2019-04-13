@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdds.scm.chillmode;
+package org.apache.hadoop.hdds.scm.safemode;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
@@ -42,38 +42,38 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Class defining Chill mode exit criteria for Pipelines.
+ * Class defining Safe mode exit criteria for Pipelines.
  *
  * This rule defines percentage of healthy pipelines need to be reported.
- * Once chill mode exit happens, this rules take care of writes can go
+ * Once safe mode exit happens, this rules take care of writes can go
  * through in a cluster.
  */
-public class HealthyPipelineChillModeRule
-    extends ChillModeExitRule<PipelineReportFromDatanode>{
+public class HealthyPipelineSafeModeRule
+    extends SafeModeExitRule<PipelineReportFromDatanode>{
 
   public static final Logger LOG =
-      LoggerFactory.getLogger(HealthyPipelineChillModeRule.class);
+      LoggerFactory.getLogger(HealthyPipelineSafeModeRule.class);
   private final PipelineManager pipelineManager;
   private final int healthyPipelineThresholdCount;
   private int currentHealthyPipelineCount = 0;
   private final Set<DatanodeDetails> processedDatanodeDetails =
       new HashSet<>();
 
-  HealthyPipelineChillModeRule(String ruleName, EventQueue eventQueue,
+  HealthyPipelineSafeModeRule(String ruleName, EventQueue eventQueue,
       PipelineManager pipelineManager,
-      SCMChillModeManager manager, Configuration configuration) {
+      SCMSafeModeManager manager, Configuration configuration) {
     super(manager, ruleName, eventQueue);
     this.pipelineManager = pipelineManager;
     double healthyPipelinesPercent =
         configuration.getDouble(HddsConfigKeys.
-                HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT,
+                HDDS_SCM_SAFEMODE_HEALTHY_PIPELINE_THRESHOLD_PCT,
             HddsConfigKeys.
-                HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT);
+                HDDS_SCM_SAFEMODE_HEALTHY_PIPELINE_THRESHOLD_PCT_DEFAULT);
 
     Preconditions.checkArgument(
         (healthyPipelinesPercent >= 0.0 && healthyPipelinesPercent <= 1.0),
         HddsConfigKeys.
-            HDDS_SCM_CHILLMODE_HEALTHY_PIPELINE_THRESHOLD_PCT
+            HDDS_SCM_SAFEMODE_HEALTHY_PIPELINE_THRESHOLD_PCT
             + " value should be >= 0.0 and <= 1.0");
 
     // As we want to wait for 3 node pipelines
@@ -108,7 +108,7 @@ public class HealthyPipelineChillModeRule
   protected void process(PipelineReportFromDatanode
       pipelineReportFromDatanode) {
 
-    // When SCM is in chill mode for long time, already registered
+    // When SCM is in safe mode for long time, already registered
     // datanode can send pipeline report again, then pipeline handler fires
     // processed report event, we should not consider this pipeline report
     // from datanode again during threshold calculation.
@@ -138,9 +138,9 @@ public class HealthyPipelineChillModeRule
         }
       }
 
-      if (scmInChillMode()) {
-        SCMChillModeManager.getLogger().info(
-            "SCM in chill mode. Healthy pipelines reported count is {}, " +
+      if (scmInSafeMode()) {
+        SCMSafeModeManager.getLogger().info(
+            "SCM in safe mode. Healthy pipelines reported count is {}, " +
                 "required healthy pipeline reported count is {}",
             currentHealthyPipelineCount, healthyPipelineThresholdCount);
       }
