@@ -660,4 +660,41 @@
     <Bug pattern="EI_EXPOSE_REP" />
   </Match>
 
+  <!-- The called method signature is String emptyToNull(@Nullable String string) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService"/>
+    <Method name="getHealthReport" />
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
+  <!-- The variable is not used, but it's defined for the document model. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEventSubDoc"/>
+    <Method name="setValid" />
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- The variable is not used, but it's defined for the document model. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineMetricSubDoc"/>
+    <Method name="setValid" />
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore$UpdateAppTransition"/>
+    <Method name="transition" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+  </Match>
+
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"/>
+    <Method name="updateApplicationPriority" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+  </Match>
+
 </FindBugsFilter>

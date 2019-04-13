@@ -49,7 +49,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
       .getLogger(CosmosDBDocumentStoreReader.class);
   private static final int DEFAULT_DOCUMENTS_SIZE = 1;
 
-  private static DocumentClient client;
+  private static volatile DocumentClient client;
   private final String databaseName;
   private final static String COLLECTION_LINK = "/dbs/%s/colls/%s";
   private final static String SELECT_TOP_FROM_COLLECTION = "SELECT TOP %d * " +
