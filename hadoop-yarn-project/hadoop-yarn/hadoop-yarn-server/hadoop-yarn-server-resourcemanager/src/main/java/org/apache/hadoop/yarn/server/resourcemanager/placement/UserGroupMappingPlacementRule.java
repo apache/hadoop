@@ -196,9 +196,9 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
         ApplicationPlacementContext mappedQueue = getPlacementForUser(user);
         if (mappedQueue != null) {
           // We have a mapping, should we use it?
-          if (queueName.equals(YarnConfiguration.DEFAULT_QUEUE_NAME)
+          if (Objects.equals(queueName,YarnConfiguration.DEFAULT_QUEUE_NAME)
               //queueName will be same as mapped queue name in case of recovery
-              || queueName.equals(mappedQueue.getQueue())
+              || Objects.equals(queueName,mappedQueue.getQueue())
               || overrideWithQueueMappings) {
             LOG.info("Application " + applicationId + " user " + user
                 + " mapping [" + queueName + "] to [" + mappedQueue
