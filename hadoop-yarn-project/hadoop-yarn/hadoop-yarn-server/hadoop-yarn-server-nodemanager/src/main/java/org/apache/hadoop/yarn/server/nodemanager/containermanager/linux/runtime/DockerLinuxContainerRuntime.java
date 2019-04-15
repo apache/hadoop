@@ -265,6 +265,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   @InterfaceAudience.Private
   public static final String ENV_DOCKER_CONTAINER_YARN_SYSFS =
       "YARN_CONTAINER_RUNTIME_YARN_SYSFS_ENABLE";
+  @InterfaceAudience.Private
+  public static final String ENV_DOCKER_CONTAINER_DOCKER_RUNTIME =
+      "YARN_CONTAINER_RUNTIME_DOCKER_RUNTIME";
   public static final String YARN_SYSFS_PATH =
       "/hadoop/yarn/sysfs";
   private Configuration conf;
@@ -275,7 +278,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
   private String defaultImageName;
   private Boolean defaultImageUpdate;
   private Set<String> allowedNetworks = new HashSet<>();
+  private Set<String> allowedRuntimes = new HashSet<>();
   private String defaultNetwork;
+  private String defaultRuntime;
   private CGroupsHandler cGroupsHandler;
   private AccessControlList privilegedContainersAcl;
   private boolean enableUserReMapping;
@@ -349,6 +354,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     this.conf = conf;
     dockerClient = new DockerClient();
     allowedNetworks.clear();
+    allowedRuntimes.clear();
     defaultROMounts.clear();
     defaultRWMounts.clear();
     defaultTmpfsMounts.clear();
@@ -363,6 +369,10 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     defaultNetwork = conf.getTrimmed(
         YarnConfiguration.NM_DOCKER_DEFAULT_CONTAINER_NETWORK,
         YarnConfiguration.DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK);
+    allowedRuntimes.addAll(Arrays.asList(
+        conf.getTrimmedStrings(
+            YarnConfiguration.NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES,
+            YarnConfiguration.DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES)));
 
     if(!allowedNetworks.contains(defaultNetwork)) {
       String message = "Default network: " + defaultNetwork
@@ -526,6 +536,19 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String msg = "Disallowed network:  '" + network
         + "' specified. Allowed networks: are " + allowedNetworks
         .toString();
+    throw new ContainerExecutionException(msg);
+  }
+
+  private void validateContainerRuntimeType(String runtime)
+          throws ContainerExecutionException {
+    if (runtime == null || runtime.isEmpty()
+        || allowedRuntimes.contains(runtime)) {
+      return;
+    }
+
+    String msg = "Disallowed runtime:  '" + runtime
+            + "' specified. Allowed networks: are " + allowedRuntimes
+            .toString();
     throw new ContainerExecutionException(msg);
   }
 
@@ -801,6 +824,7 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     String imageName = environment.get(ENV_DOCKER_CONTAINER_IMAGE);
     String network = environment.get(ENV_DOCKER_CONTAINER_NETWORK);
     String hostname = environment.get(ENV_DOCKER_CONTAINER_HOSTNAME);
+    String runtime = environment.get(ENV_DOCKER_CONTAINER_DOCKER_RUNTIME);
     boolean useEntryPoint = checkUseEntryPoint(environment);
 
     if (imageName == null || imageName.isEmpty()) {
@@ -815,6 +839,8 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     validateHostname(hostname);
 
     validateImageName(imageName);
+
+    validateContainerRuntimeType(runtime);
 
     if (defaultImageUpdate) {
       pullImageFromRemote(containerIdStr, imageName);
@@ -886,6 +912,9 @@ public class DockerLinuxContainerRuntime implements LinuxContainerRuntime {
     }
 
     runCommand.setCapabilities(capabilities);
+    if (runtime != null && !runtime.isEmpty()) {
+      runCommand.addRuntime(runtime);
+    }
 
     runCommand.addAllReadWriteMountLocations(containerLogDirs);
     runCommand.addAllReadWriteMountLocations(applicationLocalDirs);

@@ -2030,6 +2030,16 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
 
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+          DOCKER_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String[] DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
+
   /** Allow host pid namespace for containers. Use with care. */
   public static final String NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "host-pid-namespace.allowed";
