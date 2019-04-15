@@ -125,8 +125,8 @@ public final class ServerUtils {
    * @return
    */
   public static File getScmDbDir(Configuration conf) {
-    File metadataDir = getDirectoryFromConfig(conf, ScmConfigKeys
-        .OZONE_SCM_DB_DIRS, "SCM");
+    File metadataDir = getDirectoryFromConfig(conf,
+        ScmConfigKeys.OZONE_SCM_DB_DIRS, "SCM");
     if (metadataDir != null) {
       return metadataDir;
     }
@@ -146,8 +146,8 @@ public final class ServerUtils {
    * @return File created from the value of the key in conf.
    */
   public static File getDirectoryFromConfig(Configuration conf,
-                                             String key,
-                                             String componentName) {
+                                            String key,
+                                            String componentName) {
     final Collection<String> metadirs = conf.getTrimmedStringCollection(key);
 
     if (metadirs.size() > 1) {
@@ -162,10 +162,11 @@ public final class ServerUtils {
       if (!dbDirPath.exists() && !dbDirPath.mkdirs()) {
         throw new IllegalArgumentException("Unable to create directory " +
             dbDirPath + " specified in configuration setting " +
-            componentName);
+            key);
       }
       return dbDirPath;
     }
+
     return null;
   }
 
@@ -173,21 +174,15 @@ public final class ServerUtils {
    * Checks and creates Ozone Metadir Path if it does not exist.
    *
    * @param conf - Configuration
-   *
    * @return File MetaDir
+   * @throws IllegalArgumentException if the configuration setting is not set
    */
   public static File getOzoneMetaDirPath(Configuration conf) {
-    String metaDirPath = conf.getTrimmed(HddsConfigKeys.OZONE_METADATA_DIRS);
-
-    if (metaDirPath == null || metaDirPath.isEmpty()) {
+    File dirPath = getDirectoryFromConfig(conf,
+        HddsConfigKeys.OZONE_METADATA_DIRS, "Ozone");
+    if (dirPath == null) {
       throw new IllegalArgumentException(
           HddsConfigKeys.OZONE_METADATA_DIRS + " must be defined.");
-    }
-
-    File dirPath = new File(metaDirPath);
-    if (!dirPath.exists() && !dirPath.mkdirs()) {
-      throw new IllegalArgumentException("Unable to create paths. Path: " +
-          dirPath);
     }
     return dirPath;
   }

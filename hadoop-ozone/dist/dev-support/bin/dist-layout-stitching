@@ -116,6 +116,7 @@ run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore
 cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 
 #Copy docker compose files
-run cp -p -R "${ROOT}/hadoop-ozone/dist/src/main/compose" .
+#compose files are preprocessed: properties (eg. project.version) are replaced first by maven.
+run cp -p -R "${ROOT}/hadoop-ozone/dist/target/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .

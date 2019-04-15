@@ -51,7 +51,7 @@ public class CosmosDBDocumentStoreWriter<TimelineDoc extends TimelineDocument>
   private static final Logger LOG = LoggerFactory
       .getLogger(CosmosDBDocumentStoreWriter.class);
 
-  private static DocumentClient client;
+  private static volatile DocumentClient client;
   private final String databaseName;
   private static final PerNodeAggTimelineCollectorMetrics METRICS =
       PerNodeAggTimelineCollectorMetrics.getInstance();

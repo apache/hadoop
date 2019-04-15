@@ -63,7 +63,7 @@ public final class ReconUtils {
 
   /**
    * Get configured Recon DB directory value based on config. If not present,
-   * fallback to om.metadata.dirs
+   * fallback to ozone.metadata.dirs
    *
    * @param conf         configuration bag
    * @param dirConfigKey key to check

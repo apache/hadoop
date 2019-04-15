@@ -291,13 +291,12 @@ public class AppCatalogSolrClient {
       docs.add(request);
     }
 
-    // Commit Solr changes.
-    UpdateResponse detailsResponse = solr.add(docs);
-    if (detailsResponse.getStatus() != 0) {
+    try {
+      commitSolrChanges(solr, docs);
+    } catch (IOException e) {
       throw new IOException("Unable to register docker instance "
-          + "with application entry.");
+          + "with application entry.", e);
     }
-    solr.commit();
   }
 
   private SolrInputDocument incrementDownload(SolrDocument doc,
@@ -350,16 +349,10 @@ public class AppCatalogSolrClient {
       buffer.setField("yarnfile_s", mapper.writeValueAsString(yarnApp));
 
       docs.add(buffer);
-      // Commit Solr changes.
-      UpdateResponse detailsResponse = solr.add(docs);
-      if (detailsResponse.getStatus() != 0) {
-        throw new IOException("Unable to register application " +
-            "in Application Store.");
-      }
-      solr.commit();
+      commitSolrChanges(solr, docs);
     } catch (SolrServerException | IOException e) {
       throw new IOException("Unable to register application " +
-          "in Application Store. "+ e.getMessage());
+          "in Application Store. ", e);
     }
   }
 
@@ -389,16 +382,64 @@ public class AppCatalogSolrClient {
       buffer.setField("yarnfile_s", mapper.writeValueAsString(yarnApp));
 
       docs.add(buffer);
-      // Commit Solr changes.
-      UpdateResponse detailsResponse = solr.add(docs);
-      if (detailsResponse.getStatus() != 0) {
-        throw new IOException("Unable to register application " +
-            "in Application Store.");
-      }
-      solr.commit();
+      commitSolrChanges(solr, docs);
     } catch (SolrServerException | IOException e) {
       throw new IOException("Unable to register application " +
-          "in Application Store. "+ e.getMessage());
+          "in Application Store. ", e);
     }
+  }
+
+  public void upgradeApp(Service service) throws IOException,
+      SolrServerException {
+    ObjectMapper mapper = new ObjectMapper();
+    mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    Collection<SolrInputDocument> docs = new HashSet<SolrInputDocument>();
+    SolrClient solr = getSolrClient();
+    if (service!=null) {
+      String name = service.getName();
+      String app = "";
+      SolrQuery query = new SolrQuery();
+      query.setQuery("id:" + name);
+      query.setFilterQueries("type_s:AppEntry");
+      query.setRows(1);
+
+      QueryResponse response;
+      try {
+        response = solr.query(query);
+        Iterator<SolrDocument> appList = response.getResults().listIterator();
+        while (appList.hasNext()) {
+          SolrDocument d = appList.next();
+          app = d.get("app_s").toString();
+        }
+      } catch (SolrServerException | IOException e) {
+        LOG.error("Error in finding deployed application: " + name, e);
+      }
+      // Register deployed application instance with AppList
+      SolrInputDocument request = new SolrInputDocument();
+      request.addField("type_s", "AppEntry");
+      request.addField("id", name);
+      request.addField("name_s", name);
+      request.addField("app_s", app);
+      request.addField("yarnfile_s", mapper.writeValueAsString(service));
+      docs.add(request);
+    }
+    try {
+      commitSolrChanges(solr, docs);
+    } catch (IOException e) {
+      throw new IOException("Unable to register docker instance "
+          + "with application entry.", e);
+    }
+  }
+
+  private void commitSolrChanges(SolrClient solr,
+      Collection<SolrInputDocument> docs)
+          throws IOException, SolrServerException {
+    // Commit Solr changes.
+    UpdateResponse detailsResponse = solr.add(docs);
+    if (detailsResponse.getStatus() != 0) {
+      throw new IOException("Failed to commit document in solr, status code: "
+          + detailsResponse.getStatus());
+    }
+    solr.commit();
   }
 }

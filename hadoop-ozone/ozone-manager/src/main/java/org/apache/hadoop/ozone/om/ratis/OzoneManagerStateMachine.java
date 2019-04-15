@@ -192,6 +192,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       case CreateVolume:
       case SetVolumeProperty:
       case DeleteVolume:
+      case CreateBucket:
+      case SetBucketProperty:
+      case DeleteBucket:
         newOmRequest = handler.handleStartTransaction(omRequest);
         break;
       case AllocateBlock:
@@ -341,7 +344,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     // If request is failed, no need to proceed further.
     // Setting the exception with omResponse message and code.
 
-    // TODO: the allocate block fails when scm is in chill mode or when scm is
+    // TODO: the allocate block fails when scm is in safe mode or when scm is
     //  down, but that error is not correctly received in OM end, once that
     //  is fixed, we need to see how to handle this failure case or how we
     //  need to retry or how to handle this scenario. For other errors like

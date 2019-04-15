@@ -266,7 +266,6 @@ public class TestHddsDispatcher {
         .newBuilder()
         .setContainerID(containerId)
         .setCmdType(ContainerProtos.Type.WriteChunk)
-        .setTraceID(UUID.randomUUID().toString())
         .setDatanodeUuid(datanodeId)
         .setWriteChunk(writeChunkRequest)
         .build();

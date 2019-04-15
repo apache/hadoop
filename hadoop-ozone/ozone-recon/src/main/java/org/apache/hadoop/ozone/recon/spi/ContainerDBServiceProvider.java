@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
+import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 
 /**
  * The Recon Container DB Service interface.
@@ -66,4 +67,12 @@ public interface ContainerDBServiceProvider {
    */
   Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(long containerId)
       throws IOException;
+
+  /**
+   * Get a Map of containerID, containerMetadata of all Containers.
+   *
+   * @return Map of containerID -> containerMetadata.
+   * @throws IOException
+   */
+  Map<Long, ContainerMetadata> getContainers() throws IOException;
 }

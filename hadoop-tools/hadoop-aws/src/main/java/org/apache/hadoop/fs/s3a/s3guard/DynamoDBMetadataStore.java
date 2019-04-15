@@ -211,6 +211,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
       = "Database table is from an incompatible S3Guard version.";
 
   @VisibleForTesting
+  static final String BILLING_MODE
+      = "billing-mode";
+
+  @VisibleForTesting
+  static final String BILLING_MODE_PER_REQUEST
+      = "per-request";
+
+  @VisibleForTesting
+  static final String BILLING_MODE_PROVISIONED
+      = "provisioned";
+
+  @VisibleForTesting
   static final String DESCRIPTION
       = "S3Guard metadata store in DynamoDB";
   @VisibleForTesting
@@ -228,6 +240,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @VisibleForTesting
   static final String THROTTLING = "Throttling";
+
+  public static final String E_ON_DEMAND_NO_SET_CAPACITY
+      = "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST";
 
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
@@ -1515,6 +1530,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
           = desc.getProvisionedThroughput();
       map.put(READ_CAPACITY, throughput.getReadCapacityUnits().toString());
       map.put(WRITE_CAPACITY, throughput.getWriteCapacityUnits().toString());
+      map.put(BILLING_MODE,
+          throughput.getWriteCapacityUnits() == 0
+              ? BILLING_MODE_PER_REQUEST
+              : BILLING_MODE_PROVISIONED);
       map.put(TABLE, desc.toString());
       map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
           Boolean.toString(true));
@@ -1557,6 +1576,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
     long newWrite = getLongParam(parameters,
             S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
             currentWrite);
+
+    if (currentRead == 0 || currentWrite == 0) {
+      // table is pay on demand
+      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
+    }
 
     if (newRead != currentRead || newWrite != currentWrite) {
       LOG.info("Current table capacity is read: {}, write: {}",

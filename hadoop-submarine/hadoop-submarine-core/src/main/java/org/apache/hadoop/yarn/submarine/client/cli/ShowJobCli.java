@@ -21,6 +21,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
 import org.apache.hadoop.yarn.submarine.client.cli.param.ShowJobParameters;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.exception.SubmarineException;
@@ -61,8 +62,9 @@ public class ShowJobCli extends AbstractCli {
     CommandLine cli;
     try {
       cli = parser.parse(options, args);
-      parameters.updateParametersByParsedCommandline(cli, options,
-          clientContext);
+      ParametersHolder parametersHolder = ParametersHolder
+          .createWithCmdLine(cli);
+      parameters.updateParameters(parametersHolder, clientContext);
     } catch (ParseException e) {
       printUsages();
     }
@@ -117,7 +119,6 @@ public class ShowJobCli extends AbstractCli {
       printUsages();
       return 0;
     }
-
     parseCommandLineAndGetShowJobParameters(args);
     getAndPrintJobInfo();
     return 0;

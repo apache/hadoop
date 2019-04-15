@@ -2591,6 +2591,13 @@
   </property>
 
   <property>
+    <description>The setting that decides the capacity of the queue to hold
+    asynchronous timeline entities.</description>
+    <name>yarn.timeline-service.writer.async.queue.capacity</name>
+    <value>100</value>
+  </property>
+
+  <property>
     <description>Time period till which the application collector will be alive
      in NM, after the  application master container finishes.</description>
     <name>yarn.timeline-service.app-collector.linger-period.ms</name>

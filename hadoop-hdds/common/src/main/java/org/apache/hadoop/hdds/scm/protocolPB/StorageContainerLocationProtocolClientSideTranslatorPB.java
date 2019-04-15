@@ -23,12 +23,12 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InChillModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -370,38 +370,38 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   }
 
   /**
-   * Check if SCM is in chill mode.
+   * Check if SCM is in safe mode.
    *
-   * @return Returns true if SCM is in chill mode else returns false.
+   * @return Returns true if SCM is in safe mode else returns false.
    * @throws IOException
    */
   @Override
-  public boolean inChillMode() throws IOException {
-    InChillModeRequestProto request =
-        InChillModeRequestProto.getDefaultInstance();
+  public boolean inSafeMode() throws IOException {
+    InSafeModeRequestProto request =
+        InSafeModeRequestProto.getDefaultInstance();
     try {
-      InChillModeResponseProto resp = rpcProxy.inChillMode(
+      InSafeModeResponseProto resp = rpcProxy.inSafeMode(
           NULL_RPC_CONTROLLER, request);
-      return resp.getInChillMode();
+      return resp.getInSafeMode();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   /**
-   * Force SCM out of Chill mode.
+   * Force SCM out of Safe mode.
    *
    * @return returns true if operation is successful.
    * @throws IOException
    */
   @Override
-  public boolean forceExitChillMode() throws IOException {
-    ForceExitChillModeRequestProto request =
-        ForceExitChillModeRequestProto.getDefaultInstance();
+  public boolean forceExitSafeMode() throws IOException {
+    ForceExitSafeModeRequestProto request =
+        ForceExitSafeModeRequestProto.getDefaultInstance();
     try {
-      ForceExitChillModeResponseProto resp = rpcProxy
-          .forceExitChillMode(NULL_RPC_CONTROLLER, request);
-      return resp.getExitedChillMode();
+      ForceExitSafeModeResponseProto resp = rpcProxy
+          .forceExitSafeMode(NULL_RPC_CONTROLLER, request);
+      return resp.getExitedSafeMode();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

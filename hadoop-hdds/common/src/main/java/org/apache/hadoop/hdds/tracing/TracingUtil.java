@@ -34,6 +34,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
  */
 public final class TracingUtil {
 
+  private static final String NULL_SPAN_AS_STRING = "";
+
   private TracingUtil() {
   }
 
@@ -59,12 +61,13 @@ public final class TracingUtil {
    * @return encoded tracing context.
    */
   public static String exportCurrentSpan() {
-    StringBuilder builder = new StringBuilder();
     if (GlobalTracer.get().activeSpan() != null) {
+      StringBuilder builder = new StringBuilder();
       GlobalTracer.get().inject(GlobalTracer.get().activeSpan().context(),
           StringCodec.FORMAT, builder);
+      return builder.toString();
     }
-    return builder.toString();
+    return NULL_SPAN_AS_STRING;
   }
 
   /**
@@ -73,11 +76,12 @@ public final class TracingUtil {
    * @return encoded tracing context.
    */
   public static String exportSpan(Span span) {
-    StringBuilder builder = new StringBuilder();
     if (span != null) {
+      StringBuilder builder = new StringBuilder();
       GlobalTracer.get().inject(span.context(), StringCodec.FORMAT, builder);
+      return builder.toString();
     }
-    return builder.toString();
+    return NULL_SPAN_AS_STRING;
   }
 
   /**

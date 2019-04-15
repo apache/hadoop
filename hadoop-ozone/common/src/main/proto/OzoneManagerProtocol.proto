@@ -243,7 +243,7 @@ enum Status {
     TOKEN_EXPIRED = 35;
     TOKEN_ERROR_OTHER = 36;
     LIST_MULTIPART_UPLOAD_PARTS_FAILED = 37;
-    SCM_IN_CHILL_MODE = 38;
+    SCM_IN_SAFE_MODE = 38;
     INVALID_REQUEST = 39;
 
     BUCKET_ENCRYPTION_KEY_NOT_FOUND = 40;
@@ -478,7 +478,11 @@ message InfoBucketResponse {
 }
 
 message SetBucketPropertyRequest {
-    required BucketArgs bucketArgs = 1;
+    //TODO: See if we can merge bucketArgs and bucketInfo
+    optional BucketArgs bucketArgs = 1;
+    // This will be set during startTransaction, and used to apply to OM DB
+    // during applyTransaction.
+    optional BucketInfo bucketInfo = 2;
 }
 
 message SetBucketPropertyResponse {

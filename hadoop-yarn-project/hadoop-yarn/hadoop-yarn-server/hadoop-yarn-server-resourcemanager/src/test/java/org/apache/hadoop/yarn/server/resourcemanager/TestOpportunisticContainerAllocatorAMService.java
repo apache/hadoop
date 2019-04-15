@@ -71,6 +71,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSche
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.DistributedSchedulingAllocateResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.protocolrecords.impl.pb.RegisterDistributedSchedulingAMResponsePBImpl;
 import org.apache.hadoop.yarn.server.api.records.OpportunisticContainersStatus;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
@@ -93,8 +94,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo
-    .FifoScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.server.scheduler.OpportunisticContainerContext;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
@@ -105,17 +105,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.base.Supplier;
-
-import static org.junit.Assert.fail;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
 /**
  * Test cases for {@link OpportunisticContainerAllocatorAMService}.
@@ -222,7 +217,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm3.nodeHeartbeat(true);
     nm4.nodeHeartbeat(true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 4, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -387,7 +383,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -512,7 +509,8 @@ public class TestOpportunisticContainerAllocatorAMService {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
 
-    Thread.sleep(1000);
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
 
     QueueMetrics metrics = ((CapacityScheduler) scheduler).getRootQueue()
         .getMetrics();
@@ -617,7 +615,9 @@ public class TestOpportunisticContainerAllocatorAMService {
     amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
 
     nm1.nodeHeartbeat(true);
-    Thread.sleep(1000);
+
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 1, 10, 10 * 100);
 
     AllocateResponse allocateResponse = am1.allocate(Arrays.asList(
         ResourceRequest.newInstance(Priority.newInstance(1), "*",
@@ -753,6 +753,109 @@ public class TestOpportunisticContainerAllocatorAMService {
   }
 
   @Test(timeout = 60000)
+  public void testOpportunisticSchedulerMetrics() throws Exception {
+    HashMap<NodeId, MockNM> nodes = new HashMap<>();
+    MockNM nm1 = new MockNM("h1:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm1.getNodeId(), nm1);
+    MockNM nm2 = new MockNM("h2:1234", 4096, rm.getResourceTrackerService());
+    nodes.put(nm2.getNodeId(), nm2);
+    nm1.registerNode();
+    nm2.registerNode();
+    OpportunisticSchedulerMetrics metrics =
+        OpportunisticSchedulerMetrics.getMetrics();
+
+    int allocContainers = metrics.getAllocatedContainers();
+    long aggrAllocatedContainers = metrics.getAggregatedAllocatedContainers();
+    long aggrOffSwitchContainers = metrics.getAggregatedOffSwitchContainers();
+    long aggrReleasedContainers = metrics.getAggregatedReleasedContainers();
+
+    OpportunisticContainerAllocatorAMService amservice =
+        (OpportunisticContainerAllocatorAMService) rm
+            .getApplicationMasterService();
+    RMApp app1 = rm.submitApp(1 * GB, "app", "user", null, "default");
+    ApplicationAttemptId attemptId =
+        app1.getCurrentAppAttempt().getAppAttemptId();
+    MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm2);
+    ResourceScheduler scheduler = rm.getResourceScheduler();
+    RMNode rmNode1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+    RMNode rmNode2 = rm.getRMContext().getRMNodes().get(nm2.getNodeId());
+
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+
+    ((RMNodeImpl) rmNode1)
+        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
+    ((RMNodeImpl) rmNode2)
+        .setOpportunisticContainersStatus(getOppurtunisticStatus(-1, 100));
+
+    OpportunisticContainerContext ctxt = ((CapacityScheduler) scheduler)
+        .getApplicationAttempt(attemptId).getOpportunisticContainerContext();
+    // Send add and update node events to AM Service.
+    amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
+    amservice.handle(new NodeAddedSchedulerEvent(rmNode2));
+    amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
+    amservice.handle(new NodeUpdateSchedulerEvent(rmNode2));
+
+    // All nodes 1 to 2 will be applicable for scheduling.
+    nm1.nodeHeartbeat(true);
+    nm2.nodeHeartbeat(true);
+
+    GenericTestUtils.waitFor(() ->
+        amservice.getLeastLoadedNodes().size() == 2, 10, 10 * 100);
+
+    AllocateResponse allocateResponse = am1.allocate(Arrays.asList(
+        ResourceRequest.newInstance(Priority.newInstance(1), "*",
+            Resources.createResource(1 * GB), 2, true, null,
+            ExecutionTypeRequest
+                .newInstance(ExecutionType.OPPORTUNISTIC, true))), null);
+
+    List<Container> allocatedContainers = allocateResponse
+        .getAllocatedContainers();
+    Assert.assertEquals(2, allocatedContainers.size());
+
+    Assert.assertEquals(allocContainers + 2, metrics.getAllocatedContainers());
+    Assert.assertEquals(aggrAllocatedContainers + 2,
+        metrics.getAggregatedAllocatedContainers());
+    Assert.assertEquals(aggrOffSwitchContainers + 2,
+        metrics.getAggregatedOffSwitchContainers());
+
+    Container container = allocatedContainers.get(0);
+    MockNM allocNode = nodes.get(container.getNodeId());
+
+    // Start Container in NM
+    allocNode.nodeHeartbeat(Arrays.asList(
+        ContainerStatus.newInstance(container.getId(),
+            ExecutionType.OPPORTUNISTIC, ContainerState.RUNNING, "", 0)),
+        true);
+    rm.drainEvents();
+
+    // Verify that container is actually running wrt the RM..
+    RMContainer rmContainer = ((CapacityScheduler) scheduler)
+        .getApplicationAttempt(
+            container.getId().getApplicationAttemptId()).getRMContainer(
+            container.getId());
+    Assert.assertEquals(RMContainerState.RUNNING, rmContainer.getState());
+
+    // Container Completed in the NM
+    allocNode.nodeHeartbeat(Arrays.asList(
+        ContainerStatus.newInstance(container.getId(),
+            ExecutionType.OPPORTUNISTIC, ContainerState.COMPLETE, "", 0)),
+        true);
+    rm.drainEvents();
+
+    // Verify that container has been removed..
+    rmContainer = ((CapacityScheduler) scheduler)
+        .getApplicationAttempt(
+            container.getId().getApplicationAttemptId()).getRMContainer(
+            container.getId());
+    Assert.assertNull(rmContainer);
+
+    Assert.assertEquals(allocContainers + 1, metrics.getAllocatedContainers());
+    Assert.assertEquals(aggrReleasedContainers + 1,
+        metrics.getAggregatedReleasedContainers());
+  }
+
+  @Test(timeout = 60000)
   public void testAMCrashDuringAllocate() throws Exception {
     MockNM nm = new MockNM("h:1234", 4096, rm.getResourceTrackerService());
     nm.registerNode();
@@ -863,15 +966,10 @@ public class TestOpportunisticContainerAllocatorAMService {
     // Send add and update node events to AM Service.
     amservice.handle(new NodeAddedSchedulerEvent(rmNode1));
     amservice.handle(new NodeUpdateSchedulerEvent(rmNode1));
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override public Boolean get() {
-          return scheduler.getNumClusterNodes() == 1;
-        }
-      }, 10, 200 * 100);
-    }catch (TimeoutException e) {
-      fail("timed out while waiting for NM to add.");
-    }
+
+    GenericTestUtils.waitFor(() ->
+        scheduler.getNumClusterNodes() == 1, 10, 200 * 100);
+
     AllocateResponse allocateResponse = am.allocate(
             Arrays.asList(ResourceRequest.newInstance(Priority.newInstance(1),
                 "*", Resources.createResource(1 * GB), 2, true, null,
@@ -882,15 +980,10 @@ public class TestOpportunisticContainerAllocatorAMService {
         .getAllocatedContainers();
     Container container = allocatedContainers.get(0);
     scheduler.handle(new NodeRemovedSchedulerEvent(rmNode1));
-    try {
-      GenericTestUtils.waitFor(new Supplier<Boolean>() {
-        @Override public Boolean get() {
-          return scheduler.getNumClusterNodes() == 0;
-        }
-      }, 10, 200 * 100);
-    }catch (TimeoutException e) {
-      fail("timed out while waiting for NM to remove.");
-    }
+
+    GenericTestUtils.waitFor(() ->
+        scheduler.getNumClusterNodes() == 0, 10, 200 * 100);
+
     //test YARN-9165
     RMContainer rmContainer = null;
     rmContainer = SchedulerUtils.createOpportunisticRmContainer(
@@ -901,7 +994,6 @@ public class TestOpportunisticContainerAllocatorAMService {
         schedulerAttempt.getApplicationAttemptId(), container.getNodeId(),
         schedulerAttempt.getUser(), rm.getRMContext(), true);
     }
-    assert(rmContainer!=null);
     //test YARN-9164
     schedulerAttempt.addRMContainer(container.getId(), rmContainer);
     scheduler.handle(new AppAttemptRemovedSchedulerEvent(attemptId,

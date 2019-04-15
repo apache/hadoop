@@ -1297,17 +1297,12 @@ public class CapacityScheduler extends
     if (!scheduleAsynchronously) {
       writeLock.lock();
       try {
-        ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
-            rmNode.getNodeID());
-
         // reset allocation and reservation stats before we start doing any
         // work
         updateSchedulerHealth(lastNodeUpdateTime, rmNode.getNodeID(),
             CSAssignment.NULL_ASSIGNMENT);
 
         allocateContainersToNode(rmNode.getNodeID(), true);
-        ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
-            rmNode.getNodeID());
       } finally {
         writeLock.unlock();
       }
@@ -1706,10 +1701,18 @@ public class CapacityScheduler extends
     // nodes.
     CSAssignment assignment;
     if (!multiNodePlacementEnabled) {
+      ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
+          node.getNodeID());
       assignment = allocateContainerOnSingleNode(candidates,
           node, withNodeHeartbeat);
+      ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
+          node.getNodeID());
     } else{
+      ActivitiesLogger.NODE.startNodeUpdateRecording(activitiesManager,
+          ActivitiesManager.EMPTY_NODE_ID);
       assignment = allocateContainersOnMultiNodes(candidates);
+      ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
+          ActivitiesManager.EMPTY_NODE_ID);
     }
 
     if (assignment != null && assignment.getAssignmentInformation() != null

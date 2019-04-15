@@ -87,6 +87,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptA
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAttemptRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerExpiredSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.ContainerPreemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeResourceUpdateSchedulerEvent;
@@ -1288,8 +1289,32 @@ public class FairScheduler extends
               SchedulerUtils.EXPIRED_CONTAINER),
           RMContainerEventType.EXPIRE);
       break;
+    case MARK_CONTAINER_FOR_PREEMPTION:
+      if (!(event instanceof ContainerPreemptEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      ContainerPreemptEvent preemptContainerEvent =
+          (ContainerPreemptEvent)event;
+      ApplicationAttemptId appId = preemptContainerEvent.getAppId();
+      RMContainer preemptedContainer = preemptContainerEvent.getContainer();
+      FSAppAttempt app = getApplicationAttempt(appId);
+      app.trackContainerForPreemption(preemptedContainer);
+      break;
+    case MARK_CONTAINER_FOR_KILLABLE:
+      if (!(event instanceof ContainerPreemptEvent)) {
+        throw new RuntimeException("Unexpected event type: " + event);
+      }
+      ContainerPreemptEvent containerKillableEvent =
+          (ContainerPreemptEvent)event;
+      RMContainer killableContainer = containerKillableEvent.getContainer();
+      completedContainer(killableContainer,
+          SchedulerUtils.createPreemptedContainerStatus(
+              killableContainer.getContainerId(),
+              SchedulerUtils.PREEMPTED_CONTAINER),
+          RMContainerEventType.KILL);
+      break;
     default:
-      LOG.error("Unknown event arrived at FairScheduler: " + event.toString());
+      LOG.error("Unknown event arrived at FairScheduler: {}", event);
     }
   }
 
