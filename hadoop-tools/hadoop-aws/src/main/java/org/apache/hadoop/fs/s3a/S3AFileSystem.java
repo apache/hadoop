@@ -111,6 +111,7 @@ import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.impl.FlagSet;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.impl.FileSystemRename3Action;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.s3a.api.PerformanceFlagEnum;
 import org.apache.hadoop.fs.s3a.audit.AuditSpanS3A;
@@ -144,6 +145,7 @@ import org.apache.hadoop.fs.s3a.impl.PutObjectOptions;
 import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.RequestFactoryImpl;
 import org.apache.hadoop.fs.s3a.impl.S3AMultipartUploaderBuilder;
+import org.apache.hadoop.fs.s3a.impl.S3ARenameCallbacks;
 import org.apache.hadoop.fs.s3a.impl.S3AStoreBuilder;
 import org.apache.hadoop.fs.s3a.impl.StatusProbeEnum;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -2324,7 +2326,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         + "by S3AFileSystem");
   }
 
-
   /**
    * Renames Path src to Path dst.  Can take place on local fs
    * or remote DFS.
@@ -2504,6 +2505,48 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         pageSize,
         dirOperationsPurgeUploads);
     return renameOperation.execute();
+  }
+
+  @Override
+  public void rename(final Path source,
+      final Path dest,
+      final Options.Rename... options) throws IOException {
+    Path src = qualify(source);
+    Path dst = qualify(dest);
+
+    LOG.debug("Rename path {} to {}", src, dst);
+    entryPoint(INVOCATION_RENAME, source.toString(), dest.toString());
+    super.rename(source, dest, options);
+  }
+
+  /**
+   * Return the S3A rename callbacks; mocking tests
+   * may wish to override.
+   */
+  protected FileSystemRename3Action.RenameCallbacks createRenameCallbacks() {
+    return new S3ARenameCallbacks(
+        createStoreContext(),
+        new OperationCallbacksImpl(createStoreContext()),
+        pageSize,
+        dirOperationsPurgeUploads, new S3ARenameCallbacks.Probes() {
+          @Override
+          public S3AFileStatus stat(final Path f,
+              final boolean needEmptyDirectoryFlag,
+              final Set<StatusProbeEnum> probes) throws IOException {
+            return innerGetFileStatus(f, needEmptyDirectoryFlag, probes);
+          }
+
+          @Override
+          public boolean isDir(final Path path) throws IOException {
+            return isDirectory(path);
+          }
+
+          @Override
+          public boolean dirHasChildren(final Path path) throws IOException {
+            return listStatusIterator(path).hasNext();
+          }
+        }
+    );
   }
 
   @Override public Token<? extends TokenIdentifier> getFsDelegationToken()
