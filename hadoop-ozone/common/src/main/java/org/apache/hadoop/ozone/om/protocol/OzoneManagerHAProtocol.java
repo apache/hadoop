@@ -18,20 +18,17 @@
 
 package org.apache.hadoop.ozone.om.protocol;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.ozone.om.helpers.OmAllocateBlockResponse;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyLocation;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
 
@@ -50,39 +47,6 @@ public interface OzoneManagerHAProtocol {
    * @throws IOException
    */
   long saveRatisSnapshot() throws IOException;
-
-  /**
-   * Add a allocate block, it is assumed that the client is having an open
-   * key session going on. This block will be appended to this open key session.
-   * This will be called only during HA enabled OM, as during HA we get an
-   * allocated Block information, and add that information to OM DB.
-   *
-   * In HA the flow for allocateBlock is in StartTransaction allocateBlock
-   * will be called which returns block information, and in the
-   * applyTransaction addAllocateBlock will be called to add the block
-   * information to DB.
-   *
-   * @param args the key to append
-   * @param clientID the client identification
-   * @param keyLocation key location given by allocateBlock
-   * @return an allocated block
-   * @throws IOException
-   */
-  OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      KeyLocation keyLocation) throws IOException;
-
-  /**
-   * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
-   * This will be called only from applyTransaction, once after calling
-   * applyKey in startTransaction.
-   *
-   * @param omKeyArgs
-   * @param keyInfo
-   * @param clientID
-   * @throws IOException
-   */
-  void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
-      throws IOException;
 
   /**
    * Initiate multipart upload for the specified key.
@@ -217,5 +181,94 @@ public interface OzoneManagerHAProtocol {
    * @throws IOException
    */
   void applySetBucketProperty(OmBucketInfo omBucketInfo) throws IOException;
+
+  /**
+   * Start Allocate Block Transaction.
+   * @param args
+   * @param clientID
+   * @param excludeList
+   * @return OmAllocateBlockResponse
+   * @throws IOException
+   */
+  OmAllocateBlockResponse startAllocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException;
+
+  /**
+   * Apply Allocate Block changes to OM DB.
+   * @param clientID
+   * @param omKeyInfo
+   * @throws IOException
+   */
+  void applyAllocateBlock(long clientID, OmKeyInfo omKeyInfo)
+      throws IOException;
+
+  /**
+   * Start Open Key Transaction.
+   *
+   * @param args
+   * @return OmAllocateBlockResponse
+   * @throws IOException
+   */
+  OpenKeySession startOpenKey(OmKeyArgs args) throws IOException;
+
+  /**
+   * Apply Open Key changes to OM DB.
+   * @param omKeyInfo
+   * @param keySessionID
+   * @throws IOException
+   */
+  void applyOpenKey(OmKeyInfo omKeyInfo, long keySessionID)
+      throws IOException;
+
+  /**
+   * Start Rename Key Transaction.
+   * @param args
+   * @param toKeyName
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  OmKeyInfo startRenameKey(OmKeyArgs args, String toKeyName) throws IOException;
+
+  /**
+   * Apply Rename Key changes to OM DB.
+   * @param renameKeyInfo
+   * @param toKeyName
+   * @throws IOException
+   */
+  void applyRenameKey(OmKeyInfo renameKeyInfo, String toKeyName)
+      throws IOException;
+
+  /**
+   * Start DeleteKey Transaction.
+   * @param omKeyArgs
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  OmKeyInfo startDeleteKey(OmKeyArgs omKeyArgs) throws IOException;
+
+  /**
+   * Apply Delete Key changes to OM DB.
+   * @param deleteOmKeyInfo
+   * @throws IOException
+   */
+  void applyDeleteKey(OmKeyInfo deleteOmKeyInfo) throws IOException;
+
+  /**
+   * Start Commit Key Transaction.
+   * @param args
+   * @param clientID
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  OmKeyInfo startCommitKey(OmKeyArgs args, long clientID) throws IOException;
+
+  /**
+   * Apply Commit Key Transaction to OM DB.
+   * @param commitKeyInfo
+   * @param clientID
+   * @throws IOException
+   */
+  void applyCommitKey(OmKeyInfo commitKeyInfo, long clientID)
+      throws IOException;
 
 }

@@ -198,7 +198,8 @@ public class TestKeyDeletingService {
       OpenKeySession session = keyManager.openKey(arg);
       for (int i = 0; i < numBlocks; i++) {
         arg.addLocationInfo(
-            keyManager.allocateBlock(arg, session.getId(), new ExcludeList()));
+            keyManager.allocateBlock(arg, session.getId(), new ExcludeList())
+                .getCurrentAllocatedBlockInfo());
       }
       keyManager.commitKey(arg, session.getId());
       keyManager.deleteKey(arg);

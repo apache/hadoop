@@ -60,7 +60,6 @@ enum Type {
   ListKeys = 35;
   CommitKey = 36;
   AllocateBlock = 37;
-  ApplyCreateKey = 38;
 
   CreateS3Bucket = 41;
   DeleteS3Bucket = 42;
@@ -116,7 +115,6 @@ message OMRequest {
   optional ListKeysRequest                  listKeysRequest                = 35;
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
-  optional ApplyCreateKeyRequest            applyCreateKeyRequest          = 38;
 
 
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
@@ -600,7 +598,15 @@ message LookupFileResponse {
 }
 
 message CreateKeyRequest {
-    required KeyArgs keyArgs = 1;
+    optional KeyArgs keyArgs = 1;
+
+    // Added fields from CreateKeyResponse in OM HA, we set these fields in
+    // the request.
+    //TODO: See if we can merge KeyArgs and KeyInfo.
+
+    optional KeyInfo keyInfo = 2;
+    optional uint64 ID = 3;
+    optional uint64 openVersion = 4;
 }
 
 message CreateKeyResponse {
@@ -612,10 +618,6 @@ message CreateKeyResponse {
     optional uint64 openVersion = 4;
 }
 
-message ApplyCreateKeyRequest {
-    required CreateKeyRequest createKeyRequest = 1;
-    required CreateKeyResponse createKeyResponse = 2;
-}
 
 message LookupKeyRequest {
     required KeyArgs keyArgs = 1;
@@ -631,9 +633,13 @@ message LookupKeyResponse {
     optional uint64 openVersion = 4;
 }
 
-message RenameKeyRequest{
-    required KeyArgs keyArgs = 1;
+message RenameKeyRequest {
+    optional KeyArgs keyArgs = 1;
     required string toKeyName = 2;
+
+    // This will be set during startTransaction for OM HA
+    //TODO: See if we can merge KeyArgs and KeyInfo.
+    optional KeyInfo renameKeyInfo = 3;
 }
 
 message RenameKeyResponse{
@@ -641,7 +647,8 @@ message RenameKeyResponse{
 }
 
 message DeleteKeyRequest {
-    required KeyArgs keyArgs = 1;
+    optional KeyArgs keyArgs = 1;
+    optional KeyInfo deletedKeyInfo = 2;
 }
 
 message DeleteKeyResponse {
@@ -695,8 +702,12 @@ message ListKeysResponse {
 }
 
 message CommitKeyRequest {
-    required KeyArgs keyArgs = 1;
+    optional KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
+
+    // This will be set during startTransaction for OM HA
+    //TODO: See if we can merge KeyArgs and KeyInfo.
+    optional KeyInfo keyInfo = 3;
 }
 
 message CommitKeyResponse {
@@ -704,13 +715,17 @@ message CommitKeyResponse {
 }
 
 message AllocateBlockRequest {
-    required KeyArgs keyArgs = 1;
+    optional KeyArgs keyArgs = 1;
     required uint64 clientID = 2;
     optional hadoop.hdds.ExcludeListProto excludeList = 3;
     // During HA on one of the OM nodes, we allocate block and send the
     // AllocateBlockRequest with keyLocation set. If this is set, no need to
     // call scm again in OM Ratis applyTransaction just append it to DB.
+
+    //TODO: See if we can merge KeyArgs and KeyInfo.
+    // This will be set during startTransaction for OM HA
     optional KeyLocation keyLocation = 4;
+    optional KeyInfo keyInfo = 5;
 }
 
 message AllocateBlockResponse {

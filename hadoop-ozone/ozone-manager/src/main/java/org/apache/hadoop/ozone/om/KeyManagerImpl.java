@@ -52,6 +52,7 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
+import org.apache.hadoop.ozone.om.helpers.OmAllocateBlockResponse;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -67,10 +68,6 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
@@ -272,10 +269,9 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+  public OmAllocateBlockResponse allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException {
     Preconditions.checkNotNull(args);
-
 
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -302,11 +298,32 @@ public class KeyManagerImpl implements KeyManager {
     if (!isRatisEnabled) {
       keyInfo.appendNewBlocks(locationInfos);
       keyInfo.updateModifcationTime();
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+      commitAllocateBlockToOMDB(openKey, keyInfo);
     }
-    return locationInfos.get(0);
+    return new OmAllocateBlockResponse(keyInfo, locationInfos.get(0));
 
   }
+
+
+  public void applyAllocateBlock(long clientID, OmKeyInfo omKeyInfo)
+      throws IOException {
+
+    Preconditions.checkNotNull(omKeyInfo);
+
+    String openKey = metadataManager.getOpenKey(
+        omKeyInfo.getVolumeName(), omKeyInfo.getBucketName(),
+        omKeyInfo.getKeyName(), clientID);
+
+    commitAllocateBlockToOMDB(openKey, omKeyInfo);
+
+  }
+
+  private void commitAllocateBlockToOMDB(String openKey, OmKeyInfo omKeyInfo)
+      throws IOException {
+    metadataManager.getOpenKeyTable().put(openKey, omKeyInfo);
+  }
+
+
 
   /**
    * This methods avoids multiple rpc calls to SCM by allocating multiple blocks
@@ -457,6 +474,24 @@ public class KeyManagerImpl implements KeyManager {
     return new OpenKeySession(currentTime, keyInfo, openVersion);
   }
 
+
+  public void applyOpenKey(OmKeyInfo omKeyInfo, long keySessionID)
+      throws IOException {
+    Preconditions.checkNotNull(omKeyInfo);
+
+    String openKey = metadataManager.getOpenKey(
+        omKeyInfo.getVolumeName(), omKeyInfo.getBucketName(),
+        omKeyInfo.getKeyName(), keySessionID);
+
+    commitOpenKeyToOMDB(openKey, omKeyInfo);
+  }
+
+  private void commitOpenKeyToOMDB(String openKey, OmKeyInfo omKeyInfo)
+      throws IOException {
+    metadataManager.getOpenKeyTable().put(openKey, omKeyInfo);
+  }
+
+
   private void allocateBlockInKey(OmKeyInfo keyInfo, long size, long sessionId)
       throws IOException {
     String openKey = metadataManager
@@ -476,7 +511,7 @@ public class KeyManagerImpl implements KeyManager {
     // When OM is not managed via ratis we should write in to Om db in
     // openKey call.
     if (!isRatisEnabled) {
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+      commitOpenKeyToOMDB(openKey, keyInfo);
     }
   }
 
@@ -543,40 +578,6 @@ public class KeyManagerImpl implements KeyManager {
     return createKeyInfo(args, locations, factor, type, size, encInfo);
   }
 
-  public void applyOpenKey(KeyArgs omKeyArgs,
-      KeyInfo keyInfo, long clientID) throws IOException {
-    Preconditions.checkNotNull(omKeyArgs);
-    String volumeName = omKeyArgs.getVolumeName();
-    String bucketName = omKeyArgs.getBucketName();
-
-    // Do we need to call again validateBucket, as this is just called after
-    // start Transaction from applyTransaction. Can we remove this double
-    // check?
-    validateBucket(volumeName, bucketName);
-
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-    String keyName = omKeyArgs.getKeyName();
-
-    // TODO: here if on OM machines clocks are skewed and there is a chance
-    //  for override of the openKey entries.
-    try {
-      String openKey = metadataManager.getOpenKey(
-          volumeName, bucketName, keyName, clientID);
-
-      OmKeyInfo omKeyInfo = OmKeyInfo.getFromProtobuf(keyInfo);
-
-      metadataManager.getOpenKeyTable().put(openKey,
-          omKeyInfo);
-    } catch (IOException ex) {
-      LOG.error("Apply Open Key failed for volume:{} bucket:{} key:{}",
-          volumeName, bucketName, keyName, ex);
-      throw new OMException(ex.getMessage(),
-          ResultCodes.KEY_ALLOCATION_ERROR);
-    } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-    }
-  }
-
   /**
    * Create OmKeyInfo object.
    * @param keyArgs
@@ -608,7 +609,7 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public void commitKey(OmKeyArgs args, long clientID) throws IOException {
+  public OmKeyInfo commitKey(OmKeyArgs args, long clientID) throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -632,12 +633,11 @@ public class KeyManagerImpl implements KeyManager {
 
       //update the block length for each block
       keyInfo.updateLocationInfoList(locationInfoList);
-      metadataManager.getStore().move(
-          openKey,
-          objectKey,
-          keyInfo,
-          metadataManager.getOpenKeyTable(),
-          metadataManager.getKeyTable());
+
+      if (!isRatisEnabled) {
+        commitCommitKeyToOMDB(keyInfo, openKey, objectKey);
+      }
+      return keyInfo;
     } catch (OMException e) {
       throw e;
     } catch (IOException ex) {
@@ -648,6 +648,29 @@ public class KeyManagerImpl implements KeyManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+  }
+
+  public void applyCommitKey(OmKeyInfo commitKeyInfo, long clientID)
+      throws IOException {
+    Preconditions.checkNotNull(commitKeyInfo);
+
+    String openKey = metadataManager.getOpenKey(commitKeyInfo.getVolumeName(),
+        commitKeyInfo.getBucketName(), commitKeyInfo.getKeyName(), clientID);
+    String ozoneKey =
+        metadataManager.getOzoneKey(commitKeyInfo.getVolumeName(),
+            commitKeyInfo.getBucketName(), commitKeyInfo.getKeyName());
+
+    commitCommitKeyToOMDB(commitKeyInfo, openKey, ozoneKey);
+  }
+
+  private void commitCommitKeyToOMDB(OmKeyInfo omKeyInfo, String openKey,
+      String ozoneKey) throws IOException {
+    metadataManager.getStore().move(
+        openKey,
+        ozoneKey,
+        omKeyInfo,
+        metadataManager.getOpenKeyTable(),
+        metadataManager.getKeyTable());
   }
 
   @Override
@@ -717,7 +740,8 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public void renameKey(OmKeyArgs args, String toKeyName) throws IOException {
+  public OmKeyInfo renameKey(OmKeyArgs args, String toKeyName)
+      throws IOException {
     Preconditions.checkNotNull(args);
     Preconditions.checkNotNull(toKeyName);
     String volumeName = args.getVolumeName();
@@ -749,7 +773,9 @@ public class KeyManagerImpl implements KeyManager {
       // A rename is a no-op if the target and source name is same.
       // TODO: Discuss if we need to throw?.
       if (fromKeyName.equals(toKeyName)) {
-        return;
+        //TODO: For HA we can optimize this, so that it does not go for
+        // applyTransaction.
+        return fromKeyValue;
       }
 
       // toKeyName should not exist
@@ -765,15 +791,12 @@ public class KeyManagerImpl implements KeyManager {
             OMException.ResultCodes.KEY_ALREADY_EXISTS);
       }
 
-      fromKeyValue.setKeyName(toKeyName);
       fromKeyValue.updateModifcationTime();
-      DBStore store = metadataManager.getStore();
-      try (BatchOperation batch = store.initBatchOperation()) {
-        metadataManager.getKeyTable().deleteWithBatch(batch, fromKey);
-        metadataManager.getKeyTable().putWithBatch(batch, toKey,
-            fromKeyValue);
-        store.commitBatchOperation(batch);
+      if (!isRatisEnabled) {
+        fromKeyValue.setKeyName(toKeyName);
+        commitRenameKeyToOMDB(fromKey, toKey, fromKeyValue);
       }
+      return fromKeyValue;
     } catch (IOException ex) {
       if (ex instanceof OMException) {
         throw ex;
@@ -787,8 +810,35 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
+
+  public void applyRenameKey(OmKeyInfo renameKeyInfo, String toKeyName)
+      throws IOException {
+
+    String fromKey = metadataManager.getOzoneKey(renameKeyInfo.getVolumeName(),
+        renameKeyInfo.getBucketName(), renameKeyInfo.getKeyName());
+
+    String toKey = metadataManager.getOzoneKey(renameKeyInfo.getVolumeName(),
+        renameKeyInfo.getBucketName(), toKeyName);
+
+    //Update keyName with toKeyName
+    renameKeyInfo.setKeyName(toKeyName);
+    commitRenameKeyToOMDB(fromKey, toKey, renameKeyInfo);
+
+  }
+
+  private void commitRenameKeyToOMDB(String fromKey, String toKey,
+      OmKeyInfo renameKeyInfo) throws IOException {
+    DBStore store = metadataManager.getStore();
+    try (BatchOperation batch = store.initBatchOperation()) {
+      metadataManager.getKeyTable().deleteWithBatch(batch, fromKey);
+      metadataManager.getKeyTable().putWithBatch(batch, toKey,
+          renameKeyInfo);
+      store.commitBatchOperation(batch);
+    }
+  }
+
   @Override
-  public void deleteKey(OmKeyArgs args) throws IOException {
+  public OmKeyInfo deleteKey(OmKeyArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -801,18 +851,11 @@ public class KeyManagerImpl implements KeyManager {
       if (keyInfo == null) {
         throw new OMException("Key not found",
             OMException.ResultCodes.KEY_NOT_FOUND);
-      } else {
-        // directly delete key with no blocks from db. This key need not be
-        // moved to deleted table.
-        if (isKeyEmpty(keyInfo)) {
-          metadataManager.getKeyTable().delete(objectKey);
-          LOG.debug("Key {} deleted from OM DB", keyName);
-          return;
-        }
       }
-      metadataManager.getStore().move(objectKey,
-          metadataManager.getKeyTable(),
-          metadataManager.getDeletedTable());
+      if (!isRatisEnabled) {
+        commitDeleteKeyToOMDB(objectKey, keyInfo);
+      }
+      return keyInfo;
     } catch (OMException ex) {
       throw ex;
     } catch (IOException ex) {
@@ -822,6 +865,30 @@ public class KeyManagerImpl implements KeyManager {
           ResultCodes.KEY_DELETION_ERROR);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
+  }
+
+  public void applyDeleteKey(OmKeyInfo deleteOmKeyInfo) throws IOException {
+    String deleteKey = metadataManager.getOzoneKey(
+        deleteOmKeyInfo.getVolumeName(), deleteOmKeyInfo.getBucketName(),
+        deleteOmKeyInfo.getKeyName());
+    commitDeleteKeyToOMDB(deleteKey, deleteOmKeyInfo);
+  }
+
+  private void commitDeleteKeyToOMDB(String deleteKey,
+      OmKeyInfo deleteOmKeyInfo) throws IOException {
+    if (isKeyEmpty(deleteOmKeyInfo)) {
+      LOG.debug("Key {} deleted from OM DB, which is empty", deleteKey);
+      metadataManager.getKeyTable().delete(deleteKey);
+      return;
+    } else {
+      DBStore store = metadataManager.getStore();
+      try (BatchOperation batch = store.initBatchOperation()) {
+        metadataManager.getDeletedTable().putWithBatch(batch, deleteKey,
+            deleteOmKeyInfo);
+        metadataManager.getKeyTable().deleteWithBatch(batch, deleteKey);
+        store.commitBatchOperation(batch);
+      }
     }
   }
 

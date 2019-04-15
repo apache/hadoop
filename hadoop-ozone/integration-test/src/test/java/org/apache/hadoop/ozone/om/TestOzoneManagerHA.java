@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -201,8 +202,84 @@ public class TestOzoneManagerHA {
     OzoneTestUtils.expectOmException(OMException.ResultCodes.BUCKET_NOT_FOUND,
         () -> retVolume.deleteBucket(bucketName));
 
+  }
 
 
+  @Test
+  public void testAllKeyOperations() throws Exception {
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
+
+    OzoneVolume retVolume = createAndCheckVolume(volumeName);
+
+    BucketArgs bucketArgs =
+        BucketArgs.newBuilder().setStorageType(StorageType.DISK)
+            .setVersioning(true).build();
+
+    retVolume.createBucket(bucketName, bucketArgs);
+
+
+    OzoneBucket ozoneBucket = retVolume.getBucket(bucketName);
+
+    Assert.assertEquals(volumeName, ozoneBucket.getVolumeName());
+    Assert.assertEquals(bucketName, ozoneBucket.getName());
+    Assert.assertTrue(ozoneBucket.getVersioning());
+    Assert.assertEquals(StorageType.DISK, ozoneBucket.getStorageType());
+    Assert.assertTrue(ozoneBucket.getCreationTime() <= Time.now());
+
+    String keyName = UUID.randomUUID().toString();
+    int dataSize = createAndReadKey(ozoneBucket, keyName);
+
+    OzoneKeyDetails ozoneKeyDetails = ozoneBucket.getKey(keyName);
+
+    long modificationTimeBeforeRename = ozoneKeyDetails.getModificationTime();
+
+    Assert.assertTrue(ozoneKeyDetails.getBucketName().equals(bucketName));
+    Assert.assertTrue(ozoneKeyDetails.getVolumeName().equals(volumeName));
+    Assert.assertTrue(ozoneKeyDetails.getName().equals(keyName));
+    Assert.assertEquals(dataSize, ozoneKeyDetails.getDataSize());
+    Assert.assertTrue(
+        modificationTimeBeforeRename <= System.currentTimeMillis());
+
+
+    String toKey = UUID.randomUUID().toString();
+    ozoneBucket.renameKey(keyName, toKey);
+
+    ozoneKeyDetails = ozoneBucket.getKey(toKey);
+
+    Assert.assertTrue(ozoneKeyDetails.getBucketName().equals(bucketName));
+    Assert.assertTrue(ozoneKeyDetails.getVolumeName().equals(volumeName));
+    Assert.assertTrue(ozoneKeyDetails.getName().equals(toKey));
+    Assert.assertEquals(dataSize, ozoneKeyDetails.getDataSize());
+
+
+    Assert.assertTrue(
+        modificationTimeBeforeRename != ozoneKeyDetails.getModificationTime());
+
+    ozoneBucket.deleteKey(toKey);
+
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.KEY_NOT_FOUND,
+        () -> ozoneBucket.getKey(toKey));
+
+  }
+
+  private int createAndReadKey(OzoneBucket ozoneBucket, String keyName)
+      throws Exception {
+    String value = "random data";
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
+        value.length(), ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE, new HashMap<>());
+    ozoneOutputStream.write(value.getBytes(), 0, value.length());
+    ozoneOutputStream.close();
+
+
+    OzoneInputStream ozoneInputStream = ozoneBucket.readKey(keyName);
+
+    byte[] fileContent = new byte[value.getBytes().length];
+    ozoneInputStream.read(fileContent);
+    Assert.assertEquals(value, new String(fileContent));
+
+    return value.length();
   }
 
   /**
@@ -385,18 +462,7 @@ public class TestOzoneManagerHA {
       Assert.assertTrue(ozoneBucket.getName().equals(bucketName));
       Assert.assertTrue(ozoneBucket.getVolumeName().equals(volumeName));
 
-      String value = "random data";
-      OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
-          value.length(), ReplicationType.STAND_ALONE,
-          ReplicationFactor.ONE, new HashMap<>());
-      ozoneOutputStream.write(value.getBytes(), 0, value.length());
-      ozoneOutputStream.close();
-
-      OzoneInputStream ozoneInputStream = ozoneBucket.readKey(keyName);
-
-      byte[] fileContent = new byte[value.getBytes().length];
-      ozoneInputStream.read(fileContent);
-      Assert.assertEquals(value, new String(fileContent));
+      createAndReadKey(ozoneBucket, keyName);
 
     } catch (ConnectException | RemoteException e) {
       if (!checkSuccess) {

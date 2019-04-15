@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.helpers.OmAllocateBlockResponse;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -29,10 +30,6 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.fs.OzoneManagerFS;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
 import org.apache.hadoop.utils.BackgroundService;
@@ -67,7 +64,17 @@ public interface KeyManager extends OzoneManagerFS {
    * @param clientID the client that is committing.
    * @throws IOException
    */
-  void commitKey(OmKeyArgs args, long clientID) throws IOException;
+  OmKeyInfo commitKey(OmKeyArgs args, long clientID) throws IOException;
+
+
+  /**
+   * Apply Commit Key Transaction to OM DB.
+   * @param commitKeyInfo
+   * @param clientID
+   * @throws IOException
+   */
+  void applyCommitKey(OmKeyInfo commitKeyInfo, long clientID)
+      throws IOException;
 
   /**
    * A client calls this on an open key, to request to allocate a new block,
@@ -80,8 +87,18 @@ public interface KeyManager extends OzoneManagerFS {
    * @return the reference to the new block.
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+  OmAllocateBlockResponse allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException;
+
+
+  /**
+   * Apply Allocate Block changes to OM DB.
+   * @param clientID
+   * @param omKeyInfo
+   * @throws IOException
+   */
+  void applyAllocateBlock(long clientID, OmKeyInfo omKeyInfo)
+      throws IOException;
 
   /**
    * Ozone manager state machine call's this on an open key, to add allocated
@@ -110,16 +127,12 @@ public interface KeyManager extends OzoneManagerFS {
   OpenKeySession openKey(OmKeyArgs args) throws IOException;
 
   /**
-   * Add the openKey entry with given keyInfo and clientID in to openKeyTable.
-   * This will be called only from applyTransaction, once after calling
-   * applyKey in startTransaction.
-   *
-   * @param omKeyArgs
-   * @param keyInfo
-   * @param clientID
+   * Apply Open Key changes to OM DB.
+   * @param omKeyInfo
+   * @param keySessionID
    * @throws IOException
    */
-  void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
+  void applyOpenKey(OmKeyInfo omKeyInfo, long keySessionID)
       throws IOException;
 
   /**
@@ -140,7 +153,17 @@ public interface KeyManager extends OzoneManagerFS {
    * @throws IOException if specified key doesn't exist or
    * some other I/O errors while renaming the key.
    */
-  void renameKey(OmKeyArgs args, String toKeyName) throws IOException;
+  OmKeyInfo renameKey(OmKeyArgs args, String toKeyName) throws IOException;
+
+
+  /**
+   * Apply Rename Key changes to OM DB.
+   * @param renameKeyInfo
+   * @param toKeyName
+   * @throws IOException
+   */
+  void applyRenameKey(OmKeyInfo renameKeyInfo, String toKeyName)
+      throws IOException;
 
   /**
    * Deletes an object by an object key. The key will be immediately removed
@@ -151,7 +174,15 @@ public interface KeyManager extends OzoneManagerFS {
    * @throws IOException if specified key doesn't exist or
    * some other I/O errors while deleting an object.
    */
-  void deleteKey(OmKeyArgs args) throws IOException;
+  OmKeyInfo deleteKey(OmKeyArgs args) throws IOException;
+
+
+  /**
+   * Apply Delete Key changes to OM DB.
+   * @param deleteOmKeyInfo
+   * @throws IOException
+   */
+  void applyDeleteKey(OmKeyInfo deleteOmKeyInfo) throws IOException;
 
   /**
    * Returns a list of keys represented by {@link OmKeyInfo}

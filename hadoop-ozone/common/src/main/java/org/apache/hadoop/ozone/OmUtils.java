@@ -211,7 +211,6 @@ public final class OmUtils {
     case GetDelegationToken:
     case RenewDelegationToken:
     case CancelDelegationToken:
-    case ApplyCreateKey:
     case ApplyInitiateMultiPartUpload:
     case CreateDirectory:
     case CreateFile:

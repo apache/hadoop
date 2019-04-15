@@ -18,18 +18,38 @@
 package org.apache.hadoop.ozone.protocolPB;
 
 import java.io.IOException;
+import java.util.stream.Collectors;
 
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.ozone.om.helpers.OmAllocateBlockResponse;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .AllocateBlockRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .AllocateBlockResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CommitKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CommitKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -39,13 +59,23 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteKeyResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteVolumeRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteVolumeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .RenameKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .RenameKeyResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetBucketPropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -99,6 +129,21 @@ public class OzoneManagerHARequestHandlerImpl
     case DeleteBucket:
       newOmRequest = handleDeleteBucketRequestStart(omRequest);
       break;
+    case AllocateBlock:
+      newOmRequest = handleAllocateBlockStart(omRequest);
+      break;
+    case CreateKey:
+      newOmRequest = handleCreateKeyStart(omRequest);
+      break;
+    case RenameKey:
+      newOmRequest = handleRenameKeyStart(omRequest);
+      break;
+    case DeleteKey:
+      newOmRequest = handleDeleteKeyStart(omRequest);
+      break;
+    case CommitKey:
+      newOmRequest = handleCommitKeyStart(omRequest);
+      break;
     default:
       throw new IOException("Unrecognized Command Type:" + cmdType);
     }
@@ -138,6 +183,22 @@ public class OzoneManagerHARequestHandlerImpl
       case DeleteBucket:
         responseBuilder.setDeleteBucketResponse(
             handleDeleteBucketApply(omRequest));
+        break;
+      case AllocateBlock:
+        responseBuilder.setAllocateBlockResponse(
+            handleAllocateBlockApply(omRequest));
+        break;
+      case CreateKey:
+        responseBuilder.setCreateKeyResponse(handleCreateKeyApply(omRequest));
+        break;
+      case RenameKey:
+        responseBuilder.setRenameKeyResponse(handleRenameKeyApply(omRequest));
+        break;
+      case DeleteKey:
+        responseBuilder.setDeleteKeyResponse(handleDeleteKeyApply(omRequest));
+        break;
+      case CommitKey:
+        responseBuilder.setCommitKeyResponse(handleCommitKeyApply(omRequest));
         break;
       default:
         // As all request types are not changed so we need to call handle
@@ -363,6 +424,222 @@ public class OzoneManagerHARequestHandlerImpl
     return SetBucketPropertyResponse.newBuilder().build();
   }
 
+  private OMRequest handleAllocateBlockStart(OMRequest omRequest)
+      throws IOException {
+
+    OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
+        omRequest.getAllocateBlockRequest();
+
+    OzoneManagerProtocolProtos.KeyArgs keyArgs =
+        allocateBlockRequest.getKeyArgs();
+
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+
+    OmAllocateBlockResponse omAllocateBlockResponse =
+        getOzoneManagerServerProtocol().startAllocateBlock(omKeyArgs,
+        allocateBlockRequest.getClientID(), ExcludeList.getFromProtoBuf(
+            allocateBlockRequest.getExcludeList()));
+
+
+    AllocateBlockRequest newAllocateBlockRequest =
+        AllocateBlockRequest.newBuilder()
+            .setClientID(allocateBlockRequest.getClientID())
+            .setKeyInfo(omAllocateBlockResponse.getOmKeyInfo().getProtobuf())
+            .setKeyLocation(
+                omAllocateBlockResponse.getCurrentAllocatedBlockInfo()
+                    .getProtobuf()).build();
+
+    return OMRequest.newBuilder().setCmdType(Type.AllocateBlock)
+        .setAllocateBlockRequest(newAllocateBlockRequest)
+        .setTraceID(omRequest.getTraceID())
+        .setClientId(omRequest.getClientId()).build();
+  }
+
+
+  private AllocateBlockResponse handleAllocateBlockApply(OMRequest omRequest)
+      throws IOException {
+    OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
+        omRequest.getAllocateBlockRequest();
+
+    getOzoneManagerServerProtocol().applyAllocateBlock(
+        allocateBlockRequest.getClientID(), OmKeyInfo.getFromProtobuf(
+            allocateBlockRequest.getKeyInfo()));
+
+    return AllocateBlockResponse.newBuilder().setKeyLocation(
+        allocateBlockRequest.getKeyLocation()).build();
+  }
+
+  private OMRequest handleCreateKeyStart(OMRequest omRequest)
+      throws IOException {
+    CreateKeyRequest createKeyRequest = omRequest.getCreateKeyRequest();
+
+    KeyArgs keyArgs = createKeyRequest.getKeyArgs();
+
+
+    HddsProtos.ReplicationType type =
+        keyArgs.hasType() ? keyArgs.getType() : null;
+    HddsProtos.ReplicationFactor factor =
+        keyArgs.hasFactor() ? keyArgs.getFactor() : null;
+
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setDataSize(keyArgs.getDataSize())
+        .setType(type)
+        .setFactor(factor)
+        .setIsMultipartKey(keyArgs.getIsMultipartKey())
+        .setMultipartUploadID(keyArgs.getMultipartUploadID())
+        .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
+        .build();
+
+    OpenKeySession openKeySession =
+        getOzoneManagerServerProtocol().startOpenKey(omKeyArgs);
+
+    CreateKeyRequest newCreateKeyRequest =
+        CreateKeyRequest.newBuilder()
+            .setKeyInfo(openKeySession.getKeyInfo().getProtobuf())
+            .setID(openKeySession.getId())
+            .setOpenVersion(openKeySession.getOpenVersion()).build();
+
+    return OMRequest.newBuilder().setCmdType(Type.CreateKey)
+        .setClientId(omRequest.getClientId())
+        .setTraceID(omRequest.getTraceID())
+        .setCreateKeyRequest(newCreateKeyRequest).build();
+
+  }
+
+  private CreateKeyResponse handleCreateKeyApply(OMRequest omRequest)
+      throws IOException {
+    CreateKeyRequest createKeyRequest = omRequest.getCreateKeyRequest();
+
+    getOzoneManagerServerProtocol().applyOpenKey(
+        OmKeyInfo.getFromProtobuf(createKeyRequest.getKeyInfo()),
+        createKeyRequest.getID());
+
+    return CreateKeyResponse.newBuilder()
+        .setID(createKeyRequest.getID())
+        .setKeyInfo(createKeyRequest.getKeyInfo())
+        .setOpenVersion(createKeyRequest.getOpenVersion()).build();
+
+  }
+
+
+  private OMRequest handleRenameKeyStart(OMRequest omRequest)
+      throws IOException {
+    RenameKeyRequest renameKeyRequest = omRequest.getRenameKeyRequest();
+
+    KeyArgs keyArgs = renameKeyRequest.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setRefreshPipeline(true)
+        .build();
+
+    OmKeyInfo renameKeyInfo =
+        getOzoneManagerServerProtocol().startRenameKey(omKeyArgs,
+        renameKeyRequest.getToKeyName());
+
+    RenameKeyRequest newRenameKeyRequest =
+        RenameKeyRequest.newBuilder()
+            .setRenameKeyInfo(renameKeyInfo.getProtobuf())
+            .setToKeyName(renameKeyRequest.getToKeyName()).build();
+    return OMRequest.newBuilder().setCmdType(Type.RenameKey)
+        .setClientId(omRequest.getClientId())
+        .setTraceID(omRequest.getTraceID())
+        .setRenameKeyRequest(newRenameKeyRequest).build();
+  }
+
+  private RenameKeyResponse handleRenameKeyApply(OMRequest omRequest)
+      throws IOException {
+    RenameKeyRequest renameKeyRequest = omRequest.getRenameKeyRequest();
+
+    getOzoneManagerServerProtocol().applyRenameKey(
+        OmKeyInfo.getFromProtobuf(renameKeyRequest.getRenameKeyInfo()),
+        renameKeyRequest.getToKeyName());
+
+    return RenameKeyResponse.newBuilder().build();
+  }
+
+  private OMRequest handleDeleteKeyStart(OMRequest omRequest)
+      throws IOException {
+    DeleteKeyRequest deleteKeyRequest = omRequest.getDeleteKeyRequest();
+
+    KeyArgs keyArgs = deleteKeyRequest.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+
+    OmKeyInfo deleteOmKeyInfo =
+        getOzoneManagerServerProtocol().startDeleteKey(omKeyArgs);
+
+    DeleteKeyRequest newDeleteKeyRequest =
+        DeleteKeyRequest.newBuilder()
+            .setDeletedKeyInfo(deleteOmKeyInfo.getProtobuf()).build();
+
+    return omRequest.toBuilder().setDeleteKeyRequest(newDeleteKeyRequest)
+        .build();
+  }
+
+
+  private DeleteKeyResponse handleDeleteKeyApply(OMRequest omRequest)
+      throws IOException {
+    DeleteKeyRequest deleteKeyRequest = omRequest.getDeleteKeyRequest();
+
+    getOzoneManagerServerProtocol().applyDeleteKey(
+        OmKeyInfo.getFromProtobuf(deleteKeyRequest.getDeletedKeyInfo()));
+
+    return DeleteKeyResponse.newBuilder().build();
+  }
+
+  private OMRequest handleCommitKeyStart(OMRequest omRequest)
+      throws IOException {
+    CommitKeyRequest commitKeyRequest = omRequest.getCommitKeyRequest();
+
+    KeyArgs keyArgs = commitKeyRequest.getKeyArgs();
+
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setLocationInfoList(keyArgs.getKeyLocationsList().stream()
+            .map(OmKeyLocationInfo::getFromProtobuf)
+            .collect(Collectors.toList()))
+        .setDataSize(keyArgs.getDataSize())
+        .build();
+    OmKeyInfo omKeyInfo =
+        getOzoneManagerServerProtocol().startCommitKey(omKeyArgs,
+        commitKeyRequest.getClientID());
+
+    CommitKeyRequest newCommitKeyRequest =
+        CommitKeyRequest.newBuilder()
+            .setClientID(commitKeyRequest.getClientID())
+            .setKeyInfo(omKeyInfo.getProtobuf())
+            .build();
+
+    return omRequest.toBuilder().setCommitKeyRequest(newCommitKeyRequest)
+        .build();
+
+  }
+
+
+  private CommitKeyResponse handleCommitKeyApply(OMRequest omRequest)
+      throws IOException {
+    CommitKeyRequest commitKeyRequest = omRequest.getCommitKeyRequest();
+
+    getOzoneManagerServerProtocol().applyCommitKey(
+        OmKeyInfo.getFromProtobuf(commitKeyRequest.getKeyInfo()),
+        commitKeyRequest.getClientID());
+
+    return CommitKeyResponse.newBuilder().build();
+  }
 
 
 }
