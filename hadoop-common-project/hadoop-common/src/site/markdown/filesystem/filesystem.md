@@ -1091,7 +1091,7 @@ removes the path and all descendants
 * Object Stores and other non-traditional filesystems onto which a directory
  tree is emulated, tend to implement `delete()` as recursive listing and
 entry-by-entry delete operation.
-This can break the expectations of client applications for O(1) atomic directory
+This can break the expectations of client applications for `O(1)` atomic directory
 deletion, preventing the stores' use as drop-in replacements for HDFS.
 
 ### `boolean rename(Path src, Path d)`
@@ -1099,7 +1099,19 @@ deletion, preventing the stores' use as drop-in replacements for HDFS.
 In terms of its specification, `rename()` is one of the most complex operations within a filesystem .
 
 In terms of its implementation, it is the one with the most ambiguity regarding when to return false
-versus raising an exception.
+versus raising an exception. This makes less useful to use than
+others: in production code it is usually wrapped by code to raise an 
+exception when `false` is returned.
+
+```java
+if (!fs.rename(src, dest)) {
+  throw new IOException("rename failed!!!");
+}
+```
+
+The weakness of this approach is not just that all uses need to be so
+guarded, the actual cause of the failure is lost.
+
 
 Rename includes the calculation of the destination path.
 If the destination exists and is a directory, the final destination
@@ -1260,17 +1272,29 @@ HDFS fails without raising an exception; `rename()` merely returns false.
 The behavior of HDFS here must not be considered a feature to replicate.
 
 
-### `void rename(final Path src, final Path d, Rename... options)`
+### `void rename(Path source, Path dest, Rename...options)`
 
-This is a stricter version of `rename(src, dst)`, which:
+This is a stricter version of `rename(src, dest)`, which:
 
-1. Defines the policy on overwriting paths
-1. Defines the policy on nonexistent source paths
+1. Defines the policy on overwriting paths.
+1. Defines the policy on nonexistent source paths.
+1. MUST raise an exception on all failure conditions.
 1. Has no return code. If the method does not raise an exception, it has
 succeeded.
 
+The semantics of this method are simpler and more clearly defined.
 
-The `Rename` enumeration has three values
+- The final path of the rename is always that of the `dest` argument; there
+is no attempt to generate a new path underneath a target directory. 
+- If that destination exists, unless the `Rename.OVERWRITE` is set, an exception
+is raised.
+- The parent directory MUST exist.
+
+This avoids the "quirks" of `rename(source, dest)` where the behaviour
+of the rename depends on the type and state of the destination.
+
+
+The `Rename` enumeration has three values:
 
 * `NONE`: This is a no-op entry.
 * `OVERWRITE`: overwrite any destination file or empty destination directory.
@@ -1282,134 +1306,130 @@ As multiple entries can be supplied, all probes for features are done by
 checking for the specific flag in the options list. There is no requirement of
 ordering, and it is not an error if there are duplicate entries.
 
-
-    let overwrite = Rename.OVERWRITE in options
-
-Rename includes the calculation of the destination path.
-If the destination exists and is a directory, the final destination
-of the rename becomes the destination + the filename of the source path.
-
-    let dest = if (isDirectory(FS, src) and d != src) :
-            d + [filename(src)]
-        else :
-            d
+```python
+let overwrite = Rename.OVERWRITE in options
+```
 
 #### Preconditions
 
-All checks on the destination path MUST take place after the final `dest` path
-has been calculated.
+Source `source` MUST exist:
 
-Source `src` must exist:
+```python
+exists(FS, source) else raise FileNotFoundException
+```
 
-    exists(FS, src) else raise FileNotFoundException
 
-`src` must not be root:
+`source` MUST NOT be root:
 
-    if isRoot(FS, src)): raise IOException
+```python
+if isRoot(FS, source)): raise IOException
+```
 
-`dest` cannot equal `src`
+`dest` MUST NOT equal `source`
 
-    src != dest else raise FileAlreadyExistsException
+```python
+source != dest else raise FileAlreadyExistsException
+```
 
-**TODO**
+`dest` MUST NOT be a descendant of `source`:
 
-`dest` cannot be a descendant of `src`:
+```python
+if isDescendant(FS, source, dest) : raise IOException
+```
 
-    if isDescendant(FS, src, dest) : raise IOException
+`dest` MUST NOT be root:
 
-This implicitly covers the special case of `isRoot(FS, src)`: the source
-cannot be the root path as all destinations are descendants of that.
+```python
+if isRoot(FS, dest)): raise IOException
+```
 
-`dest` must not be root:
 
-    if isRoot(FS, dest)): raise IOException
+The parent directory of `dest` MUST exist:
 
-`dest` must have a parent that exists:
+```python
+exists(FS, parent(dest)) else raise FileNotFoundException
+```
 
-    exists(FS, parent(dest)) else raise FileNotFoundException
 
-The parent path of a destination must be a directory:
+The parent path of a destination MUST be a directory:
 
-    isDirectory(FS, parent(dest)) else raise ParentNotDirectoryException
+```python
+isDirectory(FS, parent(dest)) else raise ParentNotDirectoryException
+```
 
 This implicitly covers all the ancestors of the parent.
 
-If the destination path resolves to an entry, the type of the entry must match
+If `dest` exists the type of the entry MUST match
 that of the source.
 
-    if exists(FS, dest) and isFile(FS, dest) and not isFile(FS, src): raise IOException
-    if exists(FS, dest) and isDirectory(FS, dest) and not isDirectory(FS, src): raise IOException
+```python
+if exists(FS, dest) and isFile(FS, dest) and not isFile(FS, src): raise IOException
+if exists(FS, dest) and isDirectory(FS, dest) and not isDirectory(FS, src): raise IOException
+```
+
 
 There must be not be an existing file at the end of the destination path unless
 `Rename.OVERWRITE` was set.
 
-    if isFile(FS, dest) and not overwrite: raise FileAlreadyExistsException
-
-There must be not be an existing directory at the end of the destination path unless
-`Rename.OVERWRITE` was set.
-
-
-    if isDirectory(FS, dest) and not overwrite and not isFile(FS, src): raise FileAlreadyExistsException
+```python
+if isFile(FS, dest) and not overwrite: raise FileAlreadyExistsException
+```
 
 
-If there is a directory at the end of the path, it must be empty
+If the source is a directory, there must be not be an existing directory at the end of
+the destination path unless `Rename.OVERWRITE` was set.
 
-    if isDirectory(FS, dest) and len(listStatus(FS, dest)) > 0: raise IOException
+```python
+if isDirectory(FS, dest) and not overwrite and isDirectory(FS, source): raise FileAlreadyExistsException
+```
+
+
+
+If there is a directory at the end of the path, it must be empty:
+
+```python
+if isDirectory(FS, source) and isDirectory(FS, dest) and len(listStatus(FS, dest)) > 0:
+    raise IOException
+```
+
+Note how this is different from `rename(src, dest)`.
 
 
 #### Postconditions
 
+##### Renaming a file onto an empty path or an existing file
 
-##### Renaming a directory onto itself
+Renaming a file to a path where there is no entry moves the file to the
+destination path. If the destination exists, the operation MUST fail unless the
+`overwrite` option is not set. If `overwrite` is set the semantics are the same
+as renaming onto an empty path.
 
-**TODO**
+```python
+if isFile(FS, source) and not exists(dest) or (isFile(dest) and overwrite):
+    FS' where:
+        exists(FS', dest)
+        and data(FS', dest) == data(FS, source)
+        and not exists(FS', source)
+```
 
-This is rejected
+##### Renaming a directory
 
-     if isDirectory(FS, src) and src == dest : raise IOException
+If `source` is a directory then all its children will then exist under `dest`, while the path
+`source` and its descendants will no longer exist. The names of the paths under
+`dest` will match those under `source`, as will the contents:
 
-
-##### Renaming a file to self
-
-**TODO**
-
-Renaming a file onto itself is a no-op.
-
-     if isFile(FS, src) and src == dest raise FileAlreadyExistsException
-         FS' = FS
-
-** This is not true if OVERWRITE is set: src is deleted. **
-
-    FS' = FS where not exists(FS, src)
-
-##### Renaming a file onto a nonexistent path
-
-Renaming a file where the destination is a directory moves the file as a child
- of the destination directory, retaining the filename element of the source path.
-
-    if isFile(FS, src) and src != dest:
-        FS' where:
-            not exists(FS', src)
-            and exists(FS', dest)
-            and data(FS', dest) == data (FS, dest)
-
-
-##### Renaming a directory under a directory
-
-If `src` is a directory then all its children will then exist under `dest`, while the path
-`src` and its descendants will no longer exist. The names of the paths under
-`dest` will match those under `src`, as will the contents:
-
-    if isDirectory(FS, src) :
-        FS' where:
-            not exists(FS', src)
-            and dest in FS'.Directories
-            and forall c in descendants(FS, src) :
-                not exists(FS', c))
-            and forall c in descendants(FS, src) where isDirectory(FS, c):
-                isDirectory(FS', dest + childElements(src, c))
-            and forall c in descendants(FS, src) where not isDirectory(FS, c):
-                data(FS', dest + childElements(s, c)) == data(FS, c)
+```python
+if isDirectory(FS, source) :
+    FS' where:
+        isDirectory(FS, dest)
+        and forall c in descendants(FS, source) where isDirectory(FS, c):
+            isDirectory(FS', dest + childElements(source, c))
+        and forall c in descendants(FS, source) where not isDirectory(FS, c):
+            data(FS', dest + childElements(s, c)) == data(FS, c)
+        and not exists(FS', source)
+        and forall c in descendants(FS, source):
+            not exists(FS', c))
+```
 
 ##### Concurrency requirements
 
@@ -1417,8 +1437,9 @@ If `src` is a directory then all its children will then exist under `dest`, whil
 another, SHOULD be atomic. Many applications rely on this as a way to commit operations.
 
 * However, the base implementation is *not* atomic; some of the precondition checks
-are performed separately. HDFS's `rename()` operation *is* atomic; other filesystems
-should follow its example.
+are performed separately. 
+
+HDFS's `rename()` operation *is* atomic; other filesystems SHOULD follow its example.
 
 ##### Implementation Notes
 

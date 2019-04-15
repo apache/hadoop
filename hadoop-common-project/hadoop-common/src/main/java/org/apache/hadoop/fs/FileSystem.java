@@ -1520,10 +1520,10 @@ public abstract class FileSystem extends Configured
   public abstract boolean rename(Path src, Path dst) throws IOException;
 
   /**
-   * Renames Path src to Path dst
+   * Renames Path source to Path dest.
    * <ul>
-   *   <li>Fails if src is a file and dest is a directory.</li>
-   *   <li>Fails if src is a directory and dest is a file.</li>
+   *   <li>Fails if source is a file and dest is a directory.</li>
+   *   <li>Fails if source is a directory and dest is a file.</li>
    *   <li>Fails if the parent of dest does not exist or is a file.</li>
    * </ul>
    * <p>
@@ -1555,7 +1555,7 @@ public abstract class FileSystem extends Configured
     final String srcStr = src.toUri().getPath();
     final String dstStr = dst.toUri().getPath();
     if (dstStr.startsWith(srcStr)
-        && dstStr.charAt(srcStr.length()) == Path.SEPARATOR_CHAR) {
+        && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
       throw new IOException(String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
     }
     if ("/".equals(srcStr)) {

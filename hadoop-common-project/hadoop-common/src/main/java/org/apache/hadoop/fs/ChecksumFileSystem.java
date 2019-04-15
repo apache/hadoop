@@ -643,7 +643,7 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Rename files/dirs
+   * Rename files/dirs.
    */
   @Override
   @SuppressWarnings("deprecation")
@@ -669,6 +669,36 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       }
 
       return value;
+    }
+  }
+
+  /**
+   * Rename files/dirs.
+   */
+  @Override
+  @SuppressWarnings("deprecation")
+  public void rename(final Path src,
+      Path dst,
+      final Options.Rename... options)
+      throws IOException {
+
+    if (fs.isDirectory(src)) {
+      fs.rename(src, dst, options);
+    } else {
+      if (fs.isDirectory(dst)) {
+        dst = new Path(dst, src.getName());
+      }
+
+      fs.rename(src, dst, options);
+
+      Path srcCheckFile = getChecksumFile(src);
+      Path dstCheckFile = getChecksumFile(dst);
+      if (fs.exists(srcCheckFile)) { //try to rename checksum
+        fs.rename(srcCheckFile, dstCheckFile, Options.Rename.OVERWRITE);
+      } else {
+        // no src checksum, so remove dst checksum if present
+        fs.delete(dstCheckFile, true);
+      }
     }
   }
 

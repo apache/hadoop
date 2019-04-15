@@ -18,21 +18,45 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.hadoop.fs.FileAlreadyExistsException;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.junit.Test;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import org.junit.Test;
+
+import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Path;
+
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertListStatusFinds;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.rm;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyFileContents;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test renaming files.
+ * Test renaming files with the {@code oolean rename(source, dest)}
+ * call.
  */
-public abstract class AbstractContractRenameTest extends
+public abstract class AbstractContractRenameExTest extends
     AbstractFSContractTestBase {
+
+  protected void renameEx(
+      final Path src,
+      final Path dst)
+      throws IOException {
+    getFileSystem().rename(src, dst, Options.Rename.NONE);
+  }
+
+  protected void renameEx(
+      final Path src,
+      final Path dst,
+      final Options.Rename... options)
+      throws IOException {
+    getFileSystem().rename(src, dst, options);
+  }
 
   @Test
   public void testRenameNewFileSameDir() throws Throwable {
@@ -53,35 +77,16 @@ public abstract class AbstractContractRenameTest extends
   @Test
   public void testRenameNonexistentFile() throws Throwable {
     describe("rename a file which does not exist");
-    Path missing = path("testRenameNonexistentFileSrc");
-    Path target = path("testRenameNonexistentFileDest");
-    boolean renameReturnsFalseOnFailure =
-        isSupported(ContractOptions.RENAME_RETURNS_FALSE_IF_SOURCE_MISSING);
+    final Path missing = path("testRenameNonexistentFileSrc");
+    final Path target = path("testRenameNonexistentFileDest");
     mkdirs(missing.getParent());
-    try {
-      boolean renamed = rename(missing, target);
-      //expected an exception
-      if (!renameReturnsFalseOnFailure) {
-        String destDirLS = generateAndLogErrorListing(missing, target);
-        fail("expected rename(" + missing + ", " + target + " ) to fail," +
-             " got a result of " + renamed
-             + " and a destination directory of " + destDirLS);
-      } else {
-        // at least one FS only returns false here, if that is the case
-        // warn but continue
-        getLogger().warn("Rename returned {} renaming a nonexistent file", renamed);
-        assertFalse("Renaming a missing file returned true", renamed);
-      }
-    } catch (FileNotFoundException e) {
-      if (renameReturnsFalseOnFailure) {
-        ContractTestUtils.fail(
-            "Renaming a missing file unexpectedly threw an exception", e);
-      }
+    IOException e = intercept(IOException.class,
+        () -> renameEx(missing, target));
+    if (e instanceof FileNotFoundException) {
       handleExpectedException(e);
-    } catch (IOException e) {
+    } else {
       handleRelaxedException("rename nonexistent file",
-          "FileNotFoundException",
-          e);
+          "FileNotFoundException", e);
     }
     assertPathDoesNotExist("rename nonexistent file created a destination file",
         target);
@@ -90,99 +95,105 @@ public abstract class AbstractContractRenameTest extends
   /**
    * Rename test -handles filesystems that will overwrite the destination
    * as well as those that do not (i.e. HDFS).
-   * @throws Throwable
    */
   @Test
   public void testRenameFileOverExistingFile() throws Throwable {
     describe("Verify renaming a file onto an existing file matches expectations");
-    Path srcFile = path("source-256.txt");
-    byte[] srcData = dataset(256, 'a', 'z');
+    final Path srcFile = path("source-256.txt");
+    final byte[] srcData = dataset(256, 'a', 'z');
     writeDataset(getFileSystem(), srcFile, srcData, srcData.length, 1024, false);
-    Path destFile = path("dest-512.txt");
-    byte[] destData = dataset(512, 'A', 'Z');
+    final Path destFile = path("dest-512.txt");
+    final byte[] destData = dataset(512, 'A', 'Z');
     writeDataset(getFileSystem(), destFile, destData, destData.length, 1024, false);
     assertIsFile(destFile);
-    boolean renameOverwritesDest = isSupported(RENAME_OVERWRITES_DEST);
-    boolean renameReturnsFalseOnRenameDestExists =
-        !isSupported(RENAME_RETURNS_FALSE_IF_DEST_EXISTS);
-    boolean destUnchanged = true;
-    try {
-      boolean renamed = rename(srcFile, destFile);
-
-      if (renameOverwritesDest) {
-      // the filesystem supports rename(file, file2) by overwriting file2
-
-      assertTrue("Rename returned false", renamed);
-      destUnchanged = false;
-      } else {
-        // rename is rejected by returning 'false' or throwing an exception
-        if (renamed && !renameReturnsFalseOnRenameDestExists) {
-          //expected an exception
-          String destDirLS = generateAndLogErrorListing(srcFile, destFile);
-          getLogger().error("dest dir {}", destDirLS);
-          fail("expected rename(" + srcFile + ", " + destFile + " ) to fail," +
-               " but got success and destination of " + destDirLS);
-        }
-      }
-    } catch (FileAlreadyExistsException e) {
+    IOException e = intercept(IOException.class,
+        () -> renameEx(srcFile, destFile));
+    if (e instanceof FileAlreadyExistsException) {
       handleExpectedException(e);
+    } else {
+      handleRelaxedException("rename over file",
+          "FileAlreadyExistsException", e);
     }
     // verify that the destination file is as expected based on the expected
     // outcome
-    verifyFileContents(getFileSystem(), destFile,
-        destUnchanged ? destData: srcData);
+    verifyFileContents(getFileSystem(), destFile, destData);
+    verifyFileContents(getFileSystem(), srcFile, srcData);
+    // now rename with overwrite
+    renameEx(srcFile, destFile, Options.Rename.OVERWRITE);
+    verifyFileContents(getFileSystem(), destFile, srcData);
+    assertPathDoesNotExist("Source still found", srcFile);
+  }
+
+  /**
+   * Rename a file onto itself.
+   */
+  @Test
+  public void testRenameFileOverSelf() throws Throwable {
+    describe("Verify renaming a file onto itself does not lose the data");
+    final Path srcFile = path("source-256.txt");
+    final byte[] srcData = dataset(256, 'a', 'z');
+    writeDataset(getFileSystem(), srcFile, srcData, srcData.length, 1024, false);
+    intercept(IOException.class,
+        () -> renameEx(srcFile, srcFile));
+    verifyFileContents(getFileSystem(), srcFile, srcData);
+    intercept(IOException.class,
+        () -> renameEx(srcFile, srcFile, Options.Rename.OVERWRITE));
+    verifyFileContents(getFileSystem(), srcFile, srcData);
+  }
+
+  /**
+   * Rename a dir onto itself.
+   */
+  @Test
+  public void testRenameDirOverSelf() throws Throwable {
+    final Path src = path("testRenameDirOverSelf");
+    getFileSystem().mkdirs(src);
+    intercept(IOException.class,
+        () -> renameEx(src, src));
   }
 
   @Test
   public void testRenameDirIntoExistingDir() throws Throwable {
-    describe("Verify renaming a dir into an existing dir puts it"
-        + " underneath"
+    describe("Verify renaming a dir into an existing dir puts it underneath"
              +" and leaves existing files alone");
     FileSystem fs = getFileSystem();
     String sourceSubdir = "source";
     Path srcDir = path(sourceSubdir);
-    Path srcFilePath = new Path(srcDir, "source-256.txt");
+    String sourceName = "source-256.txt";
+    Path srcFilePath = new Path(srcDir, sourceName);
     byte[] srcDataset = dataset(256, 'a', 'z');
     writeDataset(fs, srcFilePath, srcDataset, srcDataset.length, 1024, false);
     Path destDir = path("dest");
 
     Path destFilePath = new Path(destDir, "dest-512.txt");
-    byte[] destData = dataset(512, 'A', 'Z');
-    writeDataset(fs, destFilePath, destData, destData.length, 1024, false);
+    byte[] destDateset = dataset(512, 'A', 'Z');
+    writeDataset(fs, destFilePath, destDateset, destDateset.length, 1024, false);
     assertIsFile(destFilePath);
-
-    boolean rename = rename(srcDir, destDir);
-    Path renamedSrc = new Path(destDir, sourceSubdir);
-    assertIsFile(destFilePath);
-    assertIsDirectory(renamedSrc);
-    verifyFileContents(fs, destFilePath, destData);
-    assertTrue("rename returned false though the contents were copied", rename);
+    // no overwrite: fail
+    intercept(FileAlreadyExistsException.class,
+        () -> renameEx(srcDir, destDir));
+    // overwrite fails if dest dir has a file
+    intercept(IOException.class,
+        () -> renameEx(srcDir, destDir, Options.Rename.OVERWRITE));
+    // overwrite is good
+    // delete the dest file and all will be well
+    assertDeleted(destFilePath, false);
+    renameEx(srcDir, destDir, Options.Rename.OVERWRITE);
+    verifyFileContents(fs, new Path(destDir, sourceName), srcDataset);
+    assertPathDoesNotExist("Source still found", srcFilePath);
   }
 
   @Test
   public void testRenameFileNonexistentDir() throws Throwable {
     describe("rename a file into a nonexistent directory");
-    Path renameSrc = path("testRenameSrc");
-    Path renameTarget = path("subdir/testRenameTarget");
+    final Path renameSrc = path("testRenameSrc");
+    final Path renameTarget = path("subdir/testRenameTarget");
     byte[] data = dataset(256, 'a', 'z');
     writeDataset(getFileSystem(), renameSrc, data, data.length, 1024 * 1024,
         false);
-    boolean renameCreatesDestDirs = isSupported(RENAME_CREATES_DEST_DIRS);
-
-    try {
-      boolean rename = rename(renameSrc, renameTarget);
-      if (renameCreatesDestDirs) {
-        assertTrue(rename);
-        verifyFileContents(getFileSystem(), renameTarget, data);
-      } else {
-        assertFalse(rename);
-        verifyFileContents(getFileSystem(), renameSrc, data);
-      }
-    } catch (FileNotFoundException e) {
-       // allowed unless that rename flag is set
-      assertFalse(renameCreatesDestDirs);
-    }
-    assertPathDoesNotExist("Source still found", renameSrc);
+    intercept(FileNotFoundException.class,
+        () -> renameEx(renameSrc, renameTarget));
+    verifyFileContents(getFileSystem(), renameSrc, data);
   }
 
   @Test
@@ -207,8 +218,11 @@ public abstract class AbstractContractRenameTest extends
     assertPathExists("not created in src/sub dir",
         new Path(srcSubDir, "subfile.txt"));
 
-    rename(srcDir, finalDir);
-
+    // no overwrite: fail
+    intercept(FileAlreadyExistsException.class,
+        () -> renameEx(srcDir, finalDir));
+    // now overwrite
+    renameEx(srcDir, finalDir, Options.Rename.OVERWRITE);
     // Accept both POSIX rename behavior and CLI rename behavior
     if (renameRemoveEmptyDest) {
       // POSIX rename behavior
@@ -241,7 +255,7 @@ public abstract class AbstractContractRenameTest extends
 
     Path dst = path("testRenamePopulatesDirectoryAncestorsNew");
 
-    fs.rename(src, dst);
+    renameEx(src, dst);
     validateAncestorsMoved(src, dst, nestedDir);
   }
 
@@ -261,7 +275,7 @@ public abstract class AbstractContractRenameTest extends
 
     Path dst = path("testRenamePopulatesFileAncestorsNew");
 
-    fs.rename(src, dst);
+    renameEx(src, dst);
     validateAncestorsMoved(src, dst, nestedFile);
   }
 
@@ -272,7 +286,7 @@ public abstract class AbstractContractRenameTest extends
    * @param dst the destination root to move
    * @param nestedPath the nested path to move
    */
-  protected void validateAncestorsMoved(Path src, Path dst, String nestedPath)
+  private void validateAncestorsMoved(Path src, Path dst, String nestedPath)
       throws IOException {
     assertIsDirectory(dst);
     assertPathDoesNotExist("src path should not exist", path(src + nestedPath));
@@ -287,56 +301,6 @@ public abstract class AbstractContractRenameTest extends
       assertIsDirectory(parentDst);
       path = path.getParent();
     }
-  }
-
-  @Test
-  public void testRenameFileUnderFile() throws Exception {
-    String action = "rename directly under file";
-    describe(action);
-    Path base = methodPath();
-    Path grandparent = new Path(base, "file");
-    expectRenameUnderFileFails(action,
-        grandparent,
-        new Path(base, "testRenameSrc"),
-        new Path(grandparent, "testRenameTarget"));
-  }
-
-  @Test
-  public void testRenameFileUnderFileSubdir() throws Exception {
-    String action = "rename directly under file/subdir";
-    describe(action);
-    Path base = methodPath();
-    Path grandparent = new Path(base, "file");
-    Path parent = new Path(grandparent, "parent");
-    expectRenameUnderFileFails(action,
-        grandparent,
-        new Path(base, "testRenameSrc"),
-        new Path(parent, "testRenameTarget"));
-  }
-
-  protected void expectRenameUnderFileFails(String action,
-      Path file, Path renameSrc, Path renameTarget)
-      throws Exception {
-    byte[] data = dataset(256, 'a', 'z');
-    FileSystem fs = getFileSystem();
-    writeDataset(fs, file, data, data.length, 1024 * 1024,
-        true);
-    writeDataset(fs, renameSrc, data, data.length, 1024 * 1024,
-        true);
-    String outcome;
-    boolean renamed;
-    try {
-      renamed = rename(renameSrc, renameTarget);
-      outcome = action + ": rename (" + renameSrc + ", " + renameTarget
-          + ")= " + renamed;
-    } catch (IOException e) {
-      // raw local raises an exception here
-      renamed = false;
-      outcome = "rename raised an exception: " + e;
-    }
-    assertPathDoesNotExist("after " + outcome, renameTarget);
-    assertFalse(outcome, renamed);
-    assertPathExists(action, renameSrc);
   }
 
 }
