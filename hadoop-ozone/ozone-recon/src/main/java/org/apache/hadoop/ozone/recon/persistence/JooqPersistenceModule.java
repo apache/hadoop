@@ -54,7 +54,6 @@ public class JooqPersistenceModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(DataSourceConfiguration.class).toProvider(configurationProvider);
     bind(DataSource.class).toProvider(DefaultDataSourceProvider.class)
         .in(Singleton.class);
 

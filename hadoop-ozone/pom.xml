@@ -34,6 +34,7 @@
     <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
+    <guice.version>4.0</guice.version>
   </properties>
   <modules>
     <module>common</module>
