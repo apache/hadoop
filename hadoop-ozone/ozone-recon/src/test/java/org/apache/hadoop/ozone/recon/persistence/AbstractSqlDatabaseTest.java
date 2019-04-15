@@ -31,6 +31,7 @@ import org.junit.BeforeClass;
 import org.junit.ClassRule;
 import org.junit.rules.TemporaryFolder;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Provider;
@@ -56,7 +57,12 @@ public abstract class AbstractSqlDatabaseTest {
     JooqPersistenceModule persistenceModule =
         new JooqPersistenceModule(configurationProvider);
 
-    injector = Guice.createInjector(persistenceModule);
+    injector = Guice.createInjector(persistenceModule, new AbstractModule() {
+      @Override
+      public void configure() {
+        bind(DataSourceConfiguration.class).toProvider(configurationProvider);
+        }
+    });
     dslContext = DSL.using(new DefaultConfiguration().set(
         injector.getInstance(DataSource.class)));
   }
