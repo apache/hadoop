@@ -37,6 +37,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -47,6 +49,8 @@ import java.util.Set;
 
 public class TestOpportunisticContainerAllocator {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestOpportunisticContainerAllocator.class);
   private static final int GB = 1024;
   private OpportunisticContainerAllocator allocator = null;
   private OpportunisticContainerContext oppCntxt = null;
@@ -174,7 +178,7 @@ public class TestOpportunisticContainerAllocator {
 
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Set<String> allocatedHosts = new HashSet<>();
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
@@ -242,7 +246,7 @@ public class TestOpportunisticContainerAllocator {
 
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Set<String> allocatedHosts = new HashSet<>();
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
@@ -295,7 +299,7 @@ public class TestOpportunisticContainerAllocator {
 
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Set<String> allocatedHosts = new HashSet<>();
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
@@ -412,7 +416,7 @@ public class TestOpportunisticContainerAllocator {
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Assert.assertTrue(allocatedHosts.contains("h2:1234"));
     Assert.assertTrue(allocatedHosts.contains("h5:1234"));
     Assert.assertFalse(allocatedHosts.contains("h3:1234"));
@@ -459,7 +463,7 @@ public class TestOpportunisticContainerAllocator {
     for (Container c : containers) {
       allocatedHosts.add(c.getNodeHttpAddress());
     }
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Assert.assertTrue(allocatedHosts.contains("h2:1234"));
     Assert.assertTrue(allocatedHosts.contains("h5:1234"));
     Assert.assertFalse(allocatedHosts.contains("h3:1234"));
@@ -502,7 +506,7 @@ public class TestOpportunisticContainerAllocator {
 
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
-    System.out.println(containers);
+    LOG.info("Containers: {}", containers);
     Assert.assertEquals(2, containers.size());
   }
 
