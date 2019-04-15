@@ -746,6 +746,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return appActivitiesInfo;
       } catch (Exception e) {
         String errMessage = "Cannot find application with given appId";
+        LOG.error(errMessage, e);
         return new AppActivitiesInfo(errMessage, appId);
       }
 

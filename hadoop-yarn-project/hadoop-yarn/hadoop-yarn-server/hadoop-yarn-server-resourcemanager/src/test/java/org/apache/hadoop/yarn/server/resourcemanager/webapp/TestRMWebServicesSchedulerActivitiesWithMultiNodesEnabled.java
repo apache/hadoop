@@ -21,6 +21,7 @@ import com.google.inject.Guice;
 import com.google.inject.servlet.ServletModule;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.core.util.MultivaluedMapImpl;
 import com.sun.jersey.guice.spi.container.servlet.GuiceContainer;
 import com.sun.jersey.test.framework.WebAppDescriptor;
 import org.apache.hadoop.http.JettyUtils;
@@ -37,6 +38,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement.ResourceUsageMultiNodeLookupPolicy;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.hadoop.yarn.webapp.GenericExceptionHandler;
 import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
@@ -84,6 +86,17 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       // enable multi-nodes placement
       conf.setBoolean(
           CapacitySchedulerConfiguration.MULTI_NODE_PLACEMENT_ENABLED, true);
+      String policyName = "resource-based";
+      conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICIES,
+          policyName);
+      conf.set(CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME,
+          policyName);
+      String policyConfPrefix =
+          CapacitySchedulerConfiguration.MULTI_NODE_SORTING_POLICY_NAME + "."
+              + policyName;
+      conf.set(policyConfPrefix + ".class",
+          ResourceUsageMultiNodeLookupPolicy.class.getName());
+      conf.set(policyConfPrefix + ".sorting-interval.ms", "0");
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
@@ -199,6 +212,59 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       JSONObject allocations = json.getJSONObject("allocations");
       verifyStateOfAllocations(allocations,
           "finalAllocationState", "SKIPPED");
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test
+  public void testAppAssignContainer() throws Exception {
+    rm.start();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      am1.allocate(Arrays.asList(ResourceRequest
+          .newInstance(Priority.UNDEFINED, "*", Resources.createResource(3072),
+              1)), null);
+
+      //Trigger recording for this app
+      WebResource r = resource();
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add(RMWSConsts.APP_ID, app1.getApplicationId().toString());
+      ClientResponse response = r.path("ws").path("v1").path("cluster")
+          .path("scheduler/app-activities").queryParams(params)
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("waiting for display", json.getString("diagnostic"));
+
+      //Trigger scheduling for this app
+      CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+      RMNode rmNode = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
+      cs.handle(new NodeUpdateSchedulerEvent(rmNode));
+
+      //Check app activities, it should contain one allocation and
+      // final allocation state is ALLOCATED
+      response = r.path("ws").path("v1").path("cluster")
+          .path("scheduler/app-activities").queryParams(params)
+          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      json = response.getEntity(JSONObject.class);
+
+      verifyNumberOfAllocations(json, 1);
+
+      JSONObject allocations = json.getJSONObject("allocations");
+      verifyStateOfAllocations(allocations, "allocationState", "ACCEPTED");
+      JSONArray allocationAttempts =
+          allocations.getJSONArray("allocationAttempt");
+      assertEquals(2, allocationAttempts.length());
     } finally {
       rm.stop();
     }

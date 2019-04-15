@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,6 +42,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicat
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -187,6 +190,55 @@ public class TestActivitiesManager {
     }
     // Check activities for multi-nodes should be recorded only once
     Assert.assertEquals(1, activitiesManager.historyNodeAllocations.size());
+  }
+
+
+  /**
+   * Test recording app activities in multiple threads,
+   * only one activity info should be recorded by one of these threads.
+   */
+  @Test
+  public void testRecordingAppActivitiesInMultiThreads()
+      throws Exception {
+    Random rand = new Random();
+    // start recording activities for a random app
+    SchedulerApplicationAttempt randomApp = apps.get(rand.nextInt(NUM_APPS));
+    activitiesManager
+        .turnOnAppActivitiesRecording(randomApp.getApplicationId(), 3);
+    List<Future<Void>> futures = new ArrayList<>();
+    // generate app activities
+    int nTasks = 20;
+    for (int i=0; i<nTasks; i++) {
+      Callable<Void> task = () -> {
+        ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager,
+            (FiCaSchedulerNode) nodes.get(0),
+            SystemClock.getInstance().getTime(), randomApp);
+        for (SchedulerNode node : nodes) {
+          ActivitiesLogger.APP
+              .recordAppActivityWithoutAllocation(activitiesManager, node,
+                  randomApp, Priority.newInstance(0),
+                  ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
+                  ActivityState.REJECTED);
+        }
+        ActivitiesLogger.APP
+            .finishAllocatedAppAllocationRecording(activitiesManager,
+                randomApp.getApplicationId(), null, ActivityState.SKIPPED,
+                ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
+        return null;
+      };
+      futures.add(threadPoolExecutor.submit(task));
+    }
+    // Check activities for multi-nodes should be recorded only once
+    for (Future<Void> future : futures) {
+      future.get();
+    }
+    Queue<AppAllocation> appAllocations =
+        activitiesManager.completedAppAllocations
+            .get(randomApp.getApplicationId());
+    Assert.assertEquals(nTasks, appAllocations.size());
+    for(AppAllocation aa : appAllocations) {
+      Assert.assertEquals(NUM_NODES, aa.getAllocationAttempts().size());
+    }
   }
 
   /**

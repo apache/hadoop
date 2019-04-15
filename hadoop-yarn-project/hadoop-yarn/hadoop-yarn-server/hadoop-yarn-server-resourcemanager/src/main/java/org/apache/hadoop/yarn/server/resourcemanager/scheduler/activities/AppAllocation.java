@@ -68,7 +68,7 @@ public class AppAllocation {
   }
 
   public String getNodeId() {
-    return nodeId.toString();
+    return nodeId == null ? null : nodeId.toString();
   }
 
   public String getQueueName() {
