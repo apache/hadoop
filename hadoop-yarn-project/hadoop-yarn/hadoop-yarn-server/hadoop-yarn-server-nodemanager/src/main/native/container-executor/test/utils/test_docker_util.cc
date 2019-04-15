@@ -304,7 +304,7 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(
         std::make_pair<std::string, std::string>(
             "[docker-command-execution]\n  docker-command=rm\n  name=container_e1_12312_11111_02_000001",
-            "rm container_e1_12312_11111_02_000001"));
+            "rm -f container_e1_12312_11111_02_000001"));
 
     std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
@@ -1711,7 +1711,7 @@ namespace ContainerExecutor {
         "/usr/bin/docker --config=/my-config pull image-id"));
     input_output_map.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=rm\n  docker-config=/my-config\n  name=container_e1_12312_11111_02_000001",
-        "/usr/bin/docker --config=/my-config rm container_e1_12312_11111_02_000001"));
+        "/usr/bin/docker --config=/my-config rm -f container_e1_12312_11111_02_000001"));
     input_output_map.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=stop\n  docker-config=/my-config\n  name=container_e1_12312_11111_02_000001",
         "/usr/bin/docker --config=/my-config stop container_e1_12312_11111_02_000001"));
