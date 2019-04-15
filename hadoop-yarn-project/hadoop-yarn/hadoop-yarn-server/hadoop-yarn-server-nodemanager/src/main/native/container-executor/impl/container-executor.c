@@ -3206,12 +3206,15 @@ int remove_docker_container(char**argv, int argc) {
   const char *container_id = NULL;
 
   int start_index = 0;
+  char **args = alloc_and_clear_memory(argc + 1, sizeof(char *));
+  args[0] = "-f";
   if (argc == 2) {
     yarn_hierarchy = argv[0];
     container_id = argv[1];
     // Skip the yarn_hierarchy argument for exec_docker_command
     start_index = 1;
   }
+  args[1] = argv[start_index];
 
   pid_t child_pid = fork();
   if (child_pid == -1) {
@@ -3222,15 +3225,15 @@ int remove_docker_container(char**argv, int argc) {
   }
 
   if (child_pid == 0) { // child
-    int rc = exec_docker_command("rm", argv + start_index, argc - start_index);
-    return rc; // Only get here if exec fails
-
+    int rc = exec_docker_command("rm", args, 2);
+    exit_code = rc; // Only get here if exec fails
   } else { // parent
     exit_code = wait_and_get_exit_code(child_pid);
     if (exit_code != 0) {
       exit_code = DOCKER_RUN_FAILED;
     }
   }
+  free(args);
 
   // Clean up cgroups if necessary
   if (yarn_hierarchy != NULL) {

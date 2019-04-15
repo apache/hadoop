@@ -722,11 +722,19 @@ int get_docker_rm_command(const char *command_file, const struct configuration *
   }
 
   ret = add_to_args(args, DOCKER_RM_COMMAND);
-  if (ret == 0) {
-    ret = add_to_args(args, container_name);
-    if (ret != 0) {
-      ret = BUFFER_TOO_SMALL;
-    }
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, "-f");
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
+  }
+  ret = add_to_args(args, container_name);
+  if (ret != 0) {
+    ret = BUFFER_TOO_SMALL;
+    goto free_and_exit;
   }
 free_and_exit:
   free(container_name);
