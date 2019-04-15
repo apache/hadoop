@@ -91,6 +91,7 @@ import org.slf4j.LoggerFactory;
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
 import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+import static org.apache.hadoop.fs.FSExceptionMessages.*;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -1521,42 +1522,55 @@ public abstract class FileSystem extends Configured
   /**
    * Renames Path src to Path dst
    * <ul>
-   *   <li>Fails if src is a file and dst is a directory.</li>
-   *   <li>Fails if src is a directory and dst is a file.</li>
-   *   <li>Fails if the parent of dst does not exist or is a file.</li>
+   *   <li>Fails if src is a file and dest is a directory.</li>
+   *   <li>Fails if src is a directory and dest is a file.</li>
+   *   <li>Fails if the parent of dest does not exist or is a file.</li>
    * </ul>
    * <p>
    * If OVERWRITE option is not passed as an argument, rename fails
-   * if the dst already exists.
+   * if the dest already exists.
    * <p>
    * If OVERWRITE option is passed as an argument, rename overwrites
-   * the dst if it is a file or an empty directory. Rename fails if dst is
+   * the dest if it is a file or an empty directory. Rename fails if dest is
    * a non-empty directory.
    * <p>
    * Note that atomicity of rename is dependent on the file system
    * implementation. Please refer to the file system documentation for
    * details. This default implementation is non atomic.
-   * <p>
-   * This method is deprecated since it is a temporary method added to
-   * support the transition from FileSystem to FileContext for user
-   * applications.
    *
-   * @param src path to be renamed
-   * @param dst new path after rename
-   * @throws FileNotFoundException src path does not exist, or the parent
-   * path of dst does not exist.
+   * @param source path to be renamed
+   * @param dest new path after rename
+   * @throws FileNotFoundException source path does not exist, or the parent
+   * path of dest does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
    * @throws ParentNotDirectoryException if the parent path of dest is not
    * a directory
    * @throws IOException on failure
    */
-  @Deprecated
-  protected void rename(final Path src, final Path dst,
+  public void rename(final Path source, final Path dest,
       final Rename... options) throws IOException {
+    final Path src = makeQualified(source);
+    final Path dst = makeQualified(dest);
     // Default implementation
+    final String srcStr = src.toUri().getPath();
+    final String dstStr = dst.toUri().getPath();
+    if (dstStr.startsWith(srcStr)
+        && dstStr.charAt(srcStr.length()) == Path.SEPARATOR_CHAR) {
+      throw new IOException(String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
+    }
+    if ("/".equals(srcStr)) {
+      throw new IOException(RENAME_SOURCE_IS_ROOT);
+    }
+    if ("/".equals(dstStr)) {
+      throw new IOException(RENAME_DEST_IS_ROOT);
+    }
+    if (srcStr.equals(dstStr)) {
+      throw new IOException(String.format(RENAME_DEST_EQUALS_SOURCE, src, dst));
+    }
     final FileStatus srcStatus = getFileLinkStatus(src);
     if (srcStatus == null) {
-      throw new FileNotFoundException("rename source " + src + " not found.");
+      throw new FileNotFoundException(
+          String.format(RENAME_SOURCE_NOT_FOUND, src));
     }
 
     boolean overwrite = false;
@@ -1576,19 +1590,18 @@ public abstract class FileSystem extends Configured
     }
     if (dstStatus != null) {
       if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
-        throw new IOException("Source " + src + " Destination " + dst
-            + " both should be either file or directory");
+        throw new IOException(
+            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, src, dst));
       }
       if (!overwrite) {
-        throw new FileAlreadyExistsException("rename destination " + dst
-            + " already exists.");
+        throw new FileAlreadyExistsException(
+            String.format(RENAME_DEST_EXISTS, dst));
       }
       // Delete the destination that is a file or an empty directory
       if (dstStatus.isDirectory()) {
-        FileStatus[] list = listStatus(dst);
-        if (list != null && list.length != 0) {
-          throw new IOException(
-              "rename cannot overwrite non empty destination directory " + dst);
+        // list children. This may be expensive in time or memory.
+        if (hasChildren(dst)) {
+          throw new IOException(String.format(RENAME_DEST_NOT_EMPTY, dst));
         }
       }
       delete(dst, false);
@@ -1596,17 +1609,34 @@ public abstract class FileSystem extends Configured
       final Path parent = dst.getParent();
       final FileStatus parentStatus = getFileStatus(parent);
       if (parentStatus == null) {
-        throw new FileNotFoundException("rename destination parent " + parent
-            + " not found.");
+        throw new FileNotFoundException(
+            String.format(RENAME_DEST_NO_PARENT, parent));
       }
       if (!parentStatus.isDirectory()) {
-        throw new ParentNotDirectoryException("rename destination parent " + parent
-            + " is a file.");
+        throw new ParentNotDirectoryException(
+            String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, parent));
       }
     }
     if (!rename(src, dst)) {
-      throw new IOException("rename from " + src + " to " + dst + " failed.");
+      // inner rename failed, no obvious cause
+      throw new IOException(String.format(RENAME_FAILED, src, dst));
     }
+  }
+
+  /**
+   * Test for a directory having children. This is used by the
+   * base implementation of {@link #rename(Path, Path, Rename...)}.
+   * It is made an override point so that those stores for which listing
+   * children is expensive, but probing for the existence of one or more
+   * children inexpensive, may substitute their own implementation. This
+   * is particularly relevant for object stores.
+   * @param qualifiedDirectory a pre-qualified path to a directory
+   * @return true if the path has one or more child entries.
+   * @throws IOException for IO problems.
+   */
+  protected boolean hasChildren(Path qualifiedDirectory) throws IOException {
+    FileStatus[] list = listStatus(qualifiedDirectory);
+    return list != null && list.length != 0;
   }
 
   /**

@@ -252,7 +252,7 @@ public class FilterFileSystem extends FileSystem {
   }
 
   @Override
-  protected void rename(Path src, Path dst, Rename... options)
+  public void rename(Path src, Path dst, Rename... options)
       throws IOException {
     fs.rename(src, dst, options);
   }

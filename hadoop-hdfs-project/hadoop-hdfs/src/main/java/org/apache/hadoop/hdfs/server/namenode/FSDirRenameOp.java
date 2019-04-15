@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -43,6 +44,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import static org.apache.hadoop.fs.FSExceptionMessages.*;
 import static org.apache.hadoop.hdfs.protocol.FSLimitException.MaxDirectoryItemsExceededException;
 import static org.apache.hadoop.hdfs.protocol.FSLimitException.PathComponentTooLongException;
 
@@ -376,13 +379,15 @@ class FSDirRenameOp {
 
     // validate the destination
     if (dst.equals(src)) {
-      throw new FileAlreadyExistsException("The source " + src +
-          " and destination " + dst + " are the same");
+      throw new FileAlreadyExistsException(
+          String.format(RENAME_DEST_EQUALS_SOURCE,
+              src , dst));
     }
     validateDestination(src, dst, srcInode);
 
     if (dstIIP.length() == 1) {
-      error = "rename destination cannot be the root";
+      error = RENAME_DEST_IS_ROOT;
+
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: " +
           error);
       throw new IOException(error);
@@ -399,13 +404,13 @@ class FSDirRenameOp {
 
     INode dstParent = dstIIP.getINode(-2);
     if (dstParent == null) {
-      error = "rename destination parent " + dst + " not found.";
+      error = String.format(RENAME_DEST_NO_PARENT_OF, dst);
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: " +
           error);
       throw new FileNotFoundException(error);
     }
     if (!dstParent.isDirectory()) {
-      error = "rename destination parent " + dst + " is a file.";
+      error = String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, dst);
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: " +
           error);
       throw new ParentNotDirectoryException(error);
@@ -531,8 +536,7 @@ class FSDirRenameOp {
     // dst cannot be a directory or a file under src
     if (dst.startsWith(src)
         && dst.charAt(src.length()) == Path.SEPARATOR_CHAR) {
-      error = "Rename destination " + dst
-          + " is a directory or file under source " + src;
+      error = String.format(RENAME_DEST_UNDER_SOURCE, dst, src);
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new IOException(error);
@@ -540,7 +544,8 @@ class FSDirRenameOp {
 
     if (FSDirectory.isExactReservedName(src)
         || FSDirectory.isExactReservedName(dst)) {
-      error = "Cannot rename to or from /.reserved";
+      error = String.format("Cannot rename to or from reserved path;" +
+          " source =\"%s\", dest=\"%s\"", src, dst);
       throw new InvalidPathException(error);
     }
   }
@@ -550,14 +555,13 @@ class FSDirRenameOp {
       throws IOException {
     String error;// It's OK to rename a file to a symlink and vice versa
     if (dstInode.isDirectory() != srcInode.isDirectory()) {
-      error = "Source " + src + " and destination " + dst
-          + " must both be directories";
+      error = String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, src, dst);
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new IOException(error);
     }
     if (!overwrite) { // If destination exists, overwrite flag must be true
-      error = "rename destination " + dst + " already exists";
+      error = String.format(RENAME_DEST_EXISTS, dst);
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new FileAlreadyExistsException(error);
@@ -566,7 +570,7 @@ class FSDirRenameOp {
       final ReadOnlyList<INode> children = dstInode.asDirectory()
           .getChildrenList(Snapshot.CURRENT_STATE_ID);
       if (!children.isEmpty()) {
-        error = "rename destination directory is not empty: " + dst;
+        error = String.format(RENAME_DEST_NOT_EMPTY, dst);
         NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
             + error);
         throw new IOException(error);
@@ -581,13 +585,13 @@ class FSDirRenameOp {
     final INode srcInode = srcIIP.getLastINode();
     // validate source
     if (srcInode == null) {
-      error = "rename source " + srcIIP.getPath() + " is not found.";
+      error = String.format(RENAME_SOURCE_NOT_FOUND, srcIIP.getPath());
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new FileNotFoundException(error);
     }
     if (srcIIP.length() == 1) {
-      error = "rename source cannot be the root";
+      error = RENAME_SOURCE_IS_ROOT;
       NameNode.stateChangeLog.warn("DIR* FSDirectory.unprotectedRenameTo: "
           + error);
       throw new IOException(error);
