@@ -1804,6 +1804,13 @@
   </property>
 
   <property>
+    <description>The set of runtimes allowed when launching containers using the
+      DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-runtimes</name>
+    <value>runc</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines whether the host's PID
       namespace is allowed for docker containers on this cluster.
       Use with care.</description>
