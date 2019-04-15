@@ -32,8 +32,7 @@ import java.util.Arrays;
  *
  * This class is immutable.
  */
-@InterfaceAudience.LimitedPrivate({"HBase", "HDFS", "Hive", "MapReduce",
-    "Pig", "Spark", "YARN"})
+@InterfaceAudience.Public
 @InterfaceStability.Evolving
 public final class CallerContext {
   public static final Charset SIGNATURE_ENCODING = StandardCharsets.UTF_8;
