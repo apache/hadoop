@@ -246,7 +246,17 @@ public class SCMContainerManager implements ContainerManager {
           containerStateManager.allocateContainer(pipelineManager, type,
               replicationFactor, owner);
       // Add container to DB.
-      addContainerToDB(containerInfo);
+      try {
+        addContainerToDB(containerInfo);
+      } catch (IOException ex) {
+        // When adding to DB failed, we are removing from containerStateMap.
+        // We should also remove from pipeline2Container Map in
+        // PipelineStateManager.
+        pipelineManager.removeContainerFromPipeline(
+            containerInfo.getPipelineID(),
+            new ContainerID(containerInfo.getContainerID()));
+        throw ex;
+      }
       return containerInfo;
     } finally {
       lock.unlock();
@@ -440,6 +450,8 @@ public class SCMContainerManager implements ContainerManager {
     } catch (IOException ex) {
       // If adding to containerStore fails, we should remove the container
       // from in-memory map.
+      LOG.error("Add Container to DB failed for ContainerID #{}",
+          containerInfo.getContainerID());
       try {
         containerStateManager.removeContainer(containerInfo.containerID());
       } catch (ContainerNotFoundException cnfe) {
