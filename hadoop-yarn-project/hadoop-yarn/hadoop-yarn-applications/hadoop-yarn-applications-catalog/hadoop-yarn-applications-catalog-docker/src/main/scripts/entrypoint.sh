@@ -42,4 +42,15 @@ if [ -e "$KEYTAB" ]; then
   export JAVA_OPTS="$JAVA_OPTS -Djava.security.auth.login.config=/etc/tomcat/jaas.config -Djava.security.krb5.conf=/etc/krb5.conf -Djavax.security.auth.useSubjectCredsOnly=false"
   template_generator /etc/tomcat/jaas.config.template /etc/tomcat/jaas.config
 fi
+if [ -e "$SPNEGO_KEYTAB" ]; then
+  sed -i.bak 's/authentication.type=.*$/authentication.type=kerberos/g' /etc/tomcat/catalina.properties
+  sed -i.bak 's/simple.anonymous.allowed=.*$/simple.anonymous.allowed=false/g' /etc/tomcat/catalina.properties
+  if [ -z "$SPNEGO_PRINCIPAL" ]; then
+    echo "kerberos.principal=HTTP/$HOSTNAME" >> /etc/tomcat/catalina.properties
+  else
+    echo "kerberos.principal=$SPNEGO_PRINCIPAL" >> /etc/tomcat/catalina.properties
+  fi
+  echo "kerberos.keytab=$SPNEGO_KEYTAB" >> /etc/tomcat/catalina.properties
+  echo "hostname=$HOSTNAME" >> /etc/tomcat/catalina.properties
+fi
 /usr/libexec/tomcat/server start
