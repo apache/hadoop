@@ -1114,11 +1114,16 @@ public class TestOzoneShell {
     }
 
     out.reset();
+    String msgText = "Listing first 3 entries of the result. " +
+        "Use --length (-l) to override max returned keys.";
     args =
         new String[] {"key", "list", url + "/" + volumeName + "/" + bucketName,
             "--length", "3"};
     execute(shell, args);
     commandOutput = out.toString();
+    assertTrue("Expecting output to start with " + msgText,
+        commandOutput.contains(msgText));
+    commandOutput = commandOutput.replace(msgText, "");
     keys = (List<KeyInfo>) JsonUtils.toJsonList(commandOutput,
         KeyInfo.class);
 
