@@ -114,6 +114,7 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.PathLocation;
 import org.apache.hadoop.hdfs.server.federation.resolver.RemoteLocation;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
 import org.apache.hadoop.hdfs.server.namenode.CheckpointSignature;
@@ -480,17 +481,26 @@ public class RouterRpcServer extends AbstractService
     // Store the category of the operation category for this thread
     opCategory.set(op);
 
-    // We allow unchecked and read operations
+    // We allow unchecked and read operations to try, fail later
     if (op == OperationCategory.UNCHECKED || op == OperationCategory.READ) {
       return;
     }
+    checkSafeMode();
+  }
 
+  /**
+   * Check if the Router is in safe mode.
+   * @throws StandbyException If the Router is in safe mode and cannot serve
+   *                          client requests.
+   */
+  private void checkSafeMode() throws StandbyException {
     RouterSafemodeService safemodeService = router.getSafemodeService();
     if (safemodeService != null && safemodeService.isInSafeMode()) {
       // Throw standby exception, router is not available
       if (rpcMonitor != null) {
         rpcMonitor.routerFailureSafemode();
       }
+      OperationCategory op = opCategory.get();
       throw new StandbyException("Router " + router.getRouterId() +
           " is in safe mode and cannot handle " + op + " requests");
     }
@@ -1468,6 +1478,9 @@ public class RouterRpcServer extends AbstractService
     } catch (IOException ioe) {
       if (this.rpcMonitor != null) {
         this.rpcMonitor.routerFailureStateStore();
+      }
+      if (ioe instanceof StateStoreUnavailableException) {
+        checkSafeMode();
       }
       throw ioe;
     }

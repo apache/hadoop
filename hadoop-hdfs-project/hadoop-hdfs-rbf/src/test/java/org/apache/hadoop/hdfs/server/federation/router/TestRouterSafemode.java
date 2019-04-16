@@ -34,9 +34,13 @@ import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreUnavailableException;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.EnterSafeModeRequest;
 import org.apache.hadoop.hdfs.tools.federation.RouterAdmin;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.service.Service.STATE;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.After;
@@ -233,5 +237,45 @@ public class TestRouterSafemode {
   private void verifyRouter(RouterServiceState status)
       throws IllegalStateException, IOException {
     assertEquals(status, router.getRouterState());
+  }
+
+  @Test
+  public void testRouterNotInitMountTable() throws Exception {
+
+    // Manually disable the mount table to trigger unavailable exceptions
+    MountTableResolver mountTable =
+        (MountTableResolver)router.getSubclusterResolver();
+    mountTable.setDisabled(true);
+
+    // Wait until it gets out of safe mode
+    int interval = 2 * (int)conf.getTimeDuration(DFS_ROUTER_SAFEMODE_EXTENSION,
+        TimeUnit.SECONDS.toMillis(2), TimeUnit.MILLISECONDS);
+    GenericTestUtils.waitFor(
+        () -> router.getRouterState() == RouterServiceState.RUNNING,
+        100, interval);
+
+    // Getting file info should fail
+    try {
+      router.getRpcServer().getFileInfo("/mnt/file.txt");
+      fail("We should have thrown StateStoreUnavailableException");
+    } catch (StateStoreUnavailableException e) {
+      assertEquals("Mount Table not initialized", e.getMessage());
+    }
+
+    // Enter safe mode
+    RouterAdminServer admin = router.getAdminServer();
+    EnterSafeModeRequest request = EnterSafeModeRequest.newInstance();
+    admin.enterSafeMode(request);
+    verifyRouter(RouterServiceState.SAFEMODE);
+
+    // This time it should report safe mode
+    try {
+      router.getRpcServer().getFileInfo("/mnt/file.txt");
+      fail("We should have thrown a safe mode exception");
+    } catch (StandbyException e) {
+      String msg = e.getMessage();
+      assertTrue("Wrong message: " + msg,
+          msg.endsWith("is in safe mode and cannot handle READ requests"));
+    }
   }
 }
