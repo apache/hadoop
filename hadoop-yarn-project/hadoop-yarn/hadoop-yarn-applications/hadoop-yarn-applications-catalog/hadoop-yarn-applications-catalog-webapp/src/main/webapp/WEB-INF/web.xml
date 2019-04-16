@@ -30,6 +30,48 @@
     </description>
     <display-name>appcatalog</display-name>
 
+    <listener>
+      <listener-class>org.apache.hadoop.yarn.appcatalog.application.AppCatalogInitializer</listener-class>
+    </listener>
+
+    <filter>
+      <filter-name>AuthFilter</filter-name>
+      <filter-class>${auth.filter}</filter-class>
+      <init-param>
+        <param-name>type</param-name>
+        <param-value>${authentication.type}</param-value>
+      </init-param>
+      <init-param>
+        <param-name>simple.anonymous.allowed</param-name>
+        <param-value>${simple.anonymous.allowed}</param-value>
+      </init-param>
+      <init-param>
+        <param-name>token.validity</param-name>
+        <param-value>30</param-value>
+      </init-param>
+      <init-param>
+        <param-name>cookie.path</param-name>
+        <param-value>/</param-value>
+      </init-param>
+      <init-param>
+        <param-name>cookie.domain</param-name>
+        <param-value>${hostname}</param-value>
+      </init-param>
+      <init-param>
+        <param-name>kerberos.principal</param-name>
+        <param-value>${kerberos.principal}</param-value>
+      </init-param>
+      <init-param>
+        <param-name>kerberos.keytab</param-name>
+        <param-value>${kerberos.keytab}</param-value>
+      </init-param>
+    </filter>
+
+    <filter-mapping>
+      <filter-name>AuthFilter</filter-name>
+      <url-pattern>/*</url-pattern>
+    </filter-mapping>
+
     <servlet>
       <servlet-name>REST_API</servlet-name>
       <servlet-class>com.sun.jersey.spi.container.servlet.ServletContainer</servlet-class>

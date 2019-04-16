@@ -19,3 +19,8 @@ mkdir -p /etc/hadoop
 mkdir -p /opt/apache/solr/server/logs
 chmod -R 777 /opt/apache/solr/server/logs /var/log/tomcat /var/cache/tomcat /var/lib/tomcat/webapps /opt/apache/solr/server/solr
 chmod 777 /etc/tomcat
+{
+  echo "auth.filter=org.apache.hadoop.security.authentication.server.AuthenticationFilter"
+  echo "authentication.type=simple"
+  echo "simple.anonymous.allowed=true"
+} >> /etc/tomcat/catalina.properties
