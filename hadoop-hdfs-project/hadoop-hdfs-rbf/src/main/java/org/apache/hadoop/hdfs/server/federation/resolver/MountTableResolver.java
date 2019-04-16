@@ -87,6 +87,8 @@ public class MountTableResolver
 
   /** If the tree has been initialized. */
   private boolean init = false;
+  /** If the mount table is manually disabled*/
+  private boolean disabled = false;
   /** Path -> Remote HDFS location. */
   private final TreeMap<String, MountTable> tree = new TreeMap<>();
   /** Path -> Remote location. */
@@ -391,7 +393,14 @@ public class MountTableResolver
       };
       return this.locationCache.get(path, meh);
     } catch (ExecutionException e) {
-      throw new IOException(e);
+      Throwable cause = e.getCause();
+      final IOException ioe;
+      if (cause instanceof IOException) {
+        ioe = (IOException) cause;
+      } else {
+        ioe = new IOException(cause);
+      }
+      throw ioe;
     } finally {
       readLock.unlock();
     }
@@ -504,7 +513,7 @@ public class MountTableResolver
    * @throws StateStoreUnavailableException If it cannot connect to the store.
    */
   private void verifyMountTable() throws StateStoreUnavailableException {
-    if (!this.init) {
+    if (!this.init || disabled) {
       throw new StateStoreUnavailableException("Mount Table not initialized");
     }
   }
@@ -653,5 +662,10 @@ public class MountTableResolver
   @VisibleForTesting
   public void setDefaultNSEnable(boolean defaultNSRWEnable) {
     this.defaultNSEnable = defaultNSRWEnable;
+  }
+
+  @VisibleForTesting
+  public void setDisabled(boolean disable) {
+    this.disabled = disable;
   }
 }
