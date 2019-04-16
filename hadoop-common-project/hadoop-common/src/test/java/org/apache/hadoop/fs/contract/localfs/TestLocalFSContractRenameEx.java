@@ -22,6 +22,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameExTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+/**
+ * Test the local FS supports renameEx semantics.
+ * This implicitly requires the checksums to be copied too.
+ */
 public class TestLocalFSContractRenameEx extends AbstractContractRenameExTest {
 
   @Override

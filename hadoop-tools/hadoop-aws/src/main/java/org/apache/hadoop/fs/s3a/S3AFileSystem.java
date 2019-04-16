@@ -94,6 +94,7 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
@@ -1385,6 +1386,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (FileNotFoundException e) {
       LOG.debug(e.toString());
       return false;
+    }
+  }
+
+  /**
+   * Directly invoke {@link #innerRename(Path, Path)} so that
+   * failures are passed up to the callers, rather than converted to
+   * a true/false return value.
+   * @param source source path
+   * @param dest destination path
+   * @param options options
+   * @throws IOException failure
+   */
+  @Override
+  @Retries.RetryTranslated
+  protected void executeInnerRename(final Path source,
+      final Path dest,
+      final Options.Rename... options) throws IOException {
+    try {
+      innerRename(source, dest);
+    } catch (AmazonClientException e) {
+      throw translateException("rename(" + source + ", " + dest + ")", source, e);
     }
   }
 

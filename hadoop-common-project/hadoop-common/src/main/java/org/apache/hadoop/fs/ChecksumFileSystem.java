@@ -681,14 +681,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
       Path dst,
       final Options.Rename... options)
       throws IOException {
-
-    if (fs.isDirectory(src)) {
-      fs.rename(src, dst, options);
-    } else {
-      if (fs.isDirectory(dst)) {
-        dst = new Path(dst, src.getName());
-      }
-
       fs.rename(src, dst, options);
 
       Path srcCheckFile = getChecksumFile(src);
@@ -700,7 +692,6 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
         fs.delete(dstCheckFile, true);
       }
     }
-  }
 
   /**
    * Implement the delete(Path, boolean) in checksum

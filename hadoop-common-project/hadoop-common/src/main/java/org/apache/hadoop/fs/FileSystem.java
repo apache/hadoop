@@ -1556,16 +1556,18 @@ public abstract class FileSystem extends Configured
     final String dstStr = dst.toUri().getPath();
     if (dstStr.startsWith(srcStr)
         && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
-      throw new IOException(String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
+      throw new PathIOException(src.toString(),
+          String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
     }
     if ("/".equals(srcStr)) {
-      throw new IOException(RENAME_SOURCE_IS_ROOT);
+      throw new PathIOException(src.toString(), RENAME_SOURCE_IS_ROOT);
     }
     if ("/".equals(dstStr)) {
-      throw new IOException(RENAME_DEST_IS_ROOT);
+      throw new PathIOException(src.toString(), RENAME_DEST_IS_ROOT);
     }
     if (srcStr.equals(dstStr)) {
-      throw new IOException(String.format(RENAME_DEST_EQUALS_SOURCE, src, dst));
+      throw new FileAlreadyExistsException(
+          String.format(RENAME_DEST_EQUALS_SOURCE, src, dst));
     }
     final FileStatus srcStatus = getFileLinkStatus(src);
     if (srcStatus == null) {
@@ -1590,7 +1592,7 @@ public abstract class FileSystem extends Configured
     }
     if (dstStatus != null) {
       if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
-        throw new IOException(
+        throw new PathIOException(src.toString(),
             String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, src, dst));
       }
       if (!overwrite) {
@@ -1601,7 +1603,8 @@ public abstract class FileSystem extends Configured
       if (dstStatus.isDirectory()) {
         // list children. This may be expensive in time or memory.
         if (hasChildren(dst)) {
-          throw new IOException(String.format(RENAME_DEST_NOT_EMPTY, dst));
+          throw new PathIOException(src.toString(),
+              String.format(RENAME_DEST_NOT_EMPTY, dst));
         }
       }
       delete(dst, false);
@@ -1617,9 +1620,27 @@ public abstract class FileSystem extends Configured
             String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, parent));
       }
     }
-    if (!rename(src, dst)) {
+    executeInnerRename(src, dst);
+  }
+
+  /**
+   * This is a method called by the base {@link #rename(Path, Path, Rename...)}
+   * method after all validation of the existing state.
+   * The base class simply calls {@link #rename(Path, Path)} and
+   * uprates a return value of false to an exception.
+   * Subclasses can override this to expose their actual exceptions.
+   * If they do so, they can assume that all the preconditions of the
+   * rename operation have been met.
+   * @param source source path
+   * @param dest destination path
+   * @throws IOException failure.
+   */
+  protected void executeInnerRename(final Path source, final Path dest,
+      final Rename... options) throws IOException {
+    if (!rename(source, dest)) {
       // inner rename failed, no obvious cause
-      throw new IOException(String.format(RENAME_FAILED, src, dst));
+      throw new PathIOException(source.toString(),
+          String.format(RENAME_FAILED, source, dest));
     }
   }
 

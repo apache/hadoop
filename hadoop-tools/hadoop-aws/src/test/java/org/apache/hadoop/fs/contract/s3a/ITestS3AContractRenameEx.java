@@ -16,34 +16,34 @@
  *  limitations under the License.
  */
 
-package org.apache.hadoop.fs.contract.hdfs;
-
-import java.io.IOException;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+package org.apache.hadoop.fs.contract.s3a;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.contract.AbstractContractRenameExTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
+
 /**
- * Test that HDFS supports renameEx semantics.
+ * S3A contract tests covering rename/3.
  */
-public class TestHDFSContractRenameEx extends AbstractContractRenameExTest {
+public class ITestS3AContractRenameEx extends AbstractContractRenameExTest {
 
-  @BeforeClass
-  public static void createCluster() throws IOException {
-    HDFSContract.createCluster();
-  }
-
-  @AfterClass
-  public static void teardownCluster() throws IOException {
-    HDFSContract.destroyCluster();
+  /**
+   * Create a configuration, possibly patching in S3Guard options.
+   * @return a configuration
+   */
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // patch in S3Guard options
+    maybeEnableS3Guard(conf);
+    return conf;
   }
 
   @Override
   protected AbstractFSContract createContract(Configuration conf) {
-    return new HDFSContract(conf);
+    return new S3AContract(conf);
   }
+
 }

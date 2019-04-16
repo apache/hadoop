@@ -37,8 +37,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
- * Test renaming files with the {@code oolean rename(source, dest)}
- * call.
+ * Test the rename(path, path, options) operations.
  */
 public abstract class AbstractContractRenameExTest extends
     AbstractFSContractTestBase {
@@ -133,10 +132,10 @@ public abstract class AbstractContractRenameExTest extends
     final Path srcFile = path("source-256.txt");
     final byte[] srcData = dataset(256, 'a', 'z');
     writeDataset(getFileSystem(), srcFile, srcData, srcData.length, 1024, false);
-    intercept(IOException.class,
+    intercept(FileAlreadyExistsException.class,
         () -> renameEx(srcFile, srcFile));
     verifyFileContents(getFileSystem(), srcFile, srcData);
-    intercept(IOException.class,
+    intercept(FileAlreadyExistsException.class,
         () -> renameEx(srcFile, srcFile, Options.Rename.OVERWRITE));
     verifyFileContents(getFileSystem(), srcFile, srcData);
   }
@@ -148,8 +147,9 @@ public abstract class AbstractContractRenameExTest extends
   public void testRenameDirOverSelf() throws Throwable {
     final Path src = path("testRenameDirOverSelf");
     getFileSystem().mkdirs(src);
-    intercept(IOException.class,
+    intercept(FileAlreadyExistsException.class,
         () -> renameEx(src, src));
+    assertIsDirectory(src );
   }
 
   @Test
@@ -208,15 +208,18 @@ public abstract class AbstractContractRenameExTest extends
 
     fs.mkdirs(srcDir);
     fs.mkdirs(finalDir);
-    writeTextFile(fs, new Path(srcDir, "source.txt"),
+    String sourceTextName = "source.txt";
+    Path sourceTextPath = new Path(srcDir, sourceTextName);
+    writeTextFile(fs, sourceTextPath,
         "this is the file in src dir", false);
-    writeTextFile(fs, new Path(srcSubDir, "subfile.txt"),
+    Path subfileTxt = new Path(srcSubDir, "subfile.txt");
+    writeTextFile(fs, subfileTxt,
         "this is the file in src/sub dir", false);
 
     assertPathExists("not created in src dir",
-        new Path(srcDir, "source.txt"));
+        sourceTextPath);
     assertPathExists("not created in src/sub dir",
-        new Path(srcSubDir, "subfile.txt"));
+        subfileTxt);
 
     // no overwrite: fail
     intercept(FileAlreadyExistsException.class,
@@ -224,21 +227,13 @@ public abstract class AbstractContractRenameExTest extends
     // now overwrite
     renameEx(srcDir, finalDir, Options.Rename.OVERWRITE);
     // Accept both POSIX rename behavior and CLI rename behavior
-    if (renameRemoveEmptyDest) {
-      // POSIX rename behavior
-      assertPathExists("not renamed into dest dir",
-          new Path(finalDir, "source.txt"));
-      assertPathExists("not renamed into dest/sub dir",
-          new Path(finalDir, "sub/subfile.txt"));
-    } else {
-      // CLI rename behavior
-      assertPathExists("not renamed into dest dir",
-          new Path(finalDir, "src1/source.txt"));
-      assertPathExists("not renamed into dest/sub dir",
-          new Path(finalDir, "src1/sub/subfile.txt"));
-    }
+    // POSIX rename behavior
+    assertPathExists("not renamed into dest dir",
+        new Path(finalDir, sourceTextName));
+    assertPathExists("not renamed into dest/sub dir",
+        new Path(finalDir, "sub/subfile.txt"));
     assertPathDoesNotExist("not deleted",
-        new Path(srcDir, "source.txt"));
+        sourceTextPath);
   }
 
   /**
