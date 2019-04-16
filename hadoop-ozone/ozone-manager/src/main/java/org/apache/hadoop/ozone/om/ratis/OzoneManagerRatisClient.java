@@ -17,15 +17,14 @@
 
 package org.apache.hadoop.ozone.om.ratis;
 
+import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ozone.OmUtils;
@@ -40,7 +39,6 @@ import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientReply;
 import org.apache.ratis.protocol.RaftGroup;
-import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.retry.RetryPolicies;
 import org.apache.ratis.retry.RetryPolicy;
@@ -51,7 +49,9 @@ import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.ServiceException;
 
 /**
  * OM Ratis client to interact with OM Ratis server endpoint.
@@ -174,6 +174,30 @@ public final class OzoneManagerRatisClient implements Closeable {
             request.getTraceID(), e))
             .thenApply(reply -> {
               try {
+                Preconditions.checkNotNull(reply);
+                if (!reply.isSuccess()) {
+                  // in case of raft retry failure, the raft client is
+                  // not able to connect to the leader hence the pipeline
+                  // can not be used but this instance of RaftClient will close
+                  // and refreshed again. In case the client cannot connect to
+                  // leader, getClient call will fail.
+
+                  // No need to set the failed Server ID here. Ozone client
+                  // will directly exclude this pipeline in next allocate block
+                  // to SCM as in this case, it is the raft client which is not
+                  // able to connect to leader in the pipeline, though the
+                  // pipeline can still be functional.
+                  IOException exception = null;
+                  if (reply.getNotLeaderException() != null) {
+                    exception = reply.getNotLeaderException();
+                  } else if (reply.getNotReplicatedException() != null) {
+                    exception = reply.getNotReplicatedException();
+                  } else if (reply.getStateMachineException() != null) {
+                    exception = reply.getStateMachineException();
+                  }
+                  Preconditions.checkNotNull(exception);
+                  throw new CompletionException(exception);
+                }
                 return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
               } catch (InvalidProtocolBufferException e) {
                 throw new CompletionException(e);
