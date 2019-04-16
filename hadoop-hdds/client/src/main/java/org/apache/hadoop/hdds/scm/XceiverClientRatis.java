@@ -311,6 +311,17 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         }).thenApply(reply -> {
           try {
             if (!reply.isSuccess()) {
+              // in case of raft retry failure, the raft client is
+              // not able to connect to the leader hence the pipeline
+              // can not be used but this instance of RaftClient will close
+              // and refreshed again. In case the client cannot connect to
+              // leader, getClient call will fail.
+
+              // No need to set the failed Server ID here. Ozone client
+              // will directly exclude this pipeline in next allocate block
+              // to SCM as in this case, it is the raft client which is not
+              // able to connect to leader in the pipeline, though the
+              // pipeline can still be functional.
               IOException exception = null;
               if (reply.getNotLeaderException() != null) {
                 exception = reply.getNotLeaderException();
