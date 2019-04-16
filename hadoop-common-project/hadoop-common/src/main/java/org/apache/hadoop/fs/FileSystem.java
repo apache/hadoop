@@ -1620,23 +1620,6 @@ public abstract class FileSystem extends Configured
             String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, parent));
       }
     }
-    executeInnerRename(src, dst);
-  }
-
-  /**
-   * This is a method called by the base {@link #rename(Path, Path, Rename...)}
-   * method after all validation of the existing state.
-   * The base class simply calls {@link #rename(Path, Path)} and
-   * uprates a return value of false to an exception.
-   * Subclasses can override this to expose their actual exceptions.
-   * If they do so, they can assume that all the preconditions of the
-   * rename operation have been met.
-   * @param source source path
-   * @param dest destination path
-   * @throws IOException failure.
-   */
-  protected void executeInnerRename(final Path source, final Path dest,
-      final Rename... options) throws IOException {
     if (!rename(source, dest)) {
       // inner rename failed, no obvious cause
       throw new PathIOException(source.toString(),
