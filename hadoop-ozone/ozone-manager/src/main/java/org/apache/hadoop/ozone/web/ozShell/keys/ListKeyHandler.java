@@ -90,10 +90,17 @@ public class ListKeyHandler extends Handler {
         startKey);
     List<KeyInfo> keyInfos = new ArrayList<>();
 
+    int maxKeyLimit = maxKeys;
     while (maxKeys > 0 && keyIterator.hasNext()) {
       KeyInfo key = OzoneClientUtils.asKeyInfo(keyIterator.next());
       keyInfos.add(key);
       maxKeys -= 1;
+    }
+
+    // More keys were returned notify about max length
+    if (keyIterator.hasNext()) {
+      System.out.println("Listing first " + maxKeyLimit + " entries of the " +
+          "result. Use --length (-l) to override max returned keys.");
     }
 
     if (isVerbose()) {
