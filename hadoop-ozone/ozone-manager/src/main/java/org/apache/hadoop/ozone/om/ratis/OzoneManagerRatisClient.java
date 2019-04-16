@@ -174,17 +174,7 @@ public final class OzoneManagerRatisClient implements Closeable {
             request.getTraceID(), e))
             .thenApply(reply -> {
               try {
-                // we need to handle RaftRetryFailure Exception
-                RaftRetryFailureException raftRetryFailureException =
-                    reply.getRetryFailureException();
-                if (raftRetryFailureException != null) {
-                  throw new CompletionException(raftRetryFailureException);
-                }
-
-                OMResponse response = OMRatisHelper
-                    .getOMResponseFromRaftClientReply(reply);
-
-                return response;
+                return OMRatisHelper.getOMResponseFromRaftClientReply(reply);
               } catch (InvalidProtocolBufferException e) {
                 throw new CompletionException(e);
               }
