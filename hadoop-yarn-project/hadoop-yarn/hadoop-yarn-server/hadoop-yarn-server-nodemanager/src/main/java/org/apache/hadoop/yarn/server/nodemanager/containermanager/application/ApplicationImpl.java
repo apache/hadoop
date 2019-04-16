@@ -646,7 +646,7 @@ public class ApplicationImpl implements Application {
         // queue event requesting init of the same app
         newState = stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.warn("Can't handle this event at current state", e);
+        LOG.error("Can't handle this event at current state", e);
       }
       if (newState != null && oldState != newState) {
         LOG.info("Application " + applicationID + " transitioned from "
