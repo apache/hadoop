@@ -47,14 +47,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
+import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -94,6 +98,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.namenode.ErasureCodingPolicyManager;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.io.erasurecode.ECSchema;
+import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ScriptBasedMapping;
@@ -101,6 +106,7 @@ import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
@@ -1660,6 +1666,59 @@ public class TestDistributedFileSystem {
 
       FileStatus status = fs.getFileStatus(path);
       assertEquals(16 * 2, status.getLen());
+    }
+  }
+
+  @Test
+  public void testSuperUserPrivilege() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    File tmpDir = GenericTestUtils.getTestDir(UUID.randomUUID().toString());
+    final Path jksPath = new Path(tmpDir.toString(), "test.jks");
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        JavaKeyStoreProvider.SCHEME_NAME + "://file" + jksPath.toUri());
+
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      Path dir = new Path("/testPrivilege");
+      dfs.mkdirs(dir);
+
+      final KeyProvider provider =
+          cluster.getNameNode().getNamesystem().getProvider();
+      final KeyProvider.Options options = KeyProvider.options(conf);
+      provider.createKey("key", options);
+      provider.flush();
+
+      // Create a non-super user.
+      UserGroupInformation user = UserGroupInformation.createUserForTesting(
+          "Non_SuperUser", new String[] {"Non_SuperGroup"});
+
+      DistributedFileSystem userfs = (DistributedFileSystem) user.doAs(
+          (PrivilegedExceptionAction<FileSystem>) () -> FileSystem.get(conf));
+
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "Superuser privilege is required",
+          () -> userfs.createEncryptionZone(dir, "key"));
+
+      RemoteException re = LambdaTestUtils.intercept(RemoteException.class,
+          "Superuser privilege is required",
+          () -> userfs.listEncryptionZones().hasNext());
+      assertTrue(re.unwrapRemoteException() instanceof AccessControlException);
+
+      re = LambdaTestUtils.intercept(RemoteException.class,
+          "Superuser privilege is required",
+          () -> userfs.listReencryptionStatus().hasNext());
+      assertTrue(re.unwrapRemoteException() instanceof AccessControlException);
+
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "Superuser privilege is required",
+          () -> user.doAs(new PrivilegedExceptionAction<Void>() {
+            @Override
+            public Void run() throws Exception {
+              cluster.getNameNode().getRpcServer().rollEditLog();
+              return null;
+            }
+          }));
     }
   }
 
