@@ -180,12 +180,13 @@ public class OzoneContainer {
    *
    * @throws IOException
    */
-  public void start() throws IOException {
+  public void start(String scmId) throws IOException {
     LOG.info("Attempting to start container services.");
     startContainerScrub();
     writeChannel.start();
     readChannel.start();
     hddsDispatcher.init();
+    hddsDispatcher.setScmId(scmId);
   }
 
   /**

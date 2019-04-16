@@ -258,6 +258,21 @@ public class TestDatanodeStateMachine {
 
       task.execute(executorService);
       newState = task.await(10, TimeUnit.SECONDS);
+
+      // Wait for GetVersion call (called by task.execute) to finish. After
+      // Earlier task.execute called into GetVersion. Wait for the execution
+      // to finish and the endPointState to move to REGISTER state.
+      GenericTestUtils.waitFor(() -> {
+        for (EndpointStateMachine endpoint :
+            stateMachine.getConnectionManager().getValues()) {
+          if (endpoint.getState() !=
+              EndpointStateMachine.EndPointStates.REGISTER) {
+            return false;
+          }
+        }
+        return true;
+      }, 1000, 50000);
+
       // If we are in running state, we should be in running.
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
           newState);

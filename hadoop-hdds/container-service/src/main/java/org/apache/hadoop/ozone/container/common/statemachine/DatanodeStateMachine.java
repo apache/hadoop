@@ -166,7 +166,6 @@ public class DatanodeStateMachine implements Closeable {
   private void start() throws IOException {
     long now = 0;
 
-    container.start();
     reportManager.init();
     initCommandHandlerThread(conf);
 

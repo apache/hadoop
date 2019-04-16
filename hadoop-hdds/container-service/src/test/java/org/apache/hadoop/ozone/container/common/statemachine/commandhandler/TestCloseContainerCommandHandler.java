@@ -68,7 +68,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -105,7 +105,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -140,7 +140,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -188,7 +188,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer =
         getOzoneContainer(conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container =
           createContainer(conf, datanodeDetails, ozoneContainer);
@@ -224,7 +224,7 @@ public class TestCloseContainerCommandHandler {
     final DatanodeDetails datanodeDetails = randomDatanodeDetails();
     final OzoneContainer ozoneContainer = getOzoneContainer(
         conf, datanodeDetails);
-    ozoneContainer.start();
+    ozoneContainer.start(UUID.randomUUID().toString());
     try {
       final Container container = createContainer(
           conf, datanodeDetails, ozoneContainer);
@@ -277,7 +277,6 @@ public class TestCloseContainerCommandHandler {
     Mockito.when(context.getParent()).thenReturn(datanodeStateMachine);
     final OzoneContainer ozoneContainer = new  OzoneContainer(
         datanodeDetails, conf, context, null);
-    ozoneContainer.getDispatcher().setScmId(UUID.randomUUID().toString());
     return ozoneContainer;
   }
 
