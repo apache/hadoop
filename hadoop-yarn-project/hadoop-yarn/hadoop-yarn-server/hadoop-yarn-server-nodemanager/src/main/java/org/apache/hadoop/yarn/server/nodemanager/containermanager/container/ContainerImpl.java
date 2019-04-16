@@ -2125,7 +2125,7 @@ public class ContainerImpl implements Container {
         newState =
             stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.warn("Can't handle this event at current state: Current: ["
+        LOG.error("Can't handle this event at current state: Current: ["
             + oldState + "], eventType: [" + event.getType() + "]," +
             " container: [" + containerID + "]", e);
       }
