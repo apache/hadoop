@@ -56,10 +56,11 @@ public class MiniOzoneLoadGenerator {
 
   private AtomicBoolean isWriteThreadRunning;
 
-  private final OzoneBucket ozoneBucket;
+  private final List<OzoneBucket> ozoneBuckets;
 
-  MiniOzoneLoadGenerator(OzoneBucket bucket, int numThreads, int numBuffers) {
-    this.ozoneBucket = bucket;
+  MiniOzoneLoadGenerator(List<OzoneBucket> bucket, int numThreads,
+      int numBuffers) {
+    this.ozoneBuckets = bucket;
     this.numWriteThreads = numThreads;
     this.numBuffers = numBuffers;
     this.writeExecutor = new ThreadPoolExecutor(numThreads, numThreads, 100,
@@ -94,7 +95,9 @@ public class MiniOzoneLoadGenerator {
       int bufferCapacity = buffer.capacity();
 
       String keyName = threadName + "-" + index;
-      try (OzoneOutputStream stream = ozoneBucket.createKey(keyName,
+      OzoneBucket bucket =
+          ozoneBuckets.get((int) (Math.random() * ozoneBuckets.size()));
+      try (OzoneOutputStream stream = bucket.createKey(keyName,
           bufferCapacity, ReplicationType.RATIS, ReplicationFactor.THREE,
           new HashMap<>())) {
         stream.write(buffer.array());
@@ -106,7 +109,7 @@ public class MiniOzoneLoadGenerator {
         //  to closed container. add a break here once that is fixed.
       }
 
-      try (OzoneInputStream stream = ozoneBucket.readKey(keyName)) {
+      try (OzoneInputStream stream = bucket.readKey(keyName)) {
         byte[] readBuffer = new byte[bufferCapacity];
         int readLen = stream.read(readBuffer);
 
