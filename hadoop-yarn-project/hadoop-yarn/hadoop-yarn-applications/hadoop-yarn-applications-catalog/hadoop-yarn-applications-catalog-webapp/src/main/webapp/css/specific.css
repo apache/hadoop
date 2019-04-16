@@ -197,8 +197,8 @@ ul.nav.side-nav-menu li {
 .toparea {
   position: fixed;
   top: 0px;
-  left: 230px;
-  width: calc(100% - 230px);
+  left: 0px;
+  width: 100%;
   height: 300px;
   color: #2c2e3b;
   background: -webkit-linear-gradient(left,#2e3b51 ,#181d2b);
@@ -249,4 +249,42 @@ ul.nav.side-nav-menu li {
     font-size:14px;
     margin:20px;
     padding:10px;
+}
+
+.grid-container {
+  display:table;
+  width:100%;
+  height: 100%;
+  padding: 0;
+  margin-top: 0px;
+}
+
+.grid-row {
+  height: 100%;
+  display: table-row;
+}
+
+.grid-row .no-float {
+  display: table-cell;
+  float: none;
+  vertical-align: top;
+}
+
+.navbar-close {
+  text-align:right;
+}
+
+.apps {
+  z-index: 99;
+}
+
+.side-bar {
+  min-width: 230px;
+  width: 16.666667%;
+  height: 100%;
+  background-color: #2D3A4F;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1000;
 }

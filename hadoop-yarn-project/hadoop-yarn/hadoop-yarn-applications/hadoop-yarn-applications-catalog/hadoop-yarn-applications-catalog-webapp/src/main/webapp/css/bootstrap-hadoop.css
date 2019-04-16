@@ -189,6 +189,11 @@
   background-color: #FFF;
   box-shadow: 0 0 2px 0 #1391c1;
 }
+.btn-secondary:visited {
+  color: #429929;
+  background-color: #FFF;
+  box-shadow: 0 0 2px 0 #1391c1;
+}
 .btn-secondary[disabled],
 .btn-secondary:focus[disabled],
 .btn-secondary.disabled,
@@ -772,20 +777,17 @@ input.radio:checked + label:after {
   border-radius: 6px;
 }
 .navigation-bar-container {
-  height: auto;
-  width: 230px;
-  background-color: #323544;
+  min-width: 230px;
   padding: 0;
   -ms-overflow-style: none;
   transition: width 0.5s ease-out;
   -webkit-font-smoothing: antialiased;
+  z-index: 999;
 }
 .navigation-bar-container ul.nav.side-nav-header {
-  width: 230px;
   transition: width 0.5s ease-out;
 }
 .navigation-bar-container ul.nav.side-nav-header li.navigation-header {
-  background: #313d54;
   padding: 15px 5px 15px 25px;
   height: 55px;
 }
@@ -849,8 +851,7 @@ input.radio:checked + label:after {
 }
 .navigation-bar-container ul.nav.side-nav-menu,
 .navigation-bar-container ul.nav.side-nav-footer {
-  background-color: #323544;
-  width: 230px;
+  min-width: 230px;
   transition: width 0.5s ease-out;
 }
 .navigation-bar-container ul.nav.side-nav-menu li,
@@ -858,15 +859,47 @@ input.radio:checked + label:after {
   padding: 0;
   margin: 0;
 }
+.navigation-bar-container ul.nav.side-nav-menu li.navigation-footer span.navbar-close,
+.navigation-bar-container ul.nav.side-nav-footer li.navigation-footer span.navbar-close,
+.navigation-bar-container ul.nav.side-nav-menu li.submenu-li span.navbar-close,
+.navigation-bar-container ul.nav.side-nav-footer li.submenu-li span.navbar-close,
+.navigation-bar-container ul.nav.side-nav-menu li.mainmenu-li span.navbar-close,
+.navigation-bar-container ul.nav.side-nav-footer li.mainmenu-li span.navbar-close {
+  text-align:right;
+}
+.navigation-bar-container ul.nav.side-nav-menu li.navigation-footer > span.line,
+.navigation-bar-container ul.nav.side-nav-footer li.navigation-footer > span.line,
+.navigation-bar-container ul.nav.side-nav-menu li.submenu-li > span.line,
+.navigation-bar-container ul.nav.side-nav-footer li.submenu-li > span.line,
+.navigation-bar-container ul.nav.side-nav-menu li.mainmenu-li > span.line,
+.navigation-bar-container ul.nav.side-nav-footer li.mainmenu-li > span.line {
+  width: 49%;
+  display:inline-block;
+  height: 35px;
+  padding: 10px 5px 10px 25px;
+  white-space: nowrap;
+}
+.navigation-bar-container ul.nav.side-nav-menu li.navigation-footer span.line a,
+.navigation-bar-container ul.nav.side-nav-footer li.navigation-footer span.line a,
+.navigation-bar-container ul.nav.side-nav-menu li.submenu-li span.line a,
+.navigation-bar-container ul.nav.side-nav-footer li.submenu-li span.line a,
+.navigation-bar-container ul.nav.side-nav-menu li.mainmenu-li span.line a,
+.navigation-bar-container ul.nav.side-nav-footer li.mainmenu-li span.line a {
+  font-family: 'Roboto', sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  color: #333;
+  font-size: 14px;
+  color: #b8bec4;
+}
 .navigation-bar-container ul.nav.side-nav-menu li.navigation-footer > a,
 .navigation-bar-container ul.nav.side-nav-footer li.navigation-footer > a,
 .navigation-bar-container ul.nav.side-nav-menu li.submenu-li > a,
 .navigation-bar-container ul.nav.side-nav-footer li.submenu-li > a,
 .navigation-bar-container ul.nav.side-nav-menu li.mainmenu-li > a,
 .navigation-bar-container ul.nav.side-nav-footer li.mainmenu-li > a {
-  display: table-cell;
   vertical-align: middle;
-  width: 230px;
   border-radius: 0;
   -moz-border-radius: 0;
   -webkit-border-radius: 0;
@@ -1109,7 +1142,7 @@ input.radio:checked + label:after {
 .navigation-bar-container.collapsed ul.nav.side-nav-menu li ul.sub-menu,
 .navigation-bar-container.collapsed ul.nav.side-nav-footer li ul.sub-menu {
   display: none;
-  width: 230px;
+  min-width: 230px;
   position: absolute;
   z-index: 100;
   top: 0;
@@ -1118,7 +1151,7 @@ input.radio:checked + label:after {
 .navigation-bar-container.collapsed ul.nav.side-nav-menu li.submenu-li > a,
 .navigation-bar-container.collapsed ul.nav.side-nav-footer li.submenu-li > a {
   padding: 10px 5px 10px 25px;
-  width: 230px;
+  min-width: 230px;
 }
 .navigation-bar-container.collapsed ul.nav.side-nav-menu li.active,
 .navigation-bar-container.collapsed ul.nav.side-nav-footer li.active {

@@ -11,8 +11,8 @@
   See the License for the specific language governing permissions and
   limitations under the License. See accompanying LICENSE file.
 -->
-<div class="toparea"><div class="pattern-wrapper"></div></div>
-<div class="container content toparea pattern-wrapper">
+<div class="container content apps">
+      <div class="toparea"><div class="pattern-wrapper"></div></div>
       <form>
         <div class="input-group input-group-lg">
           <div class="input-group-addon">
@@ -27,7 +27,7 @@
 
       <div ng-repeat="a in appStore" ng-if="$index % 3 == 0" class="row">
         <div ng-repeat="i in [$index, $index + 1, $index + 2]"
-             ng-if="appStore[i] != null" class="col-xs-4 col-md-4 col-lg-4">
+             ng-if="appStore[i] != null" class="col-xs-4 col-md-4 col-lg-4 apps">
           <div class="tile mdl-shadow-4dp">
             <img ng-src="{{appStore[i].icon}}" alt="" width="128" height="128" ng-if="appStore[i] != null" />
             <div class="card-title">

@@ -28,9 +28,10 @@
 <div ng-controller="LoadScreenController" class="loader-wrapper {{loadScreen}}">
   <div class="loader"><img src="/css/img/loading.svg"></div>
 </div>
-<div class="container">
-  <div class="row">
-      <div class="navigation-bar-container col-sm-3 col-md-3 col-lg-3" ng-controller="AppListController">
+<div class="grid-container">
+  <div class="grid-row">
+      <div class="side-bar"></div>
+      <div class="navigation-bar-container col-sx-2 col-sm-2 col-md-2 col-lg-2 no-float" ng-controller="AppListController">
         <ul class="side-nav-header nav nav-pills nav-stacked">
           <li class="navigation-header">
             <div class="btn-group">
@@ -49,21 +50,27 @@
         </ul>
         <ul class="side-nav-menu nav nav-pills nav-stacked">
           <li class="mainmenu-li" ng-repeat="yarnApp in appList">
-            <a href="#!/app/{{yarnApp.id}}"><span class="glyphicon glyphicon-ok-sign"></span> {{yarnApp.name}}</a>
-            <a ng-click="deleteApp(yarnApp.id,yarnApp.name)" class="icon-width"><span class="glyphicon glyphicon-remove pull-right"></span></a>
+            <span class="line">
+              <a href="#!/app/{{yarnApp.id}}"><span class="glyphicon glyphicon-ok-sign"></span> {{yarnApp.name}}</a>
+            </span>
+            <span class="line navbar-close">
+              <a ng-click="deleteApp(yarnApp.id,yarnApp.name)"><span class="glyphicon glyphicon-remove"></span></a>
+            </span>
+            <div>
             <span class="navigation-menu-item">{{yarnApp.app}}</span>
+              </div>
           </li>
         </ul>
-        <ul class="side-nav-footer nav nav-pills nav-stacked">
+        <!--<ul class="side-nav-footer nav nav-pills nav-stacked">
           <li class="navigation-footer">
             <a href="#" data-toggle="collapse-side-nav">
               <span class="navigation-icon fa fa-angle-double-left"></span>
             </a>
           </li>
-        </ul>
+        </ul>-->
       </div>
 
-    <div class="col-xs-9 col-md-9 col-lg-9">
+    <div class="col-xs-10 col-sm-10 col-md-10 col-lg-10 no-float">
       <div data-ng-view></div>
     </div>
   </div>
