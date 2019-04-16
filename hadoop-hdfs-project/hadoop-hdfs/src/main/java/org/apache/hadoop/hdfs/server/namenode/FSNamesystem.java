@@ -7397,7 +7397,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-      checkSuperuserPrivilege(pc);
       checkOperation(OperationCategory.WRITE);
       final FileStatus resultingStat;
       writeLock();
@@ -7459,7 +7458,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    checkSuperuserPrivilege(pc);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -7497,7 +7495,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    checkSuperuserPrivilege(pc);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
