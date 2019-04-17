@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.LocatedFileStatus;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
  */
@@ -33,7 +35,7 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
 
   public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations,
       String eTag, String versionId) {
-    super(status, locations);
+    super(checkNotNull(status), locations);
     this.eTag = eTag;
     this.versionId = versionId;
   }

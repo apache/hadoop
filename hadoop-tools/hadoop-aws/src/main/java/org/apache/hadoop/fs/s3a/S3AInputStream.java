@@ -147,10 +147,8 @@ public class S3AInputStream extends FSInputStream implements CanSetReadahead {
     this.serverSideEncryptionAlgorithm =
         s3Attributes.getServerSideEncryptionAlgorithm();
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
-    ChangeDetectionPolicy changeDetectionPolicy =
-        ctx.getChangeDetectionPolicy();
     this.changeTracker = new ChangeTracker(uri,
-        changeDetectionPolicy,
+        ctx.getChangeDetectionPolicy(),
         streamStatistics.getVersionMismatchCounter(),
         s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
