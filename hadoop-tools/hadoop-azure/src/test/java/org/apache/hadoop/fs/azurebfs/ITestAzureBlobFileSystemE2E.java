@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -174,12 +175,17 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final Path testFilePath = new Path(methodName.getMethodName());
     testWriteOneByteToFile(testFilePath);
 
-    FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
+    final FSDataInputStream inputStream = fs.open(testFilePath, TEST_DEFAULT_BUFFER_SIZE);
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
 
     intercept(FileNotFoundException.class,
-            () -> inputStream.read(new byte[1]));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            inputStream.read(new byte[1]);
+          }
+        });
   }
 
   @Test
@@ -187,7 +193,7 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
 
-    FSDataOutputStream stream = fs.create(testFilePath);
+    final FSDataOutputStream stream = fs.create(testFilePath);
     assertTrue(fs.exists(testFilePath));
     stream.write(TEST_BYTE);
 
@@ -196,7 +202,12 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
 
     // trigger append call
     intercept(FileNotFoundException.class,
-            () -> stream.close());
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            stream.close();
+          }
+        });
   }
 
   @Test
@@ -204,14 +215,19 @@ public class ITestAzureBlobFileSystemE2E extends AbstractAbfsIntegrationTest {
     final AzureBlobFileSystem fs = getFileSystem();
     final Path testFilePath = new Path(methodName.getMethodName());
 
-    FSDataOutputStream stream = fs.create(testFilePath);
+    final FSDataOutputStream stream = fs.create(testFilePath);
     assertTrue(fs.exists(testFilePath));
 
     fs.delete(testFilePath, true);
     assertFalse(fs.exists(testFilePath));
 
     intercept(FileNotFoundException.class,
-            () -> stream.close());
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            stream.close();
+          }
+        });
   }
 
   private void testWriteOneByteToFile(Path testFilePath) throws Exception {

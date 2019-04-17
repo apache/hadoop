@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
@@ -277,21 +278,36 @@ public abstract class AbstractContractGetFileStatusTest extends
   public void testLocatedStatusNoDir() throws Throwable {
     describe("test the LocatedStatus call on a path which is not present");
     intercept(FileNotFoundException.class,
-        () -> getFileSystem().listLocatedStatus(path("missing")));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            getFileSystem().listLocatedStatus(path("missing"));
+          }
+        });
   }
 
   @Test
   public void testListStatusNoDir() throws Throwable {
     describe("test the listStatus(path) call on a path which is not present");
     intercept(FileNotFoundException.class,
-        () -> getFileSystem().listStatus(path("missing")));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            getFileSystem().listStatus(path("missing"));
+          }
+        });
   }
 
   @Test
   public void testListStatusFilteredNoDir() throws Throwable {
     describe("test the listStatus(path, filter) call on a missing path");
     intercept(FileNotFoundException.class,
-        () -> getFileSystem().listStatus(path("missing"), ALL_PATHS));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            getFileSystem().listStatus(path("missing"), ALL_PATHS);
+          }
+        });
   }
 
   @Test

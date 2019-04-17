@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.azurebfs.extensions;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -46,6 +44,8 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
   private Set<Path> readOnlyPaths = new HashSet<Path>();
   private Set<Path> writeOnlyPaths = new HashSet<Path>();
   private Set<Path> readWritePaths = new HashSet<Path>();
+  private Set<Path> readPaths = new HashSet<>();
+  private Set<Path> writePaths = new HashSet<>();
   private int writeThenReadOnly = 0;
   public MockAbfsAuthorizer(Configuration conf) {
     this.conf = conf;
@@ -61,6 +61,10 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
     writeOnlyPaths.add(new Path(TEST_WRITE_ONLY_FOLDER));
     readWritePaths.add(new Path(TEST_READ_WRITE_FILE_0));
     readWritePaths.add(new Path(TEST_READ_WRITE_FILE_1));
+    readPaths.addAll(readOnlyPaths);
+    readPaths.addAll(readWritePaths);
+    writePaths.addAll(writeOnlyPaths);
+    writePaths.addAll(readWritePaths);
   }
 
   @Override
@@ -70,12 +74,11 @@ public class MockAbfsAuthorizer implements AbfsAuthorizer {
       paths.add(new Path(path.getName()));
     }
 
-    if (action.equals(FsAction.READ) && Stream.concat(readOnlyPaths.stream(), readWritePaths.stream()).collect(Collectors.toSet()).containsAll(paths)) {
+    if (action.equals(FsAction.READ) && readPaths.containsAll(paths)) {
       return true;
     } else if (action.equals(FsAction.READ) && paths.contains(new Path(TEST_WRITE_THEN_READ_ONLY)) && writeThenReadOnly == 1) {
       return true;
-    } else if (action.equals(FsAction.WRITE)
-        && Stream.concat(writeOnlyPaths.stream(), readWritePaths.stream()).collect(Collectors.toSet()).containsAll(paths)) {
+    } else if (action.equals(FsAction.WRITE) && writePaths.containsAll(paths)) {
       return true;
     } else if (action.equals(FsAction.WRITE) && paths.contains(new Path(TEST_WRITE_THEN_READ_ONLY)) && writeThenReadOnly == 0) {
       writeThenReadOnly = 1;

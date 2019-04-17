@@ -89,7 +89,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         maxConcurrentRequestCount,
         10L,
         TimeUnit.SECONDS,
-        new LinkedBlockingQueue<>());
+        new LinkedBlockingQueue<Runnable>());
     this.completionService = new ExecutorCompletionService<>(this.threadExecutor);
   }
 
@@ -242,6 +242,11 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         threadExecutor.shutdownNow();
       }
     }
+  }
+
+  @Override
+  public void sync() throws IOException {
+    throw new UnsupportedOperationException();
   }
 
   private synchronized void flushInternal(boolean isClose) throws IOException {

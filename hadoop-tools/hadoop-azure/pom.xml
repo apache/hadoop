@@ -159,13 +159,13 @@
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
-
+<!--
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-util-ajax</artifactId>
       <scope>compile</scope>
     </dependency>
-
+-->
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
@@ -177,13 +177,13 @@
       <artifactId>jackson-core-asl</artifactId>
       <scope>compile</scope>
     </dependency>
-
+<!--
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
       <scope>compile</scope>
     </dependency>
-
+-->
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->
     <!--transitive dependency from Azure SDK-->
     <dependency>
@@ -237,13 +237,13 @@
       <artifactId>log4j</artifactId>
       <scope>test</scope>
     </dependency>
-
+<!--
     <dependency>
       <groupId>javax.ws.rs</groupId>
       <artifactId>jsr311-api</artifactId>
       <scope>test</scope>
     </dependency>
-
+-->
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>

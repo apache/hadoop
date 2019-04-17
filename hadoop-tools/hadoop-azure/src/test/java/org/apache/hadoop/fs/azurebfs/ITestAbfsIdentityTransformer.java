@@ -239,7 +239,7 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     List<AclEntry> aclEntriesToBeTransformed = Lists.newArrayList(
             aclEntry(ACCESS, USER, DAEMON, ALL),
-            aclEntry(ACCESS, USER, FULLY_QUALIFIED_NAME,ALL),
+            aclEntry(ACCESS, USER, FULLY_QUALIFIED_NAME, ALL),
             aclEntry(DEFAULT, USER, SUPER_USER, ALL),
             aclEntry(DEFAULT, USER, SERVICE_PRINCIPAL_ID, ALL),
             aclEntry(DEFAULT, USER, SHORT_NAME, ALL),

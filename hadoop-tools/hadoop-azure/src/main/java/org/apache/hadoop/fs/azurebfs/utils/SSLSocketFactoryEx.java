@@ -32,8 +32,9 @@ import javax.net.ssl.SSLSocketFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+/*
 import org.wildfly.openssl.OpenSSLProvider;
-
+*/
 
 /**
  * Extension to use native OpenSSL library instead of JSSE for better
@@ -85,11 +86,11 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
   public static SSLSocketFactoryEx getDefaultFactory() {
     return instance;
   }
-
+/*
   static {
     OpenSSLProvider.register();
   }
-
+*/
   private SSLSocketFactoryEx(SSLChannelMode preferredChannelMode)
       throws IOException {
     try {

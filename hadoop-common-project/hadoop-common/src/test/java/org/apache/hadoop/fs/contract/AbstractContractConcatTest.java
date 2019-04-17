@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.contract;
 
 import org.apache.hadoop.fs.Path;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -62,14 +63,24 @@ public abstract class AbstractContractConcatTest extends AbstractFSContractTestB
   public void testConcatEmptyFiles() throws Throwable {
     touch(getFileSystem(), target);
     handleExpectedException(intercept(Exception.class,
-        () -> getFileSystem().concat(target, new Path[0])));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            getFileSystem().concat(target, new Path[0]);
+          }
+        }));
   }
 
   @Test
   public void testConcatMissingTarget() throws Throwable {
     handleExpectedException(
         intercept(Exception.class,
-            () -> getFileSystem().concat(target, new Path[]{zeroByteFile})));
+            new LambdaTestUtils.VoidCallable() {
+              @Override
+              public void call() throws Exception {
+                getFileSystem().concat(target, new Path[]{zeroByteFile});
+              }
+        }));
   }
 
   @Test
@@ -90,7 +101,12 @@ public abstract class AbstractContractConcatTest extends AbstractFSContractTestB
     byte[] block = dataset(TEST_FILE_LEN, 0, 255);
     createFile(getFileSystem(), target, false, block);
     handleExpectedException(intercept(Exception.class,
-        () -> getFileSystem().concat(target, new Path[]{target})));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            getFileSystem().concat(target, new Path[]{target});
+          }
+        }));
   }
 
 }

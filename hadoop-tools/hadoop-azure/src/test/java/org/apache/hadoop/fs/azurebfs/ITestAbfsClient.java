@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 
 import java.util.UUID;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -61,7 +62,7 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
   public void testUnknownHost() throws Exception {
     // When hitting hostName not found exception, the retry will take about 14 mins until failed.
     // This test is to verify that the "Unknown host name: %s. Retrying to resolve the host name..." is logged as warning during the retry.
-    AbfsConfiguration conf = this.getConfiguration();
+    final AbfsConfiguration conf = this.getConfiguration();
     String accountName = this.getAccountName();
     String fakeAccountName = "fake" + UUID.randomUUID() + accountName.substring(accountName.indexOf("."));
 
@@ -71,6 +72,11 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
 
     intercept(AbfsRestOperationException.class,
             "UnknownHostException: " + fakeAccountName,
-            () -> FileSystem.get(conf.getRawConfiguration()));
+              new LambdaTestUtils.VoidCallable() {
+                @Override
+                public void call() throws Exception {
+                  FileSystem.get(conf.getRawConfiguration());
+                }
+              });
   }
 }
