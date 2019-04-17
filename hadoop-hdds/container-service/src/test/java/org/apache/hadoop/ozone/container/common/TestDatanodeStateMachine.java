@@ -86,6 +86,7 @@ public class TestDatanodeStateMachine {
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500,
         TimeUnit.MILLISECONDS);
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
     serverAddresses = new ArrayList<>();
     scmServers = new ArrayList<>();
     mockServers = new ArrayList<>();

@@ -25,6 +25,7 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -269,6 +270,8 @@ public class TestCloseContainerCommandHandler {
         TestCloseContainerCommandHandler.class.getName() + UUID.randomUUID());
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, testDir.getPath());
     conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testDir.getPath());
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
 
     final DatanodeStateMachine datanodeStateMachine = Mockito.mock(
         DatanodeStateMachine.class);
