@@ -295,66 +295,60 @@ public class KeyOutputStream extends OutputStream {
       throws IOException {
     int succeededAllocates = 0;
     while (len > 0) {
-      try {
-        if (streamEntries.size() <= currentStreamIndex) {
-          Preconditions.checkNotNull(omClient);
-          // allocate a new block, if a exception happens, log an error and
-          // throw exception to the caller directly, and the write fails.
-          try {
-            allocateNewBlock(currentStreamIndex);
-            succeededAllocates += 1;
-          } catch (IOException ioe) {
-            LOG.error("Try to allocate more blocks for write failed, already "
-                + "allocated " + succeededAllocates
-                + " blocks for this write.");
-            throw ioe;
-          }
-        }
-        // in theory, this condition should never violate due the check above
-        // still do a sanity check.
-        Preconditions.checkArgument(currentStreamIndex < streamEntries.size());
-        BlockOutputStreamEntry current = streamEntries.get(currentStreamIndex);
-
-        // length(len) will be in int range if the call is happening through
-        // write API of blockOutputStream. Length can be in long range if it comes
-        // via Exception path.
-        int writeLen = Math.min((int) len, (int) current.getRemaining());
-        long currentPos = current.getWrittenDataLength();
+      if (streamEntries.size() <= currentStreamIndex) {
+        Preconditions.checkNotNull(omClient);
+        // allocate a new block, if a exception happens, log an error and
+        // throw exception to the caller directly, and the write fails.
         try {
-          if (retry) {
-            current.writeOnRetry(len);
-          } else {
-            current.write(b, off, writeLen);
-            offset += writeLen;
-          }
+          allocateNewBlock(currentStreamIndex);
+          succeededAllocates += 1;
         } catch (IOException ioe) {
-          // for the current iteration, totalDataWritten - currentPos gives the
-          // amount of data already written to the buffer
-
-          // In the retryPath, the total data to be written will always be equal
-          // to or less than the max length of the buffer allocated.
-          // The len specified here is the combined sum of the data length of
-          // the buffers
-          Preconditions.checkState(!retry || len <= streamBufferMaxSize);
-          int dataWritten = (int) (current.getWrittenDataLength() - currentPos);
-          writeLen = retry ? (int) len : dataWritten;
-          // In retry path, the data written is already accounted in offset.
-          if (!retry) {
-            offset += writeLen;
-          }
-          LOG.debug("writeLen {}, total len {}", writeLen, len);
-          handleException(current, currentStreamIndex, ioe);
+          LOG.error("Try to allocate more blocks for write failed, already "
+              + "allocated " + succeededAllocates + " blocks for this write.");
+          throw ioe;
         }
-        if (current.getRemaining() <= 0) {
-          // since the current block is already written close the stream.
-          handleFlushOrClose(StreamAction.FULL);
-        }
-        len -= writeLen;
-        off += writeLen;
-      } catch (Exception e) {
-        markStreamClosed();
-        throw e;
       }
+      // in theory, this condition should never violate due the check above
+      // still do a sanity check.
+      Preconditions.checkArgument(currentStreamIndex < streamEntries.size());
+      BlockOutputStreamEntry current = streamEntries.get(currentStreamIndex);
+
+      // length(len) will be in int range if the call is happening through
+      // write API of blockOutputStream. Length can be in long range if it comes
+      // via Exception path.
+      int writeLen = Math.min((int)len, (int) current.getRemaining());
+      long currentPos = current.getWrittenDataLength();
+      try {
+        if (retry) {
+          current.writeOnRetry(len);
+        } else {
+          current.write(b, off, writeLen);
+          offset += writeLen;
+        }
+      } catch (IOException ioe) {
+        // for the current iteration, totalDataWritten - currentPos gives the
+        // amount of data already written to the buffer
+
+        // In the retryPath, the total data to be written will always be equal
+        // to or less than the max length of the buffer allocated.
+        // The len specified here is the combined sum of the data length of
+        // the buffers
+        Preconditions.checkState(!retry || len <= streamBufferMaxSize);
+        int dataWritten  = (int) (current.getWrittenDataLength() - currentPos);
+        writeLen = retry ? (int) len : dataWritten;
+        // In retry path, the data written is already accounted in offset.
+        if (!retry) {
+          offset += writeLen;
+        }
+        LOG.debug("writeLen {}, total len {}", writeLen, len);
+        handleException(current, currentStreamIndex, ioe);
+      }
+      if (current.getRemaining() <= 0) {
+        // since the current block is already written close the stream.
+        handleFlushOrClose(StreamAction.FULL);
+      }
+      len -= writeLen;
+      off += writeLen;
     }
   }
 
@@ -371,7 +365,7 @@ public class KeyOutputStream extends OutputStream {
     // pre allocated blocks available.
 
     // This will be called only to discard the next subsequent unused blocks
-    // in the streamEntryList.
+    // in the sreamEntryList.
     if (streamIndex < streamEntries.size()) {
       ListIterator<BlockOutputStreamEntry> streamEntryIterator =
           streamEntries.listIterator(streamIndex);
@@ -404,20 +398,6 @@ public class KeyOutputStream extends OutputStream {
       }
     }
   }
-
-  private void cleanup() {
-    if (excludeList != null) {
-      excludeList.clear();
-      excludeList = null;
-    }
-    if (bufferPool != null) {
-      bufferPool.clearBufferPool();
-    }
-
-    if (streamEntries != null) {
-      streamEntries.clear();
-    }
-  }
   /**
    * It performs following actions :
    * a. Updates the committed length at datanode for the current stream in
@@ -438,7 +418,8 @@ public class KeyOutputStream extends OutputStream {
       closedContainerException = checkIfContainerIsClosed(t);
     }
     PipelineID pipelineId = null;
-    long totalSuccessfulFlushedData = streamEntry.getTotalAckDataLength();
+    long totalSuccessfulFlushedData =
+        streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = computeBufferData();
@@ -469,8 +450,8 @@ public class KeyOutputStream extends OutputStream {
     if (closedContainerException) {
       // discard subsequent pre allocated blocks from the streamEntries list
       // from the closed container
-      discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID(), null,
-          streamIndex + 1);
+      discardPreallocatedBlocks(streamEntry.getBlockID().getContainerID(),
+          null, streamIndex + 1);
     } else {
       // In case there is timeoutException or Watch for commit happening over
       // majority or the client connection failure to the leader in the
@@ -492,11 +473,6 @@ public class KeyOutputStream extends OutputStream {
       streamEntries.remove(streamIndex);
       currentStreamIndex -= 1;
     }
-  }
-
-  private void markStreamClosed() {
-    cleanup();
-    closed = true;
   }
 
   private void handleRetry(IOException exception, long len) throws IOException {
@@ -610,46 +586,40 @@ public class KeyOutputStream extends OutputStream {
       return;
     }
     while (true) {
-      try {
-        int size = streamEntries.size();
-        int streamIndex =
-            currentStreamIndex >= size ? size - 1 : currentStreamIndex;
-        BlockOutputStreamEntry entry = streamEntries.get(streamIndex);
-        if (entry != null) {
-          try {
-            Collection<DatanodeDetails> failedServers =
-                entry.getFailedServers();
-            // failed servers can be null in case there is no data written in the
-            // stream
-            if (failedServers != null && !failedServers.isEmpty()) {
-              excludeList.addDatanodes(failedServers);
-            }
-            switch (op) {
-            case CLOSE:
-              entry.close();
-              break;
-            case FULL:
-              if (entry.getRemaining() == 0) {
-                entry.close();
-                currentStreamIndex++;
-              }
-              break;
-            case FLUSH:
-              entry.flush();
-              break;
-            default:
-              throw new IOException("Invalid Operation");
-            }
-          } catch (IOException ioe) {
-            handleException(entry, streamIndex, ioe);
-            continue;
+      int size = streamEntries.size();
+      int streamIndex =
+          currentStreamIndex >= size ? size - 1 : currentStreamIndex;
+      BlockOutputStreamEntry entry = streamEntries.get(streamIndex);
+      if (entry != null) {
+        try {
+          Collection<DatanodeDetails> failedServers = entry.getFailedServers();
+          // failed servers can be null in case there is no data written in the
+          // stream
+          if (failedServers != null && !failedServers.isEmpty()) {
+            excludeList.addDatanodes(failedServers);
           }
+          switch (op) {
+          case CLOSE:
+            entry.close();
+            break;
+          case FULL:
+            if (entry.getRemaining() == 0) {
+              entry.close();
+              currentStreamIndex++;
+            }
+            break;
+          case FLUSH:
+            entry.flush();
+            break;
+          default:
+            throw new IOException("Invalid Operation");
+          }
+        } catch (IOException ioe) {
+          handleException(entry, streamIndex, ioe);
+          continue;
         }
-        break;
-      } catch (Exception e) {
-        markStreamClosed();
-        throw e;
       }
+      break;
     }
   }
 
@@ -688,7 +658,7 @@ public class KeyOutputStream extends OutputStream {
     } catch (IOException ioe) {
       throw ioe;
     } finally {
-      cleanup();
+      bufferPool.clearBufferPool();
     }
   }
 
