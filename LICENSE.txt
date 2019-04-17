@@ -1636,7 +1636,6 @@ derived.)
 
 The binary distribution of this product bundles these dependencies under the
 following license:
-JUnit 4.11
 Eclipse JDT Core 3.1.1
 --------------------------------------------------------------------------------
 (EPL v1.0)
