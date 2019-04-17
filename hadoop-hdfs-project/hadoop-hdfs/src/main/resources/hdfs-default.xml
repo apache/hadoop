@@ -1724,7 +1724,7 @@
     A comma-separated list of paths to use when creating file descriptors that
     will be shared between the DataNode and the DFSClient.  Typically we use
     /dev/shm, so that the file descriptors will not be written to disk.
-    Systems that don't have /dev/shm will fall back to /tmp by default.
+    It tries paths in order until creation of shared memory segment succeeds.
   </description>
 </property>
 
@@ -2800,18 +2800,6 @@
     This controls the minimum amount of time
     file descriptors need to sit in the client cache context
     before they can be closed for being inactive for too long.
-  </description>
-</property>
-
-<property>
-  <name>dfs.datanode.shared.file.descriptor.paths</name>
-  <value>/dev/shm,/tmp</value>
-  <description>
-    Comma separated paths to the directory on which
-    shared memory segments are created.
-    The client and the DataNode exchange information via
-    this shared memory segment.
-    It tries paths in order until creation of shared memory segment succeeds.
   </description>
 </property>
 
