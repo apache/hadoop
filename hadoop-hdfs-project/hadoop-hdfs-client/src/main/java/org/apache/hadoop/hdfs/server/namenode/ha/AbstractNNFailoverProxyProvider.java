@@ -115,7 +115,8 @@ public abstract class AbstractNNFailoverProxyProvider<T> implements
     /**
      * The currently known state of the NameNode represented by this ProxyInfo.
      * This may be out of date if the NameNode has changed state since the last
-     * time the state was checked.
+     * time the state was checked. If the NameNode could not be contacted, this
+     * will store null to indicate an unknown state.
      */
     private HAServiceState cachedState;
 
