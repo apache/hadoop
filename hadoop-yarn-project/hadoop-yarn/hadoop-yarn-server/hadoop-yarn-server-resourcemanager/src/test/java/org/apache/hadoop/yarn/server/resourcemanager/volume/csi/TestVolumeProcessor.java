@@ -64,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
@@ -316,13 +317,13 @@ public class TestVolumeProcessor {
 
     Assert.assertEquals(1, allocated.size());
     Container alloc = allocated.get(0);
-    Assert.assertEquals(alloc.getResource().getMemorySize(), 1024);
-    Assert.assertEquals(alloc.getResource().getVirtualCores(), 1);
+    assertThat(alloc.getResource().getMemorySize()).isEqualTo(1024);
+    assertThat(alloc.getResource().getVirtualCores()).isEqualTo(1);
     ResourceInformation allocatedVolume =
         alloc.getResource().getResourceInformation(VOLUME_RESOURCE_NAME);
     Assert.assertNotNull(allocatedVolume);
-    Assert.assertEquals(allocatedVolume.getValue(), 1024);
-    Assert.assertEquals(allocatedVolume.getUnits(), "Mi");
+    assertThat(allocatedVolume.getValue()).isEqualTo(1024);
+    assertThat(allocatedVolume.getUnits()).isEqualTo("Mi");
     rm.stop();
   }
 }

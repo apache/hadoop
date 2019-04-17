@@ -25,6 +25,8 @@ import org.junit.Test;
 
 import org.apache.hadoop.yarn.api.records.Priority;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestFifoOrderingPolicy {
   
   @Test
@@ -33,14 +35,14 @@ public class TestFifoOrderingPolicy {
       new FifoOrderingPolicy<MockSchedulableEntity>();
     MockSchedulableEntity r1 = new MockSchedulableEntity();
     MockSchedulableEntity r2 = new MockSchedulableEntity();
-    
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 0);
+
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(0);
     
     r1.setSerial(1);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(1);
     
     r2.setSerial(2);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), -1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(-1);
   }
   
   @Test

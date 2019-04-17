@@ -76,6 +76,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -435,14 +436,14 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm.getRMContext().getRMAdminService().transitionToActive(req);
     ZKRMStateStore stateStore = (ZKRMStateStore) rm.getRMContext().getStateStore();
     List<ACL> acls = stateStore.getACL(rootPath);
-    assertEquals(acls.size(), 2);
+    assertThat(acls).hasSize(2);
     // CREATE and DELETE permissions for root node based on RM ID
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
         "world", "anyone", Perms.ALL ^ (Perms.CREATE | Perms.DELETE), acls);
 
     acls = stateStore.getACL(parentPath);
-    assertEquals(1, acls.size());
+    assertThat(acls).hasSize(1);
     assertEquals(perm, acls.get(0).getPerms());
     rm.close();
 
@@ -463,7 +464,7 @@ public class TestZKRMStateStore extends RMStateStoreTestBase {
     rm.start();
     rm.getRMContext().getRMAdminService().transitionToActive(req);
     acls = stateStore.getACL(rootPath);
-    assertEquals(acls.size(), 2);
+    assertThat(acls).hasSize(2);
     verifyZKACL("digest", "localhost", Perms.CREATE | Perms.DELETE, acls);
     verifyZKACL(
         "world", "anyone", Perms.ALL ^ (Perms.CREATE | Perms.DELETE), acls);

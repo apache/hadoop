@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -1788,7 +1789,7 @@ public class TestClientRMService {
 
     // Ensure all reservations are filtered out.
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+    assertThat(response.getReservationAllocationState()).isEmpty();
 
     duration = 30000;
     deadline = sRequest.getReservationDefinition().getDeadline();
@@ -1808,7 +1809,7 @@ public class TestClientRMService {
 
     // Ensure all reservations are filtered out.
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+    assertThat(response.getReservationAllocationState()).isEmpty();
 
     arrival = clock.getTime();
     // List reservations, search by end time before the reservation start
@@ -1826,7 +1827,7 @@ public class TestClientRMService {
 
     // Ensure all reservations are filtered out.
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+    assertThat(response.getReservationAllocationState()).isEmpty();
 
     // List reservations, search by very small end time.
     request = ReservationListRequest
@@ -1841,7 +1842,7 @@ public class TestClientRMService {
 
     // Ensure all reservations are filtered out.
     Assert.assertNotNull(response);
-    Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+    assertThat(response.getReservationAllocationState()).isEmpty();
 
     rm.stop();
   }
@@ -2012,7 +2013,7 @@ public class TestClientRMService {
         Arrays.asList(node1A)));
     Assert.assertTrue(labelsToNodes.get(labelZ.getName()).containsAll(
         Arrays.asList(node1B, node3B)));
-    Assert.assertEquals(labelsToNodes.get(labelY.getName()), null);
+    assertThat(labelsToNodes.get(labelY.getName())).isNull();
 
     rpc.stopProxy(client, conf);
     rm.close();
@@ -2113,10 +2114,10 @@ public class TestClientRMService {
         client.getAttributesToNodes(request);
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs =
         response.getAttributesToNodes();
-    Assert.assertEquals(response.getAttributesToNodes().size(), 4);
-    Assert.assertEquals(attrs.get(dist.getAttributeKey()).size(), 2);
-    Assert.assertEquals(attrs.get(os.getAttributeKey()).size(), 1);
-    Assert.assertEquals(attrs.get(gpu.getAttributeKey()).size(), 1);
+    assertThat(response.getAttributesToNodes()).hasSize(4);
+    assertThat(attrs.get(dist.getAttributeKey())).hasSize(2);
+    assertThat(attrs.get(os.getAttributeKey())).hasSize(1);
+    assertThat(attrs.get(gpu.getAttributeKey())).hasSize(1);
     Assert.assertTrue(findHostnameAndValInMapping(node1, "3_0_2",
         attrs.get(dist.getAttributeKey())));
     Assert.assertTrue(findHostnameAndValInMapping(node2, "3_0_2",
@@ -2130,7 +2131,7 @@ public class TestClientRMService {
         client.getAttributesToNodes(request2);
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs2 =
         response2.getAttributesToNodes();
-    Assert.assertEquals(attrs2.size(), 1);
+    assertThat(attrs2).hasSize(1);
     Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",
         attrs2.get(docker.getAttributeKey())));
 
@@ -2141,7 +2142,7 @@ public class TestClientRMService {
         client.getAttributesToNodes(request3);
     Map<NodeAttributeKey, List<NodeToAttributeValue>> attrs3 =
         response3.getAttributesToNodes();
-    Assert.assertEquals(attrs3.size(), 2);
+    assertThat(attrs3).hasSize(2);
     Assert.assertTrue(findHostnameAndValInMapping(node1, "windows64",
         attrs3.get(os.getAttributeKey())));
     Assert.assertTrue(findHostnameAndValInMapping(node2, "docker0",

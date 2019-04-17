@@ -23,6 +23,8 @@ import java.util.*;
 import org.junit.Assert;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 public class TestFifoOrderingPolicyForPendingApps {
 
   @Test
@@ -33,16 +35,16 @@ public class TestFifoOrderingPolicyForPendingApps {
     MockSchedulableEntity r1 = new MockSchedulableEntity();
     MockSchedulableEntity r2 = new MockSchedulableEntity();
 
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 0);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(0);
 
     r1.setSerial(1);
     r1.setRecovering(true);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), -1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(-1);
 
     r1.setRecovering(false);
     r2.setSerial(2);
     r2.setRecovering(true);
-    Assert.assertEquals(policy.getComparator().compare(r1, r2), 1);
+    assertThat(policy.getComparator().compare(r1, r2)).isEqualTo(1);
   }
 
   /**

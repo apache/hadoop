@@ -17,6 +17,7 @@
 */
 package org.apache.hadoop.yarn.util;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -93,12 +94,12 @@ public class TestConverterUtils {
     NodeId nid;
     
     nid = ConverterUtils.toNodeIdWithDefaultPort("node:10");
-    assertEquals(nid.getPort(), 10);
-    assertEquals(nid.getHost(), "node");
+    assertThat(nid.getPort()).isEqualTo(10);
+    assertThat(nid.getHost()).isEqualTo("node");
     
     nid = ConverterUtils.toNodeIdWithDefaultPort("node");
-    assertEquals(nid.getPort(), 0);
-    assertEquals(nid.getHost(), "node");
+    assertThat(nid.getPort()).isEqualTo(0);
+    assertThat(nid.getHost()).isEqualTo("node");
   }
 
   @Test(expected = IllegalArgumentException.class)
