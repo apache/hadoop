@@ -56,11 +56,7 @@ public class DeleteContainerCommandHandler implements CommandHandler {
       final ContainerController controller = ozoneContainer.getController();
       controller.deleteContainer(deleteContainerCommand.getContainerID(),
           deleteContainerCommand.isForce());
-      updateCommandStatus(context, command,
-          (cmdStatus) -> cmdStatus.setStatus(true), LOG);
     } catch (IOException e) {
-      updateCommandStatus(context, command,
-          (cmdStatus) -> cmdStatus.setStatus(false), LOG);
       LOG.error("Exception occurred while deleting the container.", e);
     } finally {
       totalTime += Time.monotonicNow() - startTime;
