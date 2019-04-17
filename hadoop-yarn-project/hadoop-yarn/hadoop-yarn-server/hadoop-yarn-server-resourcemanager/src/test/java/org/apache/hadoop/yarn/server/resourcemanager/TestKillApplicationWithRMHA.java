@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
@@ -150,7 +151,7 @@ public class TestKillApplicationWithRMHA extends RMHATestBase{
     MockAM am0 = launchAM(app0, rm1, nm1);
 
     // ensure that the app is in running state
-    Assert.assertEquals(app0.getState(), RMAppState.RUNNING);
+    assertThat(app0.getState()).isEqualTo(RMAppState.RUNNING);
 
     // kill the app.
     rm1.killApp(app0.getApplicationId());

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -608,7 +609,7 @@ public class TestRMAdminService {
         Assert.assertEquals(accessList.getAclString(),
             aclString);
       } else {
-        Assert.assertEquals(accessList.getAclString(), "*");
+        assertThat(accessList.getAclString()).isEqualTo("*");
       }
     }
   }

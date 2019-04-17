@@ -42,6 +42,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -109,7 +110,7 @@ public class TestTimelineCollector {
     TimelineEntities testEntities = generateTestEntities(groups, n);
     TimelineEntity resultEntity = TimelineCollector.aggregateEntities(
         testEntities, "test_result", "TEST_AGGR", true);
-    assertEquals(resultEntity.getMetrics().size(), groups * 3);
+    assertThat(resultEntity.getMetrics()).hasSize(groups * 3);
 
     for (int i = 0; i < groups; i++) {
       Set<TimelineMetric> metrics = resultEntity.getMetrics();
@@ -130,7 +131,7 @@ public class TestTimelineCollector {
     TimelineEntities testEntities1 = generateTestEntities(1, n);
     TimelineEntity resultEntity1 = TimelineCollector.aggregateEntities(
         testEntities1, "test_result", "TEST_AGGR", false);
-    assertEquals(resultEntity1.getMetrics().size(), 3);
+    assertThat(resultEntity1.getMetrics()).hasSize(3);
 
     Set<TimelineMetric> metrics = resultEntity1.getMetrics();
     for (TimelineMetric m : metrics) {

@@ -96,6 +96,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -704,7 +705,7 @@ public class TestNMWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseList.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), filename);
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(filename);
 
     // now create an aggregated log in Remote File system
     File tempLogDir = new File("target",
@@ -724,19 +725,19 @@ public class TestNMWebServices extends JerseyTestBase {
       assertEquals(200, response.getStatus());
       responseList = response.getEntity(new GenericType<
           List<ContainerLogsInfo>>(){});
-      assertEquals(responseList.size(), 2);
+      assertThat(responseList).hasSize(2);
       for (ContainerLogsInfo logInfo : responseList) {
         if(logInfo.getLogType().equals(
             ContainerLogAggregationType.AGGREGATED.toString())) {
           List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
-          assertEquals(meta.get(0).getFileName(), aggregatedLogFile);
+          assertThat(meta.get(0).getFileName()).isEqualTo(aggregatedLogFile);
         } else {
           assertEquals(logInfo.getLogType(),
               ContainerLogAggregationType.LOCAL.toString());
           List<ContainerLogFileInfo> meta = logInfo.getContainerLogsInfo();
           assertTrue(meta.size() == 1);
-          assertEquals(meta.get(0).getFileName(), filename);
+          assertThat(meta.get(0).getFileName()).isEqualTo(filename);
         }
       }
 

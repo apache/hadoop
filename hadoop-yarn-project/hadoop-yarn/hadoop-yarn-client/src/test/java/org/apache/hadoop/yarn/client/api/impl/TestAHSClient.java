@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -84,7 +85,7 @@ public class TestAHSClient {
     Assert.assertEquals(reports, expectedReports);
 
     reports = client.getApplications();
-    Assert.assertEquals(reports.size(), 4);
+    assertThat(reports).hasSize(4);
     client.stop();
   }
 

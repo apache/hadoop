@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_MB;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.MAXIMUM_ALLOCATION_VCORES;
@@ -5251,7 +5252,8 @@ public class TestCapacityScheduler extends CapacitySchedulerTestBase {
     RMNode node1 = rm.getRMContext().getRMNodes().get(nm1.getNodeId());
     cs.handle(new NodeUpdateSchedulerEvent(node1));
     ContainerId cid = ContainerId.newContainerId(am.getApplicationAttemptId(), 1l);
-    Assert.assertEquals(cs.getRMContainer(cid).getState(), RMContainerState.ACQUIRED);
+    assertThat(cs.getRMContainer(cid).getState()).
+        isEqualTo(RMContainerState.ACQUIRED);
     cid = ContainerId.newContainerId(am.getApplicationAttemptId(), 2l);
     Assert.assertNull(cs.getRMContainer(cid));
 

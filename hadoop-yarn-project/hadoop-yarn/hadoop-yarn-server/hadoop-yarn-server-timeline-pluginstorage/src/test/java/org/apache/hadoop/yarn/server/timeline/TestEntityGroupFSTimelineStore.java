@@ -60,6 +60,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
@@ -414,7 +415,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     TimelineEntities entities = tdm.getEntities("type_1", null, null, null,
         null, null, null, null, EnumSet.allOf(TimelineReader.Field.class),
         UserGroupInformation.getLoginUser());
-    assertEquals(entities.getEntities().size(), 1);
+    assertThat(entities.getEntities()).hasSize(1);
     for (TimelineEntity entity : entities.getEntities()) {
       assertEquals((Long) 123L, entity.getStartTime());
     }
