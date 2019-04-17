@@ -235,37 +235,6 @@ public class TestSCMNodeManager {
   }
 
   /**
-   * Asserts that if user provides a value less than 5 times the heartbeat
-   * interval as the StaleNode Value, we throw since that is a QoS that we
-   * cannot maintain.
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   * @throws TimeoutException
-   */
-
-  @Test
-  public void testScmSanityOfUserConfig1()
-      throws IOException, AuthenticationException {
-    OzoneConfiguration conf = getConf();
-    final int interval = 100;
-    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, interval,
-        MILLISECONDS);
-    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL, 1, SECONDS);
-
-    // This should be 5 times more than  OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL
-    // and 3 times more than OZONE_SCM_HEARTBEAT_INTERVAL
-    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, interval, MILLISECONDS);
-
-    thrown.expect(IllegalArgumentException.class);
-
-    // This string is a multiple of the interval value
-    thrown.expectMessage(
-        startsWith("100 is not within min = 500 or max = 100000"));
-    createNodeManager(conf);
-  }
-
-  /**
    * Asserts that if Stale Interval value is more than 5 times the value of HB
    * processing thread it is a sane value.
    *
