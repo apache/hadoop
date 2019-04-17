@@ -22,6 +22,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.Path;
@@ -69,9 +70,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   public void testOpenFileWithInvalidPath() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     intercept(IllegalArgumentException.class,
-        ()-> {
-          fs.open(new Path("")).close();
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.open(new Path("")).close();
+          }
+        });
   }
 
   @Test
@@ -86,9 +90,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.create(TEST_WRITE_ONLY_FILE_PATH_0).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.open(TEST_WRITE_ONLY_FILE_PATH_0).close();
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.open(TEST_WRITE_ONLY_FILE_PATH_0).close();
+          }
+        });
   }
 
   @Test
@@ -101,9 +108,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   public void testCreateFileUnauthorized() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.create(TEST_READ_ONLY_FILE_PATH_0).close();
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.create(TEST_READ_ONLY_FILE_PATH_0).close();
+          }
+        });
   }
 
   @Test
@@ -118,9 +128,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.append(TEST_WRITE_THEN_READ_ONLY_PATH).close();
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.append(TEST_WRITE_THEN_READ_ONLY_PATH).close();
+          }
+        });
   }
 
   @Test
@@ -133,9 +146,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   public void testRenameUnauthorized() throws Exception {
     final AzureBlobFileSystem fs = this.getFileSystem();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.rename(TEST_WRITE_ONLY_FILE_PATH_0, TEST_WRITE_ONLY_FILE_PATH_1);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.rename(TEST_WRITE_ONLY_FILE_PATH_0, TEST_WRITE_ONLY_FILE_PATH_1);
+          }
+        });
   }
 
   @Test
@@ -150,9 +166,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = this.getFileSystem();
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.delete(TEST_WRITE_THEN_READ_ONLY_PATH, false);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.delete(TEST_WRITE_THEN_READ_ONLY_PATH, false);
+          }
+        });
   }
 
   @Test
@@ -167,9 +186,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(TEST_WRITE_ONLY_FILE_PATH_0).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.listStatus(TEST_WRITE_ONLY_FILE_PATH_0);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.listStatus(TEST_WRITE_ONLY_FILE_PATH_0);
+          }
+        });
   }
 
   @Test
@@ -182,9 +204,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
   public void testMkDirsUnauthorized() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.mkdirs(TEST_READ_ONLY_FOLDER_PATH, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.mkdirs(TEST_READ_ONLY_FOLDER_PATH, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
+          }
+        });
   }
 
   @Test
@@ -199,9 +224,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     fs.create(TEST_WRITE_ONLY_FILE_PATH_0).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.getFileStatus(TEST_WRITE_ONLY_FILE_PATH_0);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.getFileStatus(TEST_WRITE_ONLY_FILE_PATH_0);
+          }
+        });
   }
 
   @Test
@@ -218,9 +246,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.setOwner(TEST_WRITE_THEN_READ_ONLY_PATH, TEST_USER, TEST_GROUP);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.setOwner(TEST_WRITE_THEN_READ_ONLY_PATH, TEST_USER, TEST_GROUP);
+          }
+        });
   }
 
   @Test
@@ -237,9 +268,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.setPermission(TEST_WRITE_THEN_READ_ONLY_PATH, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.setPermission(TEST_WRITE_THEN_READ_ONLY_PATH, new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
+          }
+        });
   }
 
   @Test
@@ -256,11 +290,14 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
-    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    final List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.modifyAclEntries(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.modifyAclEntries(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
+          }
+        });
   }
 
   @Test
@@ -277,11 +314,14 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
-    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    final List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.removeAclEntries(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.removeAclEntries(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
+          }
+        });
   }
 
   @Test
@@ -298,9 +338,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.removeDefaultAcl(TEST_WRITE_THEN_READ_ONLY_PATH);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.removeDefaultAcl(TEST_WRITE_THEN_READ_ONLY_PATH);
+          }
+        });
   }
 
   @Test
@@ -317,9 +360,12 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.removeAcl(TEST_WRITE_THEN_READ_ONLY_PATH);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.removeAcl(TEST_WRITE_THEN_READ_ONLY_PATH);
+          }
+        });
   }
 
   @Test
@@ -336,11 +382,14 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     final AzureBlobFileSystem fs = getFileSystem();
     assumeTrue("This test case only runs when namespace is enabled", fs.getIsNamespaceEnabled());
     fs.create(TEST_WRITE_THEN_READ_ONLY_PATH).close();
-    List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
+    final List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.setAcl(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.setAcl(TEST_WRITE_THEN_READ_ONLY_PATH, aclSpec);
+          }
+        });
   }
 
   @Test
@@ -359,8 +408,11 @@ public class ITestAzureBlobFileSystemAuthorization extends AbstractAbfsIntegrati
     fs.create(TEST_WRITE_ONLY_FILE_PATH_0).close();
     List<AclEntry> aclSpec = Arrays.asList(aclEntry(ACCESS, GROUP, BAR, FsAction.ALL));
     intercept(AbfsAuthorizationException.class,
-        ()-> {
-          fs.getAclStatus(TEST_WRITE_ONLY_FILE_PATH_0);
-    });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.getAclStatus(TEST_WRITE_ONLY_FILE_PATH_0);
+          }
+        });
   }
 }

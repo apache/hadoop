@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 import java.util.UUID;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -65,13 +66,16 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     String testUri = this.getTestUrl();
     String nonExistingFsUrl = getAbfsScheme() + "://" + UUID.randomUUID()
             + testUri.substring(testUri.indexOf("@"));
-    AzureBlobFileSystem fs = this.getFileSystem(nonExistingFsUrl);
+    final AzureBlobFileSystem fs = this.getFileSystem(nonExistingFsUrl);
 
     intercept(AbfsRestOperationException.class,
             "\"The specified filesystem does not exist.\", 404",
-            ()-> {
-              fs.getIsNamespaceEnabled();
-            });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.getIsNamespaceEnabled();
+          }
+        });
   }
 
   @Test
@@ -86,11 +90,14 @@ public class ITestGetNameSpaceEnabled extends AbstractAbfsIntegrationTest {
     secret = (char) (secret.charAt(0) + 1) + secret.substring(1);
     config.set(configkKey, secret);
 
-    AzureBlobFileSystem fs = this.getFileSystem(config);
+    final AzureBlobFileSystem fs = this.getFileSystem(config);
     intercept(AbfsRestOperationException.class,
             "\"Server failed to authenticate the request. Make sure the value of Authorization header is formed correctly including the signature.\", 403",
-            ()-> {
-              fs.getIsNamespaceEnabled();
-            });
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.getIsNamespaceEnabled();
+          }
+        });
   }
 }

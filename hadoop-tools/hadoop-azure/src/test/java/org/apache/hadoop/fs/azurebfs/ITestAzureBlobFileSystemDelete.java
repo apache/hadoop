@@ -26,6 +26,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -69,12 +70,17 @@ public class ITestAzureBlobFileSystemDelete extends
   @Test()
   public void testOpenFileAfterDelete() throws Exception {
     final AzureBlobFileSystem fs = getFileSystem();
-    Path testfile = new Path("/testFile");
+    final Path testfile = new Path("/testFile");
     touch(testfile);
     assertDeleted(fs, testfile, false);
 
     intercept(FileNotFoundException.class,
-        () -> fs.open(testfile));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.open(testfile);
+          }
+        });
   }
 
   @Test
@@ -122,10 +128,15 @@ public class ITestAzureBlobFileSystemDelete extends
     }
 
     es.shutdownNow();
-    Path dir = new Path("/test");
+    final Path dir = new Path("/test");
     // first try a non-recursive delete, expect failure
     intercept(FileAlreadyExistsException.class,
-        () -> fs.delete(dir, false));
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.delete(dir, false);
+          }
+        });
     assertDeleted(fs, dir, true);
     assertPathDoesNotExist(fs, "deleted", dir);
 

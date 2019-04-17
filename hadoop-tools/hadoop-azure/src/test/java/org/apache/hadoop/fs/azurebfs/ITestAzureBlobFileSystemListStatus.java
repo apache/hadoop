@@ -27,6 +27,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -38,7 +39,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertMkdirs;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathExists;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.rename;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -136,7 +137,7 @@ public class ITestAzureBlobFileSystemListStatus extends
     assertEquals(1, fileStatuses.length);
     assertEquals("sub", fileStatuses[0].getPath().getName());
     assertIsDirectoryReference(fileStatuses[0]);
-    Path childF = fs.makeQualified(new Path("/test/f"));
+    final Path childF = fs.makeQualified(new Path("/test/f"));
     touch(childF);
     fileStatuses = fs.listStatus(testDir);
     assertEquals(2, fileStatuses.length);
@@ -154,7 +155,12 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     fs.delete(testDir, true);
     intercept(FileNotFoundException.class,
-        () -> fs.listFiles(childF, false).next());
+        new LambdaTestUtils.VoidCallable() {
+          @Override
+          public void call() throws Exception {
+            fs.listFiles(childF, false).next();
+          }
+        });
 
     // do some final checks on the status (failing due to version checks)
     assertEquals("Path mismatch of " + locatedChildStatus,
@@ -228,7 +234,7 @@ public class ITestAzureBlobFileSystemListStatus extends
 
     createFile(fs, nonTrailingPeriodFile, false, new byte[0]);
     try {
-    rename(fs, nonTrailingPeriodFile, trailingPeriodFile);
+      assertRenameOutcome(fs, nonTrailingPeriodFile, trailingPeriodFile, true);
     }
     catch(IllegalArgumentException e) {
       exceptionThrown = true;
