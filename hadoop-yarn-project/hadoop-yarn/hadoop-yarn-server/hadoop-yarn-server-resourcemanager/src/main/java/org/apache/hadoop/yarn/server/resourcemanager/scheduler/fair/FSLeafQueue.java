@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -30,8 +31,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.TreeSet;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -42,6 +43,8 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsCustomResource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetricsForCustomResources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerAppUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.util.resource.Resources;
@@ -51,7 +54,8 @@ import static org.apache.hadoop.yarn.util.resource.Resources.none;
 @Private
 @Unstable
 public class FSLeafQueue extends FSQueue {
-  private static final Log LOG = LogFactory.getLog(FSLeafQueue.class.getName());
+  private static final Logger LOG = LoggerFactory.
+      getLogger(FSLeafQueue.class.getName());
   private static final List<FSQueue> EMPTY_LIST = Collections.emptyList();
 
   private FSContext context;
@@ -352,10 +356,8 @@ public class FSLeafQueue extends FSQueue {
       }
       assigned = sched.assignContainer(node);
       if (!assigned.equals(none())) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Assigned container in queue:" + getName() + " " +
-              "container:" + assigned);
-        }
+        LOG.debug("Assigned container in queue:{} container:{}",
+            getName(), assigned);
         break;
       }
     }
@@ -457,6 +459,20 @@ public class FSLeafQueue extends FSQueue {
     }
   }
 
+  @Override
+  public boolean isEmpty() {
+    readLock.lock();
+    try {
+      if (runnableApps.size() > 0 || nonRunnableApps.size() > 0 ||
+          assignedApps.size() > 0) {
+        return false;
+      }
+    } finally {
+      readLock.unlock();
+    }
+    return true;
+  }
+
   /**
    * TODO: Based on how frequently this is called, we might want to club
    * counting pending and active apps in the same method.
@@ -501,6 +517,29 @@ public class FSLeafQueue extends FSQueue {
       maxResource.setVirtualCores(Math.min(
           scheduler.getRootQueueMetrics().getAvailableVirtualCores(),
           getMaxShare().getVirtualCores()));
+    }
+
+    QueueMetricsForCustomResources metricsForCustomResources =
+        scheduler.getRootQueueMetrics().getQueueMetricsForCustomResources();
+
+    if (metricsForCustomResources != null) {
+      QueueMetricsCustomResource availableResources =
+          metricsForCustomResources.getAvailable();
+
+      // We expect all custom resources contained in availableResources,
+      // so we will loop through all of them.
+      for (Map.Entry<String, Long> availableEntry : availableResources
+          .getValues().entrySet()) {
+        String resourceName = availableEntry.getKey();
+
+        // We only update the value if fairshare is 0 for that resource.
+        if (maxResource.getResourceValue(resourceName) == 0) {
+          Long availableValue = availableEntry.getValue();
+          long value = Math.min(availableValue,
+              getMaxShare().getResourceValue(resourceName));
+          maxResource.setResourceValue(resourceName, value);
+        }
+      }
     }
 
     // Round up to allow AM to run when there is only one vcore on the cluster
@@ -647,6 +686,20 @@ public class FSLeafQueue extends FSQueue {
     writeLock.lock();
     try {
       assignedApps.add(applicationId);
+    } finally {
+      writeLock.unlock();
+    }
+  }
+
+  /**
+   * This method is called when an application is removed from this queue
+   * during the submit process.
+   * @param applicationId the application's id
+   */
+  public void removeAssignedApp(ApplicationId applicationId) {
+    writeLock.lock();
+    try {
+      assignedApps.remove(applicationId);
     } finally {
       writeLock.unlock();
     }

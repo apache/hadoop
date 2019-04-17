@@ -16,20 +16,26 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.base.Preconditions;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.hadoop.crypto.CipherSuite;
+import org.apache.hadoop.crypto.CryptoProtocolVersion;
+import org.apache.hadoop.crypto.key.KeyProvider;
+import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
 import org.apache.hadoop.util.Time;
+
+import com.google.common.base.Preconditions;
 import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * OM bucket manager.
@@ -42,6 +48,9 @@ public class BucketManagerImpl implements BucketManager {
    * OMMetadataManager is used for accessing OM MetadataDB and ReadWriteLock.
    */
   private final OMMetadataManager metadataManager;
+  private final KeyProviderCryptoExtension kmsProvider;
+
+  private final boolean isRatisEnabled;
 
   /**
    * Constructs BucketManager.
@@ -49,7 +58,23 @@ public class BucketManagerImpl implements BucketManager {
    * @param metadataManager
    */
   public BucketManagerImpl(OMMetadataManager metadataManager) {
+    this(metadataManager, null, false);
+  }
+
+  public BucketManagerImpl(OMMetadataManager metadataManager,
+                           KeyProviderCryptoExtension kmsProvider) {
+    this(metadataManager, kmsProvider, false);
+  }
+
+  public BucketManagerImpl(OMMetadataManager metadataManager,
+      KeyProviderCryptoExtension kmsProvider, boolean isRatisEnabled) {
     this.metadataManager = metadataManager;
+    this.kmsProvider = kmsProvider;
+    this.isRatisEnabled = isRatisEnabled;
+  }
+
+  KeyProviderCryptoExtension getKMSProvider() {
+    return kmsProvider;
   }
 
   /**
@@ -77,41 +102,74 @@ public class BucketManagerImpl implements BucketManager {
    * @param bucketInfo - OmBucketInfo.
    */
   @Override
-  public void createBucket(OmBucketInfo bucketInfo) throws IOException {
+  public OmBucketInfo createBucket(OmBucketInfo bucketInfo) throws IOException {
     Preconditions.checkNotNull(bucketInfo);
     String volumeName = bucketInfo.getVolumeName();
     String bucketName = bucketInfo.getBucketName();
     metadataManager.getLock().acquireVolumeLock(volumeName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] volumeKey = metadataManager.getVolumeKey(volumeName);
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      String volumeKey = metadataManager.getVolumeKey(volumeName);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
       //Check if the volume exists
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
-            OMException.ResultCodes.FAILED_VOLUME_NOT_FOUND);
+            OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
       //Check if bucket already exists
       if (metadataManager.getBucketTable().get(bucketKey) != null) {
         LOG.debug("bucket: {} already exists ", bucketName);
         throw new OMException("Bucket already exist",
-            OMException.ResultCodes.FAILED_BUCKET_ALREADY_EXISTS);
+            OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
-
-      OmBucketInfo omBucketInfo = OmBucketInfo.newBuilder()
+      BucketEncryptionKeyInfo bek = bucketInfo.getEncryptionKeyInfo();
+      BucketEncryptionKeyInfo.Builder bekb = null;
+      if (bek != null) {
+        if (kmsProvider == null) {
+          throw new OMException("Invalid KMS provider, check configuration " +
+              CommonConfigurationKeys.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+              OMException.ResultCodes.INVALID_KMS_PROVIDER);
+        }
+        if (bek.getKeyName() == null) {
+          throw new OMException("Bucket encryption key needed.", OMException
+              .ResultCodes.BUCKET_ENCRYPTION_KEY_NOT_FOUND);
+        }
+        // Talk to KMS to retrieve the bucket encryption key info.
+        KeyProvider.Metadata metadata = getKMSProvider().getMetadata(
+            bek.getKeyName());
+        if (metadata == null) {
+          throw new OMException("Bucket encryption key " + bek.getKeyName()
+              + " doesn't exist.",
+              OMException.ResultCodes.BUCKET_ENCRYPTION_KEY_NOT_FOUND);
+        }
+        // If the provider supports pool for EDEKs, this will fill in the pool
+        kmsProvider.warmUpEncryptedKeys(bek.getKeyName());
+        bekb = new BucketEncryptionKeyInfo.Builder()
+            .setKeyName(bek.getKeyName())
+            .setVersion(CryptoProtocolVersion.ENCRYPTION_ZONES)
+            .setSuite(CipherSuite.convert(metadata.getCipher()));
+      }
+      OmBucketInfo.Builder omBucketInfoBuilder = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
           .setBucketName(bucketInfo.getBucketName())
           .setAcls(bucketInfo.getAcls())
           .setStorageType(bucketInfo.getStorageType())
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
-          .build();
-      metadataManager.getBucketTable().put(bucketKey,
-          omBucketInfo.getProtobuf().toByteArray());
+          .addAllMetadata(bucketInfo.getMetadata());
 
+      if (bekb != null) {
+        omBucketInfoBuilder.setBucketEncryptionKey(bekb.build());
+      }
+
+      OmBucketInfo omBucketInfo = omBucketInfoBuilder.build();
+      if (!isRatisEnabled) {
+        commitCreateBucketInfoToDB(omBucketInfo);
+      }
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
+      return omBucketInfo;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Bucket creation failed for bucket:{} in volume:{}",
@@ -122,6 +180,27 @@ public class BucketManagerImpl implements BucketManager {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
     }
+  }
+
+
+  public void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException {
+    Preconditions.checkNotNull(omBucketInfo);
+    try {
+      commitCreateBucketInfoToDB(omBucketInfo);
+    } catch (IOException ex) {
+      LOG.error("Apply CreateBucket Failed for bucket: {}, volume: {}",
+          omBucketInfo.getBucketName(), omBucketInfo.getVolumeName(), ex);
+      throw ex;
+    }
+  }
+
+  private void commitCreateBucketInfoToDB(OmBucketInfo omBucketInfo)
+      throws IOException {
+    String dbBucketKey =
+        metadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    metadataManager.getBucketTable().put(dbBucketKey,
+        omBucketInfo);
   }
 
   /**
@@ -137,15 +216,15 @@ public class BucketManagerImpl implements BucketManager {
     Preconditions.checkNotNull(bucketName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] value = metadataManager.getBucketTable().get(bucketKey);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      OmBucketInfo value = metadataManager.getBucketTable().get(bucketKey);
       if (value == null) {
         LOG.debug("bucket: {} not found in volume: {}.", bucketName,
             volumeName);
         throw new OMException("Bucket not found",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
-      return OmBucketInfo.getFromProtobuf(BucketInfo.parseFrom(value));
+      return value;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Exception while getting bucket info for bucket: {}",
@@ -164,25 +243,25 @@ public class BucketManagerImpl implements BucketManager {
    * @throws IOException - On Failure.
    */
   @Override
-  public void setBucketProperty(OmBucketArgs args) throws IOException {
+  public OmBucketInfo setBucketProperty(OmBucketArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
-      byte[] value = metadataManager.getBucketTable().get(bucketKey);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      OmBucketInfo oldBucketInfo =
+          metadataManager.getBucketTable().get(bucketKey);
       //Check if bucket exist
-      if (value == null) {
+      if (oldBucketInfo == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
-      OmBucketInfo oldBucketInfo = OmBucketInfo.getFromProtobuf(
-          BucketInfo.parseFrom(value));
       OmBucketInfo.Builder bucketInfoBuilder = OmBucketInfo.newBuilder();
       bucketInfoBuilder.setVolumeName(oldBucketInfo.getVolumeName())
           .setBucketName(oldBucketInfo.getBucketName());
+      bucketInfoBuilder.addAllMetadata(args.getMetadata());
 
       //Check ACLs to update
       if (args.getAddAcls() != null || args.getRemoveAcls() != null) {
@@ -216,8 +295,12 @@ public class BucketManagerImpl implements BucketManager {
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
-      metadataManager.getBucketTable().put(bucketKey,
-          bucketInfoBuilder.build().getProtobuf().toByteArray());
+      OmBucketInfo omBucketInfo = bucketInfoBuilder.build();
+
+      if (!isRatisEnabled) {
+        commitSetBucketPropertyInfoToDB(omBucketInfo);
+      }
+      return omBucketInfo;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
@@ -227,6 +310,23 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+  }
+
+  public void applySetBucketProperty(OmBucketInfo omBucketInfo)
+      throws IOException {
+    try {
+      commitSetBucketPropertyInfoToDB(omBucketInfo);
+    } catch (IOException ex) {
+      LOG.error("Apply SetBucket property failed for bucket:{} in " +
+              "volume:{}", omBucketInfo.getBucketName(),
+          omBucketInfo.getVolumeName(), ex);
+      throw ex;
+    }
+  }
+
+  private void commitSetBucketPropertyInfoToDB(OmBucketInfo omBucketInfo)
+      throws IOException {
+    commitCreateBucketInfoToDB(omBucketInfo);
   }
 
   /**
@@ -257,6 +357,7 @@ public class BucketManagerImpl implements BucketManager {
    * @param bucketName - Name of the bucket.
    * @throws IOException - on Failure.
    */
+  @Override
   public void deleteBucket(String volumeName, String bucketName)
       throws IOException {
     Preconditions.checkNotNull(volumeName);
@@ -264,19 +365,22 @@ public class BucketManagerImpl implements BucketManager {
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
       //Check if bucket exists
-      byte[] bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
       if (metadataManager.getBucketTable().get(bucketKey) == null) {
         LOG.debug("bucket: {} not found ", bucketName);
         throw new OMException("Bucket doesn't exist",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_FOUND);
+            OMException.ResultCodes.BUCKET_NOT_FOUND);
       }
       //Check if bucket is empty
       if (!metadataManager.isBucketEmpty(volumeName, bucketName)) {
         LOG.debug("bucket: {} is not empty ", bucketName);
         throw new OMException("Bucket is not empty",
-            OMException.ResultCodes.FAILED_BUCKET_NOT_EMPTY);
+            OMException.ResultCodes.BUCKET_NOT_EMPTY);
       }
-      metadataManager.getBucketTable().delete(bucketKey);
+
+      if (!isRatisEnabled) {
+        commitDeleteBucketInfoToOMDB(bucketKey);
+      }
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
@@ -286,6 +390,25 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
+  }
+
+  public void applyDeleteBucket(String volumeName, String bucketName)
+      throws IOException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    try {
+      commitDeleteBucketInfoToOMDB(metadataManager.getBucketKey(volumeName,
+          bucketName));
+    } catch (IOException ex) {
+      LOG.error("Apply DeleteBucket Failed for bucket: {}, volume: {}",
+          bucketName, volumeName, ex);
+      throw ex;
+    }
+  }
+
+  private void commitDeleteBucketInfoToOMDB(String dbBucketKey)
+      throws IOException {
+    metadataManager.getBucketTable().delete(dbBucketKey);
   }
 
   /**

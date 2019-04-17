@@ -52,6 +52,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   private ContainerId containerId = null;
   private static final String HOST = "HOST";
   private static final String IPS = "IPS";
+  private static final String PORTS = "PORTS";
   private Map<String, String> containerAttributes = new HashMap<>();
 
 
@@ -89,17 +90,18 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("ContainerStatus: [");
-    sb.append("ContainerId: ").append(getContainerId()).append(", ");
-    sb.append("ExecutionType: ").append(getExecutionType()).append(", ");
-    sb.append("State: ").append(getState()).append(", ");
-    sb.append("Capability: ").append(getCapability()).append(", ");
-    sb.append("Diagnostics: ").append(getDiagnostics()).append(", ");
-    sb.append("ExitStatus: ").append(getExitStatus()).append(", ");
-    sb.append("IP: ").append(getIPs()).append(", ");
-    sb.append("Host: ").append(getHost()).append(", ");
-    sb.append("ContainerSubState: ").append(getContainerSubState());
-    sb.append("]");
+    sb.append("ContainerStatus: [")
+        .append("ContainerId: ").append(getContainerId()).append(", ")
+        .append("ExecutionType: ").append(getExecutionType()).append(", ")
+        .append("State: ").append(getState()).append(", ")
+        .append("Capability: ").append(getCapability()).append(", ")
+        .append("Diagnostics: ").append(getDiagnostics()).append(", ")
+        .append("ExitStatus: ").append(getExitStatus()).append(", ")
+        .append("IP: ").append(getIPs()).append(", ")
+        .append("Host: ").append(getHost()).append(", ")
+        .append("ExposedPorts: ").append(getExposedPorts()).append(", ")
+        .append("ContainerSubState: ").append(getContainerSubState())
+        .append("]");
     return sb.toString();
   }
 
@@ -316,6 +318,25 @@ public class ContainerStatusPBImpl extends ContainerStatus {
       return;
     }
     containerAttributes.put(IPS, StringUtils.join(",", ips));
+  }
+
+  @Override
+  public synchronized String getExposedPorts() {
+    if (!containerAttributes.containsKey(PORTS)) {
+      initContainerAttributes();
+    }
+    String ports = containerAttributes.get((PORTS));
+    return ports == null ? "" : ports;
+  }
+
+  @Override
+  public synchronized void setExposedPorts(String ports) {
+    maybeInitBuilder();
+    if (ports == null) {
+      containerAttributes.remove(PORTS);
+      return;
+    }
+    containerAttributes.put(PORTS, ports);
   }
 
   @Override

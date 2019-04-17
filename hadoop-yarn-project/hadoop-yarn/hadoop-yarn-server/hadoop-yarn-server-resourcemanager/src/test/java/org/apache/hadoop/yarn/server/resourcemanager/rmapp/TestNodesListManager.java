@@ -18,12 +18,13 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.spy;
 
 import java.util.ArrayList;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -44,9 +45,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.util.ControlledClock;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
+import org.slf4j.event.Level;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.ArgumentMatcher;
@@ -57,8 +56,7 @@ public class TestNodesListManager {
 
   @Test(timeout = 300000)
   public void testNodeUsableEvent() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     final Dispatcher dispatcher = getDispatcher();
     YarnConfiguration conf = new YarnConfiguration();
     MockRM rm = new MockRM(conf) {
@@ -134,8 +132,7 @@ public class TestNodesListManager {
 
   @Test
   public void testCachedResolver() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     ControlledClock clock = new ControlledClock();
     clock.setTime(0);
     final int CACHE_EXPIRY_INTERVAL_SECS = 30;
@@ -171,8 +168,7 @@ public class TestNodesListManager {
 
   @Test
   public void testDefaultResolver() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     YarnConfiguration conf = new YarnConfiguration();
 
@@ -187,8 +183,7 @@ public class TestNodesListManager {
 
   @Test
   public void testCachedResolverWithEvent() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
 
     YarnConfiguration conf = new YarnConfiguration();
     conf.setInt(YarnConfiguration.RM_NODE_IP_CACHE_EXPIRY_INTERVAL_SECS, 30);
@@ -236,14 +231,14 @@ public class TestNodesListManager {
    * Create dispatcher object
    */
   private Dispatcher getDispatcher() {
-    Dispatcher dispatcher = new DrainDispatcher() {
-      @SuppressWarnings({ "rawtypes", "unchecked" })
+    return new DrainDispatcher() {
+      @SuppressWarnings("unchecked")
       @Override
       public EventHandler<Event> getEventHandler() {
 
-        class EventArgMatcher extends ArgumentMatcher<AbstractEvent> {
+        class EventArgMatcher implements ArgumentMatcher<AbstractEvent> {
           @Override
-          public boolean matches(Object argument) {
+          public boolean matches(AbstractEvent argument) {
             if (argument instanceof RMAppNodeUpdateEvent) {
               ApplicationId appid =
                   ((RMAppNodeUpdateEvent) argument).getApplicationId();
@@ -258,7 +253,6 @@ public class TestNodesListManager {
         return handler;
       }
     };
-    return dispatcher;
   }
 
 }

@@ -23,7 +23,9 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto
     .XceiverClientProtocolServiceGrpc;
+import org.apache.hadoop.hdds.security.token.TokenVerifier;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,9 +41,18 @@ public class GrpcXceiverService extends
       LOG = LoggerFactory.getLogger(GrpcXceiverService.class);
 
   private final ContainerDispatcher dispatcher;
+  private final boolean isGrpcTokenEnabled;
+  private final TokenVerifier tokenVerifier;
 
   public GrpcXceiverService(ContainerDispatcher dispatcher) {
+    this(dispatcher, false, null);
+  }
+
+  public GrpcXceiverService(ContainerDispatcher dispatcher,
+      boolean grpcTokenEnabled, TokenVerifier tokenVerifier) {
     this.dispatcher = dispatcher;
+    this.isGrpcTokenEnabled = grpcTokenEnabled;
+    this.tokenVerifier = tokenVerifier;
   }
 
   @Override
@@ -53,7 +64,13 @@ public class GrpcXceiverService extends
       @Override
       public void onNext(ContainerCommandRequestProto request) {
         try {
-          ContainerCommandResponseProto resp = dispatcher.dispatch(request);
+          if(isGrpcTokenEnabled) {
+            // ServerInterceptors intercepts incoming request and creates ugi.
+            tokenVerifier.verify(UserGroupInformation.getCurrentUser()
+                .getShortUserName(), request.getEncodedToken());
+          }
+          ContainerCommandResponseProto resp =
+              dispatcher.dispatch(request, null);
           responseObserver.onNext(resp);
         } catch (Throwable e) {
           LOG.error("{} got exception when processing"

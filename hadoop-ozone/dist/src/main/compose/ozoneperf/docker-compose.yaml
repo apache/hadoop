@@ -20,45 +20,56 @@ services:
       image: apache/hadoop-runner
       volumes:
         - ../..:/opt/hadoop
-        - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
         - 9864
-      command: ["/opt/hadoop/bin/ozone","datanode"]
+      command: ["ozone","datanode"]
       env_file:
         - ./docker-config
-   ozoneManager:
+   om:
       image: apache/hadoop-runner
       volumes:
         - ../..:/opt/hadoop
-        - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
          - 9874:9874
       environment:
-         ENSURE_OM_INITIALIZED: /data/metadata/ozoneManager/current/VERSION
+         ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+         WAITFOR: scm:9876
       env_file:
           - ./docker-config
-      command: ["/opt/hadoop/bin/ozone","om"]
+      command: ["ozone","om"]
    scm:
       image: apache/hadoop-runner
       volumes:
          - ../..:/opt/hadoop
-         - ./jmxpromo.jar:/opt/jmxpromo.jar
       ports:
          - 9876:9876
       env_file:
           - ./docker-config
       environment:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
-      command: ["/opt/hadoop/bin/ozone","scm"]
-   consul:
-      image: consul
-      command: ["agent", "-dev", "-ui", "-client", "0.0.0.0"]
-      ports:
-         - 8500:8500
+      command: ["ozone","scm"]
    prometheus:
      image: prom/prometheus
      volumes:
-       - "./prometheus.yml:/etc/prometheus.yml"
+       - "../common/prometheus/prometheus.yml:/etc/prometheus.yml"
      command: ["--config.file","/etc/prometheus.yml"]
      ports:
         - 9090:9090
+   freon:
+      image: apache/hadoop-runner
+      volumes:
+         - ../..:/opt/hadoop
+      environment:
+         SLEEP_SECONDS: 30
+      env_file:
+         - ./docker-config
+      command: ["ozone","freon","rk"]
+   grafana:
+      image: grafana/grafana
+      volumes:
+         - "../common/grafana/dashboards:/var/lib/grafana/dashboards"
+         - "../common/grafana/provisioning:/etc/grafana/provisioning"
+         - "../common/grafana/conf/grafana.ini:/etc/grafana/grafana.ini"
+      command: ["-config","/etc/grafana/grafana.ini"]
+      ports:
+         - 3000:3000

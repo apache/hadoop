@@ -98,17 +98,17 @@ public interface FsVolumeSpi
 
   /**
    * BlockIterator will return ExtendedBlock entries from a block pool in
-   * this volume.  The entries will be returned in sorted order.<p/>
+   * this volume.  The entries will be returned in sorted order.<p>
    *
    * BlockIterator objects themselves do not always have internal
    * synchronization, so they can only safely be used by a single thread at a
-   * time.<p/>
+   * time.<p>
    *
    * Closing the iterator does not save it.  You must call save to save it.
    */
   interface BlockIterator extends Closeable {
     /**
-     * Get the next block.<p/>
+     * Get the next block.<p>
      *
      * Note that this block may be removed in between the time we list it,
      * and the time the caller tries to use it, or it may represent a stale
@@ -146,7 +146,7 @@ public interface FsVolumeSpi
     void save() throws IOException;
 
     /**
-     * Set the maximum staleness of entries that we will return.<p/>
+     * Set the maximum staleness of entries that we will return.<p>
      *
      * A maximum staleness of 0 means we will never return stale entries; a
      * larger value will allow us to reduce resource consumption in exchange
@@ -211,12 +211,12 @@ public interface FsVolumeSpi
    * Because millions of these structures may be created, we try to save
    * memory here.  So instead of storing full paths, we store path suffixes.
    * The block file, if it exists, will have a path like this:
-   * <volume_base_path>/<block_path>
+   * {@literal <volume_base_path>/<block_path>}
    * So we don't need to store the volume path, since we already know what the
    * volume is.
    *
    * The metadata file, if it exists, will have a path like this:
-   * <volume_base_path>/<block_path>_<genstamp>.meta
+   * {@literal <volume_base_path>/<block_path>_<genstamp>.meta}
    * So if we have a block file, there isn't any need to store the block path
    * again.
    *
@@ -439,6 +439,7 @@ public interface FsVolumeSpi
    * @param bpid block pool id to scan
    * @param report the list onto which blocks reports are placed
    * @param reportCompiler
+   * @throws InterruptedException
    * @throws IOException
    */
   void compileReport(String bpid,

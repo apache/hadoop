@@ -87,18 +87,18 @@ public class TestCapacitySchedulerMetrics {
     nm1.nodeHeartbeat(true);
     nm2.nodeHeartbeat(true);
 
-    // Verify HB metrics updated
     try {
+      // Verify HB metrics updated
       GenericTestUtils.waitFor(()
           -> csMetrics.getNumOfNodeUpdate() == 4, 100, 3000);
+      // For async mode, the number of alloc might be bigger than 1
+      Assert.assertTrue(csMetrics.getNumOfAllocates() > 0);
+      // But there will be only 2 successful commit (1 AM + 1 task)
+      GenericTestUtils.waitFor(()
+          -> csMetrics.getNumOfCommitSuccess() == 2, 100, 3000);
     } catch(TimeoutException e) {
       Assert.fail("CS metrics not updated on node-update events.");
     }
-
-    // For async mode, the number of alloc might be bigger than 1
-    Assert.assertTrue(csMetrics.getNumOfAllocates() > 0);
-    // But there will be only 2 successful commit (1 AM + 1 task)
-    Assert.assertEquals(2, csMetrics.getNumOfCommitSuccess());
   }
 
   @After

@@ -21,9 +21,11 @@
 package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.time.format.DateTimeFormatter;
 
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClientStub;
@@ -36,6 +38,8 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test get object.
@@ -51,22 +55,22 @@ public class TestObjectGet {
     client.getObjectStore().createS3Bucket("bilbo", "b1");
     String volumeName = client.getObjectStore().getOzoneVolumeName("b1");
     OzoneVolume volume = client.getObjectStore().getVolume(volumeName);
-    volume.createBucket("b1");
     OzoneBucket bucket =
         volume.getBucket("b1");
     OzoneOutputStream keyStream =
-        bucket.createKey("key1", CONTENT.getBytes().length);
-    keyStream.write(CONTENT.getBytes());
+        bucket.createKey("key1", CONTENT.getBytes(UTF_8).length);
+    keyStream.write(CONTENT.getBytes(UTF_8));
     keyStream.close();
 
     ObjectEndpoint rest = new ObjectEndpoint();
     rest.setClient(client);
     HttpHeaders headers = Mockito.mock(HttpHeaders.class);
-
-    ByteArrayInputStream body = new ByteArrayInputStream(CONTENT.getBytes());
+    rest.setHeaders(headers);
+    ByteArrayInputStream body =
+        new ByteArrayInputStream(CONTENT.getBytes(UTF_8));
 
     //WHEN
-    rest.get(headers, "b1", "key1", body);
+    Response response = rest.get("b1", "key1", null, 0, null, body);
 
     //THEN
     OzoneInputStream ozoneInputStream =
@@ -76,5 +80,11 @@ public class TestObjectGet {
         IOUtils.toString(ozoneInputStream, Charset.forName("UTF-8"));
 
     Assert.assertEquals(CONTENT, keyContent);
+    Assert.assertEquals("" + keyContent.length(),
+        response.getHeaderString("Content-Length"));
+
+    DateTimeFormatter.RFC_1123_DATE_TIME
+        .parse(response.getHeaderString("Last-Modified"));
+
   }
 }

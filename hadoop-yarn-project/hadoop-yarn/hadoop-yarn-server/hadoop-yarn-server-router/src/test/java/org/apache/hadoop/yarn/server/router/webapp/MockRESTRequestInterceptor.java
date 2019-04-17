@@ -55,6 +55,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.AppAttemptInfo;
 import org.apache.hadoop.yarn.server.webapp.dao.ContainerInfo;
@@ -112,6 +114,12 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   @Override
   public NodeInfo getNode(String nodeId) {
     return new NodeInfo();
+  }
+
+  @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr, String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException {
+    return new ResourceInfo();
   }
 
   @SuppressWarnings("checkstyle:parameternumber")
@@ -349,5 +357,4 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
       String containerId) {
     return new ContainerInfo();
   }
-
 }

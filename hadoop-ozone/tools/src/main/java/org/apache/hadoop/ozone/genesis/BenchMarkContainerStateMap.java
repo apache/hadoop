@@ -19,12 +19,13 @@
 package org.apache.hadoop.ozone.genesis;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.states.ContainerStateMap;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.util.Time;
@@ -39,7 +40,6 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -149,17 +149,16 @@ public class BenchMarkContainerStateMap {
   public static Pipeline createPipeline(String containerName,
       Iterable<DatanodeDetails> ids) throws IOException {
     Objects.requireNonNull(ids, "ids == null");
-    final Iterator<DatanodeDetails> i = ids.iterator();
-    Preconditions.checkArgument(i.hasNext());
-    final DatanodeDetails leader = i.next();
-    final Pipeline pipeline =
-        new Pipeline(leader.getUuidString(), OPEN,
-            ReplicationType.STAND_ALONE, ReplicationFactor.ONE,
-            PipelineID.randomId());
-    pipeline.addMember(leader);
-    for (; i.hasNext();) {
-      pipeline.addMember(i.next());
-    }
+    Preconditions.checkArgument(ids.iterator().hasNext());
+    List<DatanodeDetails> dns = new ArrayList<>();
+    ids.forEach(dns::add);
+    final Pipeline pipeline = Pipeline.newBuilder()
+        .setState(Pipeline.PipelineState.OPEN)
+        .setId(PipelineID.randomId())
+        .setType(HddsProtos.ReplicationType.STAND_ALONE)
+        .setFactor(HddsProtos.ReplicationFactor.ONE)
+        .setNodes(dns)
+        .build();
     return pipeline;
   }
 

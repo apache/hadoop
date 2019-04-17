@@ -1,0 +1,116 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+node("ubuntu") {
+    docker.image('elek/ozone-build').pull()
+    docker.image('elek/ozone-build').inside("--privileged") {
+
+        stage('Checkout') {
+            checkout scm
+            //use this for external Jenkinsfile builds
+            //checkout poll: false, scm: [$class: 'GitSCM', branches: [[name: env.branch]], doGenerateSubmoduleConfigurations: false, extensions: [], submoduleCfg: [], userRemoteConfigs: [[credentialsId: 'github-token', url: "https://github.com/${organization}/${repository}.git"]]]
+
+        }
+
+        stage('Clean') {
+            status = sh returnStatus: true, script: 'mvn clean -P hdds -am -pl :hadoop-ozone-dist '
+        }
+
+        stageRunner('Author', "author", {})
+
+        stageRunner('Licence', "rat", {
+            archiveArtifacts 'target/rat-aggregated.txt'
+        }, 'artifact/target/rat-aggregated.txt/*view*/')
+
+        stageRunner('Build', "build", {})
+
+        stageRunner('Findbugs', "findbugs", {
+            archiveArtifacts 'target/findbugs-all.txt'
+
+        }, 'artifact/target/findbugs-all.txt/*view*/')
+
+        stageRunner('Checkstyle', "checkstyle", {
+            checkstyle canComputeNew: false, canRunOnFailed: true, defaultEncoding: '', healthy: '', pattern: '**/checkstyle-errors.xml', unHealthy: ''
+        }, 'checkstyleResult')
+
+        stageRunner('Acceptance', "acceptance", {
+             archiveArtifacts 'hadoop-ozone/dist/target/ozone-0.4.0-SNAPSHOT/smoketest/result/**'
+        })
+
+        stageRunner('Unit test', "unit", {
+            junit '**/target/surefire-reports/*.xml'
+        }, 'testReport/')
+
+    }
+
+}
+
+def stageRunner(name, type, processResult, url = '') {
+    try {
+        stage(name) {
+            prStatusStart(type)
+            status = sh returnStatus: true, script: 'hadoop-ozone/dev-support/checks/' + type + '.sh'
+            processResult()
+            prStatusResult(status, type, url)
+        }
+        return true
+    } catch (RuntimeException ex) {
+        currentBuild.result = "FAILED"
+        return false
+    }
+}
+
+def githubStatus(name, status, description, url='') {
+  commitId = sh(returnStdout: true, script: 'git rev-parse HEAD')
+  context = 'ci/ozone/' + name
+  if (url) {
+    githubNotify account: 'apache', context: context, credentialsId: 'github-pr-ozone', description: description, repo: 'hadoop', sha: commitId, status: status, targetUrl: url
+  } else {
+    githubNotify account: 'apache', context: context, credentialsId: 'github-pr-ozone', description: description, repo: 'hadoop', sha: commitId, status: status
+  }
+}
+def prStatusStart(name) {
+       githubStatus(name,
+                     "PENDING",
+                     name + " is started")
+
+
+}
+
+def prStatusResult(responseCode, name, url = '') {
+    status = "ERROR"
+    desc = "failed"
+    if (responseCode == 0) {
+        status = "SUCCESS"
+        desc = "passed"
+    }
+    message = name + " check is " + desc
+        if (url) {
+            githubStatus(name,
+                          status,
+                          message,
+                          env.BUILD_URL + url)
+        } else {
+            githubStatus(name,
+                          status,
+                          message)
+        }
+
+    if (responseCode != 0) {
+        throw new RuntimeException(message)
+    }
+}

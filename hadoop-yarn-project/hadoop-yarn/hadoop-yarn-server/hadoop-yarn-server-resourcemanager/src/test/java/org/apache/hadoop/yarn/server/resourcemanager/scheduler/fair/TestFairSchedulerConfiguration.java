@@ -17,36 +17,36 @@
 */
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-
-import org.apache.commons.logging.impl.Log4JLogger;
+import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.apache.log4j.AppenderSkeleton;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
+import org.apache.log4j.Logger;
 import org.apache.log4j.spi.LoggingEvent;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration.parseResourceConfigValue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests fair scheduler configuration.
@@ -54,31 +54,6 @@ import org.junit.Test;
 public class TestFairSchedulerConfiguration {
 
   private static final String A_CUSTOM_RESOURCE = "a-custom-resource";
-
-  private static class CustomResourceTypesConfigurationProvider
-      extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-        String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream((
-            "<configuration>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types</name>\n" +
-            "   <value>" + A_CUSTOM_RESOURCE + "</value>\n" +
-            " </property>\n" +
-            " <property>\n" +
-            "   <name>yarn.resource-types.a-custom-resource.units</name>\n" +
-            "   <value>k</value>\n" +
-            " </property>\n" +
-            "</configuration>\n")
-                .getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
-    }
-  }
 
   private static class TestAppender extends AppenderSkeleton {
 
@@ -101,6 +76,29 @@ public class TestFairSchedulerConfiguration {
     private List<LoggingEvent> getLogEvents() {
       return logEvents;
     }
+  }
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
+  private void expectMissingResource(String resource) {
+    exception.expect(AllocationConfigurationException.class);
+    exception.expectMessage("Missing resource: " + resource);
+  }
+
+  private void expectNegativePercentageOldStyle() {
+    exception.expect(AllocationConfigurationException.class);
+    exception.expectMessage("percentage should not be negative");
+  }
+
+  private void expectNegativePercentageNewStyle() {
+    exception.expect(AllocationConfigurationException.class);
+    exception.expectMessage("is either not a non-negative number");
+  }
+
+  private void expectNegativeValueOfResource(String resource) {
+    exception.expect(AllocationConfigurationException.class);
+    exception.expectMessage("Invalid value of " + resource);
   }
 
   @Test
@@ -246,48 +244,267 @@ public class TestFairSchedulerConfiguration {
             + "test1 = 50 % ").getResource(clusterResource));
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testNoUnits() throws Exception {
+    expectMissingResource("mb");
     parseResourceConfigValue("1024");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testOnlyMemory() throws Exception {
+    expectMissingResource("vcores");
     parseResourceConfigValue("1024mb");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testOnlyCPU() throws Exception {
+    expectMissingResource("mb");
     parseResourceConfigValue("1024vcores");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testGibberish() throws Exception {
+    expectMissingResource("mb");
     parseResourceConfigValue("1o24vc0res");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testNoUnitsPercentage() throws Exception {
+    expectMissingResource("cpu");
     parseResourceConfigValue("95%, 50% memory");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testInvalidNumPercentage() throws Exception {
+    expectMissingResource("cpu");
     parseResourceConfigValue("95A% cpu, 50% memory");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testCpuPercentageMemoryAbsolute() throws Exception {
+    expectMissingResource("memory");
     parseResourceConfigValue("50% cpu, 1024 mb");
   }
 
-  @Test(expected = AllocationConfigurationException.class)
+  @Test
   public void testMemoryPercentageCpuAbsolute() throws Exception {
+    expectMissingResource("cpu");
     parseResourceConfigValue("50% memory, 2 vcores");
   }
 
   @Test
-  public void testAllocationIncrementMemoryDefaultUnit() throws Exception {
+  public void testMemoryPercentageNegativeValue() throws Exception {
+    expectNegativePercentageOldStyle();
+    parseResourceConfigValue("-10% memory, 50% cpu");
+  }
+
+  @Test
+  public void testCpuPercentageNegativeValue() throws Exception {
+    expectNegativePercentageOldStyle();
+    parseResourceConfigValue("10% memory, -10% cpu");
+  }
+
+  @Test
+  public void testMemoryAndCpuPercentageNegativeValue() throws Exception {
+    expectNegativePercentageOldStyle();
+    parseResourceConfigValue("-20% memory, -10% cpu");
+  }
+
+  @Test
+  public void testCpuPercentageMemoryAbsoluteCpuNegative() throws Exception {
+    expectMissingResource("memory");
+    parseResourceConfigValue("-50% cpu, 1024 mb");
+  }
+
+  @Test
+  public void testCpuPercentageMemoryAbsoluteMemoryNegative() throws Exception {
+    expectMissingResource("memory");
+    parseResourceConfigValue("50% cpu, -1024 mb");
+  }
+
+  @Test
+  public void testMemoryPercentageCpuAbsoluteCpuNegative() throws Exception {
+    expectMissingResource("cpu");
+    parseResourceConfigValue("50% memory, -2 vcores");
+  }
+
+  @Test
+  public void testMemoryPercentageCpuAbsoluteMemoryNegative() throws Exception {
+    expectNegativePercentageOldStyle();
+    parseResourceConfigValue("-50% memory, 2 vcores");
+  }
+
+
+  @Test
+  public void testAbsoluteVcoresNegative() throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("-2 vcores,5120 mb");
+  }
+
+  @Test
+  public void testAbsoluteMemoryNegative() throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("2 vcores,-5120 mb");
+  }
+
+  @Test
+  public void testAbsoluteVcoresNegativeWithSpaces() throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("-2 vcores, 5120 mb");
+  }
+
+  @Test
+  public void testAbsoluteMemoryNegativeWithSpaces() throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("2 vcores, -5120 mb");
+  }
+
+  @Test
+  public void testAbsoluteVcoresNegativeWithMoreSpaces() throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("5120mb   mb, -2    vcores");
+  }
+
+  @Test
+  public void testAbsoluteMemoryNegativeWithMoreSpaces() throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("-5120mb   mb, 2    vcores");
+  }
+
+  @Test
+  public void testAbsoluteVcoresNegativeFractional() throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("  5120.3 mb, -2.35 vcores  ");
+  }
+
+  @Test
+  public void testAbsoluteMemoryNegativeFractional() throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("  -5120.3 mb, 2.35 vcores  ");
+  }
+
+  @Test
+  public void testParseNewStyleResourceMemoryNegative() throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("memory-mb=-5120,vcores=2");
+  }
+
+  @Test
+  public void testParseNewStyleResourceVcoresNegative() throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("memory-mb=5120,vcores=-2");
+  }
+
+  @Test
+  public void testParseNewStyleResourceMemoryNegativeWithSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("memory-mb=-5120, vcores=2");
+  }
+
+  @Test
+  public void testParseNewStyleResourceVcoresNegativeWithSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("memory-mb=5120, vcores=-2");
+  }
+
+  @Test
+  public void testParseNewStyleResourceMemoryNegativeWithMoreSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue(" vcores = 2 ,  memory-mb = -5120 ");
+  }
+
+  @Test
+  public void testParseNewStyleResourceVcoresNegativeWithMoreSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue(" vcores = -2 ,  memory-mb = 5120 ");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithCustomResourceMemoryNegative()
+      throws Exception {
+    expectNegativeValueOfResource("memory");
+    parseResourceConfigValue("vcores=2,memory-mb=-5120,test1=4");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithCustomResourceVcoresNegative()
+      throws Exception {
+    expectNegativeValueOfResource("vcores");
+    parseResourceConfigValue("vcores=-2,memory-mb=-5120,test1=4");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithCustomResourceNegative()
+      throws Exception {
+    expectNegativeValueOfResource("test1");
+    parseResourceConfigValue("vcores=2,memory-mb=5120,test1=-4");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithCustomResourceNegativeWithSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("test1");
+    parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithPercentagesVcoresNegative() throws
+      Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores=-75%,memory-mb=40%");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithPercentagesMemoryNegative() throws
+      Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores=75%,memory-mb=-40%");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithPercentagesVcoresNegativeWithSpaces()
+      throws Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores=-75%, memory-mb=40%");
+  }
+
+  @Test
+  public void testParseNewStyleResourceWithPercentagesMemoryNegativeWithSpaces()
+      throws Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores=75%, memory-mb=-40%");
+  }
+
+  @Test
+  public void
+  testParseNewStyleResourceWithPercentagesVcoresNegativeWithMoreSpaces()
+      throws Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores = -75%, memory-mb = 40%");
+  }
+
+  @Test
+  public void
+  testParseNewStyleResourceWithPercentagesMemoryNegativeWithMoreSpaces()
+      throws Exception {
+    expectNegativePercentageNewStyle();
+    parseResourceConfigValue("vcores = 75%, memory-mb = -40%");
+  }
+
+  @Test
+  public void
+  testParseNewStyleResourceWithPercentagesCustomResourceNegativeWithSpaces()
+      throws Exception {
+    expectNegativeValueOfResource("test1");
+    parseResourceConfigValue(" vcores = 2 , memory-mb = 5120 , test1 = -4 ");
+  }
+
+  @Test
+  public void testAllocationIncrementMemoryDefaultUnit() {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.RESOURCE_TYPES + "." +
         ResourceInformation.MEMORY_MB.getName() +
@@ -393,7 +610,7 @@ public class TestFairSchedulerConfiguration {
   }
 
   @Test
-  public void testAllocationIncrementCustomResource() throws Exception {
+  public void testAllocationIncrementCustomResource() {
     try {
       initResourceTypes();
       Configuration conf = new Configuration();
@@ -442,17 +659,17 @@ public class TestFairSchedulerConfiguration {
   }
 
   private void initResourceTypes() {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-        CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(conf);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(
+        ImmutableMap.<String, String>builder()
+            .put(A_CUSTOM_RESOURCE, "k")
+            .build());
   }
 
   @Test
   public void testMemoryIncrementConfiguredViaMultipleProperties() {
     TestAppender testAppender = new TestAppender();
-    Log4JLogger logger = (Log4JLogger) FairSchedulerConfiguration.LOG;
-    logger.getLogger().addAppender(testAppender);
+    Logger logger = LogManager.getRootLogger();
+    logger.addAppender(testAppender);
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-mb", "7");
@@ -470,15 +687,15 @@ public class TestFairSchedulerConfiguration {
               "overriding the yarn.scheduler.increment-allocation-mb=7 " +
               "property").equals(e.getMessage())));
     } finally {
-      logger.getLogger().removeAppender(testAppender);
+      logger.removeAppender(testAppender);
     }
   }
 
   @Test
   public void testCpuIncrementConfiguredViaMultipleProperties() {
     TestAppender testAppender = new TestAppender();
-    Log4JLogger logger = (Log4JLogger) FairSchedulerConfiguration.LOG;
-    logger.getLogger().addAppender(testAppender);
+    Logger logger = LogManager.getRootLogger();
+    logger.addAppender(testAppender);
     try {
       Configuration conf = new Configuration();
       conf.set("yarn.scheduler.increment-allocation-vcores", "7");
@@ -496,7 +713,7 @@ public class TestFairSchedulerConfiguration {
               "overriding the yarn.scheduler.increment-allocation-vcores=7 " +
               "property").equals(e.getMessage())));
     } finally {
-      logger.getLogger().removeAppender(testAppender);
+      logger.removeAppender(testAppender);
     }
   }
 }

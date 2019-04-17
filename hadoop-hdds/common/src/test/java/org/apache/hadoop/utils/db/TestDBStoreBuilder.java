@@ -31,7 +31,6 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 /**
  * Tests RDBStore creation.
@@ -124,14 +123,14 @@ public class TestDBStoreBuilder {
         .addTable("First")
         .addTable("Second")
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertArrayEquals(value, temp);
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {
@@ -154,14 +153,14 @@ public class TestDBStoreBuilder {
         .addTable("Second")
         .setProfile(DBProfile.DISK)
         .build()) {
-      try (Table firstTable = dbStore.getTable("First")) {
+      try (Table<byte[], byte[]> firstTable = dbStore.getTable("First")) {
         byte[] key =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         byte[] value =
             RandomStringUtils.random(9).getBytes(StandardCharsets.UTF_8);
         firstTable.put(key, value);
         byte[] temp = firstTable.get(key);
-        Arrays.equals(value, temp);
+        Assert.assertArrayEquals(value, temp);
       }
 
       try (Table secondTable = dbStore.getTable("Second")) {

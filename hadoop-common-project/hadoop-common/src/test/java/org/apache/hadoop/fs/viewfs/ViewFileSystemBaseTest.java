@@ -968,6 +968,11 @@ abstract public class ViewFileSystemBaseTest {
     fsView.unsetStoragePolicy(new Path("/internalDir"));
   }
 
+  @Test(expected = AccessControlException.class)
+  public void testInternalSatisfyStoragePolicy() throws IOException {
+    fsView.satisfyStoragePolicy(new Path("/internalDir"));
+  }
+
   @Test(expected = NotInMountpointException.class)
   public void testInternalgetStoragePolicy() throws IOException {
     fsView.getStoragePolicy(new Path("/internalDir"));

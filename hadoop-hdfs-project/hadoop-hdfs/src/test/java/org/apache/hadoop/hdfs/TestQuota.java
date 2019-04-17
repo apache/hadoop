@@ -28,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -332,6 +333,13 @@ public class TestQuota {
     // 14a: set quota on a non-existent directory
     Path nonExistentPath = new Path(dir, "test1");
     assertFalse(dfs.exists(nonExistentPath));
+    try {
+      compareQuotaUsage(null, dfs, nonExistentPath);
+      fail("Expected FileNotFoundException");
+    } catch (FileNotFoundException fnfe) {
+      GenericTestUtils.assertExceptionContains(
+          "File/Directory does not exist: " + nonExistentPath, fnfe);
+    }
     args = new String[]{"-setQuota", "1", nonExistentPath.toString()};
     runCommand(admin, args, true);
     runCommand(admin, true, "-setSpaceQuota", "1g", // for space quota
@@ -405,13 +413,13 @@ public class TestQuota {
       }
     });
 
-    // 19: clrQuota on the root directory ("/") should fail
-    runCommand(admin, true, "-clrQuota", "/");
+    // 19: clrQuota on the root directory ("/") should pass.
+    runCommand(admin, false, "-clrQuota", "/");
 
     // 20: setQuota on the root directory ("/") should succeed
     runCommand(admin, false, "-setQuota", "1000000", "/");
 
-    runCommand(admin, true, "-clrQuota", "/");
+    runCommand(admin, false, "-clrQuota", "/");
     runCommand(admin, false, "-clrSpaceQuota", "/");
     runCommand(admin, new String[]{"-clrQuota", parent.toString()}, false);
     runCommand(admin, false, "-clrSpaceQuota", parent.toString());
@@ -448,7 +456,7 @@ public class TestQuota {
     final Path childFile4 = new Path(dir, "datafile2");
     final Path childFile5 = new Path(dir, "datafile3");
 
-    runCommand(admin, true, "-clrQuota", "/");
+    runCommand(admin, false, "-clrQuota", "/");
     runCommand(admin, false, "-clrSpaceQuota", "/");
     // set space quota to a real low value
     runCommand(admin, false, "-setSpaceQuota", Long.toString(spaceQuota2), "/");
@@ -1555,6 +1563,19 @@ public class TestQuota {
       }
     }, 100, 10000);
     assertEquals(0, cluster.getNamesystem().getNumFilesUnderConstruction());
+  }
+
+  @Test
+  public void testClrQuotaOnRoot() throws Exception {
+    long orignalQuota = dfs.getQuotaUsage(new Path("/")).getQuota();
+    DFSAdmin admin = new DFSAdmin(conf);
+    String[] args;
+    args = new String[] {"-setQuota", "3K", "/"};
+    runCommand(admin, args, false);
+    assertEquals(3 * 1024, dfs.getQuotaUsage(new Path("/")).getQuota());
+    args = new String[] {"-clrQuota", "/"};
+    runCommand(admin, args, false);
+    assertEquals(orignalQuota, dfs.getQuotaUsage(new Path("/")).getQuota());
   }
 
   @Test

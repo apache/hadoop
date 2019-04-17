@@ -30,7 +30,9 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Configuration for ozone.
@@ -47,6 +49,8 @@ public class OzoneConfiguration extends Configuration {
 
   public OzoneConfiguration(Configuration conf) {
     super(conf);
+    //load the configuration from the classloader of the original conf.
+    setClassLoader(conf.getClassLoader());
   }
 
   public List<Property> readPropertyFromXml(URL url) throws JAXBException {
@@ -158,5 +162,32 @@ public class OzoneConfiguration extends Configuration {
     Configuration.addDefaultResource("hdfs-site.xml");
     Configuration.addDefaultResource("ozone-default.xml");
     Configuration.addDefaultResource("ozone-site.xml");
+  }
+
+  /**
+   * The super class method getAllPropertiesByTag
+   * does not override values of properties
+   * if there is no tag present in the configs of
+   * newly added resources.
+   * @param tag
+   * @return Properties that belong to the tag
+   */
+  @Override
+  public Properties getAllPropertiesByTag(String tag) {
+    // Call getProps first to load the newly added resources
+    // before calling super.getAllPropertiesByTag
+    Properties updatedProps = getProps();
+    Properties propertiesByTag = super.getAllPropertiesByTag(tag);
+    Properties props = new Properties();
+    Enumeration properties = propertiesByTag.propertyNames();
+    while (properties.hasMoreElements()) {
+      Object propertyName =  properties.nextElement();
+      // get the current value of the property
+      Object value = updatedProps.getProperty(propertyName.toString());
+      if (value != null) {
+        props.put(propertyName, value);
+      }
+    }
+    return props;
   }
 }

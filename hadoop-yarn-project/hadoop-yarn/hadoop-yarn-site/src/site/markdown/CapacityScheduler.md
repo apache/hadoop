@@ -54,7 +54,7 @@ The `CapacityScheduler` supports the following features:
 
 * **Operability**
 
-    * Runtime Configuration - The queue definitions and properties such as capacity, ACLs can be changed, at runtime, by administrators in a secure manner to minimize disruption to users. Also, a console is provided for users and administrators to view current allocation of resources to various queues in the system. Administrators can *add additional queues* at runtime, but queues cannot be *deleted* at runtime.
+    * Runtime Configuration - The queue definitions and properties such as capacity, ACLs can be changed, at runtime, by administrators in a secure manner to minimize disruption to users. Also, a console is provided for users and administrators to view current allocation of resources to various queues in the system. Administrators can *add additional queues* at runtime, but queues cannot be *deleted* at runtime unless the queue is STOPPED and nhas no pending/running apps.
 
     * Drain applications - Administrators can *stop* queues at runtime to ensure that while existing applications run to completion, no new applications can be submitted. If a queue is in `STOPPED` state, new applications cannot be submitted to *itself* or *any of its child queues*. Existing applications continue to completion, thus the queue can be *drained* gracefully. Administrators can also *start* the stopped queues.
 
@@ -416,7 +416,7 @@ Note, this feature should be disabled if YARN is deployed separately with the fi
 | Property | Description |
 |:---- |:---- |
 | `yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled` | Whether to allow multiple container assignments in one NodeManager heartbeat. Defaults to true. |
-| `yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments` | If `multiple-assignments-enabled` is true, the maximum amount of containers that can be assigned in one NodeManager heartbeat. Defaults to -1, which sets no limit. |
+| `yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments` | If `multiple-assignments-enabled` is true, the maximum amount of containers that can be assigned in one NodeManager heartbeat. Default value is 100, which limits the maximum number of container assignments per heartbeat to 100. Set this value to -1 will disable this limit. |
 | `yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments` | If `multiple-assignments-enabled` is true, the maximum amount of off-switch containers that can be assigned in one NodeManager heartbeat. Defaults to 1, which represents only one off-switch allocation allowed in one heartbeat. |
 
 ###Reviewing the configuration of the CapacityScheduler
@@ -440,6 +440,18 @@ Changing queue/scheduler properties and adding/removing queues can be done in tw
 
     $ vi $HADOOP_CONF_DIR/capacity-scheduler.xml
     $ $HADOOP_YARN_HOME/bin/yarn rmadmin -refreshQueues
+
+#### Deleting queue via file
+
+  Step 1: Stop the queue
+
+  Before deleting a leaf queue, the leaf queue should not have any running/pending apps and has to BE STOPPED by changing `yarn.scheduler.capacity.<queue-path>.state`. See the
+  [Queue Administration & Permissions](CapacityScheduler.html#Queue Properties) section. 
+  Before deleting a parent queue, all its child queues should not have any running/pending apps and have to BE STOPPED. The parent queue also needs to be STOPPED
+
+  Step 2: Delete the queue
+
+  Remove the queue configurations from the file and run refresh as described above
 
 ### Changing queue configuration via API
 

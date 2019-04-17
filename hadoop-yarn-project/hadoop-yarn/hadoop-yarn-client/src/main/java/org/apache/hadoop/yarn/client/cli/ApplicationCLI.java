@@ -48,9 +48,11 @@ import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.ShellContainerCommand;
 import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.client.api.AppAdminClient;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
@@ -99,6 +101,7 @@ public class ApplicationCLI extends YarnCLI {
   public static final String DESTROY_CMD = "destroy";
   public static final String FLEX_CMD = "flex";
   public static final String COMPONENT = "component";
+  public static final String DECOMMISSION = "decommission";
   public static final String ENABLE_FAST_LAUNCH = "enableFastLaunch";
   public static final String UPGRADE_CMD = "upgrade";
   public static final String UPGRADE_EXPRESS = "express";
@@ -110,6 +113,8 @@ public class ApplicationCLI extends YarnCLI {
   public static final String COMPONENTS = "components";
   public static final String VERSION = "version";
   public static final String STATES = "states";
+  public static final String SHELL_CMD = "shell";
+  public static final String CLUSTER_ID_OPTION = "clusterId";
 
   private static String firstArg = null;
 
@@ -239,6 +244,10 @@ public class ApplicationCLI extends YarnCLI {
           "yarn-service. If ID is provided, the appType will be looked up. " +
           "Supports -appTypes option to specify which client implementation " +
           "to use.");
+      opts.addOption(DECOMMISSION, true, "Decommissions component " +
+          "instances for an application / long-running service. Requires " +
+          "-instances option. Supports -appTypes option to specify which " +
+          "client implementation to use.");
       opts.addOption(COMPONENT, true, "Works with -flex option to change " +
           "the number of components/containers running for an application / " +
           "long-running service. Supports absolute or relative changes, such " +
@@ -258,9 +267,12 @@ public class ApplicationCLI extends YarnCLI {
           "application specification file.");
       opts.addOption(COMPONENT_INSTS, true, "Works with -upgrade option to " +
           "trigger the upgrade of specified component instances of the " +
-          "application.");
+          "application. Also works with -decommission option to decommission " +
+          "specified component instances. Multiple instances should be " +
+          "separated by commas.");
       opts.addOption(COMPONENTS, true, "Works with -upgrade option to " +
-          "trigger the upgrade of specified components of the application.");
+          "trigger the upgrade of specified components of the application. " +
+          "Multiple components should be separated by commas.");
       opts.addOption(UPGRADE_FINALIZE, false, "Works with -upgrade option to " +
           "finalize the upgrade.");
       opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and " +
@@ -268,6 +280,8 @@ public class ApplicationCLI extends YarnCLI {
           "the ability to finalize the upgrade automatically.");
       opts.addOption(UPGRADE_CANCEL, false, "Works with -upgrade option to " +
           "cancel current upgrade.");
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
       opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
       opts.getOption(LAUNCH_CMD).setArgs(2);
       opts.getOption(START_CMD).setArgName("Application Name");
@@ -290,6 +304,9 @@ public class ApplicationCLI extends YarnCLI {
       opts.getOption(COMPONENTS).setArgName("Components");
       opts.getOption(COMPONENTS).setValueSeparator(',');
       opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
+      opts.getOption(DECOMMISSION).setArgName("Application Name");
+      opts.getOption(DECOMMISSION).setArgs(1);
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the application attempt.");
@@ -297,10 +314,15 @@ public class ApplicationCLI extends YarnCLI {
           "List application attempts for application.");
       opts.addOption(FAIL_CMD, true, "Fails application attempt.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
       opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
       opts.getOption(LIST_CMD).setArgName("Application ID");
       opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     } else if (title != null && title.equalsIgnoreCase(CONTAINER)) {
+      opts.addOption(SHELL_CMD, true,
+          "Run a shell in the container.");
       opts.addOption(STATUS_CMD, true,
           "Prints the status of the container.");
       opts.addOption(LIST_CMD, true,
@@ -313,6 +335,8 @@ public class ApplicationCLI extends YarnCLI {
           "app version, -components to filter instances based on component " +
           "names, -states to filter instances based on instance state.");
       opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+      opts.getOption(SHELL_CMD).setArgName("Container ID [bash|sh]");
+      opts.getOption(SHELL_CMD).setArgs(3);
       opts.getOption(STATUS_CMD).setArgName("Container ID");
       opts.getOption(LIST_CMD).setArgName("Application Name or Attempt ID");
       opts.addOption(APP_TYPE_CMD, true, "Works with -list to " +
@@ -343,6 +367,9 @@ public class ApplicationCLI extends YarnCLI {
           " Default command is OUTPUT_THREAD_DUMP.");
       opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
       opts.getOption(SIGNAL_CMD).setArgs(3);
+      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
+          + "By default, it will take default cluster id from the RM");
+      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
     }
 
     int exitCode = -1;
@@ -366,6 +393,12 @@ public class ApplicationCLI extends YarnCLI {
         return exitCode;
       }
     }
+
+    if (cliParser.hasOption(CLUSTER_ID_OPTION)) {
+      String clusterIdStr = cliParser.getOptionValue(CLUSTER_ID_OPTION);
+      getConf().set(YarnConfiguration.RM_CLUSTER_ID, clusterIdStr);
+    }
+    createAndStartYarnClient();
 
     if (cliParser.hasOption(STATUS_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD, APP_TYPE_CMD)) {
@@ -542,6 +575,19 @@ public class ApplicationCLI extends YarnCLI {
         command = SignalContainerCommand.valueOf(signalArgs[1]);
       }
       signalToContainer(containerId, command);
+    } else if (cliParser.hasOption(SHELL_CMD)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, SHELL_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      final String[] shellArgs = cliParser.getOptionValues(SHELL_CMD);
+      final String containerId = shellArgs[0];
+      ShellContainerCommand command =
+          ShellContainerCommand.BASH;
+      if (shellArgs.length == 2) {
+        command = ShellContainerCommand.valueOf(shellArgs[1].toUpperCase());
+      }
+      shellToContainer(containerId, command);
     } else if (cliParser.hasOption(LAUNCH_CMD)) {
       if (hasAnyOtherCLIOptions(cliParser, opts, LAUNCH_CMD, APP_TYPE_CMD,
           UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
@@ -708,6 +754,18 @@ public class ApplicationCLI extends YarnCLI {
         }
         return client.actionCancelUpgrade(appName);
       }
+    } else if (cliParser.hasOption(DECOMMISSION)) {
+      if (!cliParser.hasOption(COMPONENT_INSTS) ||
+          hasAnyOtherCLIOptions(cliParser, opts, DECOMMISSION, COMPONENT_INSTS,
+              APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
+      String[] appNameAndType = getAppNameAndType(cliParser, DECOMMISSION);
+      return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
+          .actionDecommissionInstances(appNameAndType[0],
+              Arrays.asList(instances));
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);
@@ -784,7 +842,7 @@ public class ApplicationCLI extends YarnCLI {
   }
 
   /**
-   * Signals the containerId
+   * Signals the containerId.
    *
    * @param containerIdStr the container id
    * @param command the signal command
@@ -795,6 +853,20 @@ public class ApplicationCLI extends YarnCLI {
     ContainerId containerId = ContainerId.fromString(containerIdStr);
     sysout.println("Signalling container " + containerIdStr);
     client.signalToContainer(containerId, command);
+  }
+
+  /**
+   * Shell to the containerId.
+   *
+   * @param containerIdStr the container id
+   * @param command the shell command
+   * @throws YarnException
+   */
+  private void shellToContainer(String containerIdStr,
+      ShellContainerCommand command) throws YarnException, IOException {
+    ContainerId containerId = ContainerId.fromString(containerIdStr);
+    sysout.println("Shelling to container " + containerIdStr);
+    client.shellToContainer(containerId, command);
   }
 
   /**
@@ -912,6 +984,9 @@ public class ApplicationCLI extends YarnCLI {
       containerReportStr.print("\tNodeHttpAddress : ");
       containerReportStr.println(containerReport.getNodeHttpAddress() == null
           ? "N/A" : containerReport.getNodeHttpAddress());
+      containerReportStr.print("\tExposedPorts : ");
+      containerReportStr.println(containerReport.getExposedPorts() == null
+          ? "N/A" : containerReport.getExposedPorts());
       containerReportStr.print("\tDiagnostics : ");
       containerReportStr.print(containerReport.getDiagnosticsInfo());
     } else {
@@ -1170,8 +1245,8 @@ public class ApplicationCLI extends YarnCLI {
 
   private String getAllValidApplicationStates() {
     StringBuilder sb = new StringBuilder();
-    sb.append("The valid application state can be" + " one of the following: ");
-    sb.append(ALLSTATES_OPTION + ",");
+    sb.append("The valid application state can be" + " one of the following: ")
+        .append(ALLSTATES_OPTION + ",");
     for (YarnApplicationState appState : YarnApplicationState.values()) {
       sb.append(appState + ",");
     }

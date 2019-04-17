@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.service.ServiceStateException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.CommandExecutor;
 import org.apache.hadoop.util.Shell.ExitCodeException;
@@ -163,8 +164,7 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     // randomly choose the local directory
     Path appStorageDir = getWorkingDir(localDirs, user, appId);
 
-    String tokenFn =
-        String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT, locId);
+    String tokenFn = String.format(TOKEN_FILE_NAME_FMT, locId);
     Path tokenDst = new Path(appStorageDir, tokenFn);
     copyFile(nmPrivateContainerTokensPath, tokenDst, user);
     LOG.info("Copying from " + nmPrivateContainerTokensPath
@@ -179,7 +179,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
         + localizerFc.getWorkingDirectory());
 
     ContainerLocalizer localizer =
-        createContainerLocalizer(user, appId, locId, localDirs, localizerFc);
+        createContainerLocalizer(user, appId, locId, tokenFn, localDirs,
+            localizerFc);
     // TODO: DO it over RPC for maintaining similarity?
     localizer.runLocalization(nmAddr);
   }
@@ -203,10 +204,10 @@ public class DefaultContainerExecutor extends ContainerExecutor {
   @Private
   @VisibleForTesting
   protected ContainerLocalizer createContainerLocalizer(String user,
-      String appId, String locId, List<String> localDirs,
+      String appId, String locId, String tokenFileName, List<String> localDirs,
       FileContext localizerFc) throws IOException {
     ContainerLocalizer localizer =
-        new ContainerLocalizer(localizerFc, user, appId, locId,
+        new ContainerLocalizer(localizerFc, user, appId, locId, tokenFileName,
             getPaths(localDirs),
             RecordFactoryProvider.getRecordFactory(getConf()));
     return localizer;
@@ -330,17 +331,17 @@ public class DefaultContainerExecutor extends ContainerExecutor {
             + containerId + " and exit code: " + exitCode , e);
 
         StringBuilder builder = new StringBuilder();
-        builder.append("Exception from container-launch.\n");
-        builder.append("Container id: ").append(containerId).append("\n");
-        builder.append("Exit code: ").append(exitCode).append("\n");
+        builder.append("Exception from container-launch.\n")
+            .append("Container id: ").append(containerId).append("\n")
+            .append("Exit code: ").append(exitCode).append("\n");
         if (!Optional.fromNullable(e.getMessage()).or("").isEmpty()) {
-          builder.append("Exception message: ");
-          builder.append(e.getMessage()).append("\n");
+          builder.append("Exception message: ")
+              .append(e.getMessage()).append("\n");
         }
 
         if (!shExec.getOutput().isEmpty()) {
-          builder.append("Shell output: ");
-          builder.append(shExec.getOutput()).append("\n");
+          builder.append("Shell output: ")
+              .append(shExec.getOutput()).append("\n");
         }
         String diagnostics = builder.toString();
         logOutput(diagnostics);
@@ -572,10 +573,8 @@ public class DefaultContainerExecutor extends ContainerExecutor {
     String user = ctx.getUser();
     String pid = ctx.getPid();
     Signal signal = ctx.getSignal();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending signal " + signal.getValue() + " to pid " + pid
-          + " as user " + user);
-    }
+    LOG.debug("Sending signal {} to pid {} as user {}",
+        signal.getValue(), pid, user);
     if (!containerIsAlive(pid)) {
       return false;
     }
@@ -1037,5 +1036,11 @@ public class DefaultContainerExecutor extends ContainerExecutor {
       paths.add(new Path(dirs.get(i)));
     }
     return paths;
+  }
+
+  @Override
+  public void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException {
+    throw new ServiceStateException("Implementation unavailable");
   }
 }

@@ -34,11 +34,11 @@ import "hdds.proto";
 * Request send to SCM asking where the container should be created.
 */
 message ContainerRequestProto {
-  // Ozone only support replciation of either 1 or 3.
+  // Ozone only support replication of either 1 or 3.
   required ReplicationFactor replicationFactor = 2;
   required ReplicationType  replicationType = 3;
   required string owner = 4;
-
+  optional string traceID = 5;
 }
 
 /**
@@ -57,14 +57,18 @@ message ContainerResponseProto {
 
 message GetContainerRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message GetContainerResponseProto {
-  required SCMContainerInfo containerInfo = 1;
+  required ContainerInfoProto containerInfo = 1;
 }
 
 message GetContainerWithPipelineRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message GetContainerWithPipelineResponseProto {
@@ -74,14 +78,17 @@ message GetContainerWithPipelineResponseProto {
 message SCMListContainerRequestProto {
   required uint32 count = 1;
   optional uint64 startContainerID = 2;
- }
+  optional string traceID = 3;
+}
 
 message SCMListContainerResponseProto {
-  repeated SCMContainerInfo containers = 1;
+  repeated ContainerInfoProto containers = 1;
 }
 
 message SCMDeleteContainerRequestProto {
   required int64 containerID = 1;
+  optional string traceID = 2;
+
 }
 
 message SCMDeleteContainerResponseProto {
@@ -106,6 +113,7 @@ message ObjectStageChangeRequestProto {
   required Type type = 2;
   required Op op= 3;
   required Stage stage = 4;
+  optional string traceID = 5;
 }
 
 message ObjectStageChangeResponseProto {
@@ -120,6 +128,7 @@ message NodeQueryRequestProto {
   required NodeState state = 1;
   required QueryScope scope = 2;
   optional string poolName = 3; // if scope is pool, then pool name is needed.
+  optional string traceID = 4;
 }
 
 message NodeQueryResponseProto {
@@ -137,6 +146,7 @@ message PipelineRequestProto {
   // datanodes.
   optional NodePool nodePool = 3;
   optional string pipelineID = 4;
+  optional string traceID = 5;
 }
 
 message  PipelineResponseProto {
@@ -149,19 +159,37 @@ message  PipelineResponseProto {
   optional string errorMessage = 3;
 }
 
-
-message InChillModeRequestProto {
+message ListPipelineRequestProto {
+  optional string traceID = 1;
 }
 
-message InChillModeResponseProto {
-  required bool inChillMode = 1;
+message ListPipelineResponseProto {
+  repeated Pipeline pipelines = 1;
 }
 
-message ForceExitChillModeRequestProto {
+message ClosePipelineRequestProto {
+  required PipelineID pipelineID = 1;
+  optional string traceID = 2;
+
 }
 
-message ForceExitChillModeResponseProto {
-  required bool exitedChillMode = 1;
+message ClosePipelineResponseProto {
+}
+
+message InSafeModeRequestProto {
+  optional string traceID = 1;
+}
+
+message InSafeModeResponseProto {
+  required bool inSafeMode = 1;
+}
+
+message ForceExitSafeModeRequestProto {
+  optional string traceID = 1;
+}
+
+message ForceExitSafeModeResponseProto {
+  required bool exitedSafeMode = 1;
 }
 
 /**
@@ -219,20 +247,32 @@ service StorageContainerLocationProtocolService {
       returns (PipelineResponseProto);
 
   /**
+   * Returns the list of Pipelines managed by SCM.
+   */
+  rpc listPipelines(ListPipelineRequestProto)
+      returns (ListPipelineResponseProto);
+
+  /**
+   * Closes a pipeline.
+   */
+  rpc closePipeline(ClosePipelineRequestProto)
+      returns (ClosePipelineResponseProto);
+
+  /**
   *  Returns information about SCM.
   */
   rpc getScmInfo(GetScmInfoRequestProto)
       returns (GetScmInfoRespsonseProto);
 
   /**
-  *  Checks if SCM is in ChillMode.
+  *  Checks if SCM is in SafeMode.
   */
-  rpc inChillMode(InChillModeRequestProto)
-  returns (InChillModeResponseProto);
+  rpc inSafeMode(InSafeModeRequestProto)
+  returns (InSafeModeResponseProto);
 
   /**
   *  Returns information about SCM.
   */
-  rpc forceExitChillMode(ForceExitChillModeRequestProto)
-  returns (ForceExitChillModeResponseProto);
+  rpc forceExitSafeMode(ForceExitSafeModeRequestProto)
+  returns (ForceExitSafeModeResponseProto);
 }

@@ -19,7 +19,6 @@
 package org.apache.hadoop.ipc;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.*;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;
@@ -154,12 +153,12 @@ public class TestServer {
 
     // No stack trace should be logged for a terse exception.
     server.logException(logger, new TestException2(), dummyCall);
-    verify(logger, times(1)).info(anyObject());
+    verify(logger, times(1)).info(any());
 
     // Full stack trace should be logged for other exceptions.
     final Throwable te3 = new TestException3();
     server.logException(logger, te3, dummyCall);
-    verify(logger, times(1)).info(anyObject(), eq(te3));
+    verify(logger, times(1)).info(any(), eq(te3));
   }
 
   @Test

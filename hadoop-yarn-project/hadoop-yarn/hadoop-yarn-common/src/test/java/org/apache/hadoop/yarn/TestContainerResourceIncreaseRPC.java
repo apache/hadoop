@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.net.NetUtils;
@@ -31,6 +31,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
@@ -72,7 +74,7 @@ import java.util.List;
  */
 public class TestContainerResourceIncreaseRPC {
 
-  static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestContainerResourceIncreaseRPC.class);
 
   @Test
@@ -186,7 +188,7 @@ public class TestContainerResourceIncreaseRPC {
         // make the thread sleep to look like its not going to respond
         Thread.sleep(10000);
       } catch (Exception e) {
-        LOG.error(e);
+        LOG.error(e.toString());
         throw new YarnException(e);
       }
       throw new YarnException("Shouldn't happen!!");
@@ -224,6 +226,13 @@ public class TestContainerResourceIncreaseRPC {
 
     @Override
     public CommitResponse commitLastReInitialization(ContainerId containerId)
+        throws YarnException, IOException {
+      return null;
+    }
+
+    @Override
+    public GetLocalizationStatusesResponse getLocalizationStatuses(
+        GetLocalizationStatusesRequest request)
         throws YarnException, IOException {
       return null;
     }

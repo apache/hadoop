@@ -185,10 +185,8 @@ public class TrafficControlBandwidthHandlerImpl
       throws ResourceHandlerException {
     String containerIdStr = containerId.toString();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Attempting to reacquire classId for container: " +
-          containerIdStr);
-    }
+    LOG.debug("Attempting to reacquire classId for container: {}",
+        containerIdStr);
 
     String classIdStrFromFile = cGroupsHandler.getCGroupParam(
         CGroupsHandler.CGroupController.NET_CLS, containerIdStr,
@@ -277,10 +275,13 @@ public class TrafficControlBandwidthHandlerImpl
   @Override
   public List<PrivilegedOperation> teardown()
       throws ResourceHandlerException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("teardown(): Nothing to do");
-    }
+    LOG.debug("teardown(): Nothing to do");
 
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return TrafficControlBandwidthHandlerImpl.class.getName();
   }
 }

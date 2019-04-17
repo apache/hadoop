@@ -53,6 +53,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`GETSNAPSHOTDIFF`](#Get_Snapshot_Diff)
     * [`GETSNAPSHOTTABLEDIRECTORYLIST`](#Get_Snapshottable_Directory_List)
     * [`GETFILEBLOCKLOCATIONS`](#Get_File_Block_Locations) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileBlockLocations)
+    * [`GETECPOLICY`](#Get_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy)
 *   HTTP PUT
     * [`CREATE`](#Create_and_Write_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).create)
     * [`MKDIRS`](#Make_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).mkdirs)
@@ -64,16 +65,23 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`SETTIMES`](#Set_Access_or_Modification_Time) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setTimes)
     * [`RENEWDELEGATIONTOKEN`](#Renew_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).renewDelegationToken)
     * [`CANCELDELEGATIONTOKEN`](#Cancel_Delegation_Token) (see [DelegationTokenAuthenticator](../../api/org/apache/hadoop/security/token/delegation/web/DelegationTokenAuthenticator.html).cancelDelegationToken)
+    * [`ALLOWSNAPSHOT`](#Allow_Snapshot)
+    * [`DISALLOWSNAPSHOT`](#Disallow_Snapshot)
     * [`CREATESNAPSHOT`](#Create_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).createSnapshot)
     * [`RENAMESNAPSHOT`](#Rename_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).renameSnapshot)
     * [`SETXATTR`](#Set_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setXAttr)
     * [`REMOVEXATTR`](#Remove_XAttr) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).removeXAttr)
     * [`SETSTORAGEPOLICY`](#Set_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).setStoragePolicy)
+    * [`SATISFYSTORAGEPOLICY`](#Satisfy_Storage_Policy) (see [ArchivalStorage](./ArchivalStorage.html#Satisfy_Storage_Policy).satisfyStoragePolicy)
+    * [`ENABLEECPOLICY`](#Enable_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).enablePolicy)
+    * [`DISABLEECPOLICY`](#Disable_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).disablePolicy)
+    * [`SETECPOLICY`](#Set_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).setErasureCodingPolicy)
 *   HTTP POST
     * [`APPEND`](#Append_to_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).append)
     * [`CONCAT`](#Concat_Files) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).concat)
     * [`TRUNCATE`](#Truncate_a_File) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).truncate)
     * [`UNSETSTORAGEPOLICY`](#Unset_Storage_Policy) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).unsetStoragePolicy)
+    * [`UNSETECPOLICY`](#Unset_EC_Policy) (see [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).unsetErasureCodingPolicy)
 *   HTTP DELETE
     * [`DELETE`](#Delete_a_FileDirectory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).delete)
     * [`DELETESNAPSHOT`](#Delete_Snapshot) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).deleteSnapshot)
@@ -1088,6 +1096,19 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).unsetStor
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getStoragePolicy
 
+### Satisfy Storage Policy
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SATISFYSTORAGEPOLICY"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [ArchivalStorage](./ArchivalStorage.html#Satisfy_Storage_Policy).satisfyStoragePolicy
+
 ### Get File Block Locations
 
 * Submit a HTTP GET request.
@@ -1266,8 +1287,122 @@ See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getXAttrs
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listXAttrs
 
+Erasure Coding Operations
+-------------------------
+
+### Enable EC Policy
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=ENABLEECPOLICY
+                                      &ecpolicy=<policy>"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).enablePolicy
+
+### Disable EC Policy
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/?op=DISABLEECPOLICY
+                                      &ecpolicy=<policy>"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).disablePolicy
+
+### Set EC Policy
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=SETECPOLICY
+                                      &ecpolicy=<policy>"
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).setErasureCodingPolicy
+
+### Get EC Policy
+
+* Submit a HTTP GET request.
+
+        curl -i -X GET "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETECPOLICY
+                                     "
+
+   The client receives a response with a [`ECPolicy` JSON object](#ECPolicy_JSON_Schema):
+
+
+        {
+            "name": "RS-10-4-1024k",
+            "schema":
+            {
+            "codecName": "rs",
+            "numDataUnits": 10,
+            "numParityUnits": 4,
+            "extraOptions": {}
+            }
+            "cellSize": 1048576,
+            "id":5,
+            "codecname":"rs",
+            "numDataUnits": 10,
+            "numParityUnits": 4,
+            "replicationpolicy":false,
+            "systemPolicy":true
+
+        }
+
+
+
+See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).getErasureCodingPolicy
+
+### Unset EC Policy
+
+* Submit a HTTP POST request.
+
+        curl -i -X POST "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=UNSETECPOLICY
+                                     "
+
+    The client receives a response with zero content length:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+See also: [HDFSErasureCoding](./HDFSErasureCoding.html#Administrative_commands).unsetErasureCodingPolicy
+
 Snapshot Operations
 -------------------
+
+### Allow Snapshot
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=ALLOWSNAPSHOT"
+
+    The client receives a response with zero content length on success:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
+
+### Disallow Snapshot
+
+* Submit a HTTP PUT request.
+
+        curl -i -X PUT "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=DISALLOWSNAPSHOT"
+
+    The client receives a response with zero content length on success:
+
+        HTTP/1.1 200 OK
+        Content-Length: 0
 
 ### Create Snapshot
 
@@ -2116,6 +2251,26 @@ var blockStoragePolicyProperties =
   }
 };
 ```
+### ECPolicy JSON Schema
+
+```json
+{
+  "name": "RS-10-4-1024k",
+  schema {
+           "codecName": "rs",
+           "numDataUnits": 10,
+           "numParityUnits": 4,
+           "extraOptions": {}
+          }
+  "cellSize": 1048576,
+  "id":5,
+  "codecname":"rs",
+  "numDataUnits": 10,
+  "numParityUnits": 4,
+  "replicationpolicy":false,
+  "systemPolicy":true
+}
+```
 
 ### BlockStoragePolicies JSON Schema
 
@@ -2186,6 +2341,7 @@ A `BlockStoragePolicies` JSON object represents an array of `BlockStoragePolicy`
   }
 }
 ```
+
 
 #### DiffReport Entries
 
@@ -2821,6 +2977,18 @@ See also: [Create and Write to a File](#Create_and_Write_to_a_File)
 | Syntax | Any string. |
 
 See also: [`SETSTORAGEPOLICY`](#Set_Storage_Policy)
+
+### Erasure Coding Policy
+
+| Name | `ecpolicy` |
+|:---- |:---- |
+| Description | The name of the erasure coding policy. |
+| Type | String |
+| Default Value | \<empty\> |
+| Valid Values | Any valid erasure coding policy name;  |
+| Syntax | Any string. |
+
+See also: [`ENABLEECPOLICY`](#Enable_EC_Policy) or [`DISABLEECPOLICY`](#Disable_EC_Policy)
 
 ### Start After
 

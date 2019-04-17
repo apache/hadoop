@@ -56,7 +56,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -116,22 +115,6 @@ public class DFSUtil {
     return SECURE_RANDOM.get();
   }
 
-  /** Shuffle the elements in the given array. */
-  public static <T> T[] shuffle(final T[] array) {
-    if (array != null && array.length > 0) {
-      for (int n = array.length; n > 1; ) {
-        final int randomIndex = ThreadLocalRandom.current().nextInt(n);
-        n--;
-        if (n != randomIndex) {
-          final T tmp = array[randomIndex];
-          array[randomIndex] = array[n];
-          array[n] = tmp;
-        }
-      }
-    }
-    return array;
-  }
-
   /**
    * Comparator for sorting DataNodeInfo[] based on
    * decommissioned and entering_maintenance states.
@@ -160,7 +143,8 @@ public class DFSUtil {
   /**
    * Comparator for sorting DataNodeInfo[] based on
    * stale, decommissioned and entering_maintenance states.
-   * Order: live -> stale -> entering_maintenance -> decommissioned
+   * Order: live {@literal ->} stale {@literal ->} entering_maintenance
+   * {@literal ->} decommissioned
    */
   @InterfaceAudience.Private 
   public static class ServiceAndStaleComparator extends ServiceComparator {
@@ -390,7 +374,8 @@ public class DFSUtil {
    * @param conf Configuration
    * @param nsId the nameservice whose NNs addresses we want.
    * @param defaultValue default address to return in case key is not found.
-   * @return A map from nnId -> RPC address of each NN in the nameservice.
+   * @return A map from nnId {@literal ->} RPC address of each NN in the
+   * nameservice.
    */
   public static Map<String, InetSocketAddress> getRpcAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue) {
@@ -1289,7 +1274,8 @@ public class DFSUtil {
    * @param conf configuration
    * @param protocol Protocol interface
    * @param service service that implements the protocol
-   * @param server RPC server to which the protocol & implementation is added to
+   * @param server RPC server to which the protocol &amp; implementation is
+   *               added to
    * @throws IOException
    */
   public static void addPBProtocol(Configuration conf, Class<?> protocol,
@@ -1357,7 +1343,8 @@ public class DFSUtil {
    * @param conf Configuration
    * @param nsId the nameservice whose NNs addresses we want.
    * @param defaultValue default address to return in case key is not found.
-   * @return A map from nnId -> Web address of each NN in the nameservice.
+   * @return A map from nnId {@literal ->} Web address of each NN in the
+   * nameservice.
    */
   public static Map<String, InetSocketAddress> getWebAddressesForNameserviceId(
       Configuration conf, String nsId, String defaultValue) {

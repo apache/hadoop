@@ -20,7 +20,8 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -30,6 +31,7 @@ import org.apache.ratis.client.RaftClient;
 import org.apache.ratis.protocol.RaftPeer;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,7 @@ import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
+import static org.apache.ratis.RatisHelper.newRaftClient;
 
 /**
  * Helpers for Ratis tests.
@@ -50,7 +53,7 @@ public interface RatisTestHelper {
 
   /** For testing Ozone with Ratis. */
   class RatisTestSuite implements Closeable {
-    static final RpcType RPC = SupportedRpcType.NETTY;
+    static final RpcType RPC = SupportedRpcType.GRPC;
     static final int NUM_DATANODES = 3;
 
     private final OzoneConfiguration conf;
@@ -122,8 +125,13 @@ public interface RatisTestHelper {
       RpcType rpc, DatanodeDetails dd, Pipeline pipeline) throws IOException {
     final RaftPeer p = RatisHelper.toRaftPeer(dd);
     final OzoneConfiguration conf = new OzoneConfiguration();
+    final int maxOutstandingRequests =
+        HddsClientUtils.getMaxOutstandingRequests(conf);
+    final TimeDuration requestTimeout =
+        RatisHelper.getClientRequestTimeout(conf);
     final RaftClient client =
-        RatisHelper.newRaftClient(rpc, p, RatisHelper.createRetryPolicy(conf));
+        newRaftClient(rpc, p, RatisHelper.createRetryPolicy(conf),
+            maxOutstandingRequests, requestTimeout);
     client.groupAdd(RatisHelper.newRaftGroup(pipeline), p.getId());
   }
 }

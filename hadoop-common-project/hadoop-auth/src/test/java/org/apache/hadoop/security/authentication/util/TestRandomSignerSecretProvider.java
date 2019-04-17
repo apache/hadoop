@@ -26,8 +26,8 @@ import static org.mockito.Mockito.verify;
 
 public class TestRandomSignerSecretProvider {
 
-  // rollover every 50 msec
-  private final int timeout = 100;
+  // rollover every 250 msec
+  private final int timeout = 500;
   private final long rolloverFrequency = timeout / 2;
 
   {

@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-dist</artifactId>
   <name>Apache Hadoop Ozone Distribution</name>
   <packaging>pom</packaging>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
@@ -38,7 +38,7 @@
         <executions>
           <execution>
             <id>copy-classpath-files</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy</goal>
             </goals>
@@ -84,6 +84,13 @@
                 </artifactItem>
                 <artifactItem>
                   <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-filesystem</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-filesystem.classpath</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
                   <artifactId>hadoop-ozone-common</artifactId>
                   <version>${ozone.version}</version>
                   <classifier>classpath</classifier>
@@ -96,12 +103,26 @@
                   <classifier>classpath</classifier>
                   <destFileName>hadoop-ozone-datanode.classpath</destFileName>
                 </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-recon</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-recon.classpath</destFileName>
+                </artifactItem>
+                <artifactItem>
+                  <groupId>org.apache.hadoop</groupId>
+                  <artifactId>hadoop-ozone-upgrade</artifactId>
+                  <version>${ozone.version}</version>
+                  <classifier>classpath</classifier>
+                  <destFileName>hadoop-ozone-upgrade.classpath</destFileName>
+                </artifactItem>
               </artifactItems>
             </configuration>
           </execution>
           <execution>
             <id>copy-jars</id>
-            <phase>package</phase>
+            <phase>prepare-package</phase>
             <goals>
               <goal>copy-dependencies</goal>
             </goals>
@@ -109,6 +130,28 @@
               <outputDirectory>target/ozone-${ozone.version}/share/ozone/lib
               </outputDirectory>
               <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-resources-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>copy-resources</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/compose</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/compose</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
             </configuration>
           </execution>
         </executions>
@@ -155,6 +198,18 @@
           </execution>
         </executions>
       </plugin>
+      <!-- there is no problem to have multiple versions of the jar files from
+      here. As the dependencies will be handled in a separated way with
+      separated classpath definitions-->
+      <plugin>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>depcheck</id>
+            <phase></phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -185,11 +240,31 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-filesystem-lib-current</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-filesystem-lib-legacy</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-datanode</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-recon</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-hdds-docs</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-ozone-upgrade</artifactId>
     </dependency>
   </dependencies>
 </project>

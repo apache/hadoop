@@ -19,6 +19,11 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.ratis.thirdparty.io.grpc.Context;
+import org.apache.ratis.thirdparty.io.grpc.Metadata;
+
+import static org.apache.ratis.thirdparty.io.grpc.Metadata.ASCII_STRING_MARSHALLER;
 
 /**
  * Set of constants used in Ozone implementation.
@@ -47,11 +52,20 @@ public final class OzoneConsts {
   public static final String OZONE_ACL_USER_TYPE = "user";
   public static final String OZONE_ACL_GROUP_TYPE = "group";
   public static final String OZONE_ACL_WORLD_TYPE = "world";
+  public static final String OZONE_ACL_IP_TYPE = "ip";
 
   public static final String OZONE_ACL_READ = "r";
   public static final String OZONE_ACL_WRITE = "w";
   public static final String OZONE_ACL_READ_WRITE = "rw";
   public static final String OZONE_ACL_WRITE_READ = "wr";
+  public static final String OZONE_ACL_DELETE = "d";
+  public static final String OZONE_ACL_LIST = "l";
+  public static final String OZONE_ACL_ALL = "a";
+  public static final String OZONE_ACL_NONE = "n";
+  public static final String OZONE_ACL_CREATE = "c";
+  public static final String OZONE_ACL_READ_ACL = "x";
+  public static final String OZONE_ACL_WRITE_ACL = "y";
+
 
   public static final String OZONE_DATE_FORMAT =
       "EEE, dd MMM yyyy HH:mm:ss zzz";
@@ -81,6 +95,7 @@ public final class OzoneConsts {
   public static final String CONTAINER_ROOT_PREFIX = "repository";
 
   public static final String FILE_HASH = "SHA-256";
+  public static final String MD5_HASH = "MD5";
   public final static String CHUNK_OVERWRITE = "OverWriteRequested";
 
   public static final int CHUNK_SIZE = 1 * 1024 * 1024; // 1 MB
@@ -99,8 +114,13 @@ public final class OzoneConsts {
   public static final String DN_CONTAINER_DB = "-dn-"+ CONTAINER_DB_SUFFIX;
   public static final String DELETED_BLOCK_DB = "deletedBlock.db";
   public static final String OM_DB_NAME = "om.db";
+  public static final String OM_DB_CHECKPOINTS_DIR_NAME = "om.db.checkpoints";
+  public static final String OZONE_MANAGER_TOKEN_DB_NAME = "om-token.db";
+  public static final String SCM_DB_NAME = "scm.db";
 
   public static final String STORAGE_DIR_CHUNKS = "chunks";
+  public static final String OZONE_DB_CHECKPOINT_REQUEST_FLUSH =
+      "flushBeforeCheckpoint";
 
   /**
    * Supports Bucket Versioning.
@@ -144,6 +164,13 @@ public final class OzoneConsts {
   public static final String OM_KEY_PREFIX = "/";
   public static final String OM_USER_PREFIX = "$";
   public static final String OM_S3_PREFIX ="S3:";
+  public static final String OM_S3_VOLUME_PREFIX = "s3";
+
+  /**
+   *   Max chunk size limit.
+   */
+  public static final int OZONE_SCM_CHUNK_MAX_SIZE = 32 * 1024 * 1024;
+
 
   /**
    * Max OM Quota size of 1024 PB.
@@ -186,6 +213,12 @@ public final class OzoneConsts {
   public static final String CHUNKS_PATH = "chunksPath";
   public static final String CONTAINER_DB_TYPE = "containerDBType";
   public static final String CHECKSUM = "checksum";
+  public static final String ORIGIN_PIPELINE_ID = "originPipelineId";
+  public static final String ORIGIN_NODE_ID = "originNodeId";
+
+  // Supported store types.
+  public static final String OZONE = "ozone";
+  public static final String S3 = "s3";
 
   // For OM Audit usage
   public static final String VOLUME = "volume";
@@ -215,7 +248,38 @@ public final class OzoneConsts {
   public static final String REPLICATION_TYPE = "replicationType";
   public static final String REPLICATION_FACTOR = "replicationFactor";
   public static final String KEY_LOCATION_INFO = "keyLocationInfo";
+  public static final String MULTIPART_LIST = "multipartList";
+  public static final String UPLOAD_ID = "uploadID";
+  public static final String PART_NUMBER_MARKER = "partNumberMarker";
+  public static final String MAX_PARTS = "maxParts";
 
 
 
+  // For OM metrics saving to a file
+  public static final String OM_METRICS_FILE = "omMetrics";
+  public static final String OM_METRICS_TEMP_FILE = OM_METRICS_FILE + ".tmp";
+
+  // For Multipart upload
+  public static final int OM_MULTIPART_MIN_SIZE = 5 * 1024 * 1024;
+
+  // GRPC block token metadata header and context key
+  public static final String OZONE_BLOCK_TOKEN = "blocktoken";
+  public static final Context.Key<UserGroupInformation> UGI_CTX_KEY =
+      Context.key("UGI");
+
+  public static final Metadata.Key<String> OBT_METADATA_KEY =
+      Metadata.Key.of(OZONE_BLOCK_TOKEN, ASCII_STRING_MARSHALLER);
+  public static final Metadata.Key<String> USER_METADATA_KEY =
+      Metadata.Key.of(OZONE_USER, ASCII_STRING_MARSHALLER);
+
+  public static final String RPC_PORT = "RPC";
+
+  // Default OMServiceID for OM Ratis servers to use as RaftGroupId
+  public static final String OM_SERVICE_ID_DEFAULT = "omServiceIdDefault";
+
+  // Dummy OMNodeID for OM Clients to use for a non-HA OM setup
+  public static final String OM_NODE_ID_DUMMY = "omNodeIdDummy";
+
+  // OM Ratis snapshot file to store the last applied index
+  public static final String OM_RATIS_SNAPSHOT_INDEX = "ratisSnapshotIndex";
 }

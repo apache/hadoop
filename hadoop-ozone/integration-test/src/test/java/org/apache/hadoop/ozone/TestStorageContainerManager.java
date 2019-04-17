@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -50,7 +51,7 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
-import org.apache.hadoop.hdds.scm.server.SCMStorage;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager.StartupOption;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -58,8 +59,11 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.utils.HddsVersionInfo;
+
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -140,7 +144,7 @@ public class TestStorageContainerManager {
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
-          Assert.assertEquals(1, container2.getPipeline().getMachines().size());
+          Assert.assertEquals(1, container2.getPipeline().getNodes().size());
         }
       } catch (Exception e) {
         verifyPermissionDeniedException(e, fakeRemoteUsername);
@@ -153,7 +157,7 @@ public class TestStorageContainerManager {
         if (expectPermissionDenied) {
           fail("Operation should fail, expecting an IOException here.");
         } else {
-          Assert.assertEquals(1, container3.getPipeline().getMachines().size());
+          Assert.assertEquals(1, container3.getPipeline().getNodes().size());
         }
       } catch (Exception e) {
         verifyPermissionDeniedException(e, fakeRemoteUsername);
@@ -200,7 +204,7 @@ public class TestStorageContainerManager {
         1, TimeUnit.SECONDS);
     // Reset container provision size, otherwise only one container
     // is created by default.
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
         numKeys);
 
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -282,7 +286,7 @@ public class TestStorageContainerManager {
     conf.setInt(ScmConfigKeys.OZONE_SCM_BLOCK_DELETION_MAX_RETRY, 5);
     conf.setTimeDuration(OzoneConfigKeys.OZONE_BLOCK_DELETING_SERVICE_INTERVAL,
         100, TimeUnit.MILLISECONDS);
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE,
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT,
         numKeys);
 
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -388,13 +392,13 @@ public class TestStorageContainerManager {
     final String path = GenericTestUtils.getTempPath(
         UUID.randomUUID().toString());
     Path scmPath = Paths.get(path, "scm-meta");
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
 
     StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
 
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
     StartupOption.INIT.setClusterId("testClusterIdNew");
@@ -410,7 +414,7 @@ public class TestStorageContainerManager {
     final String path = GenericTestUtils.getTempPath(
         UUID.randomUUID().toString());
     Path scmPath = Paths.get(path, "scm-meta");
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     //This will set the cluster id in the version file
     MiniOzoneCluster cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
@@ -418,27 +422,30 @@ public class TestStorageContainerManager {
     StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
     StorageContainerManager.scmInit(conf);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
     cluster.shutdown();
   }
 
   @Test
-  public void testSCMInitializationFailure() throws IOException {
+  public void testSCMInitializationFailure()
+      throws IOException, AuthenticationException {
     OzoneConfiguration conf = new OzoneConfiguration();
     final String path =
         GenericTestUtils.getTempPath(UUID.randomUUID().toString());
     Path scmPath = Paths.get(path, "scm-meta");
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
     exception.expect(SCMException.class);
-    exception.expectMessage("SCM not initialized.");
+    exception.expectMessage(
+        "SCM not initialized due to storage config failure");
     StorageContainerManager.createSCM(null, conf);
   }
 
   @Test
-  public void testSCMInitializationReturnCode() throws IOException {
+  public void testSCMInitializationReturnCode() throws IOException,
+      AuthenticationException {
     ExitUtil.disableSystemExit();
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
@@ -455,9 +462,9 @@ public class TestStorageContainerManager {
     final String path =
         GenericTestUtils.getTempPath(UUID.randomUUID().toString());
     Path scmPath = Paths.get(path, "scm-meta");
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
     conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    SCMStorage scmStore = new SCMStorage(conf);
+    SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     String clusterId = UUID.randomUUID().toString();
     String scmId = UUID.randomUUID().toString();
     scmStore.setClusterId(clusterId);
@@ -469,5 +476,10 @@ public class TestStorageContainerManager {
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     Assert.assertEquals(clusterId, scmInfo.getClusterId());
     Assert.assertEquals(scmId, scmInfo.getScmId());
+
+    String expectedVersion = HddsVersionInfo.HDDS_VERSION_INFO.getVersion();
+    String actualVersion = scm.getSoftwareVersion();
+    Assert.assertEquals(expectedVersion, actualVersion);
   }
+
 }

@@ -37,24 +37,8 @@
         <td>{{$ctrl.overview.jmx.DatanodeRpcPort}}</td>
     </tr>
     <tr>
-        <td>Block Manager: Open containers</td>
-        <td>{{$ctrl.blockmanagermetrics.OpenContainersNo}}</td>
-    </tr>
-    <tr>
-        <td>Node Manager: Minimum chill mode nodes</td>
-        <td>{{$ctrl.nodemanagermetrics.MinimumChillModeNodes}}</td>
-    </tr>
-    <tr>
-        <td>Node Manager: Out-of-node chill mode</td>
-        <td>{{$ctrl.nodemanagermetrics.OutOfNodeChillMode}}</td>
-    </tr>
-    <tr>
-        <td>Node Manager: Chill mode status</td>
-        <td>{{$ctrl.scmmetrics.InChillMode}}</td>
-    </tr>
-    <tr>
-        <td>Node Manager: Manual chill mode</td>
-        <td>{{$ctrl.nodemanagermetrics.InManualChillMode}}</td>
+        <td>Node Manager: Safe mode status</td>
+        <td>{{$ctrl.scmmetrics.InSafeMode}}</td>
     </tr>
     </tbody>
 </table>

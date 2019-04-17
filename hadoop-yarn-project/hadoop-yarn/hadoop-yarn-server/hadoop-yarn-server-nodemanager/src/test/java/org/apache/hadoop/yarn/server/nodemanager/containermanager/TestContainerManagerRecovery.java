@@ -23,7 +23,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -527,7 +527,7 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
     assertNotNull(app);
 
     ResourceUtilization utilization =
-        ResourceUtilization.newInstance(1024, 2048, 0.25F);
+        ResourceUtilization.newInstance(1024, 2048, 1.0F);
     assertEquals(cm.getContainerScheduler().getNumRunningContainers(), 1);
     assertEquals(utilization,
         cm.getContainerScheduler().getCurrentUtilization());
@@ -736,7 +736,8 @@ public class TestContainerManagerRecovery extends BaseContainerManagerTest {
       @Override
       protected void authorizeGetAndStopContainerRequest(
           ContainerId containerId, Container container,
-          boolean stopRequest, NMTokenIdentifier identifier)
+          boolean stopRequest, NMTokenIdentifier identifier,
+          String remoteUser)
           throws YarnException {
         if(container == null || container.getUser().equals("Fail")){
           throw new YarnException("Reject this container");

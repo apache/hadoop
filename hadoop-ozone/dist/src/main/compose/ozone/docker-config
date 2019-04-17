@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.om.address=ozoneManager
-OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=True
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
@@ -25,8 +25,10 @@ OZONE-SITE.XML_ozone.handler.type=distributed
 OZONE-SITE.XML_ozone.scm.client.address=scm
 OZONE-SITE.XML_ozone.replication=1
 OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
+OZONE-SITE.XML_hdds.profiler.endpoint.enabled=true
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
+ASYNC_PROFILER_HOME=/opt/profiler
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
@@ -56,7 +58,7 @@ LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
 LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
 LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
-LOG4J2.PROPERTIES_appender.rolling.fileName =${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
 LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
 LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n

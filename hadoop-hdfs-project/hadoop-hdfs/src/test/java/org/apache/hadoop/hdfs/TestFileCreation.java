@@ -1246,7 +1246,7 @@ public class TestFileCreation {
           try {
             nnrpc.create(pathStr, new FsPermission((short)0755), "client",
                 new EnumSetWritable<CreateFlag>(EnumSet.of(CreateFlag.CREATE)),
-                true, (short)1, 128*1024*1024L, null, null);
+                true, (short) 1, 128 * 1024 * 1024L, null, null, null);
             fail("Should have thrown exception when creating '"
                 + pathStr + "'" + " by " + method);
           } catch (InvalidPathException ipe) {

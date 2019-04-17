@@ -51,7 +51,7 @@ public final class Constants {
   // s3 secret key
   public static final String SECRET_KEY = "fs.s3a.secret.key";
 
-  // aws credentials provider
+  // aws credentials providers
   public static final String AWS_CREDENTIALS_PROVIDER =
       "fs.s3a.aws.credentials.provider";
 
@@ -63,18 +63,20 @@ public final class Constants {
   public static final String S3A_SECURITY_CREDENTIAL_PROVIDER_PATH =
       "fs.s3a.security.credential.provider.path";
 
-  // session token for when using TemporaryAWSCredentialsProvider
+  /**
+   * session token for when using TemporaryAWSCredentialsProvider: : {@value}.
+   */
   public static final String SESSION_TOKEN = "fs.s3a.session.token";
 
   /**
-   * AWS Role to request.
+   * ARN of AWS Role to request: {@value}.
    */
   public static final String ASSUMED_ROLE_ARN =
       "fs.s3a.assumed.role.arn";
 
   /**
    * Session name for the assumed role, must be valid characters according
-   * to the AWS APIs.
+   * to the AWS APIs: {@value}.
    * If not set, one is generated from the current Hadoop/Kerberos username.
    */
   public static final String ASSUMED_ROLE_SESSION_NAME =
@@ -86,34 +88,50 @@ public final class Constants {
   public static final String ASSUMED_ROLE_SESSION_DURATION =
       "fs.s3a.assumed.role.session.duration";
 
-  /** Security Token Service Endpoint. If unset, uses the default endpoint. */
+  /**
+   * Security Token Service Endpoint: {@value}.
+   * If unset, uses the default endpoint.
+   */
   public static final String ASSUMED_ROLE_STS_ENDPOINT =
       "fs.s3a.assumed.role.sts.endpoint";
 
   /**
-   * Region for the STS endpoint; only relevant if the endpoint
-   * is set.
+   * Default endpoint for session tokens: {@value}.
+   * This is the central STS endpoint which, for v3 signing, can
+   * issue STS tokens for any region.
+   */
+  public static final String DEFAULT_ASSUMED_ROLE_STS_ENDPOINT = "";
+
+  /**
+   * Region for the STS endpoint; needed if the endpoint
+   * is set to anything other then the central one.: {@value}.
    */
   public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION =
       "fs.s3a.assumed.role.sts.endpoint.region";
 
   /**
    * Default value for the STS endpoint region; needed for
-   * v4 signing.
+   * v4 signing: {@value}.
    */
-  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT =
-      "us-west-1";
+  public static final String ASSUMED_ROLE_STS_ENDPOINT_REGION_DEFAULT = "";
 
   /**
-   * Default duration of an assumed role.
+   * Default duration of an assumed role: {@value}.
    */
-  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "30m";
+  public static final String ASSUMED_ROLE_SESSION_DURATION_DEFAULT = "1h";
 
-  /** list of providers to authenticate for the assumed role. */
+  /**
+   * List of providers to authenticate for the assumed role: {@value}.
+   */
   public static final String ASSUMED_ROLE_CREDENTIALS_PROVIDER =
       "fs.s3a.assumed.role.credentials.provider";
 
-  /** JSON policy containing the policy to apply to the role. */
+  /**
+   * JSON policy containing the policy to apply to the role: {@value}.
+   * This is not used for delegation tokens, which generate the policy
+   * automatically, and restrict it to the S3, KMS and S3Guard services
+   * needed.
+   */
   public static final String ASSUMED_ROLE_POLICY =
       "fs.s3a.assumed.role.policy";
 
@@ -320,7 +338,10 @@ public final class Constants {
   /** Prefix for S3A bucket-specific properties: {@value}. */
   public static final String FS_S3A_BUCKET_PREFIX = "fs.s3a.bucket.";
 
-  public static final int S3A_DEFAULT_PORT = -1;
+  /**
+   * Default port for this is 443: HTTPS.
+   */
+  public static final int S3A_DEFAULT_PORT = 443;
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
@@ -524,7 +545,7 @@ public final class Constants {
   public static final String S3GUARD_METASTORE_LOCAL_ENTRY_TTL =
       "fs.s3a.s3guard.local.ttl";
   public static final int DEFAULT_S3GUARD_METASTORE_LOCAL_ENTRY_TTL
-      = 10 * 1000;
+      = 60 * 1000;
 
   /**
    * Use DynamoDB for the metadata: {@value}.
@@ -620,4 +641,84 @@ public final class Constants {
    */
   public static final boolean ETAG_CHECKSUM_ENABLED_DEFAULT = false;
 
+  /**
+   * Where to get the value to use in change detection.  E.g. eTag, or
+   * versionId?
+   */
+  public static final String CHANGE_DETECT_SOURCE
+      = "fs.s3a.change.detection.source";
+
+  /**
+   * eTag as the change detection mechanism.
+   */
+  public static final String CHANGE_DETECT_SOURCE_ETAG = "etag";
+
+  /**
+   * Object versionId as the change detection mechanism.
+   */
+  public static final String CHANGE_DETECT_SOURCE_VERSION_ID = "versionid";
+
+  /**
+   * Default change detection mechanism: eTag.
+   */
+  public static final String CHANGE_DETECT_SOURCE_DEFAULT =
+      CHANGE_DETECT_SOURCE_ETAG;
+
+  /**
+   * Mode to run change detection in.  Server side comparison?  Client side
+   * comparison? Client side compare and warn rather than exception?  Don't
+   * bother at all?
+   */
+  public static final String CHANGE_DETECT_MODE =
+      "fs.s3a.change.detection.mode";
+
+  /**
+   * Change is detected on the client side by comparing the returned id with the
+   * expected id.  A difference results in {@link RemoteFileChangedException}.
+   */
+  public static final String CHANGE_DETECT_MODE_CLIENT = "client";
+
+  /**
+   * Change is detected by passing the expected value in the GetObject request.
+   * If the expected value is unavailable, {@link RemoteFileChangedException} is
+   * thrown.
+   */
+  public static final String CHANGE_DETECT_MODE_SERVER = "server";
+
+  /**
+   * Change is detected on the client side by comparing the returned id with the
+   * expected id.  A difference results in a WARN level message being logged.
+   */
+  public static final String CHANGE_DETECT_MODE_WARN = "warn";
+
+  /**
+   * Change detection is turned off.  Readers may see inconsistent results due
+   * to concurrent writes without any exception or warning messages.  May be
+   * useful with third-party S3 API implementations that don't support one of
+   * the change detection modes.
+   */
+  public static final String CHANGE_DETECT_MODE_NONE = "none";
+
+  /**
+   * Default change detection mode: server.
+   */
+  public static final String CHANGE_DETECT_MODE_DEFAULT =
+      CHANGE_DETECT_MODE_SERVER;
+
+  /**
+   * If true, raises a {@link RemoteFileChangedException} exception when S3
+   * doesn't provide the attribute defined by fs.s3a.change.detection.source.
+   * For example, if source is versionId, but object versioning is not enabled
+   * on the bucket, or alternatively if source is eTag and a third-party S3
+   * implementation that doesn't return eTag is used.
+   * <p>
+   * When false, only a warning message will be logged for this condition.
+   */
+  public static final String CHANGE_DETECT_REQUIRE_VERSION =
+      "fs.s3a.change.detection.version.required";
+
+  /**
+   * Default change detection require version: true.
+   */
+  public static final boolean CHANGE_DETECT_REQUIRE_VERSION_DEFAULT = true;
 }

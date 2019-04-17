@@ -116,6 +116,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
   private ReservationSubmissionRequest reservationRequest;
 
+  private Map<ApplicationId, AMSimulator> appIdToAMSim;
+
   public AMSimulator() {
     this.responseQueue = new LinkedBlockingQueue<>();
   }
@@ -125,8 +127,8 @@ public abstract class AMSimulator extends TaskRunner.Task {
       List<ContainerSimulator> containerList, ResourceManager resourceManager,
       SLSRunner slsRunnner, long startTime, long finishTime, String simUser,
       String simQueue, boolean tracked, String oldApp, long baseTimeMS,
-      Resource amResource, String nodeLabelExpr,
-      Map<String, String> params) {
+      Resource amResource, String nodeLabelExpr, Map<String, String> params,
+      Map<ApplicationId, AMSimulator> appIdAMSim) {
     super.init(startTime, startTime + 1000000L * heartbeatInterval,
         heartbeatInterval);
     this.user = simUser;
@@ -140,6 +142,7 @@ public abstract class AMSimulator extends TaskRunner.Task {
     this.traceFinishTimeMS = finishTime;
     this.amContainerResource = amResource;
     this.nodeLabelExpression = nodeLabelExpr;
+    this.appIdToAMSim = appIdAMSim;
   }
 
   /**
@@ -162,6 +165,9 @@ public abstract class AMSimulator extends TaskRunner.Task {
 
     // submit application, waiting until ACCEPTED
     submitApp(reservationId);
+
+    // add submitted app to mapping
+    appIdToAMSim.put(appId, this);
 
     // track app metrics
     trackApp();

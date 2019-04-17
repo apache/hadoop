@@ -166,6 +166,10 @@ public class AbfsConfiguration{
           DefaultValue = DEFAULT_ENABLE_HTTPS)
   private boolean alwaysUseHttps;
 
+  @BooleanConfigurationValidatorAnnotation(ConfigurationKey = FS_AZURE_USE_UPN,
+      DefaultValue = DEFAULT_USE_UPN)
+  private boolean useUpn;
+
   private Map<String, String> storageAccountKeys;
 
   public AbfsConfiguration(final Configuration rawConfig, String accountName)
@@ -211,6 +215,16 @@ public class AbfsConfiguration{
    */
   public String get(String key) {
     return rawConfig.get(accountConf(key), rawConfig.get(key));
+  }
+
+  /**
+   * Returns the account-specific value if it exists, then looks for an
+   * account-agnostic value.
+   * @param key Account-agnostic configuration key
+   * @return value if one exists, else the default value
+   */
+  public String getString(String key, String defaultValue) {
+    return rawConfig.get(accountConf(key), rawConfig.get(key, defaultValue));
   }
 
   /**
@@ -441,6 +455,10 @@ public class AbfsConfiguration{
     return this.alwaysUseHttps;
   }
 
+  public boolean isUpnUsed() {
+    return this.useUpn;
+  }
+
   public AccessTokenProvider getTokenProvider() throws TokenAccessProviderException {
     AuthType authType = getEnum(FS_AZURE_ACCOUNT_AUTH_TYPE_PROPERTY_NAME, AuthType.SharedKey);
     if (authType == AuthType.OAuth) {
@@ -496,7 +514,7 @@ public class AbfsConfiguration{
       } catch(IllegalArgumentException e) {
         throw e;
       } catch (Exception e) {
-        throw new TokenAccessProviderException("Unable to load custom token provider class.", e);
+        throw new TokenAccessProviderException("Unable to load custom token provider class: " + e, e);
       }
 
     } else {

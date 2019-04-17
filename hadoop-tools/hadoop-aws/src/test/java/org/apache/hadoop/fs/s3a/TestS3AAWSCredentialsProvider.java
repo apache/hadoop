@@ -23,12 +23,14 @@ import java.io.InterruptedIOException;
 import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.google.common.collect.Sets;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -51,18 +53,24 @@ import static org.junit.Assert.*;
  */
 public class TestS3AAWSCredentialsProvider {
 
+  /**
+   * URI of the landsat images.
+   */
+  private static final URI TESTFILE_URI = new Path(
+      DEFAULT_CSVTEST_FILE).toUri();
+
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testProviderWrongClass() throws Exception {
-    expectProviderInstantiationFailure(this.getClass().getName(),
+    expectProviderInstantiationFailure(this.getClass(),
         NOT_AWS_PROVIDER);
   }
 
   @Test
   public void testProviderAbstractClass() throws Exception {
-    expectProviderInstantiationFailure(AbstractProvider.class.getName(),
+    expectProviderInstantiationFailure(AbstractProvider.class,
         ABSTRACT_PROVIDER);
   }
 
@@ -75,31 +83,29 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testProviderConstructorError() throws Exception {
     expectProviderInstantiationFailure(
-        ConstructorSignatureErrorProvider.class.getName(),
+        ConstructorSignatureErrorProvider.class,
         CONSTRUCTOR_EXCEPTION);
   }
 
   @Test
   public void testProviderFailureError() throws Exception {
     expectProviderInstantiationFailure(
-        ConstructorFailureProvider.class.getName(),
+        ConstructorFailureProvider.class,
         INSTANTIATION_EXCEPTION);
   }
 
   @Test
   public void testInstantiationChain() throws Throwable {
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(false);
     conf.set(AWS_CREDENTIALS_PROVIDER,
         TemporaryAWSCredentialsProvider.NAME
             + ", \t" + SimpleAWSCredentialsProvider.NAME
             + " ,\n " + AnonymousAWSCredentialsProvider.NAME);
-    Path testFile = new Path(
-        conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
+    Path testFile = getCSVTestPath(conf);
 
-    URI uri = testFile.toUri();
-    AWSCredentialProviderList list = S3AUtils.createAWSCredentialProviderSet(
-        uri, conf);
-    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
+    AWSCredentialProviderList list = createAWSCredentialProviderSet(
+        testFile.toUri(), conf);
+    List<Class<?>> expectedClasses =
         Arrays.asList(
             TemporaryAWSCredentialsProvider.class,
             SimpleAWSCredentialsProvider.class,
@@ -110,60 +116,73 @@ public class TestS3AAWSCredentialsProvider {
   @Test
   public void testDefaultChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
-    Configuration conf = new Configuration();
+    Configuration conf = new Configuration(false);
     // use the default credential provider chain
     conf.unset(AWS_CREDENTIALS_PROVIDER);
-    AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
+    AWSCredentialProviderList list1 = createAWSCredentialProviderSet(
         uri1, conf);
-    AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
+    AWSCredentialProviderList list2 = createAWSCredentialProviderSet(
         uri2, conf);
-    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
-        Arrays.asList(
-            SimpleAWSCredentialsProvider.class,
-            EnvironmentVariableCredentialsProvider.class,
-            InstanceProfileCredentialsProvider.class);
+    List<Class<?>> expectedClasses = STANDARD_AWS_PROVIDERS;
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
-    assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(2),
-        list2.getProviders().get(2));
+  }
+
+  @Test
+  public void testDefaultChainNoURI() throws Exception {
+    Configuration conf = new Configuration(false);
+    // use the default credential provider chain
+    conf.unset(AWS_CREDENTIALS_PROVIDER);
+    assertCredentialProviders(STANDARD_AWS_PROVIDERS,
+        createAWSCredentialProviderSet(null, conf));
   }
 
   @Test
   public void testConfiguredChain() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
-    Configuration conf = new Configuration();
-    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
+    List<Class<?>> expectedClasses =
         Arrays.asList(
             EnvironmentVariableCredentialsProvider.class,
             InstanceProfileCredentialsProvider.class,
             AnonymousAWSCredentialsProvider.class);
-    conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
-    AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
+    Configuration conf =
+        createProviderConfiguration(buildClassListString(expectedClasses));
+    AWSCredentialProviderList list1 = createAWSCredentialProviderSet(
         uri1, conf);
-    AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
+    AWSCredentialProviderList list2 = createAWSCredentialProviderSet(
         uri2, conf);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
-    assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(1),
-        list2.getProviders().get(1));
   }
 
   @Test
   public void testConfiguredChainUsesSharedInstanceProfile() throws Exception {
     URI uri1 = new URI("s3a://bucket1"), uri2 = new URI("s3a://bucket2");
-    Configuration conf = new Configuration();
-    List<Class<? extends AWSCredentialsProvider>> expectedClasses =
-        Arrays.<Class<? extends AWSCredentialsProvider>>asList(
+    Configuration conf = new Configuration(false);
+    List<Class<?>> expectedClasses =
+        Arrays.asList(
             InstanceProfileCredentialsProvider.class);
     conf.set(AWS_CREDENTIALS_PROVIDER, buildClassListString(expectedClasses));
-    AWSCredentialProviderList list1 = S3AUtils.createAWSCredentialProviderSet(
+    AWSCredentialProviderList list1 = createAWSCredentialProviderSet(
         uri1, conf);
-    AWSCredentialProviderList list2 = S3AUtils.createAWSCredentialProviderSet(
+    AWSCredentialProviderList list2 = createAWSCredentialProviderSet(
         uri2, conf);
     assertCredentialProviders(expectedClasses, list1);
     assertCredentialProviders(expectedClasses, list2);
-    assertSameInstanceProfileCredentialsProvider(list1.getProviders().get(0),
-        list2.getProviders().get(0));
+  }
+
+  @Test
+  public void testFallbackToDefaults() throws Throwable {
+    // build up the base provider
+    final AWSCredentialProviderList credentials = buildAWSProviderList(
+        new URI("s3a://bucket1"),
+        createProviderConfiguration("  "),
+        ASSUMED_ROLE_CREDENTIALS_PROVIDER,
+        Arrays.asList(
+            EnvironmentVariableCredentialsProvider.class),
+        Sets.newHashSet());
+    assertTrue("empty credentials", credentials.size() > 0);
+
   }
 
   /**
@@ -213,14 +232,110 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
+  @Test
+  public void testAWSExceptionTranslation() throws Throwable {
+    IOException ex = expectProviderInstantiationFailure(
+        AWSExceptionRaisingFactory.class,
+        AWSExceptionRaisingFactory.NO_AUTH);
+    if (!(ex instanceof AccessDeniedException)) {
+      throw ex;
+    }
+  }
+
+  static class AWSExceptionRaisingFactory implements AWSCredentialsProvider {
+
+    public static final String NO_AUTH = "No auth";
+
+    public static AWSCredentialsProvider getInstance() {
+      throw new NoAuthWithAWSException(NO_AUTH);
+    }
+
+    @Override
+    public AWSCredentials getCredentials() {
+      return null;
+    }
+
+    @Override
+    public void refresh() {
+
+    }
+  }
+
+  @Test
+  public void testFactoryWrongType() throws Throwable {
+    expectProviderInstantiationFailure(
+        FactoryOfWrongType.class,
+        CONSTRUCTOR_EXCEPTION);
+  }
+
+  static class FactoryOfWrongType implements AWSCredentialsProvider {
+
+    public static final String NO_AUTH = "No auth";
+
+    public static String getInstance() {
+      return "oops";
+    }
+
+    @Override
+    public AWSCredentials getCredentials() {
+      return null;
+    }
+
+    @Override
+    public void refresh() {
+
+    }
+  }
+
+  /**
+   * Expect a provider to raise an exception on failure.
+   * @param option aws provider option string.
+   * @param expectedErrorText error text to expect
+   * @return the exception raised
+   * @throws Exception any unexpected exception thrown.
+   */
   private IOException expectProviderInstantiationFailure(String option,
       String expectedErrorText) throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(AWS_CREDENTIALS_PROVIDER, option);
-    Path testFile = new Path(
-        conf.getTrimmed(KEY_CSVTEST_FILE, DEFAULT_CSVTEST_FILE));
     return intercept(IOException.class, expectedErrorText,
-        () -> S3AUtils.createAWSCredentialProviderSet(testFile.toUri(), conf));
+        () -> createAWSCredentialProviderSet(
+            TESTFILE_URI,
+            createProviderConfiguration(option)));
+  }
+
+  /**
+   * Expect a provider to raise an exception on failure.
+   * @param aClass class to use
+   * @param expectedErrorText error text to expect
+   * @return the exception raised
+   * @throws Exception any unexpected exception thrown.
+   */
+  private IOException expectProviderInstantiationFailure(Class aClass,
+      String expectedErrorText) throws Exception {
+    return expectProviderInstantiationFailure(
+        buildClassListString(Collections.singletonList(aClass)),
+        expectedErrorText);
+  }
+
+  /**
+   * Create a configuration with a specific provider.
+   * @param providerOption option for the aws credential provider option.
+   * @return a configuration to use in test cases
+   */
+  private Configuration createProviderConfiguration(
+      final String providerOption) {
+    Configuration conf = new Configuration(false);
+    conf.set(AWS_CREDENTIALS_PROVIDER, providerOption);
+    return conf;
+  }
+
+  /**
+   * Create a configuration with a specific class.
+   * @param aClass class to use
+   * @return a configuration to use in test cases
+   */
+  public Configuration createProviderConfiguration(final Class<?> aClass) {
+    return createProviderConfiguration(buildClassListString(
+        Collections.singletonList(aClass)));
   }
 
   /**
@@ -229,13 +344,13 @@ public class TestS3AAWSCredentialsProvider {
    * @param list providers to check
    */
   private static void assertCredentialProviders(
-      List<Class<? extends AWSCredentialsProvider>> expectedClasses,
+      List<Class<?>> expectedClasses,
       AWSCredentialProviderList list) {
     assertNotNull(list);
     List<AWSCredentialsProvider> providers = list.getProviders();
     assertEquals(expectedClasses.size(), providers.size());
     for (int i = 0; i < expectedClasses.size(); ++i) {
-      Class<? extends AWSCredentialsProvider> expectedClass =
+      Class<?> expectedClass =
           expectedClasses.get(i);
       AWSCredentialsProvider provider = providers.get(i);
       assertNotNull(
@@ -246,23 +361,6 @@ public class TestS3AAWSCredentialsProvider {
               i, expectedClass, provider.getClass()),
           expectedClass.isAssignableFrom(provider.getClass()));
     }
-  }
-
-  /**
-   * Asserts that two different references point to the same shared instance of
-   * InstanceProfileCredentialsProvider using a descriptive assertion message.
-   * @param provider1 provider to check
-   * @param provider2 provider to check
-   */
-  private static void assertSameInstanceProfileCredentialsProvider(
-      AWSCredentialsProvider provider1, AWSCredentialsProvider provider2) {
-    assertNotNull(provider1);
-    assertInstanceOf(InstanceProfileCredentialsProvider.class, provider1);
-    assertNotNull(provider2);
-    assertInstanceOf(InstanceProfileCredentialsProvider.class, provider2);
-    assertSame("Expected all usage of InstanceProfileCredentialsProvider to "
-            + "share a singleton instance, but found unique instances.",
-        provider1, provider2);
   }
 
   /**
@@ -291,7 +389,7 @@ public class TestS3AAWSCredentialsProvider {
     // but that it closes safely
     providers.close();
 
-    S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration());
+    S3ARetryPolicy retryPolicy = new S3ARetryPolicy(new Configuration(false));
     assertEquals("Expected no retry on auth failure",
         RetryPolicy.RetryAction.FAIL.action,
         retryPolicy.shouldRetry(noAuth, 0, 0, true).action);
@@ -356,6 +454,9 @@ public class TestS3AAWSCredentialsProvider {
     }
   }
 
+  /**
+   * Credential provider which raises an IOE when constructed.
+   */
   private static class IOERaisingProvider implements AWSCredentialsProvider {
 
     public IOERaisingProvider(URI uri, Configuration conf)

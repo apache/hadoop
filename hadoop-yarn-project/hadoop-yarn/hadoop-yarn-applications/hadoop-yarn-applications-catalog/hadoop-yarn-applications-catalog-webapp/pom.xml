@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+       http://www.apache.org/licenses/LICENSE-2.0
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<project xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://maven.apache.org/POM/4.0.0"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.apache.hadoop</groupId>
+  <artifactId>hadoop-yarn-applications-catalog-webapp</artifactId>
+  <packaging>war</packaging>
+
+  <parent>
+    <artifactId>hadoop-yarn-applications-catalog</artifactId>
+    <groupId>org.apache.hadoop</groupId>
+    <version>3.3.0-SNAPSHOT</version>
+  </parent>
+
+  <name>Apache Hadoop YARN Application Catalog Webapp</name>
+
+  <url>http://hadoop.apache.org</url>
+
+    <properties>
+        <artifact.name>app</artifact.name>
+        <endorsed.dir>${project.build.directory}/endorsed</endorsed.dir>
+        <vendor.loc>target/generated-sources/vendor</vendor.loc>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <dependency.locations.enabled>false</dependency.locations.enabled>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.swagger</groupId>
+          <artifactId>swagger-annotations</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-module-junit4</artifactId>
+            <version>${powermock.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.powermock</groupId>
+            <artifactId>powermock-api-mockito</artifactId>
+            <version>${powermock.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.mockito</groupId>
+                    <artifactId>mockito-all</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jersey.media</groupId>
+            <artifactId>jersey-media-json-jackson</artifactId>
+            <version>2.12</version>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.javassist</groupId>
+                    <artifactId>javassist</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.fasterxml.jackson.jaxrs</groupId>
+                    <artifactId>jackson-jaxrs-base</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-json</artifactId>
+            <version>${jersey.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-solrj</artifactId>
+            <version>${solr.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-core</artifactId>
+            <version>${solr.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-io</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.solr</groupId>
+            <artifactId>solr-test-framework</artifactId>
+            <version>${solr.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>jcl-over-slf4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.eclipse.jetty</groupId>
+                    <artifactId>jetty-io</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-auth</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-common</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-services-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-yarn-services-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-json-provider</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.jaxrs</groupId>
+            <artifactId>jackson-jaxrs-base</artifactId>
+            <version>${jackson2.version}</version>
+        </dependency>
+    </dependencies>
+    <build>
+        <finalName>${artifact.name}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/javascript</directory>
+                <filtering>true</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>com.github.eirslett</groupId>
+                <artifactId>frontend-maven-plugin</artifactId>
+                <configuration>
+                    <workingDirectory>target</workingDirectory>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>install node and yarn</id>
+                        <goals>
+                            <goal>install-node-and-yarn</goal>
+                        </goals>
+                        <phase>generate-resources</phase>
+                        <configuration>
+                            <nodeVersion>v8.11.3</nodeVersion>
+                            <yarnVersion>v1.7.0</yarnVersion>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>yarn install</id>
+                        <goals>
+                            <goal>yarn</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArguments>
+                        <endorseddirs>${endorsed.dir}</endorseddirs>
+                    </compilerArguments>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <log4j.configuration>file:${project.build.testOutputDirectory}/log4j.properties</log4j.configuration>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <configuration>
+                    <failOnMissingWebXml>false</failOnMissingWebXml>
+                    <webResources>
+                        <resource>
+                            <directory>target/generated-sources</directory>
+                            <includes>
+                                <include>vendor/jquery/**</include>
+                                <include>vendor/angular/**</include>
+                                <include>vendor/angular-route/**</include>
+                                <include>vendor/bootstrap/**</include>
+                                <include>vendor/roboto-fontface/fonts/roboto/Roboto-Regular.woff</include>
+                            </includes>
+                        </resource>
+                    </webResources>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>copy</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${endorsed.dir}</outputDirectory>
+                            <silent>true</silent>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>javax</groupId>
+                                    <artifactId>javaee-endorsed-api</artifactId>
+                                    <version>7.0</version>
+                                    <type>jar</type>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>net.alchim31.maven</groupId>
+                <artifactId>yuicompressor-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>compress-js</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <!--<goal>jslint</goal>-->
+                            <goal>compress</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failOnWarning>true</failOnWarning>
+                    <!--<outputDirectory>src/main/webapp/js</outputDirectory>-->
+                    <outputDirectory>target/${artifact.name}/js</outputDirectory>
+                    <nosuffix>true</nosuffix>
+                    <excludes>
+                        <exclude>**/js/**/*js</exclude>
+                        <exclude>vendor/**</exclude>
+                        <exclude>**/*min.css</exclude>
+                        <exclude>**/*min.js</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.klieber</groupId>
+                <artifactId>phantomjs-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>install</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <version>2.1.1</version>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.github.searls</groupId>
+                <artifactId>jasmine-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>test</goal>
+                            <goal>bdd</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <webDriverClassName>org.openqa.selenium.phantomjs.PhantomJSDriver</webDriverClassName>
+                    <webDriverCapabilities>
+                        <capability>
+                            <name>phantomjs.binary.path</name>
+                            <value>${phantomjs.binary}</value>
+                        </capability>
+                    </webDriverCapabilities>
+                    <preloadSources>
+                        <source>${vendor.loc}/jquery/dist/jquery.js</source>
+                        <source>${vendor.loc}/angular/angular.min.js</source>
+                        <source>${vendor.loc}/angular-route/angular-route.min.js</source>
+                        <source>${vendor.loc}/angular-mocks/angular-mocks.js</source>
+                    </preloadSources>
+                    <jsSrcDir>src/main/javascript</jsSrcDir>
+                    <jsTestSrcDir>src/test/javascript</jsTestSrcDir>
+                    <specIncludes>
+                        <include>*Spec.js</include>
+                    </specIncludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.rat</groupId>
+                <artifactId>apache-rat-plugin</artifactId>
+                <configuration>
+                    <excludes>
+                        <exclude>src/main/webapp/vendor/**</exclude>
+                        <exclude>src/main/resources/appcatalog.properties</exclude>
+                        <exclude>src/main/webapp//**/*.svg</exclude>
+                        <exclude>src/test/javascript/karma.conf.js</exclude>
+                        <exclude>src/test/resources/configsets/exampleCollection/conf/params.json</exclude>
+                        <exclude>src/test/resources/log4j.properties</exclude>
+                        <exclude>src/test/resources/jaas.config</exclude>
+                        <exclude>.bowerrc</exclude>
+                        <exclude>.yarnrc</exclude>
+                        <exclude>bower.json</exclude>
+                        <exclude>package.json</exclude>
+                        <exclude>yarn.lock</exclude>
+                        <exclude>node/**</exclude>
+                        <exclude>node_modules/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                    <excludePackageNames>org.apache.hadoop.yarn.appcatalog</excludePackageNames>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+      <profile>
+        <id>parallel-tests</id>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.apache.hadoop</groupId>
+              <artifactId>hadoop-maven-plugins</artifactId>
+              <executions>
+                <execution>
+                  <id>parallel-tests-createdir</id>
+                  <goals>
+                    <goal>parallel-tests-createdir</goal>
+                  </goals>
+                </execution>
+              </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-surefire-plugin</artifactId>
+              <configuration>
+                <forkCount>${testsThreadCount}</forkCount>
+                <reuseForks>false</reuseForks>
+                <argLine>${maven-surefire-plugin.argLine} -DminiClusterDedicatedDirs=true</argLine>
+                <systemPropertyVariables>
+                  <testsThreadCount>${testsThreadCount}</testsThreadCount>
+                  <test.build.data>${test.build.data}/${surefire.forkNumber}</test.build.data>
+                  <test.build.dir>${test.build.dir}/${surefire.forkNumber}</test.build.dir>
+                  <hadoop.tmp.dir>${hadoop.tmp.dir}/${surefire.forkNumber}</hadoop.tmp.dir>
+
+                  <!-- Due to a Maven quirk, setting this to just -->
+                  <!-- surefire.forkNumber won't do the parameter substitution. -->
+                  <!-- Putting a prefix in front of it like "fork-" makes it -->
+                  <!-- work. -->
+                  <test.unique.fork.id>fork-${surefire.forkNumber}</test.unique.fork.id>
+                </systemPropertyVariables>
+              </configuration>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+      <profile>
+        <id>rest-docs</id>
+        <build>
+          <plugins>
+            <plugin>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>exec-maven-plugin</artifactId>
+              <executions>
+                <execution>
+                  <id>apidocs</id>
+                  <phase>package</phase>
+                  <goals>
+                    <goal>exec</goal>
+                  </goals>
+                  <configuration>
+                    <outputFile>${project.build.directory}/apidocs.log</outputFile>
+                    <executable>${basedir}/node/node</executable>
+                    <commandlineArgs>${basedir}/node_modules/.bin/apidoc -i src/main/java -o ${project.build.directory}/site/apidocs</commandlineArgs>
+                    <silent>true</silent>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+          </plugins>
+        </build>
+      </profile>
+    </profiles>
+</project>

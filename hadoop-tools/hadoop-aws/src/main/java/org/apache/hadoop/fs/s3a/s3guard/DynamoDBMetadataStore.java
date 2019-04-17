@@ -26,6 +26,7 @@ import java.nio.file.AccessDeniedException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -70,6 +71,7 @@ import com.amazonaws.services.dynamodbv2.model.WriteRequest;
 import com.amazonaws.waiters.WaiterTimedOutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -90,7 +92,9 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
+import org.apache.hadoop.fs.s3a.auth.delegation.AWSPolicyProvider;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -98,6 +102,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowAllDynamoDBOperations;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3GuardClientOperations;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
@@ -185,7 +191,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DynamoDBMetadataStore implements MetadataStore {
+public class DynamoDBMetadataStore implements MetadataStore,
+    AWSPolicyProvider {
   public static final Logger LOG = LoggerFactory.getLogger(
       DynamoDBMetadataStore.class);
 
@@ -202,6 +209,18 @@ public class DynamoDBMetadataStore implements MetadataStore {
   /** Error: version mismatch. */
   public static final String E_INCOMPATIBLE_VERSION
       = "Database table is from an incompatible S3Guard version.";
+
+  @VisibleForTesting
+  static final String BILLING_MODE
+      = "billing-mode";
+
+  @VisibleForTesting
+  static final String BILLING_MODE_PER_REQUEST
+      = "per-request";
+
+  @VisibleForTesting
+  static final String BILLING_MODE_PROVISIONED
+      = "provisioned";
 
   @VisibleForTesting
   static final String DESCRIPTION
@@ -222,6 +241,9 @@ public class DynamoDBMetadataStore implements MetadataStore {
   @VisibleForTesting
   static final String THROTTLING = "Throttling";
 
+  public static final String E_ON_DEMAND_NO_SET_CAPACITY
+      = "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST";
+
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
 
@@ -231,6 +253,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
   private String region;
   private Table table;
   private String tableName;
+  private String tableArn;
   private Configuration conf;
   private String username;
 
@@ -403,6 +426,8 @@ public class DynamoDBMetadataStore implements MetadataStore {
     region = conf.getTrimmed(S3GUARD_DDB_REGION_KEY);
     Preconditions.checkArgument(!StringUtils.isEmpty(region),
         "No DynamoDB region configured");
+    // there's no URI here, which complicates life: you cannot
+    // create AWS providers here which require one.
     credentials = createAWSCredentialProviderSet(null, conf);
     dynamoDB = createDynamoDB(conf, region, null, credentials);
 
@@ -576,12 +601,16 @@ public class DynamoDBMetadataStore implements MetadataStore {
             path.toString(),
             true,
             () -> table.query(spec).iterator().hasNext());
-        // When this class has support for authoritative
-        // (fully-cached) directory listings, we may also be able to answer
-        // TRUE here.  Until then, we don't know if we have full listing or
-        // not, thus the UNKNOWN here:
-        meta.setIsEmptyDirectory(
-            hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
+
+        // If directory is authoritative, we can set the empty directory flag
+        // to TRUE or FALSE. Otherwise FALSE, or UNKNOWN.
+        if(meta.isAuthoritativeDir()) {
+          meta.setIsEmptyDirectory(
+              hasChildren ? Tristate.FALSE : Tristate.TRUE);
+        } else {
+          meta.setIsEmptyDirectory(
+              hasChildren ? Tristate.FALSE : Tristate.UNKNOWN);
+        }
       }
     }
 
@@ -624,20 +653,40 @@ public class DynamoDBMetadataStore implements MetadataStore {
             metas.add(meta);
           }
 
+          // Minor race condition here - if the path is deleted between
+          // getting the list of items and the directory metadata we might
+          // get a null in DDBPathMetadata.
           DDBPathMetadata dirPathMeta = get(path);
-          boolean isAuthoritative = false;
-          if(dirPathMeta != null) {
-            isAuthoritative = dirPathMeta.isAuthoritativeDir();
-          }
 
-          LOG.trace("Listing table {} in region {} for {} returning {}",
-              tableName, region, path, metas);
-
-          return (metas.isEmpty() || dirPathMeta == null)
-              ? null
-              : new DirListingMetadata(path, metas, isAuthoritative,
-              dirPathMeta.getLastUpdated());
+          return getDirListingMetadataFromDirMetaAndList(path, metas,
+              dirPathMeta);
         });
+  }
+
+  DirListingMetadata getDirListingMetadataFromDirMetaAndList(Path path,
+      List<PathMetadata> metas, DDBPathMetadata dirPathMeta) {
+    boolean isAuthoritative = false;
+    if (dirPathMeta != null) {
+      isAuthoritative = dirPathMeta.isAuthoritativeDir();
+    }
+
+    LOG.trace("Listing table {} in region {} for {} returning {}",
+        tableName, region, path, metas);
+
+    if (!metas.isEmpty() && dirPathMeta == null) {
+      // We handle this case as the directory is deleted.
+      LOG.warn("Directory marker is deleted, but the list of the directory "
+          + "elements is not empty: {}. This case is handled as if the "
+          + "directory was deleted.", metas);
+      return null;
+    }
+
+    if(metas.isEmpty() && dirPathMeta == null) {
+      return null;
+    }
+
+    return new DirListingMetadata(path, metas, isAuthoritative,
+        dirPathMeta.getLastUpdated());
   }
 
   /**
@@ -1118,7 +1167,31 @@ public class DynamoDBMetadataStore implements MetadataStore {
     return getClass().getSimpleName() + '{'
         + "region=" + region
         + ", tableName=" + tableName
+        + ", tableArn=" + tableArn
         + '}';
+  }
+
+  /**
+   * The administrative policy includes all DDB table operations;
+   * application access is restricted to those operations S3Guard operations
+   * require when working with data in a guarded bucket.
+   * @param access access level desired.
+   * @return a possibly empty list of statements.
+   */
+  @Override
+  public List<RoleModel.Statement> listAWSPolicyRules(
+      final Set<AccessLevel> access) {
+    Preconditions.checkState(tableArn != null, "TableARN not known");
+    if (access.isEmpty()) {
+      return Collections.emptyList();
+    }
+    RoleModel.Statement stat;
+    if (access.contains(AccessLevel.ADMIN)) {
+      stat = allowAllDynamoDBOperations(tableArn);
+    } else {
+      stat = allowS3GuardClientOperations(tableArn);
+    }
+    return Lists.newArrayList(stat);
   }
 
   /**
@@ -1147,6 +1220,7 @@ public class DynamoDBMetadataStore implements MetadataStore {
         LOG.debug("Binding to table {}", tableName);
         TableDescription description = table.describe();
         LOG.debug("Table state: {}", description);
+        tableArn = description.getTableArn();
         final String status = description.getTableStatus();
         switch (status) {
         case "CREATING":
@@ -1456,6 +1530,10 @@ public class DynamoDBMetadataStore implements MetadataStore {
           = desc.getProvisionedThroughput();
       map.put(READ_CAPACITY, throughput.getReadCapacityUnits().toString());
       map.put(WRITE_CAPACITY, throughput.getWriteCapacityUnits().toString());
+      map.put(BILLING_MODE,
+          throughput.getWriteCapacityUnits() == 0
+              ? BILLING_MODE_PER_REQUEST
+              : BILLING_MODE_PROVISIONED);
       map.put(TABLE, desc.toString());
       map.put(MetadataStoreCapabilities.PERSISTS_AUTHORITATIVE_BIT,
           Boolean.toString(true));
@@ -1498,6 +1576,11 @@ public class DynamoDBMetadataStore implements MetadataStore {
     long newWrite = getLongParam(parameters,
             S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
             currentWrite);
+
+    if (currentRead == 0 || currentWrite == 0) {
+      // table is pay on demand
+      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
+    }
 
     if (newRead != currentRead || newWrite != currentWrite) {
       LOG.info("Current table capacity is read: {}, write: {}",

@@ -20,10 +20,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-hdds</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-hdds-container-service</artifactId>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Container Service</description>
   <name>Apache Hadoop HDDS Container Service</name>
   <packaging>jar</packaging>
@@ -49,6 +49,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.yaml</groupId>
       <artifactId>snakeyaml</artifactId>
       <version>1.8</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>findbugs</artifactId>
+      <version>3.0.1</version>
+      <scope>provided</scope>
     </dependency>
 
     <dependency>

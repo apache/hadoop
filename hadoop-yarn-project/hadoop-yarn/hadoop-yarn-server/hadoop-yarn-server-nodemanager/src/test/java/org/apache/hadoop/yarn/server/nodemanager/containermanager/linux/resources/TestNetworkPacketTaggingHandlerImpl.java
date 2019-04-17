@@ -20,7 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
@@ -31,7 +31,7 @@ import java.io.File;
 import java.util.List;
 
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.yarn.api.records.ContainerId;

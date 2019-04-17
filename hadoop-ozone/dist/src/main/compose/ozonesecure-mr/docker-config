@@ -1,0 +1,177 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
+OZONE-SITE.XML_ozone.scm.names=scm
+OZONE-SITE.XML_ozone.enabled=True
+OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
+OZONE-SITE.XML_ozone.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
+OZONE-SITE.XML_ozone.handler.type=distributed
+OZONE-SITE.XML_ozone.scm.client.address=scm
+OZONE-SITE.XML_hdds.block.token.enabled=true
+OZONE-SITE.XML_ozone.replication=1
+OZONE-SITE.XML_hdds.scm.kerberos.principal=scm/scm@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.kerberos.keytab.file=/etc/security/keytabs/scm.keytab
+OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
+OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
+OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
+
+OZONE-SITE.XML_ozone.security.enabled=true
+OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
+OZONE-SITE.XML_hdds.scm.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.om.http.kerberos.principal=HTTP/om@EXAMPLE.COM
+OZONE-SITE.XML_ozone.om.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+HDFS-SITE.XML_dfs.datanode.kerberos.principal=dn/_HOST@EXAMPLE.COM
+HDFS-SITE.XML_dfs.datanode.keytab.file=/etc/security/keytabs/dn.keytab
+HDFS-SITE.XML_dfs.web.authentication.kerberos.principal=HTTP/_HOST@EXAMPLE.COM
+HDFS-SITE.XML_dfs.web.authentication.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
+HDFS-SITE.XML_dfs.datanode.address=0.0.0.0:1019
+HDFS-SITE.XML_dfs.datanode.http.address=0.0.0.0:1012
+CORE-SITE.XML_dfs.data.transfer.protection=authentication
+CORE-SITE.XML_hadoop.security.authentication=kerberos
+COER-SITE.XML_hadoop.security.auth_to_local=RULE:[2:$1@$0](.*@EXAMPLE.COM)s/@.*///L
+CORE-SITE.XML_hadoop.security.key.provider.path=kms://http@kms:9600/kms
+
+#temporary disable authorization as org.apache.hadoop.yarn.server.api.ResourceTrackerPB is not properly annotated to support it
+CORE-SITE.XML_hadoop.security.authorization=false
+HADOOP-POLICY.XML_ozone.om.security.client.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.datanode.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.container.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.block.protocol.acl=*
+HADOOP-POLICY.XML_hdds.security.client.scm.certificate.protocol.acl=*
+HADOOP-POLICY.XML_org.apache.hadoop.yarn.server.api.ResourceTracker.acl=*
+
+HDFS-SITE.XML_rpc.metrics.quantile.enable=true
+HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
+
+CORE-SITE.xml_fs.o3fs.impl=org.apache.hadoop.fs.ozone.OzoneFileSystem
+CORE-SITE.xml_fs.AbstractFileSystem.o3fs.impl=org.apache.hadoop.fs.ozone.OzFs
+CORE-SITE.xml_fs.defaultFS=o3fs://bucket1.vol1/
+
+MAPRED-SITE.XML_mapreduce.framework.name=yarn
+MAPRED-SITE.XML_yarn.app.mapreduce.am.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
+MAPRED-SITE.XML_mapreduce.map.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
+MAPRED-SITE.XML_mapreduce.reduce.env=HADOOP_MAPRED_HOME=$HADOOP_HOME
+MAPRED-SITE.XML_mapreduce.map.memory.mb=2048
+MAPRED-SITE.XML_mapreduce.reduce.memory.mb=2048
+#MAPRED-SITE.XML_mapred.child.java.opts=-Xmx2048
+MAPRED-SITE.XML_mapreduce.application.classpath=/opt/hadoop/share/hadoop/mapreduce/*:/opt/hadoop/share/hadoop/mapreduce/lib/*:/opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
+
+YARN-SITE.XML_yarn.app.mapreduce.am.staging-dir=/user
+YARN_SITE.XML_yarn.timeline-service.enabled=true
+YARN_SITE.XML_yarn.timeline-service.generic.application.history.enabled=true
+YARN_SITE.XML_yarn.timeline-service.hostname=jhs
+YARN-SITE.XML_yarn.timeline-service.principal=jhs/jhs@EXAMPLE.COM
+YARN-SITE.XML_yarn.timeline-service.keytab=/etc/security/keytabs/jhs.keytab
+YARN_SITE.XML_yarn.log.server.url=http://jhs:8188/applicationhistory/logs/
+
+YARN-SITE.XML_yarn.nodemanager.principal=nm/_HOST@EXAMPLE.COM
+YARN-SITE.XML_yarn.nodemanager.keytab=/etc/security/keytabs/nm.keytab
+YARN-SITE.XML_yarn.nodemanager.pmem-check-enabled=false
+YARN-SITE.XML_yarn.nodemanager.delete.debug-delay-sec=600
+YARN-SITE.XML_yarn.nodemanager.vmem-check-enabled=false
+YARN-SITE.XML_yarn.nodemanager.aux-services=mapreduce_shuffle
+YARN-SITE.XML_yarn.nodemanager.disk-health-checker.enable=false
+
+YARN-SITE.XML_yarn.resourcemanager.hostname=rm
+YARN-SITE.XML_yarn.resourcemanager.keytab=/etc/security/keytabs/rm.keytab
+YARN-SITE.XML_yarn.resourcemanager.principal=rm/rm@EXAMPLE.COM
+YARN_SITE_XML_yarn.resourcemanager.system.metrics.publisher.enabled=true
+
+YARN-SITE.XML_yarn.log-aggregation-enable=true
+YARN-SITE.yarn.nodemanager.log-aggregation.roll-monitoring-interval-seconds=3600
+YARN-SITE.yarn.nodemanager.delete.debug-delay-sec=600
+
+YARN-SITE.yarn.nodemanager.container-executor.class=org.apache.hadoop.yarn.server.nodemanager.LinuxContainerExecutor
+YARN-SITE.yarn.nodemanager.linux-container-executor.path=/opt/hadoop/bin/container-executor
+YARN-SITE.yarn.nodemanager.linux-container-executor.group=hadoop
+
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-applications=10000
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.maximum-am-resource-percent=0.1
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.resource-calculator=org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.queues=default
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.capacity=100
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.user-limit-factor=1
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.maximum-capacity=100
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.state=RUNNING
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.acl_submit_applications=*
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.root.default.acl_administer_queue=*
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.node-locality-delay=40
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.queue-mappings=
+CAPACITY-SCHEDULER.XML_yarn.scheduler.capacity.queue-mappings-override.enable=false
+
+LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
+LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
+LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop=INFO
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
+
+#Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
+#BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm
+
+#LOG4J2.PROPERTIES_* are for Ozone Audit Logging
+LOG4J2.PROPERTIES_monitorInterval=30
+LOG4J2.PROPERTIES_filter=read,write
+LOG4J2.PROPERTIES_filter.read.type=MarkerFilter
+LOG4J2.PROPERTIES_filter.read.marker=READ
+LOG4J2.PROPERTIES_filter.read.onMatch=DENY
+LOG4J2.PROPERTIES_filter.read.onMismatch=NEUTRAL
+LOG4J2.PROPERTIES_filter.write.type=MarkerFilter
+LOG4J2.PROPERTIES_filter.write.marker=WRITE
+LOG4J2.PROPERTIES_filter.write.onMatch=NEUTRAL
+LOG4J2.PROPERTIES_filter.write.onMismatch=NEUTRAL
+LOG4J2.PROPERTIES_appenders=console, rolling
+LOG4J2.PROPERTIES_appender.console.type=Console
+LOG4J2.PROPERTIES_appender.console.name=STDOUT
+LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
+LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
+LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
+LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
+LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
+LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
+LOG4J2.PROPERTIES_appender.rolling.policies.type=Policies
+LOG4J2.PROPERTIES_appender.rolling.policies.time.type=TimeBasedTriggeringPolicy
+LOG4J2.PROPERTIES_appender.rolling.policies.time.interval=86400
+LOG4J2.PROPERTIES_appender.rolling.policies.size.type=SizeBasedTriggeringPolicy
+LOG4J2.PROPERTIES_appender.rolling.policies.size.size=64MB
+LOG4J2.PROPERTIES_loggers=audit
+LOG4J2.PROPERTIES_logger.audit.type=AsyncLogger
+LOG4J2.PROPERTIES_logger.audit.name=OMAudit
+LOG4J2.PROPERTIES_logger.audit.level=INFO
+LOG4J2.PROPERTIES_logger.audit.appenderRefs=rolling
+LOG4J2.PROPERTIES_logger.audit.appenderRef.file.ref=RollingFile
+LOG4J2.PROPERTIES_rootLogger.level=INFO
+LOG4J2.PROPERTIES_rootLogger.appenderRefs=stdout
+LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
+
+OZONE_DATANODE_SECURE_USER=root
+KEYTAB_DIR=/etc/security/keytabs
+KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop
+KERBEROS_KEYSTORES=hadoop
+KERBEROS_SERVER=kdc
+JAVA_HOME=/usr/lib/jvm/jre
+JSVC_HOME=/usr/bin
+SLEEP_SECONDS=5
+KERBEROS_ENABLED=true

@@ -18,14 +18,13 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 
 /**
@@ -36,27 +35,10 @@ import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 @Unstable
 public class Resources {
 
-  private static final Log LOG =
-      LogFactory.getLog(Resources.class);
+  private enum RoundingDirection { UP, DOWN }
 
-  /**
-   * Return a new {@link Resource} instance with all resource values
-   * initialized to {@code value}.
-   * @param value the value to use for all resources
-   * @return a new {@link Resource} instance
-   */
-  @Private
-  @Unstable
-  public static Resource createResourceWithSameValue(long value) {
-    LightWeightResource res = new LightWeightResource(value,
-            Long.valueOf(value).intValue());
-    int numberOfResources = ResourceUtils.getNumberOfKnownResourceTypes();
-    for (int i = 2; i < numberOfResources; i++) {
-      res.setResourceValue(i, value);
-    }
-
-    return res;
-  }
+  private static final Logger LOG =
+      LoggerFactory.getLogger(Resources.class);
 
   /**
    * Helper class to create a resource with a fixed value for all resource
@@ -251,7 +233,7 @@ public class Resources {
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
@@ -270,7 +252,7 @@ public class Resources {
   }
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
@@ -325,17 +307,7 @@ public class Resources {
   }
 
   public static Resource multiplyTo(Resource lhs, double by) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
-    for (int i = 0; i < maxLength; i++) {
-      try {
-        ResourceInformation lhsValue = lhs.getResourceInformation(i);
-        lhs.setResourceValue(i, (long) (lhsValue.getValue() * by));
-      } catch (ResourceNotFoundException ye) {
-        LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
-      }
-    }
-    return lhs;
+    return multiplyAndRound(lhs, by, RoundingDirection.DOWN);
   }
 
   public static Resource multiply(Resource lhs, double by) {
@@ -348,7 +320,7 @@ public class Resources {
    */
   public static Resource multiplyAndAddTo(
       Resource lhs, Resource rhs, double by) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
@@ -358,7 +330,6 @@ public class Resources {
         lhs.setResourceValue(i, lhsValue.getValue() + convertedRhs);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
     return lhs;
@@ -378,29 +349,58 @@ public class Resources {
       ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
     return calculator.multiplyAndNormalizeDown(lhs, by, factor);
   }
-  
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result rounded down into a
+   * cloned version of {@code lhs} Resource object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return A cloned version of {@code lhs} with updated values
+   */
   public static Resource multiplyAndRoundDown(Resource lhs, double by) {
-    Resource out = clone(lhs);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    return multiplyAndRound(clone(lhs), by, RoundingDirection.DOWN);
+  }
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result rounded up into a
+   * cloned version of {@code lhs} Resource object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return A cloned version of {@code lhs} with updated values
+   */
+  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
+    return multiplyAndRound(clone(lhs), by, RoundingDirection.UP);
+  }
+
+  /**
+   * Multiply {@code lhs} by {@code by}, and set the result according to
+   * the rounding direction to {@code lhs}
+   * without creating any new {@link Resource} object.
+   * @param lhs Resource object
+   * @param by Multiply values by this value
+   * @return Returns {@code lhs} itself (without cloning) with updated values
+   */
+  private static Resource multiplyAndRound(Resource lhs, double by,
+      RoundingDirection roundingDirection) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation lhsValue = lhs.getResourceInformation(i);
-        out.setResourceValue(i, (long) (lhsValue.getValue() * by));
+
+        final long value;
+        if (roundingDirection == RoundingDirection.DOWN) {
+          value = (long) (lhsValue.getValue() * by);
+        } else {
+          value = (long) Math.ceil(lhsValue.getValue() * by);
+        }
+        lhs.setResourceValue(i, value);
       } catch (ResourceNotFoundException ye) {
         LOG.warn("Resource is missing:" + ye.getMessage());
-        continue;
       }
     }
-    return out;
+    return lhs;
   }
 
-  public static Resource multiplyAndRoundUp(Resource lhs, double by) {
-    Resource out = clone(lhs);
-    out.setMemorySize((long)Math.ceil(lhs.getMemorySize() * by));
-    out.setVirtualCores((int)Math.ceil(lhs.getVirtualCores() * by));
-    return out;
-  }
-  
   public static Resource normalize(
       ResourceCalculator calculator, Resource lhs, Resource min,
       Resource max, Resource increment) {
@@ -490,7 +490,7 @@ public class Resources {
   }
   
   public static boolean fitsIn(Resource smaller, Resource bigger) {
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = bigger.getResourceInformation(i);
@@ -513,7 +513,7 @@ public class Resources {
   
   public static Resource componentwiseMin(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);
@@ -532,7 +532,7 @@ public class Resources {
   
   public static Resource componentwiseMax(Resource lhs, Resource rhs) {
     Resource ret = createResource(0);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       try {
         ResourceInformation rhsValue = rhs.getResourceInformation(i);

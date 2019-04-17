@@ -18,13 +18,16 @@
 
 package org.apache.hadoop.yarn.util;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.util.Time;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+import org.slf4j.MarkerFactory;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
+
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +36,10 @@ import java.util.Map;
 public class TestLog4jWarningErrorMetricsAppender {
 
   Log4jWarningErrorMetricsAppender appender;
-  Log logger = LogFactory.getLog(TestLog4jWarningErrorMetricsAppender.class);
+  private static final Logger LOG = LoggerFactory.
+      getLogger(TestLog4jWarningErrorMetricsAppender.class);
+  private static final Marker FATAL =
+      MarkerFactory.getMarker("FATAL");
   List<Long> cutoff = new ArrayList<>();
 
   void setupAppender(int cleanupIntervalSeconds, long messageAgeLimitSeconds,
@@ -42,33 +48,33 @@ public class TestLog4jWarningErrorMetricsAppender {
     appender =
         new Log4jWarningErrorMetricsAppender(cleanupIntervalSeconds,
           messageAgeLimitSeconds, maxUniqueMessages);
-    Logger.getRootLogger().addAppender(appender);
+    LogManager.getRootLogger().addAppender(appender);
   }
 
   void removeAppender() {
-    Logger.getRootLogger().removeAppender(appender);
+    LogManager.getRootLogger().removeAppender(appender);
   }
 
   void logMessages(Level level, String message, int count) {
     for (int i = 0; i < count; ++i) {
       switch (level.toInt()) {
       case Level.FATAL_INT:
-        logger.fatal(message);
+        LOG.error(FATAL, message);
         break;
       case Level.ERROR_INT:
-        logger.error(message);
+        LOG.error(message);
         break;
       case Level.WARN_INT:
-        logger.warn(message);
+        LOG.warn(message);
         break;
       case Level.INFO_INT:
-        logger.info(message);
+        LOG.info(message);
         break;
       case Level.DEBUG_INT:
-        logger.debug(message);
+        LOG.debug(message);
         break;
       case Level.TRACE_INT:
-        logger.trace(message);
+        LOG.trace(message);
         break;
       }
     }

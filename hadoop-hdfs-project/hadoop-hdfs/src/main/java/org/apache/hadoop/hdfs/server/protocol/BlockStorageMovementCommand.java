@@ -30,11 +30,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
  *
  * Upon receiving this command, this DataNode pass the array of block movement
  * details to
- * {@link org.apache.hadoop.hdfs.server.datanode.StoragePolicySatisfyWorker}
- * service. Later, StoragePolicySatisfyWorker will schedule block movement tasks
- * for these blocks and monitors the completion of each task. After the block
- * movement attempt is finished(with success or failure) this DataNode will send
- * response back to NameNode about the block movement attempt finished details.
+ * {@link org.apache.hadoop.hdfs.server.sps.ExternalSPSBlockMoveTaskHandler}
+ * service. Later, ExternalSPSBlockMoveTaskHandler will schedule block movement
+ * tasks for these blocks and monitors the completion of each task. After the
+ * block movement attempt is finished(with success or failure) this DataNode
+ * will send response back to NameNode about the block movement attempt
+ * finished details.
  */
 public class BlockStorageMovementCommand extends DatanodeCommand {
   private final String blockPoolId;

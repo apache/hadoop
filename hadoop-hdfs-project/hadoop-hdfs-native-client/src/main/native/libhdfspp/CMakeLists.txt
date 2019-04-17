@@ -63,8 +63,8 @@ check_cxx_source_compiles(
 if (NOT THREAD_LOCAL_SUPPORTED)
   message(FATAL_ERROR
   "FATAL ERROR: The required feature thread_local storage is not supported by your compiler. \
-  Known compilers that support this feature: GCC, Visual Studio, Clang (community version), \
-  Clang (version for iOS 9 and later).")
+  Known compilers that support this feature: GCC 4.8+, Visual Studio 2015+, Clang (community \
+  version 3.3+), Clang (version for Xcode 8+ and iOS 9+).")
 endif (NOT THREAD_LOCAL_SUPPORTED)
 
 # Check if PROTOC library was compiled with the compatible compiler by trying

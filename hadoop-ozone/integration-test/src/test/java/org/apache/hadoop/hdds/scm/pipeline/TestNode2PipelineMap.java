@@ -21,12 +21,10 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .ContainerWithPipeline;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.junit.After;
@@ -43,6 +41,9 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos
     .ReplicationFactor.THREE;
 
+/**
+ * Test for the Node2Pipeline map.
+ */
 public class TestNode2PipelineMap {
 
   private static MiniOzoneCluster cluster;
@@ -50,7 +51,7 @@ public class TestNode2PipelineMap {
   private static StorageContainerManager scm;
   private static ContainerWithPipeline ratisContainer;
   private static ContainerManager containerManager;
-  private static PipelineSelector pipelineSelector;
+  private static PipelineManager pipelineManager;
 
   /**
    * Create a MiniDFSCluster for testing.
@@ -64,9 +65,12 @@ public class TestNode2PipelineMap {
     cluster.waitForClusterToBeReady();
     scm = cluster.getStorageContainerManager();
     containerManager = scm.getContainerManager();
-    ratisContainer = containerManager.allocateContainer(
+    pipelineManager = scm.getPipelineManager();
+    ContainerInfo containerInfo = containerManager.allocateContainer(
         RATIS, THREE, "testOwner");
-    pipelineSelector = containerManager.getPipelineSelector();
+    ratisContainer = new ContainerWithPipeline(containerInfo,
+        pipelineManager.getPipeline(containerInfo.getPipelineID()));
+    pipelineManager = scm.getPipelineManager();
   }
 
   /**
@@ -79,51 +83,40 @@ public class TestNode2PipelineMap {
     }
   }
 
-
   @Test
   public void testPipelineMap() throws IOException {
 
-    Set<ContainerID> set = pipelineSelector.getOpenContainerIDsByPipeline(
-        ratisContainer.getPipeline().getId());
+    Set<ContainerID> set = pipelineManager
+        .getContainersInPipeline(ratisContainer.getPipeline().getId());
 
     ContainerID cId = ratisContainer.getContainerInfo().containerID();
     Assert.assertEquals(1, set.size());
     set.forEach(containerID ->
-            Assert.assertEquals(containerID, cId));
+        Assert.assertEquals(containerID, cId));
 
-    List<DatanodeDetails> dns = ratisContainer.getPipeline().getMachines();
+    List<DatanodeDetails> dns = ratisContainer.getPipeline().getNodes();
     Assert.assertEquals(3, dns.size());
 
     // get pipeline details by dnid
     Set<PipelineID> pipelines = scm.getScmNodeManager()
-        .getPipelineByDnID(dns.get(0).getUuid());
-    Assert.assertEquals(1, pipelines.size());
-    pipelines.forEach(p -> Assert.assertEquals(p,
-        ratisContainer.getPipeline().getId()));
-
+        .getPipelines(dns.get(0));
+    Assert.assertTrue(pipelines.contains(ratisContainer.getPipeline().getId()));
 
     // Now close the container and it should not show up while fetching
     // containers by pipeline
     containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATE);
-    containerManager
-        .updateContainerState(cId, HddsProtos.LifeCycleEvent.CREATED);
-    containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.FINALIZE);
     containerManager
         .updateContainerState(cId, HddsProtos.LifeCycleEvent.CLOSE);
-    Set<ContainerID> set2 = pipelineSelector.getOpenContainerIDsByPipeline(
+    Set<ContainerID> set2 = pipelineManager.getContainersInPipeline(
         ratisContainer.getPipeline().getId());
     Assert.assertEquals(0, set2.size());
 
-    try {
-      pipelineSelector.updatePipelineState(ratisContainer.getPipeline(),
-          HddsProtos.LifeCycleEvent.CLOSE);
-      Assert.fail("closing of pipeline without finalize should fail");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SCMException);
-      Assert.assertEquals(((SCMException)e).getResult(),
-          SCMException.ResultCodes.FAILED_TO_CHANGE_PIPELINE_STATE);
-    }
+    pipelineManager
+        .finalizeAndDestroyPipeline(ratisContainer.getPipeline(), false);
+    pipelines = scm.getScmNodeManager()
+        .getPipelines(dns.get(0));
+    Assert
+        .assertFalse(pipelines.contains(ratisContainer.getPipeline().getId()));
   }
 }

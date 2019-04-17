@@ -60,7 +60,8 @@ public class VolumeHandler implements Volume {
    * Creates a volume.
    *
    * @param volume Volume Name, this has to be unique at Ozone cluster level
-   * @param quota Quota for this Storage Volume - <int>(<BYTES|MB|GB|TB>)
+   * @param quota Quota for this Storage Volume
+   *             - {@literal <int>(<BYTES|MB|GB|TB>)}
    * @param req Request Object
    * @param uriInfo URI info
    * @param headers Http Headers
@@ -114,7 +115,8 @@ public class VolumeHandler implements Volume {
    * with neither of these actions, update just returns 200 OK.
    *
    * @param volume Volume Name, this has to be unique at Ozone Level
-   * @param quota Quota for this volume - <int>(<BYTES|MB|GB|TB>)|remove
+   * @param quota Quota for this volume
+   *             - {@literal <int>(<BYTES|MB|GB|TB>)}|remove
    * @param req - Request Object
    * @param uriInfo - URI info
    * @param headers Http Headers

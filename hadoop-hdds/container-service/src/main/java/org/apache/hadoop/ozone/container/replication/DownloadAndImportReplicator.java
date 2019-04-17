@@ -28,9 +28,8 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
-import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
+import org.apache.hadoop.ozone.container.ozoneimpl.ContainerController;
 import org.apache.hadoop.ozone.container.replication.ReplicationTask.Status;
 
 import org.slf4j.Logger;
@@ -49,7 +48,7 @@ public class DownloadAndImportReplicator implements ContainerReplicator {
 
   private final ContainerSet containerSet;
 
-  private final ContainerDispatcher containerDispatcher;
+  private final ContainerController controller;
 
   private final ContainerDownloader downloader;
 
@@ -57,11 +56,11 @@ public class DownloadAndImportReplicator implements ContainerReplicator {
 
   public DownloadAndImportReplicator(
       ContainerSet containerSet,
-      ContainerDispatcher containerDispatcher,
+      ContainerController controller,
       ContainerDownloader downloader,
       TarContainerPacker packer) {
     this.containerSet = containerSet;
-    this.containerDispatcher = containerDispatcher;
+    this.controller = controller;
     this.downloader = downloader;
     this.packer = packer;
   }
@@ -80,11 +79,12 @@ public class DownloadAndImportReplicator implements ContainerReplicator {
       try (FileInputStream tempContainerTarStream = new FileInputStream(
           tarFilePath.toFile())) {
 
-        Handler handler = containerDispatcher.getHandler(
-            originalContainerData.getContainerType());
-
-        Container container = handler.importContainer(containerID,
+        Container container = controller.importContainer(
+            originalContainerData.getContainerType(),
+            containerID,
             originalContainerData.getMaxSize(),
+            originalContainerData.getOriginPipelineId(),
+            originalContainerData.getOriginNodeId(),
             tempContainerTarStream,
             packer);
 
@@ -95,13 +95,12 @@ public class DownloadAndImportReplicator implements ContainerReplicator {
       LOG.error(
           "Can't import the downloaded container data id=" + containerID,
           e);
+    } finally {
       try {
         Files.delete(tarFilePath);
       } catch (Exception ex) {
-        LOG.error(
-            "Container import is failed and the downloaded file can't be "
-                + "deleted: "
-                + tarFilePath.toAbsolutePath().toString());
+        LOG.error("Got exception while deleting downloaded container file: "
+            + tarFilePath.toAbsolutePath().toString(), ex);
       }
     }
   }

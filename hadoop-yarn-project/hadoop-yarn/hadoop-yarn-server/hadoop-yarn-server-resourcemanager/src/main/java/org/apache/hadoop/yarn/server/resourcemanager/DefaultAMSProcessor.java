@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceContext;
 import org.apache.hadoop.yarn.ams.ApplicationMasterServiceUtils;
@@ -103,7 +103,8 @@ import static org.apache.hadoop.yarn.exceptions
  */
 final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
-  private static final Log LOG = LogFactory.getLog(DefaultAMSProcessor.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultAMSProcessor.class);
 
   private final static List<Container> EMPTY_CONTAINER_LIST =
       new ArrayList<Container>();
@@ -115,12 +116,15 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
   private RMContext rmContext;
   private ResourceProfilesManager resourceProfilesManager;
+  private boolean timelineServiceV2Enabled;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
     this.resourceProfilesManager = rmContext.getResourceProfilesManager();
+    this.timelineServiceV2Enabled = YarnConfiguration.
+        timelineServiceV2Enabled(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -326,8 +330,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add collector address for this application
-    if (YarnConfiguration.timelineServiceV2Enabled(
-        getRmContext().getYarnConfiguration())) {
+    if (timelineServiceV2Enabled) {
       CollectorInfo collectorInfo = app.getCollectorInfo();
       if (collectorInfo != null) {
         response.setCollectorInfo(collectorInfo);

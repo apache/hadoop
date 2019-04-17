@@ -22,6 +22,8 @@ import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem;
 import org.apache.hadoop.fs.http.client.HttpFSFileSystem.Operation;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.lib.service.FileSystemAccess;
 import org.apache.hadoop.lib.wsrs.BooleanParam;
 import org.apache.hadoop.lib.wsrs.EnumParam;
 import org.apache.hadoop.lib.wsrs.EnumSetParam;
@@ -37,8 +39,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
-
 /**
  * HttpFS ParametersProvider.
  */
@@ -52,23 +52,25 @@ public class HttpFSParametersProvider extends ParametersProvider {
 
   static {
     PARAMS_DEF.put(Operation.OPEN,
-        new Class[]{OffsetParam.class, LenParam.class});
+        new Class[]{OffsetParam.class, LenParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.GETFILESTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.LISTSTATUS, new Class[]{FilterParam.class});
     PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
     PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
-    PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
+    PARAMS_DEF.put(Operation.GETFILECHECKSUM,
+        new Class[]{NoRedirectParam.class});
     PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});
     PARAMS_DEF.put(Operation.GETTRASHROOT, new Class[]{});
     PARAMS_DEF.put(Operation.INSTRUMENTATION, new Class[]{});
-    PARAMS_DEF.put(Operation.APPEND, new Class[]{DataParam.class});
+    PARAMS_DEF.put(Operation.APPEND,
+        new Class[]{DataParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.CONCAT, new Class[]{SourcesParam.class});
     PARAMS_DEF.put(Operation.TRUNCATE, new Class[]{NewLengthParam.class});
     PARAMS_DEF.put(Operation.CREATE,
         new Class[]{PermissionParam.class, OverwriteParam.class,
             ReplicationParam.class, BlockSizeParam.class, DataParam.class,
-            UnmaskedPermissionParam.class});
+            UnmaskedPermissionParam.class, NoRedirectParam.class});
     PARAMS_DEF.put(Operation.MKDIRS, new Class[]{PermissionParam.class,
         UnmaskedPermissionParam.class});
     PARAMS_DEF.put(Operation.RENAME, new Class[]{DestinationParam.class});
@@ -173,6 +175,23 @@ public class HttpFSParametersProvider extends ParametersProvider {
      * Constructor.
      */
     public DataParam() {
+      super(NAME, false);
+    }
+  }
+
+  /**
+   * Class for noredirect parameter.
+   */
+  @InterfaceAudience.Private
+  public static class NoRedirectParam extends BooleanParam {
+    /**
+     * Parameter name.
+     */
+    public static final String NAME = "noredirect";
+    /**
+     * Constructor.
+     */
+    public NoRedirectParam() {
       super(NAME, false);
     }
   }
@@ -430,7 +449,11 @@ public class HttpFSParametersProvider extends ParametersProvider {
      */
     public AclPermissionParam() {
       super(NAME, HttpFSFileSystem.ACLSPEC_DEFAULT,
-              Pattern.compile(DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
+        Pattern.compile(HttpFSServerWebApp.get()
+          .get(FileSystemAccess.class)
+          .getFileSystemConfiguration()
+          .get(HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
+            HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT)));
     }
   }
 

@@ -24,6 +24,10 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerPauseEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerResumeEvent;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,6 +92,8 @@ public class NMTimelinePublisher extends CompositeService {
 
   private final Map<ApplicationId, TimelineV2Client> appToClientMap;
 
+  private boolean publishNMContainerEvents = true;
+
   public NMTimelinePublisher(Context context) {
     super(NMTimelinePublisher.class.getName());
     this.context = context;
@@ -110,6 +116,10 @@ public class NMTimelinePublisher extends CompositeService {
     if (webAppURLWithoutScheme.contains(":")) {
       httpPort = webAppURLWithoutScheme.split(":")[1];
     }
+
+    publishNMContainerEvents = conf.getBoolean(
+        YarnConfiguration.NM_PUBLISH_CONTAINER_EVENTS_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PUBLISH_CONTAINER_EVENTS_ENABLED);
     super.serviceInit(conf);
   }
 
@@ -155,54 +165,55 @@ public class NMTimelinePublisher extends CompositeService {
 
   public void reportContainerResourceUsage(Container container, Long pmemUsage,
       Float cpuUsagePercentPerCore) {
-    if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE ||
-        cpuUsagePercentPerCore != ResourceCalculatorProcessTree.UNAVAILABLE) {
-      ContainerEntity entity =
-          createContainerEntity(container.getContainerId());
-      long currentTimeMillis = System.currentTimeMillis();
-      if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE) {
-        TimelineMetric memoryMetric = new TimelineMetric();
-        memoryMetric.setId(ContainerMetric.MEMORY.toString());
-        memoryMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
-        memoryMetric.addValue(currentTimeMillis, pmemUsage);
-        entity.addMetric(memoryMetric);
-      }
-      if (cpuUsagePercentPerCore != ResourceCalculatorProcessTree.UNAVAILABLE) {
-        TimelineMetric cpuMetric = new TimelineMetric();
-        cpuMetric.setId(ContainerMetric.CPU.toString());
-        // TODO: support average
-        cpuMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
-        cpuMetric.addValue(currentTimeMillis,
-            Math.round(cpuUsagePercentPerCore));
-        entity.addMetric(cpuMetric);
-      }
-      entity.setIdPrefix(TimelineServiceHelper.
-          invertLong(container.getContainerStartTime()));
-      ApplicationId appId = container.getContainerId().getApplicationAttemptId()
-          .getApplicationId();
-      try {
-        // no need to put it as part of publisher as timeline client already has
-        // Queuing concept
-        TimelineV2Client timelineClient = getTimelineClient(appId);
-        if (timelineClient != null) {
-          timelineClient.putEntitiesAsync(entity);
-        } else {
-          LOG.error("Seems like client has been removed before the container"
-              + " metric could be published for " + container.getContainerId());
+    if (publishNMContainerEvents) {
+      if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE
+          || cpuUsagePercentPerCore !=
+          ResourceCalculatorProcessTree.UNAVAILABLE) {
+        ContainerEntity entity =
+            createContainerEntity(container.getContainerId());
+        long currentTimeMillis = System.currentTimeMillis();
+        if (pmemUsage != ResourceCalculatorProcessTree.UNAVAILABLE) {
+          TimelineMetric memoryMetric = new TimelineMetric();
+          memoryMetric.setId(ContainerMetric.MEMORY.toString());
+          memoryMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
+          memoryMetric.addValue(currentTimeMillis, pmemUsage);
+          entity.addMetric(memoryMetric);
         }
-      } catch (IOException e) {
-        LOG.error("Failed to publish Container metrics for container "
-            + container.getContainerId());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to publish Container metrics for container "
-              + container.getContainerId(), e);
+        if (cpuUsagePercentPerCore !=
+            ResourceCalculatorProcessTree.UNAVAILABLE) {
+          TimelineMetric cpuMetric = new TimelineMetric();
+          cpuMetric.setId(ContainerMetric.CPU.toString());
+          // TODO: support average
+          cpuMetric.setRealtimeAggregationOp(TimelineMetricOperation.SUM);
+          cpuMetric.addValue(currentTimeMillis,
+              Math.round(cpuUsagePercentPerCore));
+          entity.addMetric(cpuMetric);
         }
-      } catch (YarnException e) {
-        LOG.error("Failed to publish Container metrics for container "
-            + container.getContainerId(), e.getMessage());
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Failed to publish Container metrics for container "
-              + container.getContainerId(), e);
+        ApplicationId appId = container.getContainerId().
+            getApplicationAttemptId().getApplicationId();
+        try {
+          // no need to put it as part of publisher as timeline client
+          // already has Queuing concept
+          TimelineV2Client timelineClient = getTimelineClient(appId);
+          if (timelineClient != null) {
+            timelineClient.putEntitiesAsync(entity);
+          } else {
+            LOG.error("Seems like client has been removed before the container"
+                + " metric could be published for " +
+                container.getContainerId());
+          }
+        } catch (IOException e) {
+          LOG.error(
+              "Failed to publish Container metrics for container " +
+                  container.getContainerId());
+          LOG.debug("Failed to publish Container metrics for container {}",
+              container.getContainerId(), e);
+        } catch (YarnException e) {
+          LOG.error(
+              "Failed to publish Container metrics for container " +
+                  container.getContainerId(), e.getMessage());
+          LOG.debug("Failed to publish Container metrics for container {}",
+              container.getContainerId(), e);
         }
       }
     }
@@ -210,104 +221,191 @@ public class NMTimelinePublisher extends CompositeService {
 
   @SuppressWarnings("unchecked")
   private void publishContainerCreatedEvent(ContainerEvent event) {
-    ContainerId containerId = event.getContainerID();
-    ContainerEntity entity = createContainerEntity(containerId);
-    Container container = context.getContainers().get(containerId);
-    Resource resource = container.getResource();
+    if (publishNMContainerEvents) {
+      ContainerId containerId = event.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+      Container container = context.getContainers().get(containerId);
+      Resource resource = container.getResource();
 
-    Map<String, Object> entityInfo = new HashMap<String, Object>();
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO,
-        resource.getMemorySize());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO,
-        resource.getVirtualCores());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
-        nodeId.getHost());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO,
-        nodeId.getPort());
-    entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO,
-        container.getPriority().toString());
-    entityInfo.put(
-        ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO,
-        httpAddress);
-    entity.setInfo(entityInfo);
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_MEMORY_INFO,
+          resource.getMemorySize());
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_VCORE_INFO,
+          resource.getVirtualCores());
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_HOST_INFO,
+          nodeId.getHost());
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_PORT_INFO,
+          nodeId.getPort());
+      entityInfo.put(ContainerMetricsConstants.ALLOCATED_PRIORITY_INFO,
+          container.getPriority().toString());
+      entityInfo.put(
+          ContainerMetricsConstants.ALLOCATED_HOST_HTTP_ADDRESS_INFO,
+          httpAddress);
+      entity.setInfo(entityInfo);
 
-    TimelineEvent tEvent = new TimelineEvent();
-    tEvent.setId(ContainerMetricsConstants.CREATED_EVENT_TYPE);
-    tEvent.setTimestamp(event.getTimestamp());
+      TimelineEvent tEvent = new TimelineEvent();
+      tEvent.setId(ContainerMetricsConstants.CREATED_EVENT_TYPE);
+      tEvent.setTimestamp(event.getTimestamp());
 
-    long containerStartTime = container.getContainerStartTime();
-    entity.addEvent(tEvent);
-    entity.setCreatedTime(containerStartTime);
-    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
-    dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
-        containerId.getApplicationAttemptId().getApplicationId()));
+      long containerStartTime = container.getContainerStartTime();
+      entity.addEvent(tEvent);
+      entity.setCreatedTime(containerStartTime);
+      dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+          containerId.getApplicationAttemptId().getApplicationId()));
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerResumedEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerResumeEvent resumeEvent = (ContainerResumeEvent) event;
+      ContainerId containerId = resumeEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          resumeEvent.getDiagnostic());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.RESUMED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+
+        long containerStartTime = container.getContainerStartTime();
+        entity.addEvent(tEvent);
+        entity
+            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerPausedEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerPauseEvent pauseEvent = (ContainerPauseEvent) event;
+      ContainerId containerId = pauseEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          pauseEvent.getDiagnostic());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.PAUSED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+
+        long containerStartTime = container.getContainerStartTime();
+        entity.addEvent(tEvent);
+        entity
+            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  private void publishContainerKilledEvent(
+      ContainerEvent event) {
+    if (publishNMContainerEvents) {
+      ContainerKillEvent killEvent = (ContainerKillEvent) event;
+      ContainerId containerId = killEvent.getContainerID();
+      ContainerEntity entity = createContainerEntity(containerId);
+
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          killEvent.getDiagnostic());
+      entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO,
+          killEvent.getContainerExitStatus());
+      entity.setInfo(entityInfo);
+
+      Container container = context.getContainers().get(containerId);
+      if (container != null) {
+        TimelineEvent tEvent = new TimelineEvent();
+        tEvent.setId(ContainerMetricsConstants.KILLED_EVENT_TYPE);
+        tEvent.setTimestamp(event.getTimestamp());
+
+        long containerStartTime = container.getContainerStartTime();
+        entity.addEvent(tEvent);
+        entity
+            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
+        dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+            containerId.getApplicationAttemptId().getApplicationId()));
+      }
+    }
   }
 
   @SuppressWarnings("unchecked")
   private void publishContainerFinishedEvent(ContainerStatus containerStatus,
       long containerFinishTime, long containerStartTime) {
-    ContainerId containerId = containerStatus.getContainerId();
-    TimelineEntity entity = createContainerEntity(containerId);
+    if (publishNMContainerEvents) {
+      ContainerId containerId = containerStatus.getContainerId();
+      TimelineEntity entity = createContainerEntity(containerId);
 
-    Map<String, Object> entityInfo = new HashMap<String, Object>();
-    entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
-        containerStatus.getDiagnostics());
-    entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO,
-        containerStatus.getExitStatus());
-    entityInfo.put(ContainerMetricsConstants.STATE_INFO,
-        ContainerState.COMPLETE.toString());
-    entityInfo.put(ContainerMetricsConstants.CONTAINER_FINISHED_TIME,
-        containerFinishTime);
-    entity.setInfo(entityInfo);
+      Map<String, Object> entityInfo = new HashMap<String, Object>();
+      entityInfo.put(ContainerMetricsConstants.DIAGNOSTICS_INFO,
+          containerStatus.getDiagnostics());
+      entityInfo.put(ContainerMetricsConstants.EXIT_STATUS_INFO,
+          containerStatus.getExitStatus());
+      entityInfo.put(ContainerMetricsConstants.STATE_INFO,
+          ContainerState.COMPLETE.toString());
+      entityInfo.put(ContainerMetricsConstants.CONTAINER_FINISHED_TIME,
+          containerFinishTime);
+      entity.setInfo(entityInfo);
 
-    TimelineEvent tEvent = new TimelineEvent();
-    tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
-    tEvent.setTimestamp(containerFinishTime);
-    entity.addEvent(tEvent);
-    entity.setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
+      TimelineEvent tEvent = new TimelineEvent();
+      tEvent.setId(ContainerMetricsConstants.FINISHED_EVENT_TYPE);
+      tEvent.setTimestamp(containerFinishTime);
+      entity.addEvent(tEvent);
 
-    dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
-        containerId.getApplicationAttemptId().getApplicationId()));
+      dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
+          containerId.getApplicationAttemptId().getApplicationId()));
+    }
   }
 
   private void publishContainerLocalizationEvent(
       ContainerLocalizationEvent event, String eventType) {
-    Container container = event.getContainer();
-    ContainerId containerId = container.getContainerId();
-    TimelineEntity entity = createContainerEntity(containerId);
+    if (publishNMContainerEvents) {
+      Container container = event.getContainer();
+      ContainerId containerId = container.getContainerId();
+      TimelineEntity entity = createContainerEntity(containerId);
 
-    TimelineEvent tEvent = new TimelineEvent();
-    tEvent.setId(eventType);
-    tEvent.setTimestamp(event.getTimestamp());
-    entity.addEvent(tEvent);
-    entity.setIdPrefix(TimelineServiceHelper.
-        invertLong(container.getContainerStartTime()));
+      TimelineEvent tEvent = new TimelineEvent();
+      tEvent.setId(eventType);
+      tEvent.setTimestamp(event.getTimestamp());
+      entity.addEvent(tEvent);
 
-    ApplicationId appId =
-        container.getContainerId().getApplicationAttemptId().getApplicationId();
-    try {
-      // no need to put it as part of publisher as timeline client already has
-      // Queuing concept
-      TimelineV2Client timelineClient = getTimelineClient(appId);
-      if (timelineClient != null) {
-        timelineClient.putEntitiesAsync(entity);
-      } else {
-        LOG.error("Seems like client has been removed before the event could be"
-            + " published for " + container.getContainerId());
-      }
-    } catch (IOException e) {
-      LOG.error("Failed to publish Container metrics for container "
-          + container.getContainerId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to publish Container metrics for container "
-            + container.getContainerId(), e);
-      }
-    } catch (YarnException e) {
-      LOG.error("Failed to publish Container metrics for container "
-          + container.getContainerId(), e.getMessage());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to publish Container metrics for container "
-            + container.getContainerId(), e);
+      ApplicationId appId = container.getContainerId().
+          getApplicationAttemptId().getApplicationId();
+      try {
+        // no need to put it as part of publisher as timeline client already has
+        // Queuing concept
+        TimelineV2Client timelineClient = getTimelineClient(appId);
+        if (timelineClient != null) {
+          timelineClient.putEntitiesAsync(entity);
+        } else {
+          LOG.error("Seems like client has been removed before the event"
+              + " could be published for " + container.getContainerId());
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to publish Container metrics for container "
+            + container.getContainerId());
+        LOG.debug("Failed to publish Container metrics for container {}",
+            container.getContainerId(), e);
+      } catch (YarnException e) {
+        LOG.error("Failed to publish Container metrics for container "
+            + container.getContainerId(), e.getMessage());
+        LOG.debug("Failed to publish Container metrics for container {}",
+            container.getContainerId(), e);
       }
     }
   }
@@ -316,6 +414,8 @@ public class NMTimelinePublisher extends CompositeService {
       ContainerId containerId) {
     ContainerEntity entity = new ContainerEntity();
     entity.setId(containerId.toString());
+    entity.setIdPrefix(TimelineServiceHelper.invertLong(
+        containerId.getContainerId()));
     Identifier parentIdentifier = new Identifier();
     parentIdentifier
         .setType(TimelineEntityType.YARN_APPLICATION_ATTEMPT.name());
@@ -327,8 +427,8 @@ public class NMTimelinePublisher extends CompositeService {
   private void putEntity(TimelineEntity entity, ApplicationId appId) {
     try {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Publishing the entity " + entity + ", JSON-style content: "
-            + TimelineUtils.dumpTimelineRecordtoJSON(entity));
+        LOG.debug("Publishing the entity {} JSON-style content: {}",
+            entity, TimelineUtils.dumpTimelineRecordtoJSON(entity));
       }
       TimelineV2Client timelineClient = getTimelineClient(appId);
       if (timelineClient != null) {
@@ -339,14 +439,10 @@ public class NMTimelinePublisher extends CompositeService {
       }
     } catch (IOException e) {
       LOG.error("Error when publishing entity " + entity);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error when publishing entity " + entity, e);
-      }
+      LOG.debug("Error when publishing entity {}", entity, e);
     } catch (YarnException e) {
       LOG.error("Error when publishing entity " + entity, e.getMessage());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Error when publishing entity " + entity, e);
-      }
+      LOG.debug("Error when publishing entity {}", entity, e);
     }
   }
 
@@ -368,10 +464,8 @@ public class NMTimelinePublisher extends CompositeService {
       break;
 
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType() + " is not a desired ApplicationEvent which"
-            + " needs to be published by NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired ApplicationEvent which"
+          + " needs to be published by NMTimelinePublisher", event.getType());
       break;
     }
   }
@@ -382,13 +476,18 @@ public class NMTimelinePublisher extends CompositeService {
     case INIT_CONTAINER:
       publishContainerCreatedEvent(event);
       break;
-
+    case KILL_CONTAINER:
+      publishContainerKilledEvent(event);
+      break;
+    case PAUSE_CONTAINER:
+      publishContainerPausedEvent(event);
+      break;
+    case RESUME_CONTAINER:
+      publishContainerResumedEvent(event);
+      break;
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType()
-            + " is not a desired ContainerEvent which needs to be published by"
-            + " NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired ContainerEvent which needs to be "
+            + " published by NMTimelinePublisher", event.getType());
       break;
     }
   }
@@ -405,11 +504,8 @@ public class NMTimelinePublisher extends CompositeService {
           ContainerMetricsConstants.LOCALIZATION_START_EVENT_TYPE);
       break;
     default:
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(event.getType()
-            + " is not a desired LocalizationEvent which needs to be published"
-            + " by NMTimelinePublisher");
-      }
+      LOG.debug("{} is not a desired LocalizationEvent which needs to be"
+            + " published by NMTimelinePublisher", event.getType());
       break;
     }
   }

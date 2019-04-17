@@ -16,15 +16,8 @@
  */
 package org.apache.hadoop.hdds.scm.container;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.ContainerReportsProto;
-import org.apache.hadoop.hdds.scm.pipelines.PipelineSelector;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -41,6 +34,14 @@ import java.util.Set;
  */
 public interface ContainerManager extends Closeable {
 
+
+  /**
+   * Returns all the container Ids managed by ContainerManager.
+   *
+   * @return Set of ContainerID
+   */
+  Set<ContainerID> getContainerIDs();
+
   /**
    * Returns all the containers managed by ContainerManager.
    *
@@ -56,6 +57,14 @@ public interface ContainerManager extends Closeable {
   List<ContainerInfo> getContainers(HddsProtos.LifeCycleState state);
 
   /**
+   * Returns number of containers in the given,
+   *  {@link org.apache.hadoop.hdds.protocol.proto.HddsProtos.LifeCycleState}.
+   *
+   * @return Number of containers
+   */
+  Integer getContainerCountByState(HddsProtos.LifeCycleState state);
+
+  /**
    * Returns the ContainerInfo from the container ID.
    *
    * @param containerID - ID of container.
@@ -63,16 +72,6 @@ public interface ContainerManager extends Closeable {
    * @throws IOException
    */
   ContainerInfo getContainer(ContainerID containerID)
-      throws ContainerNotFoundException;
-
-  /**
-   * Returns the ContainerInfo from the container ID.
-   *
-   * @param containerID - ID of container.
-   * @return - ContainerWithPipeline such as creation state and the pipeline.
-   * @throws IOException
-   */
-  ContainerWithPipeline getContainerWithPipeline(ContainerID containerID)
       throws ContainerNotFoundException;
 
   /**
@@ -97,10 +96,10 @@ public interface ContainerManager extends Closeable {
    *
    * @param replicationFactor - replication factor of the container.
    * @param owner
-   * @return - ContainerWithPipeline.
+   * @return - ContainerInfo.
    * @throws IOException
    */
-  ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType type,
+  ContainerInfo allocateContainer(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor replicationFactor, String owner)
       throws IOException;
 
@@ -121,14 +120,6 @@ public interface ContainerManager extends Closeable {
    */
   HddsProtos.LifeCycleState updateContainerState(ContainerID containerID,
       HddsProtos.LifeCycleEvent event) throws IOException;
-
-  /**
-   * Process container report from Datanode.
-   *
-   * @param reports Container report
-   */
-  void processContainerReports(DatanodeDetails datanodeDetails,
-      ContainerReportsProto reports) throws IOException;
 
   /**
    * Returns the latest list of replicas for given containerId.
@@ -169,12 +160,23 @@ public interface ContainerManager extends Closeable {
       throws IOException;
 
   /**
-   * Returns the ContainerWithPipeline.
-   * @return NodeManager
+   * Returns ContainerInfo which matches the requirements.
+   * @param size - the amount of space required in the container
+   * @param owner - the user which requires space in its owned container
+   * @param pipeline - pipeline to which the container should belong
+   * @return ContainerInfo for the matching container.
    */
-  ContainerWithPipeline getMatchingContainerWithPipeline(long size,
-      String owner, ReplicationType type, ReplicationFactor factor,
-      LifeCycleState state) throws IOException;
+  ContainerInfo getMatchingContainer(long size, String owner,
+      Pipeline pipeline);
 
-  PipelineSelector getPipelineSelector();
+  /**
+   * Returns ContainerInfo which matches the requirements.
+   * @param size - the amount of space required in the container
+   * @param owner - the user which requires space in its owned container
+   * @param pipeline - pipeline to which the container should belong.
+   * @param excludedContainerIDS - containerIds to be excluded.
+   * @return ContainerInfo for the matching container.
+   */
+  ContainerInfo getMatchingContainer(long size, String owner,
+      Pipeline pipeline, List<ContainerID> excludedContainerIDS);
 }

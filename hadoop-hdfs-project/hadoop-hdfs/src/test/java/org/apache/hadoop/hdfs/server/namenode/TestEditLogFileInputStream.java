@@ -20,7 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -32,6 +32,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.EnumMap;
 
+import com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -76,6 +77,23 @@ public class TestEditLogFileInputStream {
     assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
 
     // Check that length header was picked up.
+    assertEquals(FAKE_LOG_DATA.length, elis.length());
+    elis.close();
+  }
+
+  @Test
+  public void testByteStringLog() throws Exception {
+    ByteString bytes = ByteString.copyFrom(FAKE_LOG_DATA);
+    EditLogInputStream elis = EditLogFileInputStream.fromByteString(bytes,
+        HdfsServerConstants.INVALID_TXID, HdfsServerConstants.INVALID_TXID,
+        true);
+    // Read the edit log and verify that all of the data is present
+    EnumMap<FSEditLogOpCodes, Holder<Integer>> counts = FSImageTestUtil
+        .countEditLogOpTypes(elis);
+    assertThat(counts.get(FSEditLogOpCodes.OP_ADD).held, is(1));
+    assertThat(counts.get(FSEditLogOpCodes.OP_SET_GENSTAMP_V1).held, is(1));
+    assertThat(counts.get(FSEditLogOpCodes.OP_CLOSE).held, is(1));
+
     assertEquals(FAKE_LOG_DATA.length, elis.length());
     elis.close();
   }

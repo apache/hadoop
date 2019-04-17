@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.api.records.SchedulingRequest;
 import org.apache.hadoop.yarn.exceptions.SchedulerInvalidResoureRequestException;
@@ -51,8 +51,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class LocalityAppPlacementAllocator <N extends SchedulerNode>
     extends AppPlacementAllocator<N> {
-  private static final Log LOG =
-      LogFactory.getLog(LocalityAppPlacementAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(LocalityAppPlacementAllocator.class);
 
   private final Map<String, ResourceRequest> resourceRequestMap =
       new ConcurrentHashMap<>();
@@ -155,9 +155,9 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
   public PendingAskUpdateResult updatePendingAsk(
       Collection<ResourceRequest> requests,
       boolean recoverPreemptedRequestForAContainer) {
-    try {
-      this.writeLock.lock();
 
+    this.writeLock.lock();
+    try {
       PendingAskUpdateResult updateResult = null;
 
       // Update resource requests
@@ -228,8 +228,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
   @Override
   public PendingAsk getPendingAsk(String resourceName) {
+    readLock.lock();
     try {
-      readLock.lock();
       ResourceRequest request = getResourceRequest(resourceName);
       if (null == request) {
         return PendingAsk.ZERO;
@@ -245,8 +245,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
   @Override
   public int getOutstandingAsksCount(String resourceName) {
+    readLock.lock();
     try {
-      readLock.lock();
       ResourceRequest request = getResourceRequest(resourceName);
       if (null == request) {
         return 0;
@@ -353,8 +353,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
   @Override
   public boolean canAllocate(NodeType type, SchedulerNode node) {
+    readLock.lock();
     try {
-      readLock.lock();
       ResourceRequest r = resourceRequestMap.get(
           ResourceRequest.ANY);
       if (r == null || r.getNumContainers() <= 0) {
@@ -381,8 +381,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
   @Override
   public boolean canDelayTo(String resourceName) {
+    readLock.lock();
     try {
-      readLock.lock();
       ResourceRequest request = getResourceRequest(resourceName);
       return request == null || request.getRelaxLocality();
     } finally {
@@ -396,10 +396,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
       SchedulingMode schedulingMode) {
     // We will only look at node label = nodeLabelToLookAt according to
     // schedulingMode and partition of node.
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("precheckNode is invoked for " + schedulerNode.getNodeID() + ","
-          + schedulingMode);
-    }
+    LOG.debug("precheckNode is invoked for {},{}", schedulerNode.getNodeID(),
+        schedulingMode);
     String nodePartitionToLookAt;
     if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY) {
       nodePartitionToLookAt = schedulerNode.getPartition();
@@ -432,8 +430,8 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
   @Override
   public ContainerRequest allocate(SchedulerRequestKey schedulerKey,
       NodeType type, SchedulerNode node) {
+    writeLock.lock();
     try {
-      writeLock.lock();
 
       List<ResourceRequest> resourceRequests = new ArrayList<>();
 

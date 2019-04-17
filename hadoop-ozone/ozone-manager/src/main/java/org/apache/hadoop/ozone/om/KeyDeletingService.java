@@ -16,10 +16,13 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import org.apache.hadoop.util.Time;
@@ -28,19 +31,16 @@ import org.apache.hadoop.utils.BackgroundTask;
 import org.apache.hadoop.utils.BackgroundTaskQueue;
 import org.apache.hadoop.utils.BackgroundTaskResult;
 import org.apache.hadoop.utils.BackgroundTaskResult.EmptyTaskResult;
+import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.Table;
-import org.rocksdb.RocksDBException;
-import org.rocksdb.WriteBatch;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
+import com.google.common.annotations.VisibleForTesting;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_KEY_DELETING_LIMIT_PER_TASK;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT;
+import org.rocksdb.RocksDBException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * This is the background service to delete keys. Scan the metadata of om
@@ -151,20 +151,23 @@ public class KeyDeletingService extends BackgroundService {
     private int deleteAllKeys(List<DeleteBlockGroupResult> results)
         throws RocksDBException, IOException {
       Table deletedTable = manager.getMetadataManager().getDeletedTable();
+
+      DBStore store = manager.getMetadataManager().getStore();
+
       // Put all keys to delete in a single transaction and call for delete.
       int deletedCount = 0;
-      try (WriteBatch writeBatch = new WriteBatch()) {
+      try (BatchOperation writeBatch = store.initBatchOperation()) {
         for (DeleteBlockGroupResult result : results) {
           if (result.isSuccess()) {
             // Purge key from OM DB.
-            writeBatch.delete(deletedTable.getHandle(),
-                DFSUtil.string2Bytes(result.getObjectKey()));
+            deletedTable.deleteWithBatch(writeBatch,
+                result.getObjectKey());
             LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
             deletedCount++;
           }
         }
         // Write a single transaction for delete.
-        manager.getMetadataManager().getStore().write(writeBatch);
+        store.commitBatchOperation(writeBatch);
       }
       return deletedCount;
     }

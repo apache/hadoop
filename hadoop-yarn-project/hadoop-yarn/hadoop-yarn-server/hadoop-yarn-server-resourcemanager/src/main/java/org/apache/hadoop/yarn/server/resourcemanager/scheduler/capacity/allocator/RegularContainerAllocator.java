@@ -23,8 +23,8 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
@@ -63,7 +63,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
  * delayed scheduling mechanism to get better locality allocation.
  */
 public class RegularContainerAllocator extends AbstractContainerAllocator {
-  private static final Log LOG = LogFactory.getLog(RegularContainerAllocator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RegularContainerAllocator.class);
 
   public RegularContainerAllocator(FiCaSchedulerApp application,
       ResourceCalculator rc, RMContext rmContext,
@@ -126,11 +127,9 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
     // avoid painful of preempt an AM container
     if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY) {
       if (application.isWaitingForAMContainer()) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Skip allocating AM container to app_attempt="
-              + application.getApplicationAttemptId()
-              + ", don't allow to allocate AM container in non-exclusive mode");
-        }
+        LOG.debug("Skip allocating AM container to app_attempt={},"
+            + " don't allow to allocate AM container in non-exclusive mode",
+            application.getApplicationAttemptId());
         application.updateAppSkipNodeDiagnostics(
             "Skipping assigning to Node in Ignore Exclusivity mode. ");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
@@ -152,9 +151,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     if (!application.getCSLeafQueue().getReservationContinueLooking()) {
       if (!shouldAllocOrReserveNewContainer(schedulerKey, required)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("doesn't need containers based on reservation algo!");
-        }
+        LOG.debug("doesn't need containers based on reservation algo!");
         ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
             activitiesManager, node, application, priority,
             ActivityDiagnosticConstant.DO_NOT_NEED_ALLOCATIONATTEMPTINFOS);
@@ -164,10 +161,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
 
     if (!checkHeadroom(clusterResource, resourceLimits, required,
         node.getPartition())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("cannot allocate required resource=" + required
-            + " because of headroom");
-      }
+      LOG.debug("cannot allocate required resource={} because of headroom",
+          required);
       ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
           activitiesManager, node, application, priority,
           ActivityDiagnosticConstant.QUEUE_SKIPPED_HEADROOM);
@@ -620,9 +615,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           // reservationsContinueLooking is set. Make sure we didn't need to
           // unreserve one.
           if (needToUnreserve) {
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("we needed to unreserve to be able to allocate");
-            }
+            LOG.debug("we needed to unreserve to be able to allocate");
+
             // Skip the locality request
             ActivitiesLogger.APP.recordSkippedAppActivityWithoutAllocation(
                 activitiesManager, node, application, priority,
@@ -780,9 +774,8 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
       // otherwise the app will be delayed for each non-local assignment.
       // This helps apps with many off-cluster requests schedule faster.
       if (allocationResult.containerNodeType != NodeType.OFF_SWITCH) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Resetting scheduling opportunities");
-        }
+        LOG.debug("Resetting scheduling opportunities");
+
         // Only reset scheduling opportunities for RACK_LOCAL if configured
         // to do so. Not resetting means we will continue to schedule
         // RACK_LOCAL without delay.

@@ -19,12 +19,12 @@
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -44,6 +44,7 @@ import javax.annotation.Nullable;
 import java.nio.channels.ClosedChannelException;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -224,12 +225,12 @@ public class DatasetVolumeChecker {
         Futures.addCallback(olf.get(),
             new ResultHandler(reference, healthyVolumes, failedVolumes,
                 numVolumes, new Callback() {
-              @Override
-              public void call(Set<FsVolumeSpi> ignored1,
-                               Set<FsVolumeSpi> ignored2) {
-                latch.countDown();
-              }
-            }));
+                  @Override
+                  public void call(Set<FsVolumeSpi> ignored1,
+                                   Set<FsVolumeSpi> ignored2) {
+                    latch.countDown();
+                  }
+                }), MoreExecutors.directExecutor());
       } else {
         IOUtils.cleanup(null, reference);
         if (numVolumes.decrementAndGet() == 0) {
@@ -241,7 +242,7 @@ public class DatasetVolumeChecker {
     // Wait until our timeout elapses, after which we give up on
     // the remaining volumes.
     if (!latch.await(maxAllowedTimeForCheckMs, TimeUnit.MILLISECONDS)) {
-      LOG.warn("checkAllVolumes timed out after {} ms" +
+      LOG.warn("checkAllVolumes timed out after {} ms",
           maxAllowedTimeForCheckMs);
     }
 

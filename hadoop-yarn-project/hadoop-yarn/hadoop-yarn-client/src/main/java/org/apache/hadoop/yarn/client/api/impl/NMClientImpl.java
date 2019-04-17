@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.collect.Lists;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
@@ -36,7 +37,10 @@ import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReInitializeContainerRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.ResourceLocalizationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.StartContainersResponse;
@@ -48,6 +52,8 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Token;
 import org.apache.hadoop.yarn.client.api.NMClient;
@@ -464,4 +470,54 @@ public class NMClientImpl extends NMClient {
     return null;
   }
 
+  @Override
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  public void localize(ContainerId containerId, NodeId nodeId,
+      Map<String, LocalResource> localResources) throws YarnException,
+      IOException {
+    ContainerManagementProtocolProxyData proxy;
+    StartedContainer container = startedContainers.get(containerId);
+    if (container != null) {
+      synchronized (container) {
+        proxy = cmProxy.getProxy(container.getNodeId().toString(), containerId);
+        try {
+          proxy.getContainerManagementProtocol().localize(
+              ResourceLocalizationRequest.newInstance(containerId,
+                  localResources));
+        } finally {
+          if (proxy != null) {
+            cmProxy.mayBeCloseProxy(proxy);
+          }
+        }
+      }
+    } else {
+      throw new YarnException("Unknown container [" + containerId + "]");
+    }
+  }
+
+  @Override
+  public List<LocalizationStatus> getLocalizationStatuses(
+      ContainerId containerId, NodeId nodeId) throws YarnException,
+      IOException {
+
+    ContainerManagementProtocolProxyData proxy = null;
+    List<ContainerId> containerIds = Lists.newArrayList(containerId);
+    try {
+      proxy = cmProxy.getProxy(nodeId.toString(), containerId);
+      GetLocalizationStatusesResponse response =
+          proxy.getContainerManagementProtocol().getLocalizationStatuses(
+              GetLocalizationStatusesRequest.newInstance(containerIds));
+      if (response.getFailedRequests() != null
+          && response.getFailedRequests().containsKey(containerId)) {
+        Throwable t =
+            response.getFailedRequests().get(containerId).deSerialize();
+        parseAndThrowException(t);
+      }
+      return response.getLocalizationStatuses().get(containerId);
+    } finally {
+      if (proxy != null) {
+        cmProxy.mayBeCloseProxy(proxy);
+      }
+    }
+  }
 }

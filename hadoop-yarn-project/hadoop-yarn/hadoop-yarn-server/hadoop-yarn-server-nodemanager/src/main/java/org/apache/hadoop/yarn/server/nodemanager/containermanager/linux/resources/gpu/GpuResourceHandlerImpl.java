@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.gpu;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -41,25 +41,28 @@ import java.util.Arrays;
 import java.util.List;
 
 public class GpuResourceHandlerImpl implements ResourceHandler {
-  final static Log LOG = LogFactory
-      .getLog(GpuResourceHandlerImpl.class);
+  final static Logger LOG = LoggerFactory
+      .getLogger(GpuResourceHandlerImpl.class);
 
   // This will be used by container-executor to add necessary clis
   public static final String EXCLUDED_GPUS_CLI_OPTION = "--excluded_gpus";
   public static final String CONTAINER_ID_CLI_OPTION = "--container_id";
 
-  private Context nmContext;
-  private GpuResourceAllocator gpuAllocator;
-  private CGroupsHandler cGroupsHandler;
-  private PrivilegedOperationExecutor privilegedOperationExecutor;
+  private final Context nmContext;
+  private final GpuResourceAllocator gpuAllocator;
+  private final CGroupsHandler cGroupsHandler;
+  private final PrivilegedOperationExecutor privilegedOperationExecutor;
+  private final GpuDiscoverer gpuDiscoverer;
 
   public GpuResourceHandlerImpl(Context nmContext,
       CGroupsHandler cGroupsHandler,
-      PrivilegedOperationExecutor privilegedOperationExecutor) {
+      PrivilegedOperationExecutor privilegedOperationExecutor,
+      GpuDiscoverer gpuDiscoverer) {
     this.nmContext = nmContext;
     this.cGroupsHandler = cGroupsHandler;
     this.privilegedOperationExecutor = privilegedOperationExecutor;
-    gpuAllocator = new GpuResourceAllocator(nmContext);
+    this.gpuAllocator = new GpuResourceAllocator(nmContext);
+    this.gpuDiscoverer = gpuDiscoverer;
   }
 
   @Override
@@ -67,11 +70,10 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
       throws ResourceHandlerException {
     List<GpuDevice> usableGpus;
     try {
-      usableGpus = GpuDiscoverer.getInstance()
-          .getGpusUsableByYarn();
+      usableGpus = gpuDiscoverer.getGpusUsableByYarn();
       if (usableGpus == null || usableGpus.isEmpty()) {
         String message = "GPU is enabled on the NodeManager, but couldn't find "
-            + "any usable GPU devices, please double check configuration.";
+            + "any usable GPU devices, please double check configuration!";
         LOG.error(message);
         throw new ResourceHandlerException(message);
       }
@@ -184,5 +186,12 @@ public class GpuResourceHandlerImpl implements ResourceHandler {
   @Override
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
+  }
+
+  @Override
+  public String toString() {
+    return GpuResourceHandlerImpl.class.getName() + "{" +
+        "gpuAllocator=" + gpuAllocator +
+        '}';
   }
 }

@@ -20,11 +20,11 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.argThat;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -493,8 +493,8 @@ public class TestNonAggregatingLogHandler {
     return;
   }
 
-  static class DeletePathsMatcher extends ArgumentMatcher<Path[]> implements
-      VarargMatcher {
+  static class DeletePathsMatcher implements
+      ArgumentMatcher<Path[]>, VarargMatcher {
     
     // to get rid of serialization warning
     static final long serialVersionUID = 0;
@@ -506,7 +506,7 @@ public class TestNonAggregatingLogHandler {
     }
 
     @Override
-    public boolean matches(Object varargs) {
+    public boolean matches(Path[] varargs) {
       return new EqualsBuilder().append(matchPaths, varargs).isEquals();
     }
 

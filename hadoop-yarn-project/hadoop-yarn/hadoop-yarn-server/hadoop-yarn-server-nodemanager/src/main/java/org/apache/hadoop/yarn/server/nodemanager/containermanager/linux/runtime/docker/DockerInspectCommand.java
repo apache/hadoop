@@ -75,4 +75,11 @@ public class DockerInspectCommand extends DockerCommand {
 
   public static final String STATUS_TEMPLATE = "{{.State.Status}}";
   public static final String STOPSIGNAL_TEMPLATE = "{{.Config.StopSignal}}";
+
+  public DockerInspectCommand getExposedPorts() {
+    super.addCommandArguments("format", "{{json .NetworkSettings.Ports}}");
+    this.commandArguments = "--format={{json .NetworkSettings.Ports}}";
+    return this;
+  }
+
 }

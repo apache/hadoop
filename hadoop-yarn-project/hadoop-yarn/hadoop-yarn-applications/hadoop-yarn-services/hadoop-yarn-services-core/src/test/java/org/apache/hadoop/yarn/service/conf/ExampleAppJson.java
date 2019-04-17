@@ -38,6 +38,7 @@ public final class ExampleAppJson {
   public static final String EXTERNAL_JSON_0 = "external0.json";
   public static final String EXTERNAL_JSON_1 = "external1.json";
   public static final String EXTERNAL_JSON_2 = "external2.json";
+  public static final String EXTERNAL_JSON_3 = "external3.json";
 
   public static final String PACKAGE = "/org/apache/hadoop/yarn/service/conf/examples/";
 

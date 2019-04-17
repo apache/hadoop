@@ -639,17 +639,14 @@ public class ApplicationImpl implements Application {
 
     try {
       ApplicationId applicationID = event.getApplicationID();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Processing " + applicationID + " of type " + event.getType());
-      }
+      LOG.debug("Processing {} of type {}", applicationID, event.getType());
       ApplicationState oldState = stateMachine.getCurrentState();
       ApplicationState newState = null;
       try {
         // queue event requesting init of the same app
         newState = stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.warn("Can't handle this event at current state", e);
+        LOG.error("Can't handle this event at current state", e);
       }
       if (newState != null && oldState != newState) {
         LOG.info("Application " + applicationID + " transitioned from "
@@ -667,8 +664,8 @@ public class ApplicationImpl implements Application {
 
   @VisibleForTesting
   public LogAggregationContext getLogAggregationContext() {
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       return this.logAggregationContext;
     } finally {
       this.readLock.unlock();

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.yarn.service.providers;
 
-import static org.mockito.Matchers.anyObject;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +40,7 @@ public class TestDefaultClientProvider {
   public void testConfigFile() throws IOException {
     DefaultClientProvider defaultClientProvider = new DefaultClientProvider();
     FileSystem mockFs = mock(FileSystem.class);
-    when(mockFs.exists(anyObject())).thenReturn(true);
+    when(mockFs.exists(any())).thenReturn(true);
 
     String compName = "sleeper";
     ConfigFile configFile = new ConfigFile();

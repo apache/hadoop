@@ -184,9 +184,9 @@ public class TokenPBImpl extends Token {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("Token { ");
-    sb.append("kind: ").append(getKind()).append(", ");
-    sb.append("service: ").append(getService()).append(" }");
+    sb.append("Token { ")
+        .append("kind: ").append(getKind()).append(", ")
+        .append("service: ").append(getService()).append(" }");
     return sb.toString();
   }
 }  

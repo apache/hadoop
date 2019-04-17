@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.ozone.container.common.helpers;
 
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.client.BlockID;
 import com.google.common.base.Preconditions;
@@ -34,7 +36,6 @@ import java.util.ArrayList;
 public class BlockData {
   private final BlockID blockID;
   private final Map<String, String> metadata;
-  private long blockCommitSequenceId;
 
   /**
    * Represent a list of chunks.
@@ -65,15 +66,14 @@ public class BlockData {
     this.blockID = blockID;
     this.metadata = new TreeMap<>();
     this.size = 0;
-    blockCommitSequenceId = 0;
   }
 
   public long getBlockCommitSequenceId() {
-    return blockCommitSequenceId;
+    return blockID.getBlockCommitSequenceId();
   }
 
   public void setBlockCommitSequenceId(long blockCommitSequenceId) {
-    this.blockCommitSequenceId = blockCommitSequenceId;
+    this.blockID.setBlockCommitSequenceId(blockCommitSequenceId);
   }
 
   /**
@@ -95,7 +95,6 @@ public class BlockData {
     if (data.hasSize()) {
       Preconditions.checkArgument(data.getSize() == blockData.getSize());
     }
-    blockData.setBlockCommitSequenceId(data.getBlockCommitSequenceId());
     return blockData;
   }
 
@@ -115,7 +114,6 @@ public class BlockData {
     }
     builder.addAllChunks(getChunks());
     builder.setSize(size);
-    builder.setBlockCommitSequenceId(blockCommitSequenceId);
     return builder.build();
   }
 
@@ -263,5 +261,13 @@ public class BlockData {
    */
   public long getSize() {
     return size;
+  }
+
+  @Override
+  public String toString() {
+    return new ToStringBuilder(this, ToStringStyle.NO_CLASS_NAME_STYLE)
+        .append("blockId", blockID.toString())
+        .append("size", this.size)
+        .toString();
   }
 }

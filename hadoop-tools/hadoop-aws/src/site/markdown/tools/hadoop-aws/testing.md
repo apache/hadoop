@@ -237,6 +237,16 @@ define the target region in `auth-keys.xml`.
   <value>s3.eu-central-1.amazonaws.com</value>
 </property>
 ```
+
+Alternatively you can use endpoints defined in [core-site.xml](../../../../test/resources/core-site.xml).
+
+```xml
+<property>
+  <name>fs.s3a.endpoint</name>
+  <value>${frankfurt.endpoint}</value>
+</property>
+```
+
 This is used for all tests expect for scale tests using a Public CSV.gz file
 (see below)
 
@@ -300,7 +310,7 @@ By their very nature they are slow. And, as their execution time is often
 limited by bandwidth between the computer running the tests and the S3 endpoint,
 parallel execution does not speed these tests up.
 
-***Note: Running scale tests with -Ds3guard and -Ddynamo requires that
+***Note: Running scale tests with `-Ds3guard` and `-Ddynamo` requires that
 you use a private, testing-only DynamoDB table.*** The tests do disruptive
 things such as deleting metadata and setting the provisioned throughput
 to very low values.
@@ -478,13 +488,30 @@ the `fs.s3a.scale.test.csvfile` option set to its path.
 (yes, the space is necessary. The Hadoop `Configuration` class treats an empty
 value as "do not override the default").
 
+### Turning off S3 Select
+
+The S3 select tests are skipped when the S3 endpoint doesn't support S3 Select.
+
+```xml
+<property>
+  <name>fs.s3a.select.enabled</name>
+  <value>false</value>
+</property>
+```
+
+If your endpoint doesn't support that feature, this option should be in
+your `core-site.xml` file, so that trying to use S3 select fails fast with
+a meaningful error ("S3 Select not supported") rather than a generic Bad Request
+exception.
+
 
 ### Testing Session Credentials
 
-The test `TestS3ATemporaryCredentials` requests a set of temporary
-credentials from the STS service, then uses them to authenticate with S3.
+Some tests requests a session credentials and assumed role credentials from the
+AWS Secure Token Service, then use them to authenticate with S3 either directly
+or via delegation tokens.
 
-If an S3 implementation does not support STS, then the functional test
+If an S3 implementation does not support STS, then these functional test
 cases must be disabled:
 
 ```xml
@@ -492,18 +519,30 @@ cases must be disabled:
   <name>test.fs.s3a.sts.enabled</name>
   <value>false</value>
 </property>
+
 ```
 These tests request a temporary set of credentials from the STS service endpoint.
-An alternate endpoint may be defined in `test.fs.s3a.sts.endpoint`.
+An alternate endpoint may be defined in `fs.s3a.assumed.role.sts.endpoint`.
+If this is set, a delegation token region must also be defined:
+in `fs.s3a.assumed.role.sts.endpoint.region`.
+This is useful not just for testing alternative infrastructures,
+but to reduce latency on tests executed away from the central
+service.
 
 ```xml
 <property>
-  <name>test.fs.s3a.sts.endpoint</name>
-  <value>https://sts.example.org/</value>
+  <name>fs.s3a.delegation.token.endpoint</name>
+  <value>fs.s3a.assumed.role.sts.endpoint</value>
+</property>
+<property>
+  <name>fs.s3a.assumed.role.sts.endpoint.region</name>
+  <value>eu-west-2</value>
 </property>
 ```
-The default is ""; meaning "use the amazon default value".
+The default is ""; meaning "use the amazon default endpoint" (`sts.amazonaws.com`).
 
+Consult the [AWS documentation](https://docs.aws.amazon.com/general/latest/gr/rande.html#sts_region)
+for the full list of locations.
 
 ## <a name="debugging"></a> Debugging Test failures
 
@@ -570,9 +609,22 @@ rather than write new tests. When doing this, make sure that the new predicates
 fail with meaningful diagnostics, so any new problems can be easily debugged
 from test logs.
 
+***Effective use of FS instances during S3A integration tests.*** Tests using
+`FileSystem` instances are fastest if they can recycle the existing FS
+instance from the same JVM.
+
+If you do that, you MUST NOT close or do unique configuration on them.
+If you want a guarantee of 100% isolation or an instance with unique config,
+create a new instance which you MUST close in the teardown to avoid leakage
+of resources.
+
+Do NOT add `FileSystem` instances manually
+(with e.g `org.apache.hadoop.fs.FileSystem#addFileSystemForTesting`) to the
+cache that will be modified or closed during the test runs. This can cause
+other tests to fail when using the same modified or closed FS instance.
+For more details see HADOOP-15819.
 
 ## <a name="requirements"></a> Requirements of new Tests
-
 
 This is what we expect from new tests; they're an extension of the normal
 Hadoop requirements, based on the need to work with remote servers whose
@@ -778,7 +830,7 @@ it can be manually done:
       hadoop s3guard destroy s3a://hwdev-steve-ireland-new/
 
 The S3Guard tests will automatically create the Dynamo DB table in runs with
-`-Ds3guard -Ddynamodb` set; default capacity of these buckets
+`-Ds3guard -Ddynamo` set; default capacity of these buckets
 tests is very small; it keeps costs down at the expense of IO performance
 and, for test runs in or near the S3/DDB stores, throttling events.
 
@@ -996,11 +1048,7 @@ When the `s3guard` profile is enabled, following profiles can be specified:
 
 * `dynamo`: use an AWS-hosted DynamoDB table; creating the table if it does
   not exist. You will have to pay the bills for DynamoDB web service.
-* `dynamodblocal`: use an in-memory DynamoDBLocal server instead of real AWS
-  DynamoDB web service; launch the server and creating the table.
-  You won't be charged bills for using DynamoDB in test. As it runs in-JVM,
-  the table isn't shared across other tests running in parallel.
-* `non-auth`: treat the S3Guard metadata as authoritative.
+* `auth`: treat the S3Guard metadata as authoritative.
 
 ```bash
 mvn -T 1C verify -Dparallel-tests -DtestsThreadCount=6 -Ds3guard -Ddynamo -Dauth
@@ -1022,6 +1070,10 @@ If the `s3guard` profile *is* set,
 1. The S3Guard options from maven (the dynamo and authoritative flags)
   overwrite any previously set in the configuration files.
 1. DynamoDB will be configured to create any missing tables.
+1. When using DynamoDB and running ITestDynamoDBMetadataStore, the fs.s3a.s3guard.ddb.test.table
+property should be configured, and the name of that table should be different
+ than what is used for fs.s3a.s3guard.ddb.table. The test table is destroyed
+ and modified multiple times during the test.
 
 
 ### Scale Testing MetadataStore Directly
@@ -1121,16 +1173,25 @@ This is not for use in production.
 Tests for the AWS Assumed Role credential provider require an assumed
 role to request.
 
-If this role is not set, the tests which require it will be skipped.
+If this role is not declared in `fs.s3a.assumed.role.arn`,
+the tests which require it will be skipped.
 
-To run the tests in `ITestAssumeRole`, you need:
+The specific tests an Assumed Role ARN is required for are
+
+- `ITestAssumeRole`.
+- `ITestRoleDelegationTokens`.
+- One of the parameterized test cases in `ITestDelegatedMRJob`.
+
+To run these tests you need:
 
 1. A role in your AWS account will full read and write access rights to
-the S3 bucket used in the tests, and ideally DynamoDB, for S3Guard.
+the S3 bucket used in the tests, DynamoDB, for S3Guard, and KMS for any
+SSE-KMS tests.
+
 If your bucket is set up by default to use S3Guard, the role must have access
 to that service.
 
-1.  Your IAM User to have the permissions to adopt that role.
+1. Your IAM User to have the permissions to "assume" that role.
 
 1. The role ARN must be set in `fs.s3a.assumed.role.arn`.
 
@@ -1182,7 +1243,8 @@ as it may take a couple of SDK updates before it is ready.
 1. Identify the latest AWS SDK [available for download](https://aws.amazon.com/sdk-for-java/).
 1. Create a private git branch of trunk for JIRA, and in
   `hadoop-project/pom.xml` update the `aws-java-sdk.version` to the new SDK version.
-1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamodb` options.
+1. Update AWS SDK versions in NOTICE.txt.
+1. Do a clean build and rerun all the `hadoop-aws` tests, with and without the `-Ds3guard -Ddynamo` options.
   This includes the `-Pscale` set, with a role defined for the assumed role tests.
   in `fs.s3a.assumed.role.arn` for testing assumed roles,
   and `fs.s3a.server-side-encryption.key` for encryption, for full coverage.
@@ -1207,7 +1269,7 @@ or whether some packaging change breaks that CLI
 
 From the root of the project, create a command line release `mvn package -Pdist -DskipTests -Dmaven.javadoc.skip=true  -DskipShade`;
 
-1. Change into the `hadoop/dist/target/hadoop-x.y.z-SNAPSHOT` dir.
+1. Change into the `hadoop-dist/target/hadoop-x.y.z-SNAPSHOT` dir.
 1. Copy a `core-site.xml` file into `etc/hadoop`.
 1. Set the `HADOOP_OPTIONAL_TOOLS` env var on the command line or `~/.hadoop-env`.
 
@@ -1255,9 +1317,9 @@ bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2/
 bin/hadoop fs -ls $BUCKET/dir-no-trailing/file2/
 bin/hadoop fs -ls $BUCKET/dir-no-trailing
 # expect a "0" here:
-bin/hadoop fs -test -d  $BUCKET/dir-no-trailing && echo $?
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing ; echo $?
 # expect a "1" here:
-bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 && echo $?
+bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 ; echo $?
 # will return NONE unless bucket has checksums enabled
 bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
 # expect "etag" + a long string

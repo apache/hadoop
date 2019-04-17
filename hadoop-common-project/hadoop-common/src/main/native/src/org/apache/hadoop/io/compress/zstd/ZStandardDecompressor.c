@@ -178,6 +178,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompre
         return (jint) 0;
     }
     uncompressed_bytes = ((char*) uncompressed_bytes) + uncompressed_direct_buf_off;
+    uncompressed_direct_buf_len -= uncompressed_direct_buf_off;
 
     ZSTD_inBuffer input = { compressed_bytes, compressed_direct_buf_len, compressed_direct_buf_off };
     ZSTD_outBuffer output = { uncompressed_bytes, uncompressed_direct_buf_len, 0 };

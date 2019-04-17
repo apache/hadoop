@@ -114,7 +114,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -1475,6 +1475,41 @@ public class TestBlockManager {
       assertFalse("Block group of " + file + " should be placement" +
               " policy unsatisfied, currently!",
           blockManager.isPlacementPolicySatisfied(blockInfo));
+    }
+  }
+
+  /**
+   * Unit test to check the race condition for adding a Block to
+   * postponedMisreplicatedBlocks set which may not present in BlockManager
+   * thus avoiding NullPointerException.
+   **/
+  @Test
+  public void testMetaSavePostponedMisreplicatedBlocks() throws IOException {
+    bm.postponeBlock(new Block());
+
+    File file = new File("test.log");
+    PrintWriter out = new PrintWriter(file);
+
+    bm.metaSave(out);
+    out.flush();
+
+    FileInputStream fstream = new FileInputStream(file);
+    DataInputStream in = new DataInputStream(fstream);
+
+    BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+    StringBuffer buffer = new StringBuffer();
+    String line;
+    try {
+      while ((line = reader.readLine()) != null) {
+        buffer.append(line);
+      }
+      String output = buffer.toString();
+      assertTrue("Metasave output should not have null block ",
+          output.contains("Block blk_0_0 is Null"));
+
+    } finally {
+      reader.close();
+      file.delete();
     }
   }
 

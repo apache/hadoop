@@ -32,6 +32,7 @@ import java.io.IOException;
 
 import static org.apache.hadoop.fs.aliyun.oss.Constants.MULTIPART_UPLOAD_PART_SIZE_DEFAULT;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.IO_CHUNK_BUFFER_SIZE;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests regular and multi-part upload functionality for
@@ -48,7 +49,6 @@ public class TestAliyunOSSBlockOutputStream {
   @Before
   public void setUp() throws Exception {
     Configuration conf = new Configuration();
-    conf.setLong(Constants.MIN_MULTIPART_UPLOAD_THRESHOLD_KEY, 5 * 1024 * 1024);
     conf.setInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 1024 * 1024);
     conf.setInt(IO_CHUNK_BUFFER_SIZE,
         conf.getInt(Constants.MULTIPART_UPLOAD_PART_SIZE_KEY, 0));
@@ -74,24 +74,76 @@ public class TestAliyunOSSBlockOutputStream {
 
   @Test
   public void testRegularUpload() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024 - 1);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 1024 * 1024 + 1);
+    FileSystem.clearStatistics();
+    long size = 1024 * 1024;
+    FileSystem.Statistics statistics =
+        FileSystem.getStatistics("oss", AliyunOSSFileSystem.class);
+    // This test is a little complicated for statistics, lifecycle is
+    // generateTestFile
+    //   fs.create(getFileStatus)    read 1
+    //   output stream write         write 1
+    // path exists(fs.exists)        read 1
+    // verifyReceivedData
+    //   fs.open(getFileStatus)      read 1
+    //   input stream read           read 2(part size is 512K)
+    // fs.delete
+    //   getFileStatus & delete & exists & create fake dir read 2, write 2
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size - 1);
+    assertEquals(7, statistics.getReadOps());
+    assertEquals(size - 1, statistics.getBytesRead());
+    assertEquals(3, statistics.getWriteOps());
+    assertEquals(size - 1, statistics.getBytesWritten());
+
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size);
+    assertEquals(14, statistics.getReadOps());
+    assertEquals(2 * size - 1, statistics.getBytesRead());
+    assertEquals(6, statistics.getWriteOps());
+    assertEquals(2 * size - 1, statistics.getBytesWritten());
+
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size + 1);
+
+    assertEquals(22, statistics.getReadOps());
+    assertEquals(3 * size, statistics.getBytesRead());
+    assertEquals(10, statistics.getWriteOps());
+    assertEquals(3 * size, statistics.getBytesWritten());
   }
 
   @Test
   public void testMultiPartUpload() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        6 * 1024 * 1024 - 1);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), 6 * 1024 * 1024);
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        6 * 1024 * 1024 + 1);
+    long size = 6 * 1024 * 1024;
+    FileSystem.clearStatistics();
+    FileSystem.Statistics statistics =
+        FileSystem.getStatistics("oss", AliyunOSSFileSystem.class);
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size - 1);
+    assertEquals(17, statistics.getReadOps());
+    assertEquals(size - 1, statistics.getBytesRead());
+    assertEquals(8, statistics.getWriteOps());
+    assertEquals(size - 1, statistics.getBytesWritten());
+
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size);
+    assertEquals(34, statistics.getReadOps());
+    assertEquals(2 * size - 1, statistics.getBytesRead());
+    assertEquals(16, statistics.getWriteOps());
+    assertEquals(2 * size - 1, statistics.getBytesWritten());
+
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size + 1);
+    assertEquals(52, statistics.getReadOps());
+    assertEquals(3 * size, statistics.getBytesRead());
+    assertEquals(25, statistics.getWriteOps());
+    assertEquals(3 * size, statistics.getBytesWritten());
   }
 
   @Test
   public void testMultiPartUploadConcurrent() throws IOException {
-    ContractTestUtils.createAndVerifyFile(fs, getTestPath(),
-        50 * 1024 * 1024 - 1);
+    FileSystem.clearStatistics();
+    long size = 50 * 1024 * 1024 - 1;
+    ContractTestUtils.createAndVerifyFile(fs, getTestPath(), size);
+    FileSystem.Statistics statistics =
+        FileSystem.getStatistics("oss", AliyunOSSFileSystem.class);
+    assertEquals(105, statistics.getReadOps());
+    assertEquals(size, statistics.getBytesRead());
+    assertEquals(52, statistics.getWriteOps());
+    assertEquals(size, statistics.getBytesWritten());
   }
 
   @Test

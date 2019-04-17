@@ -137,10 +137,8 @@ public class ContainerScheduler extends AbstractService implements
         resourceHandlerChain = ResourceHandlerModule
             .getConfiguredResourceHandlerChain(conf, context);
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
-            != null));
-      }
+      LOG.debug("Resource handler chain enabled = {}",
+          (resourceHandlerChain != null));
       if (resourceHandlerChain != null) {
         LOG.debug("Bootstrapping resource handler chain");
         resourceHandlerChain.bootstrap(conf);
@@ -199,6 +197,8 @@ public class ContainerScheduler extends AbstractService implements
       break;
     case RECOVERY_COMPLETED:
       startPendingContainers(maxOppQueueLength <= 0);
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());
@@ -252,6 +252,8 @@ public class ContainerScheduler extends AbstractService implements
             "continer update of %s", containerId), ex);
       }
       startPendingContainers(maxOppQueueLength <= 0);
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     }
   }
 
@@ -277,6 +279,8 @@ public class ContainerScheduler extends AbstractService implements
             "UnKnown execution type received " + container.getContainerId()
                 + ", execType " + execType);
       }
+      metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+          queuedGuaranteedContainers.size());
     } else if (rcs.getStatus() == RecoveredContainerStatus.LAUNCHED) {
       runningContainers.put(container.getContainerId(), container);
       utilizationTracker.addContainerResources(container);
@@ -378,6 +382,8 @@ public class ContainerScheduler extends AbstractService implements
       boolean forceStartGuaranteedContainers = (maxOppQueueLength <= 0);
       startPendingContainers(forceStartGuaranteedContainers);
     }
+    this.metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   /**
@@ -508,6 +514,8 @@ public class ContainerScheduler extends AbstractService implements
         startPendingContainers(false);
       }
     }
+    metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   @SuppressWarnings("unchecked")
@@ -518,7 +526,7 @@ public class ContainerScheduler extends AbstractService implements
     // Kill the opportunistic containers that were chosen.
     for (Container contToReclaim : extraOppContainersToReclaim) {
       String preemptionAction = usePauseEventForPreemption == true ? "paused" :
-          "resumed";
+          "killed";
       LOG.info(
           "Container {} will be {} to start the "
               + "execution of guaranteed container {}.",
@@ -594,10 +602,7 @@ public class ContainerScheduler extends AbstractService implements
       ResourceUtilization resourcesToFreeUp) {
     return resourcesToFreeUp.getPhysicalMemory() <= 0 &&
         resourcesToFreeUp.getVirtualMemory() <= 0 &&
-        // Convert the number of cores to nearest integral number, due to
-        // imprecision of direct float comparison.
-        Math.round(resourcesToFreeUp.getCPU()
-            * getContainersMonitor().getVCoresAllocatedForContainers()) <= 0;
+        resourcesToFreeUp.getCPU() <= 0;
   }
 
   private ResourceUtilization resourcesToFreeUp(
@@ -665,6 +670,8 @@ public class ContainerScheduler extends AbstractService implements
         numAllowed--;
       }
     }
+    this.metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
+        queuedGuaranteedContainers.size());
   }
 
   public ContainersMonitor getContainersMonitor() {

@@ -17,21 +17,16 @@
  */
 package org.apache.hadoop.ozone.web.ozShell.bucket;
 
-import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
-import org.apache.hadoop.ozone.client.OzoneBucket;
-import org.apache.hadoop.ozone.client.OzoneClientException;
-import org.apache.hadoop.ozone.client.OzoneClientUtils;
-import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.hdds.protocol.StorageType;
+import org.apache.hadoop.ozone.client.*;
 import org.apache.hadoop.ozone.web.ozShell.Handler;
+import org.apache.hadoop.ozone.web.ozShell.OzoneAddress;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.utils.JsonUtils;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
-
 /**
  * create bucket handler.
  */
@@ -42,36 +37,48 @@ public class CreateBucketHandler extends Handler {
   @Parameters(arity = "1..1", description = Shell.OZONE_BUCKET_URI_DESCRIPTION)
   private String uri;
 
+  @Option(names = {"--bucketkey", "-k"},
+      description = "bucket encryption key name")
+  private String bekName;
+
   /**
    * Executes create bucket.
    */
   @Override
   public Void call() throws Exception {
 
-    URI ozoneURI = verifyURI(uri);
-    Path path = Paths.get(ozoneURI.getPath());
-    int pathNameCount = path.getNameCount();
-    if (pathNameCount != 2) {
-      String errorMessage;
-      if (pathNameCount < 2) {
-        errorMessage = "volume and bucket name required in createBucket";
-      } else {
-        errorMessage = "Invalid bucket name. Delimiters (/) not allowed in " +
-            "bucket name";
-      }
-      throw new OzoneClientException(errorMessage);
-    }
+    OzoneAddress address = new OzoneAddress(uri);
+    address.ensureBucketAddress();
+    OzoneClient client = address.createClient(createOzoneConfiguration());
 
-    String volumeName = path.getName(0).toString();
-    String bucketName = path.getName(1).toString();
+    String volumeName = address.getVolumeName();
+    String bucketName = address.getBucketName();
+
+    BucketArgs.Builder bb = new BucketArgs.Builder()
+        .setStorageType(StorageType.DEFAULT)
+        .setVersioning(false);
+
+    if (bekName != null) {
+      if (!bekName.isEmpty()) {
+        bb.setBucketEncryptionKey(bekName);
+      } else {
+        throw new IllegalArgumentException("Bucket encryption key name must " +
+            "be specified to enable bucket encryption!");
+      }
+    }
 
     if (isVerbose()) {
       System.out.printf("Volume Name : %s%n", volumeName);
       System.out.printf("Bucket Name : %s%n", bucketName);
+      if (bekName != null) {
+        bb.setBucketEncryptionKey(bekName);
+        System.out.printf("Bucket Encryption enabled with Key Name: %s%n",
+            bekName);
+      }
     }
 
     OzoneVolume vol = client.getObjectStore().getVolume(volumeName);
-    vol.createBucket(bucketName);
+    vol.createBucket(bucketName, bb.build());
 
     if (isVerbose()) {
       OzoneBucket bucket = vol.getBucket(bucketName);

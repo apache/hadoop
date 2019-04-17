@@ -61,7 +61,7 @@ public class TestReportPublisher {
   /**
    * Dummy report publisher for testing.
    */
-  private class DummyReportPublisher extends ReportPublisher {
+  private static class DummyReportPublisher extends ReportPublisher {
 
     private final long frequency;
     private int getReportCount = 0;

@@ -61,7 +61,8 @@ public final class BlockGroup {
   public static BlockGroup getFromProto(KeyBlocks proto) {
     List<BlockID> blockIDs = new ArrayList<>();
     for (HddsProtos.BlockID block : proto.getBlocksList()) {
-      blockIDs.add(new BlockID(block.getContainerID(), block.getLocalID()));
+      blockIDs.add(new BlockID(block.getContainerBlockID().getContainerID(),
+          block.getContainerBlockID().getLocalID()));
     }
     return BlockGroup.newBuilder().setKeyName(proto.getKey())
         .addAllBlockIDs(blockIDs).build();
@@ -69,6 +70,14 @@ public final class BlockGroup {
 
   public static Builder newBuilder() {
     return new Builder();
+  }
+
+  @Override
+  public String toString() {
+    return "BlockGroup[" +
+        "groupID='" + groupID + '\'' +
+        ", blockIDs=" + blockIDs +
+        ']';
   }
 
   /**

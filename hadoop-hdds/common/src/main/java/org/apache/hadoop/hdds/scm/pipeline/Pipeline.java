@@ -45,6 +45,11 @@ public final class Pipeline {
   private PipelineState state;
   private Map<DatanodeDetails, Long> nodeStatus;
 
+  /**
+   * The immutable properties of pipeline object is used in
+   * ContainerStateManager#getMatchingContainerByPipeline to take a lock on
+   * the container allocations for a particular pipeline.
+   */
   private Pipeline(PipelineID id, ReplicationType type,
       ReplicationFactor factor, PipelineState state,
       Map<DatanodeDetails, Long> nodeStatus) {
@@ -60,7 +65,7 @@ public final class Pipeline {
    *
    * @return PipelineID
    */
-  public PipelineID getID() {
+  public PipelineID getId() {
     return id;
   }
 
@@ -87,9 +92,24 @@ public final class Pipeline {
    *
    * @return - LifeCycleStates.
    */
-  PipelineState getPipelineState() {
-    // TODO: See if we need to expose this.
+  public PipelineState getPipelineState() {
     return state;
+  }
+
+  /**
+   * Returns the list of nodes which form this pipeline.
+   *
+   * @return List of DatanodeDetails
+   */
+  public List<DatanodeDetails> getNodes() {
+    return new ArrayList<>(nodeStatus.keySet());
+  }
+
+  public DatanodeDetails getFirstNode() throws IOException {
+    if (nodeStatus.isEmpty()) {
+      throw new IOException(String.format("Pipeline=%s is empty", id));
+    }
+    return nodeStatus.keySet().iterator().next();
   }
 
   public boolean isClosed() {
@@ -117,20 +137,17 @@ public final class Pipeline {
     return true;
   }
 
-  /**
-   * Returns the list of nodes which form this pipeline.
-   *
-   * @return List of DatanodeDetails
-   */
-  public List<DatanodeDetails> getNodes() {
-    return new ArrayList<>(nodeStatus.keySet());
+  public boolean isEmpty() {
+    return nodeStatus.isEmpty();
   }
 
-  public HddsProtos.Pipeline getProtobufMessage() {
+  public HddsProtos.Pipeline getProtobufMessage()
+      throws UnknownPipelineStateException {
     HddsProtos.Pipeline.Builder builder = HddsProtos.Pipeline.newBuilder()
         .setId(id.getProtobuf())
         .setType(type)
         .setFactor(factor)
+        .setState(PipelineState.getProtobuf(state))
         .setLeaderID("")
         .addAllMembers(nodeStatus.keySet().stream()
             .map(DatanodeDetails::getProtoBufMessage)
@@ -138,11 +155,13 @@ public final class Pipeline {
     return builder.build();
   }
 
-  public static Pipeline fromProtobuf(HddsProtos.Pipeline pipeline) {
+  public static Pipeline getFromProtobuf(HddsProtos.Pipeline pipeline)
+      throws UnknownPipelineStateException {
+    Preconditions.checkNotNull(pipeline, "Pipeline is null");
     return new Builder().setId(PipelineID.getFromProtobuf(pipeline.getId()))
         .setFactor(pipeline.getFactor())
         .setType(pipeline.getType())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.fromProtobuf(pipeline.getState()))
         .setNodes(pipeline.getMembersList().stream()
             .map(DatanodeDetails::getFromProtoBuf).collect(Collectors.toList()))
         .build();
@@ -164,8 +183,7 @@ public final class Pipeline {
         .append(id, that.id)
         .append(type, that.type)
         .append(factor, that.factor)
-        .append(state, that.state)
-        .append(nodeStatus, that.nodeStatus)
+        .append(getNodes(), that.getNodes())
         .isEquals();
   }
 
@@ -175,9 +193,22 @@ public final class Pipeline {
         .append(id)
         .append(type)
         .append(factor)
-        .append(state)
         .append(nodeStatus)
         .toHashCode();
+  }
+
+  @Override
+  public String toString() {
+    final StringBuilder b =
+        new StringBuilder(getClass().getSimpleName()).append("[");
+    b.append(" Id: ").append(id.getId());
+    b.append(", Nodes: ");
+    nodeStatus.keySet().forEach(b::append);
+    b.append(", Type:").append(getType());
+    b.append(", Factor:").append(getFactor());
+    b.append(", State:").append(getPipelineState());
+    b.append("]");
+    return b.toString();
   }
 
   public static Builder newBuilder() {
@@ -244,7 +275,36 @@ public final class Pipeline {
     }
   }
 
-  enum PipelineState {
-    ALLOCATED, OPEN, CLOSED
+  /**
+   * Possible Pipeline states in SCM.
+   */
+  public enum PipelineState {
+    ALLOCATED, OPEN, CLOSED;
+
+    public static PipelineState fromProtobuf(HddsProtos.PipelineState state)
+        throws UnknownPipelineStateException {
+      Preconditions.checkNotNull(state, "Pipeline state is null");
+      switch (state) {
+      case PIPELINE_ALLOCATED: return ALLOCATED;
+      case PIPELINE_OPEN: return OPEN;
+      case PIPELINE_CLOSED: return CLOSED;
+      default:
+        throw new UnknownPipelineStateException(
+            "Pipeline state: " + state + " is not recognized.");
+      }
+    }
+
+    public static HddsProtos.PipelineState getProtobuf(PipelineState state)
+        throws UnknownPipelineStateException {
+      Preconditions.checkNotNull(state, "Pipeline state is null");
+      switch (state) {
+      case ALLOCATED: return HddsProtos.PipelineState.PIPELINE_ALLOCATED;
+      case OPEN: return HddsProtos.PipelineState.PIPELINE_OPEN;
+      case CLOSED: return HddsProtos.PipelineState.PIPELINE_CLOSED;
+      default:
+        throw new UnknownPipelineStateException(
+            "Pipeline state: " + state + " is not recognized.");
+      }
+    }
   }
 }

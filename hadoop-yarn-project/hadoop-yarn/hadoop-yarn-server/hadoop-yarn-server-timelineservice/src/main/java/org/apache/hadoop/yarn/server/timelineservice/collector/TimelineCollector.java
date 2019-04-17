@@ -23,8 +23,11 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
@@ -37,6 +40,7 @@ import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntities;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineWriteResponse;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +65,7 @@ public abstract class TimelineCollector extends CompositeService {
       = new ConcurrentHashMap<>();
   private static Set<String> entityTypesSkipAggregation
       = new HashSet<>();
+  private ThreadPoolExecutor pool;
 
   private volatile boolean readyToAggregate = false;
 
@@ -73,6 +78,14 @@ public abstract class TimelineCollector extends CompositeService {
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
     super.serviceInit(conf);
+    int capacity = conf.getInt(
+        YarnConfiguration.TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY,
+        YarnConfiguration.DEFAULT_TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY
+    );
+    pool = new ThreadPoolExecutor(1, 1, 3, TimeUnit.SECONDS,
+        new ArrayBlockingQueue<>(capacity));
+    pool.setRejectedExecutionHandler(
+        new ThreadPoolExecutor.DiscardOldestPolicy());
   }
 
   @Override
@@ -83,6 +96,7 @@ public abstract class TimelineCollector extends CompositeService {
   @Override
   protected void serviceStop() throws Exception {
     isStopped = true;
+    pool.shutdownNow();
     super.serviceStop();
   }
 
@@ -137,10 +151,7 @@ public abstract class TimelineCollector extends CompositeService {
    */
   public TimelineWriteResponse putEntities(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("putEntities(entities=" + entities + ", callerUgi="
-          + callerUgi + ")");
-    }
+    LOG.debug("putEntities(entities={}, callerUgi={})", entities, callerUgi);
 
     TimelineWriteResponse response;
     // synchronize on the writer object so that no other threads can
@@ -166,10 +177,7 @@ public abstract class TimelineCollector extends CompositeService {
    */
   public TimelineWriteResponse putDomain(TimelineDomain domain,
       UserGroupInformation callerUgi) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "putDomain(domain=" + domain + ", callerUgi=" + callerUgi + ")");
-    }
+    LOG.debug("putDomain(domain={}, callerUgi={})", domain, callerUgi);
 
     TimelineWriteResponse response;
     synchronized (writer) {
@@ -216,12 +224,18 @@ public abstract class TimelineCollector extends CompositeService {
    */
   public void putEntitiesAsync(TimelineEntities entities,
       UserGroupInformation callerUgi) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("putEntitiesAsync(entities=" + entities + ", callerUgi=" +
-          callerUgi + ")");
-    }
+    LOG.debug("putEntitiesAsync(entities={}, callerUgi={})", entities,
+        callerUgi);
 
-    writeTimelineEntities(entities, callerUgi);
+    pool.execute(new Runnable() {
+      @Override public void run() {
+        try {
+          writeTimelineEntities(entities, callerUgi);
+        } catch (IOException ie) {
+          LOG.error("Got an exception while writing entity", ie);
+        }
+      }
+    });
   }
 
   /**

@@ -241,8 +241,11 @@ public final class FSImageFormatProtobuf {
             summary.getCodec(), in);
 
         String n = s.getName();
-
-        switch (SectionName.fromString(n)) {
+        SectionName sectionName = SectionName.fromString(n);
+        if (sectionName == null) {
+          throw new IOException("Unrecognized section " + n);
+        }
+        switch (sectionName) {
         case NS_INFO:
           loadNameSystemSection(in);
           break;
@@ -380,7 +383,7 @@ public final class FSImageFormatProtobuf {
         ecPolicies.add(PBHelperClient.convertErasureCodingPolicyInfo(
             s.getPolicies(i)));
       }
-      fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies);
+      fsn.getErasureCodingPolicyManager().loadPolicies(ecPolicies, conf);
     }
   }
 
@@ -601,7 +604,7 @@ public final class FSImageFormatProtobuf {
         FileSummary.Builder summary) throws IOException {
       final FSNamesystem fsn = context.getSourceNamesystem();
       ErasureCodingPolicyInfo[] ecPolicies =
-          fsn.getErasureCodingPolicyManager().getPolicies();
+          fsn.getErasureCodingPolicyManager().getPersistedPolicies();
       ArrayList<ErasureCodingPolicyProto> ecPolicyProtoes =
           new ArrayList<ErasureCodingPolicyProto>();
       for (ErasureCodingPolicyInfo p : ecPolicies) {

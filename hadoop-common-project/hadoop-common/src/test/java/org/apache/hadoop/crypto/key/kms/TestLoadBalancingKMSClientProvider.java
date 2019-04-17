@@ -18,6 +18,7 @@
 package org.apache.hadoop.crypto.key.kms;
 
 import static org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
+import static org.apache.hadoop.crypto.key.kms.KMSDelegationToken.TOKEN_KIND;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
@@ -35,6 +36,7 @@ import java.net.URI;
 import java.net.UnknownHostException;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 
@@ -45,11 +47,15 @@ import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProvider.Options;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.net.ConnectTimeoutException;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authorize.AuthorizationException;
+import org.apache.hadoop.security.token.Token;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -908,5 +914,67 @@ public class TestLoadBalancingKMSClientProvider {
           providers[i].getCanonicalServiceName());
       assertNotEquals(kmsUri, providers[i].getCanonicalServiceName());
     }
+  }
+
+  private void testTokenSelectionWithConf(Configuration conf) throws Exception {
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    UserGroupInformation ugi = UserGroupInformation.createUserForTesting(
+        "foo", new String[] {"hadoop"});
+
+    String providerUriString = "kms://http@host1;host2;host3:9600/kms/foo";
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        providerUriString);
+
+    final URI kmsUri = URI.create(providerUriString);
+    // create a fake kms dt
+    final Token token = new Token();
+    token.setKind(TOKEN_KIND);
+    token.setService(new Text(providerUriString));
+    // call getActualUgi() with the current user.
+    UserGroupInformation actualUgi =
+        ugi.doAs(new PrivilegedExceptionAction<UserGroupInformation>(){
+          @Override
+          public UserGroupInformation run() throws Exception {
+            final KeyProvider kp =
+                new KMSClientProvider.Factory().createProvider(kmsUri, conf);
+            final LoadBalancingKMSClientProvider lbkp =
+                (LoadBalancingKMSClientProvider) kp;
+            final Credentials creds = new Credentials();
+            creds.addToken(token.getService(), token);
+            UserGroupInformation.getCurrentUser().addCredentials(creds);
+
+            KMSClientProvider[] providers = lbkp.getProviders();
+            return providers[0].getActualUgi();
+          }
+        });
+    // make sure getActualUgi() returns the current user, not login user.
+    assertEquals(
+        "testTokenSelectionWithConf() should return the" +
+            " current user, not login user", ugi, actualUgi);
+  }
+
+  @Test
+  public void testTokenSelectionWithKMSUriInConf() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+
+    // test client with hadoop.security.key.provider.path configured.
+    String providerUriString = "kms://http@host1;host2;host3:9600/kms/foo";
+    conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
+        providerUriString);
+
+    testTokenSelectionWithConf(conf);
+  }
+
+  @Test
+  public void testGetActualUGI() throws Exception {
+    final Configuration conf = new Configuration();
+    conf.set("hadoop.security.authentication", "kerberos");
+    UserGroupInformation.setConfiguration(conf);
+
+    // test client without hadoop.security.key.provider.path configured.
+    testTokenSelectionWithConf(conf);
   }
 }

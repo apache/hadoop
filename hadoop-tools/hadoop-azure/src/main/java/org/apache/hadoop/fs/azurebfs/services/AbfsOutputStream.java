@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -33,10 +35,11 @@ import java.util.concurrent.TimeUnit;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.Syncable;
-import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
 /**
  * The BlobFsOutputStream for Rest AbfsClient.
@@ -197,7 +200,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @Override
   public void hsync() throws IOException {
     if (supportFlush) {
-      flushInternal();
+      flushInternal(false);
     }
   }
 
@@ -208,7 +211,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
   @Override
   public void hflush() throws IOException {
     if (supportFlush) {
-      flushInternal();
+      flushInternal(false);
     }
   }
 
@@ -227,7 +230,7 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     }
 
     try {
-      flushInternal();
+      flushInternal(true);
       threadExecutor.shutdown();
     } finally {
       lastError = new IOException(FSExceptionMessages.STREAM_IS_CLOSED);
@@ -241,10 +244,10 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     }
   }
 
-  private synchronized void flushInternal() throws IOException {
+  private synchronized void flushInternal(boolean isClose) throws IOException {
     maybeThrowLastError();
     writeCurrentBufferToService();
-    flushWrittenBytesToService();
+    flushWrittenBytesToService(isClose);
   }
 
   private synchronized void flushInternalAsync() throws IOException {
@@ -285,11 +288,17 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
     shrinkWriteOperationQueue();
   }
 
-  private synchronized void flushWrittenBytesToService() throws IOException {
+  private synchronized void flushWrittenBytesToService(boolean isClose) throws IOException {
     for (WriteOperation writeOperation : writeOperations) {
       try {
         writeOperation.task.get();
       } catch (Exception ex) {
+        if (ex.getCause() instanceof AbfsRestOperationException) {
+          if (((AbfsRestOperationException) ex.getCause()).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+            throw new FileNotFoundException(ex.getMessage());
+          }
+        }
+
         if (ex.getCause() instanceof AzureBlobFileSystemException) {
           ex = (AzureBlobFileSystemException) ex.getCause();
         }
@@ -297,22 +306,28 @@ public class AbfsOutputStream extends OutputStream implements Syncable, StreamCa
         throw lastError;
       }
     }
-    flushWrittenBytesToServiceInternal(position, false);
+    flushWrittenBytesToServiceInternal(position, false, isClose);
   }
 
   private synchronized void flushWrittenBytesToServiceAsync() throws IOException {
     shrinkWriteOperationQueue();
 
     if (this.lastTotalAppendOffset > this.lastFlushOffset) {
-      this.flushWrittenBytesToServiceInternal(this.lastTotalAppendOffset, true);
+      this.flushWrittenBytesToServiceInternal(this.lastTotalAppendOffset, true,
+        false/*Async flush on close not permitted*/);
     }
   }
 
   private synchronized void flushWrittenBytesToServiceInternal(final long offset,
-      final boolean retainUncommitedData) throws IOException {
+      final boolean retainUncommitedData, final boolean isClose) throws IOException {
     try {
-      client.flush(path, offset, retainUncommitedData);
+      client.flush(path, offset, retainUncommitedData, isClose);
     } catch (AzureBlobFileSystemException ex) {
+      if (ex instanceof AbfsRestOperationException) {
+        if (((AbfsRestOperationException) ex).getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          throw new FileNotFoundException(ex.getMessage());
+        }
+      }
       throw new IOException(ex);
     }
     this.lastFlushOffset = offset;

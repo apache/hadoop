@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
+import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.junit.After;
@@ -31,7 +32,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,23 +55,6 @@ public class TestResourceUtils {
       resourceCount = count;
       resourceNameUnitsMap = new HashMap<>();
     }
-  }
-
-  public static void addNewTypesToResources(String... resourceTypes) {
-    // Initialize resource map
-    Map<String, ResourceInformation> riMap = new HashMap<>();
-
-    // Initialize mandatory resources
-    riMap.put(ResourceInformation.MEMORY_URI, ResourceInformation.MEMORY_MB);
-    riMap.put(ResourceInformation.VCORES_URI, ResourceInformation.VCORES);
-
-    for (String newResource : resourceTypes) {
-      riMap.put(newResource, ResourceInformation
-          .newInstance(newResource, "", 0, ResourceTypes.COUNTABLE, 0,
-              Integer.MAX_VALUE));
-    }
-
-    ResourceUtils.initializeResourcesFromResourceInformationMap(riMap);
   }
 
   @Before
@@ -408,6 +394,74 @@ public class TestResourceUtils {
     }
   }
 
+  @Test
+  public void testResourceUnitParsing() throws Exception {
+    Resource res = ResourceUtils.createResourceFromString("memory=20g,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20G,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20M,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory=20m,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20m,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20, 3), res);
+
+    res = ResourceUtils.createResourceFromString("memory-mb=20G,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(20 * 1024, 3), res);
+
+    // W/o unit for memory means bits, and 20 bits will be rounded to 0
+    res = ResourceUtils.createResourceFromString("memory=20,vcores=3",
+            ResourceUtils.getResourcesTypeInfo());
+    Assert.assertEquals(Resources.createResource(0, 3), res);
+
+    // Test multiple resources
+    List<ResourceTypeInfo> resTypes = new ArrayList<>(
+            ResourceUtils.getResourcesTypeInfo());
+    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
+    ResourceUtils.reinitializeResources(resTypes);
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=0",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3,gpu=3",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString("memory=2G,vcores=3",
+            resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString(
+            "memory=2G,vcores=3,yarn.io/gpu=0", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(0, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    res = ResourceUtils.createResourceFromString(
+            "memory=2G,vcores=3,yarn.io/gpu=3", resTypes);
+    Assert.assertEquals(2 * 1024, res.getMemorySize());
+    Assert.assertEquals(3, res.getResourceValue(ResourceInformation.GPU_URI));
+
+    // TODO, add more negative tests.
+  }
+
   public static String setupResourceTypes(Configuration conf, String filename)
       throws Exception {
     File source = new File(
@@ -416,5 +470,58 @@ public class TestResourceUtils {
     FileUtils.copyFile(source, dest);
     ResourceUtils.getResourceTypes();
     return dest.getAbsolutePath();
+  }
+
+  @Test
+  public void testMultipleOpsForResourcesWithTags() throws Exception {
+
+    Configuration conf = new YarnConfiguration();
+    setupResourceTypes(conf, "resource-types-6.xml");
+    Resource resourceA = Resource.newInstance(2, 4);
+    Resource resourceB = Resource.newInstance(3, 6);
+
+    resourceA.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "T", 5L));
+
+    resourceA.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "M", 2L));
+    resourceA.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 1));
+    resourceA.setResourceInformation("yarn.io/test-volume",
+        ResourceInformation.newInstance("yarn.io/test-volume", "", 2));
+
+    resourceB.setResourceInformation("resource1",
+        ResourceInformation.newInstance("resource1", "T", 3L));
+
+    resourceB.setResourceInformation("resource2",
+        ResourceInformation.newInstance("resource2", "M", 4L));
+    resourceB.setResourceInformation("yarn.io/gpu",
+        ResourceInformation.newInstance("yarn.io/gpu", "", 2));
+    resourceB.setResourceInformation("yarn.io/test-volume",
+        ResourceInformation.newInstance("yarn.io/test-volume", "", 3));
+
+    Resource addedResource = Resources.add(resourceA, resourceB);
+    Assert.assertEquals(addedResource.getMemorySize(), 5);
+    Assert.assertEquals(addedResource.getVirtualCores(), 10);
+    Assert.assertEquals(
+        addedResource.getResourceInformation("resource1").getValue(), 8);
+
+    // Verify that value of resourceA and resourceB is not added up for
+    // "yarn.io/test-volume".
+    Assert.assertEquals(
+        addedResource.getResourceInformation("yarn.io/test-volume").getValue(),
+        2);
+
+    Resource mulResource = Resources.multiplyAndRoundDown(resourceA, 3);
+    Assert.assertEquals(mulResource.getMemorySize(), 6);
+    Assert.assertEquals(mulResource.getVirtualCores(), 12);
+    Assert.assertEquals(
+        mulResource.getResourceInformation("resource1").getValue(), 15);
+
+    // Verify that value of resourceA is not multiplied up for
+    // "yarn.io/test-volume".
+    Assert.assertEquals(
+        mulResource.getResourceInformation("yarn.io/test-volume").getValue(),
+        2);
   }
 }

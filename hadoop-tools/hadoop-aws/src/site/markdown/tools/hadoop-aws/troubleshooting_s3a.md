@@ -235,7 +235,23 @@ As an example, the endpoint for S3 Frankfurt is `s3.eu-central-1.amazonaws.com`:
 </property>
 ```
 
-## <a name="access_denied"></a> `AccessDeniedException` "Access Denied"
+## <a name="access_denied"></a> "The security token included in the request is invalid"
+
+You are trying to use session/temporary credentials and the session token
+supplied is considered invalid.
+
+```
+org.apache.hadoop.fs.s3a.AWSBadRequestException: initTable on bucket:
+  com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException:
+  The security token included in the request is invalid
+  (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: UnrecognizedClientException)
+```
+
+This can surface if your configuration is setting the `fs.s3a.secret.key`,
+`fs.s3a.access.key` and `fs.s3a.session.key` correctly, but the
+AWS credential provider list set in `AWS_CREDENTIALS_PROVIDER` does not include
+`org.apache.hadoop.fs.s3a.TemporaryAWSCredentialsProvider`.
+
 
 ### <a name="access_denied_unknown-ID"></a> AccessDeniedException "The AWS Access Key Id you provided does not exist in our records."
 
@@ -699,36 +715,36 @@ org.apache.hadoop.fs.s3a.AWSS3IOException: copyFromLocalFile(file:/tmp/hello.txt
     (Service: Amazon S3; Status Code: 400; Error Code: BadDigest; Request ID: 4018131225),
     S3 Extended Request ID: null
   at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:127)
-	at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:69)
-	at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFromLocalFile(S3AFileSystem.java:1494)
-	at org.apache.hadoop.tools.cloudup.Cloudup.uploadOneFile(Cloudup.java:466)
-	at org.apache.hadoop.tools.cloudup.Cloudup.access$000(Cloudup.java:63)
-	at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:353)
-	at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:350)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
-	at java.util.concurrent.FutureTask.run(FutureTask.java:266)
-	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
-	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
-	at java.lang.Thread.run(Thread.java:748)
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:69)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFromLocalFile(S3AFileSystem.java:1494)
+  at org.apache.hadoop.tools.cloudup.Cloudup.uploadOneFile(Cloudup.java:466)
+  at org.apache.hadoop.tools.cloudup.Cloudup.access$000(Cloudup.java:63)
+  at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:353)
+  at org.apache.hadoop.tools.cloudup.Cloudup$1.call(Cloudup.java:350)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.Executors$RunnableAdapter.call(Executors.java:511)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1142)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:617)
+  at java.lang.Thread.run(Thread.java:748)
 Caused by: com.amazonaws.services.s3.model.AmazonS3Exception:
     The Content-MD5 you specified did not match what we received.
     (Service: Amazon S3; Status Code: 400; Error Code: BadDigest; Request ID: 4018131225),
     S3 Extended Request ID: null
   at com.amazonaws.http.AmazonHttpClient.handleErrorResponse(AmazonHttpClient.java:1307)
-	at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:894)
-	at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:597)
-	at com.amazonaws.http.AmazonHttpClient.doExecute(AmazonHttpClient.java:363)
-	at com.amazonaws.http.AmazonHttpClient.executeWithTimer(AmazonHttpClient.java:329)
-	at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:308)
-	at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3659)
-	at com.amazonaws.services.s3.AmazonS3Client.putObject(AmazonS3Client.java:1422)
-	at com.amazonaws.services.s3.transfer.internal.UploadCallable.uploadInOneChunk(UploadCallable.java:131)
-	at com.amazonaws.services.s3.transfer.internal.UploadCallable.call(UploadCallable.java:123)
-	at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:139)
-	at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:47)
-	at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
-	... 4 more
+  at com.amazonaws.http.AmazonHttpClient.executeOneRequest(AmazonHttpClient.java:894)
+  at com.amazonaws.http.AmazonHttpClient.executeHelper(AmazonHttpClient.java:597)
+  at com.amazonaws.http.AmazonHttpClient.doExecute(AmazonHttpClient.java:363)
+  at com.amazonaws.http.AmazonHttpClient.executeWithTimer(AmazonHttpClient.java:329)
+  at com.amazonaws.http.AmazonHttpClient.execute(AmazonHttpClient.java:308)
+  at com.amazonaws.services.s3.AmazonS3Client.invoke(AmazonS3Client.java:3659)
+  at com.amazonaws.services.s3.AmazonS3Client.putObject(AmazonS3Client.java:1422)
+  at com.amazonaws.services.s3.transfer.internal.UploadCallable.uploadInOneChunk(UploadCallable.java:131)
+  at com.amazonaws.services.s3.transfer.internal.UploadCallable.call(UploadCallable.java:123)
+  at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:139)
+  at com.amazonaws.services.s3.transfer.internal.UploadMonitor.call(UploadMonitor.java:47)
+  at org.apache.hadoop.fs.s3a.BlockingThreadPoolExecutorService$CallableWithPermitRelease.call(BlockingThreadPoolExecutorService.java:239)
+  ... 4 more
 ```
 
 This stack trace was seen when interacting with a third-party S3 store whose
@@ -949,6 +965,69 @@ if it is required that the data is persisted durably after every
 `Syncable.hflush()` or `Syncable.hsync()` call.
 This includes resilient logging, HBase-style journaling
 and the like. The standard strategy here is to save to HDFS and then copy to S3.
+
+### `RemoteFileChangedException` and read-during-overwrite
+
+```
+org.apache.hadoop.fs.s3a.RemoteFileChangedException: re-open `s3a://my-bucket/test/file.txt':
+  ETag change reported by S3 while reading at position 1949.
+  Version f9c186d787d4de9657e99f280ba26555 was unavailable
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:137)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:339)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:372)
+```
+
+If an S3 object is updated while an S3A filesystem reader has an open
+`InputStream` on it, the reader may encounter `RemoteFileChangedException`.  This
+occurs if the S3A `InputStream` needs to re-open the object (e.g. during a seek())
+and detects the change.
+
+If the change detection mode is configured to 'warn', a warning like the
+following will be seen instead of `RemoteFileChangedException`:
+
+```
+WARN  - ETag change detected on re-open s3a://my-bucket/test/readFileToChange.txt at 1949.
+ Expected f9c186d787d4de9657e99f280ba26555 got 043abff21b7bd068d2d2f27ccca70309
+```
+
+Using a third-party S3 implementation that doesn't support eTags might result in
+the following error.
+
+```
+org.apache.hadoop.fs.s3a.NoVersionAttributeException: `s3a://my-bucket/test/file.txt':
+ Change detection policy requires ETag
+  at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:153)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$2(Invoker.java:195)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$3(Invoker.java:265)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:322)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:261)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:193)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:215)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.lazySeek(S3AInputStream.java:339)
+  at org.apache.hadoop.fs.s3a.S3AInputStream.read(S3AInputStream.java:372)
+```
+
+If the change policy is `versionid` there are a number of possible causes
+
+* The bucket does not have object versioning enabled.
+* The bucket does have versioning enabled, but the object being read was created
+before versioning was enabled.
+* The bucket is on a third-party store which does not support object versioning.
+
+See [Handling Read-During-Overwrite](./index.html#handling_read-during-overwrite)
+for more information.
 
 ## <a name="encryption"></a> S3 Server Side Encryption
 

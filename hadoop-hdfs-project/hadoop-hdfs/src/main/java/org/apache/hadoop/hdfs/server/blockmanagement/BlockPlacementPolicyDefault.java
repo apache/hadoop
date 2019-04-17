@@ -71,6 +71,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       CHOOSE_RANDOM_REASONS = ThreadLocal
       .withInitial(() -> new HashMap<NodeNotChosenReason, Integer>());
 
+  private static final BlockPlacementStatus ONE_RACK_PLACEMENT =
+      new BlockPlacementStatusDefault(1, 1, 1);
+
   private enum NodeNotChosenReason {
     NOT_IN_SERVICE("the node is not in service"),
     NODE_STALE("the node is stale"),
@@ -121,7 +124,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     this.host2datanodeMap = host2datanodeMap;
     this.heartbeatInterval = conf.getTimeDuration(
         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
-        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT, TimeUnit.SECONDS) * 1000;
+        DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_DEFAULT,
+        TimeUnit.SECONDS, TimeUnit.MILLISECONDS);
     this.tolerateHeartbeatMultiplier = conf.getInt(
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_KEY,
         DFSConfigKeys.DFS_NAMENODE_TOLERATE_HEARTBEAT_MULTIPLIER_DEFAULT);
@@ -1029,22 +1033,23 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
   @Override
   public BlockPlacementStatus verifyBlockPlacement(DatanodeInfo[] locs,
       int numberOfReplicas) {
-    if (locs == null)
+    if (locs == null) {
       locs = DatanodeDescriptor.EMPTY_ARRAY;
+    }
     if (!clusterMap.hasClusterEverBeenMultiRack()) {
       // only one rack
-      return new BlockPlacementStatusDefault(1, 1, 1);
+      return ONE_RACK_PLACEMENT;
     }
-    int minRacks = 2;
-    minRacks = Math.min(minRacks, numberOfReplicas);
+    final int minRacks = Math.min(2, numberOfReplicas);
     // 1. Check that all locations are different.
     // 2. Count locations on different racks.
-    Set<String> racks = new TreeSet<>();
-    for (DatanodeInfo dn : locs)
-      racks.add(dn.getNetworkLocation());
-    return new BlockPlacementStatusDefault(racks.size(), minRacks,
-        clusterMap.getNumOfRacks());
+    final long rackCount = Arrays.asList(locs).stream()
+        .map(dn -> dn.getNetworkLocation()).distinct().count();
+
+    return new BlockPlacementStatusDefault(Math.toIntExact(rackCount),
+        minRacks, clusterMap.getNumOfRacks());
   }
+
   /**
    * Decide whether deleting the specified replica of the block still makes
    * the block conform to the configured block placement policy.

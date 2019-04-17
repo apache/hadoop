@@ -79,7 +79,8 @@ import static org.apache.hadoop.hdfs.server.namenode.FSImageUtil.MAGIC_HEADER;
 public class ImageWriter implements Closeable {
 
   private static final int ONDISK_VERSION = 1;
-  private static final int LAYOUT_VERSION = -64; // see NameNodeLayoutVersion
+  private static final int LAYOUT_VERSION =
+      NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION;
 
   private final Path outdir;
   private final FileSystem outfs;
@@ -128,7 +129,7 @@ public class ImageWriter implements Closeable {
         NamespaceInfo info = NNStorage.newNamespaceInfo();
         if (info.getLayoutVersion() != LAYOUT_VERSION) {
           throw new IllegalStateException("Incompatible layout " +
-              info.getLayoutVersion() + " (expected " + LAYOUT_VERSION);
+              info.getLayoutVersion() + " (expected " + LAYOUT_VERSION + ")");
         }
         // set the cluster id, if given
         if (opts.clusterID.length() > 0) {

@@ -17,13 +17,14 @@
 
 package org.apache.hadoop.hdds.server;
 
-import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.HddsConfServlet;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpServer2;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.net.NetUtils;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
@@ -32,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Optional;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
@@ -43,6 +45,7 @@ public abstract class BaseHttpServer {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(BaseHttpServer.class);
+  protected static final String PROMETHEUS_SINK = "PROMETHEUS_SINK";
 
   private HttpServer2 httpServer;
   private final Configuration conf;
@@ -53,18 +56,19 @@ public abstract class BaseHttpServer {
   private HttpConfig.Policy policy;
 
   private String name;
+  private PrometheusMetricsSink prometheusMetricsSink;
+
+  private boolean prometheusSupport;
+
+  private boolean profilerSupport;
 
   public BaseHttpServer(Configuration conf, String name) throws IOException {
     this.name = name;
     this.conf = conf;
+    policy = DFSUtil.getHttpPolicy(conf);
     if (isEnabled()) {
-      policy = DFSUtil.getHttpPolicy(conf);
-      if (policy.isHttpEnabled()) {
-        this.httpAddress = getHttpBindAddress();
-      }
-      if (policy.isHttpsEnabled()) {
-        this.httpsAddress = getHttpsBindAddress();
-      }
+      this.httpAddress = getHttpBindAddress();
+      this.httpsAddress = getHttpsBindAddress();
       HttpServer2.Builder builder = null;
       builder = DFSUtil.httpServerTemplateForNNAndJN(conf, this.httpAddress,
           this.httpsAddress, name, getSpnegoPrincipal(), getKeytabFile());
@@ -82,6 +86,25 @@ public abstract class BaseHttpServer {
       httpServer = builder.build();
       httpServer.addServlet("conf", "/conf", HddsConfServlet.class);
 
+      prometheusSupport =
+          conf.getBoolean(HddsConfigKeys.HDDS_PROMETHEUS_ENABLED, false);
+
+      profilerSupport =
+          conf.getBoolean(HddsConfigKeys.HDDS_PROFILER_ENABLED, false);
+
+      if (prometheusSupport) {
+        prometheusMetricsSink = new PrometheusMetricsSink();
+        httpServer.getWebAppContext().getServletContext()
+            .setAttribute(PROMETHEUS_SINK, prometheusMetricsSink);
+        httpServer.addServlet("prometheus", "/prom", PrometheusServlet.class);
+      }
+
+      if (profilerSupport) {
+        LOG.warn(
+            "/prof java profiling servlet is activated. Not safe for "
+                + "production!");
+        httpServer.addServlet("profile", "/prof", ProfileServlet.class);
+      }
     }
 
   }
@@ -115,13 +138,13 @@ public abstract class BaseHttpServer {
     final Optional<Integer> addressPort =
         getPortNumberFromConfigKeys(conf, addressKey);
 
-    final Optional<String> addresHost =
+    final Optional<String> addressHost =
         getHostNameFromConfigKeys(conf, addressKey);
 
-    String hostName = bindHost.or(addresHost).or(bindHostDefault);
+    String hostName = bindHost.orElse(addressHost.orElse(bindHostDefault));
 
     return NetUtils.createSocketAddr(
-        hostName + ":" + addressPort.or(bindPortdefault));
+        hostName + ":" + addressPort.orElse(bindPortdefault));
   }
 
   /**
@@ -150,6 +173,11 @@ public abstract class BaseHttpServer {
   public void start() throws IOException {
     if (httpServer != null && isEnabled()) {
       httpServer.start();
+      if (prometheusSupport) {
+        DefaultMetricsSystem.instance()
+            .register("prometheus", "Hadoop metrics prometheus exporter",
+                prometheusMetricsSink);
+      }
       updateConnectorAddress();
     }
 

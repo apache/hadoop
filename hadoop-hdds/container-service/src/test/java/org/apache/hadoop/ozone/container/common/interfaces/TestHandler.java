@@ -18,10 +18,15 @@
 
 package org.apache.hadoop.ozone.container.common.interfaces;
 
+import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerMetrics;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.junit.Assert;
@@ -31,6 +36,8 @@ import org.junit.Test;
 import org.junit.rules.TestRule;
 import org.junit.rules.Timeout;
 import org.mockito.Mockito;
+
+import java.util.Map;
 
 /**
  * Tests Handler interface.
@@ -50,8 +57,22 @@ public class TestHandler {
     this.conf = new Configuration();
     this.containerSet = Mockito.mock(ContainerSet.class);
     this.volumeSet = Mockito.mock(VolumeSet.class);
-
-    this.dispatcher = new HddsDispatcher(conf, containerSet, volumeSet, null);
+    DatanodeDetails datanodeDetails = Mockito.mock(DatanodeDetails.class);
+    DatanodeStateMachine stateMachine = Mockito.mock(
+        DatanodeStateMachine.class);
+    StateContext context = Mockito.mock(StateContext.class);
+    Mockito.when(stateMachine.getDatanodeDetails()).thenReturn(datanodeDetails);
+    Mockito.when(context.getParent()).thenReturn(stateMachine);
+    ContainerMetrics metrics = ContainerMetrics.create(conf);
+    Map<ContainerProtos.ContainerType, Handler> handlers = Maps.newHashMap();
+    for (ContainerProtos.ContainerType containerType :
+        ContainerProtos.ContainerType.values()) {
+      handlers.put(containerType,
+          Handler.getHandlerForContainerType(
+              containerType, conf, context, containerSet, volumeSet, metrics));
+    }
+    this.dispatcher = new HddsDispatcher(
+        conf, containerSet, volumeSet, handlers, null, metrics);
   }
 
   @Test
@@ -73,8 +94,8 @@ public class TestHandler {
     Assert.assertEquals("New ContainerType detected. Not an invalid " +
         "containerType", invalidContainerType, null);
 
-    Handler handler = dispatcher.getHandler(invalidContainerType);
+    Handler dispatcherHandler = dispatcher.getHandler(invalidContainerType);
     Assert.assertEquals("Get Handler for Invalid ContainerType should " +
-        "return null.", handler, null);
+        "return null.", dispatcherHandler, null);
   }
 }

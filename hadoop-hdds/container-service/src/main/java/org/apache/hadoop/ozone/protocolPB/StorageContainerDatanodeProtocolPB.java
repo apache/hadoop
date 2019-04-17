@@ -19,7 +19,10 @@ package org.apache.hadoop.ozone.protocolPB;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos
     .StorageContainerDatanodeProtocolService;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * Protocol used from a datanode to StorageContainerManager.  This extends
@@ -29,6 +32,9 @@ import org.apache.hadoop.ipc.ProtocolInfo;
 @ProtocolInfo(protocolName =
     "org.apache.hadoop.ozone.protocol.StorageContainerDatanodeProtocol",
     protocolVersion = 1)
+@KerberosInfo(
+    serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
+    clientPrincipal = DFSConfigKeys.DFS_DATANODE_KERBEROS_PRINCIPAL_KEY)
 public interface StorageContainerDatanodeProtocolPB extends
     StorageContainerDatanodeProtocolService.BlockingInterface {
 }

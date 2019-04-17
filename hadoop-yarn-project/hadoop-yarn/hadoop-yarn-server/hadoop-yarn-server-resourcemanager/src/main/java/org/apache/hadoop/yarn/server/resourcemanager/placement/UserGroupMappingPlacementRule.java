@@ -23,8 +23,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -34,8 +34,10 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.resourcemanager.placement.UserGroupMappingPlacementRule.QueueMapping.MappingType;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.AutoCreatedLeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -45,8 +47,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.ManagedP
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.DOT;
 
 public class UserGroupMappingPlacementRule extends PlacementRule {
-  private static final Log LOG = LogFactory
-      .getLog(UserGroupMappingPlacementRule.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(UserGroupMappingPlacementRule.class);
 
   public static final String CURRENT_USER_MAPPING = "%user";
 
@@ -230,8 +232,15 @@ public class UserGroupMappingPlacementRule extends PlacementRule {
 
   @VisibleForTesting
   @Override
-  public boolean initialize(CapacitySchedulerContext schedulerContext)
+  public boolean initialize(ResourceScheduler scheduler)
       throws IOException {
+    if (!(scheduler instanceof CapacityScheduler)) {
+      throw new IOException(
+          "UserGroupMappingPlacementRule can be configured only for "
+              + "CapacityScheduler");
+    }
+    CapacitySchedulerContext schedulerContext =
+        (CapacitySchedulerContext) scheduler;
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(

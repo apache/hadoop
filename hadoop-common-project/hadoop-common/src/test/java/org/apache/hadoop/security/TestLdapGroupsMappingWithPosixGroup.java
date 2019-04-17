@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.security;
 
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.contains;
@@ -28,7 +28,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -62,7 +61,7 @@ public class TestLdapGroupsMappingWithPosixGroup
   }
 
   @Test
-  public void testGetGroups() throws IOException, NamingException {
+  public void testGetGroups() throws NamingException {
     // The search functionality of the mock context is reused, so we will
     // return the user NamingEnumeration first, and then the group
     when(getContext().search(anyString(), contains("posix"),
@@ -73,10 +72,9 @@ public class TestLdapGroupsMappingWithPosixGroup
   }
 
   private void doTestGetGroups(List<String> expectedGroups, int searchTimes)
-      throws IOException, NamingException {
-    Configuration conf = new Configuration();
-    // Set this, so we don't throw an exception
-    conf.set(LdapGroupsMapping.LDAP_URL_KEY, "ldap://test");
+      throws NamingException {
+    String ldapUrl = "ldap://test";
+    Configuration conf = getBaseConf(ldapUrl);
     conf.set(LdapGroupsMapping.GROUP_SEARCH_FILTER_KEY,
         "(objectClass=posixGroup)(cn={0})");
     conf.set(LdapGroupsMapping.USER_SEARCH_FILTER_KEY,

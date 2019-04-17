@@ -58,6 +58,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.inotify.EventBatchList;
@@ -499,10 +500,11 @@ public class RouterRpcServer extends AbstractService
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException {
     return clientProto.create(src, masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName);
+        replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
   }
 
   /**
@@ -1188,9 +1190,20 @@ public class RouterRpcServer extends AbstractService
   }
 
   @Override // ClientProtocol
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    return clientProto.getHAServiceState();
+  }
+
+  @Override // ClientProtocol
   public BatchedEntries<OpenFileEntry> listOpenFiles(long prevId,
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     return clientProto.listOpenFiles(prevId, openFilesTypes, path);
+  }
+
+  @Override // ClientProtocol
+  public void msync() throws IOException {
+    clientProto.msync();
   }
 
   @Override // ClientProtocol

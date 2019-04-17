@@ -35,6 +35,7 @@ import "xattr.proto";
 import "encryption.proto";
 import "inotify.proto";
 import "erasurecoding.proto";
+import "HAServiceProtocol.proto";
 
 /**
  * The ClientNamenodeProtocol Service defines the interface between a client 
@@ -82,6 +83,7 @@ message CreateRequestProto {
   repeated CryptoProtocolVersionProto cryptoProtocolVersion = 8;
   optional FsPermissionProto unmasked = 9;
   optional string ecPolicyName = 10;
+  optional string storagePolicy = 11;
 }
 
 message CreateResponseProto {
@@ -830,12 +832,25 @@ message ListOpenFilesResponseProto {
   repeated OpenFilesTypeProto types = 3;
 }
 
+message MsyncRequestProto {
+}
+
+message MsyncResponseProto {
+}
+
 message SatisfyStoragePolicyRequestProto {
   required string src = 1;
 }
 
 message SatisfyStoragePolicyResponseProto {
 
+}
+
+message HAServiceStateRequestProto {
+}
+
+message HAServiceStateResponseProto {
+  required hadoop.common.HAServiceStateProto state = 1;
 }
 
 service ClientNamenodeProtocol {
@@ -1024,6 +1039,10 @@ service ClientNamenodeProtocol {
       returns(GetQuotaUsageResponseProto);
   rpc listOpenFiles(ListOpenFilesRequestProto)
       returns(ListOpenFilesResponseProto);
+  rpc msync(MsyncRequestProto)
+      returns(MsyncResponseProto);
   rpc satisfyStoragePolicy(SatisfyStoragePolicyRequestProto)
       returns(SatisfyStoragePolicyResponseProto);
+  rpc getHAServiceState(HAServiceStateRequestProto)
+      returns(HAServiceStateResponseProto);
 }

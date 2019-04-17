@@ -195,7 +195,7 @@ public class TestRetryCacheWithHA {
     FSNamesystem fsn1 = cluster.getNamesystem(1);
     cacheSet = (LightWeightCache<CacheEntry, CacheEntry>) fsn1
         .getRetryCache().getCacheSet();
-    assertEquals("Retry cache size is wrong", 38, cacheSet.size());
+    assertEquals("Retry cache size is wrong", 39, cacheSet.size());
     iter = cacheSet.iterator();
     while (iter.hasNext()) {
       CacheEntry entry = iter.next();
@@ -414,7 +414,7 @@ public class TestRetryCacheWithHA {
           new EnumSetWritable<CreateFlag>(createFlag), false, DataNodes,
           BlockSize,
           new CryptoProtocolVersion[] {CryptoProtocolVersion.ENCRYPTION_ZONES},
-          null);
+          null, null);
     }
 
     @Override

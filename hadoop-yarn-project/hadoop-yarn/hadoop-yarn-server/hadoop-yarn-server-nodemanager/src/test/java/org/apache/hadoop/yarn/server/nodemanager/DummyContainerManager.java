@@ -207,7 +207,8 @@ public class DummyContainerManager extends ContainerManagerImpl {
   
   @Override
   protected void authorizeGetAndStopContainerRequest(ContainerId containerId,
-      Container container, boolean stopRequest, NMTokenIdentifier identifier) throws YarnException {
+      Container container, boolean stopRequest, NMTokenIdentifier identifier,
+      String remoteUser) throws YarnException {
     // do nothing
   }
 

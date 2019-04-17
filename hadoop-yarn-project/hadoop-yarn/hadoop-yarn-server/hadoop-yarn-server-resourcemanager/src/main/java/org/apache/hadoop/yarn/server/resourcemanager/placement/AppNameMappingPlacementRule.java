@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.placement;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CSQueue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerContext;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerQueueManager;
@@ -40,8 +41,8 @@ import static org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlace
 import static org.apache.hadoop.yarn.server.resourcemanager.placement.QueuePlacementRuleUtils.validateAndGetQueueMapping;
 
 public class AppNameMappingPlacementRule extends PlacementRule {
-  private static final Log LOG = LogFactory
-      .getLog(AppNameMappingPlacementRule.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AppNameMappingPlacementRule.class);
 
   public static final String CURRENT_APP_MAPPING = "%application";
 
@@ -61,8 +62,15 @@ public class AppNameMappingPlacementRule extends PlacementRule {
   }
 
   @Override
-  public boolean initialize(CapacitySchedulerContext schedulerContext)
+  public boolean initialize(ResourceScheduler scheduler)
       throws IOException {
+    if (!(scheduler instanceof CapacityScheduler)) {
+      throw new IOException(
+          "AppNameMappingPlacementRule can be configured only for "
+              + "CapacityScheduler");
+    }
+    CapacitySchedulerContext schedulerContext =
+        (CapacitySchedulerContext) scheduler;
     CapacitySchedulerConfiguration conf = schedulerContext.getConfiguration();
     boolean overrideWithQueueMappings = conf.getOverrideWithQueueMappings();
     LOG.info(

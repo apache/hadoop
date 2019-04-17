@@ -1134,7 +1134,6 @@ public class DatanodeManager {
           nodeDescr.setDependentHostNames(
               getNetworkDependenciesWithDefault(nodeDescr));
         }
-        networktopology.add(nodeDescr);
         nodeDescr.setSoftwareVersion(nodeReg.getSoftwareVersion());
         resolveUpgradeDomain(nodeDescr);
 
@@ -1251,6 +1250,13 @@ public class DatanodeManager {
   /** @return the number of dead datanodes. */
   public int getNumDeadDataNodes() {
     return getDatanodeListForReport(DatanodeReportType.DEAD).size();
+  }
+
+  /** @return the number of datanodes. */
+  public int getNumOfDataNodes() {
+    synchronized (this) {
+      return datanodeMap.size();
+    }
   }
 
   /** @return list of datanodes where decommissioning is in progress. */

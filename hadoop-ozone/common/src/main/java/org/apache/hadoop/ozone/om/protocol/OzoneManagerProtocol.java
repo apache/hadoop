@@ -15,25 +15,53 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.hadoop.ozone.om.protocol;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
+
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.hadoop.ozone.security.OzoneDelegationTokenSelector;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.security.token.TokenInfo;
 
 /**
  * Protocol to talk to OM.
  */
-public interface OzoneManagerProtocol {
+@KerberosInfo(
+    serverPrincipal = OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY)
+@TokenInfo(OzoneDelegationTokenSelector.class)
+public interface OzoneManagerProtocol
+    extends OzoneManagerSecurityProtocol, Closeable {
+
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
 
   /**
    * Creates a volume.
@@ -156,11 +184,14 @@ public interface OzoneManagerProtocol {
    *
    * @param args the key to append
    * @param clientID the client identification
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation
    * @return an allocated block
    * @throws IOException
    */
-  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID)
-      throws IOException;
+  OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
+      ExcludeList excludeList) throws IOException;
+
 
   /**
    * Look up for the container of an existing key.
@@ -281,5 +312,143 @@ public interface OzoneManagerProtocol {
    */
   String getOzoneBucketMapping(String s3BucketName) throws IOException;
 
+  /**
+   * Returns a list of buckets represented by {@link OmBucketInfo}
+   * for the given user. Argument username is required, others
+   * are optional.
+   *
+   * @param userName
+   *   user Name.
+   * @param startBucketName
+   *   the start bucket name, only the buckets whose name is
+   *   after this value will be included in the result.
+   * @param bucketPrefix
+   *   bucket name prefix, only the buckets whose name has
+   *   this prefix will be included in the result.
+   * @param maxNumOfBuckets
+   *   the maximum number of buckets to return. It ensures
+   *   the size of the result will not exceed this limit.
+   * @return a list of buckets.
+   * @throws IOException
+   */
+  List<OmBucketInfo> listS3Buckets(String userName, String startBucketName,
+                                   String bucketPrefix, int maxNumOfBuckets)
+      throws IOException;
+
+  /**
+   * Initiate multipart upload for the specified key.
+   * @param keyArgs
+   * @return MultipartInfo
+   * @throws IOException
+   */
+  OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
+
+
+  /**
+   * Commit Multipart upload part file.
+   * @param omKeyArgs
+   * @param clientID
+   * @return OmMultipartCommitUploadPartInfo
+   * @throws IOException
+   */
+  OmMultipartCommitUploadPartInfo commitMultipartUploadPart(
+      OmKeyArgs omKeyArgs, long clientID) throws IOException;
+
+  /**
+   * Complete Multipart upload Request.
+   * @param omKeyArgs
+   * @param multipartUploadList
+   * @return OmMultipartUploadCompleteInfo
+   * @throws IOException
+   */
+  OmMultipartUploadCompleteInfo completeMultipartUpload(
+      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      throws IOException;
+
+  /**
+   * Abort multipart upload.
+   * @param omKeyArgs
+   * @throws IOException
+   */
+  void abortMultipartUpload(OmKeyArgs omKeyArgs) throws IOException;
+
+  /**
+   * Returns list of parts of a multipart upload key.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param uploadID
+   * @param partNumberMarker
+   * @param maxParts
+   * @return OmMultipartUploadListParts
+   */
+  OmMultipartUploadListParts listParts(String volumeName, String bucketName,
+      String keyName, String uploadID, int partNumberMarker,
+      int maxParts)  throws IOException;
+
+  /**
+   * Gets s3Secret for given kerberos user.
+   * @param kerberosID
+   * @return S3SecretValue
+   * @throws IOException
+   */
+  S3SecretValue getS3Secret(String kerberosID) throws IOException;
+
+  /**
+   * Get the OM Client's Retry and Failover Proxy provider.
+   * @return OMFailoverProxyProvider
+   */
+  OMFailoverProxyProvider getOMFailoverProxyProvider();
+
+  /**
+   * OzoneFS api to get file status for an entry.
+   *
+   * @param keyArgs Key args
+   * @throws OMException if file does not exist
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OzoneFileStatus getFileStatus(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Ozone FS api to create a directory. Parent directories if do not exist
+   * are created for the input directory.
+   *
+   * @param args Key args
+   * @throws OMException if any entry in the path exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  void createDirectory(OmKeyArgs args) throws IOException;
+
+  /**
+   * OzoneFS api to creates an output stream for a file.
+   *
+   * @param keyArgs   Key args
+   * @param overWrite if true existing file at the location will be overwritten
+   * @param recursive if true file would be created even if parent directories
+   *                  do not exist
+   * @throws OMException if given key is a directory
+   *                     if file exists and isOverwrite flag is false
+   *                     if an ancestor exists as a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OpenKeySession createFile(OmKeyArgs keyArgs, boolean overWrite,
+      boolean recursive) throws IOException;
+
+  /**
+   * OzoneFS api to lookup for a file.
+   *
+   * @param keyArgs Key args
+   * @throws OMException if given key is not found or it is not a file
+   *                     if bucket does not exist
+   * @throws IOException if there is error in the db
+   *                     invalid arguments
+   */
+  OmKeyInfo lookupFile(OmKeyArgs keyArgs) throws IOException;
 }
 

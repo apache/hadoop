@@ -18,8 +18,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
@@ -29,8 +29,8 @@ import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
  * it is backward compatible with procfs in terms of virtual memory usage.
  */
 public class CombinedResourceCalculator  extends ResourceCalculatorProcessTree {
-  protected static final Log LOG = LogFactory
-      .getLog(CombinedResourceCalculator.class);
+  protected static final Logger LOG = LoggerFactory
+      .getLogger(CombinedResourceCalculator.class);
   private ProcfsBasedProcessTree procfs;
   private CGroupsResourceCalculator cgroup;
 

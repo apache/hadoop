@@ -30,7 +30,16 @@ public interface BucketManager {
    * Creates a bucket.
    * @param bucketInfo - OmBucketInfo for creating bucket.
    */
-  void createBucket(OmBucketInfo bucketInfo) throws IOException;
+  OmBucketInfo createBucket(OmBucketInfo bucketInfo) throws IOException;
+
+  /**
+   * Apply Create Bucket changes to OM DB.
+   * @param omBucketInfo
+   * @throws IOException
+   */
+  void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException;
+
+
   /**
    * Returns Bucket Information.
    * @param volumeName - Name of the Volume.
@@ -44,7 +53,14 @@ public interface BucketManager {
    * @param args - BucketArgs.
    * @throws IOException
    */
-  void setBucketProperty(OmBucketArgs args) throws IOException;
+  OmBucketInfo setBucketProperty(OmBucketArgs args) throws IOException;
+
+  /**
+   * Apply SetBucket Property changes to OM DB.
+   * @param omBucketInfo
+   * @throws IOException
+   */
+  void applySetBucketProperty(OmBucketInfo omBucketInfo) throws IOException;
 
   /**
    * Deletes an existing empty bucket from volume.
@@ -53,6 +69,15 @@ public interface BucketManager {
    * @throws IOException
    */
   void deleteBucket(String volumeName, String bucketName) throws IOException;
+
+  /**
+   * Apply Delete Bucket changes to OM DB.
+   * @param volumeName
+   * @param bucketName
+   * @throws IOException
+   */
+  void applyDeleteBucket(String volumeName, String bucketName)
+      throws IOException;
 
   /**
    * Returns a list of buckets represented by {@link OmBucketInfo}
@@ -74,6 +99,6 @@ public interface BucketManager {
    * @throws IOException
    */
   List<OmBucketInfo> listBuckets(String volumeName,
-                                 String startBucket, String bucketPrefix, int maxNumOfBuckets)
+      String startBucket, String bucketPrefix, int maxNumOfBuckets)
       throws IOException;
 }

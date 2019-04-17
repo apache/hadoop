@@ -73,9 +73,7 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
   @Override
   public synchronized void synchronizePlan(Plan plan, boolean shouldReplan) {
     String planQueueName = plan.getQueueName();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Running plan follower edit policy for plan: " + planQueueName);
-    }
+    LOG.debug("Running plan follower edit policy for plan: {}", planQueueName);
     // align with plan step
     long step = plan.getStep();
     long now = clock.getTime();
@@ -171,11 +169,9 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
               calculateReservationToPlanRatio(plan.getResourceCalculator(),
                   clusterResources, planResources, capToAssign);
         }
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
+        LOG.debug(
               "Assigning capacity of {} to queue {} with target capacity {}",
               capToAssign, currResId, targetCapacity);
-        }
         // set maxCapacity to 100% unless the job requires gang, in which
         // case we stick to capacity (as running early/before is likely a
         // waste of resources)
@@ -195,12 +191,10 @@ public abstract class AbstractSchedulerPlanFollower implements PlanFollower {
     }
     // compute the default queue capacity
     float defQCap = 1.0f - totalAssignedCapacity;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
+    LOG.debug(
           "PlanFollowerEditPolicyTask: total Plan Capacity: {} "
               + "currReservation: {} default-queue capacity: {}",
           planResources, numRes, defQCap);
-    }
     // set the default queue to eat-up all remaining capacity
     try {
       setQueueEntitlement(planQueueName, defReservationQueue, defQCap, 1.0f);

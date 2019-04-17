@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.util.timeline;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineAuthenticationFilter;
@@ -33,7 +33,8 @@ import org.apache.hadoop.yarn.server.timeline.security.TimelineDelgationTokenSec
  * Set of utility methods to be used across timeline reader and collector.
  */
 public final class TimelineServerUtils {
-  private static final Log LOG = LogFactory.getLog(TimelineServerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineServerUtils.class);
 
   private TimelineServerUtils() {
   }

@@ -288,8 +288,10 @@ public class NetUtils {
     if (fqHost == null) {
       try {
         fqHost = SecurityUtil.getByName(host).getHostName();
-        // slight race condition, but won't hurt
         canonicalizedHostCache.putIfAbsent(host, fqHost);
+        // ensures that we won't return a canonicalized stale (non-cached)
+        // host name for a given host
+        fqHost = canonicalizedHostCache.get(host);
       } catch (UnknownHostException e) {
         fqHost = host;
       }
@@ -831,7 +833,7 @@ public class NetUtils {
       Throwable t = ctor.newInstance(msg);
       return (T)(t.initCause(exception));
     } catch (Throwable e) {
-      LOG.warn("Unable to wrap exception of type {}: it has no (String) "
+      LOG.trace("Unable to wrap exception of type {}: it has no (String) "
           + "constructor", clazz, e);
       throw exception;
     }
@@ -850,8 +852,8 @@ public class NetUtils {
     StringBuilder hostDetails = new StringBuilder(27);
     hostDetails.append("local host is: ")
         .append(quoteHost(localHost))
-        .append("; ");
-    hostDetails.append("destination host is: ").append(quoteHost(destHost))
+        .append("; ")
+        .append("destination host is: ").append(quoteHost(destHost))
         .append(":")
         .append(destPort).append("; ");
     return hostDetails.toString();

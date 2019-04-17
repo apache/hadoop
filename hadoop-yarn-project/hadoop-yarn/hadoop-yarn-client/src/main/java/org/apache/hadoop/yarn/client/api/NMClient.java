@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.client.api;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -32,6 +33,8 @@ import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.LocalResource;
+import org.apache.hadoop.yarn.api.records.LocalizationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.client.api.impl.NMClientImpl;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -244,7 +247,38 @@ public abstract class NMClient extends AbstractService {
    * @return NodeId of the container on which it is running.
    */
   public NodeId getNodeIdOfStartedContainer(ContainerId containerId) {
+
     return null;
   }
 
+  /**
+   * Localize resources for a container.
+   * @param containerId     the ID of the container
+   * @param nodeId          node Id of the container
+   * @param localResources  resources to localize
+   */
+  @InterfaceStability.Unstable
+  public void localize(ContainerId containerId, NodeId nodeId,
+      Map<String, LocalResource> localResources) throws YarnException,
+      IOException {
+    // do nothing.
+  }
+
+  /**
+   * Get the localization statuses of a container.
+   *
+   * @param containerId   the Id of the container
+   * @param nodeId        node Id of the container
+   *
+   * @return the status of a container.
+   *
+   * @throws YarnException YarnException.
+   * @throws IOException IOException.
+   */
+  @InterfaceStability.Unstable
+  public List<LocalizationStatus> getLocalizationStatuses(
+      ContainerId containerId, NodeId nodeId) throws YarnException,
+      IOException {
+    return null;
+  }
 }

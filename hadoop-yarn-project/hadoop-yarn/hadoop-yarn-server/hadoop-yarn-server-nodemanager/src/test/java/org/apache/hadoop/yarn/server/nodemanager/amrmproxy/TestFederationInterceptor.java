@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +49,8 @@ import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NMToken;
 import org.apache.hadoop.yarn.api.records.NodeReport;
+import org.apache.hadoop.yarn.api.records.PreemptionContainer;
+import org.apache.hadoop.yarn.api.records.PreemptionContract;
 import org.apache.hadoop.yarn.api.records.PreemptionMessage;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -159,6 +163,10 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
 
     // Disable StateStoreFacade cache
     conf.setInt(YarnConfiguration.FEDERATION_CACHE_TIME_TO_LIVE_SECS, 0);
+
+    // Set sub-cluster timeout to 500ms
+    conf.setLong(YarnConfiguration.FEDERATION_AMRMPROXY_SUBCLUSTER_TIMEOUT,
+        500);
 
     return conf;
   }
@@ -568,6 +576,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         interceptor.recover(recoveredDataMap);
 
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        // SC1 should be initialized to be timed out
+        Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
 
         // The first allocate call expects a fail-over exception and re-register
         try {
@@ -741,6 +751,60 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
   }
 
   @Test
+  public void testSubClusterTimeOut() throws Exception {
+    UserGroupInformation ugi =
+        interceptor.getUGIWithToken(interceptor.getAttemptId());
+    ugi.doAs(new PrivilegedExceptionAction<Object>() {
+      @Override
+      public Object run() throws Exception {
+        // Register the application first time
+        RegisterApplicationMasterRequest registerReq =
+            Records.newRecord(RegisterApplicationMasterRequest.class);
+        registerReq.setHost(Integer.toString(testAppId));
+        registerReq.setRpcPort(0);
+        registerReq.setTrackingUrl("");
+        RegisterApplicationMasterResponse registerResponse =
+            interceptor.registerApplicationMaster(registerReq);
+        Assert.assertNotNull(registerResponse);
+        lastResponseId = 0;
+
+        registerSubCluster(SubClusterId.newInstance("SC-1"));
+
+        getContainersAndAssert(1, 1);
+
+        AllocateResponse allocateResponse =
+            interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(2, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(0, interceptor.getTimedOutSCs(true).size());
+
+        // Let all SC timeout (home and SC-1), without an allocate from AM
+        Thread.sleep(800);
+
+        // Should not be considered timeout, because there's no recent AM
+        // heartbeat
+        allocateResponse = interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(2, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(0, interceptor.getTimedOutSCs(true).size());
+
+        // Generate a duplicate heartbeat from AM, so that it won't really
+        // trigger an heartbeat to all SC
+        AllocateRequest allocateRequest =
+            Records.newRecord(AllocateRequest.class);
+        // Set to lastResponseId - 1 so that it will be considered a duplicate
+        // heartbeat and thus not forwarded to all SCs
+        allocateRequest.setResponseId(lastResponseId - 1);
+        interceptor.allocate(allocateRequest);
+
+        // Should be considered timeout
+        allocateResponse = interceptor.generateBaseAllocationResponse();
+        Assert.assertEquals(0, allocateResponse.getNumClusterNodes());
+        Assert.assertEquals(2, interceptor.getTimedOutSCs(true).size());
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testSecondAttempt() throws Exception {
     final RegisterApplicationMasterRequest registerReq =
         Records.newRecord(RegisterApplicationMasterRequest.class);
@@ -803,6 +867,8 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
         int numberOfContainers = 3;
         // Should re-attach secondaries and get the three running containers
         Assert.assertEquals(1, interceptor.getUnmanagedAMPoolSize());
+        // SC1 should be initialized to be timed out
+        Assert.assertEquals(1, interceptor.getTimedOutSCs(true).size());
         Assert.assertEquals(numberOfContainers,
             registerResponse.getContainersFromPreviousAttempts().size());
 
@@ -832,4 +898,74 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     });
   }
 
+  @Test
+  public void testMergeAllocateResponse() {
+    ContainerId cid = ContainerId.newContainerId(attemptId, 0);
+    ContainerStatus cStatus = Records.newRecord(ContainerStatus.class);
+    cStatus.setContainerId(cid);
+    Container container =
+            Container.newInstance(cid, null, null, null, null, null);
+
+
+    AllocateResponse homeResponse = Records.newRecord(AllocateResponse.class);
+    homeResponse.setAllocatedContainers(Collections.singletonList(container));
+    homeResponse.setCompletedContainersStatuses(
+        Collections.singletonList(cStatus));
+    homeResponse.setUpdatedNodes(
+            Collections.singletonList(Records.newRecord(NodeReport.class)));
+    homeResponse.setNMTokens(
+            Collections.singletonList(Records.newRecord(NMToken.class)));
+    homeResponse.setUpdatedContainers(
+            Collections.singletonList(
+                Records.newRecord(UpdatedContainer.class)));
+    homeResponse.setUpdateErrors(Collections
+            .singletonList(Records.newRecord(UpdateContainerError.class)));
+    homeResponse.setAvailableResources(Records.newRecord(Resource.class));
+    homeResponse.setPreemptionMessage(createDummyPreemptionMessage(
+        ContainerId.newContainerId(attemptId, 0)));
+
+    AllocateResponse response = Records.newRecord(AllocateResponse.class);
+    response.setAllocatedContainers(Collections.singletonList(container));
+    response.setCompletedContainersStatuses(Collections.singletonList(cStatus));
+    response.setUpdatedNodes(
+            Collections.singletonList(Records.newRecord(NodeReport.class)));
+    response.setNMTokens(
+            Collections.singletonList(Records.newRecord(NMToken.class)));
+    response.setUpdatedContainers(
+            Collections.singletonList(
+                Records.newRecord(UpdatedContainer.class)));
+    response.setUpdateErrors(Collections
+            .singletonList(Records.newRecord(UpdateContainerError.class)));
+    response.setAvailableResources(Records.newRecord(Resource.class));
+    response.setPreemptionMessage(createDummyPreemptionMessage(
+        ContainerId.newContainerId(attemptId, 1)));
+
+    interceptor.mergeAllocateResponse(homeResponse,
+        response, SubClusterId.newInstance("SC-1"));
+
+    Assert.assertEquals(2,
+        homeResponse.getPreemptionMessage().getContract()
+            .getContainers().size());
+    Assert.assertEquals(2,
+        homeResponse.getAllocatedContainers().size());
+    Assert.assertEquals(2,
+        homeResponse.getUpdatedNodes().size());
+    Assert.assertEquals(2,
+        homeResponse.getCompletedContainersStatuses().size());
+  }
+
+  private PreemptionMessage createDummyPreemptionMessage(
+      ContainerId containerId) {
+    PreemptionMessage preemptionMessage = Records.newRecord(
+        PreemptionMessage.class);
+    PreemptionContainer container = Records.newRecord(
+        PreemptionContainer.class);
+    container.setId(containerId);
+    Set<PreemptionContainer> preemptionContainers = new HashSet<>();
+    preemptionContainers.add(container);
+    PreemptionContract contract = Records.newRecord(PreemptionContract.class);
+    contract.setContainers(preemptionContainers);
+    preemptionMessage.setContract(contract);
+    return preemptionMessage;
+  }
 }

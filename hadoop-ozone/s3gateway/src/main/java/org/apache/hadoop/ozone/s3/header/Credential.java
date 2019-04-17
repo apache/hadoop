@@ -19,7 +19,8 @@ package org.apache.hadoop.ozone.s3.header;
 
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 /**
@@ -29,6 +30,7 @@ import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
  *
  */
 public class Credential {
+  private static final Logger LOG = LoggerFactory.getLogger(Credential.class);
 
   private String accessKeyID;
   private String date;
@@ -54,17 +56,31 @@ public class Credential {
    *
    * @throws OS3Exception
    */
+  @SuppressWarnings("StringSplitter")
   public void parseCredential() throws OS3Exception {
     String[] split = credential.split("/");
-    if (split.length == 5) {
-      accessKeyID = split[0];
-      date = split[1];
-      awsRegion = split[2];
-      awsService = split[3];
-      awsRequest = split[4];
-    } else {
-      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, S3ErrorTable
-          .Resource.HEADER);
+    switch (split.length) {
+    case 5:
+      // Ex: dkjad922329ddnks/20190321/us-west-1/s3/aws4_request
+      accessKeyID = split[0].trim();
+      date = split[1].trim();
+      awsRegion = split[2].trim();
+      awsService = split[3].trim();
+      awsRequest = split[4].trim();
+      return;
+    case 6:
+      // Access id is kerberos principal.
+      // Ex: testuser/om@EXAMPLE.COM/20190321/us-west-1/s3/aws4_request
+      accessKeyID = split[0] + "/" +split[1];
+      date = split[2].trim();
+      awsRegion = split[3].trim();
+      awsService = split[4].trim();
+      awsRequest = split[5].trim();
+      return;
+    default:
+      LOG.error("Credentials not in expected format. credential:{}",
+          credential);
+      throw S3ErrorTable.newError(S3ErrorTable.MALFORMED_HEADER, credential);
     }
   }
 

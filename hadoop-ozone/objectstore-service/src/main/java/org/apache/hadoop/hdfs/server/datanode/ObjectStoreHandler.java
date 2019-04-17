@@ -16,19 +16,24 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import com.sun.jersey.api.container.ContainerFactory;
-import com.sun.jersey.api.core.ApplicationAdapter;
+import java.io.Closeable;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolClientSideTranslatorPB;
-import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.web.ObjectStoreApplication;
@@ -37,22 +42,18 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.netty.ObjectStoreJerseyContainer;
 import org.apache.hadoop.ozone.web.storage.DistributedStorageHandler;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.Map;
-
+import com.sun.jersey.api.container.ContainerFactory;
+import com.sun.jersey.api.core.ApplicationAdapter;
 import static com.sun.jersey.api.core.ResourceConfig.FEATURE_TRACE;
 import static com.sun.jersey.api.core.ResourceConfig.PROPERTY_CONTAINER_REQUEST_FILTERS;
-import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.ozone.OmUtils.getOmAddress;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_TRACE_ENABLED_KEY;
+import org.apache.ratis.protocol.ClientId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Implements object store handling within the DataNode process.  This class is
@@ -65,13 +66,12 @@ public final class ObjectStoreHandler implements Closeable {
       LoggerFactory.getLogger(ObjectStoreHandler.class);
 
   private final ObjectStoreJerseyContainer objectStoreJerseyContainer;
-  private final OzoneManagerProtocolClientSideTranslatorPB
-      ozoneManagerClient;
-  private final StorageContainerLocationProtocolClientSideTranslatorPB
+  private final OzoneManagerProtocol ozoneManagerClient;
+  private final StorageContainerLocationProtocol
       storageContainerLocationClient;
-  private final ScmBlockLocationProtocolClientSideTranslatorPB
-      scmBlockLocationClient;
+
   private final StorageHandler storageHandler;
+  private ClientId clientId = ClientId.randomId();
 
   /**
    * Creates a new ObjectStoreHandler.
@@ -92,20 +92,14 @@ public final class ObjectStoreHandler implements Closeable {
     InetSocketAddress scmAddress =
         getScmAddressForClients(conf);
     this.storageContainerLocationClient =
-        new StorageContainerLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(StorageContainerLocationProtocolPB.class, scmVersion,
-                scmAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
-
-    InetSocketAddress scmBlockAddress =
-        getScmAddressForBlockClients(conf);
-    this.scmBlockLocationClient =
-        new ScmBlockLocationProtocolClientSideTranslatorPB(
-            RPC.getProxy(ScmBlockLocationProtocolPB.class, scmVersion,
-                scmBlockAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+        TracingUtil.createProxy(
+            new StorageContainerLocationProtocolClientSideTranslatorPB(
+                RPC.getProxy(StorageContainerLocationProtocolPB.class,
+                    scmVersion,
+                    scmAddress, UserGroupInformation.getCurrentUser(), conf,
+                    NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf))),
+            StorageContainerLocationProtocol.class, conf);
 
     RPC.setProtocolEngine(conf, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
@@ -113,15 +107,18 @@ public final class ObjectStoreHandler implements Closeable {
         RPC.getProtocolVersion(OzoneManagerProtocolPB.class);
     InetSocketAddress omAddress = getOmAddress(conf);
     this.ozoneManagerClient =
-        new OzoneManagerProtocolClientSideTranslatorPB(
-            RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
-                omAddress, UserGroupInformation.getCurrentUser(), conf,
-                NetUtils.getDefaultSocketFactory(conf),
-                Client.getRpcTimeout(conf)));
+        TracingUtil.createProxy(
+            new OzoneManagerProtocolClientSideTranslatorPB(
+                RPC.getProxy(OzoneManagerProtocolPB.class, omVersion,
+                    omAddress, UserGroupInformation.getCurrentUser(), conf,
+                    NetUtils.getDefaultSocketFactory(conf),
+                    Client.getRpcTimeout(conf)), clientId.toString()),
+            OzoneManagerProtocol.class, conf);
 
     storageHandler = new DistributedStorageHandler(
         new OzoneConfiguration(conf),
-        this.storageContainerLocationClient,
+        TracingUtil.createProxy(storageContainerLocationClient,
+            StorageContainerLocationProtocol.class, conf),
         this.ozoneManagerClient);
     ApplicationAdapter aa =
         new ApplicationAdapter(new ObjectStoreApplication());
@@ -158,7 +155,6 @@ public final class ObjectStoreHandler implements Closeable {
     LOG.info("Closing ObjectStoreHandler.");
     storageHandler.close();
     IOUtils.cleanupWithLogger(LOG, storageContainerLocationClient);
-    IOUtils.cleanupWithLogger(LOG, scmBlockLocationClient);
     IOUtils.cleanupWithLogger(LOG, ozoneManagerClient);
   }
 }

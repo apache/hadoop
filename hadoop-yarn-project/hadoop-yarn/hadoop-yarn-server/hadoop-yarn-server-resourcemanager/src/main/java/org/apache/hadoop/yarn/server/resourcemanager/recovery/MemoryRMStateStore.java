@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
 import java.io.IOException;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -78,6 +80,15 @@ public class MemoryRMStateStore extends RMStateStore {
         state.amrmTokenSecretManagerState == null ? null
             : AMRMTokenSecretManagerState
               .newInstance(state.amrmTokenSecretManagerState);
+    if (state.proxyCAState.getCaCert() != null) {
+      byte[] caCertData = state.proxyCAState.getCaCert().getEncoded();
+      returnState.proxyCAState.setCaCert(caCertData);
+    }
+    if (state.proxyCAState.getCaPrivateKey() != null) {
+      byte[] caPrivateKeyData
+          = state.proxyCAState.getCaPrivateKey().getEncoded();
+      returnState.proxyCAState.setCaPrivateKey(caPrivateKeyData);
+    }
     return returnState;
   }
   
@@ -275,6 +286,13 @@ public class MemoryRMStateStore extends RMStateStore {
     if (planState.isEmpty()) {
       state.getReservationState().remove(planName);
     }
+  }
+
+  @Override
+  protected void storeProxyCACertState(
+      X509Certificate caCert, PrivateKey caPrivateKey) throws Exception {
+    state.getProxyCAState().setCaCert(caCert);
+    state.getProxyCAState().setCaPrivateKey(caPrivateKey);
   }
 
   @Override

@@ -18,7 +18,7 @@
 package org.apache.hadoop.ozone.web.response;
 
 import java.io.IOException;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -68,6 +68,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
   private StorageType storageType;
   private long bytesUsed;
   private long keyCount;
+  private String encryptionKeyName;
 
   /**
    * Constructor for BucketInfo.
@@ -85,7 +86,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    * Default constructor for BucketInfo.
    */
   public BucketInfo() {
-    acls = new LinkedList<OzoneAcl>();
+    acls = new ArrayList<>();
   }
 
   /**
@@ -190,6 +191,15 @@ public class BucketInfo implements Comparable<BucketInfo> {
    */
   public String getCreatedOn() {
     return createdOn;
+  }
+
+
+  public void setEncryptionKeyName(String encryptionKeyName) {
+    this.encryptionKeyName = encryptionKeyName;
+  }
+
+  public String getEncryptionKeyName() {
+    return encryptionKeyName;
   }
 
   /**
@@ -318,7 +328,7 @@ public class BucketInfo implements Comparable<BucketInfo> {
    * for the Json serialization.
    */
   @JsonFilter(BUCKET_INFO)
-  class MixIn {
+  static class MixIn {
 
   }
 

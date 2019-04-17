@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.hdds.server.BaseHttpServer;
 
@@ -33,6 +32,7 @@ public class OzoneManagerHttpServer extends BaseHttpServer {
       throws IOException {
     super(conf, "ozoneManager");
     addServlet("serviceList", "/serviceList", ServiceListJSONServlet.class);
+    addServlet("dbCheckpoint", "/dbCheckpoint", OMDBCheckpointServlet.class);
     getWebAppContext().setAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE, om);
   }
 
@@ -65,11 +65,11 @@ public class OzoneManagerHttpServer extends BaseHttpServer {
   }
 
   @Override protected String getKeytabFile() {
-    return OMConfigKeys.OZONE_OM_KEYTAB_FILE;
+    return OMConfigKeys.OZONE_OM_HTTP_KERBEROS_KEYTAB_FILE;
   }
 
   @Override protected String getSpnegoPrincipal() {
-    return OzoneConfigKeys.OZONE_SCM_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL;
+    return OMConfigKeys.OZONE_OM_HTTP_KERBEROS_PRINCIPAL_KEY;
   }
 
   @Override protected String getEnabledKey() {

@@ -107,9 +107,7 @@ class FlowScanner implements RegionScanner, Closeable {
           YarnConfiguration.APP_FINAL_VALUE_RETENTION_THRESHOLD,
           YarnConfiguration.DEFAULT_APP_FINAL_VALUE_RETENTION_THRESHOLD);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(" batch size=" + batchSize);
-    }
+    LOG.debug(" batch size={}", batchSize);
   }
 
 

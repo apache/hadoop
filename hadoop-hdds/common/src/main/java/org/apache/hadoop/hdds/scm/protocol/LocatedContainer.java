@@ -82,7 +82,7 @@ public final class LocatedContainer {
   /**
    * Returns the nodes that currently host the container.
    *
-   * @return Set<DatanodeInfo> nodes that currently host the container
+   * @return {@code Set<DatanodeInfo>} nodes that currently host the container
    */
   public Set<DatanodeInfo> getLocations() {
     return this.locations;

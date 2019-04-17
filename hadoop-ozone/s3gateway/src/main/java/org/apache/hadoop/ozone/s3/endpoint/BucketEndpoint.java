@@ -21,25 +21,41 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
+import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.Iterator;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.s3.commontypes.KeyMetadata;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteRequest.DeleteObject;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.DeletedObject;
+import org.apache.hadoop.ozone.s3.endpoint.MultiDeleteResponse.Error;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 import org.apache.hadoop.ozone.s3.exception.S3ErrorTable;
+import org.apache.hadoop.ozone.s3.util.ContinueToken;
+import org.apache.hadoop.ozone.s3.util.S3StorageType;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.commons.lang3.StringUtils;
+
+import static org.apache.hadoop.ozone.s3.util.OzoneS3Util.getVolumeName;
+import static org.apache.hadoop.ozone.s3.util.S3Consts.ENCODING_TYPE;
 import org.apache.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,81 +76,132 @@ public class BucketEndpoint extends EndpointBase {
    * for more details.
    */
   @GET
-  public ListObjectResponse list(
+  @SuppressFBWarnings
+  @SuppressWarnings("parameternumber")
+  public Response list(
       @PathParam("bucket") String bucketName,
       @QueryParam("delimiter") String delimiter,
       @QueryParam("encoding-type") String encodingType,
       @QueryParam("marker") String marker,
       @DefaultValue("1000") @QueryParam("max-keys") int maxKeys,
       @QueryParam("prefix") String prefix,
+      @QueryParam("browser") String browser,
+      @QueryParam("continuation-token") String continueToken,
+      @QueryParam("start-after") String startAfter,
       @Context HttpHeaders hh) throws OS3Exception, IOException {
 
-    if (delimiter == null) {
-      delimiter = "/";
+    if (browser != null) {
+      InputStream browserPage = getClass()
+          .getResourceAsStream("/browser.html");
+      return Response.ok(browserPage,
+            MediaType.TEXT_HTML_TYPE)
+            .build();
+
     }
+
     if (prefix == null) {
       prefix = "";
     }
 
     OzoneBucket bucket = getBucket(bucketName);
 
-    Iterator<? extends OzoneKey> ozoneKeyIterator = bucket.listKeys(prefix);
+    Iterator<? extends OzoneKey> ozoneKeyIterator;
+
+    ContinueToken decodedToken =
+        ContinueToken.decodeFromString(continueToken);
+
+    if (startAfter != null && continueToken != null) {
+      // If continuation token and start after both are provided, then we
+      // ignore start After
+      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken.getLastKey());
+    } else if (startAfter != null && continueToken == null) {
+      ozoneKeyIterator = bucket.listKeys(prefix, startAfter);
+    } else if (startAfter == null && continueToken != null){
+      ozoneKeyIterator = bucket.listKeys(prefix, decodedToken.getLastKey());
+    } else {
+      ozoneKeyIterator = bucket.listKeys(prefix);
+    }
+
 
     ListObjectResponse response = new ListObjectResponse();
     response.setDelimiter(delimiter);
     response.setName(bucketName);
     response.setPrefix(prefix);
     response.setMarker("");
-    response.setMaxKeys(1000);
-    response.setEncodingType("url");
+    response.setMaxKeys(maxKeys);
+    response.setEncodingType(ENCODING_TYPE);
     response.setTruncated(false);
+    response.setContinueToken(continueToken);
 
     String prevDir = null;
+    if (continueToken != null) {
+      prevDir = decodedToken.getLastDir();
+    }
+    String lastKey = null;
+    int count = 0;
     while (ozoneKeyIterator.hasNext()) {
       OzoneKey next = ozoneKeyIterator.next();
       String relativeKeyName = next.getName().substring(prefix.length());
 
-      int depth =
-          StringUtils.countMatches(relativeKeyName, delimiter);
+      int depth = StringUtils.countMatches(relativeKeyName, delimiter);
+      if (delimiter != null) {
+        if (depth > 0) {
+          // means key has multiple delimiters in its value.
+          // ex: dir/dir1/dir2, where delimiter is "/" and prefix is dir/
+          String dirName = relativeKeyName.substring(0, relativeKeyName
+              .indexOf(delimiter));
+          if (!dirName.equals(prevDir)) {
+            response.addPrefix(prefix + dirName + delimiter);
+            prevDir = dirName;
+            count++;
+          }
+        } else if (relativeKeyName.endsWith(delimiter)) {
+          // means or key is same as prefix with delimiter at end and ends with
+          // delimiter. ex: dir/, where prefix is dir and delimiter is /
+          response.addPrefix(relativeKeyName);
+          count++;
+        } else {
+          // means our key is matched with prefix if prefix is given and it
+          // does not have any common prefix.
+          addKey(response, next);
+          count++;
+        }
+      } else {
+        addKey(response, next);
+        count++;
+      }
 
-      if (prefix.length() > 0 && !prefix.endsWith(delimiter)
-          && relativeKeyName.length() > 0) {
-        response.addPrefix(prefix + "/");
+      if (count == maxKeys) {
+        lastKey = next.getName();
         break;
       }
-      if (depth > 0) {
-        String dirName = relativeKeyName
-            .substring(0, relativeKeyName.indexOf(delimiter));
-        if (!dirName.equals(prevDir)) {
-          response.addPrefix(
-              prefix + dirName + delimiter);
-          prevDir = dirName;
-        }
-      } else if (relativeKeyName.endsWith(delimiter)) {
-        response.addPrefix(relativeKeyName);
-      } else if (relativeKeyName.length() > 0) {
-        KeyMetadata keyMetadata = new KeyMetadata();
-        keyMetadata.setKey(next.getName());
-        keyMetadata.setSize(next.getDataSize());
-        keyMetadata.setETag("" + next.getModificationTime());
-        keyMetadata.setStorageClass("STANDARD");
-        keyMetadata
-            .setLastModified(Instant.ofEpochMilli(next.getModificationTime()));
-        response.addKey(keyMetadata);
-      }
     }
+
+    response.setKeyCount(count);
+
+    if (count < maxKeys) {
+      response.setTruncated(false);
+    } else if(ozoneKeyIterator.hasNext()) {
+      response.setTruncated(true);
+      ContinueToken nextToken = new ContinueToken(lastKey, prevDir);
+      response.setNextToken(nextToken.encodeToString());
+    } else {
+      response.setTruncated(false);
+    }
+
     response.setKeyCount(
         response.getCommonPrefixes().size() + response.getContents().size());
-    return response;
+    return Response.ok(response).build();
   }
 
   @PUT
   public Response put(@PathParam("bucket") String bucketName, @Context
       HttpHeaders httpHeaders) throws IOException, OS3Exception {
 
-    String userName = parseUsername(httpHeaders);
+    String volumeName = getVolumeName(getAuthenticationHeaderParser().
+        getAccessKeyID());
 
-    String location = createS3Bucket(userName, bucketName);
+    String location = createS3Bucket(volumeName, bucketName);
 
     LOG.info("Location is {}", location);
     return Response.status(HttpStatus.SC_OK).header("Location", location)
@@ -177,15 +244,13 @@ public class BucketEndpoint extends EndpointBase {
 
     try {
       deleteS3Bucket(bucketName);
-    } catch (IOException ex) {
-      if (ex.getMessage().contains("BUCKET_NOT_EMPTY")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .BUCKET_NOT_EMPTY, S3ErrorTable.Resource.BUCKET);
-        throw os3Exception;
-      } else if (ex.getMessage().contains("BUCKET_NOT_FOUND")) {
-        OS3Exception os3Exception = S3ErrorTable.newError(S3ErrorTable
-            .NO_SUCH_BUCKET, S3ErrorTable.Resource.BUCKET);
-        throw os3Exception;
+    } catch (OMException ex) {
+      if (ex.getResult() == ResultCodes.BUCKET_NOT_EMPTY) {
+        throw S3ErrorTable.newError(S3ErrorTable
+            .BUCKET_NOT_EMPTY, bucketName);
+      } else if (ex.getResult() == ResultCodes.BUCKET_NOT_FOUND) {
+        throw S3ErrorTable.newError(S3ErrorTable
+            .NO_SUCH_BUCKET, bucketName);
       } else {
         throw ex;
       }
@@ -195,5 +260,60 @@ public class BucketEndpoint extends EndpointBase {
         .status(HttpStatus.SC_NO_CONTENT)
         .build();
 
+  }
+
+  /**
+   * Implement multi delete.
+   * <p>
+   * see: https://docs.aws.amazon
+   * .com/AmazonS3/latest/API/multiobjectdeleteapi.html
+   */
+  @POST
+  @Produces(MediaType.APPLICATION_XML)
+  public MultiDeleteResponse multiDelete(@PathParam("bucket") String bucketName,
+      @QueryParam("delete") String delete,
+      MultiDeleteRequest request) throws OS3Exception, IOException {
+    OzoneBucket bucket = getBucket(bucketName);
+    MultiDeleteResponse result = new MultiDeleteResponse();
+    if (request.getObjects() != null) {
+      for (DeleteObject keyToDelete : request.getObjects()) {
+        try {
+          bucket.deleteKey(keyToDelete.getKey());
+
+          if (!request.isQuiet()) {
+            result.addDeleted(new DeletedObject(keyToDelete.getKey()));
+          }
+        } catch (OMException ex) {
+          if (ex.getResult() != ResultCodes.KEY_NOT_FOUND) {
+            result.addError(
+                new Error(keyToDelete.getKey(), "InternalError",
+                    ex.getMessage()));
+          } else if (!request.isQuiet()) {
+            result.addDeleted(new DeletedObject(keyToDelete.getKey()));
+          }
+        } catch (Exception ex) {
+          result.addError(
+              new Error(keyToDelete.getKey(), "InternalError",
+                  ex.getMessage()));
+        }
+      }
+    }
+    return result;
+  }
+
+  private void addKey(ListObjectResponse response, OzoneKey next) {
+    KeyMetadata keyMetadata = new KeyMetadata();
+    keyMetadata.setKey(next.getName());
+    keyMetadata.setSize(next.getDataSize());
+    keyMetadata.setETag("" + next.getModificationTime());
+    if (next.getReplicationType().toString().equals(ReplicationType
+        .STAND_ALONE.toString())) {
+      keyMetadata.setStorageClass(S3StorageType.REDUCED_REDUNDANCY.toString());
+    } else {
+      keyMetadata.setStorageClass(S3StorageType.STANDARD.toString());
+    }
+    keyMetadata.setLastModified(Instant.ofEpochMilli(
+        next.getModificationTime()));
+    response.addKey(keyMetadata);
   }
 }

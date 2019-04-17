@@ -139,6 +139,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
    * @throws IllegalArgumentException If there is no EventHandler for
    *                                  the specific event.
    */
+  @Override
   public <PAYLOAD, EVENT_TYPE extends Event<PAYLOAD>> void fireEvent(
       EVENT_TYPE event, PAYLOAD payload) {
 
@@ -219,7 +220,9 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       try {
         Thread.sleep(100);
       } catch (InterruptedException e) {
-        e.printStackTrace();
+        LOG.warn("Interrupted exception while sleeping.", e);
+        // We ignore this exception for time being. Review? should we
+        // propogate it back to caller?
       }
 
       if (Time.now() > currentTime + timeout) {
@@ -229,7 +232,7 @@ public class EventQueue implements EventPublisher, AutoCloseable {
       }
     }
   }
-
+  @Override
   public void close() {
 
     isRunning = false;

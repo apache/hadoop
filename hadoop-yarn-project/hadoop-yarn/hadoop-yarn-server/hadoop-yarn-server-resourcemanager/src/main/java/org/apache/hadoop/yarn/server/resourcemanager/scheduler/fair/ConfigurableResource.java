@@ -25,7 +25,6 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-import org.apache.hadoop.yarn.util.resource.Resources;
 
 /**
  * A {@code ConfigurableResource} object represents an entity that is used to
@@ -53,7 +52,7 @@ public class ConfigurableResource {
    * @param value the value to use for all resources
    */
   ConfigurableResource(long value) {
-    this(Resources.createResourceWithSameValue(value));
+    this(ResourceUtils.createResourceWithSameValue(value));
   }
 
   public ConfigurableResource(Resource resource) {
@@ -63,7 +62,7 @@ public class ConfigurableResource {
 
   private static double[] getOneHundredPercentArray() {
     double[] resourcePercentages =
-        new double[ResourceUtils.getNumberOfKnownResourceTypes()];
+        new double[ResourceUtils.getNumberOfCountableResourceTypes()];
     Arrays.fill(resourcePercentages, 1.0);
 
     return resourcePercentages;

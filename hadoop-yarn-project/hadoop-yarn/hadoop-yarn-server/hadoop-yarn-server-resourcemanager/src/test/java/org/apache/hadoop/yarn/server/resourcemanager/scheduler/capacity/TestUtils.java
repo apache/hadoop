@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.*;
 import org.apache.hadoop.yarn.event.Dispatcher;
@@ -55,14 +55,15 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestUtils {
-  private static final Log LOG = LogFactory.getLog(TestUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestUtils.class);
 
   /**
    * Get a mock {@link RMContext} for use in test cases.
@@ -111,7 +112,7 @@ public class TestUtils {
       }
     });
     
-    when(nlm.getResourceByLabel(any(String.class), any(Resource.class)))
+    when(nlm.getResourceByLabel(any(), any(Resource.class)))
         .thenAnswer(new Answer<Resource>() {
           @Override public Resource answer(InvocationOnMock invocation)
               throws Throwable {

@@ -40,6 +40,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.HashMap;
 
 /**
  * This class tests container report with DN container state info.
@@ -93,7 +94,7 @@ public class TestContainerReportWithKeys {
     OzoneOutputStream key =
         objectStore.getVolume(volumeName).getBucket(bucketName)
             .createKey(keyName, keySize, ReplicationType.STAND_ALONE,
-                ReplicationFactor.ONE);
+                ReplicationFactor.ONE, new HashMap<>());
     String dataString = RandomStringUtils.randomAlphabetic(keySize);
     key.write(dataString.getBytes());
     key.close();
@@ -104,6 +105,7 @@ public class TestContainerReportWithKeys {
         .setKeyName(keyName)
         .setType(HddsProtos.ReplicationType.STAND_ALONE)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setDataSize(keySize)
+        .setRefreshPipeline(true)
         .build();
 
 

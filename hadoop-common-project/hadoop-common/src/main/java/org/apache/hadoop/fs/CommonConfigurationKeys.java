@@ -21,6 +21,8 @@ package org.apache.hadoop.fs;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.http.lib.StaticUserWebFilter;
+import org.apache.hadoop.net.DomainNameResolver;
+import org.apache.hadoop.net.DNSDomainNameResolver;
 
 /** 
  * This class contains constants for configuration keys used
@@ -393,4 +395,10 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final String ZK_RETRY_INTERVAL_MS =
       ZK_PREFIX + "retry-interval-ms";
   public static final int    ZK_RETRY_INTERVAL_MS_DEFAULT = 1000;
+  /** Default domain name resolver for hadoop to use. */
+  public static final String HADOOP_DOMAINNAME_RESOLVER_IMPL =
+      "hadoop.domainname.resolver.impl";
+  public static final Class<? extends DomainNameResolver>
+      HADOOP_DOMAINNAME_RESOLVER_IMPL_DEFAULT =
+      DNSDomainNameResolver.class;
 }

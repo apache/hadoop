@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.om.address=ozoneManager
+OZONE-SITE.XML_ozone.om.address=om
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=true
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
@@ -59,7 +59,7 @@ LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
 LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
 LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
-LOG4J2.PROPERTIES_appender.rolling.fileName =${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
 LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
 LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n

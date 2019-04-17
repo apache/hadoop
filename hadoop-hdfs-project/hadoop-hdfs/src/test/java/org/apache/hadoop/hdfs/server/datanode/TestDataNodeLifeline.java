@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY;
@@ -54,7 +55,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.apache.hadoop.test.GenericTestUtils;
 
 import org.apache.log4j.Level;
@@ -169,7 +169,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class),
+            any(),
             anyBoolean(),
             any(SlowPeerReports.class),
             any(SlowDiskReports.class));
@@ -184,7 +184,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class));
+            any());
 
     // While waiting on the latch for the expected number of lifeline messages,
     // poll DataNode tracking information.  Thanks to the lifeline, we expect
@@ -196,6 +196,10 @@ public class TestDataNodeLifeline {
           namesystem.getNumDeadDataNodes());
       assertEquals("Expect DataNode not marked stale due to lifeline.", 0,
           namesystem.getNumStaleDataNodes());
+      // add a new volume on the next heartbeat
+      cluster.getDataNodes().get(0).reconfigurePropertyImpl(
+          DFS_DATANODE_DATA_DIR_KEY,
+          cluster.getDataDirectory().concat("/data-new"));
     }
 
     // Verify that we did in fact call the lifeline RPC.
@@ -207,7 +211,7 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any(VolumeFailureSummary.class));
+        any());
 
     // Also verify lifeline call through metrics.  We expect at least
     // numLifelines, guaranteed by waiting on the latch.  There is a small
@@ -234,7 +238,7 @@ public class TestDataNodeLifeline {
             anyInt(),
             anyInt(),
             anyInt(),
-            any(VolumeFailureSummary.class),
+            any(),
             anyBoolean(),
             any(SlowPeerReports.class),
             any(SlowDiskReports.class));
@@ -260,7 +264,7 @@ public class TestDataNodeLifeline {
         anyInt(),
         anyInt(),
         anyInt(),
-        any(VolumeFailureSummary.class));
+        any());
 
     // Also verify no lifeline calls through metrics.
     assertEquals("Expect metrics to count no lifeline calls.", 0,

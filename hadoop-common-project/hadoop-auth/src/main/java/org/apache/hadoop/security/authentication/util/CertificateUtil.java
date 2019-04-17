@@ -19,6 +19,7 @@ package org.apache.hadoop.security.authentication.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -45,7 +46,7 @@ public class CertificateUtil {
     try {
       CertificateFactory fact = CertificateFactory.getInstance("X.509");
       ByteArrayInputStream is = new ByteArrayInputStream(
-          fullPem.getBytes("UTF8"));
+          fullPem.getBytes(StandardCharsets.UTF_8));
 
       X509Certificate cer = (X509Certificate) fact.generateCertificate(is);
       key = cer.getPublicKey();
@@ -58,8 +59,6 @@ public class CertificateUtil {
         message = "CertificateException - PEM may be corrupt";
       }
       throw new ServletException(message, ce);
-    } catch (UnsupportedEncodingException uee) {
-      throw new ServletException(uee);
     }
     return (RSAPublicKey) key;
   }

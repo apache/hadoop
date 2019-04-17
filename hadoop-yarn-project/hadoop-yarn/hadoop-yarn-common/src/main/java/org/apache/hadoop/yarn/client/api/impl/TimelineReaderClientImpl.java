@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -53,8 +53,8 @@ import static org.apache.hadoop.yarn.util.StringHelper.PATH_JOINER;
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
 public class TimelineReaderClientImpl extends TimelineReaderClient {
-  private static final Log LOG =
-      LogFactory.getLog(TimelineReaderClientImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TimelineReaderClientImpl.class);
 
   private static final String RESOURCE_URI_STR_V2 = "/ws/v2/timeline/";
 
@@ -94,6 +94,8 @@ public class TimelineReaderClientImpl extends TimelineReaderClient {
         conf, timelineReaderWebAppAddress, RESOURCE_URI_STR_V2);
     clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID,
         YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
+    LOG.info("Initialized TimelineReader URI=" + baseUri + ", clusterId="
+        + clusterId);
     super.serviceInit(conf);
   }
 

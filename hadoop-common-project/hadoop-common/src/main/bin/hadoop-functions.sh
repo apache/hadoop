@@ -585,7 +585,7 @@ function hadoop_bootstrap
 
   #
   # short-cuts. vendors may redefine these as well, preferably
-  # in hadoop-layouts.sh
+  # in hadoop-layout.sh
   #
   HADOOP_COMMON_DIR=${HADOOP_COMMON_DIR:-"share/hadoop/common"}
   HADOOP_COMMON_LIB_JARS_DIR=${HADOOP_COMMON_LIB_JARS_DIR:-"share/hadoop/common/lib"}
@@ -2364,6 +2364,10 @@ function hadoop_verify_user_perm
   declare command=$2
   declare uvar
 
+  if [[ ${command} =~ \. ]]; then
+    return 1
+  fi
+
   uvar=$(hadoop_build_custom_subcmd_var "${program}" "${command}" USER)
 
   if [[ -n ${!uvar} ]]; then
@@ -2392,6 +2396,10 @@ function hadoop_need_reexec
   # we've already been re-execed, bail
 
   if [[ "${HADOOP_REEXECED_CMD}" = true ]]; then
+    return 1
+  fi
+
+  if [[ ${command} =~ \. ]]; then
     return 1
   fi
 
@@ -2428,6 +2436,10 @@ function hadoop_subcommand_opts
   declare ucommand
 
   if [[ -z "${program}" || -z "${command}" ]]; then
+    return 1
+  fi
+
+  if [[ ${command} =~ \. ]]; then
     return 1
   fi
 
@@ -2518,7 +2530,7 @@ function hadoop_do_classpath_subcommand
   fi
 }
 
-## @description  generic shell script opton parser.  sets
+## @description  generic shell script option parser.  sets
 ## @description  HADOOP_PARSE_COUNTER to set number the
 ## @description  caller should shift
 ## @audience     private

@@ -463,6 +463,7 @@ public class TopCLI extends YarnCLI {
       LOG.error("Unable to parse options", e);
       return 1;
     }
+    createAndStartYarnClient();
     setAppsHeader();
 
     Thread keyboardMonitor = new KeyboardMonitor();
@@ -870,43 +871,47 @@ public class TopCLI extends YarnCLI {
     String currentTime = DateFormatUtils.ISO_8601_EXTENDED_TIME_FORMAT
         .format(now);
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format(
-      "YARN top - %s, up %s, %d active users, queue(s): %s%n", currentTime,
-      uptimeStr, queueMetrics.activeUsers, queue), terminalWidth, true));
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format(
+            "YARN top - %s, up %s, %d active users, queue(s): %s%n",
+            currentTime, uptimeStr, queueMetrics.activeUsers, queue),
+            terminalWidth, true));
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format(
-      "NodeManager(s): %d total, %d active, %d unhealthy, %d decommissioned,"
-          + " %d lost, %d rebooted%n", nodes.totalNodes, nodes.runningNodes,
-      nodes.unhealthyNodes, nodes.decommissionedNodes, nodes.lostNodes,
-      nodes.rebootedNodes), terminalWidth, true));
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format(
+            "NodeManager(s)"
+                + ": %d total, %d active, %d unhealthy, %d decommissioned,"
+                + " %d lost, %d rebooted%n",
+            nodes.totalNodes, nodes.runningNodes, nodes.unhealthyNodes,
+            nodes.decommissionedNodes, nodes.lostNodes,
+            nodes.rebootedNodes), terminalWidth, true));
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format(
-        "Queue(s) Applications: %d running, %d submitted, %d pending,"
-            + " %d completed, %d killed, %d failed%n", queueMetrics.appsRunning,
-        queueMetrics.appsSubmitted, queueMetrics.appsPending,
-        queueMetrics.appsCompleted, queueMetrics.appsKilled,
-        queueMetrics.appsFailed), terminalWidth, true));
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format(
+            "Queue(s) Applications: %d running, %d submitted, %d pending,"
+                + " %d completed, %d killed, %d failed%n",
+            queueMetrics.appsRunning, queueMetrics.appsSubmitted,
+            queueMetrics.appsPending, queueMetrics.appsCompleted,
+            queueMetrics.appsKilled, queueMetrics.appsFailed), terminalWidth,
+            true));
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format("Queue(s) Mem(GB): %d available,"
-        + " %d allocated, %d pending, %d reserved%n",
-      queueMetrics.availableMemoryGB, queueMetrics.allocatedMemoryGB,
-      queueMetrics.pendingMemoryGB, queueMetrics.reservedMemoryGB),
-      terminalWidth, true));
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format("Queue(s) Mem(GB): %d available,"
+            + " %d allocated, %d pending, %d reserved%n",
+            queueMetrics.availableMemoryGB, queueMetrics.allocatedMemoryGB,
+            queueMetrics.pendingMemoryGB, queueMetrics.reservedMemoryGB),
+            terminalWidth, true));
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format("Queue(s) VCores: %d available,"
-        + " %d allocated, %d pending, %d reserved%n",
-      queueMetrics.availableVCores, queueMetrics.allocatedVCores,
-      queueMetrics.pendingVCores, queueMetrics.reservedVCores), terminalWidth,
-      true));
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format("Queue(s) VCores: %d available,"
+            + " %d allocated, %d pending, %d reserved%n",
+            queueMetrics.availableVCores, queueMetrics.allocatedVCores,
+            queueMetrics.pendingVCores, queueMetrics.reservedVCores),
+            terminalWidth, true));
 
-    ret.append(CLEAR_LINE);
-    ret.append(limitLineLength(String.format(
-        "Queue(s) Containers: %d allocated, %d pending, %d reserved%n",
+    ret.append(CLEAR_LINE)
+        .append(limitLineLength(String.format(
+            "Queue(s) Containers: %d allocated, %d pending, %d reserved%n",
             queueMetrics.allocatedContainers, queueMetrics.pendingContainers,
             queueMetrics.reservedContainers), terminalWidth, true));
     return ret.toString();

@@ -38,7 +38,7 @@
   <body>
     <links position="left">
       <item name="Wiki" href="http://wiki.apache.org/hadoop" />
-      <item name="git" href="https://git-wip-us.apache.org/repos/asf/hadoop.git" />
+      <item name="git" href="https://gitbox.apache.org/repos/asf/hadoop.git" />
     </links>
 
     <breadcrumbs position="left">
@@ -62,6 +62,7 @@
 
     <menu name="Common" inherit="top">
       <item name="CLI Mini Cluster" href="hadoop-project-dist/hadoop-common/CLIMiniCluster.html"/>
+      <item name="Fair Call Queue" href="hadoop-project-dist/hadoop-common/FairCallQueue.html"/>
       <item name="Native Libraries" href="hadoop-project-dist/hadoop-common/NativeLibraries.html"/>
       <item name="Proxy User" href="hadoop-project-dist/hadoop-common/Superusers.html"/>
       <item name="Rack Awareness" href="hadoop-project-dist/hadoop-common/RackAwareness.html"/>

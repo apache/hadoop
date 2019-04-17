@@ -336,6 +336,11 @@ public class NamenodeBeanMetrics
   }
 
   @Override
+  public int getCorruptFilesCount() {
+    return 0;
+  }
+
+  @Override
   public int getThreads() {
     return ManagementFactory.getThreadMXBean().getThreadCount();
   }
@@ -705,5 +710,10 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumEncryptionZones() {
     return 0;
+  }
+
+  @Override
+  public String getVerifyECWithTopologyResult() {
+    return null;
   }
 }

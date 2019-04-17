@@ -262,7 +262,7 @@ public class AbstractPreemptableResourceCalculator {
   private void resetCapacity(Resource clusterResource,
       Collection<TempQueuePerPartition> queues, boolean ignoreGuar) {
     Resource activeCap = Resource.newInstance(0, 0);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
 
     if (ignoreGuar) {
       for (TempQueuePerPartition q : queues) {

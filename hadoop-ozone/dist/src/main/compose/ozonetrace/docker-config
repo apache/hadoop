@@ -1,0 +1,84 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.scm.names=scm
+OZONE-SITE.XML_ozone.enabled=true
+OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
+OZONE-SITE.XML_ozone.scm.block.client.address=scm
+OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
+OZONE-SITE.XML_ozone.scm.client.address=scm
+OZONE-SITE.XML_ozone.replication=1
+OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
+
+HDFS-SITE.XML_rpc.metrics.quantile.enable=true
+HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
+
+JAEGER_SAMPLER_PARAM=1
+JAEGER_SAMPLER_TYPE=const
+JAEGER_AGENT_HOST=jaeger
+
+LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
+LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
+LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
+LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR
+LOG4J.PROPERTIES_log4j.logger.http.requests.s3gateway=INFO,s3gatewayrequestlog
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog=org.apache.hadoop.http.HttpRequestLogAppender
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.Filename=/tmp/jetty-s3gateway-yyyy_mm_dd.log
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.RetainDays=3
+
+#Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
+#BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm
+
+#LOG4J2.PROPERTIES_* are for Ozone Audit Logging
+LOG4J2.PROPERTIES_monitorInterval=30
+LOG4J2.PROPERTIES_filter=read,write
+LOG4J2.PROPERTIES_filter.read.type=MarkerFilter
+LOG4J2.PROPERTIES_filter.read.marker=READ
+LOG4J2.PROPERTIES_filter.read.onMatch=DENY
+LOG4J2.PROPERTIES_filter.read.onMismatch=NEUTRAL
+LOG4J2.PROPERTIES_filter.write.type=MarkerFilter
+LOG4J2.PROPERTIES_filter.write.marker=WRITE
+LOG4J2.PROPERTIES_filter.write.onMatch=NEUTRAL
+LOG4J2.PROPERTIES_filter.write.onMismatch=NEUTRAL
+LOG4J2.PROPERTIES_appenders=console, rolling
+LOG4J2.PROPERTIES_appender.console.type=Console
+LOG4J2.PROPERTIES_appender.console.name=STDOUT
+LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
+LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
+LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
+LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
+LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
+LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
+LOG4J2.PROPERTIES_appender.rolling.policies.type=Policies
+LOG4J2.PROPERTIES_appender.rolling.policies.time.type=TimeBasedTriggeringPolicy
+LOG4J2.PROPERTIES_appender.rolling.policies.time.interval=86400
+LOG4J2.PROPERTIES_appender.rolling.policies.size.type=SizeBasedTriggeringPolicy
+LOG4J2.PROPERTIES_appender.rolling.policies.size.size=64MB
+LOG4J2.PROPERTIES_loggers=audit
+LOG4J2.PROPERTIES_logger.audit.type=AsyncLogger
+LOG4J2.PROPERTIES_logger.audit.name=OMAudit
+LOG4J2.PROPERTIES_logger.audit.level=INFO
+LOG4J2.PROPERTIES_logger.audit.appenderRefs=rolling
+LOG4J2.PROPERTIES_logger.audit.appenderRef.file.ref=RollingFile
+LOG4J2.PROPERTIES_rootLogger.level=INFO
+LOG4J2.PROPERTIES_rootLogger.appenderRefs=stdout
+LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT

@@ -17,7 +17,8 @@
  */
 
 package org.apache.hadoop.yarn.applications.distributedshell;
-
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
@@ -30,6 +31,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.io.UncheckedIOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
@@ -38,6 +40,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import com.google.common.base.Supplier;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -52,6 +55,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.ServerSocketUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.JarFinder;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -62,6 +66,7 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
@@ -173,7 +178,10 @@ public class TestDistributedShell {
         true);
     conf.setBoolean(YarnConfiguration.RM_SYSTEM_METRICS_PUBLISHER_ENABLED,
           true);
-
+    conf.setBoolean(
+        YarnConfiguration.OPPORTUNISTIC_CONTAINER_ALLOCATION_ENABLED, true);
+    conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+        YarnConfiguration.PROCESSOR_RM_PLACEMENT_CONSTRAINTS_HANDLER);
     // ATS version specific settings
     if (timelineVersion == 1.0f) {
       conf.setFloat(YarnConfiguration.TIMELINE_SERVICE_VERSION, 1.0f);
@@ -776,7 +784,7 @@ public class TestDistributedShell {
 
   }
 
-  private String getSleepCommand(int sec) {
+  protected String getSleepCommand(int sec) {
     // Windows doesn't have a sleep command, ping -n does the trick
     return Shell.WINDOWS ? "ping -n " + (sec + 1) + " 127.0.0.1 >nul"
         : "sleep " + sec;
@@ -1470,6 +1478,97 @@ public class TestDistributedShell {
 
   @Test
   @TimelineVersion(2.0f)
+  public void testDSShellWithEnforceExecutionType() throws Exception {
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    try {
+      String[] args = {
+          "--jar",
+          APPMASTER_JAR,
+          "--num_containers",
+          "2",
+          "--master_memory",
+          "512",
+          "--master_vcores",
+          "2",
+          "--container_memory",
+          "128",
+          "--container_vcores",
+          "1",
+          "--shell_command",
+          "date",
+          "--container_type",
+          "OPPORTUNISTIC",
+          "--enforce_execution_type"
+      };
+      client.init(args);
+      final AtomicBoolean result = new AtomicBoolean(false);
+      Thread t = new Thread() {
+        public void run() {
+          try {
+            result.set(client.run());
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        }
+      };
+      t.start();
+
+      YarnClient yarnClient = YarnClient.createYarnClient();
+      yarnClient.init(new Configuration(yarnCluster.getConfig()));
+      yarnClient.start();
+      waitForContainersLaunch(yarnClient, 2);
+      List<ApplicationReport> apps = yarnClient.getApplications();
+      ApplicationReport appReport = apps.get(0);
+      ApplicationId appId = appReport.getApplicationId();
+      List<ApplicationAttemptReport> appAttempts =
+          yarnClient.getApplicationAttempts(appId);
+      ApplicationAttemptReport appAttemptReport = appAttempts.get(0);
+      ApplicationAttemptId appAttemptId =
+          appAttemptReport.getApplicationAttemptId();
+      List<ContainerReport> containers =
+          yarnClient.getContainers(appAttemptId);
+      // we should get two containers.
+      Assert.assertEquals(2, containers.size());
+      ContainerId amContainerId = appAttemptReport.getAMContainerId();
+      for (ContainerReport container : containers) {
+        if (!container.getContainerId().equals(amContainerId)) {
+          Assert.assertEquals(container.getExecutionType(),
+              ExecutionType.OPPORTUNISTIC);
+        }
+      }
+    } catch (Exception e) {
+      Assert.fail("Job execution with enforce execution type failed.");
+    }
+  }
+
+  private void waitForContainersLaunch(YarnClient client,
+      int nContainers) throws Exception {
+    GenericTestUtils.waitFor(new Supplier<Boolean>() {
+      public Boolean get() {
+        try {
+          List<ApplicationReport> apps = client.getApplications();
+          if (apps == null || apps.isEmpty()) {
+            return false;
+          }
+          ApplicationId appId = apps.get(0).getApplicationId();
+          List<ApplicationAttemptReport> appAttempts =
+              client.getApplicationAttempts(appId);
+          if (appAttempts == null || appAttempts.isEmpty()) {
+            return false;
+          }
+          ApplicationAttemptId attemptId =
+              appAttempts.get(0).getApplicationAttemptId();
+          List<ContainerReport> containers = client.getContainers(attemptId);
+          return (containers.size() == nContainers);
+        } catch (Exception e) {
+          return false;
+        }
+      }
+    }, 10, 60000);
+  }
+
+  @Test
+  @TimelineVersion(2.0f)
   public void testDistributedShellWithResources() throws Exception {
     doTestDistributedShellWithResources(false);
   }
@@ -1629,5 +1728,122 @@ public class TestDistributedShell {
     Client client = new Client(new Configuration(yarnCluster.getConfig()));
     client.init(args);
     client.run();
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testDistributedShellNonExistentQueue()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--queue",
+        "non-existent-queue"
+    };
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    client.run();
+  }
+
+  @Test
+  public void testDistributedShellWithSingleFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "./src/test/resources/a.txt",
+        "--shell_args",
+        "a.txt"
+    };
+
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    assertTrue("Client exited with an error", client.run());
+  }
+
+  @Test
+  public void testDistributedShellWithMultiFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "./src/test/resources/a.txt,./src/test/resources/b.txt",
+        "--shell_args",
+        "a.txt b.txt"
+    };
+
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    assertTrue("Client exited with an error", client.run());
+  }
+
+  @Test(expected=UncheckedIOException.class)
+  public void testDistributedShellWithNonExistentFileLocalization()
+      throws Exception {
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "type" : "cat",
+        "--localize_files",
+        "/non/existing/path/file.txt",
+        "--shell_args",
+        "file.txt"
+    };
+
+    Client client = new Client(new Configuration(yarnCluster.getConfig()));
+    client.init(args);
+    client.run();
+  }
+
+
+  @Test
+  public void testDistributedShellCleanup()
+      throws Exception {
+    String appName = "DistributedShellCleanup";
+    String[] args = {
+        "--jar",
+        APPMASTER_JAR,
+        "--num_containers",
+        "1",
+        "--shell_command",
+        Shell.WINDOWS ? "dir" : "ls",
+        "--appname",
+        appName
+    };
+    Configuration config = new Configuration(yarnCluster.getConfig());
+    Client client = new Client(config);
+    client.init(args);
+    client.run();
+    ApplicationId appId = client.getAppId();
+    String relativePath =
+        ApplicationMaster.getRelativePath(appName, appId.toString(), "");
+    FileSystem fs1 = FileSystem.get(config);
+    Path path = new Path(fs1.getHomeDirectory(), relativePath);
+
+    GenericTestUtils.waitFor(() -> {
+      try {
+        return !fs1.exists(path);
+      } catch (IOException e) {
+        return false;
+      }
+    }, 10, 60000);
+
+    assertFalse("Distributed Shell Cleanup failed", fs1.exists(path));
   }
 }

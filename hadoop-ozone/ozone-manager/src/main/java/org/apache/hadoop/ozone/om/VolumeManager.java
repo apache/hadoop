@@ -16,9 +16,13 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,7 +36,17 @@ public interface VolumeManager {
    * Create a new volume.
    * @param args - Volume args to create a volume
    */
-  void createVolume(OmVolumeArgs args) throws IOException;
+  VolumeList createVolume(OmVolumeArgs args)
+      throws IOException;
+
+  /**
+   * Apply Create Volume changes to OM DB.
+   * @param omVolumeArgs
+   * @param volumeList
+   * @throws IOException
+   */
+  void applyCreateVolume(OmVolumeArgs omVolumeArgs,
+      VolumeList volumeList) throws IOException;
 
   /**
    * Changes the owner of a volume.
@@ -41,7 +55,20 @@ public interface VolumeManager {
    * @param owner - Name of the owner.
    * @throws IOException
    */
-  void setOwner(String volume, String owner) throws IOException;
+  OmVolumeOwnerChangeResponse setOwner(String volume, String owner)
+      throws IOException;
+
+  /**
+   * Apply Set Owner changes to OM DB.
+   * @param oldOwner
+   * @param oldOwnerVolumeList
+   * @param newOwnerVolumeList
+   * @param newOwnerVolumeArgs
+   * @throws IOException
+   */
+  void applySetOwner(String oldOwner, VolumeList oldOwnerVolumeList,
+      VolumeList newOwnerVolumeList, OmVolumeArgs newOwnerVolumeArgs)
+      throws IOException;
 
   /**
    * Changes the Quota on a volume.
@@ -50,7 +77,14 @@ public interface VolumeManager {
    * @param quota - Quota in bytes.
    * @throws IOException
    */
-  void setQuota(String volume, long quota) throws IOException;
+  OmVolumeArgs setQuota(String volume, long quota) throws IOException;
+
+  /**
+   * Apply Set Quota changes to OM DB.
+   * @param omVolumeArgs
+   * @throws IOException
+   */
+  void applySetQuota(OmVolumeArgs omVolumeArgs) throws IOException;
 
   /**
    * Gets the volume information.
@@ -66,7 +100,17 @@ public interface VolumeManager {
    * @param volume - Name of the volume.
    * @throws IOException
    */
-  void deleteVolume(String volume) throws IOException;
+  OmDeleteVolumeResponse deleteVolume(String volume) throws IOException;
+
+  /**
+   * Apply Delete Volume changes to OM DB.
+   * @param volume
+   * @param owner
+   * @param newVolumeList
+   * @throws IOException
+   */
+  void applyDeleteVolume(String volume, String owner,
+      VolumeList newVolumeList) throws IOException;
 
   /**
    * Checks if the specified user with a role can access this volume.
@@ -96,5 +140,5 @@ public interface VolumeManager {
    * @throws IOException
    */
   List<OmVolumeArgs> listVolumes(String userName, String prefix,
-                                 String startKey, int maxKeys) throws IOException;
+      String startKey, int maxKeys) throws IOException;
 }

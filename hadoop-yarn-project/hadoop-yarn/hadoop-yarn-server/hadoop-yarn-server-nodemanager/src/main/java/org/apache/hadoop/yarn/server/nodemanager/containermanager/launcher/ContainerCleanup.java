@@ -29,10 +29,12 @@ import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
+import org.apache.hadoop.yarn.server.nodemanager.DeletionService;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerDiagnosticsUpdateEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
@@ -100,19 +102,14 @@ public class ContainerCleanup implements Runnable {
           + " No cleanup needed to be done");
       return;
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Marking container " + containerIdStr + " as inactive");
-    }
+    LOG.debug("Marking container {} as inactive", containerIdStr);
     // this should ensure that if the container process has not launched
     // by this time, it will never be launched
     exec.deactivateContainer(containerId);
     Path pidFilePath = launch.getPidFilePath();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting pid for container {} to kill"
-              + " from pid file {}", containerIdStr, pidFilePath != null ?
-          pidFilePath : "null");
-    }
-
+    LOG.debug("Getting pid for container {} to kill"
+        + " from pid file {}", containerIdStr, pidFilePath != null ?
+        pidFilePath : "null");
     // however the container process may have already started
     try {
 
@@ -145,11 +142,12 @@ public class ContainerCleanup implements Runnable {
           // Increasing YarnConfiguration.NM_PROCESS_KILL_WAIT_MS
           // reduces the likelihood of this race condition and process leak.
         }
-        // The Docker container may not have fully started, reap the container.
-        if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
-            container.getLaunchContext().getEnvironment())) {
-          reapDockerContainerNoPid(user);
-        }
+      }
+
+      // rm container in docker
+      if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
+          container.getLaunchContext().getEnvironment())) {
+        rmDockerContainerDelayed();
       }
     } catch (Exception e) {
       String message =
@@ -181,22 +179,27 @@ public class ContainerCleanup implements Runnable {
     }
   }
 
+  private void rmDockerContainerDelayed() {
+    DeletionService deletionService = context.getDeletionService();
+    DockerContainerDeletionTask deletionTask =
+        new DockerContainerDeletionTask(deletionService, container.getUser(),
+            container.getContainerId().toString());
+    deletionService.delete(deletionTask);
+  }
+
   private void signalProcess(String processId, String user,
       String containerIdStr) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sending signal to pid " + processId + " as user " + user
-          + " for container " + containerIdStr);
-    }
+    LOG.debug("Sending signal to pid {} as user {} for container {}",
+        processId, user, containerIdStr);
     final ContainerExecutor.Signal signal =
         sleepDelayBeforeSigKill > 0 ? ContainerExecutor.Signal.TERM :
             ContainerExecutor.Signal.KILL;
 
     boolean result = sendSignal(user, processId, signal);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sent signal " + signal + " to pid " + processId + " as user "
-          + user + " for container " + containerIdStr + ", result="
-          + (result ? "success" : "failed"));
-    }
+    LOG.debug("Sent signal {} to pid {} as user {} for container {},"
+        + " result={}", signal, processId, user, containerIdStr,
+        (result ? "success" : "failed"));
+
     if (sleepDelayBeforeSigKill > 0) {
       new ContainerExecutor.DelayedProcessKiller(container, user, processId,
           sleepDelayBeforeSigKill, ContainerExecutor.Signal.KILL, exec).start();
@@ -221,9 +224,7 @@ public class ContainerCleanup implements Runnable {
             .setContainer(container)
             .setUser(container.getUser())
             .build());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Sent signal to docker container " + containerIdStr
-          + " as user " + user + ", result=" + (result ? "success" : "failed"));
-    }
+    LOG.debug("Sent signal to docker container {} as user {}, result={}",
+        containerIdStr, user, (result ? "success" : "failed"));
   }
 }

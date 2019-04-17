@@ -116,8 +116,8 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
       .append(getState() == ResourceState.LOCALIZED
           ? getLocalPath() + "," + getSize()
           : "pending").append(",[");
+    this.readLock.lock();
     try {
-      this.readLock.lock();
       for (ContainerId c : ref) {
         sb.append("(").append(c.toString()).append(")");
       }
@@ -187,26 +187,21 @@ public class LocalizedResource implements EventHandler<ResourceEvent> {
 
   @Override
   public void handle(ResourceEvent event) {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
-
       Path resourcePath = event.getLocalResourceRequest().getPath();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Processing " + resourcePath + " of type " + event.getType());
-      }
+      LOG.debug("Processing {} of type {}", resourcePath, event.getType());
       ResourceState oldState = this.stateMachine.getCurrentState();
       ResourceState newState = null;
       try {
         newState = this.stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
-        LOG.warn("Can't handle this event at current state", e);
+        LOG.error("Can't handle this event at current state", e);
       }
       if (newState != null && oldState != newState) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Resource " + resourcePath + (localPath != null ?
-              "(->" + localPath + ")": "") + " size : " + getSize()
-              + " transitioned from " + oldState + " to " + newState);
-        }
+        LOG.debug("Resource {}{} size : {} transitioned from {} to {}",
+            resourcePath, (localPath != null ? "(->" + localPath + ")": ""),
+            getSize(), oldState, newState);
       }
     } finally {
       this.writeLock.unlock();

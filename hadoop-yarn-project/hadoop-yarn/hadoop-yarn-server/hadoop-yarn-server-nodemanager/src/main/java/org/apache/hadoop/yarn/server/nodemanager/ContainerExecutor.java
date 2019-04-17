@@ -38,7 +38,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
-import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,6 +58,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.runtime.ContainerExecutionException;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerPrepareContext;
 import org.apache.hadoop.yarn.server.nodemanager.util.NodeManagerHardwareUtils;
+import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerExecContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerLivenessContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReacquisitionContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
@@ -81,6 +81,7 @@ public abstract class ContainerExecutor implements Configurable {
   private static final Logger LOG =
        LoggerFactory.getLogger(ContainerExecutor.class);
   protected static final String WILDCARD = "*";
+  public static final String TOKEN_FILE_NAME_FMT = "%s.tokens";
 
   /**
    * The permissions to use when creating the launch script.
@@ -259,6 +260,18 @@ public abstract class ContainerExecutor implements Configurable {
       throws IOException;
 
   /**
+   * Update cluster information inside container.
+   *
+   * @param ctx ContainerRuntimeContext
+   * @param user Owner of application
+   * @param appId YARN application ID
+   * @param spec Service Specification
+   * @throws IOException if there is a failure while writing spec to disk
+   */
+  public abstract void updateYarnSysFS(Context ctx, String user,
+      String appId, String spec) throws IOException;
+
+  /**
    * Recover an already existing container. This is a blocking call and returns
    * only when the container exits.  Note that the container must have been
    * activated prior to this call.
@@ -418,16 +431,6 @@ public abstract class ContainerExecutor implements Configurable {
           sb.env(env.getKey(), env.getValue());
         }
       }
-      // Add the whitelist vars to the environment.  Do this after writing
-      // environment variables so they are not written twice.
-      for(String var : whitelistVars) {
-        if (!environment.containsKey(var)) {
-          String val = getNMEnvVar(var);
-          if (val != null) {
-            environment.put(var, val);
-          }
-        }
-      }
     }
 
     if (resources != null) {
@@ -556,8 +559,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @return the path of the pid-file for the given containerId.
    */
   protected Path getPidFilePath(ContainerId containerId) {
+    readLock.lock();
     try {
-      readLock.lock();
       return (this.pidFiles.get(containerId));
     } finally {
       readLock.unlock();
@@ -707,9 +710,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @return true if the container is active
    */
   protected boolean isContainerActive(ContainerId containerId) {
+    readLock.lock();
     try {
-      readLock.lock();
-
       return (this.pidFiles.containsKey(containerId));
     } finally {
       readLock.unlock();
@@ -729,8 +731,8 @@ public abstract class ContainerExecutor implements Configurable {
    * of the launched process
    */
   public void activateContainer(ContainerId containerId, Path pidFilePath) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.pidFiles.put(containerId, pidFilePath);
     } finally {
       writeLock.unlock();
@@ -765,8 +767,8 @@ public abstract class ContainerExecutor implements Configurable {
    * @param containerId the container ID
    */
   public void deactivateContainer(ContainerId containerId) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       this.pidFiles.remove(containerId);
     } finally {
       writeLock.unlock();
@@ -916,5 +918,10 @@ public abstract class ContainerExecutor implements Configurable {
       }
     }
     return symLinks;
+  }
+
+  public String getExposedPorts(Container container)
+      throws ContainerExecutionException {
+    return null;
   }
 }

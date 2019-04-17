@@ -470,23 +470,23 @@ public class Diff<K, E extends Diff.Element<K>> {
    * <pre>
    * 1. For (c, 0) in the posterior diff, check the element in this diff:
    * 1.1 (c', 0)  in this diff: impossible
-   * 1.2 (0, d')  in this diff: put in c-list --> (c, d')
+   * 1.2 (0, d')  in this diff: put in c-list --&gt; (c, d')
    * 1.3 (c', d') in this diff: impossible
-   * 1.4 (0, 0)   in this diff: put in c-list --> (c, 0)
+   * 1.4 (0, 0)   in this diff: put in c-list --&gt; (c, 0)
    * This is the same logic as create(E).
    * 
    * 2. For (0, d) in the posterior diff,
-   * 2.1 (c', 0)  in this diff: remove from c-list --> (0, 0)
+   * 2.1 (c', 0)  in this diff: remove from c-list --&gt; (0, 0)
    * 2.2 (0, d')  in this diff: impossible
-   * 2.3 (c', d') in this diff: remove from c-list --> (0, d')
-   * 2.4 (0, 0)   in this diff: put in d-list --> (0, d)
+   * 2.3 (c', d') in this diff: remove from c-list --&gt; (0, d')
+   * 2.4 (0, 0)   in this diff: put in d-list --&gt; (0, d)
    * This is the same logic as delete(E).
    * 
    * 3. For (c, d) in the posterior diff,
-   * 3.1 (c', 0)  in this diff: replace the element in c-list --> (c, 0)
+   * 3.1 (c', 0)  in this diff: replace the element in c-list --&gt; (c, 0)
    * 3.2 (0, d')  in this diff: impossible
-   * 3.3 (c', d') in this diff: replace the element in c-list --> (c, d')
-   * 3.4 (0, 0)   in this diff: put in c-list and d-list --> (c, d)
+   * 3.3 (c', d') in this diff: replace the element in c-list --&gt; (c, d')
+   * 3.4 (0, 0)   in this diff: put in c-list and d-list --&gt; (c, d)
    * This is the same logic as modify(E, E).
    * </pre>
    * 

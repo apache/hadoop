@@ -20,14 +20,18 @@ package org.apache.hadoop.yarn.util.resource;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
+import org.apache.hadoop.yarn.api.records.impl.LightWeightResource;
 import org.apache.hadoop.yarn.conf.ConfigurationProvider;
 import org.apache.hadoop.yarn.conf.ConfigurationProviderFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.util.UnitsConversionUtil;
@@ -60,6 +64,7 @@ public class ResourceUtils {
   public static final String TAGS = ".tags";
   public static final String MINIMUM_ALLOCATION = ".minimum-allocation";
   public static final String MAXIMUM_ALLOCATION = ".maximum-allocation";
+  public static final String EXTERNAL_VOLUME_RESOURCE_TAG = "system:csi-volume";
 
   private static final String MEMORY = ResourceInformation.MEMORY_MB.getName();
   private static final String VCORES = ResourceInformation.VCORES.getName();
@@ -70,14 +75,18 @@ public class ResourceUtils {
       "^(((\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?\\.)*"
           + "\\p{Alnum}([\\p{Alnum}-]*\\p{Alnum})?)/)?\\p{Alpha}([\\w.-]*)$");
 
+  private final static String RES_PATTERN = "^[^=]+=\\d+\\s?\\w*$";
+
   private static volatile boolean initializedResources = false;
   private static final Map<String, Integer> RESOURCE_NAME_TO_INDEX =
       new ConcurrentHashMap<String, Integer>();
   private static volatile Map<String, ResourceInformation> resourceTypes;
+  private static volatile Map<String, ResourceInformation> nonCountableResourceTypes;
   private static volatile ResourceInformation[] resourceTypesArray;
   private static volatile boolean initializedNodeResources = false;
   private static volatile Map<String, ResourceInformation> readOnlyNodeResources;
   private static volatile int numKnownResourceTypes = -1;
+  private static volatile int numNonCountableResourceTypes = -1;
 
   static final Logger LOG = LoggerFactory.getLogger(ResourceUtils.class);
 
@@ -129,20 +138,17 @@ public class ResourceUtils {
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
     if (!res.containsKey(MEMORY)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding resource type - name = " + MEMORY + ", units = "
-            + ResourceInformation.MEMORY_MB.getUnits() + ", type = "
-            + ResourceTypes.COUNTABLE);
-      }
+      LOG.debug("Adding resource type - name = {}, units = {}, type = {}",
+          MEMORY, ResourceInformation.MEMORY_MB.getUnits(),
+          ResourceTypes.COUNTABLE);
       ri = ResourceInformation.newInstance(MEMORY,
           ResourceInformation.MEMORY_MB.getUnits());
       res.put(MEMORY, ri);
     }
     if (!res.containsKey(VCORES)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Adding resource type - name = " + VCORES
-            + ", units = , type = " + ResourceTypes.COUNTABLE);
-      }
+      LOG.debug("Adding resource type - name = {}, units = {}, type = {}",
+          VCORES, ResourceInformation.VCORES.getUnits(),
+          ResourceTypes.COUNTABLE);
       ri = ResourceInformation.newInstance(VCORES);
       res.put(VCORES, ri);
     }
@@ -180,9 +186,9 @@ public class ResourceUtils {
       String resourceTypesKey, String schedulerKey, long schedulerDefault) {
     long value = conf.getLong(resourceTypesKey, -1L);
     if (value == -1) {
-      LOG.debug("Mandatory Resource '" + resourceTypesKey + "' is not "
+      LOG.debug("Mandatory Resource '{}' is not "
           + "configured in resource-types config file. Setting allocation "
-          + "specified using '" + schedulerKey + "'");
+          + "specified using '{}'", resourceTypesKey, schedulerKey);
       value = conf.getLong(schedulerKey, schedulerDefault);
     }
     return value;
@@ -290,15 +296,18 @@ public class ResourceUtils {
   public static void initializeResourcesFromResourceInformationMap(
       Map<String, ResourceInformation> resourceInformationMap) {
     resourceTypes = Collections.unmodifiableMap(resourceInformationMap);
+    nonCountableResourceTypes = new HashMap<>();
     updateKnownResources();
     updateResourceTypeIndex();
     initializedResources = true;
     numKnownResourceTypes = resourceTypes.size();
+    numNonCountableResourceTypes = nonCountableResourceTypes.size();
   }
 
   private static void updateKnownResources() {
     // Update resource names.
     resourceTypesArray = new ResourceInformation[resourceTypes.size()];
+    List<ResourceInformation> nonCountableResources = new ArrayList<>();
 
     int index = 2;
     for (ResourceInformation resInfo : resourceTypes.values()) {
@@ -309,9 +318,21 @@ public class ResourceUtils {
         resourceTypesArray[1] = ResourceInformation
             .newInstance(resourceTypes.get(VCORES));
       } else {
+        if (resInfo.getTags() != null && resInfo.getTags()
+            .contains(EXTERNAL_VOLUME_RESOURCE_TAG)) {
+          nonCountableResources.add(resInfo);
+          continue;
+        }
         resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
         index++;
       }
+    }
+
+    // Add all non-countable resource types to the end of the resource array.
+    for(ResourceInformation resInfo: nonCountableResources) {
+      resourceTypesArray[index] = ResourceInformation.newInstance(resInfo);
+      nonCountableResourceTypes.put(resInfo.getName(), resInfo);
+      index++;
     }
   }
 
@@ -355,6 +376,13 @@ public class ResourceUtils {
     return numKnownResourceTypes;
   }
 
+  public static int getNumberOfCountableResourceTypes() {
+    if (numKnownResourceTypes < 0) {
+      initializeResourceTypesIfNeeded();
+    }
+    return numKnownResourceTypes - numNonCountableResourceTypes;
+  }
+
   private static Map<String, ResourceInformation> getResourceTypes(
       Configuration conf) {
     return getResourceTypes(conf,
@@ -383,6 +411,7 @@ public class ResourceUtils {
       }
     }
     numKnownResourceTypes = resourceTypes.size();
+    numNonCountableResourceTypes = nonCountableResourceTypes.size();
   }
 
   private static Map<String, ResourceInformation> getResourceTypes(
@@ -418,9 +447,7 @@ public class ResourceUtils {
       Configuration conf) {
     try {
       InputStream ris = getConfInputStream(resourceFile, conf);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Found " + resourceFile + ", adding to configuration");
-      }
+      LOG.debug("Found {}, adding to configuration", resourceFile);
       conf.addResource(ris);
     } catch (FileNotFoundException fe) {
       LOG.info("Unable to find '" + resourceFile + "'.");
@@ -543,10 +570,8 @@ public class ResourceUtils {
       }
       nodeResources.get(resourceType).setValue(resourceValue);
       nodeResources.get(resourceType).setUnits(units);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting value for resource type " + resourceType + " to "
-            + resourceValue + " with units " + units);
-      }
+      LOG.debug("Setting value for resource type {} to {} with units {}",
+          resourceType, resourceValue, units);
     }
   }
 
@@ -749,5 +774,109 @@ public class ResourceUtils {
     }
 
     return info;
+  }
+
+  /**
+   * Return a new {@link Resource} instance with all resource values
+   * initialized to {@code value}.
+   * @param value the value to use for all resources
+   * @return a new {@link Resource} instance
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static Resource createResourceWithSameValue(long value) {
+    LightWeightResource res = new LightWeightResource(value,
+            Long.valueOf(value).intValue());
+    int numberOfResources = getNumberOfKnownResourceTypes();
+    for (int i = 2; i < numberOfResources; i++) {
+      res.setResourceValue(i, value);
+    }
+
+    return res;
+  }
+
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public static Resource createResourceFromString(
+          String resourceStr,
+          List<ResourceTypeInfo> resourceTypeInfos) {
+    Map<String, Long> typeToValue = parseResourcesString(resourceStr);
+    validateResourceTypes(typeToValue.keySet(), resourceTypeInfos);
+    Resource resource = Resource.newInstance(0, 0);
+    for (Entry<String, Long> entry : typeToValue.entrySet()) {
+      resource.setResourceValue(entry.getKey(), entry.getValue());
+    }
+    return resource;
+  }
+
+  private static Map<String, Long> parseResourcesString(String resourcesStr) {
+    Map<String, Long> resources = new HashMap<>();
+    String[] pairs = resourcesStr.trim().split(",");
+    for (String resource : pairs) {
+      resource = resource.trim();
+      if (!resource.matches(RES_PATTERN)) {
+        throw new IllegalArgumentException("\"" + resource + "\" is not a "
+                + "valid resource type/amount pair. "
+                + "Please provide key=amount pairs separated by commas.");
+      }
+      String[] splits = resource.split("=");
+      String key = splits[0], value = splits[1];
+      String units = getUnits(value);
+
+      String valueWithoutUnit = value.substring(0,
+              value.length()- units.length()).trim();
+      long resourceValue = Long.parseLong(valueWithoutUnit);
+
+      // Convert commandline unit to standard YARN unit.
+      if (units.equals("M") || units.equals("m")) {
+        units = "Mi";
+      } else if (units.equals("G") || units.equals("g")) {
+        units = "Gi";
+      } else if (units.isEmpty()) {
+        // do nothing;
+      } else {
+        throw new IllegalArgumentException("Acceptable units are M/G or empty");
+      }
+
+      // special handle memory-mb and memory
+      if (key.equals(ResourceInformation.MEMORY_URI)) {
+        if (!units.isEmpty()) {
+          resourceValue = UnitsConversionUtil.convert(units, "Mi",
+                  resourceValue);
+        }
+      }
+
+      if (key.equals("memory")) {
+        key = ResourceInformation.MEMORY_URI;
+        resourceValue = UnitsConversionUtil.convert(units, "Mi",
+                resourceValue);
+      }
+
+      // special handle gpu
+      if (key.equals("gpu")) {
+        key = ResourceInformation.GPU_URI;
+      }
+
+      // special handle fpga
+      if (key.equals("fpga")) {
+        key = ResourceInformation.FPGA_URI;
+      }
+
+      resources.put(key, resourceValue);
+    }
+    return resources;
+  }
+
+  private static void validateResourceTypes(
+          Iterable<String> resourceNames,
+          List<ResourceTypeInfo> resourceTypeInfos)
+          throws ResourceNotFoundException {
+    for (String resourceName : resourceNames) {
+      if (!resourceTypeInfos.stream().anyMatch(
+          e -> e.getName().equals(resourceName))) {
+        throw new ResourceNotFoundException(
+                "Unknown resource: " + resourceName);
+      }
+    }
   }
 }

@@ -390,7 +390,6 @@ public class KDiag extends Configured implements Tool, Closeable {
       validateKinitExecutable();
       validateJAAS(jaas);
       validateNTPConf();
-
       if (checkShortName) {
         validateShortName();
       }
@@ -462,8 +461,8 @@ public class KDiag extends Configured implements Tool, Closeable {
       KerberosName kn = new KerberosName(principal);
       String result = kn.getShortName();
       if (nonSimplePattern.matcher(result).find()) {
-        warn(CAT_KERBEROS, principal + " short name: " + result
-                + " still contains @ or /");
+        warn(CAT_KERBEROS, principal + " short name: " + result +
+                " still contains @ or /");
       }
     } catch (IOException e) {
       throw new KerberosDiagsFailure(CAT_KERBEROS, e,

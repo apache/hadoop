@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.s3.endpoint;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -32,6 +33,7 @@ import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
 
 import static java.net.HttpURLConnection.HTTP_NOT_FOUND;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -69,9 +71,9 @@ public class TestObjectHead {
     //GIVEN
     String value = RandomStringUtils.randomAlphanumeric(32);
     OzoneOutputStream out = bucket.createKey("key1",
-        value.getBytes().length, ReplicationType.STAND_ALONE,
-        ReplicationFactor.ONE);
-    out.write(value.getBytes());
+        value.getBytes(UTF_8).length, ReplicationType.STAND_ALONE,
+        ReplicationFactor.ONE, new HashMap<>());
+    out.write(value.getBytes(UTF_8));
     out.close();
 
     //WHEN
@@ -79,7 +81,7 @@ public class TestObjectHead {
 
     //THEN
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(value.getBytes().length,
+    Assert.assertEquals(value.getBytes(UTF_8).length,
         Long.parseLong(response.getHeaderString("Content-Length")));
 
     DateTimeFormatter.RFC_1123_DATE_TIME
@@ -91,7 +93,8 @@ public class TestObjectHead {
   public void testHeadFailByBadName() throws Exception {
     //Head an object that doesn't exist.
     try {
-      keyEndpoint.head(bucketName, "badKeyName");
+      Response response =  keyEndpoint.head(bucketName, "badKeyName");
+      Assert.assertEquals(404, response.getStatus());
     } catch (OS3Exception ex) {
       Assert.assertTrue(ex.getCode().contains("NoSuchObject"));
       Assert.assertTrue(ex.getErrorMessage().contains("object does not exist"));

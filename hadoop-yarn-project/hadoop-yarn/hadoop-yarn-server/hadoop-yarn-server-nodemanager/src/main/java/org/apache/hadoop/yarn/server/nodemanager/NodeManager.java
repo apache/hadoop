@@ -52,6 +52,7 @@ import org.apache.hadoop.yarn.server.api.protocolrecords.LogAggregationReport;
 import org.apache.hadoop.yarn.server.api.records.AppCollectorData;
 import org.apache.hadoop.yarn.server.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.server.nodemanager.collectormanager.NMCollectorService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServices;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.ContainerManagerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.Application;
@@ -199,11 +200,8 @@ public class NodeManager extends CompositeService
                 + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Attributes is enabled"
-          + " with provider class as : "
-          + attributesProvider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Attributes is enabled with provider class"
+        + " as : {}", attributesProvider.getClass());
     return attributesProvider;
   }
 
@@ -237,10 +235,8 @@ public class NodeManager extends CompositeService
             "Failed to create NodeLabelsProvider : " + e.getMessage(), e);
       }
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Distributed Node Labels is enabled"
-          + " with provider class as : " + provider.getClass().toString());
-    }
+    LOG.debug("Distributed Node Labels is enabled"
+        + " with provider class as : {}", provider.getClass());
     return provider;
   }
 
@@ -616,14 +612,10 @@ public class NodeManager extends CompositeService
           && !ApplicationState.FINISHED.equals(app.getApplicationState())) {
         registeringCollectors.putIfAbsent(entry.getKey(), entry.getValue());
         AppCollectorData data = entry.getValue();
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(entry.getKey() + " : " + data.getCollectorAddr() + "@<"
-              + data.getRMIdentifier() + ", " + data.getVersion() + ">");
-        }
+        LOG.debug("{} : {}@<{}, {}>", entry.getKey(), data.getCollectorAddr(),
+            data.getRMIdentifier(), data.getVersion());
       } else {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Remove collector data for done app " + entry.getKey());
-        }
+        LOG.debug("Remove collector data for done app {}", entry.getKey());
       }
     }
     knownCollectors.clear();
@@ -683,6 +675,8 @@ public class NodeManager extends CompositeService
     private ResourcePluginManager resourcePluginManager;
 
     private NMLogAggregationStatusTracker nmLogAggregationStatusTracker;
+
+    private AuxServices auxServices;
 
     public NMContext(NMContainerTokenSecretManager containerTokenSecretManager,
         NMTokenSecretManagerInNM nmTokenSecretManager,
@@ -933,6 +927,16 @@ public class NodeManager extends CompositeService
     @Override
     public NMLogAggregationStatusTracker getNMLogAggregationStatusTracker() {
       return nmLogAggregationStatusTracker;
+    }
+
+    @Override
+    public void setAuxServices(AuxServices auxServices) {
+      this.auxServices = auxServices;
+    }
+
+    @Override
+    public AuxServices getAuxServices() {
+      return this.auxServices;
     }
   }
 

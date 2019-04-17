@@ -139,6 +139,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       INVOCATION_CREATE_NON_RECURSIVE,
       INVOCATION_DELETE,
       INVOCATION_EXISTS,
+      INVOCATION_GET_DELEGATION_TOKEN,
       INVOCATION_GET_FILE_CHECKSUM,
       INVOCATION_GET_FILE_STATUS,
       INVOCATION_GLOB_STATUS,
@@ -159,6 +160,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       OBJECT_PUT_BYTES,
       OBJECT_PUT_REQUESTS,
       OBJECT_PUT_REQUESTS_COMPLETED,
+      OBJECT_SELECT_REQUESTS,
+      STREAM_READ_VERSION_MISMATCHES,
       STREAM_WRITE_FAILURES,
       STREAM_WRITE_BLOCK_UPLOADS,
       STREAM_WRITE_BLOCK_UPLOADS_COMMITTED,
@@ -181,7 +184,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_INITIALIZATION,
       S3GUARD_METADATASTORE_RETRY,
       S3GUARD_METADATASTORE_THROTTLED,
-      STORE_IO_THROTTLED
+      STORE_IO_THROTTLED,
+      DELEGATION_TOKENS_ISSUED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {
@@ -548,7 +552,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
    * Create a stream input statistics instance.
    * @return the new instance
    */
-  InputStreamStatistics newInputStreamStatistics() {
+  public InputStreamStatistics newInputStreamStatistics() {
     return new InputStreamStatistics();
   }
 
@@ -591,6 +595,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     streamReadsIncomplete.incr(statistics.readsIncomplete);
     streamBytesReadInClose.incr(statistics.bytesReadInClose);
     streamBytesDiscardedInAbort.incr(statistics.bytesDiscardedInAbort);
+    incrementCounter(STREAM_READ_VERSION_MISMATCHES,
+        statistics.versionMismatches.get());
   }
 
   @Override
@@ -636,6 +642,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     public long bytesDiscardedInAbort;
     public long policySetCount;
     public long inputPolicy;
+    /** This is atomic so that it can be passed as a reference. */
+    private final AtomicLong versionMismatches = new AtomicLong(0);
 
     private InputStreamStatistics() {
     }
@@ -761,6 +769,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
     }
 
     /**
+     * Get a reference to the version mismatch counter.
+     * @return a counter which can be incremented.
+     */
+    public AtomicLong getVersionMismatchCounter() {
+      return versionMismatches;
+    }
+
+    /**
      * String operator describes all the current statistics.
      * <b>Important: there are no guarantees as to the stability
      * of this value.</b>
@@ -793,6 +809,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       sb.append(", BytesDiscardedInAbort=").append(bytesDiscardedInAbort);
       sb.append(", InputPolicy=").append(inputPolicy);
       sb.append(", InputPolicySetCount=").append(policySetCount);
+      sb.append(", versionMismatches=").append(versionMismatches.get());
       sb.append('}');
       return sb.toString();
     }
@@ -1101,6 +1118,30 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
   }
 
   /**
+   * Create a delegation token statistics instance.
+   * @return an instance of delegation token statistics
+   */
+  public DelegationTokenStatistics newDelegationTokenStatistics() {
+    return new DelegationTokenStatistics();
+  }
+
+  /**
+   * Instrumentation exported to S3A Delegation Token support.
+   */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
+  public final class DelegationTokenStatistics {
+
+    private DelegationTokenStatistics() {
+    }
+
+    /** A token has been issued. */
+    public void tokenIssued() {
+      incrementCounter(DELEGATION_TOKENS_ISSUED, 1);
+    }
+  }
+
+    /**
    * Copy all the metrics to a map of (name, long-value).
    * @return a map of the metrics
    */

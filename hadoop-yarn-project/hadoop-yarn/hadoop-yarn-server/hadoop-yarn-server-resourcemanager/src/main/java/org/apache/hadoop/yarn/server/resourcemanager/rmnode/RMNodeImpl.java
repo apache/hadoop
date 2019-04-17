@@ -35,8 +35,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.collections.keyvalue.DefaultMapEntry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.net.Node;
@@ -103,7 +104,8 @@ import com.google.common.annotations.VisibleForTesting;
 @SuppressWarnings("unchecked")
 public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
-  private static final Log LOG = LogFactory.getLog(RMNodeImpl.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMNodeImpl.class);
 
   private static final RecordFactory recordFactory = RecordFactoryProvider
       .getRecordFactory(null);
@@ -124,6 +126,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Snapshot of total resources before receiving decommissioning command */
   private volatile Resource originalTotalCapability;
   private volatile Resource totalCapability;
+  private volatile boolean updatedCapability = false;
   private final Node node;
 
   private String healthReport;
@@ -176,6 +179,14 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       new ArrayList<ApplicationId>();
   
   private final Map<ContainerId, Container> toBeUpdatedContainers =
+      new HashMap<>();
+
+  /*
+   * Because the Docker container's Ip, Port Mapping and other properties
+   * are generated after the container is launched, need to update the
+   * container property information to the applications in the RM.
+   */
+  private final Map<ContainerId, ContainerStatus> updatedExistContainers =
       new HashMap<>();
 
   // NOTE: This is required for backward compatibility.
@@ -447,6 +458,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   @Override
+  public boolean isUpdatedCapability() {
+    return this.updatedCapability;
+  }
+
+  @Override
+  public void resetUpdatedCapability() {
+    this.updatedCapability = false;
+  }
+
+  @Override
   public String getRackName() {
     return node.getNetworkLocation();
   }
@@ -659,9 +680,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   }
 
   public void handle(RMNodeEvent event) {
-    LOG.debug("Processing " + event.getNodeId() + " of type " + event.getType());
+    LOG.debug("Processing {} of type {}", event.getNodeId(), event.getType());
+    writeLock.lock();
     try {
-      writeLock.lock();
       NodeState oldState = getState();
       try {
          stateMachine.doTransition(event.getType(), event);
@@ -804,11 +825,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
   }
   
-  private static void updateNodeResourceFromEvent(RMNodeImpl rmNode, 
-     RMNodeResourceUpdateEvent event){
-      ResourceOption resourceOption = event.getResourceOption();
-      // Set resource on RMNode
-      rmNode.totalCapability = resourceOption.getResource();
+  private static void updateNodeResourceFromEvent(RMNodeImpl rmNode,
+      RMNodeResourceUpdateEvent event){
+    ResourceOption resourceOption = event.getResourceOption();
+    // Set resource on RMNode
+    rmNode.totalCapability = resourceOption.getResource();
+    rmNode.updatedCapability = true;
   }
 
   private static NodeHealthStatus updateRMNodeFromStatusEvents(
@@ -1371,6 +1393,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         new ArrayList<ContainerStatus>();
     List<ContainerStatus> newlyCompletedContainers =
         new ArrayList<ContainerStatus>();
+    List<Map.Entry<ApplicationId, ContainerStatus>> needUpdateContainers =
+        new ArrayList<Map.Entry<ApplicationId, ContainerStatus>>();
     int numRemoteRunningContainers = 0;
     for (ContainerStatus remoteContainer : containerStatuses) {
       ContainerId containerId = remoteContainer.getContainerId();
@@ -1393,11 +1417,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
             + " no further processing");
         continue;
       } else if (!runningApplications.contains(containerAppId)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Container " + containerId
-              + " is the first container get launched for application "
-              + containerAppId);
-        }
+        LOG.debug("Container {} is the first container get launched for"
+            + " application {}", containerId, containerAppId);
         handleRunningAppOnNode(this, context, containerAppId, nodeId);
       }
 
@@ -1411,6 +1432,26 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
           // Unregister from containerAllocationExpirer.
           containerAllocationExpirer
               .unregister(new AllocationExpirationInfo(containerId));
+        }
+
+        // Check if you need to update the exist container status
+        boolean needUpdate = false;
+        if (!updatedExistContainers.containsKey(containerId)) {
+          needUpdate = true;
+        } else {
+          ContainerStatus pContainer = updatedExistContainers.get(containerId);
+          if (null != pContainer) {
+            String preExposedPorts = pContainer.getExposedPorts();
+            if (null != preExposedPorts &&
+                !preExposedPorts.equals(remoteContainer.getExposedPorts())) {
+              needUpdate = true;
+            }
+          }
+        }
+        if (needUpdate) {
+          updatedExistContainers.put(containerId, remoteContainer);
+          needUpdateContainers.add(new DefaultMapEntry(containerAppId,
+              remoteContainer));
         }
       } else {
         // A finished container
@@ -1434,9 +1475,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     }
 
     if (newlyLaunchedContainers.size() != 0
-        || newlyCompletedContainers.size() != 0) {
+        || newlyCompletedContainers.size() != 0
+        || needUpdateContainers.size() != 0) {
       nodeUpdateQueue.add(new UpdatedContainerInfo(newlyLaunchedContainers,
-          newlyCompletedContainers));
+          newlyCompletedContainers, needUpdateContainers));
     }
   }
 
@@ -1482,9 +1524,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
 
   @Override
   public List<Container> pullNewlyIncreasedContainers() {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       if (nmReportedIncreasedContainers.isEmpty()) {
         return Collections.emptyList();
       } else {

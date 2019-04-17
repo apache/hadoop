@@ -122,7 +122,7 @@ The above config allows the service AM to be retried a maximum of 10 times.
 | Service-Level Config Name | Description |
 | ------------ | ------------- |
 |yarn.service.am-restart.max-attempts | Max number of times to start the service AM, after which the service will be killed (default 20).|
-|yarn.service.am-resource.memory | Memory size in GB for the service AM (default 1024).|
+|yarn.service.am-resource.memory | Memory size in MB for the service AM (default 1024).|
 |yarn.service.am.java.opts | Additional JVM options for the service AM (default " -Xmx768m" will be appended to any JVM opts that do not specify -Xmx).|
 |yarn.service.container-recovery.timeout.ms | Timeout in milliseconds after which a newly started service AM releases all the containers of previous AM attempts which are not yet recovered from the RM (default 120000, i.e. 2 minutes).|
 |yarn.service.failure-count-reset.window | Interval in seconds after which the container failure counts that will be evaluated for the per-component `yarn.service.container-failure-per-component.threshold` and `yarn.service.node-blacklist.threshold` are reset (default 21600, i.e. 6 hours).|
@@ -147,6 +147,7 @@ Component-level service AM configuration properties can be specified either in t
 |yarn.service.container-health-threshold.poll-frequency-secs | Health check monitor poll frequency. It is an advanced setting and does not need to be set unless the service owner understands the implication and does not want the default. The default is 10 secs.
 |yarn.service.container-health-threshold.window-secs | The amount of time the health check monitor allows a specific component to be below the health threshold after which it considers the service to be unhealthy. The default is 600 secs (10 mins).
 |yarn.service.container-health-threshold.init-delay-secs | The amount of initial time the health check monitor waits before the first check kicks in. It gives a lead time for the service containers to come up for the first time. The default is 600 secs (10 mins).
+|yarn.service.container-state-report-as-service-state | The boolean flag indicates that if this component is finished, the service is also terminated. The default is false.
 
 There is one component-level configuration property that is set differently in the `yarn-site.xml` file than it is in the service specification.
 To select the docker network type that will be used for docker containers, `docker.network` may be set in the service `Configuration` `properties` or the component `Configuration` `properties`.

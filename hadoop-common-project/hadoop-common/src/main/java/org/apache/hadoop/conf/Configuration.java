@@ -41,7 +41,6 @@ import java.io.Writer;
 import java.lang.ref.WeakReference;
 import java.net.InetSocketAddress;
 import java.net.JarURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -70,6 +69,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.stream.XMLInputFactory;
@@ -1806,6 +1806,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Return time duration in the given time unit. Valid units are encoded in
    * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
    * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
    * @param name Property name
    * @param defaultValue Value returned if no mapping exists.
    * @param unit Unit to convert the stored property, if it exists.
@@ -1814,20 +1815,44 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * @return time duration in given time unit
    */
   public long getTimeDuration(String name, long defaultValue, TimeUnit unit) {
+    return getTimeDuration(name, defaultValue, unit, unit);
+  }
+
+  public long getTimeDuration(String name, String defaultValue, TimeUnit unit) {
+    return getTimeDuration(name, defaultValue, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d). If no unit is
+   * provided, the default unit is applied.
+   *
+   * @param name Property name
+   * @param defaultValue Value returned if no mapping exists.
+   * @param defaultUnit Default time unit if no valid suffix is provided.
+   * @param returnUnit The unit used for the returned value.
+   * @throws NumberFormatException If the property stripped of its unit is not
+   *         a number
+   * @return time duration in given time unit
+   */
+  public long getTimeDuration(String name, long defaultValue,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
       return defaultValue;
     } else {
-      return getTimeDurationHelper(name, vStr, unit);
+      return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
     }
   }
 
-  public long getTimeDuration(String name, String defaultValue, TimeUnit unit) {
+  public long getTimeDuration(String name, String defaultValue,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
-      return getTimeDurationHelper(name, defaultValue, unit);
+      return getTimeDurationHelper(name, defaultValue, defaultUnit, returnUnit);
     } else {
-      return getTimeDurationHelper(name, vStr, unit);
+      return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
     }
   }
 
@@ -1835,26 +1860,43 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * Return time duration in the given time unit. Valid units are encoded in
    * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
    * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
    * @param name Property name
    * @param vStr The string value with time unit suffix to be converted.
    * @param unit Unit to convert the stored property, if it exists.
    */
   public long getTimeDurationHelper(String name, String vStr, TimeUnit unit) {
+    return getTimeDurationHelper(name, vStr, unit, unit);
+  }
+
+  /**
+   * Return time duration in the given time unit. Valid units are encoded in
+   * properties as suffixes: nanoseconds (ns), microseconds (us), milliseconds
+   * (ms), seconds (s), minutes (m), hours (h), and days (d).
+   *
+   * @param name Property name
+   * @param vStr The string value with time unit suffix to be converted.
+   * @param defaultUnit Unit to convert the stored property, if it exists.
+   * @param returnUnit Unit for the returned value.
+   */
+  private long getTimeDurationHelper(String name, String vStr,
+      TimeUnit defaultUnit, TimeUnit returnUnit) {
     vStr = vStr.trim();
     vStr = StringUtils.toLowerCase(vStr);
     ParsedTimeDuration vUnit = ParsedTimeDuration.unitFor(vStr);
     if (null == vUnit) {
-      logDeprecation("No unit for " + name + "(" + vStr + ") assuming " + unit);
-      vUnit = ParsedTimeDuration.unitFor(unit);
+      logDeprecation("No unit for " + name + "(" + vStr + ") assuming " +
+          defaultUnit);
+      vUnit = ParsedTimeDuration.unitFor(defaultUnit);
     } else {
       vStr = vStr.substring(0, vStr.lastIndexOf(vUnit.suffix()));
     }
 
     long raw = Long.parseLong(vStr);
-    long converted = unit.convert(raw, vUnit.unit());
-    if (vUnit.unit().convert(converted, unit) < raw) {
+    long converted = returnUnit.convert(raw, vUnit.unit());
+    if (vUnit.unit().convert(converted, returnUnit) < raw) {
       logDeprecation("Possible loss of precision converting " + vStr
-          + vUnit.suffix() + " to " + unit + " for " + name);
+          + vUnit.suffix() + " to " + returnUnit + " for " + name);
     }
     return converted;
   }
@@ -2611,7 +2653,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * If no such property is specified, then <code>defaultValue</code> is 
    * returned.
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @return property value as a <code>Class</code>, 
    *         or <code>defaultValue</code>. 
@@ -2637,7 +2679,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * An exception is thrown if the returned class does not implement the named
    * interface. 
    * 
-   * @param name the class name.
+   * @param name the conf key name.
    * @param defaultValue default value.
    * @param xface the interface implemented by the named class.
    * @return property value as a <code>Class</code>, 
@@ -2972,36 +3014,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
     try {
       Object resource = wrapper.getResource();
       name = wrapper.getName();
-      XMLStreamReader2 reader = null;
       boolean returnCachedProperties = false;
-      boolean isRestricted = wrapper.isParserRestricted();
 
-      if (resource instanceof URL) {                  // an URL resource
-        reader = (XMLStreamReader2)parse((URL)resource, isRestricted);
-      } else if (resource instanceof String) {        // a CLASSPATH resource
-        URL url = getResource((String)resource);
-        reader = (XMLStreamReader2)parse(url, isRestricted);
-      } else if (resource instanceof Path) {          // a file resource
-        // Can't use FileSystem API or we get an infinite loop
-        // since FileSystem uses Configuration API.  Use java.io.File instead.
-        File file = new File(((Path)resource).toUri().getPath())
-          .getAbsoluteFile();
-        if (file.exists()) {
-          if (!quiet) {
-            LOG.debug("parsing File " + file);
-          }
-          reader = (XMLStreamReader2)parse(new BufferedInputStream(
-              new FileInputStream(file)), ((Path)resource).toString(),
-              isRestricted);
-        }
-      } else if (resource instanceof InputStream) {
-        reader = (XMLStreamReader2)parse((InputStream)resource, null,
-            isRestricted);
+      if (resource instanceof InputStream) {
         returnCachedProperties = true;
       } else if (resource instanceof Properties) {
         overlay(properties, (Properties)resource);
       }
 
+      XMLStreamReader2 reader = getStreamReader(wrapper, quiet);
       if (reader == null) {
         if (quiet) {
           return null;
@@ -3032,6 +3053,36 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       LOG.error("error parsing conf " + name, e);
       throw new RuntimeException(e);
     }
+  }
+
+  private XMLStreamReader2 getStreamReader(Resource wrapper, boolean quiet)
+      throws XMLStreamException, IOException {
+    Object resource = wrapper.getResource();
+    boolean isRestricted = wrapper.isParserRestricted();
+    XMLStreamReader2 reader = null;
+    if (resource instanceof URL) {                  // an URL resource
+      reader  = (XMLStreamReader2)parse((URL)resource, isRestricted);
+    } else if (resource instanceof String) {        // a CLASSPATH resource
+      URL url = getResource((String)resource);
+      reader = (XMLStreamReader2)parse(url, isRestricted);
+    } else if (resource instanceof Path) {          // a file resource
+      // Can't use FileSystem API or we get an infinite loop
+      // since FileSystem uses Configuration API.  Use java.io.File instead.
+      File file = new File(((Path)resource).toUri().getPath())
+        .getAbsoluteFile();
+      if (file.exists()) {
+        if (!quiet) {
+          LOG.debug("parsing File " + file);
+        }
+        reader = (XMLStreamReader2)parse(new BufferedInputStream(
+            new FileInputStream(file)), ((Path)resource).toString(),
+            isRestricted);
+      }
+    } else if (resource instanceof InputStream) {
+      reader = (XMLStreamReader2)parse((InputStream)resource, null,
+          isRestricted);
+    }
+    return reader;
   }
 
   private static class ParsedItem {
@@ -3095,7 +3146,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       return results;
     }
 
-    private void handleStartElement() throws MalformedURLException {
+    private void handleStartElement() throws XMLStreamException, IOException {
       switch (reader.getLocalName()) {
       case "property":
         handleStartProperty();
@@ -3151,10 +3202,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
 
-    private void handleInclude() throws MalformedURLException {
+    private void handleInclude() throws XMLStreamException, IOException {
       // Determine href for xi:include
       confInclude = null;
       int attrCount = reader.getAttributeCount();
+      List<ParsedItem> items;
       for (int i = 0; i < attrCount; i++) {
         String attrName = reader.getAttributeLocalName(i);
         if ("href".equals(attrName)) {
@@ -3178,7 +3230,12 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, classpathResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(classpathResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(classpathResource + " not found");
+          }
+          items = new Parser(includeReader, classpathResource, quiet).parse();
         }
       } else {
         URL url;
@@ -3204,9 +3261,15 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
         // This is only called recursively while the lock is already held
         // by this thread, but synchronizing avoids a findbugs warning.
         synchronized (Configuration.this) {
-          loadResource(properties, uriResource, quiet);
+          XMLStreamReader2 includeReader =
+              getStreamReader(uriResource, quiet);
+          if (includeReader == null) {
+            throw new RuntimeException(uriResource + " not found");
+          }
+          items = new Parser(includeReader, uriResource, quiet).parse();
         }
       }
+      results.addAll(items);
     }
 
     void handleEndElement() throws IOException {
@@ -3450,7 +3513,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    * </ul>
    * @param out the writer to write to.
    */
-  public void writeXml(String propertyName, Writer out)
+  public void writeXml(@Nullable String propertyName, Writer out)
       throws IOException, IllegalArgumentException {
     Document doc = asXmlDocument(propertyName);
 
@@ -3472,7 +3535,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   /**
    * Return the XML DOM corresponding to this Configuration.
    */
-  private synchronized Document asXmlDocument(String propertyName)
+  private synchronized Document asXmlDocument(@Nullable String propertyName)
       throws IOException, IllegalArgumentException {
     Document doc;
     try {

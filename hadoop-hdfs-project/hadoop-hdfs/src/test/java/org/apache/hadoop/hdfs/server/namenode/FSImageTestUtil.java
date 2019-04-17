@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
@@ -59,7 +60,6 @@ import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.util.Holder;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.IOUtils;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
@@ -200,7 +200,7 @@ public abstract class FSImageTestUtil {
     List<StorageDirectory> sds = Lists.newArrayList(sd);
     Mockito.doReturn(sds).when(storage).dirIterable(NameNodeDirType.EDITS);
     Mockito.doReturn(sd).when(storage)
-      .getStorageDirectory(Matchers.<URI>anyObject());
+      .getStorageDirectory(any());
 
     FSEditLog editLog = new FSEditLog(new Configuration(), 
                          storage,

@@ -36,7 +36,7 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.container.common.helpers.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -70,6 +70,10 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   private String owner;
   private long containerID;
   private long deleteTransactionId;
+  // The sequenceId of a close container cannot change, and all the
+  // container replica should have the same sequenceId.
+  private long sequenceId;
+
   /**
    * Allows you to maintain private data on ContainerInfo. This is not
    * serialized via protobuf, just allows us to maintain some private data.
@@ -77,6 +81,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
   @JsonIgnore
   private byte[] data;
 
+  @SuppressWarnings("parameternumber")
   ContainerInfo(
       long containerID,
       HddsProtos.LifeCycleState state,
@@ -86,6 +91,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       long stateEnterTime,
       String owner,
       long deleteTransactionId,
+      long sequenceId,
       ReplicationFactor replicationFactor,
       ReplicationType repType) {
     this.containerID = containerID;
@@ -97,24 +103,18 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     this.stateEnterTime = stateEnterTime;
     this.owner = owner;
     this.deleteTransactionId = deleteTransactionId;
+    this.sequenceId = sequenceId;
     this.replicationFactor = replicationFactor;
     this.replicationType = repType;
   }
 
-  public ContainerInfo(ContainerInfo info) {
-    this(info.getContainerID(), info.getState(), info.getPipelineID(),
-        info.getUsedBytes(), info.getNumberOfKeys(),
-        info.getStateEnterTime(), info.getOwner(),
-        info.getDeleteTransactionId(), info.getReplicationFactor(),
-        info.getReplicationType());
-  }
   /**
    * Needed for serialization findbugs.
    */
   public ContainerInfo() {
   }
 
-  public static ContainerInfo fromProtobuf(HddsProtos.SCMContainerInfo info) {
+  public static ContainerInfo fromProtobuf(HddsProtos.ContainerInfoProto info) {
     ContainerInfo.Builder builder = new ContainerInfo.Builder();
     return builder.setPipelineID(
         PipelineID.getFromProtobuf(info.getPipelineID()))
@@ -158,16 +158,33 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return usedBytes;
   }
 
+  public void setUsedBytes(long value) {
+    usedBytes = value;
+  }
+
   public long getNumberOfKeys() {
     return numberOfKeys;
+  }
+
+  public void setNumberOfKeys(long value) {
+    numberOfKeys = value;
   }
 
   public long getDeleteTransactionId() {
     return deleteTransactionId;
   }
 
+  public long getSequenceId() {
+    return sequenceId;
+  }
+
   public void updateDeleteTransactionId(long transactionId) {
     deleteTransactionId = max(transactionId, deleteTransactionId);
+  }
+
+  public void updateSequenceId(long sequenceID) {
+    assert (isOpen() || state == HddsProtos.LifeCycleState.QUASI_CLOSED);
+    sequenceId = max(sequenceID, sequenceId);
   }
 
   public ContainerID containerID() {
@@ -191,9 +208,9 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     lastUsed = Time.monotonicNow();
   }
 
-  public HddsProtos.SCMContainerInfo getProtobuf() {
-    HddsProtos.SCMContainerInfo.Builder builder =
-        HddsProtos.SCMContainerInfo.newBuilder();
+  public HddsProtos.ContainerInfoProto getProtobuf() {
+    HddsProtos.ContainerInfoProto.Builder builder =
+        HddsProtos.ContainerInfoProto.newBuilder();
     Preconditions.checkState(containerID > 0);
     return builder.setContainerID(getContainerID())
         .setUsedBytes(getUsedBytes())
@@ -372,6 +389,7 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     private String owner;
     private long containerID;
     private long deleteTransactionId;
+    private long sequenceId;
     private PipelineID pipelineID;
     private ReplicationFactor replicationFactor;
     private ReplicationType replicationType;
@@ -428,22 +446,25 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
       return this;
     }
 
+    public Builder setSequenceId(long sequenceID) {
+      this.sequenceId = sequenceID;
+      return this;
+    }
+
     public ContainerInfo build() {
       return new ContainerInfo(containerID, state, pipelineID,
-              used, keys, stateEnterTime, owner, deleteTransactionId,
-          replicationFactor, replicationType);
+          used, keys, stateEnterTime, owner, deleteTransactionId,
+          sequenceId, replicationFactor, replicationType);
     }
   }
 
   /**
    * Check if a container is in open state, this will check if the
-   * container is either open, allocated, creating or creating.
-   * Any containers in these states is managed as an open container by SCM.
+   * container is either open or closing state. Any containers in these states
+   * is managed as an open container by SCM.
    */
   public boolean isOpen() {
-    return state == HddsProtos.LifeCycleState.ALLOCATED ||
-        state == HddsProtos.LifeCycleState.CREATING ||
-        state == HddsProtos.LifeCycleState.OPEN ||
-        state == HddsProtos.LifeCycleState.CLOSING;
+    return state == HddsProtos.LifeCycleState.OPEN
+        || state == HddsProtos.LifeCycleState.CLOSING;
   }
 }

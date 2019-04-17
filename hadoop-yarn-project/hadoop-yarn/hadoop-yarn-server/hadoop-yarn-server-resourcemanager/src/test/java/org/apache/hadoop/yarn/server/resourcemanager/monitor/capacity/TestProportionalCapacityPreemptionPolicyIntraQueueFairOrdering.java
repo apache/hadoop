@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 
-import static org.mockito.Matchers.argThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 

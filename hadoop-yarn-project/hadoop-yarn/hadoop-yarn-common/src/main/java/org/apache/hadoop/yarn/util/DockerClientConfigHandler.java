@@ -141,7 +141,7 @@ public final class DockerClientConfigHandler {
     tokens.rewind();
     if (LOG.isDebugEnabled()) {
       for (Token token : credentials.getAllTokens()) {
-        LOG.debug("Token read from token storage: " + token.toString());
+        LOG.debug("Token read from token storage: {}", token);
       }
     }
     return credentials;
@@ -172,9 +172,7 @@ public final class DockerClientConfigHandler {
           registryUrlNode.put(ti.getRegistryUrl(), registryCredNode);
           registryCredNode.put(CONFIG_AUTH_KEY,
               new String(tk.getPassword(), Charset.forName("UTF-8")));
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Prepared token for write: " + tk.toString());
-          }
+          LOG.debug("Prepared token for write: {}", tk);
         }
       }
       if (foundDockerCred) {

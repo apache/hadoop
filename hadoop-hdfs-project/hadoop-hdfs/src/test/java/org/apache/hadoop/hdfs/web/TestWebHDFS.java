@@ -47,6 +47,8 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
 
@@ -83,18 +85,23 @@ import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffType;
 import static org.apache.hadoop.hdfs.protocol.SnapshotDiffReport.DiffReportEntry;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.SnapshotTestHelper;
+import org.apache.hadoop.hdfs.server.namenode.sps.StoragePolicySatisfier;
 import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
+import org.apache.hadoop.hdfs.server.sps.ExternalSPSContext;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem.WebHdfsInputStream;
 import org.apache.hadoop.hdfs.web.resources.LengthParam;
 import org.apache.hadoop.hdfs.web.resources.NoRedirectParam;
@@ -122,8 +129,8 @@ import org.mockito.Mockito;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.MapType;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
@@ -1596,6 +1603,90 @@ public class TestWebHDFS {
           "Failed to set storage policy since"));
     } finally {
       cluster.shutdown();
+    }
+  }
+
+  private void checkECPolicyState(Collection<ErasureCodingPolicyInfo> policies,
+      String ecpolicy, String state) {
+    Iterator<ErasureCodingPolicyInfo> itr = policies.iterator();
+    boolean found = false;
+    while (policies.iterator().hasNext()) {
+      ErasureCodingPolicyInfo policy = itr.next();
+      if (policy.getPolicy().getName().equals(ecpolicy)) {
+        found = true;
+        if (state.equals("disable")) {
+          Assert.assertTrue(policy.isDisabled());
+        } else if (state.equals("enable")) {
+          Assert.assertTrue(policy.isEnabled());
+        }
+        break;
+      }
+    }
+    Assert.assertTrue(found);
+  }
+
+  // Test For Enable/Disable EC Policy in DFS.
+  @Test
+  public void testECPolicyCommands() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(conf).numDataNodes(0).build()) {
+      cluster.waitActive();
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil
+          .getWebHdfsFileSystem(conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      String policy = "RS-10-4-1024k";
+      // Check for Enable EC policy via WEBHDFS.
+      dfs.disableErasureCodingPolicy(policy);
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "disable");
+      webHdfs.enableECPolicy(policy);
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "enable");
+      Path dir = new Path("/tmp");
+      dfs.mkdirs(dir);
+      // Check for Set EC policy via WEBHDFS
+      assertNull(dfs.getErasureCodingPolicy(dir));
+      webHdfs.setErasureCodingPolicy(dir, policy);
+      assertEquals(policy, dfs.getErasureCodingPolicy(dir).getName());
+
+      // Check for Get EC policy via WEBHDFS
+      assertEquals(policy, webHdfs.getErasureCodingPolicy(dir).getName());
+
+      // Check for Unset EC policy via WEBHDFS
+      webHdfs.unsetErasureCodingPolicy(dir);
+      assertNull(dfs.getErasureCodingPolicy(dir));
+
+      // Check for Disable EC policy via WEBHDFS.
+      webHdfs.disableECPolicy(policy);
+      checkECPolicyState(dfs.getAllErasureCodingPolicies(), policy, "disable");
+    }
+  }
+
+  // Test for Storage Policy Satisfier in DFS.
+
+  @Test
+  public void testWebHdfsSps() throws Exception {
+    final Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_STORAGE_POLICY_SATISFIER_MODE_KEY,
+        StoragePolicySatisfierMode.EXTERNAL.toString());
+    StoragePolicySatisfier sps = new StoragePolicySatisfier(conf);
+    try (MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .storageTypes(
+            new StorageType[][] {{StorageType.DISK, StorageType.ARCHIVE}})
+        .storagesPerDatanode(2).numDataNodes(1).build()) {
+      cluster.waitActive();
+      sps.init(new ExternalSPSContext(sps, DFSTestUtil.getNameNodeConnector(
+          conf, HdfsServerConstants.MOVER_ID_PATH, 1, false)));
+      sps.start(StoragePolicySatisfierMode.EXTERNAL);
+      sps.start(StoragePolicySatisfierMode.EXTERNAL);
+      DistributedFileSystem dfs = cluster.getFileSystem();
+      DFSTestUtil.createFile(dfs, new Path("/file"), 1024L, (short) 1, 0L);
+      DFSTestUtil.waitForReplication(dfs, new Path("/file"), (short) 1, 5000);
+      dfs.setStoragePolicy(new Path("/file"), "COLD");
+      dfs.satisfyStoragePolicy(new Path("/file"));
+      DFSTestUtil.waitExpectedStorageType("/file", StorageType.ARCHIVE, 1,
+          30000, dfs);
+    } finally {
+      sps.stopGracefully();
     }
   }
 

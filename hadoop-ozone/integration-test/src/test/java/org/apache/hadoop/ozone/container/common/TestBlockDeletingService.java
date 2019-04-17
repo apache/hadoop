@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -110,7 +111,8 @@ public class TestBlockDeletingService {
       conf.set(ScmConfigKeys.HDDS_DATANODE_DIR_KEY, testRoot.getAbsolutePath());
       long containerID = ContainerTestHelper.getTestContainerID();
       KeyValueContainerData data = new KeyValueContainerData(containerID,
-          ContainerTestHelper.CONTAINER_MAX_SIZE);
+          ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
+          UUID.randomUUID().toString());
       Container container = new KeyValueContainer(data, conf);
       container.create(new VolumeSet(scmId, clusterID, conf),
           new RoundRobinVolumeChoosingPolicy(), scmId);
@@ -139,7 +141,7 @@ public class TestBlockDeletingService {
                   .setChunkName(chunk.getAbsolutePath())
                   .setLen(0)
                   .setOffset(0)
-                  .setChecksum("")
+                  .setChecksumData(Checksum.getNoChecksumDataProto())
                   .build();
           chunks.add(info);
         }
@@ -202,7 +204,7 @@ public class TestBlockDeletingService {
 
     MetadataStore meta = BlockUtils.getDB(
         (KeyValueContainerData) containerData.get(0), conf);
-    Map<Long, Container> containerMap = containerSet.getContainerMap();
+    Map<Long, Container> containerMap = containerSet.getContainerMapCopy();
     // NOTE: this test assumes that all the container is KetValueContainer and
     // have DeleteTransactionId in KetValueContainerData. If other
     // types is going to be added, this test should be checked.

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.aliyun.oss;
 
-import com.aliyun.oss.common.utils.AuthUtils;
 import com.aliyun.oss.common.utils.VersionInfoUtils;
 
 /**
@@ -38,31 +37,12 @@ public final class Constants {
   public static final String CREDENTIALS_PROVIDER_KEY =
       "fs.oss.credentials.provider";
 
+  public static final int OSS_DEFAULT_PORT = -1;
+
   // OSS access verification
   public static final String ACCESS_KEY_ID = "fs.oss.accessKeyId";
   public static final String ACCESS_KEY_SECRET = "fs.oss.accessKeySecret";
   public static final String SECURITY_TOKEN = "fs.oss.securityToken";
-
-  // Assume role configurations
-  public static final String ROLE_ARN = "fs.oss.assumed.role.arn";
-  public static final String ASSUMED_ROLE_DURATION =
-      "fs.oss.assumed.role.session.duration";
-  // Default session duration(in seconds)
-  public static final long ASSUMED_ROLE_DURATION_DEFAULT = 30 * 60;
-
-  // Expired factor of sts token
-  // For example, if session duration is 900s and expiredFactor is 0.8
-  // sts token will be refreshed after 900 * 0.8s
-  public static final String ASSUMED_ROLE_STS_EXPIRED_FACTOR =
-      "fs.oss.assumed.role.sts.expiredFactor";
-
-  public static final double ASSUMED_ROLE_STS_EXPIRED_FACTOR_DEFAULT =
-      AuthUtils.DEFAULT_EXPIRED_FACTOR;
-
-  public static final String ASSUMED_ROLE_STS_ENDPOINT =
-      "fs.oss.assumed.role.sts.endpoint";
-  public static final String ASSUMED_ROLE_SESSION_NAME =
-      "fs.oss.assumed.role.session.name";
 
   // Number of simultaneous connections to oss
   public static final String MAXIMUM_CONNECTIONS_KEY =

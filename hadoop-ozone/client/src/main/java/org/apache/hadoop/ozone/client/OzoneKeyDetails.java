@@ -18,7 +18,11 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.fs.FileEncryptionInfo;
+import org.apache.hadoop.hdds.client.ReplicationType;
+
 import java.util.List;
+import java.util.Map;
 
 /**
  * A class that encapsulates OzoneKeyLocation.
@@ -30,15 +34,24 @@ public class OzoneKeyDetails extends OzoneKey {
    */
   private List<OzoneKeyLocation> ozoneKeyLocations;
 
+  private Map<String, String> metadata;
+
+  private FileEncryptionInfo feInfo;
+
   /**
    * Constructs OzoneKeyDetails from OmKeyInfo.
    */
+  @SuppressWarnings("parameternumber")
   public OzoneKeyDetails(String volumeName, String bucketName, String keyName,
-                  long size, long creationTime, long modificationTime,
-                         List<OzoneKeyLocation> ozoneKeyLocations) {
+                         long size, long creationTime, long modificationTime,
+                         List<OzoneKeyLocation> ozoneKeyLocations,
+                         ReplicationType type, Map<String, String> metadata,
+                         FileEncryptionInfo feInfo) {
     super(volumeName, bucketName, keyName, size, creationTime,
-        modificationTime);
+        modificationTime, type);
     this.ozoneKeyLocations = ozoneKeyLocations;
+    this.metadata = metadata;
+    this.feInfo = feInfo;
   }
 
   /**
@@ -48,6 +61,13 @@ public class OzoneKeyDetails extends OzoneKey {
     return ozoneKeyLocations;
   }
 
+  public Map<String, String> getMetadata() {
+    return metadata;
+  }
+
+  public FileEncryptionInfo getFileEncryptionInfo() {
+    return feInfo;
+  }
   /**
    * Set details of key location.
    * @param ozoneKeyLocations - details of key location

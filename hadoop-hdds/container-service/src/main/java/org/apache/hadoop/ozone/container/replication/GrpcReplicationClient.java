@@ -33,9 +33,9 @@ import org.apache.hadoop.hdds.protocol.datanode.proto
     .IntraDatanodeProtocolServiceGrpc;
 import org.apache.hadoop.hdds.protocol.datanode.proto
     .IntraDatanodeProtocolServiceGrpc.IntraDatanodeProtocolServiceStub;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.ratis.thirdparty.io.grpc.ManagedChannel;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyChannelBuilder;
 import org.apache.ratis.thirdparty.io.grpc.stub.StreamObserver;
@@ -61,7 +61,7 @@ public class GrpcReplicationClient {
 
     channel = NettyChannelBuilder.forAddress(host, port)
         .usePlaintext()
-        .maxInboundMessageSize(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE)
+        .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
         .build();
     client = IntraDatanodeProtocolServiceGrpc.newStub(channel);
     this.workingDirectory = workingDir;
@@ -114,7 +114,7 @@ public class GrpcReplicationClient {
       this.containerId = containerId;
       this.outputPath = outputPath;
       try {
-        outputPath = Preconditions.checkNotNull(outputPath);
+        Preconditions.checkNotNull(outputPath, "Output path cannot be null");
         Path parentPath = Preconditions.checkNotNull(outputPath.getParent());
         Files.createDirectories(parentPath);
         stream =

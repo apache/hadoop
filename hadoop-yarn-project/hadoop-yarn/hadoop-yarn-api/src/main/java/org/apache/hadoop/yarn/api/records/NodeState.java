@@ -55,4 +55,16 @@ public enum NodeState {
     return (this == UNHEALTHY || this == DECOMMISSIONED
         || this == LOST || this == SHUTDOWN);
   }
+
+  public boolean isInactiveState() {
+    return this == NodeState.DECOMMISSIONED ||
+      this == NodeState.LOST || this == NodeState.REBOOTED ||
+      this == NodeState.SHUTDOWN;
+  }
+
+  public boolean isActiveState() {
+    return this == NodeState.NEW ||
+        this == NodeState.RUNNING || this == NodeState.UNHEALTHY ||
+        this == NodeState.DECOMMISSIONING;
+  }
 }

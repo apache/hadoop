@@ -40,7 +40,8 @@ import org.apache.hadoop.conf.Configuration;
 @Stringable
 @InterfaceAudience.Public
 @InterfaceStability.Stable
-public class Path implements Comparable, Serializable, ObjectInputValidation {
+public class Path
+    implements Comparable<Path>, Serializable, ObjectInputValidation {
 
   /**
    * The directory separator, a slash.
@@ -68,6 +69,9 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
    */
   private static final Pattern HAS_DRIVE_LETTER_SPECIFIER =
       Pattern.compile("^/?[a-zA-Z]:");
+
+  /** Pre-compiled regular expressions to detect duplicated slashes. */
+  private static final Pattern SLASHES = Pattern.compile("/+");
 
   private static final long serialVersionUID = 0xad00f;
 
@@ -290,8 +294,8 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
    * @return the normalized path string
    */
   private static String normalizePath(String scheme, String path) {
-    // Remove double forward slashes.
-    path = StringUtils.replace(path, "//", "/");
+    // Remove duplicated slashes.
+    path = SLASHES.matcher(path).replaceAll("/");
 
     // Remove backslashes if this looks like a Windows path. Avoid
     // the substitution if it looks like a non-local URI.
@@ -452,12 +456,12 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
     // illegal characters unescaped in the string, for glob processing, etc.
     StringBuilder buffer = new StringBuilder();
     if (uri.getScheme() != null) {
-      buffer.append(uri.getScheme());
-      buffer.append(":");
+      buffer.append(uri.getScheme())
+          .append(":");
     }
     if (uri.getAuthority() != null) {
-      buffer.append("//");
-      buffer.append(uri.getAuthority());
+      buffer.append("//")
+          .append(uri.getAuthority());
     }
     if (uri.getPath() != null) {
       String path = uri.getPath();
@@ -469,8 +473,8 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
       buffer.append(path);
     }
     if (uri.getFragment() != null) {
-      buffer.append("#");
-      buffer.append(uri.getFragment());
+      buffer.append("#")
+          .append(uri.getFragment());
     }
     return buffer.toString();
   }
@@ -490,11 +494,10 @@ public class Path implements Comparable, Serializable, ObjectInputValidation {
   }
 
   @Override
-  public int compareTo(Object o) {
-    Path that = (Path)o;
-    return this.uri.compareTo(that.uri);
+  public int compareTo(Path o) {
+    return this.uri.compareTo(o.uri);
   }
-  
+
   /**
    * Returns the number of elements in this path.
    * @return the number of elements in this path

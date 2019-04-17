@@ -18,22 +18,21 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler;
 
+
 import static org.apache.hadoop.yarn.exceptions
-        .InvalidResourceRequestException.InvalidResourceType
-        .GREATER_THEN_MAX_ALLOCATION;
+    .InvalidResourceRequestException.InvalidResourceType
+    .GREATER_THEN_MAX_ALLOCATION;
 import static org.apache.hadoop.yarn.exceptions
-        .InvalidResourceRequestException.InvalidResourceType.LESS_THAN_ZERO;
+    .InvalidResourceRequestException.InvalidResourceType.LESS_THAN_ZERO;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.security.PrivilegedAction;
 import java.util.Arrays;
@@ -43,14 +42,13 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableMap;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.yarn.LocalConfigurationProvider;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
@@ -73,8 +71,7 @@ import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceBlacklistRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
-        .InvalidResourceType;
-import org.apache.hadoop.yarn.exceptions.YarnException;
+    .InvalidResourceType;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
 import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
@@ -84,6 +81,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MockRMW
 import org.apache.hadoop.yarn.server.resourcemanager.TestAMAuthorization.MyContainerManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NullRMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
+import org.apache.hadoop.yarn.server.resourcemanager.placement.ApplicationPlacementContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
@@ -93,10 +91,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppRemovedS
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.DominantResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Assert;
 import org.junit.Before;
@@ -108,41 +106,13 @@ import com.google.common.collect.Sets;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
+
 public class TestSchedulerUtils {
 
-  private static final Log LOG = LogFactory.getLog(TestSchedulerUtils.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestSchedulerUtils.class);
   private static Resource configuredMaxAllocation;
 
-  private static class CustomResourceTypesConfigurationProvider
-          extends LocalConfigurationProvider {
-
-    @Override
-    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
-            String name) throws YarnException, IOException {
-      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
-        return new ByteArrayInputStream(
-                ("<configuration>\n" +
-                        " <property>\n" +
-                        "   <name>yarn.resource-types</name>\n" +
-                        "   <value>custom-resource-1," +
-                        "custom-resource-2,custom-resource-3</value>\n" +
-                        " </property>\n" +
-                        " <property>\n" +
-                        "   <name>yarn.resource-types" +
-                        ".custom-resource-1.units</name>\n" +
-                        "   <value>G</value>\n" +
-                        " </property>\n" +
-                        " <property>\n" +
-                        "   <name>yarn.resource-types" +
-                        ".custom-resource-2.units</name>\n" +
-                        "   <value>G</value>\n" +
-                        " </property>\n" +
-                        "</configuration>\n").getBytes());
-      } else {
-        return super.getConfigurationInputStream(bootstrapConf, name);
-      }
-    }
-  }
   private RMContext rmContext = getMockRMContext();
 
   private static YarnConfiguration conf = new YarnConfiguration();
@@ -151,10 +121,7 @@ public class TestSchedulerUtils {
   public ExpectedException exception = ExpectedException.none();
 
   private void initResourceTypes() {
-    Configuration yarnConf = new Configuration();
-    yarnConf.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
-            CustomResourceTypesConfigurationProvider.class.getName());
-    ResourceUtils.resetResourceTypes(yarnConf);
+    CustomResourceTypesConfigurationProvider.initResourceTypes(3, "G");
   }
 
   @Before
@@ -1012,14 +979,17 @@ public class TestSchedulerUtils {
   }
 
   public static SchedulerApplication<SchedulerApplicationAttempt>
-  verifyAppAddedAndRemovedFromScheduler(
-          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>> applications,
+      verifyAppAddedAndRemovedFromScheduler(
+          Map<ApplicationId, SchedulerApplication<SchedulerApplicationAttempt>>
+              applications,
           EventHandler<SchedulerEvent> handler, String queueName) {
 
+    ApplicationPlacementContext apc =
+        new ApplicationPlacementContext(queueName);
     ApplicationId appId =
             ApplicationId.newInstance(System.currentTimeMillis(), 1);
     AppAddedSchedulerEvent appAddedEvent =
-            new AppAddedSchedulerEvent(appId, queueName, "user");
+            new AppAddedSchedulerEvent(appId, queueName, "user", apc);
     handler.handle(appAddedEvent);
     SchedulerApplication<SchedulerApplicationAttempt> app =
             applications.get(appId);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.block;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.client.BlockID;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -36,11 +37,14 @@ public interface BlockManager extends Closeable {
    * @param size - Block Size
    * @param type Replication Type
    * @param factor - Replication Factor
+   * @param excludeList List of datanodes/containers to exclude during block
+   *                    allocation.
    * @return AllocatedBlock
    * @throws IOException
    */
   AllocatedBlock allocateBlock(long size, HddsProtos.ReplicationType type,
-      HddsProtos.ReplicationFactor factor, String owner) throws IOException;
+      HddsProtos.ReplicationFactor factor, String owner,
+      ExcludeList excludeList) throws IOException;
 
   /**
    * Deletes a list of blocks in an atomic operation. Internally, SCM
@@ -75,4 +79,11 @@ public interface BlockManager extends Closeable {
    * @return the block deleting service executed in SCM.
    */
   SCMBlockDeletingService getSCMBlockDeletingService();
+
+  /**
+   * Set SafeMode status.
+   *
+   * @param safeModeStatus
+   */
+  void setSafeModeStatus(boolean safeModeStatus);
 }

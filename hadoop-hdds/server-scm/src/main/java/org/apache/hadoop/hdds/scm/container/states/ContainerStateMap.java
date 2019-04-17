@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdds.scm.container.states;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdds.scm.container.ContainerID;
@@ -33,10 +32,8 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.TreeSet;
@@ -108,9 +105,9 @@ public class ContainerStateMap {
     this.ownerMap = new ContainerAttribute<>();
     this.factorMap = new ContainerAttribute<>();
     this.typeMap = new ContainerAttribute<>();
-    this.containerMap = new HashMap<>();
+    this.containerMap = new ConcurrentHashMap<>();
     this.lock = new ReentrantReadWriteLock();
-    this.replicaMap = new HashMap<>();
+    this.replicaMap = new ConcurrentHashMap<>();
     this.resultCache = new ConcurrentHashMap<>();
   }
 
@@ -140,7 +137,7 @@ public class ContainerStateMap {
       ownerMap.insert(info.getOwner(), id);
       factorMap.insert(info.getReplicationFactor(), id);
       typeMap.insert(info.getReplicationType(), id);
-      replicaMap.put(id, new HashSet<>());
+      replicaMap.put(id, ConcurrentHashMap.newKeySet());
 
       // Flush the cache of this container type, will be added later when
       // get container queries are executed.
@@ -209,7 +206,7 @@ public class ContainerStateMap {
     try {
       checkIfContainerExist(containerID);
       return Collections
-          .unmodifiableSet(new HashSet<>(replicaMap.get(containerID)));
+          .unmodifiableSet(replicaMap.get(containerID));
     } finally {
       lock.readLock().unlock();
     }
@@ -263,12 +260,6 @@ public class ContainerStateMap {
     }
   }
 
-  @VisibleForTesting
-  // TODO: fix the test case and remove this method!
-  public static Logger getLOG() {
-    return LOG;
-  }
-
   /**
    * Just update the container State.
    * @param info ContainerInfo.
@@ -304,8 +295,7 @@ public class ContainerStateMap {
       checkIfContainerExist(containerID);
       final ContainerInfo currentInfo = containerMap.get(containerID);
       try {
-        final ContainerInfo newInfo = new ContainerInfo(currentInfo);
-        newInfo.setState(newState);
+        currentInfo.setState(newState);
 
         // We are updating two places before this update is done, these can
         // fail independently, since the code needs to handle it.
@@ -317,13 +307,12 @@ public class ContainerStateMap {
         // roll back the earlier change we did. If the rollback fails, we can
         // be in an inconsistent state,
 
-        containerMap.put(containerID, newInfo);
         lifeCycleStateMap.update(currentState, newState, containerID);
         LOG.trace("Updated the container {} to new state. Old = {}, new = " +
             "{}", containerID, currentState, newState);
 
         // Just flush both old and new data sets from the result cache.
-        flushCache(currentInfo, newInfo);
+        flushCache(currentInfo);
       } catch (SCMException ex) {
         LOG.error("Unable to update the container state. {}", ex);
         // we need to revert the change in this attribute since we are not
@@ -332,7 +321,7 @@ public class ContainerStateMap {
                 "old state. Old = {}, Attempted state = {}", currentState,
             newState);
 
-        containerMap.put(containerID, currentInfo);
+        currentInfo.setState(currentState);
 
         // if this line throws, the state map can be in an inconsistent
         // state, since we will have modified the attribute by the
@@ -349,7 +338,7 @@ public class ContainerStateMap {
   }
 
   public Set<ContainerID> getAllContainerIDs() {
-    return containerMap.keySet();
+    return Collections.unmodifiableSet(containerMap.keySet());
   }
 
   /**

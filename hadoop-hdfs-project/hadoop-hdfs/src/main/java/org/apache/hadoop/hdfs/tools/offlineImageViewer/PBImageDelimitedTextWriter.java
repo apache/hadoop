@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.namenode.FsImageProto.INodeSection.INode;
@@ -46,46 +44,17 @@ import java.util.Date;
  * constructor.
  */
 public class PBImageDelimitedTextWriter extends PBImageTextWriter {
-  static final String DEFAULT_DELIMITER = "\t";
   private static final String DATE_FORMAT="yyyy-MM-dd HH:mm";
   private final SimpleDateFormat dateFormatter =
       new SimpleDateFormat(DATE_FORMAT);
 
-  private final String delimiter;
-
   PBImageDelimitedTextWriter(PrintStream out, String delimiter, String tempPath)
       throws IOException {
-    super(out, tempPath);
-    this.delimiter = delimiter;
+    super(out, delimiter, tempPath);
   }
 
   private String formatDate(long date) {
     return dateFormatter.format(new Date(date));
-  }
-
-  private void append(StringBuffer buffer, int field) {
-    buffer.append(delimiter);
-    buffer.append(field);
-  }
-
-  private void append(StringBuffer buffer, long field) {
-    buffer.append(delimiter);
-    buffer.append(field);
-  }
-
-  static final String CRLF = StringUtils.CR + StringUtils.LF;
-
-  private void append(StringBuffer buffer, String field) {
-    buffer.append(delimiter);
-
-    String escapedField = StringEscapeUtils.escapeCsv(field);
-    if (escapedField.contains(CRLF)) {
-      escapedField = escapedField.replace(CRLF, "%x0D%x0A");
-    } else if (escapedField.contains(StringUtils.LF)) {
-      escapedField = escapedField.replace(StringUtils.LF, "%x0A");
-    }
-
-    buffer.append(escapedField);
   }
 
   @Override
@@ -167,5 +136,10 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
     append(buffer, "UserName");
     append(buffer, "GroupName");
     return buffer.toString();
+  }
+
+  @Override
+  public void afterOutput() {
+    // do nothing
   }
 }

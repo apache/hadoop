@@ -280,4 +280,29 @@ public class TestSSEConfiguration extends Assert {
     assertSecretKeyEquals(conf, bucketURI.getHost(), "overidden", "overidden");
   }
 
+  @Test
+  public void testUnknownEncryptionMethod() throws Throwable {
+    intercept(IOException.class, UNKNOWN_ALGORITHM,
+        () -> S3AEncryptionMethods.getMethod("SSE-ROT13"));
+  }
+
+  @Test
+  public void testClientEncryptionMethod() throws Throwable {
+    S3AEncryptionMethods method = getMethod("CSE-KMS");
+    assertEquals(CSE_KMS, method);
+    assertFalse("shouldn't be server side " + method, method.isServerSide());
+  }
+
+  @Test
+  public void testCSEKMSEncryptionMethod() throws Throwable {
+    S3AEncryptionMethods method = getMethod("CSE-CUSTOM");
+    assertEquals(CSE_CUSTOM, method);
+    assertFalse("shouldn't be server side " + method, method.isServerSide());
+  }
+
+  @Test
+  public void testNoEncryptionMethod() throws Throwable {
+    assertEquals(NONE, getMethod(" "));
+  }
+
 }

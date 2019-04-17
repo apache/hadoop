@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.node;
 import java.util.Set;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerException;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
@@ -56,12 +58,18 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
   @Override
   public void onMessage(DatanodeDetails datanodeDetails,
       EventPublisher publisher) {
-    nodeManager.processDeadNode(datanodeDetails.getUuid());
 
     // TODO: check if there are any pipeline on this node and fire close
     // pipeline event
     Set<ContainerID> ids =
-        nodeManager.getContainers(datanodeDetails.getUuid());
+        null;
+    try {
+      ids = nodeManager.getContainers(datanodeDetails);
+    } catch (NodeNotFoundException e) {
+      // This should not happen, we cannot get a dead node event for an
+      // unregistered node!
+      LOG.error("DeadNode event for a unregistered node: {}!", datanodeDetails);
+    }
     if (ids == null) {
       LOG.info("There's no containers in dead datanode {}, no replica will be"
           + " removed from the in-memory state.", datanodeDetails.getUuid());
@@ -72,18 +80,24 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
     for (ContainerID id : ids) {
       try {
         final ContainerInfo container = containerManager.getContainer(id);
+        // TODO: For open containers, trigger close on other nodes
         if (!container.isOpen()) {
-          final ContainerReplica replica = ContainerReplica.newBuilder()
-              .setContainerID(id)
-              .setDatanodeDetails(datanodeDetails)
-              .build();
-          try {
-            containerManager.removeContainerReplica(id, replica);
-            replicateIfNeeded(container, publisher);
-          } catch (ContainerException ex) {
-            LOG.warn("Exception while removing container replica #{} for " +
-                "container #{}.", replica, container, ex);
-          }
+          Set<ContainerReplica> replicas = containerManager
+              .getContainerReplicas(id);
+          replicas.stream()
+              .filter(r -> r.getDatanodeDetails().equals(datanodeDetails))
+              .findFirst()
+              .ifPresent(replica -> {
+                try {
+                  containerManager.removeContainerReplica(id, replica);
+                  ContainerInfo containerInfo =
+                      containerManager.getContainer(id);
+                  replicateIfNeeded(containerInfo, publisher);
+                } catch (ContainerException ex) {
+                  LOG.warn("Exception while removing container replica #{} " +
+                      "for container #{}.", replica, container, ex);
+                }
+              });
         }
       } catch (ContainerNotFoundException cnfe) {
         LOG.warn("Container Not found!", cnfe);
@@ -96,13 +110,21 @@ public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
    */
   private void replicateIfNeeded(ContainerInfo container,
       EventPublisher publisher) throws ContainerNotFoundException {
-    final int existingReplicas = containerManager
-        .getContainerReplicas(container.containerID()).size();
-    final int expectedReplicas = container.getReplicationFactor().getNumber();
-    if (existingReplicas != expectedReplicas) {
-      publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-          new ReplicationRequest(
-              container.getContainerID(), existingReplicas, expectedReplicas));
+    // Replicate only closed and Quasi closed containers
+    if (container.getState() == HddsProtos.LifeCycleState.CLOSED ||
+        container.getState() == HddsProtos.LifeCycleState.QUASI_CLOSED) {
+      final int existingReplicas = containerManager
+          .getContainerReplicas(container.containerID()).size();
+      final int expectedReplicas = container.getReplicationFactor().getNumber();
+      if (existingReplicas != expectedReplicas) {
+        LOG.debug("Replicate Request fired for container {}, exisiting " +
+                "replica count {}, expected replica count {}",
+            container.getContainerID(), existingReplicas, expectedReplicas);
+        publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
+            new ReplicationRequest(
+                container.getContainerID(), existingReplicas,
+                expectedReplicas));
+      }
     }
   }
 

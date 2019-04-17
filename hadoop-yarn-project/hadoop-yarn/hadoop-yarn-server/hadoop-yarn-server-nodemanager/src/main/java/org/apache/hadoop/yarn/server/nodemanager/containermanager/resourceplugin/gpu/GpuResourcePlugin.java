@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
-import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
@@ -34,18 +33,23 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInforma
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 
 import java.util.List;
-import java.util.Map;
 
 public class GpuResourcePlugin implements ResourcePlugin {
+  private final GpuNodeResourceUpdateHandler resourceDiscoverHandler;
+  private final GpuDiscoverer gpuDiscoverer;
   private GpuResourceHandlerImpl gpuResourceHandler = null;
-  private GpuNodeResourceUpdateHandler resourceDiscoverHandler = null;
   private DockerCommandPlugin dockerCommandPlugin = null;
+
+  public GpuResourcePlugin(GpuNodeResourceUpdateHandler resourceDiscoverHandler,
+      GpuDiscoverer gpuDiscoverer) {
+    this.resourceDiscoverHandler = resourceDiscoverHandler;
+    this.gpuDiscoverer = gpuDiscoverer;
+  }
 
   @Override
   public synchronized void initialize(Context context) throws YarnException {
-    resourceDiscoverHandler = new GpuNodeResourceUpdateHandler();
-    GpuDiscoverer.getInstance().initialize(context.getConf());
-    dockerCommandPlugin =
+    this.gpuDiscoverer.initialize(context.getConf());
+    this.dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
             context.getConf());
   }
@@ -56,7 +60,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (gpuResourceHandler == null) {
       gpuResourceHandler = new GpuResourceHandlerImpl(context, cGroupsHandler,
-          privilegedOperationExecutor);
+          privilegedOperationExecutor, gpuDiscoverer);
     }
 
     return gpuResourceHandler;
@@ -77,9 +81,9 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public NMResourceInfo getNMResourceInfo() throws YarnException {
+  public synchronized NMResourceInfo getNMResourceInfo() throws YarnException {
     GpuDeviceInformation gpuDeviceInformation =
-        GpuDiscoverer.getInstance().getGpuDeviceInformation();
+        gpuDiscoverer.getGpuDeviceInformation();
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
     List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
@@ -88,5 +92,10 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
+  }
+
+  @Override
+  public String toString() {
+    return GpuResourcePlugin.class.getName();
   }
 }

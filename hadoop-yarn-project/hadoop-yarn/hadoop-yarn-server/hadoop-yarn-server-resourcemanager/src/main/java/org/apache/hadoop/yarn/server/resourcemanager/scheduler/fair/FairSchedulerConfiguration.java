@@ -24,8 +24,8 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.conf.Configuration;
@@ -43,7 +43,7 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Evolving
 public class FairSchedulerConfiguration extends Configuration {
 
-  public static final Log LOG = LogFactory.getLog(
+  public static final Logger LOG = LoggerFactory.getLogger(
       FairSchedulerConfiguration.class.getName());
 
   /**
@@ -506,11 +506,13 @@ public class FairSchedulerConfiguration extends Configuration {
       String resourceValue = parts[1].trim();
       try {
         if (asPercent) {
-          configurableResource.setPercentage(resourceName,
-              findPercentage(resourceValue, ""));
+          double percentage = parseNewStyleResourceAsPercentage(value,
+              resourceValue);
+          configurableResource.setPercentage(resourceName, percentage);
         } else {
-          configurableResource.setValue(resourceName,
-              Long.parseLong(resourceValue));
+          long parsedValue = parseNewStyleResourceAsAbsoluteValue(value,
+              resourceValue, resourceName);
+          configurableResource.setValue(resourceName, parsedValue);
         }
       } catch (ResourceNotFoundException ex) {
         throw createConfigException(value, "The "
@@ -518,20 +520,41 @@ public class FairSchedulerConfiguration extends Configuration {
             + "recognized. Please check the value of "
             + YarnConfiguration.RESOURCE_TYPES + " in the Resource "
             + "Manager's configuration files.", ex);
-      } catch (NumberFormatException ex) {
-        // This only comes from Long.parseLong()
-        throw createConfigException(value, "The "
-            + "resource values must all be integers. \"" + resourceValue
-            + "\" is not an integer.", ex);
-      } catch (AllocationConfigurationException ex) {
-        // This only comes from findPercentage()
-        throw createConfigException(value, "The "
-            + "resource values must all be percentages. \""
-            + resourceValue + "\" is either not a number or does not "
-            + "include the '%' symbol.", ex);
       }
     }
     return configurableResource;
+  }
+
+  private static double parseNewStyleResourceAsPercentage(
+      String value, String resourceValue)
+      throws AllocationConfigurationException {
+    try {
+      return findPercentage(resourceValue, "");
+    } catch (AllocationConfigurationException ex) {
+      throw createConfigException(value,
+          "The resource values must all be percentages. \""
+              + resourceValue + "\" is either not a non-negative number " +
+              "or does not include the '%' symbol.", ex);
+    }
+  }
+
+  private static long parseNewStyleResourceAsAbsoluteValue(String value,
+      String resourceValue, String resourceName)
+      throws AllocationConfigurationException {
+    final long parsedValue;
+    try {
+      parsedValue = Long.parseLong(resourceValue);
+    } catch (NumberFormatException e) {
+      throw createConfigException(value, "The "
+          + "resource values must all be integers. \"" + resourceValue
+          + "\" is not an integer.", e);
+    }
+    if (parsedValue < 0) {
+      throw new AllocationConfigurationException(
+          "Invalid value of " + resourceName +
+              ": " + parsedValue + ", value should not be negative!");
+    }
+    return parsedValue;
   }
 
   private static ConfigurableResource parseOldStyleResourceAsPercentage(
@@ -543,17 +566,40 @@ public class FairSchedulerConfiguration extends Configuration {
   private static ConfigurableResource parseOldStyleResource(String value)
           throws AllocationConfigurationException {
     final String lCaseValue = StringUtils.toLowerCase(value);
-    int memory = findResource(lCaseValue, "mb");
-    int vcores = findResource(lCaseValue, "vcores");
-
+    final int memory = parseOldStyleResourceMemory(lCaseValue);
+    final int vcores = parseOldStyleResourceVcores(lCaseValue);
     return new ConfigurableResource(
             BuilderUtils.newResource(memory, vcores));
+  }
+
+  private static int parseOldStyleResourceMemory(String lCaseValue)
+      throws AllocationConfigurationException {
+    final int memory = findResource(lCaseValue, "mb");
+
+    if (memory < 0) {
+      throw new AllocationConfigurationException(
+          "Invalid value of memory: " + memory +
+              ", value should not be negative!");
+    }
+    return memory;
+  }
+
+  private static int parseOldStyleResourceVcores(String lCaseValue)
+      throws AllocationConfigurationException {
+    final int vcores = findResource(lCaseValue, "vcores");
+
+    if (vcores < 0) {
+      throw new AllocationConfigurationException(
+          "Invalid value of vcores: " + vcores +
+              ", value should not be negative!");
+    }
+    return vcores;
   }
 
   private static double[] getResourcePercentage(
       String val) throws AllocationConfigurationException {
     int numberOfKnownResourceTypes = ResourceUtils
-        .getNumberOfKnownResourceTypes();
+        .getNumberOfCountableResourceTypes();
     double[] resourcePercentage = new double[numberOfKnownResourceTypes];
     String[] strings = val.split(",");
 
@@ -573,7 +619,7 @@ public class FairSchedulerConfiguration extends Configuration {
   private static double findPercentage(String val, String units)
       throws AllocationConfigurationException {
     final Pattern pattern =
-        Pattern.compile("((\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
+        Pattern.compile("(-?(\\d+)(\\.\\d*)?)\\s*%\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       if (units.equals("")) {
@@ -584,7 +630,14 @@ public class FairSchedulerConfiguration extends Configuration {
             units);
       }
     }
-    return Double.parseDouble(matcher.group(1)) / 100.0;
+    double percentage = Double.parseDouble(matcher.group(1)) / 100.0;
+
+    if (percentage < 0) {
+      throw new AllocationConfigurationException("Invalid percentage: " +
+          val + ", percentage should not be negative!");
+    }
+
+    return percentage;
   }
 
   private static AllocationConfigurationException createConfigException(
@@ -608,7 +661,7 @@ public class FairSchedulerConfiguration extends Configuration {
   
   private static int findResource(String val, String units)
       throws AllocationConfigurationException {
-    final Pattern pattern = Pattern.compile("(\\d+)(\\.\\d*)?\\s*" + units);
+    final Pattern pattern = Pattern.compile("(-?\\d+)(\\.\\d*)?\\s*" + units);
     Matcher matcher = pattern.matcher(val);
     if (!matcher.find()) {
       throw new AllocationConfigurationException("Missing resource: " + units);

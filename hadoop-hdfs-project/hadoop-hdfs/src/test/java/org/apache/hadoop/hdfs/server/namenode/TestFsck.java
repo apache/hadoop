@@ -25,9 +25,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -165,7 +164,7 @@ public class TestFsck {
   private static final String LINE_SEPARATOR =
       System.getProperty("line.separator");
 
-  static String runFsck(Configuration conf, int expectedErrCode, 
+  public static String runFsck(Configuration conf, int expectedErrCode,
                         boolean checkErrorCode, String... path)
                         throws Exception {
     ByteArrayOutputStream bStream = new ByteArrayOutputStream();
@@ -1354,7 +1353,7 @@ public class TestFsck {
     when(fsName.getBlockManager()).thenReturn(blockManager);
     when(fsName.getFSDirectory()).thenReturn(fsd);
     when(fsd.getFSNamesystem()).thenReturn(fsName);
-    when(fsd.resolvePath(anyObject(), anyString(), any(DirOp.class))).thenReturn(iip);
+    when(fsd.resolvePath(any(), anyString(), any(DirOp.class))).thenReturn(iip);
     when(blockManager.getDatanodeManager()).thenReturn(dnManager);
 
     NamenodeFsck fsck = new NamenodeFsck(conf, namenode, nettop, pmap, out,

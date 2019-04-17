@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.TestFsDatasetCache;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.CacheManipulator;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX.NoMlockCacheManipulator;
@@ -50,6 +51,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Tests FsDatasetCache behaviors.
+ */
 public class TestFsDatasetCacheRevocation {
   private static final Logger LOG = LoggerFactory.getLogger(
       TestFsDatasetCacheRevocation.class);
@@ -86,7 +90,7 @@ public class TestFsDatasetCacheRevocation {
     conf.setLong(DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY, 1);
     conf.setBoolean(HdfsClientConfigKeys.Read.ShortCircuit.KEY, true);
     conf.set(DFSConfigKeys.DFS_DOMAIN_SOCKET_PATH_KEY,
-      new File(sockDir.getDir(), "sock").getAbsolutePath());
+        new File(sockDir.getDir(), "sock").getAbsolutePath());
     return conf;
   }
 
@@ -112,19 +116,18 @@ public class TestFsDatasetCacheRevocation {
     DistributedFileSystem dfs = cluster.getFileSystem();
 
     // Create and cache a file.
-    final String TEST_FILE = "/test_file";
-    DFSTestUtil.createFile(dfs, new Path(TEST_FILE),
+    final String testFile = "/test_file";
+    DFSTestUtil.createFile(dfs, new Path(testFile),
         BLOCK_SIZE, (short)1, 0xcafe);
     dfs.addCachePool(new CachePoolInfo("pool"));
-    long cacheDirectiveId =
-      dfs.addCacheDirective(new CacheDirectiveInfo.Builder().
-        setPool("pool").setPath(new Path(TEST_FILE)).
-          setReplication((short) 1).build());
+    long cacheDirectiveId = dfs
+        .addCacheDirective(new CacheDirectiveInfo.Builder().setPool("pool")
+            .setPath(new Path(testFile)).setReplication((short) 1).build());
     FsDatasetSpi<?> fsd = cluster.getDataNodes().get(0).getFSDataset();
     DFSTestUtil.verifyExpectedCacheUsage(BLOCK_SIZE, 1, fsd);
 
     // Mmap the file.
-    FSDataInputStream in = dfs.open(new Path(TEST_FILE));
+    FSDataInputStream in = dfs.open(new Path(testFile));
     ByteBuffer buf =
         in.read(null, BLOCK_SIZE, EnumSet.noneOf(ReadOption.class));
 
@@ -143,8 +146,8 @@ public class TestFsDatasetCacheRevocation {
   }
 
   /**
-   * Test that when we have an uncache request, and the client refuses to release
-   * the replica for a long time, we will un-mlock it.
+   * Test that when we have an uncache request, and the client refuses to
+   * release the replica for a long time, we will un-mlock it.
    */
   @Test(timeout=120000)
   public void testRevocation() throws Exception {
@@ -163,19 +166,19 @@ public class TestFsDatasetCacheRevocation {
     DistributedFileSystem dfs = cluster.getFileSystem();
 
     // Create and cache a file.
-    final String TEST_FILE = "/test_file2";
-    DFSTestUtil.createFile(dfs, new Path(TEST_FILE),
+    final String testFile = "/test_file2";
+    DFSTestUtil.createFile(dfs, new Path(testFile),
         BLOCK_SIZE, (short)1, 0xcafe);
     dfs.addCachePool(new CachePoolInfo("pool"));
     long cacheDirectiveId =
         dfs.addCacheDirective(new CacheDirectiveInfo.Builder().
-            setPool("pool").setPath(new Path(TEST_FILE)).
+            setPool("pool").setPath(new Path(testFile)).
             setReplication((short) 1).build());
     FsDatasetSpi<?> fsd = cluster.getDataNodes().get(0).getFSDataset();
     DFSTestUtil.verifyExpectedCacheUsage(BLOCK_SIZE, 1, fsd);
 
     // Mmap the file.
-    FSDataInputStream in = dfs.open(new Path(TEST_FILE));
+    FSDataInputStream in = dfs.open(new Path(testFile));
     ByteBuffer buf =
         in.read(null, BLOCK_SIZE, EnumSet.noneOf(ReadOption.class));
 

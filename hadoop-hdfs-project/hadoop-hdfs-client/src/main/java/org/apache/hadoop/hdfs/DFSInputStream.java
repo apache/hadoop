@@ -972,19 +972,19 @@ public class DFSInputStream extends FSInputStream
         " No live nodes contain current block ");
     errMsgr.append("Block locations:");
     for (DatanodeInfo datanode : nodes) {
-      errMsgr.append(" ");
-      errMsgr.append(datanode.toString());
+      errMsgr.append(" ")
+          .append(datanode.toString());
     }
     errMsgr.append(" Dead nodes: ");
     for (DatanodeInfo datanode : deadNodes.keySet()) {
-      errMsgr.append(" ");
-      errMsgr.append(datanode.toString());
+      errMsgr.append(" ")
+          .append(datanode.toString());
     }
     if (ignoredNodes != null) {
       errMsgr.append(" Ignored nodes: ");
       for (DatanodeInfo datanode : ignoredNodes) {
-        errMsgr.append(" ");
-        errMsgr.append(datanode.toString());
+        errMsgr.append(" ")
+            .append(datanode.toString());
       }
     }
     return errMsgr.toString();
@@ -1779,6 +1779,7 @@ public class DFSInputStream extends FSInputStream
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.DROPBEHIND:
     case StreamCapabilities.UNBUFFER:
+    case StreamCapabilities.READBYTEBUFFER:
       return true;
     default:
       return false;

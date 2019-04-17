@@ -26,8 +26,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DataInputByteBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -41,6 +42,8 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.CommitResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ContainerUpdateResponse;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.GetLocalizationStatusesResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.IncreaseContainersResourceResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.GetContainerStatusesRequest;
@@ -86,24 +89,21 @@ import org.apache.hadoop.yarn.server.resourcemanager.security.ProxyCAManager;
 import org.apache.hadoop.yarn.server.security.AMSecretKeys;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.base.Supplier;
 
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 public class TestApplicationMasterLauncher {
 
-  private static final Log LOG = LogFactory
-      .getLog(TestApplicationMasterLauncher.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestApplicationMasterLauncher.class);
 
   private static final class MyContainerManagerImpl implements
       ContainerManagementProtocol {
@@ -212,12 +212,18 @@ public class TestApplicationMasterLauncher {
         request) throws YarnException, IOException {
       return null;
     }
+
+    @Override
+    public GetLocalizationStatusesResponse getLocalizationStatuses(
+        GetLocalizationStatusesRequest request) throws YarnException,
+        IOException {
+      return null;
+    }
   }
 
   @Test
   public void testAMLaunchAndCleanup() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MyContainerManagerImpl containerManager = new MyContainerManagerImpl();
     MockRMWithCustomAMLauncher rm = new MockRMWithCustomAMLauncher(
         containerManager);
@@ -374,9 +380,8 @@ public class TestApplicationMasterLauncher {
   @SuppressWarnings("unused")
   @Test(timeout = 100000)
   public void testallocateBeforeAMRegistration() throws Exception {
-    Logger rootLogger = LogManager.getRootLogger();
     boolean thrown = false;
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     MockRM rm = new MockRM();
     rm.start();
     MockNM nm1 = rm.registerNode("h1:1234", 5000);

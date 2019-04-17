@@ -62,6 +62,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -74,7 +75,10 @@ import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_VMEM_CHECK_ENABLE
 import static org.apache.hadoop.yarn.conf.YarnConfiguration.TIMELINE_SERVICE_ENABLED;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.AM_RESOURCE_MEM;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
-import static org.mockito.Matchers.anyObject;
+
+import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants
+    .CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -126,6 +130,23 @@ public class ServiceTestUtils {
     return exampleApp;
   }
 
+  public static Service createTerminatingDominantComponentJobExample(
+      String serviceName) {
+    Service exampleApp = new Service();
+    exampleApp.setName(serviceName);
+    exampleApp.setVersion("v1");
+    Component serviceStateComponent = createComponent("terminating-comp1", 2,
+        "sleep 1000", Component.RestartPolicyEnum.NEVER, null);
+    serviceStateComponent.getConfiguration().setProperty(
+        CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true");
+    exampleApp.addComponent(serviceStateComponent);
+    exampleApp.addComponent(
+        createComponent("terminating-comp2", 2, "sleep 60000",
+            Component.RestartPolicyEnum.ON_FAILURE, null));
+
+    return exampleApp;
+  }
+
   public static Component createComponent(String name) {
     return createComponent(name, 2L, "sleep 1000",
         Component.RestartPolicyEnum.ALWAYS, null);
@@ -165,10 +186,10 @@ public class ServiceTestUtils {
     FileSystem mockFs = mock(FileSystem.class);
     JsonSerDeser<Service> jsonSerDeser = mock(JsonSerDeser.class);
     when(sfs.getFileSystem()).thenReturn(mockFs);
-    when(sfs.buildClusterDirPath(anyObject())).thenReturn(
+    when(sfs.buildClusterDirPath(any())).thenReturn(
         new Path("cluster_dir_path"));
     if (ext != null) {
-      when(jsonSerDeser.load(anyObject(), anyObject())).thenReturn(ext);
+      when(jsonSerDeser.load(any(), any())).thenReturn(ext);
     }
     ServiceApiUtil.setJsonSerDeser(jsonSerDeser);
     return sfs;
@@ -195,6 +216,8 @@ public class ServiceTestUtils {
     LOG.info("Starting up YARN cluster");
     if (conf == null) {
       setConf(new YarnConfiguration());
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_FIXED_PORTS, false);
+      conf.setBoolean(YarnConfiguration.YARN_MINICLUSTER_USE_RPC, false);
     }
     conf.setInt(YarnConfiguration.RM_SCHEDULER_MINIMUM_ALLOCATION_MB, 128);
     // reduce the teardown waiting time
@@ -246,7 +269,7 @@ public class ServiceTestUtils {
 
     if (yarnCluster == null) {
       yarnCluster =
-          new MiniYARNCluster(TestYarnNativeServices.class.getSimpleName(), 1,
+          new MiniYARNCluster(this.getClass().getSimpleName(), 1,
               numNodeManager, 1, 1);
       yarnCluster.init(conf);
       yarnCluster.start();
@@ -383,6 +406,7 @@ public class ServiceTestUtils {
           description.getClassName(), description.getMethodName());
       conf.set(YARN_SERVICE_BASE_PATH, serviceBasePath.toString());
       try {
+        Files.createDirectories(serviceBasePath);
         fs = new SliderFileSystem(conf);
         fs.setAppDir(new Path(serviceBasePath.toString()));
       } catch (IOException e) {
@@ -511,6 +535,12 @@ public class ServiceTestUtils {
   protected void waitForServiceToBeStarted(ServiceClient client,
       Service exampleApp) throws TimeoutException, InterruptedException {
     waitForServiceToBeInState(client, exampleApp, ServiceState.STARTED);
+  }
+
+  protected void waitForServiceToBeExpressUpgrading(ServiceClient client,
+      Service exampleApp) throws TimeoutException, InterruptedException {
+    waitForServiceToBeInState(client, exampleApp,
+        ServiceState.EXPRESS_UPGRADING);
   }
 
   protected void waitForServiceToBeInState(ServiceClient client,

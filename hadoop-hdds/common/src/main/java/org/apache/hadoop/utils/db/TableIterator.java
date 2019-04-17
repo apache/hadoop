@@ -20,6 +20,7 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.Closeable;
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -27,7 +28,7 @@ import java.util.Iterator;
  *
  * @param <T>
  */
-public interface TableIterator<T> extends Iterator<T>, Closeable {
+public interface TableIterator<KEY, T> extends Iterator<T>, Closeable {
 
   /**
    * seek to first entry.
@@ -43,8 +44,20 @@ public interface TableIterator<T> extends Iterator<T>, Closeable {
    * Seek to the specific key.
    *
    * @param key - Bytes that represent the key.
-   * @return T.
+   * @return VALUE.
    */
-  T seek(byte[] key);
+  T seek(KEY key) throws IOException;
+
+  /**
+   * Returns the key value at the current position.
+   * @return KEY
+   */
+  KEY key() throws IOException;
+
+  /**
+   * Returns the VALUE at the current position.
+   * @return VALUE
+   */
+  T value();
 
 }

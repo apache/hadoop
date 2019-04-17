@@ -18,7 +18,7 @@
 # The name of the script being executed.
 HADOOP_SHELL_EXECNAME="ozone"
 MYNAME="${BASH_SOURCE-$0}"
-
+JVM_PID="$$"
 ## @description  build up the hdfs command's usage text.
 ## @audience     public
 ## @stability    stable
@@ -32,6 +32,7 @@ function hadoop_usage
   hadoop_add_option "--loglevel level" "set the log4j level for this command"
   hadoop_add_option "--workers" "turn on worker mode"
 
+  hadoop_add_subcommand "auditparser" client "runs audit parser tool"
   hadoop_add_subcommand "classpath" client "prints the class path needed to get the hadoop jar and the required libraries"
   hadoop_add_subcommand "datanode" daemon "run a HDDS datanode"
   hadoop_add_subcommand "envvars" client "display computed Hadoop environment variables"
@@ -45,9 +46,13 @@ function hadoop_usage
   hadoop_add_subcommand "om" daemon "Ozone Manager"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "s3g" daemon "run the S3 compatible REST gateway"
+  hadoop_add_subcommand "recon" daemon "run the Recon service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "sh" client "command line interface for object store operations"
+  hadoop_add_subcommand "s3" client "command line interface for s3 related operations"
   hadoop_add_subcommand "version" client "print the version"
+  hadoop_add_subcommand "dtutil" client "operations related to delegation tokens"
+  hadoop_add_subcommand "upgrade" client "HDFS to Ozone in-place upgrade tool"
 
   hadoop_generate_usage "${HADOOP_SHELL_EXECNAME}" false
 }
@@ -63,11 +68,30 @@ function ozonecmd_case
   shift
 
   case ${subcmd} in
+    auditparser)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.audit.parser.AuditParser
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
     classpath)
-      hadoop_do_classpath_subcommand HADOOP_CLASSNAME "$@"
+      if [[ "$#" -gt 0 ]]; then
+        OZONE_RUN_ARTIFACT_NAME="$1"
+        HADOOP_CLASSNAME="org.apache.hadoop.util.Classpath"
+        #remove the artifact name and replace it with glob
+        # (We need at least one argument to execute the Classpath helper class)
+        HADOOP_SUBCMD_ARGS[0]="--glob"
+      else
+        hadoop_finalize
+        echo "Usage: ozone classpath <ARTIFACTNAME>"
+        echo "Where the artifact name is one of:"
+        echo ""
+        ls -1 ${HADOOP_HDFS_HOME}/share/ozone/classpath/ | sed 's/.classpath//'
+        exit -1
+      fi
     ;;
     datanode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties"
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDDS_DN_OPTS}"
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.HddsDatanodeService
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-datanode"
     ;;
@@ -106,13 +130,18 @@ function ozonecmd_case
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     sh | shell)
-      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.Shell
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
+    ;;
+    s3)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.s3.S3Shell
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     scm)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.hdds.scm.server.StorageContainerManager'
       hadoop_debug "Appending HDFS_STORAGECONTAINERMANAGER_OPTS onto HADOOP_OPTS"
+      HDFS_STORAGECONTAINERMANAGER_OPTS="${HDFS_STORAGECONTAINERMANAGER_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/scm-audit-log4j2.properties"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_STORAGECONTAINERMANAGER_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-server-scm"
     ;;
@@ -120,6 +149,11 @@ function ozonecmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.ozone.s3.Gateway'
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-s3gateway"
+    ;;
+    recon)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.recon.ReconServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-recon"
     ;;
     fs)
       HADOOP_CLASSNAME=org.apache.hadoop.fs.FsShell
@@ -136,6 +170,14 @@ function ozonecmd_case
     genconf)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.genconf.GenerateOzoneRequiredConfigurations
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    dtutil)
+      HADOOP_CLASSNAME=org.apache.hadoop.security.token.DtUtilShell
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-tools"
+    ;;
+    upgrade)
+      HADOOP_CLASSNAME=org.apache.hadoop.ozone.upgrade.InPlaceUpgrade
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-upgrade"
     ;;
     *)
       HADOOP_CLASSNAME="${subcmd}"

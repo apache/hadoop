@@ -18,31 +18,6 @@
 
 package org.apache.hadoop.ozone.web.client;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hdds.client.OzoneQuota;
-import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
-import org.apache.hadoop.ozone.client.rest.RestClient;
-import org.apache.hadoop.ozone.client.rpc.RpcClient;
-import org.apache.hadoop.ozone.client.rest.OzoneException;
-import org.apache.hadoop.ozone.client.OzoneVolume;
-import org.apache.hadoop.ozone.web.utils.OzoneUtils;
-import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Time;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
 import java.io.File;
 import java.io.IOException;
 import java.text.ParseException;
@@ -50,10 +25,35 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.hadoop.hdds.client.OzoneQuota;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneTestUtils;
+import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
+import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
+import org.apache.hadoop.ozone.client.rest.OzoneException;
+import org.apache.hadoop.ozone.client.rest.RestClient;
+import org.apache.hadoop.ozone.client.rpc.RpcClient;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.util.Time;
+
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import org.junit.AfterClass;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  * Test Ozone Volumes Lifecycle.
@@ -67,11 +67,11 @@ public class TestVolume {
   @Parameterized.Parameters
   public static Collection<Object[]> clientProtocol() {
     Object[][] params = new Object[][] {
-        {RpcClient.class},
-        {RestClient.class}};
+        {RpcClient.class}};
     return Arrays.asList(params);
   }
 
+  @SuppressWarnings("visibilitymodifier")
   @Parameterized.Parameter
   public Class clientProtocol;
 
@@ -120,7 +120,7 @@ public class TestVolume {
     runTestCreateVolume(client);
   }
 
-  static void runTestCreateVolume(ClientProtocol client)
+  static void runTestCreateVolume(ClientProtocol clientProtocol)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
 
@@ -131,8 +131,8 @@ public class TestVolume {
         .setQuota("100TB")
         .setAdmin("hdfs")
         .build();
-    client.createVolume(volumeName, volumeArgs);
-    OzoneVolume vol = client.getVolumeDetails(volumeName);
+    clientProtocol.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = clientProtocol.getVolumeDetails(volumeName);
 
     assertEquals(vol.getName(), volumeName);
     assertEquals(vol.getAdmin(), "hdfs");
@@ -147,7 +147,7 @@ public class TestVolume {
     // not use Rule here because the test method is static.
     try {
       String invalidVolumeName = "#" + OzoneUtils.getRequestID().toLowerCase();
-      client.createVolume(invalidVolumeName);
+      clientProtocol.createVolume(invalidVolumeName);
       /*
       //TODO: RestClient and RpcClient should use HddsClientUtils to verify name
       fail("Except the volume creation be failed because the"
@@ -159,20 +159,16 @@ public class TestVolume {
   }
 
   @Test
-  public void testCreateDuplicateVolume() throws OzoneException, IOException {
+  public void testCreateDuplicateVolume() throws Exception {
     runTestCreateDuplicateVolume(client);
   }
 
-  static void runTestCreateDuplicateVolume(ClientProtocol client)
-      throws OzoneException, IOException {
-    try {
-      client.createVolume("testvol");
-      client.createVolume("testvol");
-      assertFalse(true);
-    } catch (IOException ioe) {
-      Assert.assertTrue(ioe.getMessage()
-          .contains("Volume creation failed, error:VOLUME_ALREADY_EXISTS"));
-    }
+  static void runTestCreateDuplicateVolume(ClientProtocol clientProtocol)
+      throws Exception {
+
+    clientProtocol.createVolume("testvol");
+    OzoneTestUtils.expectOmException(ResultCodes.VOLUME_ALREADY_EXISTS,
+        () -> clientProtocol.createVolume("testvol"));
   }
 
   @Test
@@ -180,11 +176,11 @@ public class TestVolume {
     runTestDeleteVolume(client);
   }
 
-  static void runTestDeleteVolume(ClientProtocol client)
+  static void runTestDeleteVolume(ClientProtocol clientProtocol)
       throws OzoneException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.createVolume(volumeName);
-    client.deleteVolume(volumeName);
+    clientProtocol.createVolume(volumeName);
+    clientProtocol.deleteVolume(volumeName);
   }
 
   @Test
@@ -192,13 +188,13 @@ public class TestVolume {
     runTestChangeOwnerOnVolume(client);
   }
 
-  static void runTestChangeOwnerOnVolume(ClientProtocol client)
+  static void runTestChangeOwnerOnVolume(ClientProtocol clientProtocol)
       throws OzoneException, ParseException, IOException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.createVolume(volumeName);
-    client.getVolumeDetails(volumeName);
-    client.setVolumeOwner(volumeName, "frodo");
-    OzoneVolume newVol = client.getVolumeDetails(volumeName);
+    clientProtocol.createVolume(volumeName);
+    clientProtocol.getVolumeDetails(volumeName);
+    clientProtocol.setVolumeOwner(volumeName, "frodo");
+    OzoneVolume newVol = clientProtocol.getVolumeDetails(volumeName);
     assertEquals(newVol.getOwner(), "frodo");
     // verify if the creation time is missing after setting owner operation
     assertTrue(newVol.getCreationTime() > 0);
@@ -209,12 +205,12 @@ public class TestVolume {
     runTestChangeQuotaOnVolume(client);
   }
 
-  static void runTestChangeQuotaOnVolume(ClientProtocol client)
+  static void runTestChangeQuotaOnVolume(ClientProtocol clientProtocol)
       throws OzoneException, IOException, ParseException {
     String volumeName = OzoneUtils.getRequestID().toLowerCase();
-    client.createVolume(volumeName);
-    client.setVolumeQuota(volumeName, OzoneQuota.parseQuota("1000MB"));
-    OzoneVolume newVol = client.getVolumeDetails(volumeName);
+    clientProtocol.createVolume(volumeName);
+    clientProtocol.setVolumeQuota(volumeName, OzoneQuota.parseQuota("1000MB"));
+    OzoneVolume newVol = clientProtocol.getVolumeDetails(volumeName);
     assertEquals(newVol.getQuota(),
         OzoneQuota.parseQuota("1000MB").sizeInBytes());
     // verify if the creation time is missing after setting quota operation
@@ -229,14 +225,14 @@ public class TestVolume {
     runTestListVolume(client);
   }
 
-  static void runTestListVolume(ClientProtocol client)
+  static void runTestListVolume(ClientProtocol clientProtocol)
       throws OzoneException, IOException {
     for (int x = 0; x < 10; x++) {
       String volumeName = OzoneUtils.getRequestID().toLowerCase();
-      client.createVolume(volumeName);
+      clientProtocol.createVolume(volumeName);
     }
 
-    List<OzoneVolume> ovols = client.listVolumes(null, null, 100);
+    List<OzoneVolume> ovols = clientProtocol.listVolumes(null, null, 100);
     assertTrue(ovols.size() >= 10);
   }
 
@@ -247,19 +243,19 @@ public class TestVolume {
     runTestListVolumePagination(client);
   }
 
-  static void runTestListVolumePagination(ClientProtocol client)
+  static void runTestListVolumePagination(ClientProtocol clientProtocol)
       throws OzoneException, IOException {
     final int volCount = 2000;
     final int step = 100;
     for (int x = 0; x < volCount; x++) {
       String volumeName = OzoneUtils.getRequestID().toLowerCase();
-      client.createVolume(volumeName);
+      clientProtocol.createVolume(volumeName);
     }
     String prevKey = null;
     int count = 0;
     int pagecount = 0;
     while (count < volCount) {
-      List<OzoneVolume> ovols = client.listVolumes(null, prevKey, step);
+      List<OzoneVolume> ovols = clientProtocol.listVolumes(null, prevKey, step);
       count += ovols.size();
       prevKey = ovols.get(ovols.size() - 1).getName();
       pagecount++;
@@ -274,7 +270,7 @@ public class TestVolume {
     runTestListAllVolumes(client);
   }
 
-  static void runTestListAllVolumes(ClientProtocol client)
+  static void runTestListAllVolumes(ClientProtocol clientProtocol)
       throws OzoneException, IOException {
     final int volCount = 200;
     final int step = 10;
@@ -288,15 +284,15 @@ public class TestVolume {
           .setQuota("100TB")
           .setAdmin("hdfs")
           .build();
-      client.createVolume(volumeName, volumeArgs);
-      OzoneVolume vol = client.getVolumeDetails(volumeName);
+      clientProtocol.createVolume(volumeName, volumeArgs);
+      OzoneVolume vol = clientProtocol.getVolumeDetails(volumeName);
       assertNotNull(vol);
     }
     String prevKey = null;
     int count = 0;
     int pagecount = 0;
     while (count < volCount) {
-      List<OzoneVolume> ovols = client.listVolumes(null, prevKey, step);
+      List<OzoneVolume> ovols = clientProtocol.listVolumes(null, prevKey, step);
       count += ovols.size();
       if (ovols.size() > 0) {
         prevKey = ovols.get(ovols.size() - 1).getName();
@@ -316,7 +312,7 @@ public class TestVolume {
     runTestListVolumes(client);
   }
 
-  static void runTestListVolumes(ClientProtocol client)
+  static void runTestListVolumes(ClientProtocol clientProtocol)
       throws OzoneException, IOException, ParseException {
     final int volCount = 20;
     final String user1 = "test-user-a";
@@ -342,13 +338,14 @@ public class TestVolume {
           .setQuota("100TB")
           .setAdmin("hdfs")
           .build();
-      client.createVolume(volumeName, volumeArgs);
-      OzoneVolume vol = client.getVolumeDetails(volumeName);
+      clientProtocol.createVolume(volumeName, volumeArgs);
+      OzoneVolume vol = clientProtocol.getVolumeDetails(volumeName);
       assertNotNull(vol);
     }
 
     // list all the volumes belong to user1
-    List<OzoneVolume> volumeList = client.listVolumes(user1, null, null, 100);
+    List<OzoneVolume> volumeList =
+        clientProtocol.listVolumes(user1, null, null, 100);
     assertEquals(10, volumeList.size());
     // verify the owner name and creation time of volume
     for (OzoneVolume vol : volumeList) {
@@ -358,25 +355,25 @@ public class TestVolume {
     }
 
     // test max key parameter of listing volumes
-    volumeList = client.listVolumes(user1, null, null, 2);
+    volumeList = clientProtocol.listVolumes(user1, null, null, 2);
     assertEquals(2, volumeList.size());
 
     // test prefix parameter of listing volumes
-    volumeList = client.listVolumes(user1, "test-vol10", null, 10);
+    volumeList = clientProtocol.listVolumes(user1, "test-vol10", null, 10);
     assertTrue(volumeList.size() == 1
         && volumeList.get(0).getName().equals("test-vol10"));
 
-    volumeList = client.listVolumes(user1, "test-vol1", null, 10);
+    volumeList = clientProtocol.listVolumes(user1, "test-vol1", null, 10);
     assertEquals(5, volumeList.size());
 
     // test start key parameter of listing volumes
-    volumeList = client.listVolumes(user2, null, "test-vol15", 10);
+    volumeList = clientProtocol.listVolumes(user2, null, "test-vol15", 10);
     assertEquals(2, volumeList.size());
 
     String volumeName;
     for (int x = 0; x < volCount; x++) {
       volumeName = "test-vol" + x;
-      client.deleteVolume(volumeName);
+      clientProtocol.deleteVolume(volumeName);
     }
   }
 }

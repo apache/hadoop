@@ -292,8 +292,7 @@ public abstract class DelegationTokenAuthenticator implements Authenticator {
     }
     // proxyuser
     if (doAsUser != null) {
-      params.put(DelegationTokenAuthenticatedURL.DO_AS,
-          URLEncoder.encode(doAsUser, "UTF-8"));
+      params.put(DelegationTokenAuthenticatedURL.DO_AS, doAsUser);
     }
     String urlStr = url.toExternalForm();
     StringBuilder sb = new StringBuilder(urlStr);

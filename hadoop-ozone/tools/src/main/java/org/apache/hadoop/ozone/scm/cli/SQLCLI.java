@@ -469,7 +469,7 @@ public class SQLCLI  extends Configured implements Tool {
         long containerID = Longs.fromByteArray(key);
         ContainerInfo containerInfo = null;
         containerInfo = ContainerInfo.fromProtobuf(
-            HddsProtos.SCMContainerInfo.PARSER.parseFrom(value));
+            HddsProtos.ContainerInfoProto.PARSER.parseFrom(value));
         Preconditions.checkNotNull(containerInfo);
         try {
           //TODO: include container state to sqllite schema

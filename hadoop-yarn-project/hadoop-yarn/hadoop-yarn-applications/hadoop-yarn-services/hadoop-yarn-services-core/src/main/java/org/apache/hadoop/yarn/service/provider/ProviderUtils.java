@@ -47,9 +47,12 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static org.apache.hadoop.yarn.service.api.ServiceApiConstants.COMPONENT_ID;
@@ -149,6 +152,20 @@ public class ProviderUtils implements YarnServiceConstants {
     return content;
   }
 
+  public static String replaceSpacesWithDelimiter(String content,
+      String delimiter) {
+    List<String> parts = new ArrayList<String>();
+    Matcher m = Pattern.compile("([^\"]\\S*|\".+?\")\\s*").matcher(content);
+    while (m.find()) {
+      String part = m.group(1);
+      if(part.startsWith("\"") && part.endsWith("\"")) {
+        part = part.replaceAll("^\"|\"$", "");
+      }
+      parts.add(part);
+    }
+    return String.join(delimiter, parts);
+  }
+
   // configs will be substituted by corresponding env in tokenMap
   public static void substituteMapWithTokens(Map<String, String> configs,
       Map<String, String> tokenMap) {
@@ -180,7 +197,10 @@ public class ProviderUtils implements YarnServiceConstants {
       AbstractLauncher launcher, SliderFileSystem fs,
       ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       Map<String, String> tokensForSubstitution, ComponentInstance instance,
-      ServiceContext context) throws IOException {
+      ServiceContext context, ProviderService.ResolvedLaunchParams
+      resolvedParams)
+      throws IOException {
+
     Path compInstanceDir = initCompInstanceDir(fs, compLaunchContext, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
       log.info("{} version {} : Creating dir on hdfs: {}",
@@ -192,11 +212,8 @@ public class ProviderUtils implements YarnServiceConstants {
       log.info("Component instance conf dir already exists: " + compInstanceDir);
     }
 
-    if (log.isDebugEnabled()) {
-      log.debug("Tokens substitution for component instance: " + instance
-          .getCompInstanceName() + System.lineSeparator()
-          + tokensForSubstitution);
-    }
+    log.debug("Tokens substitution for component instance: {}{}{}" + instance
+        .getCompInstanceName(), System.lineSeparator(), tokensForSubstitution);
 
     for (ConfigFile originalFile : compLaunchContext.getConfiguration()
         .getFiles()) {
@@ -254,13 +271,15 @@ public class ProviderUtils implements YarnServiceConstants {
           fs.createAmResource(remoteFile, LocalResourceType.FILE);
       Path destFile = new Path(configFile.getDestFile());
       String symlink = APP_CONF_DIR + "/" + fileName;
-      addLocalResource(launcher, symlink, configResource, destFile);
+      addLocalResource(launcher, symlink, configResource, destFile,
+          resolvedParams);
     }
   }
 
   public static synchronized void handleStaticFilesForLocalization(
       AbstractLauncher launcher, SliderFileSystem fs, ContainerLaunchService
-      .ComponentLaunchContext componentLaunchCtx)
+      .ComponentLaunchContext componentLaunchCtx,
+      ProviderService.ResolvedLaunchParams resolvedParams)
       throws IOException {
     for (ConfigFile staticFile :
         componentLaunchCtx.getConfiguration().getFiles()) {
@@ -298,13 +317,14 @@ public class ProviderUtils implements YarnServiceConstants {
           .isEmpty()) {
         destFile = new Path(staticFile.getDestFile());
       }
-
-      addLocalResource(launcher, destFile.getName(), localResource, destFile);
+      addLocalResource(launcher, destFile.getName(), localResource, destFile,
+          resolvedParams);
     }
   }
 
   private static void addLocalResource(AbstractLauncher launcher,
-      String symlink, LocalResource localResource, Path destFile) {
+      String symlink, LocalResource localResource, Path destFile,
+      ProviderService.ResolvedLaunchParams resolvedParams) {
     if (destFile.isAbsolute()) {
       launcher.addLocalResource(symlink, localResource, destFile.toString());
       log.info("Added file for localization: "+ symlink +" -> " +
@@ -315,6 +335,7 @@ public class ProviderUtils implements YarnServiceConstants {
       log.info("Added file for localization: " + symlink+ " -> " +
           localResource.getResource().getFile());
     }
+    resolvedParams.addResolvedRsrcPath(symlink, destFile.toString());
   }
 
   // Static file is files uploaded by users before launch the service. Which

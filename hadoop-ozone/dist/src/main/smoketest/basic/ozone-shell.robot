@@ -22,17 +22,8 @@ Test Timeout        2 minute
 *** Variables ***
 
 *** Test Cases ***
-RestClient without http port
-   Test ozone shell       http://          ozoneManager          restwoport
-
-RestClient with http port
-   Test ozone shell       http://          ozoneManager:9874     restwport
-
-RestClient without host name
-   Test ozone shell       http://          ${EMPTY}              restwohost
-
 RpcClient with port
-   Test ozone shell       o3://            ozoneManager:9862     rpcwoport
+   Test ozone shell       o3://            om:9862     rpcwoport
 
 RpcClient without host
    Test ozone shell       o3://            ${EMPTY}              rpcwport
@@ -79,4 +70,7 @@ Test key handling
                     Should contain      ${result}       createdOn
     ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.keyName=="key1") | .keyName'
                     Should Be Equal     ${result}       key1
-                    Execute             ozone sh key delete ${protocol}${server}/${volume}/bb1/key1
+                    Execute             ozone sh key rename ${protocol}${server}/${volume}/bb1 key1 key2
+    ${result} =     Execute             ozone sh key list ${protocol}${server}/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[].keyName'
+                    Should Be Equal     ${result}       key2
+                    Execute             ozone sh key delete ${protocol}${server}/${volume}/bb1/key2

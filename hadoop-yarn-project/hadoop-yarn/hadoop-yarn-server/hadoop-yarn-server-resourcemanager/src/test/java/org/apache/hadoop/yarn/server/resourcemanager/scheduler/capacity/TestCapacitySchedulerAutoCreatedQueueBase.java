@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
@@ -101,7 +101,7 @@ import static org.junit.Assert.fail;
 
 public class TestCapacitySchedulerAutoCreatedQueueBase {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestCapacitySchedulerAutoCreatedQueueBase.class);
   public static final int GB = 1024;
   public static final ContainerUpdates NULL_UPDATE_REQUESTS =

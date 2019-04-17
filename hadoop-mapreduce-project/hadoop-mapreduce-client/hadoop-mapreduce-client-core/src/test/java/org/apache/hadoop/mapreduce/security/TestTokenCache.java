@@ -19,7 +19,7 @@
 package org.apache.hadoop.mapreduce.security;
 
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 import java.io.IOException;

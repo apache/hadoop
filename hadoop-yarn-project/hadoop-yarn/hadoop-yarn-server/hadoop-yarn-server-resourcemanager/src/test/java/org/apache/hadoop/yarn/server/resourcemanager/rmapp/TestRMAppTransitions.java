@@ -19,8 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
@@ -93,7 +93,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Matchers;
 
 import java.io.File;
 import java.io.IOException;
@@ -108,9 +107,9 @@ import java.util.List;
 import java.util.Map;
 import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
@@ -121,7 +120,8 @@ import static org.mockito.Mockito.verify;
 
 @RunWith(value = Parameterized.class)
 public class TestRMAppTransitions {
-  static final Log LOG = LogFactory.getLog(TestRMAppTransitions.class);
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestRMAppTransitions.class);
 
   private boolean isSecurityEnabled;
   private Configuration conf;
@@ -255,7 +255,7 @@ public class TestRMAppTransitions {
 
     ResourceScheduler resourceScheduler = mock(ResourceScheduler.class);
     doReturn(null).when(resourceScheduler)
-              .getAppResourceUsageReport(Matchers.any());
+         .getAppResourceUsageReport(any());
     doReturn(resourceScheduler).when(rmContext).getScheduler();
 
     doReturn(mock(RMTimelineCollectorManager.class)).when(rmContext)

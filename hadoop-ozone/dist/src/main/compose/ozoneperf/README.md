@@ -17,57 +17,36 @@
 This directory contains docker-compose definition for an ozone cluster where
 all the metrics are saved to a prometheus instance.
 
- Prometheus follows a pull based approach where the metrics are published
+Prometheus follows a pull based approach where the metrics are published
  on a HTTP endpoint.
 
- Our current approach:
+Prometheus compatible metrics endpoint can be enabled by setting `hdds.prometheus.endpoint.enabled` property to `true`
 
-  1. A Java agent activates a prometheus metrics endpoint in every JVM instance
-   (use `init.sh` to download the agent)
+## How to start
 
-  2. The Java agent publishes all the jmx parameters in prometheus format AND
-  register the endpoint address to the consul.
-
-  3. Prometheus polls all the endpoints which are registered to consul.
-
-
-
-## How to use
-
-First of all download the required Java agent with running `./init.sh`
-
-After that you can start the cluster with docker-compose:
+Start the cluster with `docker-compose`
 
 ```
 docker-compose up -d
 ```
 
-After a while the cluster will be started. You can check the ozone web ui-s:
+Note: The freon test will be started after 30 seconds.
 
-https://localhost:9874
-https://localhost:9876
+## How to use
 
-You can also scale up the datanodes:
+You can check the ozone web ui:
 
-```
-docker-compose scale datanode=3
-```
+OzoneManager: https://localhost:9874
+SCM: https://localhost:9876
 
-Freon (Ozone test generator tool) is not part of docker-compose by default,
-you can activate it using `compose-all.sh` instead of `docker-compose`:
-
-```
-compose-all.sh up -d
-```
-
-Now Freon is running. Let's try to check the metrics from the local Prometheus:
+You can check the ozone metrics from the prometheus web ui.
 
 http://localhost:9090/graph
 
-Example queries:
+You can view Grafana dashboards at:
 
-```
-Hadoop_OzoneManager_NumKeyCommits
-rate(Hadoop_OzoneManager_NumKeyCommits[10m])
-rate(Hadoop_Ozone_BYTES_WRITTEN[10m])
-```
+http://localhost:3000
+
+Default dashboards available are:
+Ozone - Object Metrics
+Ozone - RPC Metrics

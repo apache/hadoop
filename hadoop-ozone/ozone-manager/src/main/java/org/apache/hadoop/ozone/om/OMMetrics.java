@@ -25,6 +25,7 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
+import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
 
 /**
  * This class is for maintaining Ozone Manager statistics.
@@ -39,6 +40,7 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeOps;
   private @Metric MutableCounterLong numBucketOps;
   private @Metric MutableCounterLong numKeyOps;
+  private @Metric MutableCounterLong numFSOps;
 
   // OM op metrics
   private @Metric MutableCounterLong numVolumeCreates;
@@ -59,7 +61,16 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeLists;
   private @Metric MutableCounterLong numKeyCommits;
   private @Metric MutableCounterLong numAllocateBlockCalls;
+  private @Metric MutableCounterLong numAddAllocateBlockCalls;
   private @Metric MutableCounterLong numGetServiceLists;
+  private @Metric MutableCounterLong numListS3Buckets;
+  private @Metric MutableCounterLong numInitiateMultipartUploads;
+  private @Metric MutableCounterLong numCompleteMultipartUploads;
+
+  private @Metric MutableCounterLong numGetFileStatus;
+  private @Metric MutableCounterLong numCreateDirectory;
+  private @Metric MutableCounterLong numCreateFile;
+  private @Metric MutableCounterLong numLookupFile;
 
   // Failure Metrics
   private @Metric MutableCounterLong numVolumeCreateFails;
@@ -80,7 +91,37 @@ public class OMMetrics {
   private @Metric MutableCounterLong numVolumeListFails;
   private @Metric MutableCounterLong numKeyCommitFails;
   private @Metric MutableCounterLong numBlockAllocateCallFails;
+  private @Metric MutableCounterLong numAddAllocateBlockCallFails;
   private @Metric MutableCounterLong numGetServiceListFails;
+  private @Metric MutableCounterLong numListS3BucketsFails;
+  private @Metric MutableCounterLong numInitiateMultipartUploadFails;
+  private @Metric MutableCounterLong numCommitMultipartUploadParts;
+  private @Metric MutableCounterLong getNumCommitMultipartUploadPartFails;
+  private @Metric MutableCounterLong numCompleteMultipartUploadFails;
+  private @Metric MutableCounterLong numAbortMultipartUploads;
+  private @Metric MutableCounterLong numAbortMultipartUploadFails;
+  private @Metric MutableCounterLong numListMultipartUploadParts;
+  private @Metric MutableCounterLong numListMultipartUploadPartFails;
+
+  private @Metric MutableCounterLong numGetFileStatusFails;
+  private @Metric MutableCounterLong numCreateDirectoryFails;
+  private @Metric MutableCounterLong numCreateFileFails;
+  private @Metric MutableCounterLong numLookupFileFails;
+
+  // Metrics for total number of volumes, buckets and keys
+
+  private @Metric MutableCounterLong numVolumes;
+  private @Metric MutableCounterLong numBuckets;
+
+  //TODO: This metric is an estimate and it may be inaccurate on restart if the
+  // OM process was not shutdown cleanly. Key creations/deletions in the last
+  // few minutes before restart may not be included in this count.
+  private @Metric MutableCounterLong numKeys;
+
+  // Metrics to track checkpointing statistics from last run.
+  private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
+  private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
 
   public OMMetrics() {
   }
@@ -91,6 +132,55 @@ public class OMMetrics {
         "Ozone Manager Metrics",
         new OMMetrics());
   }
+
+  public void incNumVolumes() {
+    numVolumes.incr();
+  }
+
+  public void decNumVolumes() {
+    numVolumes.incr(-1);
+  }
+
+  public void incNumBuckets() {
+    numBuckets.incr();
+  }
+
+  public void decNumBuckets() {
+    numBuckets.incr(-1);
+  }
+
+  public void incNumKeys() {
+    numKeys.incr();
+  }
+
+  public void decNumKeys() {
+    numKeys.incr(-1);
+  }
+
+  public void setNumVolumes(long val) {
+    this.numVolumes.incr(val);
+  }
+
+  public void setNumBuckets(long val) {
+    this.numBuckets.incr(val);
+  }
+
+  public void setNumKeys(long val) {
+    this.numKeys.incr(val);
+  }
+
+  public long getNumVolumes() {
+    return numVolumes.value();
+  }
+
+  public long getNumBuckets() {
+    return numBuckets.value();
+  }
+
+  public long getNumKeys() {
+    return numKeys.value();
+  }
+
 
   public void incNumVolumeCreates() {
     numVolumeOps.incr();
@@ -150,6 +240,101 @@ public class OMMetrics {
   public void incNumVolumeLists() {
     numVolumeOps.incr();
     numVolumeLists.incr();
+  }
+
+  public void incNumListS3Buckets() {
+    numBucketOps.incr();
+    numListS3Buckets.incr();
+  }
+
+  public void incNumListS3BucketsFails() {
+    numBucketOps.incr();
+    numListS3BucketsFails.incr();
+  }
+
+  public void incNumInitiateMultipartUploads() {
+    numKeyOps.incr();
+    numInitiateMultipartUploads.incr();
+  }
+
+  public void incNumInitiateMultipartUploadFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCommitMultipartUploadParts() {
+    numKeyOps.incr();
+    numCommitMultipartUploadParts.incr();
+  }
+
+  public void incNumCommitMultipartUploadPartFails() {
+    numInitiateMultipartUploadFails.incr();
+  }
+
+  public void incNumCompleteMultipartUploads() {
+    numKeyOps.incr();
+    numCompleteMultipartUploads.incr();
+  }
+
+  public void incNumCompleteMultipartUploadFails() {
+    numCompleteMultipartUploadFails.incr();
+  }
+
+  public void incNumAbortMultipartUploads() {
+    numKeyOps.incr();
+    numAbortMultipartUploads.incr();
+  }
+
+  public void incNumAbortMultipartUploadFails() {
+    numAbortMultipartUploadFails.incr();
+  }
+
+  public void incNumListMultipartUploadParts() {
+    numKeyOps.incr();
+    numListMultipartUploadParts.incr();
+  }
+
+  public void incNumGetFileStatus() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numGetFileStatus.incr();
+  }
+
+  public void incNumGetFileStatusFails() {
+    numGetFileStatusFails.incr();
+  }
+
+  public void incNumCreateDirectory() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateDirectory.incr();
+  }
+
+  public void incNumCreateDirectoryFails() {
+    numCreateDirectoryFails.incr();
+  }
+
+  public void incNumCreateFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numCreateFile.incr();
+  }
+
+  public void incNumCreateFileFails() {
+    numCreateFileFails.incr();
+  }
+
+  public void incNumLookupFile() {
+    numKeyOps.incr();
+    numFSOps.incr();
+    numLookupFile.incr();
+  }
+
+  public void incNumLookupFileFails() {
+    numLookupFileFails.incr();
+  }
+
+  public void incNumListMultipartUploadPartFails() {
+    numListMultipartUploadPartFails.incr();
   }
 
   public void incNumGetServiceLists() {
@@ -246,6 +431,14 @@ public class OMMetrics {
     numBlockAllocateCallFails.incr();
   }
 
+  public void incNumAddAllocateBlockCalls() {
+    numAddAllocateBlockCalls.incr();
+  }
+
+  public void incNumAddAllocateBlockFails() {
+    numAddAllocateBlockCallFails.incr();
+  }
+
   public void incNumBucketListFails() {
     numBucketListFails.incr();
   }
@@ -260,6 +453,18 @@ public class OMMetrics {
 
   public void incNumGetServiceListFails() {
     numGetServiceListFails.incr();
+  }
+
+  public void setLastCheckpointCreationTimeTaken(long val) {
+    this.lastCheckpointCreationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointTarOperationTimeTaken(long val) {
+    this.lastCheckpointTarOperationTimeTaken.set(val);
+  }
+
+  public void setLastCheckpointStreamingTimeTaken(long val) {
+    this.lastCheckpointStreamingTimeTaken.set(val);
   }
 
   @VisibleForTesting
@@ -422,6 +627,17 @@ public class OMMetrics {
     return numKeyListFails.value();
   }
 
+
+  @VisibleForTesting
+  public long getNumFSOps() {
+    return numFSOps.value();
+  }
+
+  @VisibleForTesting
+  public long getNumGetFileStatus() {
+    return numGetFileStatus.value();
+  }
+
   @VisibleForTesting
   public long getNumVolumeListFails() {
     return numVolumeListFails.value();
@@ -450,6 +666,47 @@ public class OMMetrics {
   @VisibleForTesting
   public long getNumGetServiceListFails() {
     return numGetServiceListFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3Buckets() {
+    return numListS3Buckets.value();
+  }
+
+  @VisibleForTesting
+  public long getNumListS3BucketsFails() {
+    return numListS3BucketsFails.value();
+  }
+
+  public long getNumInitiateMultipartUploads() {
+    return numInitiateMultipartUploads.value();
+  }
+
+  public long getNumInitiateMultipartUploadFails() {
+    return numInitiateMultipartUploadFails.value();
+  }
+
+  public long getNumAbortMultipartUploads() {
+    return numAbortMultipartUploads.value();
+  }
+
+  public long getNumAbortMultipartUploadFails() {
+    return numAbortMultipartUploadFails.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointCreationTimeTaken() {
+    return lastCheckpointCreationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointTarOperationTimeTaken() {
+    return lastCheckpointTarOperationTimeTaken.value();
+  }
+
+  @VisibleForTesting
+  public long getLastCheckpointStreamingTimeTaken() {
+    return lastCheckpointStreamingTimeTaken.value();
   }
 
   public void unRegister() {

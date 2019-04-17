@@ -32,13 +32,16 @@ public class AliyunOSSCopyFileTask implements Runnable {
 
   private AliyunOSSFileSystemStore store;
   private String srcKey;
+  private long srcLen;
   private String dstKey;
   private AliyunOSSCopyFileContext copyFileContext;
 
   public AliyunOSSCopyFileTask(AliyunOSSFileSystemStore store,
-      String srcKey, String dstKey, AliyunOSSCopyFileContext copyFileContext) {
+      String srcKey, long srcLen,
+      String dstKey, AliyunOSSCopyFileContext copyFileContext) {
     this.store = store;
     this.srcKey = srcKey;
+    this.srcLen = srcLen;
     this.dstKey = dstKey;
     this.copyFileContext = copyFileContext;
   }
@@ -47,7 +50,7 @@ public class AliyunOSSCopyFileTask implements Runnable {
   public void run() {
     boolean fail = false;
     try {
-      store.copyFile(srcKey, dstKey);
+      fail = !store.copyFile(srcKey, srcLen, dstKey);
     } catch (Exception e) {
       LOG.warn("Exception thrown when copy from "
           + srcKey + " to " + dstKey +  ", exception: " + e);

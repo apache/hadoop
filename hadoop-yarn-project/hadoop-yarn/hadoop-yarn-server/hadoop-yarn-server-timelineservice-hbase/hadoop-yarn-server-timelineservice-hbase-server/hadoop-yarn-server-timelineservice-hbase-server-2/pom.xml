@@ -147,6 +147,14 @@
               <groupId>org.mortbay.jetty</groupId>
               <artifactId>jetty-sslengine</artifactId>
             </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jetty</groupId>
+              <artifactId>jetty-security</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jetty</groupId>
+              <artifactId>jetty-http</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
       </dependencies>

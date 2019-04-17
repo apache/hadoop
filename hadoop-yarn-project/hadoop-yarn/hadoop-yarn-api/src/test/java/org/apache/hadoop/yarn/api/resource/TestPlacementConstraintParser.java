@@ -22,6 +22,7 @@ import com.google.common.collect.Sets;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.yarn.api.records.NodeAttributeOpCode;
 import org.apache.hadoop.yarn.api.resource.PlacementConstraint.AbstractConstraint;
@@ -42,24 +43,25 @@ import org.apache.hadoop.yarn.util.constraint.PlacementConstraintParser.Constrai
 
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets.allocationTag;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.and;
-import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.cardinality;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.or;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.PlacementTargets;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetIn;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNodeAttribute;
 import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.targetNotIn;
 
-import org.junit.Assert;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import org.junit.jupiter.api.Test;
 
 /**
  * Class to test placement constraint parser.
  */
-public class TestPlacementConstraintParser {
+class TestPlacementConstraintParser {
 
   @Test
-  public void testTargetExpressionParser()
-      throws PlacementConstraintParseException {
+  void testTargetExpressionParser() throws PlacementConstraintParseException {
     String expressionStr;
     ConstraintParser parser;
     AbstractConstraint constraint;
@@ -70,22 +72,22 @@ public class TestPlacementConstraintParser {
     expressionStr = "NOTIN, NODE, foo";
     parser = new TargetConstraintParser(expressionStr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("node", single.getScope());
-    Assert.assertEquals(0, single.getMinCardinality());
-    Assert.assertEquals(0, single.getMaxCardinality());
+    assertEquals("node", single.getScope());
+    assertEquals(0, single.getMinCardinality());
+    assertEquals(0, single.getMaxCardinality());
     verifyConstraintToString(expressionStr, constraint);
 
     // lower cases is also valid
     expressionStr = "notin, node, foo";
     parser = new TargetConstraintParser(expressionStr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("node", single.getScope());
-    Assert.assertEquals(0, single.getMinCardinality());
-    Assert.assertEquals(0, single.getMaxCardinality());
+    assertEquals("node", single.getScope());
+    assertEquals(0, single.getMinCardinality());
+    assertEquals(0, single.getMaxCardinality());
     verifyConstraintToString(expressionStr, constraint);
 
     // Affinity with single target tag
@@ -93,11 +95,11 @@ public class TestPlacementConstraintParser {
     expressionStr = "IN, NODE, foo";
     parser = new TargetConstraintParser(expressionStr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("node", single.getScope());
-    Assert.assertEquals(1, single.getMinCardinality());
-    Assert.assertEquals(Integer.MAX_VALUE, single.getMaxCardinality());
+    assertEquals("node", single.getScope());
+    assertEquals(1, single.getMinCardinality());
+    assertEquals(Integer.MAX_VALUE, single.getMaxCardinality());
     verifyConstraintToString(expressionStr, constraint);
 
     // Anti-affinity with multiple target tags
@@ -105,16 +107,18 @@ public class TestPlacementConstraintParser {
     expressionStr = "NOTIN, NODE, foo, bar, exp";
     parser = new TargetConstraintParser(expressionStr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("node", single.getScope());
-    Assert.assertEquals(0, single.getMinCardinality());
-    Assert.assertEquals(0, single.getMaxCardinality());
-    Assert.assertEquals(1, single.getTargetExpressions().size());
-    TargetExpression exp =
-        single.getTargetExpressions().iterator().next();
-    Assert.assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
-    Assert.assertEquals(3, exp.getTargetValues().size());
+    assertEquals("node", single.getScope());
+    assertEquals(0, single.getMinCardinality());
+    assertEquals(0, single.getMaxCardinality());
+    assertEquals(3, single.getTargetExpressions().size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar"),
+        PlacementTargets.allocationTag("exp"));
+    assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionStr, constraint);
 
     // Invalid OP
@@ -122,13 +126,13 @@ public class TestPlacementConstraintParser {
     try {
       parser.parse();
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof PlacementConstraintParseException);
-      Assert.assertTrue(e.getMessage().contains("expecting in or notin"));
+      assertTrue(e instanceof PlacementConstraintParseException);
+      assertTrue(e.getMessage().contains("expecting in or notin"));
     }
   }
 
   @Test
-  public void testCardinalityConstraintParser()
+  void testCardinalityConstraintParser()
       throws PlacementConstraintParseException {
     String expressionExpr;
     ConstraintParser parser;
@@ -139,35 +143,35 @@ public class TestPlacementConstraintParser {
     expressionExpr = "cardinality, NODE, foo, 0, 1";
     parser = new CardinalityConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("node", single.getScope());
-    Assert.assertEquals(0, single.getMinCardinality());
-    Assert.assertEquals(1, single.getMaxCardinality());
-    Assert.assertEquals(1, single.getTargetExpressions().size());
+    assertEquals("node", single.getScope());
+    assertEquals(0, single.getMinCardinality());
+    assertEquals(1, single.getMaxCardinality());
+    assertEquals(1, single.getTargetExpressions().size());
     TargetExpression exp =
         single.getTargetExpressions().iterator().next();
-    Assert.assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
-    Assert.assertEquals(1, exp.getTargetValues().size());
-    Assert.assertEquals("foo", exp.getTargetValues().iterator().next());
+    assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
+    assertEquals(1, exp.getTargetValues().size());
+    assertEquals("foo", exp.getTargetValues().iterator().next());
     verifyConstraintToString(expressionExpr, constraint);
 
     // cardinality,NODE,foo,bar,moo,0,1
     expressionExpr = "cardinality,RACK,foo,bar,moo,0,1";
     parser = new CardinalityConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof SingleConstraint);
+    assertTrue(constraint instanceof SingleConstraint);
     single = (SingleConstraint) constraint;
-    Assert.assertEquals("rack", single.getScope());
-    Assert.assertEquals(0, single.getMinCardinality());
-    Assert.assertEquals(1, single.getMaxCardinality());
-    Assert.assertEquals(1, single.getTargetExpressions().size());
-    exp = single.getTargetExpressions().iterator().next();
-    Assert.assertEquals("ALLOCATION_TAG", exp.getTargetType().toString());
-    Assert.assertEquals(3, exp.getTargetValues().size());
-    Set<String> expectedTags = Sets.newHashSet("foo", "bar", "moo");
-    Assert.assertTrue(Sets.difference(expectedTags, exp.getTargetValues())
-        .isEmpty());
+    assertEquals("rack", single.getScope());
+    assertEquals(0, single.getMinCardinality());
+    assertEquals(1, single.getMaxCardinality());
+    assertEquals(3, single.getTargetExpressions().size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar"),
+        PlacementTargets.allocationTag("moo"));
+    assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
     verifyConstraintToString(expressionExpr, constraint);
 
     // Invalid scope string
@@ -175,9 +179,9 @@ public class TestPlacementConstraintParser {
       parser = new CardinalityConstraintParser(
           "cardinality,NOWHERE,foo,bar,moo,0,1");
       parser.parse();
-      Assert.fail("Expecting a parsing failure!");
+      fail("Expecting a parsing failure!");
     } catch (PlacementConstraintParseException e) {
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e.getMessage()
           .contains("expecting scope to node or rack, but met NOWHERE"));
     }
 
@@ -186,15 +190,15 @@ public class TestPlacementConstraintParser {
       parser = new CardinalityConstraintParser(
           "cardinality,NODE,0,1");
       parser.parse();
-      Assert.fail("Expecting a parsing failure!");
+      fail("Expecting a parsing failure!");
     } catch (PlacementConstraintParseException e) {
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e.getMessage()
           .contains("at least 5 elements, but only 4 is given"));
     }
   }
 
   @Test
-  public void testAndConstraintParser()
+  void testAndConstraintParser()
       throws PlacementConstraintParseException {
     String expressionExpr;
     ConstraintParser parser;
@@ -204,33 +208,33 @@ public class TestPlacementConstraintParser {
     expressionExpr = "AND(NOTIN,NODE,foo:NOTIN,NODE,bar)";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof And);
+    assertTrue(constraint instanceof And);
     and = (And) constraint;
-    Assert.assertEquals(2, and.getChildren().size());
+    assertEquals(2, and.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
 
     expressionExpr = "AND(NOTIN,NODE,foo:cardinality,NODE,foo,0,1)";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof And);
-    Assert.assertEquals(2, and.getChildren().size());
+    assertTrue(constraint instanceof And);
+    assertEquals(2, and.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
 
     expressionExpr =
         "AND(NOTIN,NODE,foo:AND(NOTIN,NODE,foo:cardinality,NODE,foo,0,1))";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof And);
+    assertTrue(constraint instanceof And);
     and = (And) constraint;
-    Assert.assertTrue(and.getChildren().get(0) instanceof SingleConstraint);
-    Assert.assertTrue(and.getChildren().get(1) instanceof And);
+    assertTrue(and.getChildren().get(0) instanceof SingleConstraint);
+    assertTrue(and.getChildren().get(1) instanceof And);
     and = (And) and.getChildren().get(1);
-    Assert.assertEquals(2, and.getChildren().size());
+    assertEquals(2, and.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
   }
 
   @Test
-  public void testOrConstraintParser()
+  void testOrConstraintParser()
       throws PlacementConstraintParseException {
     String expressionExpr;
     ConstraintParser parser;
@@ -240,48 +244,48 @@ public class TestPlacementConstraintParser {
     expressionExpr = "OR(NOTIN,NODE,foo:NOTIN,NODE,bar)";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof Or);
+    assertTrue(constraint instanceof Or);
     or = (Or) constraint;
-    Assert.assertEquals(2, or.getChildren().size());
+    assertEquals(2, or.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
 
     expressionExpr = "OR(NOTIN,NODE,foo:cardinality,NODE,foo,0,1)";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof Or);
-    Assert.assertEquals(2, or.getChildren().size());
+    assertTrue(constraint instanceof Or);
+    assertEquals(2, or.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
 
     expressionExpr =
         "OR(NOTIN,NODE,foo:OR(NOTIN,NODE,foo:cardinality,NODE,foo,0,1))";
     parser = new ConjunctionConstraintParser(expressionExpr);
     constraint = parser.parse();
-    Assert.assertTrue(constraint instanceof Or);
+    assertTrue(constraint instanceof Or);
     or = (Or) constraint;
-    Assert.assertTrue(or.getChildren().get(0) instanceof SingleConstraint);
-    Assert.assertTrue(or.getChildren().get(1) instanceof Or);
+    assertTrue(or.getChildren().get(0) instanceof SingleConstraint);
+    assertTrue(or.getChildren().get(1) instanceof Or);
     or = (Or) or.getChildren().get(1);
-    Assert.assertEquals(2, or.getChildren().size());
+    assertEquals(2, or.getChildren().size());
     verifyConstraintToString(expressionExpr, constraint);
   }
 
   @Test
-  public void testMultipleConstraintsTokenizer()
+  void testMultipleConstraintsTokenizer()
       throws PlacementConstraintParseException {
     MultipleConstraintsTokenizer ct;
     SourceTagsTokenizer st;
     TokenizerTester mp;
 
     ct = new MultipleConstraintsTokenizer(
-        "foo=1,A1,A2,A3:bar=2,B1,B2:moo=3,C1,C2");
+        "foo(1),A1,A2,A3:bar(2),B1,B2:moo(3),C1,C2");
     mp = new TokenizerTester(ct,
-        "foo=1,A1,A2,A3", "bar=2,B1,B2", "moo=3,C1,C2");
+        "foo(1),A1,A2,A3", "bar(2),B1,B2", "moo(3),C1,C2");
     mp.verify();
 
     ct = new MultipleConstraintsTokenizer(
-        "foo=1,AND(A2:A3):bar=2,OR(B1:AND(B2:B3)):moo=3,C1,C2");
+        "foo(1),AND(A2:A3):bar(2),OR(B1:AND(B2:B3)):moo(3),C1,C2");
     mp = new TokenizerTester(ct,
-        "foo=1,AND(A2:A3)", "bar=2,OR(B1:AND(B2:B3))", "moo=3,C1,C2");
+        "foo(1),AND(A2:A3)", "bar(2),OR(B1:AND(B2:B3))", "moo(3),C1,C2");
     mp.verify();
 
     ct = new MultipleConstraintsTokenizer("A:B:C");
@@ -300,17 +304,17 @@ public class TestPlacementConstraintParser {
     mp = new TokenizerTester(ct, "A", "AND(B:OR(C:D))", "E");
     mp.verify();
 
-    st = new SourceTagsTokenizer("A=4");
+    st = new SourceTagsTokenizer("A(4)");
     mp = new TokenizerTester(st, "A", "4");
     mp.verify();
 
     try {
-      st = new SourceTagsTokenizer("A=B");
+      st = new SourceTagsTokenizer("A(B)");
       mp = new TokenizerTester(st, "A", "B");
       mp.verify();
-      Assert.fail("Expecting a parsing failure");
+      fail("Expecting a parsing failure");
     } catch (PlacementConstraintParseException e) {
-      Assert.assertTrue(e.getMessage()
+      assertTrue(e.getMessage()
           .contains("Value of the expression must be an integer"));
     }
   }
@@ -332,95 +336,110 @@ public class TestPlacementConstraintParser {
       int i = 0;
       while (tokenizer.hasMoreElements()) {
         String current = tokenizer.nextElement();
-        Assert.assertTrue(i < expectedExtractions.length);
-        Assert.assertEquals(expectedExtractions[i], current);
+        assertTrue(i < expectedExtractions.length);
+        assertEquals(expectedExtractions[i], current);
         i++;
       }
     }
   }
 
   @Test
-  public void testParsePlacementSpec()
+  void testParsePlacementSpec()
       throws PlacementConstraintParseException {
     Map<SourceTags, PlacementConstraint> result;
     PlacementConstraint expectedPc1, expectedPc2;
     PlacementConstraint actualPc1, actualPc2;
     SourceTags tag1, tag2;
 
+    // Only Source Tag without constraint
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo(3)");
+    assertEquals(1, result.size());
+    tag1 = result.keySet().iterator().next();
+    assertEquals("foo", tag1.getTag());
+    assertEquals(3, tag1.getNumOfAllocations());
+    expectedPc1 = null;
+    actualPc1 = result.values().iterator().next();
+    assertEquals(expectedPc1, actualPc1);
+
     // A single anti-affinity constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,notin,node,foo");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("foo(3),notin,node,foo");
+    assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(3, tag1.getNumOfAllocations());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(3, tag1.getNumOfAllocations());
     expectedPc1 = targetNotIn("node", allocationTag("foo")).build();
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1);
+    assertEquals(expectedPc1, actualPc1);
 
     // Upper case
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,NOTIN,NODE,foo");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("foo(3),NOTIN,NODE,foo");
+    assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(3, tag1.getNumOfAllocations());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(3, tag1.getNumOfAllocations());
     expectedPc1 = targetNotIn("node", allocationTag("foo")).build();
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1);
+    assertEquals(expectedPc1, actualPc1);
 
     // A single cardinality constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=10,cardinality,node,foo,bar,0,100");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("foo(10),cardinality,node,foo,bar,0,100");
+    assertEquals(1, result.size());
     tag1 = result.keySet().iterator().next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(10, tag1.getNumOfAllocations());
-    expectedPc1 = cardinality("node", 0, 100, "foo", "bar").build();
-    Assert.assertEquals(expectedPc1, result.values().iterator().next());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(10, tag1.getNumOfAllocations());
+    TargetExpression[] targetExpressions = new TargetExpression[] {
+        PlacementTargets.allocationTag("foo"),
+        PlacementTargets.allocationTag("bar")};
+    expectedPc1 = PlacementConstraints.targetCardinality("node", 0,
+        100, targetExpressions).build();
+    assertEquals(expectedPc1, result.values().iterator().next());
 
     // Two constraint expressions
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=3,notin,node,foo:bar=2,in,node,foo");
-    Assert.assertEquals(2, result.size());
+        .parsePlacementSpec("foo(3),notin,node,foo:bar(2),in,node,foo");
+    assertEquals(2, result.size());
     Iterator<SourceTags> keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(3, tag1.getNumOfAllocations());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(3, tag1.getNumOfAllocations());
     tag2 = keyIt.next();
-    Assert.assertEquals("bar", tag2.getTag());
-    Assert.assertEquals(2, tag2.getNumOfAllocations());
+    assertEquals("bar", tag2.getTag());
+    assertEquals(2, tag2.getNumOfAllocations());
     Iterator<PlacementConstraint> valueIt = result.values().iterator();
     expectedPc1 = targetNotIn("node", allocationTag("foo")).build();
     expectedPc2 = targetIn("node", allocationTag("foo")).build();
-    Assert.assertEquals(expectedPc1, valueIt.next());
-    Assert.assertEquals(expectedPc2, valueIt.next());
+    assertEquals(expectedPc1, valueIt.next());
+    assertEquals(expectedPc2, valueIt.next());
 
     // And constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("foo=1000,and(notin,node,bar:in,node,foo)");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("foo(1000),and(notin,node,bar:in,node,foo)");
+    assertEquals(1, result.size());
     keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(1000, tag1.getNumOfAllocations());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(1000, tag1.getNumOfAllocations());
     actualPc1 = result.values().iterator().next();
     expectedPc1 = and(targetNotIn("node", allocationTag("bar")),
         targetIn("node", allocationTag("foo"))).build();
-    Assert.assertEquals(expectedPc1, actualPc1);
+    assertEquals(expectedPc1, actualPc1);
 
     // Multiple constraints with nested forms.
     result = PlacementConstraintParser.parsePlacementSpec(
-            "foo=1000,and(notin,node,bar:or(in,node,foo:in,node,moo))"
-                + ":bar=200,notin,node,foo");
-    Assert.assertEquals(2, result.size());
+            "foo(1000),and(notin,node,bar:or(in,node,foo:in,node,moo))"
+                + ":bar(200),notin,node,foo");
+    assertEquals(2, result.size());
     keyIt = result.keySet().iterator();
     tag1 = keyIt.next();
     tag2 = keyIt.next();
-    Assert.assertEquals("foo", tag1.getTag());
-    Assert.assertEquals(1000, tag1.getNumOfAllocations());
-    Assert.assertEquals("bar", tag2.getTag());
-    Assert.assertEquals(200, tag2.getNumOfAllocations());
+    assertEquals("foo", tag1.getTag());
+    assertEquals(1000, tag1.getNumOfAllocations());
+    assertEquals("bar", tag2.getTag());
+    assertEquals(200, tag2.getNumOfAllocations());
     valueIt = result.values().iterator();
     actualPc1 = valueIt.next();
     actualPc2 = valueIt.next();
@@ -428,9 +447,20 @@ public class TestPlacementConstraintParser {
     expectedPc1 = and(targetNotIn("node", allocationTag("bar")),
         or(targetIn("node", allocationTag("foo")),
             targetIn("node", allocationTag("moo")))).build();
-    Assert.assertEquals(actualPc1, expectedPc1);
+    assertEquals(actualPc1, expectedPc1);
     expectedPc2 = targetNotIn("node", allocationTag("foo")).build();
-    Assert.assertEquals(expectedPc2, actualPc2);
+    assertEquals(expectedPc2, actualPc2);
+
+    // Failure Cases
+    String[] invalidSpecs = {"foo(3", "foo),bar", "foobar", "),java=1.7,1.8"};
+    for (String spec : invalidSpecs) {
+      try {
+        result = PlacementConstraintParser.parsePlacementSpec(spec);
+        fail("Expected a failure!");
+      } catch (Exception e) {
+        assertTrue(e instanceof PlacementConstraintParseException);
+      }
+    }
   }
 
   // We verify the toString result by parsing it again
@@ -447,13 +477,13 @@ public class TestPlacementConstraintParser {
     try {
       PlacementConstraintParser.parseExpression(constrainExpr);
     } catch (PlacementConstraintParseException e) {
-      Assert.fail("The parser is unable to parse the expression: "
+      fail("The parser is unable to parse the expression: "
           + constrainExpr + ", caused by: " + e.getMessage());
     }
   }
 
   @Test
-  public void testParseNodeAttributeSpec()
+  void testParseNodeAttributeSpec()
       throws PlacementConstraintParseException {
     Map<SourceTags, PlacementConstraint> result;
     PlacementConstraint.AbstractConstraint expectedPc1, expectedPc2;
@@ -461,34 +491,34 @@ public class TestPlacementConstraintParser {
 
     // A single node attribute constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("xyz=4,rm.yarn.io/foo=true");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("xyz(4),rm.yarn.io/foo=true");
+    assertEquals(1, result.size());
     TargetExpression target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "true");
     expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
 
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
 
     // A single node attribute constraint
     result = PlacementConstraintParser
-        .parsePlacementSpec("xyz=3,rm.yarn.io/foo!=abc");
-    Assert.assertEquals(1, result.size());
+        .parsePlacementSpec("xyz(3),rm.yarn.io/foo!=abc");
+    assertEquals(1, result.size());
     target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "abc");
     expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.NE, target);
 
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
 
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
 
     // A single node attribute constraint
     result = PlacementConstraintParser
         .parsePlacementSpec(
-            "xyz=1,rm.yarn.io/foo!=abc:zxy=1,rm.yarn.io/bar=true");
-    Assert.assertEquals(2, result.size());
+            "xyz(1),rm.yarn.io/foo!=abc:zxy(1),rm.yarn.io/bar=true");
+    assertEquals(2, result.size());
     target = PlacementTargets
         .nodeAttribute("rm.yarn.io/foo", "abc");
     expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.NE, target);
@@ -499,29 +529,91 @@ public class TestPlacementConstraintParser {
     Iterator<PlacementConstraint> valueIt = result.values().iterator();
     actualPc1 = valueIt.next();
     actualPc2 = valueIt.next();
-    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
-    Assert.assertEquals(expectedPc2, actualPc2.getConstraintExpr());
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    assertEquals(expectedPc2, actualPc2.getConstraintExpr());
 
     // A single node attribute constraint w/o source tags
     result = PlacementConstraintParser
         .parsePlacementSpec("rm.yarn.io/foo=true");
-    Assert.assertEquals(1, result.size());
+    assertEquals(1, result.size());
     target = PlacementTargets.nodeAttribute("rm.yarn.io/foo", "true");
     expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
 
     SourceTags actualSourceTags = result.keySet().iterator().next();
-    Assert.assertTrue(actualSourceTags.isEmpty());
+    assertTrue(actualSourceTags.isEmpty());
     actualPc1 = result.values().iterator().next();
-    Assert.assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
+
+    // Node Attribute Constraint With Multiple Values
+    result = PlacementConstraintParser
+        .parsePlacementSpec("java=1.7,1.8");
+    assertEquals(1, result.size());
+
+    Set<String> constraintEntities = new TreeSet<>();
+    constraintEntities.add("1.7");
+    constraintEntities.add("1.8");
+    target = PlacementConstraints.PlacementTargets.nodeAttribute("java",
+        constraintEntities.toArray(new String[constraintEntities.size()]));
+    expectedPc1 = targetNodeAttribute("node", NodeAttributeOpCode.EQ, target);
+    actualSourceTags = result.keySet().iterator().next();
+    assertTrue(actualSourceTags.isEmpty());
+    actualPc1 = result.values().iterator().next();
+    assertEquals(expectedPc1, actualPc1.getConstraintExpr());
 
     // If source tags is not specified for a node-attribute constraint,
     // then this expression must be single constraint expression.
     try {
       PlacementConstraintParser
-          .parsePlacementSpec("rm.yarn.io/foo=true:xyz=1,notin,node,xyz");
-      Assert.fail("Expected a failure!");
+          .parsePlacementSpec("rm.yarn.io/foo=true:xyz(1),notin,node,xyz");
+      fail("Expected a failure!");
     } catch (Exception e) {
-      Assert.assertTrue(e instanceof PlacementConstraintParseException);
+      assertTrue(e instanceof PlacementConstraintParseException);
     }
   }
+
+  @Test
+  void testParseAllocationTagNameSpace()
+      throws PlacementConstraintParseException {
+    Map<SourceTags, PlacementConstraint> result;
+
+    // Constraint with Two Different NameSpaces
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo(2),notin,node,not-self/bar,all/moo");
+    assertEquals(1, result.size());
+    Set<TargetExpression> expectedTargetExpressions = Sets.newHashSet(
+        PlacementTargets.allocationTagWithNamespace("not-self", "bar"),
+        PlacementTargets.allocationTagWithNamespace("all", "moo"));
+    AbstractConstraint constraint = result.values().iterator().next().
+        getConstraintExpr();
+    assertTrue(constraint instanceof SingleConstraint);
+    SingleConstraint single = (SingleConstraint) constraint;
+    assertEquals(2, single.getTargetExpressions().size());
+    assertTrue(Sets.difference(expectedTargetExpressions,
+        single.getTargetExpressions()).isEmpty());
+
+    // Constraint With Default NameSpace SELF
+    result = PlacementConstraintParser
+        .parsePlacementSpec("foo(2),notin,node,moo");
+    assertEquals(1, result.size());
+    TargetExpression expectedTargetExpression = PlacementTargets.
+        allocationTagWithNamespace("self", "moo");
+    constraint = result.values().iterator().next().getConstraintExpr();
+    assertTrue(constraint instanceof SingleConstraint);
+    single = (SingleConstraint) constraint;
+    assertEquals(1, single.getTargetExpressions().size());
+    assertEquals(expectedTargetExpression,
+        single.getTargetExpressions().iterator().next());
+
+    // Constraint With Invalid NameSpace
+    boolean caughtException = false;
+    try {
+      result = PlacementConstraintParser
+          .parsePlacementSpec("foo(2),notin,node,bar/moo");
+    } catch(PlacementConstraintParseException e) {
+      caughtException = true;
+    }
+    assertTrue(caughtException,
+        "PlacementConstraintParseException is expected");
+  }
+
 }

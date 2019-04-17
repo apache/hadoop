@@ -21,8 +21,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
@@ -49,7 +49,7 @@ import static org.junit.Assert.assertEquals;
 public class TestRMWebServicesSchedulerActivities
     extends TestRMWebServicesCapacitySched {
 
-  private static final Log LOG = LogFactory.getLog(
+  private static final Logger LOG = LoggerFactory.getLogger(
       TestRMWebServicesSchedulerActivities.class);
 
   @Test
@@ -95,16 +95,12 @@ public class TestRMWebServicesSchedulerActivities
           response.getType().toString());
       json = response.getEntity(JSONObject.class);
 
-      verifyNumberOfAllocations(json, 11);
-
-      JSONArray allocations = json.getJSONArray("allocations");
-      for (int i = 0; i < allocations.length(); i++) {
-        if (i != allocations.length() - 1) {
-          verifyStateOfAllocations(allocations.getJSONObject(i),
-              "finalAllocationState", "ALLOCATED");
-          verifyQueueOrder(allocations.getJSONObject(i), "root-a-b-b2-b3-b1");
-        }
-      }
+      // Collection logic of scheduler activities changed after YARN-9313,
+      // only one allocation should be recorded for all scenarios.
+      verifyNumberOfAllocations(json, 1);
+      verifyStateOfAllocations(json.getJSONObject("allocations"),
+          "finalAllocationState", "ALLOCATED");
+      verifyQueueOrder(json.getJSONObject("allocations"), "root-a-b-b2-b3-b1");
     }
     finally {
       rm.stop();

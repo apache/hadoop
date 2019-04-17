@@ -19,9 +19,9 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.eq;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
@@ -32,12 +32,11 @@ import static org.mockito.Mockito.when;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
-import org.apache.hadoop.yarn.api.records.ContainerStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -71,7 +70,8 @@ import org.mockito.stubbing.Answer;
 
 public class TestChildQueueOrder {
 
-  private static final Log LOG = LogFactory.getLog(TestChildQueueOrder.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestChildQueueOrder.class);
 
   RMContext rmContext;
   YarnConfiguration conf;
@@ -264,7 +264,7 @@ public class TestChildQueueOrder {
     // Stub an App and its containerCompleted
     FiCaSchedulerApp app_0 = getMockApplication(0,user_0);
     doReturn(true).when(app_0).containerCompleted(any(RMContainer.class),
-        any(ContainerStatus.class), any(RMContainerEventType.class),
+        any(), any(RMContainerEventType.class),
         any(String.class));
 
     Priority priority = TestUtils.createMockPriority(1); 

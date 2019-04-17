@@ -18,33 +18,28 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import javax.xml.parsers.ParserConfigurationException;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies.FifoPolicy;
-import org.xml.sax.SAXException;
-
-import com.google.common.annotations.VisibleForTesting;
-import java.util.Iterator;
-import java.util.Set;
 
 /**
  * Maintains a list of queues as well as scheduling parameters for each queue,
@@ -53,8 +48,8 @@ import java.util.Set;
 @Private
 @Unstable
 public class QueueManager {
-  private static final Log LOG =
-      LogFactory.getLog(QueueManager.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(QueueManager.class.getName());
 
   private final class IncompatibleQueueRemovalTask {
 
@@ -71,7 +66,7 @@ public class QueueManager {
       Boolean removed =
           removeEmptyIncompatibleQueues(queueToCreate, queueType).orElse(null);
       if (Boolean.TRUE.equals(removed)) {
-        FSQueue queue = getQueue(queueToCreate, true, queueType, false);
+        FSQueue queue = getQueue(queueToCreate, true, queueType, false, null);
         if (queue != null &&
             // if queueToCreate is present in the allocation config, set it
             // to static
@@ -105,8 +100,7 @@ public class QueueManager {
     return rootQueue;
   }
 
-  public void initialize(Configuration conf) throws IOException,
-      SAXException, AllocationConfigurationException, ParserConfigurationException {
+  public void initialize() {
     // Policies of root and default queue are set to
     // SchedulingPolicy.DEFAULT_POLICY since the allocation file hasn't been
     // loaded yet.
@@ -124,30 +118,49 @@ public class QueueManager {
 
   /**
    * Get a leaf queue by name, creating it if the create param is
-   * true and is necessary.
-   * If the queue is not or can not be a leaf queue, i.e. it already exists as a
-   * parent queue, or one of the parents in its name is already a leaf queue,
-   * null is returned.
+   * <code>true</code> and the queue does not exist.
+   * If the queue is not or can not be a leaf queue, i.e. it already exists as
+   * a parent queue, or one of the parents in its name is already a leaf queue,
+   * <code>null</code> is returned.
    * 
    * The root part of the name is optional, so a queue underneath the root 
    * named "queue1" could be referred to  as just "queue1", and a queue named
    * "queue2" underneath a parent named "parent1" that is underneath the root 
    * could be referred to as just "parent1.queue2".
+   * @param name name of the queue
+   * @param create <code>true</code> if the queue must be created if it does
+   *               not exist, <code>false</code> otherwise
+   * @return the leaf queue or <code>null</code> if the queue cannot be found
    */
   public FSLeafQueue getLeafQueue(String name, boolean create) {
-    return getLeafQueue(name, create, true);
+    return getLeafQueue(name, create, null, true);
   }
 
-  private FSLeafQueue getLeafQueue(
-      String name,
-      boolean create,
-      boolean recomputeSteadyShares) {
-    FSQueue queue = getQueue(
-        name,
-        create,
-        FSQueueType.LEAF,
-        recomputeSteadyShares
-    );
+  /**
+   * Get a leaf queue by name, creating it if the create param is
+   * <code>true</code> and the queue does not exist.
+   * If the queue is not or can not be a leaf queue, i.e. it already exists as
+   * a parent queue, or one of the parents in its name is already a leaf queue,
+   * <code>null</code> is returned.
+   *
+   * If the application will be assigned to the queue if the applicationId is
+   * not <code>null</code>
+   * @param name name of the queue
+   * @param create <code>true</code> if the queue must be created if it does
+   *               not exist, <code>false</code> otherwise
+   * @param applicationId the application ID to assign to the queue
+   * @return the leaf queue or <code>null</code> if teh queue cannot be found
+   */
+  public FSLeafQueue getLeafQueue(String name, boolean create,
+                                  ApplicationId applicationId) {
+    return getLeafQueue(name, create, applicationId, true);
+  }
+
+  private FSLeafQueue getLeafQueue(String name, boolean create,
+                                   ApplicationId applicationId,
+                                   boolean recomputeSteadyShares) {
+    FSQueue queue = getQueue(name, create, FSQueueType.LEAF,
+        recomputeSteadyShares, applicationId);
     if (queue instanceof FSParentQueue) {
       return null;
     }
@@ -168,42 +181,55 @@ public class QueueManager {
 
   /**
    * Get a parent queue by name, creating it if the create param is
-   * true and is necessary.
-   * If the queue is not or can not be a parent queue,
-   * i.e. it already exists as a
-   * leaf queue, or one of the parents in its name is already a leaf queue,
-   * null is returned.
+   * <code>true</code> and the queue does not exist.
+   * If the queue is not or can not be a parent queue, i.e. it already exists
+   * as a leaf queue, or one of the parents in its name is already a leaf
+   * queue, <code>null</code> is returned.
    * 
    * The root part of the name is optional, so a queue underneath the root 
    * named "queue1" could be referred to  as just "queue1", and a queue named
    * "queue2" underneath a parent named "parent1" that is underneath the root 
    * could be referred to as just "parent1.queue2".
+   * @param name name of the queue
+   * @param create <code>true</code> if the queue must be created if it does
+   *               not exist, <code>false</code> otherwise
+   * @return the parent queue or <code>null</code> if the queue cannot be found
    */
   public FSParentQueue getParentQueue(String name, boolean create) {
     return getParentQueue(name, create, true);
   }
 
-  public FSParentQueue getParentQueue(
-      String name,
-      boolean create,
+  /**
+   * Get a parent queue by name, creating it if the create param is
+   * <code>true</code> and the queue does not exist.
+   * If the queue is not or can not be a parent queue, i.e. it already exists
+   * as a leaf queue, or one of the parents in its name is already a leaf
+   * queue, <code>null</code> is returned.
+   *
+   * The root part of the name is optional, so a queue underneath the root
+   * named "queue1" could be referred to  as just "queue1", and a queue named
+   * "queue2" underneath a parent named "parent1" that is underneath the root
+   * could be referred to as just "parent1.queue2".
+   * @param name name of the queue
+   * @param create <code>true</code> if the queue must be created if it does
+   *               not exist, <code>false</code> otherwise
+   * @param recomputeSteadyShares <code>true</code> if the steady fair share
+   *                              should be recalculated when a queue is added,
+   *                              <code>false</code> otherwise
+   * @return the parent queue or <code>null</code> if the queue cannot be found
+   */
+  public FSParentQueue getParentQueue(String name, boolean create,
       boolean recomputeSteadyShares) {
-    FSQueue queue = getQueue(
-        name,
-        create,
-        FSQueueType.PARENT,
-        recomputeSteadyShares
-    );
+    FSQueue queue = getQueue(name, create, FSQueueType.PARENT,
+        recomputeSteadyShares, null);
     if (queue instanceof FSLeafQueue) {
       return null;
     }
     return (FSParentQueue) queue;
   }
 
-  private FSQueue getQueue(
-      String name,
-      boolean create,
-      FSQueueType queueType,
-      boolean recomputeSteadyShares) {
+  private FSQueue getQueue(String name, boolean create, FSQueueType queueType,
+      boolean recomputeSteadyShares, ApplicationId applicationId) {
     boolean recompute = recomputeSteadyShares;
     name = ensureRootPrefix(name);
     FSQueue queue;
@@ -215,8 +241,14 @@ public class QueueManager {
       } else {
         recompute = false;
       }
+      // At this point the queue exists and we need to assign the app if to the
+      // but only to a leaf queue
+      if (applicationId != null && queue instanceof FSLeafQueue) {
+        ((FSLeafQueue)queue).addAssignedApp(applicationId);
+      }
     }
-    if (recompute) {
+    // Don't recompute if it is an existing queue or no change was made
+    if (recompute && queue != null) {
       rootQueue.recomputeSteadyShares();
     }
     return queue;
@@ -459,7 +491,7 @@ public class QueueManager {
       }
       while (!parentQueuesToCheck.isEmpty()) {
         FSParentQueue queue = parentQueuesToCheck.iterator().next();
-        if (queue.getChildQueues().isEmpty()) {
+        if (queue.isEmpty()) {
           removeQueue(queue);
           if (queue.getParent().isDynamic()) {
             parentQueuesToCheck.add(queue.getParent());
@@ -489,7 +521,7 @@ public class QueueManager {
    * @return true if removed, false otherwise
    */
   private boolean removeQueueIfEmpty(FSQueue queue) {
-    if (isEmpty(queue)) {
+    if (queue.isEmpty()) {
       removeQueue(queue);
       return true;
     }
@@ -514,26 +546,6 @@ public class QueueManager {
     }
   }
   
-  /**
-   * Returns true if there are no applications, running or not, in the given
-   * queue or any of its descendents.
-   */
-  protected boolean isEmpty(FSQueue queue) {
-    if (queue instanceof FSLeafQueue) {
-      FSLeafQueue leafQueue = (FSLeafQueue)queue;
-      return queue.getNumRunnableApps() == 0 &&
-          leafQueue.getNumNonRunnableApps() == 0 &&
-          leafQueue.getNumAssignedApps() == 0;
-    } else {
-      for (FSQueue child : queue.getChildQueues()) {
-        if (!isEmpty(child)) {
-          return false;
-        }
-      }
-      return true;
-    }
-  }
-
   /**
    * Gets a queue by name.
    */
@@ -614,7 +626,7 @@ public class QueueManager {
         incompatibleQueuesPendingRemoval.add(
             new IncompatibleQueueRemovalTask(name, queueType));
       } else {
-        FSQueue queue = getQueue(name, true, queueType, false);
+        FSQueue queue = getQueue(name, true, queueType, false, null);
         if (queue != null) {
           queue.setDynamic(false);
         }

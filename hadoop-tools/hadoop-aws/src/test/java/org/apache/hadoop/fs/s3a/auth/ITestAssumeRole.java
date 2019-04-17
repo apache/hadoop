@@ -30,6 +30,7 @@ import java.util.stream.IntStream;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.services.securitytoken.model.AWSSecurityTokenServiceException;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
+import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.*;
 
@@ -75,6 +77,9 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       LoggerFactory.getLogger(ITestAssumeRole.class);
 
   private static final Path ROOT = new Path("/");
+
+  private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
+      = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
 
   /**
    * test URI, built in setup.
@@ -135,6 +140,34 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
   public void testCreateCredentialProvider() throws IOException {
     describe("Create the credential provider");
 
+    Configuration conf = createValidRoleConf();
+    try (AssumedRoleCredentialProvider provider
+             = new AssumedRoleCredentialProvider(uri, conf)) {
+      LOG.info("Provider is {}", provider);
+      AWSCredentials credentials = provider.getCredentials();
+      assertNotNull("Null credentials from " + provider, credentials);
+    }
+  }
+
+  @Test
+  public void testCreateCredentialProviderNoURI() throws IOException {
+    describe("Create the credential provider");
+
+    Configuration conf = createValidRoleConf();
+    try (AssumedRoleCredentialProvider provider
+             = new AssumedRoleCredentialProvider(null, conf)) {
+      LOG.info("Provider is {}", provider);
+      AWSCredentials credentials = provider.getCredentials();
+      assertNotNull("Null credentials from " + provider, credentials);
+    }
+  }
+
+  /**
+   * Create a valid role configuration.
+   * @return a configuration set to use to the role ARN.
+   * @throws JsonProcessingException problems working with JSON policies.
+   */
+  protected Configuration createValidRoleConf() throws JsonProcessingException {
     String roleARN = getAssumedRoleARN();
 
     Configuration conf = new Configuration(getContract().getConf());
@@ -143,12 +176,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     conf.set(ASSUMED_ROLE_SESSION_NAME, "valid");
     conf.set(ASSUMED_ROLE_SESSION_DURATION, "45m");
     bindRolePolicy(conf, RESTRICTED_POLICY);
-    try (AssumedRoleCredentialProvider provider
-             = new AssumedRoleCredentialProvider(uri, conf)) {
-      LOG.info("Provider is {}", provider);
-      AWSCredentials credentials = provider.getCredentials();
-      assertNotNull("Null credentials from " + provider, credentials);
-    }
+    return conf;
   }
 
   @Test
@@ -205,11 +233,12 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Assert that you can't use assumed roles to auth assumed roles");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         AssumedRoleCredentialProvider.NAME);
     expectFileSystemCreateFailure(conf,
         IOException.class,
-        AssumedRoleCredentialProvider.E_FORBIDDEN_PROVIDER);
+        E_FORBIDDEN_AWS_PROVIDER);
   }
 
   @Test
@@ -217,6 +246,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Try to authenticate with a keypair with spaces");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "not valid");
@@ -232,6 +262,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     describe("Try to authenticate with an invalid keypair");
 
     Configuration conf = createAssumedRoleConfig();
+    unsetHadoopCredentialProviders(conf);
     conf.set(ASSUMED_ROLE_CREDENTIALS_PROVIDER,
         SimpleAWSCredentialsProvider.NAME);
     conf.set(ACCESS_KEY, "notvalid");
@@ -461,7 +492,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
         STATEMENT_ALLOW_SSE_KMS_RW,
         new Statement(Effects.Allow)
           .addActions(S3_ALL_OPERATIONS)
@@ -525,7 +556,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
           .addActions(S3_PATH_RW_OPERATIONS)
           .addResources(directory(restrictedDir))
@@ -617,8 +648,8 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
 
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
-          new Statement(Effects.Allow)
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
+        new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(destDir))
     );
@@ -698,7 +729,7 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
     bindRolePolicyStatements(conf,
         STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
-        statement(true, S3_ALL_BUCKETS, S3_ROOT_READ_OPERATIONS),
+        STATEMENT_ALL_BUCKET_READ_ACCESS,
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(writeableDir))

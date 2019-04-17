@@ -33,6 +33,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
@@ -396,6 +397,23 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     @Override
     public void stopWriter(long xceiverStopTimeout) throws IOException {
     }
+
+    @Override
+    public void waitForMinLength(long minLength, long time, TimeUnit unit)
+        throws IOException {
+      final long deadLine = System.currentTimeMillis() + unit.toMillis(time);
+      do {
+        if (getBytesOnDisk() >= minLength) {
+          return;
+        }
+        try {
+          Thread.sleep(100L);
+        } catch (InterruptedException e) {
+          throw new IOException(e);
+        }
+      } while (deadLine > System.currentTimeMillis());
+      throw new IOException("Minimum length was not achieved within timeout");
+    }
   }
 
   /**
@@ -432,7 +450,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    * Class used for tracking datanode level storage utilization similar
    * to {@link FSVolumeSet}
    */
-  private static class SimulatedStorage {
+  static class SimulatedStorage {
     private final Map<String, SimulatedBPStorage> map =
         new ConcurrentHashMap<>();
 
@@ -617,7 +635,11 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public StorageLocation getStorageLocation() {
-      return null;
+      try {
+        return StorageLocation.parse("[DISK]file:///simulated");
+      } catch (Exception e) {
+        return null;
+      }
     }
 
     @Override
@@ -662,6 +684,10 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private final List<SimulatedStorage> storages;
   private final String datanodeUuid;
   private final DataNode datanode;
+
+  public List<SimulatedStorage> getStorages() {
+    return storages;
+  }
 
   public SimulatedFSDataset(DataStorage storage, Configuration conf) {
     this(null, storage, conf);

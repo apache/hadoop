@@ -102,6 +102,6 @@ public final class ContainerID implements Comparable<ContainerID> {
 
   @Override
   public String toString() {
-    return "id=" + id;
+    return "#" + id;
   }
 }

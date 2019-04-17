@@ -348,7 +348,8 @@
       corresponding storage types ([ssd]/[disk]/[archive]/[ram_disk]) for cluster with heterogeneous storage.
       For example, reserved space for RAM_DISK storage can be configured using property
       'dfs.datanode.du.reserved.ram_disk'. If specific storage type reservation is not configured
-      then dfs.datanode.du.reserved will be used.
+      then dfs.datanode.du.reserved will be used. Support multiple size unit suffix(case insensitive),
+      as described in dfs.blocksize.
       Note: In case of using tune2fs to set reserved-blocks-percentage, or other filesystem tools,
       then you can possibly run into out of disk errors because hadoop will not check those
       external tool configurations.
@@ -390,7 +391,9 @@
   <name>dfs.namenode.fs-limits.max-component-length</name>
   <value>255</value>
   <description>Defines the maximum number of bytes in UTF-8 encoding in each
-      component of a path.  A value of 0 will disable the check.</description>
+      component of a path.  A value of 0 will disable the check. Support
+      multiple size unit suffix(case insensitive), as described in dfs.blocksize.
+  </description>
 </property>
 
 <property>
@@ -406,8 +409,9 @@
   <value>1048576</value>
   <description>Minimum block size in bytes, enforced by the Namenode at create
       time. This prevents the accidental creation of files with tiny block
-      sizes (and thus many blocks), which can degrade
-      performance.</description>
+      sizes (and thus many blocks), which can degrade performance. Support multiple
+      size unit suffix(case insensitive), as described in dfs.blocksize.
+  </description>
 </property>
 
 <property>
@@ -462,6 +466,16 @@
     but all other behavior is unchanged.
     Switching from one parameter value to the other does not change the mode,
     owner or group of files or directories.
+  </description>
+</property>
+
+<property>
+  <name>dfs.permissions.ContentSummary.subAccess</name>
+  <value>false</value>
+  <description>
+    If "true", the ContentSummary permission checking will use subAccess.
+    If "false", the ContentSummary permission checking will NOT use subAccess.
+    subAccess means using recursion to check the access of all descendants.
   </description>
 </property>
 
@@ -945,7 +959,8 @@
   <value>104857600</value>
   <description>
     The amount of space to reserve/require for a NameNode storage directory
-    in bytes. The default is 100MB.
+    in bytes. The default is 100MB. Support multiple size unit
+    suffix(case insensitive), as described in dfs.blocksize.
   </description>
 </property>
 
@@ -1276,8 +1291,8 @@
   <description>The number of volumes that are allowed to
   fail before a datanode stops offering service. By default
   any volume failure will cause a datanode to shutdown.
-  The range of the value is -1 now, -1 represents the minimum
-  of volume valids is 1.
+  The value should be greater than or equal to -1 , -1 represents minimum
+  1 valid volume.
   </description>
 </property>
 
@@ -1331,6 +1346,8 @@
         A default value of 0 indicates that throttling is disabled.
         The maximum bandwidth used for bootstrapping standby namenode is
         configured with dfs.image.transfer-bootstrap-standby.bandwidthPerSec.
+        Support multiple size unit suffix(case insensitive), as described
+        in dfs.blocksize.
   </description>
 </property>
 
@@ -1344,6 +1361,8 @@
       value should be used in most cases, to ensure timely HA operations.
       The maximum bandwidth used for regular image transfers is configured
       with dfs.image.transfer.bandwidthPerSec.
+      Support multiple size unit suffix(case insensitive), as described in
+      dfs.blocksize.
     </description>
   </property>
 
@@ -1354,6 +1373,8 @@
         Chunksize in bytes to upload the checkpoint.
         Chunked streaming is used to avoid internal buffering of contents
         of image file of huge size.
+        Support multiple size unit suffix(case insensitive), as described
+        in dfs.blocksize.
   </description>
 </property>
 
@@ -2293,7 +2314,8 @@
     bytes of free disk space before they are considered imbalanced. If the free
     space of all the volumes are within this range of each other, the volumes
     will be considered balanced and block assignments will be done on a pure
-    round robin basis.
+    round robin basis. Support multiple size unit suffix(case insensitive), as
+    described in dfs.blocksize.
   </description>
 </property>
 
@@ -2366,7 +2388,8 @@
     read ahead in the block file using posix_fadvise, potentially decreasing
     I/O wait times.  Unlike dfs.datanode.readahead.bytes, this is a client-side
     setting rather than a setting for the entire datanode.  If present, this
-    setting will override the DataNode default.
+    setting will override the DataNode default. Support multiple size unit
+    suffix(case insensitive), as described in dfs.blocksize.
 
     When using local reads, this setting determines how much readahead we do in
     BlockReaderLocal.
@@ -2504,18 +2527,53 @@
 </property>
 
 <property>
+  <name>dfs.datanode.cache.loader.class</name>
+  <value>org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MemoryMappableBlockLoader</value>
+  <description>
+    Currently, the available cache loaders are MemoryMappableBlockLoader, PmemMappableBlockLoader.
+    By default, MemoryMappableBlockLoader is used and it maps block replica into memory.
+    PmemMappableBlockLoader can map block to persistent memory with mapped byte buffer, which is
+    implemented by Java code. The value of dfs.datanode.cache.pmem.dirs specifies the persistent
+    memory directory.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.max.locked.memory</name>
   <value>0</value>
   <description>
     The amount of memory in bytes to use for caching of block replicas in
     memory on the datanode. The datanode's maximum locked memory soft ulimit
     (RLIMIT_MEMLOCK) must be set to at least this value, else the datanode
-    will abort on startup.
+    will abort on startup. Support multiple size unit suffix(case insensitive),
+    as described in dfs.blocksize.
 
     By default, this parameter is set to 0, which disables in-memory caching.
 
     If the native libraries are not available to the DataNode, this
     configuration has no effect.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.cache.pmem.capacity</name>
+  <value>0</value>
+  <description>
+    The amount of persistent memory in bytes that can be used to cache block
+    replicas to persistent memory. Currently, persistent memory is only enabled
+    in HDFS Centralized Cache Management feature.
+
+    By default, this parameter is 0, which disables persistent memory caching.
+  </description>
+</property>
+
+<property>
+  <name>dfs.datanode.cache.pmem.dirs</name>
+  <value></value>
+  <description>
+    This value specifies the persistent memory directory used for caching block
+    replica. It matters only if the value of dfs.datanode.cache.loader.class is
+    PmemMappableBlockLoader. Multiple directories separated by "," are acceptable.
   </description>
 </property>
 
@@ -2590,7 +2648,7 @@
 
 <property>
   <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
-  <value>2.0</value>
+  <value>0.5</value>
   <description>
     Determines when an active namenode will roll its own edit log.
     The actual threshold (in number of edits) is determined by multiplying
@@ -2835,6 +2893,8 @@
     The maximum combined size of the name and value of an extended attribute
     in bytes. It should be larger than 0, and less than or equal to maximum
     size hard limit which is 32768.
+    Support multiple size unit suffix(case insensitive), as described in
+    dfs.blocksize.
   </description>
 </property>
 
@@ -3167,7 +3227,9 @@
   <description>
     Whether enable standby namenode to tail in-progress edit logs.
     Clients might want to turn it on when they want Standby NN to have
-    more up-to-date data.
+    more up-to-date data. When using the QuorumJournalManager, this enables
+    tailing of edit logs via the RPC-based mechanism, rather than streaming,
+    which allows for much fresher data.
   </description>
 </property>
 
@@ -3183,6 +3245,14 @@
   <name>dfs.namenode.ec.policies.max.cellsize</name>
   <value>4194304</value>
   <description>The maximum cell size of erasure coding policy. Default is 4MB.
+  </description>
+</property>
+
+<property>
+  <name>dfs.namenode.ec.userdefined.policy.allowed</name>
+  <value>true</value>
+  <description>If set to false, doesn't allow addition of user defined
+    erasure coding policies.
   </description>
 </property>
 
@@ -3692,10 +3762,53 @@
   <value>false</value>
   <description>
     Determines if the failover proxies are picked in random order instead of the
-    configured order. The prefix can be used with an optional nameservice ID
+    configured order. Random order may be enabled for better load balancing
+    or to avoid always hitting failed ones first if the failed ones appear in the
+    beginning of the configured or resolved list.
+    For example, In the case of multiple RBF routers or ObserverNameNodes,
+    it is recommended to be turned on for load balancing.
+    The config name can be extended with an optional nameservice ID
     (of form dfs.client.failover.random.order[.nameservice]) in case multiple
     nameservices exist and random order should be enabled for specific
     nameservices.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.resolve-needed</name>
+  <value>false</value>
+  <description>
+    Determines if the given nameservice address is a domain name which needs to
+    be resolved (using the resolver configured by dfs.client.failover.resolver-impl).
+    This adds a transparency layer in the client so physical server address
+    can change without changing the client. The config name can be extended with
+    an optional nameservice ID (of form dfs.client.failover.resolve-needed[.nameservice])
+    to configure specific nameservices when multiple nameservices exist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.resolver.impl</name>
+  <value>org.apache.hadoop.net.DNSDomainNameResolver</value>
+  <description>
+    Determines what class to use to resolve nameservice name to specific machine
+    address(es). The config name can be extended with an optional nameservice ID
+    (of form dfs.client.failover.resolver.impl[.nameservice]) to configure
+    specific nameservices when multiple nameservices exist.
+  </description>
+</property>
+
+<property>
+  <name>dfs.client.failover.resolver.useFQDN</name>
+  <value>true</value>
+  <description>
+    Determines whether the resolved result is fully qualified domain name instead
+    of pure IP address(es). The config name can be extended with an optional
+    nameservice ID (of form dfs.client.failover.resolver.impl[.nameservice]) to
+    configure specific nameservices when multiple nameservices exist.
+    In secure environment, this has to be enabled since Kerberos is using fqdn
+    in machine's principal therefore accessing servers by IP won't be recognized
+    by the KDC.
   </description>
 </property>
 
@@ -4130,6 +4243,18 @@
     Time interval, in milliseconds, between two Journal Node syncs.
     This configuration takes effect only if the journalnode sync is enabled
     by setting the configuration parameter dfs.journalnode.enable.sync to true.
+  </description>
+</property>
+
+<property>
+  <name>dfs.journalnode.edit-cache-size.bytes</name>
+  <value>1048576</value>
+  <description>
+    The size, in bytes, of the in-memory cache of edits to keep on the
+    JournalNode. This cache is used to serve edits for tailing via the RPC-based
+    mechanism, and is only enabled when dfs.ha.tail-edits.in-progress is true.
+    Transactions range in size but are around 200 bytes on average, so the
+    default of 1MB can store around 5000 transactions.
   </description>
 </property>
 
@@ -5202,6 +5327,50 @@
       The number of block deletion increment.
       This setting will control the block increment deletion rate to
       ensure that other waiters on the lock can get in.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.rpc-address.auxiliary-ports</name>
+    <value></value>
+    <description>
+      A comma separated list of auxiliary ports for the NameNode to listen on.
+      This allows exposing multiple NN addresses to clients.
+      Particularly, it is used to enforce different SASL levels on different ports.
+      Empty list indicates that auxiliary ports are disabled.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.send.qop.enabled</name>
+    <value>false</value>
+    <description>
+      A boolean specifies whether NameNode should encrypt the established QOP
+      and include it in block token. The encrypted QOP will be used by DataNode
+      as target QOP, overwriting DataNode configuration. This ensures DataNode
+      will use exactly the same QOP NameNode and client has already agreed on.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.encrypt.data.overwrite.downstream.derived.qop</name>
+    <value>false</value>
+    <description>
+      A boolean specifies whether DN should overwrite the downstream
+      QOP in a write pipeline. This is used in the case where client
+      talks to first DN with a QOP, but inter-DN communication needs to be
+      using a different QOP. If set to false, the default behaviour is that
+      inter-DN communication will use the same QOP as client-DN connection.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.encrypt.data.overwrite.downstream.new.qop</name>
+    <value></value>
+    <description>
+      When dfs.datanode.overwrite.downstream.derived.qop is set to true,
+      this configuration specifies the new QOP to be used to overwrite
+      inter-DN QOP.
     </description>
   </property>
 </configuration>

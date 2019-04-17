@@ -132,10 +132,8 @@ public class NonAggregatingLogHandler extends AbstractService implements
         ApplicationId appId = entry.getKey();
         LogDeleterProto proto = entry.getValue();
         long deleteDelayMsec = proto.getDeletionTime() - now;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Scheduling deletion of " + appId + " logs in "
-              + deleteDelayMsec + " msec");
-        }
+        LOG.debug("Scheduling deletion of {} logs in {} msec", appId,
+            deleteDelayMsec);
         LogDeleterRunnable logDeleter =
             new LogDeleterRunnable(proto.getUser(), appId);
         try {

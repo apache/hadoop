@@ -225,12 +225,12 @@ public class UnmanagedApplicationManager {
     this.heartbeatHandler.resetLastResponseId();
 
     for (Container container : response.getContainersFromPreviousAttempts()) {
-      LOG.debug("RegisterUAM returned existing running container "
-          + container.getId());
+      LOG.debug("RegisterUAM returned existing running container {}",
+          container.getId());
     }
     for (NMToken nmToken : response.getNMTokensFromPreviousAttempts()) {
-      LOG.debug("RegisterUAM returned existing NM token for node "
-          + nmToken.getNodeId());
+      LOG.debug("RegisterUAM returned existing NM token for node {}",
+          nmToken.getNodeId());
     }
     LOG.info(
         "RegisterUAM returned {} existing running container and {} NM tokens",
@@ -255,9 +255,6 @@ public class UnmanagedApplicationManager {
   public FinishApplicationMasterResponse finishApplicationMaster(
       FinishApplicationMasterRequest request)
       throws YarnException, IOException {
-
-    this.heartbeatHandler.shutdown();
-
     if (this.userUgi == null) {
       if (this.connectionInitiated) {
         // This is possible if the async launchUAM is still
@@ -270,7 +267,12 @@ public class UnmanagedApplicationManager {
             + "be called before createAndRegister");
       }
     }
-    return this.rmProxyRelayer.finishApplicationMaster(request);
+    FinishApplicationMasterResponse response =
+        this.rmProxyRelayer.finishApplicationMaster(request);
+    if (response.getIsUnregistered()) {
+      shutDownConnections();
+    }
+    return response;
   }
 
   /**
@@ -282,11 +284,10 @@ public class UnmanagedApplicationManager {
    */
   public KillApplicationResponse forceKillApplication()
       throws IOException, YarnException {
+    shutDownConnections();
+
     KillApplicationRequest request =
         KillApplicationRequest.newInstance(this.applicationId);
-
-    this.heartbeatHandler.shutdown();
-
     if (this.rmClient == null) {
       this.rmClient = createRMProxy(ApplicationClientProtocol.class, this.conf,
           UserGroupInformation.createRemoteUser(this.submitter), null);
@@ -321,6 +322,14 @@ public class UnmanagedApplicationManager {
             "AllocateAsync should not be called before launchUAM");
       }
     }
+  }
+
+  /**
+   * Shutdown this UAM client, without killing the UAM in the YarnRM side.
+   */
+  public void shutDownConnections() {
+    this.heartbeatHandler.shutdown();
+    this.rmProxyRelayer.shutdown();
   }
 
   /**
@@ -531,5 +540,10 @@ public class UnmanagedApplicationManager {
   @VisibleForTesting
   protected void drainHeartbeatThread() {
     this.heartbeatHandler.drainHeartbeatThread();
+  }
+
+  @VisibleForTesting
+  protected boolean isHeartbeatThreadAlive() {
+    return this.heartbeatHandler.isAlive();
   }
 }

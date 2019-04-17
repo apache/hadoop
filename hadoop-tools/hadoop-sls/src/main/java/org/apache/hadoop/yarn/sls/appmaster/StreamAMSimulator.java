@@ -24,6 +24,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
+import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -97,10 +98,10 @@ public class StreamAMSimulator extends AMSimulator {
       long traceStartTime, long traceFinishTime, String user, String queue,
       boolean isTracked, String oldAppId, long baselineStartTimeMS,
       Resource amContainerResource, String nodeLabelExpr,
-      Map<String, String> params) {
+      Map<String, String> params, Map<ApplicationId, AMSimulator> appIdAMSim) {
     super.init(heartbeatInterval, containerList, rm, se, traceStartTime,
         traceFinishTime, user, queue, isTracked, oldAppId, baselineStartTimeMS,
-        amContainerResource, nodeLabelExpr, params);
+        amContainerResource, nodeLabelExpr, params, appIdAMSim);
     amtype = "stream";
 
     allStreams.addAll(containerList);

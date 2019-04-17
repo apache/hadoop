@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getFinalizedEditsFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getImageFileName;
 import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEditsFileName;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.io.File;
 import java.io.IOException;
@@ -414,8 +415,7 @@ public class TestNNStorageRetentionManager {
         }
         return null;
       }
-    }).when(mockStorage).inspectStorageDirs(
-        Mockito.<FSImageStorageInspector>anyObject());
+    }).when(mockStorage).inspectStorageDirs(any());
     return mockStorage;
   }
 }

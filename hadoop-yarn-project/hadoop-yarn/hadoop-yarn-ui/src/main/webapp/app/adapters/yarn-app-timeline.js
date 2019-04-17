@@ -25,7 +25,11 @@ export default AbstractAdapter.extend({
 
   urlForFindRecord(id/*, modelName, snapshot*/) {
     var url = this._buildURL();
-    url = url + '/apps/' + id + '?fields=ALL';
+    var clusterId = this.get("env.app.clusterId");
+    if (clusterId) {
+      url += `/clusters/${clusterId}`;
+    }
+    url += '/apps/' + id + '?fields=ALL';
     return url;
   },
 

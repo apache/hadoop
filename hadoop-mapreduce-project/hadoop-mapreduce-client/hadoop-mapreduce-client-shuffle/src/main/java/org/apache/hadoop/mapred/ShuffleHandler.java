@@ -281,6 +281,7 @@ public class ShuffleHandler extends AuxiliaryService {
     }
   }
 
+  private final MetricsSystem ms;
   final ShuffleMetrics metrics;
 
   class ReduceMapFileCount implements ChannelFutureListener {
@@ -397,6 +398,7 @@ public class ShuffleHandler extends AuxiliaryService {
 
   ShuffleHandler(MetricsSystem ms) {
     super(MAPREDUCE_SHUFFLE_SERVICEID);
+    this.ms = ms;
     metrics = ms.register(new ShuffleMetrics());
   }
 
@@ -579,6 +581,7 @@ public class ShuffleHandler extends AuxiliaryService {
     if (stateDb != null) {
       stateDb.close();
     }
+    ms.unregisterSource(ShuffleMetrics.class.getSimpleName());
     super.serviceStop();
   }
 
@@ -910,6 +913,8 @@ public class ShuffleHandler extends AuxiliaryService {
     @Override
     public void channelOpen(ChannelHandlerContext ctx, ChannelStateEvent evt) 
         throws Exception {
+      super.channelOpen(ctx, evt);
+
       if ((maxShuffleConnections > 0) && (accepted.size() >= maxShuffleConnections)) {
         LOG.info(String.format("Current number of shuffle connections (%d) is " + 
             "greater than or equal to the max allowed shuffle connections (%d)", 
@@ -925,8 +930,6 @@ public class ShuffleHandler extends AuxiliaryService {
         return;
       }
       accepted.add(evt.getChannel());
-      super.channelOpen(ctx, evt);
-     
     }
 
     @Override

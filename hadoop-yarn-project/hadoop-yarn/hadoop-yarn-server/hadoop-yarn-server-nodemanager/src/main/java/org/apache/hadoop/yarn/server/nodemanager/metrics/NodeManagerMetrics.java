@@ -44,6 +44,7 @@ public class NodeManagerMetrics {
   @Metric("# of initializing containers")
       MutableGaugeInt containersIniting;
   @Metric MutableGaugeInt containersRunning;
+  @Metric("# of paused containers") MutableGaugeInt containersPaused;
   @Metric("Current allocated memory in GB")
       MutableGaugeInt allocatedGB;
   @Metric("Current # of allocated containers")
@@ -54,6 +55,12 @@ public class NodeManagerMetrics {
   @Metric MutableGaugeInt availableVCores;
   @Metric("Container launch duration")
       MutableRate containerLaunchDuration;
+
+  @Metric("Containers queued (Guaranteed)")
+  MutableGaugeInt containersGuaranteedQueued;
+  @Metric("Containers queued (Opportunistic)")
+  MutableGaugeInt containersOpportunisticQueued;
+
   @Metric("# of bad local dirs")
       MutableGaugeInt badLocalDirs;
   @Metric("# of bad log dirs")
@@ -162,6 +169,14 @@ public class NodeManagerMetrics {
     containersReIniting.decr();
   }
 
+  public void pausedContainer() {
+    containersPaused.incr();
+  }
+
+  public void endPausedContainer() {
+    containersPaused.decr();
+  }
+
   public void allocateContainer(Resource res) {
     allocatedContainers.incr();
     allocatedMB = allocatedMB + res.getMemorySize();
@@ -207,6 +222,11 @@ public class NodeManagerMetrics {
     allocatedOpportunisticGB
         .set((int) Math.ceil(allocatedOpportunisticMB / 1024d));
     allocatedOpportunisticVCores.decr(res.getVirtualCores());
+  }
+
+  public void setQueuedContainers(int opportunisticCount, int guaranteedCount) {
+    containersOpportunisticQueued.set(opportunisticCount);
+    containersGuaranteedQueued.set(guaranteedCount);
   }
 
   public void addResource(Resource res) {
@@ -255,6 +275,10 @@ public class NodeManagerMetrics {
 
   public int getRunningContainers() {
     return containersRunning.value();
+  }
+
+  public int getPausedContainers() {
+    return containersPaused.value();
   }
 
   @VisibleForTesting
@@ -312,6 +336,16 @@ public class NodeManagerMetrics {
 
   public int getRunningOpportunisticContainers() {
     return runningOpportunisticContainers.value();
+  }
+
+  @VisibleForTesting
+  public int getQueuedOpportunisticContainers() {
+    return containersOpportunisticQueued.value();
+  }
+
+  @VisibleForTesting
+  public int getQueuedGuaranteedContainers() {
+    return containersGuaranteedQueued.value();
   }
 
   public long getCacheSizeBeforeClean() {

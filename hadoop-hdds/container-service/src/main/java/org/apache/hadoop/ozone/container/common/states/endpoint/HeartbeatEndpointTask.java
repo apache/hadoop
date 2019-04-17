@@ -47,6 +47,7 @@ import org.apache.hadoop.ozone.container.common.statemachine
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
+import org.apache.hadoop.ozone.protocol.commands.DeleteContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 
 import org.slf4j.Logger;
@@ -141,7 +142,9 @@ public class HeartbeatEndpointTask
       rpcEndpoint.zeroMissedCount();
     } catch (IOException ex) {
       // put back the reports which failed to be sent
-      putBackReports(requestBuilder);
+      if (requestBuilder != null) {
+        putBackReports(requestBuilder);
+      }
       rpcEndpoint.logIfNeeded(ex);
     } finally {
       rpcEndpoint.unlock();
@@ -159,10 +162,10 @@ public class HeartbeatEndpointTask
       reports.add(requestBuilder.getNodeReport());
     }
     if (requestBuilder.getCommandStatusReportsCount() != 0) {
-      for (GeneratedMessage msg : requestBuilder
-          .getCommandStatusReportsList()) {
-        reports.add(msg);
-      }
+      reports.addAll(requestBuilder.getCommandStatusReportsList());
+    }
+    if (requestBuilder.getIncrementalContainerReportCount() != 0) {
+      reports.addAll(requestBuilder.getIncrementalContainerReportList());
     }
     context.putBackReports(reports);
   }
@@ -291,6 +294,16 @@ public class HeartbeatEndpointTask
               replicateContainerCommand.getContainerID());
         }
         this.context.addCommand(replicateContainerCommand);
+        break;
+      case deleteContainerCommand:
+        DeleteContainerCommand deleteContainerCommand =
+            DeleteContainerCommand.getFromProtobuf(
+                commandResponseProto.getDeleteContainerCommandProto());
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Received SCM delete container request for container {}",
+              deleteContainerCommand.getContainerID());
+        }
+        this.context.addCommand(deleteContainerCommand);
         break;
       default:
         throw new IllegalArgumentException("Unknown response : "

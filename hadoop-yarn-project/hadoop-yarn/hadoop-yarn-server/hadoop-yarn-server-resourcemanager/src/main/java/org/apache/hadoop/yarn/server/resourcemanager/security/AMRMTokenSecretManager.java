@@ -28,8 +28,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -56,8 +56,8 @@ import com.google.common.annotations.VisibleForTesting;
 public class AMRMTokenSecretManager extends
     SecretManager<AMRMTokenIdentifier> {
 
-  private static final Log LOG = LogFactory
-    .getLog(AMRMTokenSecretManager.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(AMRMTokenSecretManager.class);
 
   private int serialNo = new SecureRandom().nextInt();
   private MasterKeyData nextMasterKey;
@@ -243,9 +243,7 @@ public class AMRMTokenSecretManager extends
     try {
       ApplicationAttemptId applicationAttemptId =
           identifier.getApplicationAttemptId();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Trying to retrieve password for " + applicationAttemptId);
-      }
+      LOG.debug("Trying to retrieve password for {}", applicationAttemptId);
       if (!appAttemptSet.contains(applicationAttemptId)) {
         throw new InvalidToken(applicationAttemptId
             + " not found in AMRMTokenSecretManager.");

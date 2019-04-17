@@ -259,10 +259,25 @@
 
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-minikdc</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Used to create SSL certs for a secure Keystore -->
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <profiles>
@@ -566,6 +581,7 @@
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</exclude>
                     <exclude>**/azurebfs/ITestAbfsReadWriteAndSeek.java</exclude>
                     <exclude>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</exclude>
+                    <exclude>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</exclude>
                   </excludes>
 
                 </configuration>
@@ -604,6 +620,7 @@
                     <include>**/azurebfs/ITestAzureBlobFileSystemE2EScale.java</include>
                     <include>**/azurebfs/ITestAbfsReadWriteAndSeek.java</include>
                     <include>**/azurebfs/ITestAzureBlobFileSystemListStatus.java</include>
+                    <include>**/azurebfs/extensions/ITestAbfsDelegationTokens.java</include>
                   </includes>
                 </configuration>
               </execution>

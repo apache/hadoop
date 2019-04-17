@@ -37,6 +37,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -54,8 +55,8 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.
  */
 public class TestBCSID {
 
+  private static OzoneConfiguration conf = new OzoneConfiguration();
   private static MiniOzoneCluster cluster;
-  private static OzoneConfiguration conf;
   private static OzoneClient client;
   private static ObjectStore objectStore;
   private static String volumeName;
@@ -68,7 +69,6 @@ public class TestBCSID {
    */
   @BeforeClass
   public static void init() throws Exception {
-    conf = new OzoneConfiguration();
     String path = GenericTestUtils
         .getTempPath(TestBCSID.class.getSimpleName());
     File baseDir = new File(path);
@@ -109,7 +109,7 @@ public class TestBCSID {
     OzoneOutputStream key =
         objectStore.getVolume(volumeName).getBucket(bucketName)
             .createKey("ratis", 1024, ReplicationType.RATIS,
-                ReplicationFactor.ONE);
+                ReplicationFactor.ONE, new HashMap<>());
     key.write("ratis".getBytes());
     key.close();
 
@@ -117,6 +117,7 @@ public class TestBCSID {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName).
         setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
         .setFactor(HddsProtos.ReplicationFactor.ONE).setKeyName("ratis")
+        .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
     List<OmKeyLocationInfo> keyLocationInfos =
@@ -137,7 +138,7 @@ public class TestBCSID {
         omKeyLocationInfo.getBlockCommitSequenceId());
 
     // verify that on restarting the datanode, it reloads the BCSID correctly.
-    cluster.restartHddsDatanode(0);
+    cluster.restartHddsDatanode(0, true);
     Assert.assertEquals(blockCommitSequenceId,
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet()

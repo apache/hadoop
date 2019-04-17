@@ -100,11 +100,14 @@ class BPServiceActor implements Runnable {
     CONNECTING, INIT_FAILED, RUNNING, EXITED, FAILED;
   }
 
+  private String serviceId = null;
+  private String nnId = null;
   private volatile RunningState runningState = RunningState.CONNECTING;
   private volatile boolean shouldServiceRun = true;
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
+  private long fullBlockReportLeaseId;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -115,8 +118,8 @@ class BPServiceActor implements Runnable {
   final LinkedList<BPServiceActorAction> bpThreadQueue 
       = new LinkedList<BPServiceActorAction>();
 
-  BPServiceActor(InetSocketAddress nnAddr, InetSocketAddress lifelineNnAddr,
-      BPOfferService bpos) {
+  BPServiceActor(String serviceId, String nnId, InetSocketAddress nnAddr,
+      InetSocketAddress lifelineNnAddr, BPOfferService bpos) {
     this.bpos = bpos;
     this.dn = bpos.getDataNode();
     this.nnAddr = nnAddr;
@@ -129,11 +132,18 @@ class BPServiceActor implements Runnable {
         dnConf.ibrInterval,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
+    fullBlockReportLeaseId = 0;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs);
     // get the value of maxDataLength.
     this.maxDataLength = dnConf.getMaxDataLength();
+    if (serviceId != null) {
+      this.serviceId = serviceId;
+    }
+    if (nnId != null) {
+      this.nnId = nnId;
+    }
   }
 
   public DatanodeRegistration getBpRegistration() {
@@ -354,7 +364,7 @@ class BPServiceActor implements Runnable {
     // or we will report an RBW replica after the BlockReport already reports
     // a FINALIZED one.
     ibrManager.sendIBRs(bpNamenode, bpRegistration,
-        bpos.getBlockPoolId());
+        bpos.getBlockPoolId(), getRpcMetricSuffix());
 
     long brCreateStartTime = monotonicNow();
     Map<DatanodeStorage, BlockListAsLongs> perVolumeBlockLists =
@@ -417,7 +427,7 @@ class BPServiceActor implements Runnable {
       // Log the block report processing stats from Datanode perspective
       long brSendCost = monotonicNow() - brSendStartTime;
       long brCreateCost = brSendStartTime - brCreateStartTime;
-      dn.getMetrics().addBlockReport(brSendCost);
+      dn.getMetrics().addBlockReport(brSendCost, getRpcMetricSuffix());
       final int nCmds = cmds.size();
       LOG.info((success ? "S" : "Uns") +
           "uccessfully sent block report 0x" +
@@ -437,6 +447,18 @@ class BPServiceActor implements Runnable {
     scheduler.updateLastBlockReportTime(monotonicNow());
     scheduler.scheduleNextBlockReport();
     return cmds.size() == 0 ? null : cmds;
+  }
+
+  private String getRpcMetricSuffix() {
+    if (serviceId == null && nnId == null) {
+      return null;
+    } else if (serviceId == null && nnId != null) {
+      return nnId;
+    } else if (serviceId != null && nnId == null) {
+      return serviceId;
+    } else {
+      return serviceId + "-" + nnId;
+    }
   }
 
   DatanodeCommand cacheReport() throws IOException {
@@ -618,7 +640,6 @@ class BPServiceActor implements Runnable {
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));
-    long fullBlockReportLeaseId = 0;
 
     //
     // Now loop for a long time....
@@ -657,7 +678,8 @@ class BPServiceActor implements Runnable {
               }
               fullBlockReportLeaseId = resp.getFullBlockReportLeaseId();
             }
-            dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime);
+            dn.getMetrics().addHeartbeat(scheduler.monotonicNow() - startTime,
+                getRpcMetricSuffix());
 
             // If the state of this NN has changed (eg STANDBY->ACTIVE)
             // then let the BPOfferService update itself.
@@ -687,7 +709,7 @@ class BPServiceActor implements Runnable {
         if (!dn.areIBRDisabledForTests() &&
             (ibrManager.sendImmediately()|| sendHeartbeat)) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
-              bpos.getBlockPoolId());
+              bpos.getBlockPoolId(), getRpcMetricSuffix());
         }
 
         List<DatanodeCommand> cmds = null;
@@ -709,7 +731,7 @@ class BPServiceActor implements Runnable {
 
         if (sendHeartbeat) {
           dn.getMetrics().addHeartbeatTotal(
-              scheduler.monotonicNow() - startTime);
+              scheduler.monotonicNow() - startTime, getRpcMetricSuffix());
         }
 
         // There is no work to do;  sleep until hearbeat timer elapses, 
@@ -784,6 +806,10 @@ class BPServiceActor implements Runnable {
     
     LOG.info("Block pool " + this + " successfully registered with NN");
     bpos.registrationSucceeded(this, bpRegistration);
+
+    // reset lease id whenever registered to NN.
+    // ask for a new lease id at the next heartbeat.
+    fullBlockReportLeaseId = 0;
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
@@ -907,7 +933,7 @@ class BPServiceActor implements Runnable {
       scheduler.scheduleHeartbeat();
       // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
       // for sometime.
-      if (state == HAServiceState.STANDBY) {
+      if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
         ibrManager.clearIBRs();
       }
     }
@@ -1059,7 +1085,8 @@ class BPServiceActor implements Runnable {
         return;
       }
       sendLifeline();
-      dn.getMetrics().addLifeline(scheduler.monotonicNow() - startTime);
+      dn.getMetrics().addLifeline(scheduler.monotonicNow() - startTime,
+          getRpcMetricSuffix());
       scheduler.scheduleNextLifeline(scheduler.monotonicNow());
     }
 

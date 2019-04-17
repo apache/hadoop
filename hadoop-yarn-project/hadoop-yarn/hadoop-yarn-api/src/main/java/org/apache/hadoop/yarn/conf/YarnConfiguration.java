@@ -100,6 +100,7 @@ public class YarnConfiguration extends Configuration {
     addDeprecatedKeys();
     Configuration.addDefaultResource(YARN_DEFAULT_CONFIGURATION_FILE);
     Configuration.addDefaultResource(YARN_SITE_CONFIGURATION_FILE);
+    Configuration.addDefaultResource(RESOURCE_TYPES_CONFIGURATION_FILE);
   }
 
   private static void addDeprecatedKeys() {
@@ -1225,6 +1226,16 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_COLLECTOR_SERVICE_ADDRESS =
       "0.0.0.0:" + DEFAULT_NM_COLLECTOR_SERVICE_PORT;
 
+  /**
+   * The setting that controls whether yarn container events are published to
+   * the timeline service or not by NM. This configuration setting is for ATS
+   * V2
+   */
+  public static final String NM_PUBLISH_CONTAINER_EVENTS_ENABLED = NM_PREFIX
+      + "emit-container-events";
+  public static final boolean DEFAULT_NM_PUBLISH_CONTAINER_EVENTS_ENABLED =
+      true;
+
   /** Interval in between cache cleanups.*/
   public static final String NM_LOCALIZER_CACHE_CLEANUP_INTERVAL_MS =
     NM_PREFIX + "localizer.cache.cleanup.interval-ms";
@@ -1606,6 +1617,28 @@ public class YarnConfiguration extends Configuration {
       NM_PREFIX + "resource-plugins";
 
   /**
+   * This setting controls if pluggable device plugin framework is enabled.
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      NM_PREFIX + "pluggable-device-framework.enabled";
+
+  /**
+   * The pluggable device plugin framework is disabled by default
+   * */
+  @Private
+  public static final boolean DEFAULT_NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED =
+      false;
+
+  /**
+   * This setting contains vendor plugin class names for
+   * device plugin framework to load. Split by comma
+   * */
+  @Private
+  public static final String NM_PLUGGABLE_DEVICE_FRAMEWORK_DEVICE_CLASSES =
+      NM_PREFIX + "pluggable-device-framework.device-classes";
+
+  /**
    * Prefix for gpu configurations. Work in progress: This configuration
    * parameter may be changed/removed in the future.
    */
@@ -1626,9 +1659,6 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_GPU_PATH_TO_EXEC =
       NM_GPU_RESOURCE_PREFIX + "path-to-discovery-executables";
 
-  @Private
-  public static final String DEFAULT_NM_GPU_PATH_TO_EXEC = "";
-
   /**
    * Settings to control which implementation of docker plugin for GPU will be
    * used.
@@ -1643,11 +1673,14 @@ public class YarnConfiguration extends Configuration {
   public static final String NVIDIA_DOCKER_V1 = "nvidia-docker-v1";
 
   @Private
+  public static final String NVIDIA_DOCKER_V2 = "nvidia-docker-v2";
+
+  @Private
   public static final String DEFAULT_NM_GPU_DOCKER_PLUGIN_IMPL =
       NVIDIA_DOCKER_V1;
 
   /**
-   * This setting controls end point of nvidia-docker-v1 plugin
+   * This setting controls end point of nvidia-docker-v1 plugin.
    */
   @Private
   public static final String NVIDIA_DOCKER_PLUGIN_V1_ENDPOINT =
@@ -1681,6 +1714,15 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String DEFAULT_NM_FPGA_VENDOR_PLUGIN =
       "org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.fpga.IntelFpgaOpenclPlugin";
+
+  @Private
+  public static final String NM_FPGA_DEVICE_DISCOVERY_SCRIPT =
+      NM_FPGA_RESOURCE_PREFIX + "device-discovery-script";
+
+  @Private
+  public static final String NM_FPGA_AVAILABLE_DEVICES =
+      NM_FPGA_RESOURCE_PREFIX + "available-devices";
+
 
   public static final String NM_NETWORK_TAG_PREFIX = NM_PREFIX
       + "network-tagging";
@@ -1900,6 +1942,10 @@ public class YarnConfiguration extends Configuration {
   public static final String NM_DOCKER_IMAGE_NAME =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "image-name";
 
+  /** Default option to decide whether to pull the latest image or not. **/
+  public static final String NM_DOCKER_IMAGE_UPDATE =
+      DOCKER_CONTAINER_RUNTIME_PREFIX + "image-update";
+
   /** Capabilities allowed (and added by default) for docker containers. **/
   public static final String NM_DOCKER_CONTAINER_CAPABILITIES =
       DOCKER_CONTAINER_RUNTIME_PREFIX + "capabilities";
@@ -1983,6 +2029,16 @@ public class YarnConfiguration extends Configuration {
    * . */
   public static final String DEFAULT_NM_DOCKER_DEFAULT_CONTAINER_NETWORK =
       "host";
+
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+          DOCKER_CONTAINER_RUNTIME_PREFIX + "allowed-container-runtimes";
+
+  /** The set of runtimes allowed when launching containers using the
+   * DockerContainerRuntime. */
+  public static final String[] DEFAULT_NM_DOCKER_ALLOWED_CONTAINER_RUNTIMES =
+      {"runc"};
 
   /** Allow host pid namespace for containers. Use with care. */
   public static final String NM_DOCKER_ALLOW_HOST_PID_NAMESPACE =
@@ -2200,7 +2256,36 @@ public class YarnConfiguration extends Configuration {
   
   public static final String NM_AUX_SERVICES = 
       NM_PREFIX + "aux-services";
-  
+
+  /**
+   * Boolean indicating whether loading aux services from a manifest is
+   * enabled. If enabled, aux services may be dynamically modified through
+   * reloading the manifest via filesystem changes or a REST API. When
+   * enabled, aux services configuration properties unrelated to the manifest
+   * will be ignored.
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST_ENABLED =
+      NM_AUX_SERVICES + ".manifest.enabled";
+
+  public static final boolean DEFAULT_NM_AUX_SERVICES_MANIFEST_ENABLED =
+      false;
+
+  /**
+   * File containing auxiliary service specifications.
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST =
+      NM_AUX_SERVICES + ".manifest";
+
+  /**
+   * Interval at which manifest file will be reloaded when modifications are
+   * found (0 or less means that the file will not be checked for modifications
+   * and reloaded).
+   */
+  public static final String NM_AUX_SERVICES_MANIFEST_RELOAD_MS =
+      NM_AUX_SERVICES + ".manifest.reload-ms";
+
+  public static final long DEFAULT_NM_AUX_SERVICES_MANIFEST_RELOAD_MS = 0;
+
   public static final String NM_AUX_SERVICE_FMT =
       NM_PREFIX + "aux-services.%s.class";
 
@@ -2272,13 +2357,17 @@ public class YarnConfiguration extends Configuration {
   
   /** Keytab for Proxy.*/
   public static final String PROXY_KEYTAB = PROXY_PREFIX + "keytab";
-  
+
   /** The address for the web proxy.*/
   public static final String PROXY_ADDRESS =
     PROXY_PREFIX + "address";
   public static final int DEFAULT_PROXY_PORT = 9099;
   public static final String DEFAULT_PROXY_ADDRESS =
     "0.0.0.0:" + DEFAULT_PROXY_PORT;
+
+  /** Binding address for the web proxy. */
+  public static final String PROXY_BIND_HOST =
+      PROXY_PREFIX + "bind-host";
   
   /**
    * YARN Service Level Authorization
@@ -2660,6 +2749,13 @@ public class YarnConfiguration extends Configuration {
       "org.apache.hadoop.yarn.server.timelineservice.storage" +
           ".HBaseTimelineReaderImpl";
 
+  public static final String TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      TIMELINE_SERVICE_PREFIX + "schema-creator.class";
+
+  public static final String DEFAULT_TIMELINE_SERVICE_SCHEMA_CREATOR_CLASS =
+      "org.apache.hadoop.yarn.server.timelineservice.storage" +
+          ".HBaseTimelineSchemaCreator";
+
   /**
    * default schema prefix for hbase tables.
    */
@@ -2681,6 +2777,15 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_TIMELINE_SERVICE_WRITER_FLUSH_INTERVAL_SECONDS = 60;
 
+  /** The setting that controls the capacity of the queue for async writes
+   * to timeline collector.
+   */
+  public static final String TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY =
+      TIMELINE_SERVICE_PREFIX + "writer.async.queue.capacity";
+
+  public static final int
+      DEFAULT_TIMELINE_SERVICE_WRITER_ASYNC_QUEUE_CAPACITY = 100;
+
   /**
    * The name for setting that controls how long the final value of
    * a metric of a completed app is retained before merging
@@ -2701,6 +2806,19 @@ public class YarnConfiguration extends Configuration {
   /** default hdfs location for flowrun coprocessor jar. */
   public static final String DEFAULT_HDFS_LOCATION_FLOW_RUN_COPROCESSOR_JAR =
       "/hbase/coprocessor/hadoop-yarn-server-timelineservice.jar";
+
+  /**
+   * This setting controls the max size of the flow name getting generated
+   * in ATSv2 after removing UUID if present.
+   * */
+  public static final String FLOW_NAME_MAX_SIZE =
+      TIMELINE_SERVICE_PREFIX + "flowname.max-size";
+
+  /**
+   * Default setting for flow name size has no size restriction
+   * after removing UUID if present.
+   */
+  public static final int FLOW_NAME_DEFAULT_MAX_SIZE = 0;
 
     /**
    * The name for setting that points to an optional HBase configuration
@@ -3406,6 +3524,35 @@ public class YarnConfiguration extends Configuration {
       false;
 
   ////////////////////////////////
+  // CSI Volume configs
+  ////////////////////////////////
+  /**
+   * TERMS:
+   * csi-driver: a 3rd party CSI driver which implements the CSI protocol.
+   *   It is provided by the storage system.
+   * csi-driver-adaptor: this is an internal RPC service working
+   *   as a bridge between YARN and a csi-driver.
+   */
+  public static final String NM_CSI_ADAPTOR_PREFIX =
+      NM_PREFIX + "csi-driver-adaptor.";
+  public static final String NM_CSI_DRIVER_PREFIX =
+      NM_PREFIX + "csi-driver.";
+  public static final String NM_CSI_DRIVER_ENDPOINT_SUFFIX =
+      ".endpoint";
+  public static final String NM_CSI_ADAPTOR_ADDRESS_SUFFIX =
+      ".address";
+  public static final String NM_CSI_ADAPTOR_CLASS =
+      ".class";
+  /**
+   * One or more socket addresses for csi-adaptor.
+   * Multiple addresses are delimited by ",".
+   */
+  public static final String NM_CSI_ADAPTOR_ADDRESSES =
+      NM_CSI_ADAPTOR_PREFIX + "addresses";
+  public static final String NM_CSI_DRIVER_NAMES =
+      NM_CSI_DRIVER_PREFIX + "names";
+
+  ////////////////////////////////
   // Other Configs
   ////////////////////////////////
 
@@ -3623,6 +3770,12 @@ public class YarnConfiguration extends Configuration {
   public static final long DEFAULT_NM_NODE_LABELS_RESYNC_INTERVAL =
       2 * 60 * 1000;
 
+  public static final String NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      NM_NODE_ATTRIBUTES_PREFIX + "resync-interval-ms";
+
+  public static final long DEFAULT_NM_NODE_ATTRIBUTES_RESYNC_INTERVAL =
+      2 * 60 * 1000;
+
   // If -1 is configured then no timer task should be created
   public static final String NM_NODE_LABELS_PROVIDER_FETCH_INTERVAL_MS =
       NM_NODE_LABELS_PROVIDER_PREFIX + "fetch-interval-ms";
@@ -3800,6 +3953,10 @@ public class YarnConfiguration extends Configuration {
   @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_BIND_HOST =
       TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-host";
+
+  @Private
+  public static final String TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES =
+      TIMELINE_SERVICE_COLLECTOR_PREFIX + "bind-port-ranges";
 
   @Private
   public static final String TIMELINE_SERVICE_COLLECTOR_WEBAPP_ADDRESS =

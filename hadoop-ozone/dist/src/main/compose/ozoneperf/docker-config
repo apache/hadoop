@@ -14,25 +14,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.om.address=ozoneManager
-OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
 OZONE-SITE.XML_ozone.scm.names=scm
-OZONE-SITE.XML_ozone.enabled=True
+OZONE-SITE.XML_ozone.enabled=true
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
 OZONE-SITE.XML_ozone.scm.block.client.address=scm
 OZONE-SITE.XML_ozone.metadata.dirs=/data/metadata
-OZONE-SITE.XML_ozone.handler.type=distributed
 OZONE-SITE.XML_ozone.scm.client.address=scm
 OZONE-SITE.XML_hdds.datanode.dir=/data/hdds
+OZONE-SITE.XML_ozone.replication=1
+OZONE-SITE.XML_hdds.prometheus.endpoint.enabled=true
 
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
-OZONE-SITE.XML_ozone.replication=1
+
 LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
-HADOOP_OPTS=-javaagent:/opt/jmxpromo.jar=port=0:consulHost=consul:consulMode=node
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.util.NativeCodeLoader=ERROR
 LOG4J.PROPERTIES_log4j.logger.org.apache.ratis.conf.ConfUtils=WARN
 LOG4J.PROPERTIES_log4j.logger.org.apache.hadoop.security.ShellBasedUnixGroupsMapping=ERROR

@@ -121,8 +121,8 @@ public class OfflineEditsViewer extends Configured implements Tool {
 
   /** Process an edit log using the chosen processor or visitor.
    * 
-   * @param inputFilename   The file to process
-   * @param outputFilename  The output file name
+   * @param inputFileName   The file to process
+   * @param outputFileName  The output file name
    * @param processor       If visitor is null, the processor to use
    * @param visitor         If non-null, the visitor to use.
    * 

@@ -19,9 +19,14 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import io.opentracing.Scope;
+
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .AllocateBlockResponse;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -37,6 +42,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 
@@ -69,23 +75,33 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   public AllocateScmBlockResponseProto allocateScmBlock(
       RpcController controller, AllocateScmBlockRequestProto request)
       throws ServiceException {
-    try {
-      AllocatedBlock allocatedBlock =
-          impl.allocateBlock(request.getSize(), request.getType(),
-              request.getFactor(), request.getOwner());
-      if (allocatedBlock != null) {
-        return
-            AllocateScmBlockResponseProto.newBuilder()
-                .setBlockID(allocatedBlock.getBlockID().getProtobuf())
-                .setPipeline(allocatedBlock.getPipeline().getProtobufMessage())
-                .setCreateContainer(allocatedBlock.getCreateContainer())
-                .setErrorCode(AllocateScmBlockResponseProto.Error.success)
-                .build();
-      } else {
-        return AllocateScmBlockResponseProto.newBuilder()
+    try (Scope scope = TracingUtil
+        .importAndCreateScope("ScmBlockLocationProtocol.allocateBlock",
+            request.getTraceID())) {
+      List<AllocatedBlock> allocatedBlocks =
+          impl.allocateBlock(request.getSize(),
+              request.getNumBlocks(), request.getType(),
+              request.getFactor(), request.getOwner(),
+              ExcludeList.getFromProtoBuf(request.getExcludeList()));
+
+      AllocateScmBlockResponseProto.Builder builder =
+          AllocateScmBlockResponseProto.newBuilder();
+
+      if (allocatedBlocks.size() < request.getNumBlocks()) {
+        return builder
             .setErrorCode(AllocateScmBlockResponseProto.Error.unknownFailure)
             .build();
       }
+
+      for (AllocatedBlock block : allocatedBlocks) {
+        builder.addBlocks(AllocateBlockResponse.newBuilder()
+            .setContainerBlockID(block.getBlockID().getProtobuf())
+            .setPipeline(block.getPipeline().getProtobufMessage()));
+      }
+
+      return builder
+          .setErrorCode(AllocateScmBlockResponseProto.Error.success)
+          .build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

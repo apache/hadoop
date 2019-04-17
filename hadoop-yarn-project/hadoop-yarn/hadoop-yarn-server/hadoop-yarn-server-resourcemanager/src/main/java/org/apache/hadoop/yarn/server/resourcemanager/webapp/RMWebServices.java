@@ -56,8 +56,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.JettyUtils;
@@ -118,6 +116,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequest;
 import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceOption;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -125,8 +124,11 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.security.client.RMDelegationTokenIdentifier;
+import org.apache.hadoop.yarn.server.api.protocolrecords.UpdateNodeResourceRequest;
+import org.apache.hadoop.yarn.server.resourcemanager.AdminService;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.NodeLabelsUtils;
@@ -185,6 +187,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateResponseInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.StatisticsItemInfo;
@@ -202,6 +205,8 @@ import org.apache.hadoop.yarn.webapp.ForbiddenException;
 import org.apache.hadoop.yarn.webapp.NotFoundException;
 import org.apache.hadoop.yarn.webapp.util.WebAppUtils;
 import org.apache.hadoop.yarn.webapp.dao.SchedConfUpdateInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
@@ -211,8 +216,8 @@ import com.google.inject.Singleton;
 @Path(RMWSConsts.RM_WEB_SERVICE_PATH)
 public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
-  private static final Log LOG =
-      LogFactory.getLog(RMWebServices.class.getName());
+  private static final Logger LOG =
+      LoggerFactory.getLogger(RMWebServices.class.getName());
 
   private final ResourceManager rm;
   private static RecordFactory recordFactory =
@@ -441,9 +446,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     NodesInfo nodesInfo = new NodesInfo();
     for (RMNode rmNode : rmNodes) {
       NodeInfo nodeInfo = new NodeInfo(rmNode, sched);
-      if (EnumSet
-          .of(NodeState.LOST, NodeState.DECOMMISSIONED, NodeState.REBOOTED)
-          .contains(rmNode.getState())) {
+      if (rmNode.getState().isInactiveState()) {
         nodeInfo.setNodeHTTPAddress(RMWSConsts.EMPTY);
       }
       nodesInfo.add(nodeInfo);
@@ -482,6 +485,64 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       nodeInfo.setNodeHTTPAddress(RMWSConsts.EMPTY);
     }
     return nodeInfo;
+  }
+
+  @POST
+  @Path(RMWSConsts.NODE_RESOURCE)
+  @Consumes({ MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML })
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public ResourceInfo updateNodeResource(
+      @Context HttpServletRequest hsr,
+      @PathParam(RMWSConsts.NODEID) String nodeId,
+      ResourceOptionInfo resourceOption) throws AuthorizationException {
+
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, false);
+
+    RMNode rmNode = getRMNode(nodeId);
+    Map<NodeId, ResourceOption> nodeResourceMap =
+        Collections.singletonMap(
+            rmNode.getNodeID(), resourceOption.getResourceOption());
+    UpdateNodeResourceRequest updateRequest =
+        UpdateNodeResourceRequest.newInstance(nodeResourceMap);
+
+    try {
+      RMContext rmContext = this.rm.getRMContext();
+      AdminService admin = rmContext.getRMAdminService();
+      admin.updateNodeResource(updateRequest);
+    } catch (YarnException e) {
+      String message = "Failed to update the node resource " +
+          rmNode.getNodeID() + ".";
+      LOG.error(message, e);
+      throw new YarnRuntimeException(message, e);
+    } catch (IOException e) {
+      LOG.error("Failed to update the node resource {}.",
+          rmNode.getNodeID(), e);
+    }
+
+    return new ResourceInfo(rmNode.getTotalCapability());
+  }
+
+  /**
+   * Get the RMNode in the RM from the node identifier.
+   * @param nodeId Node identifier.
+   * @return The RMNode in the RM.
+   */
+  private RMNode getRMNode(final String nodeId) {
+    if (nodeId == null || nodeId.isEmpty()) {
+      throw new NotFoundException("nodeId, " + nodeId + ", is empty or null");
+    }
+    NodeId nid = NodeId.fromString(nodeId);
+    RMContext rmContext = this.rm.getRMContext();
+    RMNode ni = rmContext.getRMNodes().get(nid);
+    if (ni == null) {
+      ni = rmContext.getInactiveRMNodes().get(nid);
+      if (ni == null) {
+        throw new NotFoundException("nodeId, " + nodeId + ", is not found");
+      }
+    }
+    return ni;
   }
 
   @GET
@@ -685,6 +746,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return appActivitiesInfo;
       } catch (Exception e) {
         String errMessage = "Cannot find application with given appId";
+        LOG.error(errMessage, e);
         return new AppActivitiesInfo(errMessage, appId);
       }
 

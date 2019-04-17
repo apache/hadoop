@@ -55,6 +55,7 @@ public class ContainerInfo {
   protected String nodeHttpAddress;
   protected String nodeId;
   protected Map<String, Long> allocatedResources;
+  private String exposedPorts;
 
   public ContainerInfo() {
     // JAXB needs this
@@ -76,9 +77,9 @@ public class ContainerInfo {
     containerState = container.getContainerState();
     nodeHttpAddress = container.getNodeHttpAddress();
     nodeId = container.getAssignedNode().toString();
+    exposedPorts = container.getExposedPorts();
 
     Resource allocated = container.getAllocatedResource();
-
     if (allocated != null) {
       allocatedMB = allocated.getMemorySize();
       allocatedVCores = allocated.getVirtualCores();
@@ -158,5 +159,13 @@ public class ContainerInfo {
    */
   public Map<String, Long> getAllocatedResources() {
     return Collections.unmodifiableMap(allocatedResources);
+  }
+
+  public String getExposedPorts() {
+    return exposedPorts;
+  }
+
+  public boolean hasCustomResources() {
+    return allocatedResources.size() > 2;
   }
 }

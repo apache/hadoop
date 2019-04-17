@@ -53,6 +53,58 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.chunk.write.sync</name>
+    <value>true</value>
+    <tag>OZONE, CONTAINER, MANAGEMENT</tag>
+    <description>Determines whether the chunk writes in the container happen as
+      sync I/0 or buffered I/O operation.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.statemachinedata.sync.timeout</name>
+    <value>10s</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Timeout for StateMachine data writes by Ratis.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.statemachinedata.sync.retries</name>
+    <value>-1</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Number of times the WriteStateMachineData op will be tried
+      before failing, if this value is -1, then this retries indefinitely.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.queue.num-elements</name>
+    <value>1024</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Limit for the number of operations in Ratis Log Worker.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.queue.byte-limit</name>
+    <value>4GB</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Byte limit for Ratis Log Worker queue.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.appender.queue.num-elements</name>
+    <value>1</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Limit for number of append entries in ratis leader's
+      log appender queue.
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.log.appender.queue.byte-limit</name>
+    <value>32MB</value>
+    <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
+    <description>Byte limit for ratis leader's log appender queue.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.datanode.storage.dir</name>
     <value/>
     <tag>OZONE, CONTAINER, STORAGE, MANAGEMENT, RATIS</tag>
@@ -119,6 +171,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.ratis.snapshot.threshold</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Number of transactions after which a ratis snapshot should be
+      taken.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.num.write.chunk.threads</name>
     <value>60</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
@@ -145,35 +205,45 @@
   </property>
   <property>
     <name>dfs.container.ratis.segment.size</name>
-    <value>1073741824</value>
+    <value>16KB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the raft segment used by Apache Ratis on datanodes.
-      (1 GB by default)
+      (16 KB by default)
     </description>
   </property>
   <property>
     <name>dfs.container.ratis.segment.preallocated.size</name>
-    <value>134217728</value>
+    <value>16KB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the buffer which is preallocated for raft segment
-      used by Apache Ratis on datanodes.(128 MB by default)
+      used by Apache Ratis on datanodes.(16 KB by default)
+    </description>
+  </property>
+  <property>
+    <name>dfs.container.ratis.statemachine.cache.expiry.interval</name>
+    <value>10s</value>
+    <tag>OZONE, RATIS, PERFORMANCE</tag>
+    <description>The interval till which the stateMachine data in ratis
+      will be cached inside the ContainerStateMachine.
     </description>
   </property>
   <property>
     <name>dfs.ratis.client.request.timeout.duration</name>
     <value>3s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
-    <description>The timeout duration for ratis client request.</description>
+    <description>The timeout duration for ratis client request.It should be
+        set greater than leader election timeout in Ratis.
+    </description>
   </property>
   <property>
     <name>dfs.ratis.client.request.max.retries</name>
-    <value>180</value>
+    <value>20</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Number of retries for ratis client request.</description>
   </property>
   <property>
     <name>dfs.ratis.client.request.retry.interval</name>
-    <value>100ms</value>
+    <value>500ms</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>Interval between successive retries for a ratis client request.
     </description>
@@ -240,6 +310,25 @@
       datanode periodically send pipeline report to SCM. Unit could be
       defined with postfix (ns,ms,s,m,h,d)</description>
   </property>
+
+
+  <property>
+    <name>hdds.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Enable prometheus compatible metric page on the HTTP
+      servers.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.profiler.endpoint.enabled</name>
+    <value>false</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>Enable /prof java profiler servlet page on HTTP server.
+    </description>
+  </property>
+
   <!--Ozone Settings-->
   <property>
     <name>ozone.administrators</name>
@@ -298,6 +387,14 @@
     </description>
   </property>
   <property>
+    <name>ozone.UnsafeByteOperations.enabled</name>
+    <value>true</value>
+    <tag>OZONE, PERFORMANCE, CLIENT</tag>
+    <description>It specifies whether to use unsafe or safe buffer to byteString
+      copy.
+    </description>
+  </property>
+  <property>
     <name>ozone.client.connection.timeout</name>
     <value>5000ms</value>
     <tag>OZONE, PERFORMANCE, CLIENT</tag>
@@ -305,19 +402,37 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.max.retries</name>
-    <value>50</value>
+    <name>ozone.client.stream.buffer.flush.size</name>
+    <value>64MB</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Maximum number of retries by Ozone Client on encountering
-      exception while fetching committed block length.
+    <description>Size which determines at what buffer position , a partial
+      flush will be initiated during write. It should be ideally a multiple
+      of chunkSize.
     </description>
   </property>
   <property>
-    <name>ozone.client.retry.interval</name>
-    <value>200ms</value>
+    <name>ozone.client.stream.buffer.max.size</name>
+    <value>128MB</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Interval between retries by Ozone Client on encountering
-      exception while fetching committed block length.
+    <description>Size which determines at what buffer position,
+      write call be blocked till acknowledgement of the first partial flush
+      happens by all servers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.watch.request.timeout</name>
+    <value>30s</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Timeout for the watch API in Ratis client to acknowledge
+      a particular request getting replayed to all servers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.max.retries</name>
+    <value>5</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Maximum number of retries by Ozone Client on encountering
+      exception while writing a key.
     </description>
   </property>
   <property>
@@ -363,6 +478,48 @@
       per time interval in OM. Those keys are sent to delete metadata and
       generate transactions in SCM for next async deletion between SCM
       and DataNode.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.service.ids</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM service Ids.
+
+      If not set, the default value of "om-service-value" is assigned as the
+      OM service ID.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.nodes.EXAMPLEOMSERVICEID</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      Comma-separated list of OM node Ids for a given OM service ID (eg.
+      EXAMPLEOMSERVICEID). The OM service ID should be the value (one of the
+      values if there are multiple) set for the parameter ozone.om.service.ids.
+
+      Unique identifiers for each OM Node, delimited by commas. This will be
+      used by OzoneManagers in HA setup to determine all the OzoneManagers
+      belonging to the same OMservice in the cluster. For example, if you
+      used “omService1” as the OM service ID previously, and you wanted to
+      use “om1”, “om2” and "om3" as the individual IDs of the OzoneManagers,
+      you would configure a property ozone.om.nodes.omService1, and its value
+      "om1,om2,om3".
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.node.id</name>
+    <value></value>
+    <tag>OM, HA</tag>
+    <description>
+      The ID of this OM node. If the OM node ID is not configured it
+      is determined automatically by matching the local node's address
+      with the configured address.
+
+      If node ID is not deterministic from the configuration, then it is set
+      to the OmId from the OM version file.
     </description>
   </property>
   <property>
@@ -483,21 +640,30 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.db.dirs</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the OzoneManager stores its metadata. This should
+      be specified as a single directory. If the directory does not
+      exist then the OM will attempt to create it.
+
+      If undefined, then the OM will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
+  <property>
     <name>ozone.metadata.dirs</name>
     <value/>
-    <tag>OZONE, OM, SCM, CONTAINER, REQUIRED, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, STORAGE</tag>
     <description>
-      Ozone metadata is shared among OM, which acts as the namespace
-      manager for ozone, SCM which acts as the block manager and data nodes
-      which maintain the name of the key(Key Name and BlockIDs). This
-      replicated and distributed metadata store is maintained under the
-      directory pointed by this key. Since metadata can be I/O intensive, at
-      least on OM and SCM we recommend having SSDs. If you have the luxury
-      of mapping this path to SSDs on all machines in the cluster, that will
-      be excellent.
+      This setting is the fallback location for SCM, OM and DataNodes
+      to store their metadata. This setting may be used in test/PoC clusters
+      to simplify configuration.
 
-      If Ratis metadata directories are not specified, Ratis server will emit a
-      warning and use this path for storing its metadata too.
+      For production clusters or any time you care about performance, it is
+      recommended that ozone.om.db.dirs, ozone.scm.db.dirs and
+      dfs.container.ratis.datanode.storage.dir be configured separately.
     </description>
   </property>
   <property>
@@ -525,7 +691,19 @@
       Check the rocksdb documentation for more details.
     </description>
   </property>
+  <property>
+    <name>ozone.scm.db.dirs</name>
+    <value/>
+    <tag>OZONE, SCM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the StorageContainerManager stores its metadata.
+      This should be specified as a single directory. If the directory
+      does not exist then the SCM will attempt to create it.
 
+      If undefined, then the SCM will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
   <property>
     <name>ozone.scm.block.client.address</name>
     <value/>
@@ -562,17 +740,17 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.block.size.in.mb</name>
-    <value>256</value>
+    <name>ozone.scm.block.size</name>
+    <value>256MB</value>
     <tag>OZONE, SCM</tag>
     <description>
-      The default size of a scm block in bytes. This is maps to the default
+      The default size of a scm block. This is maps to the default
       Ozone block size.
     </description>
   </property>
   <property>
     <name>ozone.scm.chunk.size</name>
-    <value>16777216</value>
+    <value>16MB</value>
     <tag>OZONE, SCM, CONTAINER, PERFORMANCE</tag>
     <description>
       The chunk size for reading/writing chunk operations in bytes.
@@ -650,11 +828,10 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.container.provision_batch_size</name>
-    <value>20</value>
-    <tag>OZONE, PERFORMANCE</tag>
-    <description>Pre-provision specified number of containers for block
-      allocation.
+    <name>ozone.scm.pipeline.owner.container.count</name>
+    <value>3</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>Number of containers per owner in a pipeline.
     </description>
   </property>
   <property>
@@ -760,6 +937,8 @@
       OM/SCM eventually. So a 30 second HB seems to work. This assumes that
       replication strategy used is Ratis if not, this value should be set to
       something smaller like 3 seconds.
+      ozone.scm.pipeline.close.timeout should also be adjusted accordingly,
+      if the default value for this config is not used.
     </description>
   </property>
   <property>
@@ -776,10 +955,10 @@
   </property>
   <property>
     <name>ozone.scm.heartbeat.rpc-timeout</name>
-    <value>1000</value>
+    <value>1s</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      Timeout value for the RPC from Datanode to SCM in milliseconds.
+      Timeout value for the RPC from Datanode to SCM.
     </description>
   </property>
   <property>
@@ -851,14 +1030,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.keytab.file</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The keytab file for Kerberos authentication in SCM.
-    </description>
-  </property>
-  <property>
     <name>ozone.scm.names</name>
     <value/>
     <tag>OZONE, REQUIRED</tag>
@@ -886,20 +1057,6 @@
     <description>
       Setting this flag to true dumps the HTTP request/ response in
       the logs. Very useful when debugging REST protocol.
-    </description>
-  </property>
-  <property>
-    <name>ozone.web.authentication.kerberos.principal</name>
-    <value/>
-    <tag>OZONE, SECURITY</tag>
-    <description>
-      The server principal used by the SCM and OM for web UI SPNEGO
-      authentication when Kerberos security is enabled. This is typically set to
-      HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix
-      HTTP/ by convention.
-
-      If the value is '*', the web server will attempt to login with
-      every principal specified in the keytab file.
     </description>
   </property>
 
@@ -950,13 +1107,14 @@
   </property>
 
   <property>
-    <name>ozone.key.preallocation.maxsize</name>
-    <value>134217728</value>
+    <name>ozone.key.preallocation.max.blocks</name>
+    <value>64</value>
     <tag>OZONE, OM, PERFORMANCE</tag>
     <description>
-      When a new key write request is sent to OM, if a size is requested, at most
-      128MB of size is allocated at request time. If client needs more space for the
-      write, separate block allocation requests will be made.
+      While allocating blocks from OM, this configuration limits the maximum
+      number of blocks being allocated. This configuration ensures that the
+      allocated block response do not exceed rpc payload limit. If client needs
+      more space for the write, separate block allocation requests will be made.
     </description>
   </property>
 
@@ -1048,7 +1206,8 @@
 
   <property>
     <name>ozone.tags.system</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS</value>
   </property>
 
 
@@ -1122,41 +1281,96 @@
       postfix (ns,ms,s,m,h,d)</description>
   </property>
   <property>
-    <name>ozone.scm.pipeline.creation.lease.timeout</name>
-    <value>60s</value>
+    <name>ozone.scm.pipeline.destroy.timeout</name>
+    <value>300s</value>
     <tag>OZONE, SCM, PIPELINE</tag>
     <description>
-      Pipeline creation timeout in milliseconds to be used by SCM. When
-      BEGIN_CREATE event happens the pipeline is moved from ALLOCATED to
-      CREATING state, SCM will now wait for the configured amount of time
-      to get COMPLETE_CREATE event if it doesn't receive it will move the
-      pipeline to DELETING.
+      Once a pipeline is closed, SCM should wait for the above configured time
+      before destroying a pipeline.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.pipeline.creation.interval</name>
+    <value>120s</value>
+    <tag>OZONE, SCM, PIPELINE</tag>
+    <description>
+      SCM schedules a fixed interval job using the configured interval to
+      create pipelines.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.threshold.pct</name>
+    <name>hdds.scm.safemode.threshold.pct</name>
     <value>0.99</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description> % of containers which should have at least one
-      reported replica before SCM comes out of chill mode.
+      reported replica before SCM comes out of safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.enabled</name>
+    <name>hdds.scm.wait.time.after.safemode.exit</name>
+    <value>5m</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description> After exiting safemode, wait for configured interval of
+      time to start replication monitor and cleanup activities of unhealthy
+      pipelines.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.safemode.enabled</name>
     <value>true</value>
     <tag>HDDS,SCM,OPERATION</tag>
-    <description>Boolean value to enable or disable SCM chill mode.
+    <description>Boolean value to enable or disable SCM safe mode.
     </description>
   </property>
 
   <property>
-    <name>hdds.scm.chillmode.min.datanode</name>
+    <name>hdds.scm.safemode.min.datanode</name>
     <value>1</value>
     <tag>HDDS,SCM,OPERATION</tag>
     <description>Minimum DataNodes which should be registered to get SCM out of
-      chill mode.
+      safe mode.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.safemode.pipeline-availability.check</name>
+    <value>false</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Boolean value to enable pipeline availability check during SCM safe mode.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.safemode.healthy.pipelie.pct</name>
+    <value>0.10</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Percentage of healthy pipelines, where all 3 datanodes are reported in the
+      pipeline.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.scm.safemode.atleast.one.node.reported.pipeline.pct</name>
+    <value>0.90</value>
+    <tag>HDDS,SCM,OPERATION</tag>
+    <description>
+      Percentage of pipelines, where at least one datanode is reported in the
+      pipeline.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.containerscrub.enabled</name>
+    <value>false</value>
+    <tag>DATANODE</tag>
+    <description>
+      Boolean value to enable data and metadata scrubbing in the containers
+      running on each datanode.
     </description>
   </property>
 
@@ -1291,5 +1505,996 @@
       service principal. </description>
   </property>
 
+  <property>
+    <name>ozone.om.save.metrics.interval</name>
+    <value>5m</value>
+    <tag>OZONE, OM</tag>
+    <description>Time interval used to store the omMetrics in to a
+      file. Background thread perodically stores the OM metrics in to a
+      file. Unit could be defined with postfix (ns,ms,s,m,h,d)
+    </description>
+  </property>
+  <property>
+    <name>ozone.security.enabled</name>
+    <value>false</value>
+    <tag> OZONE, SECURITY</tag>
+    <description>True if security is enabled for ozone. When this property is
+     true, hadoop.security.authentication should be Kerberos.
+    </description>
+  </property>
 
+  <property>
+    <name>ozone.client.checksum.type</name>
+    <value>CRC32</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>The checksum type [NONE/ CRC32/ CRC32C/ SHA256/ MD5] determines
+      which algorithm would be used to compute checksum for chunk data.
+      Default checksum type is SHA256.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.bytes.per.checksum</name>
+    <value>1MB</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>Checksum will be computed for every bytes per checksum number
+      of bytes and stored sequentially. The minimum value for this config is
+      256KB.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.client.verify.checksum</name>
+    <value>true</value>
+    <tag>OZONE, CLIENT, MANAGEMENT</tag>
+    <description>
+      Ozone client to verify checksum of the checksum blocksize data.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.enable</name>
+    <value>false</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Property to enable or disable Ratis server on OM.
+    Please note - this is a temporary property to disable OM Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.port</name>
+    <value>9872</value>
+    <tag>OZONE, OM, RATIS</tag>
+    <description>
+      The port number of the OzoneManager's Ratis server.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.rpc.type</name>
+    <value>GRPC</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Ratis supports different kinds of transports like netty, GRPC,
+      Hadoop RPC etc. This picks one of those for this cluster.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.storage.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing OM's Ratis metadata like
+      logs. If this is not set then default metadata dirs is used. A warning
+      will be logged if this not set. Ideally, this should be mapped to a
+      fast disk like an SSD.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.segment.size</name>
+    <value>16KB</value>
+    <tag>OZONE, OM, RATIS, PERFORMANCE</tag>
+    <description>The size of the raft segment used by Apache Ratis on OM.
+      (16 KB by default)
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.segment.preallocated.size</name>
+    <value>16KB</value>
+    <tag>OZONE, OM, RATIS, PERFORMANCE</tag>
+    <description>The size of the buffer which is preallocated for raft segment
+      used by Apache Ratis on OM.(16 KB by default)
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.log.appender.queue.num-elements</name>
+    <value>1024</value>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
+    <description>Number of operation pending with Raft's Log Worker.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.log.appender.queue.byte-limit</name>
+    <value>32MB</value>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
+    <description>Byte limit for Raft's Log Worker queue.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.snapshot.auto.trigger.threshold</name>
+    <value>400000</value>
+    <tag>OZONE, DEBUG, OM, RATIS</tag>
+    <description>The log index threshold after ratis will auto trigger
+      snapshot on the OM state machine.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.request.timeout</name>
+    <value>3s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for OM's ratis server request .</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.retry.cache.timeout</name>
+    <value>600000ms</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Retry Cache entry timeout for OM's ratis server.</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.minimum.timeout</name>
+    <value>1s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for OM's Ratis server rpc.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.client.request.timeout.duration</name>
+    <value>3s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for OM Ratis client request.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.client.request.max.retries</name>
+    <value>180</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Number of retries for OM client request.</description>
+  </property>
+  <property>
+    <name>ozone.om.ratis.client.request.retry.interval</name>
+    <value>100ms</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>Interval between successive retries for a OM client request.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.leader.election.minimum.timeout.duration</name>
+    <value>1s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The minimum timeout duration for OM ratis leader election.
+      Default is 1s.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.failure.timeout.duration</name>
+    <value>120s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The timeout duration for ratis server failure detection,
+      once the threshold has reached, the ratis state machine will be informed
+      about the failure in the ratis ring.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.server.role.check.interval</name>
+    <value>15s</value>
+    <tag>OZONE, OM, RATIS, MANAGEMENT</tag>
+    <description>The interval between OM leader performing a role
+      check on its ratis server. Ratis server informs OM if it
+      loses the leader role. The scheduled check is an secondary
+      check to ensure that the leader role is updated periodically
+      .</description>
+  </property>
+
+  <property>
+    <name>ozone.acl.authorizer.class</name>
+    <value>org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer</value>
+    <tag>OZONE, SECURITY, ACL</tag>
+    <description>Acl authorizer for Ozone.
+    </description>
+  </property>
+  <property>
+    <name>ozone.acl.enabled</name>
+    <value>false</value>
+    <tag>OZONE, SECURITY, ACL</tag>
+    <description>Key to enable/disable ozone acls.</description>
+  </property>
+  <property>
+    <name>hdds.scm.kerberos.keytab.file</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description> The keytab file used by each SCM daemon to login as its
+      service principal. The principal name is configured with
+      hdds.scm.kerberos.principal.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.kerberos.principal</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description>The SCM service principal. Ex scm/_HOST@REALM.COM</description>
+  </property>
+
+  <property>
+    <name>ozone.om.kerberos.keytab.file</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description> The keytab file used by OzoneManager daemon to login as its
+      service principal. The principal name is configured with
+      ozone.om.kerberos.principal.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.kerberos.principal</name>
+    <value></value>
+    <tag> OZONE, SECURITY</tag>
+    <description>The OzoneManager service principal. Ex om/_HOST@REALM.COM</description>
+  </property>
+
+  <property>
+    <name>hdds.scm.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+  </property>
+  <property>
+    <name>hdds.scm.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+  </property>
+
+  <property>
+    <name>ozone.om.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <description>
+      OzoneManager http server kerberos principal.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.http.kerberos.keytab.file</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <description>
+      OzoneManager http server kerberos keytab.
+    </description>
+  </property>
+  <property>
+    <name>hdds.key.len</name>
+    <value>2048</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      SCM CA key length.  This is an algorithm-specific metric, such as modulus length, specified in number of bits.
+    </description>
+  </property>
+  <property>
+    <name>hdds.key.dir.name</name>
+    <value>keys</value>
+    <tag>SCM, HDDS, X509, SECURITY</tag>
+    <description>
+      Directory to store public/private key for SCM CA. This is relative to ozone/hdds meteadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.block.token.expiry.time</name>
+    <value>1d</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>
+      Default value for expiry time of block token. This
+      setting supports multiple time unit suffixes as described in
+      dfs.heartbeat.interval. If no suffix is specified, then milliseconds is
+      assumed.
+    </description>
+  </property>
+  
+  <property>
+    <name>hdds.block.token.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TOKEN</tag>
+    <description>True if block tokens are enabled, else false.</description>
+  </property>
+  <property>
+    <name>hdds.x509.file.name</name>
+    <value>certificate.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.provider</name>
+    <value>OPENSSL</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>HDDS GRPC server TLS provider.</description>
+  </property>
+  <property>
+    <name>hdds.client.cert.chain.file.name</name>
+    <value>client.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Client certificate file name. It is an optional
+      field only required when mutual TLS (hdds.grpc.mutual.tls.required)
+      is set to true .</description>
+  </property>
+  <property>
+    <name>hdds.grpc.mutual.tls.required</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If mutual tls check is enabled for GRPC.
+    Considered only if hdds.grpc.tls.enabled is set to true.</description>
+  </property>
+  <property>
+    <name>hdds.grpc.tls.enabled</name>
+    <value>false</value>
+    <tag>OZONE, HDDS, SECURITY, TLS</tag>
+    <description>If HDDS GRPC server TLS is enabled.</description>
+  </property>
+  <property>
+    <name>hdds.server.cert.chain.file.name</name>
+    <value>server.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Hdds server certificate file name.</description>
+  </property>
+  <property>
+    <name>hdds.trust.cert.collection.file.name</name>
+    <value>ca.crt</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>HDDS Certificate Authority trust store file name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.default.duration</name>
+    <value>P365D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Default duration for which x509 certificates issued by SCM are
+      valid. The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.dir.name</name>
+    <value>certs</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 certificate directory name.</description>
+  </property>
+  <property>
+    <name>hdds.x509.max.duration</name>
+    <value>P1865D</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Max time for which certificate issued by SCM CA are valid.
+      . The formats accepted are based on the ISO-8601 duration format
+      PnDTnHnMn.nS</description>
+  </property>
+  <property>
+    <name>hdds.x509.signature.algorithm</name>
+    <value>SHA256withRSA</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>X509 signature certificate.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.handler.count.key</name>
+    <value>2</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Threads configured for SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.address</name>
+    <value/>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>Address of SCMSecurityProtocolServer.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.bind.host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server host.</description>
+  </property>
+  <property>
+    <name>ozone.scm.security.service.port</name>
+    <value>9961</value>
+    <tag>OZONE, HDDS, SECURITY</tag>
+    <description>SCM security server port.</description>
+  </property>
+
+  <property>
+    <name>hdds.metadata.dir</name>
+    <value/>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Absolute path to HDDS metadata dir.
+    </description>
+  </property>
+  <property>
+    <name>hdds.priv.key.file.name</name>
+    <value>private.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores private key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>hdds.public.key.file.name</name>
+    <value>public.pem</value>
+    <tag>X509, SECURITY</tag>
+    <description>
+      Name of file which stores public key generated for SCM CA.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.remover.scan.interval</name>
+    <value>3600000</value>
+    <description>
+      Time interval after which ozone secret manger scans for expired
+      delegation token.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.renew-interval</name>
+    <value>1d</value>
+    <description>
+      Default time interval after which ozone delegation token will
+      require renewal before any further use.
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.delegation.token.max-lifetime</name>
+    <value>7d</value>
+    <description>
+      Default max time interval after which ozone delegation token will
+      not be renewed.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.fs.isolated-classloader</name>
+    <value></value>
+    <tag>OZONE, OZONEFS</tag>
+    <description>
+      Enable it for older hadoops to separate the classloading of all the
+      Ozone classes. With 'true' value, ozonefs can be used with older
+      hadoop versions as the hadoop3/ozone related classes are loaded by
+      an isolated classloader.
+
+      Default depends from the used jar. true for ozone-filesystem-lib-legacy
+      jar and false for the ozone-filesystem-lib-current.jar
+    </description>
+  </property>
+  <property>
+    <name>ozone.manager.db.checkpoint.transfer.bandwidthPerSec</name>
+    <value>0</value>
+    <tag>OZONE</tag>
+    <description>
+      Maximum bandwidth used for Ozone Manager DB checkpoint download through
+      the servlet.
+    </description>
+  </property>
+
+  <property>
+    <name>ozone.freon.http-address</name>
+    <value>0.0.0.0:9884</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the FREON web ui will listen on.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the Freon web server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      ozone.freon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.enabled</name>
+    <value>true</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable FREON web ui.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.https-address</name>
+    <value>0.0.0.0:9885</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Freon web server will listen
+      on using HTTPS.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The actual address the Freon web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.freon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <tag>SECURITY</tag>
+    <description>
+     Security principal used by freon.
+    </description>
+  </property>
+  <property>
+    <name>ozone.freon.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <tag>SECURITY</tag>
+    <description>
+       Keytab used by Freon.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.datanode.container.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client datanode container protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.block.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm block protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.certificate.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm certificate protocol.
+    </description>
+  </property>
+  <property>
+    <name>hdds.security.client.scm.container.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client scm container protocol.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.security.client.protocol.acl</name>
+    <value>*</value>
+    <tag>SECURITY</tag>
+    <description>
+      Comma separated list of users and groups allowed to access
+      client ozone manager protocol.
+    </description>
+  </property>
+
+  <property>
+    <name>hdds.datanode.http.kerberos.principal</name>
+    <value>HTTP/_HOST@EXAMPLE.COM</value>
+    <tag>HDDS, SECURITY, MANAGEMENT</tag>
+    <description>
+      The kerberos principal for the datanode http server.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http.kerberos.keytab</name>
+    <value>/etc/security/keytabs/HTTP.keytab</value>
+    <tag>HDDS, SECURITY, MANAGEMENT</tag>
+    <description>
+      The kerberos keytab file for datanode http server
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http-address</name>
+    <value>0.0.0.0:9882</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Datanode web ui will listen on.
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      The actual address the Datanode web server will bind to. If this
+      optional address is set, it overrides only the hostname portion of
+      hdds.datanode.http-address.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.http.enabled</name>
+    <value>true</value>
+    <tag>HDDS, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable Datanode web ui.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.https-address</name>
+    <value>0.0.0.0:9883</value>
+    <tag>HDDS, MANAGEMENT, SECURITY</tag>
+    <description>
+      The address and the base port where the Datanode web UI will listen
+      on using HTTPS.
+
+      If the port is 0 then the server will start on a free port.
+    </description>
+  </property>
+  <property>
+    <name>hdds.datanode.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>HDDS, MANAGEMENT, SECURITY</tag>
+    <description>
+      The actual address the Datanode web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      hdds.datanode.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.retry.max.attempts</name>
+    <value>10</value>
+    <description>
+      Max retry attempts for Ozone RpcClient talking to OzoneManagers.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.failover.max.attempts</name>
+    <value>15</value>
+    <description>
+      Expert only. The number of client failover attempts that should be
+      made before the failover is considered failed.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.failover.sleep.base.millis</name>
+    <value>500</value>
+    <description>
+      Expert only. The time to wait, in milliseconds, between failover
+      attempts increases exponentially as a function of the number of
+      attempts made so far, with a random factor of +/- 50%. This option
+      specifies the base value used in the failover calculation. The
+      first failover will retry immediately. The 2nd failover attempt
+      will delay at least ozone.client.failover.sleep.base.millis
+      milliseconds. And so on.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.failover.sleep.max.millis</name>
+    <value>15000</value>
+    <description>
+      Expert only. The time to wait, in milliseconds, between failover
+      attempts increases exponentially as a function of the number of
+      attempts made so far, with a random factor of +/- 50%. This option
+      specifies the maximum value to wait between failovers.
+      Specifically, the time between two failover attempts will not
+      exceed +/- 50% of ozone.client.failover.sleep.max.millis
+      milliseconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.http.enabled</name>
+    <value>true</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      Property to enable or disable Recon web user interface.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.http-address</name>
+    <value>0.0.0.0:9888</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      The address and the base port where the Recon web UI will listen on.
+
+      If the port is 0, then the server will start on a free port. However, it
+      is best to specify a well-known port, so it is easy to connect and see
+      the Recon management UI.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.http-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>RECON, MANAGEMENT</tag>
+    <description>
+      The actual address the Recon server will bind to. If this optional
+      the address is set, it overrides only the hostname portion of
+      ozone.recon.http-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.https-bind-host</name>
+    <value>0.0.0.0</value>
+    <tag>RECON, MANAGEMENT, SECURITY</tag>
+    <description>
+      The actual address the Recon web server will bind to using HTTPS.
+      If this optional address is set, it overrides only the hostname portion of
+      ozone.recon.https-address.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.https-address</name>
+    <value>0.0.0.0:9889</value>
+    <tag>RECON, MANAGEMENT, SECURITY</tag>
+    <description>
+      The address and the base port where the Recon web UI will listen
+      on using HTTPS. If the port is 0 then the server will start on a free
+      port.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.keytab.file</name>
+    <value/>
+    <tag>RECON, SECURITY</tag>
+    <description>
+      The keytab file for Kerberos authentication in Recon.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.authentication.kerberos.principal</name>
+    <value/>
+    <tag>RECON</tag>
+    <description>The server principal used by Ozone Recon server. This is
+      typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal
+      begins with the prefix HTTP/ by convention.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.container.db.cache.size.mb</name>
+    <value>128</value>
+    <tag>RECON, PERFORMANCE</tag>
+    <description>
+      The size of Recon DB cache in MB that used for caching files.
+      This value is set to an abnormally low value in the default configuration.
+      That is to make unit testing easy. Generally, this value should be set to
+      something like 16GB or more, if you intend to use Recon at scale.
+
+      A large value for this key allows a proportionally larger amount of Recon
+      container DB to be cached in memory. This makes Recon Container-Key
+      operations faster.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.db.dir</name>
+    <value/>
+    <tag>OZONE, RECON, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the Recon Server stores its metadata. This should
+      be specified as a single directory. If the directory does not
+      exist then the Recon will attempt to create it.
+      If undefined, then the Recon will log a warning and fallback to
+      ozone.metadata.dirs.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.network.topology.schema.file</name>
+    <value>network-topology-default.xm</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The schema file defines the ozone network topology
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.container.db.impl</name>
+    <value>RocksDB</value>
+    <tag>OZONE, RECON, STORAGE</tag>
+    <description>
+      Ozone Recon container DB store implementation.Supported value is either
+      LevelDB or RocksDB.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.om.db.dir</name>
+  <value/>
+  <tag>OZONE, RECON, STORAGE</tag>
+  <description>
+    Directory where the Recon Server stores its OM snapshot DB. This should
+    be specified as a single directory. If the directory does not
+    exist then the Recon will attempt to create it.
+    If undefined, then the Recon will log a warning and fallback to
+    ozone.metadata.dirs.
+  </description>
+</property>
+  <property>
+    <name>recon.om.connection.request.timeout</name>
+    <value>5000</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection request timeout in milliseconds for HTTP call made by Recon to
+      request OM DB snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.connection.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Connection timeout for HTTP call in milliseconds made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout in milliseconds for HTTP call made by Recon to request
+      OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.socket.timeout</name>
+    <value>5s</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Socket timeout for HTTP call made by Recon to request OM snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.initial.delay</name>
+    <value>1m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Initial delay in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.interval.delay</name>
+    <value>10m</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Interval in MINUTES by Recon to request OM DB Snapshot.
+    </description>
+  </property>
+  <property>
+    <name>recon.om.snapshot.task.flush.param</name>
+    <value>false</value>
+    <tag>OZONE, RECON, OM</tag>
+    <description>
+      Request to flush the OM DB before taking checkpoint snapshot.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.replication.thread.interval</name>
+    <value>5m</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      There is a replication monitor thread running inside SCM which
+      takes care of replicating the containers in the cluster. This
+      property is used to configure the interval in which that thread
+      runs.
+    </description>
+  </property>
+  <property>
+    <name>hdds.scm.replication.event.timeout</name>
+    <value>10m</value>
+    <tag>OZONE, SCM</tag>
+    <description>
+      Timeout for the container replication/deletion commands sent
+      to datanodes. After this timeout the command will be retried.
+    </description>
+  </property>
+  <property>
+    <name>hdds.tracing.enabled</name>
+    <value>true</value>
+    <tag>OZONE, HDDS</tag>
+    <description>
+      If enabled, tracing information is sent to tracing server.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.driver</name>
+    <value>org.sqlite.JDBC</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Database driver class name available on the
+      Ozone Recon classpath.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.jdbc.url</name>
+    <value>jdbc:sqlite:/${ozone.recon.db.dir}/ozone_recon_sqlite.db</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon SQL database jdbc url.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.username</name>
+    <value/>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon SQL database username.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.password</name>
+    <value/>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Ozone Recon datbase password.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.auto.commit</name>
+    <value>false</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets the Ozone Recon database connection property of auto-commit to
+      true/false.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.timeout</name>
+    <value>30000</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets time in milliseconds before call to getConnection is timed out.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.max.active</name>
+    <value>1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The max active connections to the SQL database. The default SQLite
+      database only allows single active connection, set this to a
+      resonable value like 10, for external production database.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.max.age</name>
+    <value>1800</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets maximum time a connection can be active in seconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.max.age</name>
+    <value>3600</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      Sets maximum time to live for idle connection in seconds.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.test.period</name>
+    <value>60</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      This sets the time (in seconds), for a connection to remain idle before
+      sending a test query to the DB. This is useful to prevent a DB from
+      timing out connections on its end.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.sql.db.conn.idle.test</name>
+    <value>SELECT 1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The query to send to the DB to maintain keep-alives and test for dead
+      connections.
+    </description>
+  </property>
 </configuration>

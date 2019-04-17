@@ -19,8 +19,17 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.commons.lang3.RandomStringUtils;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.hadoop.hdfs.DFSUtil;
+
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,14 +41,6 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
-import org.rocksdb.WriteBatch;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Set;
 
 /**
  * Tests for RocksDBTable Store.
@@ -55,6 +56,16 @@ public class TestRDBTableStore {
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
   private DBOptions options = null;
+
+  private static boolean consume(Table.KeyValue keyValue)  {
+    count++;
+    try {
+      Assert.assertNotNull(keyValue.getKey());
+    } catch(IOException ex) {
+      Assert.fail("Unexpected Exception " + ex.toString());
+    }
+    return true;
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -89,13 +100,13 @@ public class TestRDBTableStore {
   public void getHandle() throws Exception {
     try (Table testTable = rdbStore.getTable("First")) {
       Assert.assertNotNull(testTable);
-      Assert.assertNotNull(testTable.getHandle());
+      Assert.assertNotNull(((RDBTable) testTable).getHandle());
     }
   }
 
   @Test
   public void putGetAndEmpty() throws Exception {
-    try (Table testTable = rdbStore.getTable("First")) {
+    try (Table<byte[], byte[]> testTable = rdbStore.getTable("First")) {
       byte[] key =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
       byte[] value =
@@ -112,8 +123,8 @@ public class TestRDBTableStore {
 
   @Test
   public void delete() throws Exception {
-    List<byte[]> deletedKeys = new LinkedList<>();
-    List<byte[]> validKeys = new LinkedList<>();
+    List<byte[]> deletedKeys = new ArrayList<>();
+    List<byte[]> validKeys = new ArrayList<>();
     byte[] value =
         RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
     for (int x = 0; x < 100; x++) {
@@ -149,24 +160,46 @@ public class TestRDBTableStore {
   }
 
   @Test
-  public void writeBatch() throws Exception {
-    WriteBatch batch = new WriteBatch();
-    try (Table testTable = rdbStore.getTable("Fifth")) {
+  public void batchPut() throws Exception {
+    try (Table testTable = rdbStore.getTable("Fifth");
+        BatchOperation batch = rdbStore.initBatchOperation()) {
+      //given
       byte[] key =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
       byte[] value =
           RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
-      batch.put(testTable.getHandle(), key, value);
-      testTable.writeBatch(batch);
+      Assert.assertNull(testTable.get(key));
+
+      //when
+      testTable.putWithBatch(batch, key, value);
+      rdbStore.commitBatchOperation(batch);
+
+      //then
       Assert.assertNotNull(testTable.get(key));
     }
-    batch.close();
   }
 
-  private static boolean consume(Table.KeyValue keyValue) {
-    count++;
-    Assert.assertNotNull(keyValue.getKey());
-    return true;
+  @Test
+  public void batchDelete() throws Exception {
+    try (Table testTable = rdbStore.getTable("Fifth");
+        BatchOperation batch = rdbStore.initBatchOperation()) {
+
+      //given
+      byte[] key =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      byte[] value =
+          RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
+      testTable.put(key, value);
+      Assert.assertNotNull(testTable.get(key));
+
+
+      //when
+      testTable.deleteWithBatch(batch, key);
+      rdbStore.commitBatchOperation(batch);
+
+      //then
+      Assert.assertNull(testTable.get(key));
+    }
   }
 
   @Test
@@ -181,7 +214,7 @@ public class TestRDBTableStore {
         testTable.put(key, value);
       }
       int localCount = 0;
-      try (TableIterator<Table.KeyValue> iter = testTable.iterator()) {
+      try (TableIterator<byte[], Table.KeyValue> iter = testTable.iterator()) {
         while (iter.hasNext()) {
           Table.KeyValue keyValue = iter.next();
           localCount++;

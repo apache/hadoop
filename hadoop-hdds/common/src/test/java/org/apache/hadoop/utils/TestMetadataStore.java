@@ -1,23 +1,20 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
  * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 package org.apache.hadoop.utils;
-
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 
 import com.google.common.collect.Lists;
 import org.apache.commons.io.FileUtils;
@@ -28,9 +25,9 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.MetadataStore.KeyValue;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
 import org.apache.hadoop.utils.MetadataKeyFilters.MetadataKeyFilter;
+import org.apache.hadoop.utils.MetadataStore.KeyValue;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,14 +47,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-
 import static org.junit.runners.Parameterized.Parameters;
 
 /**
@@ -66,26 +63,23 @@ import static org.junit.runners.Parameterized.Parameters;
 @RunWith(Parameterized.class)
 public class TestMetadataStore {
 
+  private final static int MAX_GETRANGE_LENGTH = 100;
   private final String storeImpl;
-
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+  private MetadataStore store;
+  private File testDir;
   public TestMetadataStore(String metadataImpl) {
     this.storeImpl = metadataImpl;
   }
 
   @Parameters
   public static Collection<Object[]> data() {
-    return Arrays.asList(new Object[][] {
+    return Arrays.asList(new Object[][]{
         {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB},
         {OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB}
     });
   }
-
-  private MetadataStore store;
-  private File testDir;
-  private final static int MAX_GETRANGE_LENGTH = 100;
-
-  @Rule
-  public ExpectedException expectedException = ExpectedException.none();
 
   @Before
   public void init() throws IOException {
@@ -109,7 +103,7 @@ public class TestMetadataStore {
     // Add 20 entries.
     // {a0 : a-value0} to {a9 : a-value9}
     // {b0 : b-value0} to {b9 : b-value9}
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       store.put(getBytes("a" + i), getBytes("a-value" + i));
       store.put(getBytes("b" + i), getBytes("b-value" + i));
     }
@@ -169,6 +163,7 @@ public class TestMetadataStore {
 
   }
 
+
   @Test
   public void testMetaStoreConfigDifferentFromType() throws IOException {
 
@@ -178,7 +173,7 @@ public class TestMetadataStore {
     GenericTestUtils.setLogLevel(MetadataStoreBuilder.LOG, Level.DEBUG);
     GenericTestUtils.LogCapturer logCapturer =
         GenericTestUtils.LogCapturer.captureLogs(MetadataStoreBuilder.LOG);
-    if(storeImpl.equals(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB)) {
+    if (storeImpl.equals(OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB)) {
       dbType = "RocksDB";
     } else {
       dbType = "LevelDB";
@@ -241,7 +236,7 @@ public class TestMetadataStore {
 
   @Test
   public void testGetDelete() throws IOException {
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       byte[] va = store.get(getBytes("a" + i));
       assertEquals("a-value" + i, getString(va));
 
@@ -273,7 +268,7 @@ public class TestMetadataStore {
       return null;
     }
     char[] arr = key.toCharArray();
-    return new StringBuffer().append(arr[0]).append("-value")
+    return new StringBuilder().append(arr[0]).append("-value")
         .append(arr[arr.length - 1]).toString();
   }
 
@@ -326,14 +321,14 @@ public class TestMetadataStore {
       char num = value.charAt(value.length() - 1);
       // each value adds 1
       int i = Character.getNumericValue(num) + 1;
-      value =  value.substring(0, value.length() - 1) + i;
+      value = value.substring(0, value.length() - 1) + i;
       result.add(value);
       return true;
     });
 
     assertFalse(result.isEmpty());
-    for (int i=0; i<result.size(); i++) {
-      assertEquals("b-value" + (i+1), result.get(i));
+    for (int i = 0; i < result.size(); i++) {
+      assertEquals("b-value" + (i + 1), result.get(i));
     }
 
     // iterate from a non exist key
@@ -388,7 +383,7 @@ public class TestMetadataStore {
     result = store.getRangeKVs(null, 100, filter1);
     assertEquals(10, result.size());
     assertTrue(result.stream().allMatch(entry ->
-        new String(entry.getKey()).startsWith("b")
+        new String(entry.getKey(), UTF_8).startsWith("b")
     ));
     assertEquals(20, filter1.getKeysScannedNum());
     assertEquals(10, filter1.getKeysHintedNum());
@@ -416,7 +411,7 @@ public class TestMetadataStore {
     assertEquals("b-value2", getString(result.get(0).getValue()));
 
     // If filter is null, no effect.
-    result = store.getRangeKVs(null, 1, null);
+    result = store.getRangeKVs(null, 1, (MetadataKeyFilter[]) null);
     assertEquals(1, result.size());
     assertEquals("a0", getString(result.get(0).getKey()));
   }
@@ -461,7 +456,7 @@ public class TestMetadataStore {
     // If startKey is invalid, the returned list should be empty.
     List<Map.Entry<byte[], byte[]>> kvs =
         store.getRangeKVs(getBytes("unknownKey"), MAX_GETRANGE_LENGTH);
-    assertEquals(kvs.size(), 0);
+    assertEquals(0, kvs.size());
   }
 
   @Test
@@ -504,7 +499,7 @@ public class TestMetadataStore {
         .build();
 
     List<String> expectedResult = Lists.newArrayList();
-    for (int i = 0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
       dbStore.put(getBytes("batch-" + i), getBytes("batch-value-" + i));
       expectedResult.add("batch-" + i);
     }
@@ -541,43 +536,44 @@ public class TestMetadataStore {
       new KeyPrefixFilter().addFilter("b0", true).addFilter("b");
     } catch (IllegalArgumentException e) {
       exception = e;
+      assertTrue(exception.getMessage().contains("KeyPrefix: b already " +
+          "rejected"));
     }
-    assertTrue(exception.getMessage().contains("KeyPrefix: b already " +
-        "rejected"));
 
     try {
       new KeyPrefixFilter().addFilter("b0").addFilter("b", true);
     } catch (IllegalArgumentException e) {
       exception = e;
+      assertTrue(exception.getMessage().contains("KeyPrefix: b already " +
+          "accepted"));
     }
-    assertTrue(exception.getMessage().contains("KeyPrefix: b already " +
-        "accepted"));
 
     try {
       new KeyPrefixFilter().addFilter("b", true).addFilter("b0");
     } catch (IllegalArgumentException e) {
       exception = e;
+      assertTrue(exception.getMessage().contains("KeyPrefix: b0 already " +
+          "rejected"));
     }
-    assertTrue(exception.getMessage().contains("KeyPrefix: b0 already " +
-        "rejected"));
 
     try {
       new KeyPrefixFilter().addFilter("b").addFilter("b0", true);
     } catch (IllegalArgumentException e) {
       exception = e;
+      assertTrue(exception.getMessage().contains("KeyPrefix: b0 already " +
+          "accepted"));
     }
-    assertTrue(exception.getMessage().contains("KeyPrefix: b0 already " +
-        "accepted"));
 
     MetadataKeyFilter filter1 = new KeyPrefixFilter(true)
-            .addFilter("a0")
-            .addFilter("a1")
-            .addFilter("b", true);
+        .addFilter("a0")
+        .addFilter("a1")
+        .addFilter("b", true);
     result = store.getRangeKVs(null, 100, filter1);
     assertEquals(2, result.size());
-    assertTrue(result.stream().anyMatch(entry -> new String(entry.getKey())
+    assertTrue(result.stream().anyMatch(entry -> new String(entry.getKey(),
+        UTF_8)
         .startsWith("a0")) && result.stream().anyMatch(entry -> new String(
-            entry.getKey()).startsWith("a1")));
+        entry.getKey(), UTF_8).startsWith("a1")));
 
     filter1 = new KeyPrefixFilter(true).addFilter("b", true);
     result = store.getRangeKVs(null, 100, filter1);
@@ -586,7 +582,8 @@ public class TestMetadataStore {
     filter1 = new KeyPrefixFilter().addFilter("b", true);
     result = store.getRangeKVs(null, 100, filter1);
     assertEquals(10, result.size());
-    assertTrue(result.stream().allMatch(entry -> new String(entry.getKey())
+    assertTrue(result.stream().allMatch(entry -> new String(entry.getKey(),
+        UTF_8)
         .startsWith("a")));
   }
 }

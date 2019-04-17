@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.client;
 
+import org.apache.hadoop.hdds.client.ReplicationType;
+
 /**
  * A class that encapsulates OzoneKey.
  */
@@ -48,19 +50,22 @@ public class OzoneKey {
    */
   private long modificationTime;
 
+  private ReplicationType replicationType;
+
   /**
    * Constructs OzoneKey from OmKeyInfo.
    *
    */
   public OzoneKey(String volumeName, String bucketName,
                   String keyName, long size, long creationTime,
-                  long modificationTime) {
+                  long modificationTime, ReplicationType type) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.name = keyName;
     this.dataSize = size;
     this.creationTime = creationTime;
     this.modificationTime = modificationTime;
+    this.replicationType = type;
   }
 
   /**
@@ -115,5 +120,14 @@ public class OzoneKey {
    */
   public long getModificationTime() {
     return modificationTime;
+  }
+
+  /**
+   * Returns the replication type of the key.
+   *
+   * @return replicationType
+   */
+  public ReplicationType getReplicationType() {
+    return replicationType;
   }
 }

@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -83,9 +84,6 @@ public class AzureBlobFileSystem extends FileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(AzureBlobFileSystem.class);
   private URI uri;
   private Path workingDir;
-  private UserGroupInformation userGroupInformation;
-  private String user;
-  private String primaryUserGroup;
   private AzureBlobFileSystemStore abfsStore;
   private boolean isClosed;
 
@@ -103,9 +101,7 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug("Initializing AzureBlobFileSystem for {}", uri);
 
     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
-    this.userGroupInformation = UserGroupInformation.getCurrentUser();
-    this.user = userGroupInformation.getUserName();
-    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(), configuration, userGroupInformation);
+    this.abfsStore = new AzureBlobFileSystemStore(uri, this.isSecureScheme(), configuration);
     final AbfsConfiguration abfsConfiguration = abfsStore.getAbfsConfiguration();
 
     this.setWorkingDirectory(this.getHomeDirectory());
@@ -120,19 +116,14 @@ public class AzureBlobFileSystem extends FileSystem {
       }
     }
 
-    if (!abfsConfiguration.getSkipUserGroupMetadataDuringInitialization()) {
-      this.primaryUserGroup = userGroupInformation.getPrimaryGroupName();
-    } else {
-      //Provide a default group name
-      this.primaryUserGroup = this.user;
-    }
-
     if (UserGroupInformation.isSecurityEnabled()) {
       this.delegationTokenEnabled = abfsConfiguration.isDelegationTokenManagerEnabled();
 
       if (this.delegationTokenEnabled) {
         LOG.debug("Initializing DelegationTokenManager for {}", uri);
         this.delegationTokenManager = abfsConfiguration.getDelegationTokenManager();
+        delegationTokenManager.bind(getUri(), configuration);
+        LOG.debug("Created DelegationTokenManager {}", delegationTokenManager);
       }
     }
 
@@ -148,8 +139,8 @@ public class AzureBlobFileSystem extends FileSystem {
     final StringBuilder sb = new StringBuilder(
         "AzureBlobFileSystem{");
     sb.append("uri=").append(uri);
-    sb.append(", user='").append(user).append('\'');
-    sb.append(", primaryUserGroup='").append(primaryUserGroup).append('\'');
+    sb.append(", user='").append(abfsStore.getUser()).append('\'');
+    sb.append(", primaryUserGroup='").append(abfsStore.getPrimaryGroup()).append('\'');
     sb.append('}');
     return sb.toString();
   }
@@ -187,6 +178,8 @@ public class AzureBlobFileSystem extends FileSystem {
         permission,
         overwrite,
         blockSize);
+
+    trailingPeriodCheck(f);
 
     Path qualifiedPath = makeQualified(f);
     performAbfsAuthCheck(FsAction.WRITE, qualifiedPath);
@@ -267,26 +260,50 @@ public class AzureBlobFileSystem extends FileSystem {
     LOG.debug(
         "AzureBlobFileSystem.rename src: {} dst: {}", src.toString(), dst.toString());
 
+    trailingPeriodCheck(dst);
+
     Path parentFolder = src.getParent();
     if (parentFolder == null) {
       return false;
     }
+    Path qualifiedSrcPath = makeQualified(src);
+    Path qualifiedDstPath = makeQualified(dst);
 
-    final FileStatus dstFileStatus = tryGetFileStatus(dst);
+    // rename under same folder;
+    if(makeQualified(parentFolder).equals(qualifiedDstPath)) {
+      return tryGetFileStatus(qualifiedSrcPath) != null;
+    }
+
+    FileStatus dstFileStatus = null;
+    if (qualifiedSrcPath.equals(qualifiedDstPath)) {
+      // rename to itself
+      // - if it doesn't exist, return false
+      // - if it is file, return true
+      // - if it is dir, return false.
+      dstFileStatus = tryGetFileStatus(qualifiedDstPath);
+      if (dstFileStatus == null) {
+        return false;
+      }
+      return dstFileStatus.isDirectory() ? false : true;
+    }
+
+    // Non-HNS account need to check dst status on driver side.
+    if (!abfsStore.getIsNamespaceEnabled() && dstFileStatus == null) {
+      dstFileStatus = tryGetFileStatus(qualifiedDstPath);
+    }
+
     try {
       String sourceFileName = src.getName();
       Path adjustedDst = dst;
 
       if (dstFileStatus != null) {
         if (!dstFileStatus.isDirectory()) {
-          return src.equals(dst);
+          return qualifiedSrcPath.equals(qualifiedDstPath);
         }
-
         adjustedDst = new Path(dst, sourceFileName);
       }
 
-      Path qualifiedSrcPath = makeQualified(src);
-      Path qualifiedDstPath = makeQualified(adjustedDst);
+      qualifiedDstPath = makeQualified(adjustedDst);
       performAbfsAuthCheck(FsAction.READ_WRITE, qualifiedSrcPath, qualifiedDstPath);
 
       abfsStore.rename(qualifiedSrcPath, qualifiedDstPath);
@@ -349,10 +366,37 @@ public class AzureBlobFileSystem extends FileSystem {
     }
   }
 
+  /**
+   * Performs a check for (.) until root in the path to throw an exception.
+   * The purpose is to differentiate between dir/dir1 and dir/dir1.
+   * Without the exception the behavior seen is dir1. will appear
+   * to be present without it's actual creation as dir/dir1 and dir/dir1. are
+   * treated as identical.
+   * @param path the path to be checked for trailing period (.)
+   * @throws IllegalArgumentException if the path has a trailing period (.)
+   */
+  private void trailingPeriodCheck(Path path) throws IllegalArgumentException {
+    while (!path.isRoot()){
+      String pathToString = path.toString();
+      if (pathToString.length() != 0) {
+        if (pathToString.charAt(pathToString.length() - 1) == '.') {
+          throw new IllegalArgumentException(
+              "ABFS does not allow files or directories to end with a dot.");
+        }
+        path = path.getParent();
+      }
+      else {
+        break;
+      }
+    }
+  }
+
   @Override
   public boolean mkdirs(final Path f, final FsPermission permission) throws IOException {
     LOG.debug(
         "AzureBlobFileSystem.mkdirs path: {} permissions: {}", f, permission);
+
+    trailingPeriodCheck(f);
 
     final Path parentFolder = f.getParent();
     if (parentFolder == null) {
@@ -378,9 +422,10 @@ public class AzureBlobFileSystem extends FileSystem {
     if (isClosed) {
       return;
     }
-
+    // does all the delete-on-exit calls, and may be slow.
     super.close();
     LOG.debug("AzureBlobFileSystem.close");
+    IOUtils.cleanupWithLogger(LOG, abfsStore, delegationTokenManager);
     this.isClosed = true;
   }
 
@@ -445,7 +490,7 @@ public class AzureBlobFileSystem extends FileSystem {
   public Path getHomeDirectory() {
     return makeQualified(new Path(
             FileSystemConfigurations.USER_HOME_DIRECTORY_PREFIX
-                + "/" + this.userGroupInformation.getShortUserName()));
+                + "/" + abfsStore.getUser()));
   }
 
   /**
@@ -496,12 +541,20 @@ public class AzureBlobFileSystem extends FileSystem {
     super.finalize();
   }
 
+  /**
+   * Get the username of the FS.
+   * @return the short name of the user who instantiated the FS
+   */
   public String getOwnerUser() {
-    return user;
+    return abfsStore.getUser();
   }
 
+  /**
+   * Get the group name of the owner of the FS.
+   * @return primary group name
+   */
   public String getOwnerUserPrimaryGroup() {
-    return primaryUserGroup;
+    return abfsStore.getPrimaryGroup();
   }
 
   private boolean deleteRoot() throws IOException {
@@ -974,6 +1027,20 @@ public class AzureBlobFileSystem extends FileSystem {
         : super.getDelegationToken(renewer);
   }
 
+  /**
+   * If Delegation tokens are enabled, the canonical service name of
+   * this filesystem is the filesystem URI.
+   * @return either the filesystem URI as a string, or null.
+   */
+  @Override
+  public String getCanonicalServiceName() {
+    String name = null;
+    if (delegationTokenManager != null) {
+      name = delegationTokenManager.getCanonicalServiceName();
+    }
+    return name != null ? name : super.getCanonicalServiceName();
+  }
+
   @VisibleForTesting
   FileSystem.Statistics getFsStatistics() {
     return this.statistics;
@@ -1002,6 +1069,15 @@ public class AzureBlobFileSystem extends FileSystem {
   @VisibleForTesting
   AbfsClient getAbfsClient() {
     return abfsStore.getClient();
+  }
+
+  /**
+   * Get any Delegation Token manager created by the filesystem.
+   * @return the DT manager or null.
+   */
+  @VisibleForTesting
+  AbfsDelegationTokenManager getDelegationTokenManager() {
+    return delegationTokenManager;
   }
 
   @VisibleForTesting

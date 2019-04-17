@@ -18,10 +18,9 @@
 
 package org.apache.hadoop.hdfs.protocol;
 
-import java.io.IOException;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ClusterStorageCapacityExceededException;
 
 /**
  * This exception is thrown when modification to HDFS results in violation
@@ -37,7 +36,7 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class QuotaExceededException extends IOException {
+public class QuotaExceededException extends ClusterStorageCapacityExceededException {
   protected static final long serialVersionUID = 1L;
   protected String pathName=null;
   protected long quota; // quota

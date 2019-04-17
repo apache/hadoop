@@ -34,7 +34,6 @@ import org.apache.hadoop.hdfs.server.protocol.DatanodeStorage;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
 import org.apache.hadoop.hdfs.server.protocol.StorageReport;
-import org.apache.hadoop.hdfs.server.protocol.VolumeFailureSummary;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,9 +43,9 @@ import org.mockito.Mockito;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 
 public class TestStorageReport {
   public static final Logger LOG =
@@ -109,7 +108,7 @@ public class TestStorageReport {
         any(DatanodeRegistration.class),
         captor.capture(),
         anyLong(), anyLong(), anyInt(), anyInt(), anyInt(),
-        Mockito.any(VolumeFailureSummary.class), Mockito.anyBoolean(),
+        any(), Mockito.anyBoolean(),
         Mockito.any(SlowPeerReports.class),
         Mockito.any(SlowDiskReports.class));
 

@@ -88,7 +88,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
 
     BlockID blockID = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());
@@ -98,7 +98,7 @@ public class TestContainerSmallFile {
         ContainerProtocolCalls.readSmallFile(client, blockID, traceID);
     String readData = response.getData().getData().toStringUtf8();
     Assert.assertEquals("data123", readData);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -111,7 +111,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
 
     thrown.expect(StorageContainerException.class);
     thrown.expectMessage("Unable to find the block");
@@ -121,7 +121,7 @@ public class TestContainerSmallFile {
     // Try to read a Key Container Name
     ContainerProtos.GetSmallFileResponseProto response =
         ContainerProtocolCalls.readSmallFile(client, blockID, traceID);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
   @Test
@@ -135,7 +135,7 @@ public class TestContainerSmallFile {
     XceiverClientSpi client = xceiverClientManager
         .acquireClient(container.getPipeline());
     ContainerProtocolCalls.createContainer(client,
-        container.getContainerInfo().getContainerID(), traceID);
+        container.getContainerInfo().getContainerID(), traceID, null);
     BlockID blockID = ContainerTestHelper.getTestBlockID(
         container.getContainerInfo().getContainerID());
     ContainerProtocolCalls.writeSmallFile(client, blockID,
@@ -149,10 +149,61 @@ public class TestContainerSmallFile {
         ContainerProtocolCalls.readSmallFile(client,
             ContainerTestHelper.getTestBlockID(
                 nonExistContainerID), traceID);
-    xceiverClientManager.releaseClient(client);
+    xceiverClientManager.releaseClient(client, false);
   }
 
+  @Test
+  public void testReadWriteWithBCSId() throws Exception {
+    String traceID = UUID.randomUUID().toString();
+    ContainerWithPipeline container =
+        storageContainerLocationClient.allocateContainer(
+            HddsProtos.ReplicationType.RATIS,
+            HddsProtos.ReplicationFactor.ONE, containerOwner);
+    XceiverClientSpi client = xceiverClientManager
+        .acquireClient(container.getPipeline());
+    ContainerProtocolCalls.createContainer(client,
+        container.getContainerInfo().getContainerID(), traceID, null);
 
+    BlockID blockID1 = ContainerTestHelper.getTestBlockID(
+        container.getContainerInfo().getContainerID());
+    ContainerProtos.PutSmallFileResponseProto responseProto =
+        ContainerProtocolCalls
+            .writeSmallFile(client, blockID1, "data123".getBytes(), traceID);
+    long bcsId = responseProto.getCommittedBlockLength().getBlockID()
+        .getBlockCommitSequenceId();
+    try {
+      blockID1.setBlockCommitSequenceId(bcsId + 1);
+      //read a file with higher bcsId than the container bcsId
+      ContainerProtocolCalls
+          .readSmallFile(client, blockID1, traceID);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert
+          .assertTrue(sce.getResult() == ContainerProtos.Result.UNKNOWN_BCSID);
+    }
+
+    // write a new block again to bump up the container bcsId
+    BlockID blockID2 = ContainerTestHelper
+        .getTestBlockID(container.getContainerInfo().getContainerID());
+    ContainerProtocolCalls
+        .writeSmallFile(client, blockID2, "data123".getBytes(), traceID);
+
+    try {
+      blockID1.setBlockCommitSequenceId(bcsId + 1);
+      //read a file with higher bcsId than the committed bcsId for the block
+      ContainerProtocolCalls.readSmallFile(client, blockID1, traceID);
+      Assert.fail("Expected exception not thrown");
+    } catch (StorageContainerException sce) {
+      Assert
+          .assertTrue(sce.getResult() == ContainerProtos.Result.BCSID_MISMATCH);
+    }
+    blockID1.setBlockCommitSequenceId(bcsId);
+    ContainerProtos.GetSmallFileResponseProto response =
+        ContainerProtocolCalls.readSmallFile(client, blockID1, traceID);
+    String readData = response.getData().getData().toStringUtf8();
+    Assert.assertEquals("data123", readData);
+    xceiverClientManager.releaseClient(client, false);
+  }
 }
 
 

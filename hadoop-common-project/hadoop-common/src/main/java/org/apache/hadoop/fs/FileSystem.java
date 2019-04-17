@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs;
 
+import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -27,6 +28,7 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,11 +37,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.Stack;
 import java.util.TreeSet;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.commons.logging.Log;
@@ -52,6 +56,8 @@ import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
+import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
+import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -67,6 +73,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.DelegationTokenIssuer;
 import org.apache.hadoop.util.ClassUtil;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -117,6 +124,11 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
  * <li>The term "file" refers to a file in the remote filesystem,
  * rather than instances of {@code java.io.File}.</li>
  * </ol>
+ *
+ * This is a carefully evolving class.
+ * New methods may be marked as Unstable or Evolving for their initial release,
+ * as a warning that they are new and may change based on the
+ * experience of use in applications.
  *****************************************************************/
 @SuppressWarnings("DeprecatedIsStillUsed")
 @InterfaceAudience.Public
@@ -3086,6 +3098,16 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Set the source path to satisfy storage policy.
+   * @param path The source path referring to either a directory or a file.
+   * @throws IOException
+   */
+  public void satisfyStoragePolicy(final Path path) throws IOException {
+    throw new UnsupportedOperationException(
+        getClass().getSimpleName() + " doesn't support setStoragePolicy");
+  }
+
+  /**
    * Set the storage policy for a given file or directory.
    *
    * @param src file or directory path.
@@ -4218,19 +4240,41 @@ public abstract class FileSystem extends Configured
     return GlobalStorageStatistics.INSTANCE;
   }
 
+  /**
+   * Create instance of the standard FSDataOutputStreamBuilder for the
+   * given filesystem and path.
+   * @param fileSystem owner
+   * @param path path to create
+   * @return a builder.
+   */
+  @InterfaceStability.Unstable
+  protected static FSDataOutputStreamBuilder createDataOutputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final Path path) {
+    return new FileSystemDataOutputStreamBuilder(fileSystem, path);
+  }
+
+  /**
+   * Standard implementation of the FSDataOutputStreamBuilder; invokes
+   * create/createNonRecursive or Append depending upon the options.
+   */
   private static final class FileSystemDataOutputStreamBuilder extends
       FSDataOutputStreamBuilder<FSDataOutputStream,
         FileSystemDataOutputStreamBuilder> {
 
     /**
      * Constructor.
+     * @param fileSystem owner
+     * @param p path to create
      */
-    protected FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
+    private FileSystemDataOutputStreamBuilder(FileSystem fileSystem, Path p) {
       super(fileSystem, p);
     }
 
     @Override
     public FSDataOutputStream build() throws IOException {
+      rejectUnknownMandatoryKeys(Collections.emptySet(),
+          " for " + getPath());
       if (getFlags().contains(CreateFlag.CREATE) ||
           getFlags().contains(CreateFlag.OVERWRITE)) {
         if (isRecursive()) {
@@ -4245,11 +4289,12 @@ public abstract class FileSystem extends Configured
       } else if (getFlags().contains(CreateFlag.APPEND)) {
         return getFS().append(getPath(), getBufferSize(), getProgress());
       }
-      throw new IOException("Must specify either create, overwrite or append");
+      throw new PathIOException(getPath().toString(),
+          "Must specify either create, overwrite or append");
     }
 
     @Override
-    protected FileSystemDataOutputStreamBuilder getThisBuilder() {
+    public FileSystemDataOutputStreamBuilder getThisBuilder() {
       return this;
     }
   }
@@ -4265,7 +4310,7 @@ public abstract class FileSystem extends Configured
    * builder interface becomes stable.
    */
   public FSDataOutputStreamBuilder createFile(Path path) {
-    return new FileSystemDataOutputStreamBuilder(this, path)
+    return createDataOutputStreamBuilder(this, path)
         .create().overwrite(true);
   }
 
@@ -4275,6 +4320,205 @@ public abstract class FileSystem extends Configured
    * @return a {@link FSDataOutputStreamBuilder} to build file append request.
    */
   public FSDataOutputStreamBuilder appendFile(Path path) {
-    return new FileSystemDataOutputStreamBuilder(this, path).append();
+    return createDataOutputStreamBuilder(this, path).append();
   }
+
+  /**
+   * Open a file for reading through a builder API.
+   * Ultimately calls {@link #open(Path, int)} unless a subclass
+   * executes the open command differently.
+   *
+   * The semantics of this call are therefore the same as that of
+   * {@link #open(Path, int)} with one special point: it is in
+   * {@code FSDataInputStreamBuilder.build()} in which the open operation
+   * takes place -it is there where all preconditions to the operation
+   * are checked.
+   * @param path file path
+   * @return a FSDataInputStreamBuilder object to build the input stream
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public FutureDataInputStreamBuilder openFile(Path path)
+      throws IOException, UnsupportedOperationException {
+    return createDataInputStreamBuilder(this, path).getThisBuilder();
+  }
+
+  /**
+   * Open a file for reading through a builder API.
+   * Ultimately calls {@link #open(PathHandle, int)} unless a subclass
+   * executes the open command differently.
+   *
+   * If PathHandles are unsupported, this may fail in the
+   * {@code FSDataInputStreamBuilder.build()}  command,
+   * rather than in this {@code openFile()} operation.
+   * @param pathHandle path handle.
+   * @return a FSDataInputStreamBuilder object to build the input stream
+   * @throws IOException if some early checks cause IO failures.
+   * @throws UnsupportedOperationException if support is checked early.
+   */
+  @InterfaceStability.Unstable
+  public FutureDataInputStreamBuilder openFile(PathHandle pathHandle)
+      throws IOException, UnsupportedOperationException {
+    return createDataInputStreamBuilder(this, pathHandle)
+        .getThisBuilder();
+  }
+
+  /**
+   * Execute the actual open file operation.
+   *
+   * This is invoked from {@code FSDataInputStreamBuilder.build()}
+   * and from {@link DelegateToFileSystem} and is where
+   * the action of opening the file should begin.
+   *
+   * The base implementation performs a blocking
+   * call to {@link #open(Path, int)}in this call;
+   * the actual outcome is in the returned {@code CompletableFuture}.
+   * This avoids having to create some thread pool, while still
+   * setting up the expectation that the {@code get()} call
+   * is needed to evaluate the result.
+   * @param path path to the file
+   * @param mandatoryKeys set of options declared as mandatory.
+   * @param options options set during the build sequence.
+   * @param bufferSize buffer size
+   * @return a future which will evaluate to the opened file.
+   * @throws IOException failure to resolve the link.
+   * @throws IllegalArgumentException unknown mandatory key
+   */
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final Path path,
+      final Set<String> mandatoryKeys,
+      final Configuration options,
+      final int bufferSize) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+        Collections.emptySet(),
+        "for " + path);
+    return LambdaUtils.eval(
+        new CompletableFuture<>(), () -> open(path, bufferSize));
+  }
+
+  /**
+   * Execute the actual open file operation.
+   * The base implementation performs a blocking
+   * call to {@link #open(Path, int)}in this call;
+   * the actual outcome is in the returned {@code CompletableFuture}.
+   * This avoids having to create some thread pool, while still
+   * setting up the expectation that the {@code get()} call
+   * is needed to evaluate the result.
+   * @param pathHandle path to the file
+   * @param mandatoryKeys set of options declared as mandatory.
+   * @param options options set during the build sequence.
+   * @param bufferSize buffer size
+   * @return a future which will evaluate to the opened file.
+   * @throws IOException failure to resolve the link.
+   * @throws IllegalArgumentException unknown mandatory key
+   * @throws UnsupportedOperationException PathHandles are not supported.
+   * This may be deferred until the future is evaluated.
+   */
+  protected CompletableFuture<FSDataInputStream> openFileWithOptions(
+      final PathHandle pathHandle,
+      final Set<String> mandatoryKeys,
+      final Configuration options,
+      final int bufferSize) throws IOException {
+    AbstractFSBuilderImpl.rejectUnknownMandatoryKeys(mandatoryKeys,
+        Collections.emptySet(), "");
+    CompletableFuture<FSDataInputStream> result = new CompletableFuture<>();
+    try {
+      result.complete(open(pathHandle, bufferSize));
+    } catch (UnsupportedOperationException tx) {
+      // fail fast here
+      throw tx;
+    } catch (Throwable tx) {
+      // fail lazily here to ensure callers expect all File IO operations to
+      // surface later
+      result.completeExceptionally(tx);
+    }
+    return result;
+  }
+
+  /**
+   * Create instance of the standard {@link FSDataInputStreamBuilder} for the
+   * given filesystem and path.
+   * @param fileSystem owner
+   * @param path path to read
+   * @return a builder.
+   */
+  @InterfaceAudience.LimitedPrivate("Filesystems")
+  @InterfaceStability.Unstable
+  protected static FSDataInputStreamBuilder createDataInputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final Path path) {
+    return new FSDataInputStreamBuilder(fileSystem, path);
+  }
+
+  /**
+   * Create instance of the standard {@link FSDataInputStreamBuilder} for the
+   * given filesystem and path handle.
+   * @param fileSystem owner
+   * @param pathHandle path handle of file to open.
+   * @return a builder.
+   */
+  @InterfaceAudience.LimitedPrivate("Filesystems")
+  @InterfaceStability.Unstable
+  protected static FSDataInputStreamBuilder createDataInputStreamBuilder(
+      @Nonnull final FileSystem fileSystem,
+      @Nonnull final PathHandle pathHandle) {
+    return new FSDataInputStreamBuilder(fileSystem, pathHandle);
+  }
+
+  /**
+   * Builder returned for {@code #openFile(Path)}
+   * and {@code #openFile(PathHandle)}.
+   */
+  private static class FSDataInputStreamBuilder
+      extends FutureDataInputStreamBuilderImpl
+      implements FutureDataInputStreamBuilder {
+
+    /**
+     * Path Constructor.
+     * @param fileSystem owner
+     * @param path path to open.
+     */
+    protected FSDataInputStreamBuilder(
+        @Nonnull final FileSystem fileSystem,
+        @Nonnull final Path path) {
+      super(fileSystem, path);
+    }
+
+    /**
+     * Construct from a path handle.
+     * @param fileSystem owner
+     * @param pathHandle path handle of file to open.
+     */
+    protected FSDataInputStreamBuilder(
+        @Nonnull final FileSystem fileSystem,
+        @Nonnull final PathHandle pathHandle) {
+      super(fileSystem, pathHandle);
+    }
+
+    /**
+     * Perform the open operation.
+     * Returns a future which, when get() or a chained completion
+     * operation is invoked, will supply the input stream of the file
+     * referenced by the path/path handle.
+     * @return a future to the input stream.
+     * @throws IOException early failure to open
+     * @throws UnsupportedOperationException if the specific operation
+     * is not supported.
+     * @throws IllegalArgumentException if the parameters are not valid.
+     */
+    @Override
+    public CompletableFuture<FSDataInputStream> build() throws IOException {
+      Optional<Path> optionalPath = getOptionalPath();
+      if(optionalPath.isPresent()) {
+        return getFS().openFileWithOptions(optionalPath.get(),
+            getMandatoryKeys(), getOptions(), getBufferSize());
+      } else {
+        return getFS().openFileWithOptions(getPathHandle(),
+            getMandatoryKeys(), getOptions(), getBufferSize());
+      }
+    }
+
+  }
+
 }

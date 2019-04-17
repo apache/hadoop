@@ -25,11 +25,10 @@ import java.io.OutputStream;
 import java.util.Map;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerLifeCycleState;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos;
 
 import org.apache.hadoop.hdfs.util.RwLock;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -51,10 +50,9 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Deletes the container.
    *
-   * @param forceDelete   - whether this container should be deleted forcibly.
    * @throws StorageContainerException
    */
-  void delete(boolean forceDelete) throws StorageContainerException;
+  void delete() throws StorageContainerException;
 
   /**
    * Update the container.
@@ -70,7 +68,6 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get metadata about the container.
    *
    * @return ContainerData - Container Data.
-   * @throws StorageContainerException
    */
   CONTAINERDATA getContainerData();
 
@@ -78,13 +75,30 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
    * Get the Container Lifecycle state.
    *
    * @return ContainerLifeCycleState - Container State.
-   * @throws StorageContainerException
    */
-  ContainerLifeCycleState getContainerState();
+  ContainerProtos.ContainerDataProto.State getContainerState();
 
   /**
-   * Closes a open container, if it is already closed or does not exist a
+   * Marks the container for closing. Moves the container to CLOSING state.
+   */
+  void markContainerForClose() throws StorageContainerException;
+
+  /**
+   * Marks the container replica as unhealthy.
+   */
+  void markContainerUnhealthy() throws StorageContainerException;
+
+  /**
+   * Quasi Closes a open container, if it is already closed or does not exist a
    * StorageContainerException is thrown.
+   *
+   * @throws StorageContainerException
+   */
+  void quasiClose() throws StorageContainerException;
+
+  /**
+   * Closes a open/quasi closed container, if it is already closed or does not
+   * exist a StorageContainerException is thrown.
    *
    * @throws StorageContainerException
    */
@@ -130,11 +144,16 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
   /**
    * Returns containerReport for the container.
    */
-  StorageContainerDatanodeProtocolProtos.ContainerInfo getContainerReport()
+  ContainerReplicaProto getContainerReport()
       throws StorageContainerException;
 
   /**
    * updates the blockCommitSequenceId.
    */
   void updateBlockCommitSequenceId(long blockCommitSequenceId);
+
+  /**
+   * check and report the structural integrity of the container.
+   */
+  void check() throws StorageContainerException;
 }

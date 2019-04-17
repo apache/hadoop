@@ -34,24 +34,30 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.test.GenericTestUtils;
 
-import org.apache.sshd.server.SshServer;
+import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
 import org.apache.sshd.common.NamedFactory;
 import org.apache.sshd.server.Command;
-import org.apache.sshd.server.auth.password.PasswordAuthenticator;
+import org.apache.sshd.server.SshServer;
 import org.apache.sshd.server.auth.UserAuth;
+import org.apache.sshd.server.auth.password.PasswordAuthenticator;
 import org.apache.sshd.server.auth.password.UserAuthPasswordFactory;
 import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider;
 import org.apache.sshd.server.session.ServerSession;
-
 import org.apache.sshd.server.subsystem.sftp.SftpSubsystemFactory;
+import static org.hamcrest.core.Is.is;
+import org.junit.After;
 import org.junit.AfterClass;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
-
-import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
-import static org.junit.Assert.*;
 
 public class TestSFTPFileSystem {
 
@@ -64,8 +70,9 @@ public class TestSFTPFileSystem {
   private static final String connection = "sftp://user:password@localhost";
   private static Path localDir = null;
   private static FileSystem localFs = null;
-  private static FileSystem sftpFs = null;
+  private FileSystem sftpFs = null;
   private static SshServer sshd = null;
+  private static Configuration conf = null;
   private static int port;
 
   private static void startSshdServer() throws IOException {
@@ -98,6 +105,22 @@ public class TestSFTPFileSystem {
     port = sshd.getPort();
   }
 
+  @Before
+  public void init() throws Exception {
+    sftpFs = FileSystem.get(URI.create(connection), conf);
+  }
+
+  @After
+  public void cleanUp() throws Exception {
+    if (sftpFs != null) {
+      try {
+        sftpFs.close();
+      } catch (IOException e) {
+        // ignore
+      }
+    }
+  }
+
   @BeforeClass
   public static void setUp() throws Exception {
     // skip all tests if running on Windows
@@ -105,7 +128,7 @@ public class TestSFTPFileSystem {
 
     startSshdServer();
 
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.setClass("fs.sftp.impl", SFTPFileSystem.class, FileSystem.class);
     conf.setInt("fs.sftp.host.port", port);
     conf.setBoolean("fs.sftp.impl.disable.cache", true);
@@ -116,8 +139,6 @@ public class TestSFTPFileSystem {
       localFs.delete(localDir, true);
     }
     localFs.mkdirs(localDir);
-
-    sftpFs = FileSystem.get(URI.create(connection), conf);
   }
 
   @AfterClass
@@ -126,13 +147,6 @@ public class TestSFTPFileSystem {
       try {
         localFs.delete(localDir, true);
         localFs.close();
-      } catch (IOException e) {
-        // ignore
-      }
-    }
-    if (sftpFs != null) {
-      try {
-        sftpFs.close();
       } catch (IOException e) {
         // ignore
       }
@@ -179,6 +193,8 @@ public class TestSFTPFileSystem {
     assertTrue(localFs.exists(file));
     assertTrue(sftpFs.delete(file, false));
     assertFalse(localFs.exists(file));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -194,6 +210,8 @@ public class TestSFTPFileSystem {
     assertTrue(sftpFs.delete(file, false));
     assertFalse(sftpFs.exists(file));
     assertFalse(localFs.exists(file));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -217,6 +235,8 @@ public class TestSFTPFileSystem {
       }
     }
     assertTrue(sftpFs.delete(file, false));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -238,6 +258,8 @@ public class TestSFTPFileSystem {
     assertEquals(data.length, sstat.getLen());
     assertEquals(lstat.getLen(), sstat.getLen());
     assertTrue(sftpFs.delete(file, false));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -249,6 +271,8 @@ public class TestSFTPFileSystem {
   public void testDeleteNonEmptyDir() throws Exception {
     Path file = touch(localFs, name.getMethodName().toLowerCase());
     sftpFs.delete(localDir, false);
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -260,6 +284,8 @@ public class TestSFTPFileSystem {
   public void testDeleteNonExistFile() throws Exception {
     Path file = new Path(localDir, name.getMethodName().toLowerCase());
     assertFalse(sftpFs.delete(file, false));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -282,6 +308,8 @@ public class TestSFTPFileSystem {
     assertFalse(localFs.exists(file1));
 
     assertTrue(sftpFs.delete(file2, false));
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   /**
@@ -319,6 +347,8 @@ public class TestSFTPFileSystem {
     accessTime1 = (accessTime1 / 1000) * 1000;
     long accessTime2 = sftpFs.getFileStatus(file).getAccessTime();
     assertEquals(accessTime1, accessTime2);
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
   @Test
@@ -330,6 +360,18 @@ public class TestSFTPFileSystem {
     modifyTime1 = (modifyTime1 / 1000) * 1000;
     long modifyTime2 = sftpFs.getFileStatus(file).getModificationTime();
     assertEquals(modifyTime1, modifyTime2);
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
   }
 
+  @Test
+  public void testMkDirs() throws IOException {
+    Path path = new Path(localDir.toUri().getPath(),
+        new Path(name.getMethodName(), "subdirectory"));
+    sftpFs.mkdirs(path);
+    assertTrue(localFs.exists(path));
+    assertTrue(localFs.getFileStatus(path).isDirectory());
+    assertThat(((SFTPFileSystem) sftpFs).getConnectionPool().getLiveConnCount(),
+        is(1));
+  }
 }

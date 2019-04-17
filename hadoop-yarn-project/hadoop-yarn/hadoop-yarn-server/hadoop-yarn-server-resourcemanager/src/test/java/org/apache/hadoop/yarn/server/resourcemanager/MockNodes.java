@@ -119,11 +119,13 @@ public class MockNodes {
     private ResourceUtilization containersUtilization;
     private ResourceUtilization nodeUtilization;
     private Resource physicalResource;
+    private RMContext rmContext;
 
-    public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
+    MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
-        long lastHealthReportTime, int cmdPort, String hostName, NodeState state,
-        Set<String> labels, ResourceUtilization containersUtilization,
+        long lastHealthReportTime, int cmdPort, String hostName,
+        NodeState state, Set<String> labels,
+        ResourceUtilization containersUtilization,
         ResourceUtilization nodeUtilization, Resource pPhysicalResource) {
       this.nodeId = nodeId;
       this.nodeAddr = nodeAddr;
@@ -141,6 +143,18 @@ public class MockNodes {
       this.physicalResource = pPhysicalResource;
     }
 
+    public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
+        Resource perNode, String rackName, String healthReport,
+        long lastHealthReportTime, int cmdPort, String hostName,
+        NodeState state, Set<String> labels,
+        ResourceUtilization containersUtilization,
+        ResourceUtilization nodeUtilization, Resource pPhysicalResource,
+        RMContext rmContext) {
+      this(nodeId, nodeAddr, httpAddress, perNode, rackName, healthReport,
+          lastHealthReportTime, cmdPort, hostName, state, labels,
+          containersUtilization, nodeUtilization, pPhysicalResource);
+      this.rmContext = rmContext;
+    }
     @Override
     public NodeId getNodeID() {
       return this.nodeId;
@@ -174,6 +188,15 @@ public class MockNodes {
     @Override
     public Resource getTotalCapability() {
       return this.perNode;
+    }
+
+    @Override
+    public boolean isUpdatedCapability() {
+      return false;
+    }
+
+    @Override
+    public void resetUpdatedCapability() {
     }
 
     @Override
@@ -298,7 +321,7 @@ public class MockNodes {
 
     @Override
     public RMContext getRMContext() {
-      return null;
+      return this.rmContext;
     }
 
     @Override
@@ -343,6 +366,26 @@ public class MockNodes {
         containersUtilization, nodeUtilization, physicalResource);
   }
 
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, int hostnum, String hostName, int port,
+      Set<String> labels, ResourceUtilization containersUtilization,
+      ResourceUtilization nodeUtilization, Resource physicalResource,
+      RMContext rmContext) {
+    final String rackName = "rack" + rack;
+    final int nid = hostnum;
+    final String nodeAddr = hostName + ":" + nid;
+    if (hostName == null) {
+      hostName = "host" + nid;
+    }
+    final NodeId nodeID = NodeId.newInstance(hostName, port);
+
+    final String httpAddress = httpAddr;
+    String healthReport = (state == NodeState.UNHEALTHY) ? null : "HealthyMe";
+    return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode, rackName,
+        healthReport, 0, nid, hostName, state, labels, containersUtilization,
+        nodeUtilization, physicalResource, rmContext);
+  }
+
   public static RMNode nodeInfo(int rack, final Resource perNode,
       NodeState state) {
     return buildRMNode(rack, perNode, state, "N/A");
@@ -371,4 +414,9 @@ public class MockNodes {
     return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum, hostName, port);
   }
 
+  public static RMNode newNodeInfo(int rack, final Resource perNode,
+      int hostnum, String hostName, int port, RMContext rmContext) {
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum,
+        hostName, port, null, null, null, null, rmContext);
+  }
 }

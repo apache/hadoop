@@ -36,8 +36,8 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.CallerContext;
@@ -83,6 +83,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptS
 import org.apache.hadoop.yarn.server.resourcemanager.security.AMRMTokenSecretManager;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.MasterKeyData;
+import org.apache.hadoop.yarn.server.webproxy.ProxyCA;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -90,7 +91,8 @@ import org.junit.Assert;
 
 public class RMStateStoreTestBase {
 
-  public static final Log LOG = LogFactory.getLog(RMStateStoreTestBase.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(RMStateStoreTestBase.class);
 
   protected final long epoch = 10L;
 
@@ -890,6 +892,38 @@ public class RMStateStoreTestBase {
     Assert.assertNotNull(reservationState);
     reservations = reservationState.get(planName);
     Assert.assertNull(reservations);
+  }
+
+  public void testProxyCA(
+      RMStateStoreHelper stateStoreHelper) throws Exception {
+    RMStateStore store = stateStoreHelper.getRMStateStore();
+    TestDispatcher dispatcher = new TestDispatcher();
+    store.setRMDispatcher(dispatcher);
+
+    ProxyCA originalProxyCA = new ProxyCA();
+    originalProxyCA.init();
+    store.storeProxyCACert(originalProxyCA.getCaCert(),
+        originalProxyCA.getCaKeyPair().getPrivate());
+
+    RMStateStore.ProxyCAState proxyCAState =
+        store.loadState().getProxyCAState();
+    Assert.assertEquals(originalProxyCA.getCaCert(), proxyCAState.getCaCert());
+    Assert.assertEquals(originalProxyCA.getCaKeyPair().getPrivate(),
+        proxyCAState.getCaPrivateKey());
+
+    // Try replacing with a different ProxyCA
+    ProxyCA newProxyCA = new ProxyCA();
+    newProxyCA.init();
+    Assert.assertNotEquals(originalProxyCA.getCaCert(), newProxyCA.getCaCert());
+    Assert.assertNotEquals(originalProxyCA.getCaKeyPair().getPrivate(),
+        newProxyCA.getCaKeyPair().getPrivate());
+    store.storeProxyCACert(newProxyCA.getCaCert(),
+        newProxyCA.getCaKeyPair().getPrivate());
+
+    proxyCAState = store.loadState().getProxyCAState();
+    Assert.assertEquals(newProxyCA.getCaCert(), proxyCAState.getCaCert());
+    Assert.assertEquals(newProxyCA.getCaKeyPair().getPrivate(),
+        proxyCAState.getCaPrivateKey());
   }
 
   private void validateStoredReservation(

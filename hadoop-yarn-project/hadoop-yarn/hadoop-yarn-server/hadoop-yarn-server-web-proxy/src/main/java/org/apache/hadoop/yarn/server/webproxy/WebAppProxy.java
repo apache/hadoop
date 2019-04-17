@@ -74,16 +74,26 @@ public class WebAppProxy extends AbstractService {
     fetcher = new AppReportFetcher(conf);
     bindAddress = conf.get(YarnConfiguration.PROXY_ADDRESS);
     if(bindAddress == null || bindAddress.isEmpty()) {
-      throw new YarnRuntimeException(YarnConfiguration.PROXY_ADDRESS + 
+      throw new YarnRuntimeException(YarnConfiguration.PROXY_ADDRESS +
           " is not set so the proxy will not run.");
     }
-    LOG.info("Instantiating Proxy at " + bindAddress);
+
     String[] parts = StringUtils.split(bindAddress, ':');
     port = 0;
     if (parts.length == 2) {
       bindAddress = parts[0];
       port = Integer.parseInt(parts[1]);
     }
+
+    String bindHost = conf.getTrimmed(YarnConfiguration.PROXY_BIND_HOST, null);
+    if (bindHost != null) {
+      LOG.debug("{} is set, will be used to run proxy.",
+          YarnConfiguration.PROXY_BIND_HOST);
+      bindAddress = bindHost;
+    }
+
+    LOG.info("Instantiating Proxy at {}:{}", bindAddress, port);
+
     acl = new AccessControlList(conf.get(YarnConfiguration.YARN_ADMIN_ACL, 
         YarnConfiguration.DEFAULT_YARN_ADMIN_ACL));
     super.serviceInit(conf);

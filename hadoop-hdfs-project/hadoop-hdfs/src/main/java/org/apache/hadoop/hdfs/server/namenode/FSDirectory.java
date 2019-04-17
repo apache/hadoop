@@ -175,6 +175,7 @@ public class FSDirectory implements Closeable {
   private final ReentrantReadWriteLock dirLock;
 
   private final boolean isPermissionEnabled;
+  private final boolean isPermissionContentSummarySubAccess;
   /**
    * Support for ACLs is controlled by a configuration flag. If the
    * configuration flag is false, then the NameNode will reject all
@@ -274,6 +275,9 @@ public class FSDirectory implements Closeable {
     this.isPermissionEnabled = conf.getBoolean(
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_KEY,
       DFSConfigKeys.DFS_PERMISSIONS_ENABLED_DEFAULT);
+    this.isPermissionContentSummarySubAccess = conf.getBoolean(
+        DFSConfigKeys.DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_KEY,
+        DFSConfigKeys.DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_DEFAULT);
     this.fsOwnerShortUserName =
       UserGroupInformation.getCurrentUser().getShortUserName();
     this.supergroup = conf.get(
@@ -291,7 +295,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_KEY,
         DFSConfigKeys.DFS_NAMENODE_XATTRS_ENABLED_DEFAULT);
     LOG.info("XAttrs enabled? " + xattrsEnabled);
-    this.xattrMaxSize = conf.getInt(
+    this.xattrMaxSize = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_XATTR_SIZE_DEFAULT);
     Preconditions.checkArgument(xattrMaxSize > 0,
@@ -327,7 +331,7 @@ public class FSDirectory implements Closeable {
         DFSConfigKeys.DFS_CONTENT_SUMMARY_SLEEP_MICROSEC_DEFAULT);
     
     // filesystem limits
-    this.maxComponentLength = conf.getInt(
+    this.maxComponentLength = (int) conf.getLongBytes(
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_KEY,
         DFSConfigKeys.DFS_NAMENODE_MAX_COMPONENT_LENGTH_DEFAULT);
     this.maxDirItems = conf.getInt(
@@ -538,6 +542,9 @@ public class FSDirectory implements Closeable {
   boolean isAclsEnabled() {
     return aclsEnabled;
   }
+  boolean isPermissionContentSummarySubAccess() {
+    return isPermissionContentSummarySubAccess;
+  }
 
   @VisibleForTesting
   public boolean isPosixAclInheritanceEnabled() {
@@ -634,12 +641,10 @@ public class FSDirectory implements Closeable {
    *            no permission checks.
    * @param src The path to resolve.
    * @param dirOp The {@link DirOp} that controls additional checks.
-   * @param resolveLink If false, only ancestor symlinks will be checked.  If
-   *         true, the last inode will also be checked.
    * @return if the path indicates an inode, return path after replacing up to
-   *         <inodeid> with the corresponding path of the inode, else the path
-   *         in {@code src} as is. If the path refers to a path in the "raw"
-   *         directory, return the non-raw pathname.
+   *        {@code <inodeid>} with the corresponding path of the inode, else
+   *        the path in {@code src} as is. If the path refers to a path in
+   *        the "raw" directory, return the non-raw pathname.
    * @throws FileNotFoundException
    * @throws AccessControlException
    * @throws ParentNotDirectoryException

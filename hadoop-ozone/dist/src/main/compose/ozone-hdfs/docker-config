@@ -14,8 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-OZONE-SITE.XML_ozone.om.address=ozoneManager
-OZONE-SITE.XML_ozone.om.http-address=ozoneManager:9874
+OZONE-SITE.XML_ozone.om.address=om
+OZONE-SITE.XML_ozone.om.http-address=om:9874
 OZONE-SITE.XML_ozone.scm.names=scm
 OZONE-SITE.XML_ozone.enabled=true
 OZONE-SITE.XML_ozone.scm.datanode.id=/data/datanode.id
@@ -35,6 +35,10 @@ LOG4J.PROPERTIES_log4j.rootLogger=INFO, stdout
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
 LOG4J.PROPERTIES_log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
 LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1}:%L - %m%n
+LOG4J.PROPERTIES_log4j.logger.http.requests.s3gateway=INFO,s3gatewayrequestlog
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog=org.apache.hadoop.http.HttpRequestLogAppender
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.Filename=/tmp/jetty-s3gateway-yyyy_mm_dd.log
+LOG4J.PROPERTIES_log4j.appender.s3gatewayrequestlog.RetainDays=3
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
 #BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm
@@ -57,7 +61,7 @@ LOG4J2.PROPERTIES_appender.console.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.console.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n
 LOG4J2.PROPERTIES_appender.rolling.type=RollingFile
 LOG4J2.PROPERTIES_appender.rolling.name=RollingFile
-LOG4J2.PROPERTIES_appender.rolling.fileName =${sys:hadoop.log.dir}/om-audit-${hostName}.log
+LOG4J2.PROPERTIES_appender.rolling.fileName=${sys:hadoop.log.dir}/om-audit-${hostName}.log
 LOG4J2.PROPERTIES_appender.rolling.filePattern=${sys:hadoop.log.dir}/om-audit-${hostName}-%d{yyyy-MM-dd-HH-mm-ss}-%i.log.gz
 LOG4J2.PROPERTIES_appender.rolling.layout.type=PatternLayout
 LOG4J2.PROPERTIES_appender.rolling.layout.pattern=%d{DEFAULT} | %-5level | %c{1} | %msg | %throwable{3} %n

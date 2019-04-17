@@ -1,19 +1,18 @@
 /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with this
+ * work for additional information regarding copyright ownership.  The ASF
+ * licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ * <p>
  * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
  */
 
 package org.apache.hadoop.ozone.web;
@@ -82,29 +81,29 @@ public class TestQuota {
   @Test
   public void testVerifyQuota() {
     OzoneQuota qt = OzoneQuota.parseQuota("10TB");
-    assertEquals(qt.getSize(), 10);
-    assertEquals(qt.getUnit(), OzoneQuota.Units.TB);
-    assertEquals(qt.sizeInBytes(), 10L * (1024L * 1024L * 1024L * 1024L));
+    assertEquals(10, qt.getSize());
+    assertEquals(OzoneQuota.Units.TB, qt.getUnit());
+    assertEquals(10L * (1024L * 1024L * 1024L * 1024L), qt.sizeInBytes());
 
     qt = OzoneQuota.parseQuota("10MB");
-    assertEquals(qt.getSize(), 10);
-    assertEquals(qt.getUnit(), OzoneQuota.Units.MB);
-    assertEquals(qt.sizeInBytes(), 10L * (1024L * 1024L));
+    assertEquals(10, qt.getSize());
+    assertEquals(OzoneQuota.Units.MB, qt.getUnit());
+    assertEquals(10L * (1024L * 1024L), qt.sizeInBytes());
 
     qt = OzoneQuota.parseQuota("10GB");
-    assertEquals(qt.getSize(), 10);
-    assertEquals(qt.getUnit(), OzoneQuota.Units.GB);
-    assertEquals(qt.sizeInBytes(), 10L * (1024L * 1024L * 1024L));
+    assertEquals(10, qt.getSize());
+    assertEquals(OzoneQuota.Units.GB, qt.getUnit());
+    assertEquals(10L * (1024L * 1024L * 1024L), qt.sizeInBytes());
 
     qt = OzoneQuota.parseQuota("10BYTES");
-    assertEquals(qt.getSize(), 10);
-    assertEquals(qt.getUnit(), OzoneQuota.Units.BYTES);
-    assertEquals(qt.sizeInBytes(), 10L);
+    assertEquals(10, qt.getSize());
+    assertEquals(OzoneQuota.Units.BYTES, qt.getUnit());
+    assertEquals(10L, qt.sizeInBytes());
 
     OzoneQuota emptyQuota = new OzoneQuota();
-    assertEquals(emptyQuota.sizeInBytes(), -1L);
-    assertEquals(emptyQuota.getSize(), 0);
-    assertEquals(emptyQuota.getUnit(), OzoneQuota.Units.UNDEFINED);
+    assertEquals(-1L, emptyQuota.sizeInBytes());
+    assertEquals(0, emptyQuota.getSize());
+    assertEquals(OzoneQuota.Units.UNDEFINED, emptyQuota.getUnit());
   }
 
   @Test

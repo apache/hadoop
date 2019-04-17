@@ -33,7 +33,8 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.scm.*;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.RatisTestHelper;
@@ -47,8 +48,10 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 
 import static org.apache.ratis.rpc.SupportedRpcType.GRPC;
-import org.apache.ratis.util.CheckedBiConsumer;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.util.function.CheckedBiConsumer;
 
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 import org.junit.Test;
@@ -93,7 +96,7 @@ public class TestCSMMetrics {
       final OzoneConfiguration conf = new OzoneConfiguration();
       initConf.accept(pipeline, conf);
 
-      for (DatanodeDetails dn : pipeline.getMachines()) {
+      for (DatanodeDetails dn : pipeline.getNodes()) {
         final XceiverServerSpi s = createServer.apply(dn, conf);
         servers.add(s);
         s.start();
@@ -104,7 +107,8 @@ public class TestCSMMetrics {
       client.connect();
 
       // Before Read Chunk/Write Chunk
-      MetricsRecordBuilder metric = getMetrics(CSMMetrics.SOURCE_NAME);
+      MetricsRecordBuilder metric = getMetrics(CSMMetrics.SOURCE_NAME +
+          RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 0L, metric);
       assertCounter("NumReadStateMachineOps", 0L, metric);
       assertCounter("NumApplyTransactionOps", 0L, metric);
@@ -120,7 +124,8 @@ public class TestCSMMetrics {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
-      metric = getMetrics(CSMMetrics.SOURCE_NAME);
+      metric = getMetrics(CSMMetrics.SOURCE_NAME +
+              RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
 
@@ -132,7 +137,8 @@ public class TestCSMMetrics {
       Assert.assertEquals(ContainerProtos.Result.SUCCESS,
           response.getResult());
 
-      metric = getMetrics(CSMMetrics.SOURCE_NAME);
+      metric = getMetrics(CSMMetrics.SOURCE_NAME +
+          RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumReadStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
     } finally {
@@ -152,7 +158,7 @@ public class TestCSMMetrics {
 
     final ContainerDispatcher dispatcher = new TestContainerDispatcher();
     return XceiverServerRatis.newXceiverServerRatis(dn, conf, dispatcher,
-        null);
+        null, null);
   }
 
   private static class TestContainerDispatcher implements ContainerDispatcher {
@@ -164,8 +170,14 @@ public class TestCSMMetrics {
      */
     @Override
     public ContainerCommandResponseProto dispatch(
-        ContainerCommandRequestProto msg) {
+        ContainerCommandRequestProto msg,
+        DispatcherContext context) {
       return ContainerTestHelper.getCreateContainerResponse(msg);
+    }
+
+    @Override
+    public void validateContainerCommand(
+        ContainerCommandRequestProto msg) throws StorageContainerException {
     }
 
     @Override
@@ -184,6 +196,10 @@ public class TestCSMMetrics {
     @Override
     public void setScmId(String scmId) {
 
+    }
+
+    @Override
+    public void buildMissingContainerSet(Set<Long> createdContainerSet) {
     }
   }
 }

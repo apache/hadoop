@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.isA;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.timeout;
@@ -43,8 +43,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -100,6 +101,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreAMRMTokenEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreEvent;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreProxyCAEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStoreRMDTMasterKeyEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.recovery.records.ApplicationAttemptStateData;
@@ -125,9 +127,6 @@ import org.apache.hadoop.yarn.server.timelineservice.storage.FileSystemTimelineW
 import org.apache.hadoop.yarn.server.timelineservice.storage.TimelineWriter;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
-import org.apache.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -139,7 +138,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 
 public class TestRMRestart extends ParameterizedSchedulerTestBase {
-  private static final Log LOG = LogFactory.getLog(TestRMRestart.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestRMRestart.class);
   private final static File TEMP_DIR = new File(System.getProperty(
     "test.build.data", "/tmp"), "decommision");
   private File hostFile = new File(TEMP_DIR + File.separator + "hostFile.txt");
@@ -156,8 +156,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   @Before
   public void setup() throws IOException {
     conf = getConf();
-    Logger rootLogger = LogManager.getRootLogger();
-    rootLogger.setLevel(Level.DEBUG);
+    GenericTestUtils.setRootLogLevel(Level.DEBUG);
     UserGroupInformation.setConfiguration(conf);
     conf.setBoolean(YarnConfiguration.RECOVERY_ENABLED, true);
     conf.setBoolean(YarnConfiguration.RM_WORK_PRESERVING_RECOVERY_ENABLED, false);
@@ -1646,7 +1645,8 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
         // Skip if synchronous updation of DTToken
         if (!(event instanceof RMStateStoreAMRMTokenEvent)
             && !(event instanceof RMStateStoreRMDTEvent)
-            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)) {
+            && !(event instanceof RMStateStoreRMDTMasterKeyEvent)
+            && !(event instanceof RMStateStoreProxyCAEvent)) {
           while (wait);
         }
         super.handleStoreEvent(event);
@@ -2019,7 +2019,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
   }
 
   @Test (timeout = 60000)
-  public void testDecomissionedNMsMetricsOnRMRestart() throws Exception {
+  public void testDecommissionedNMsMetricsOnRMRestart() throws Exception {
     conf.set(YarnConfiguration.RM_NODES_EXCLUDE_FILE_PATH,
       hostFile.getAbsolutePath());
     writeToHostsFile("");

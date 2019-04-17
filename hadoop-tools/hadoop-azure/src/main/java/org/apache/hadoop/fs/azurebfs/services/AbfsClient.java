@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.azurebfs.services;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
@@ -37,8 +38,10 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.InvalidUriException;
+import org.apache.hadoop.fs.azurebfs.extensions.ExtensionHelper;
 import org.apache.hadoop.fs.azurebfs.AbfsConfiguration;
 import org.apache.hadoop.fs.azurebfs.oauth2.AccessTokenProvider;
+import org.apache.hadoop.io.IOUtils;
 
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.*;
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.HTTPS_SCHEME;
@@ -48,11 +51,11 @@ import static org.apache.hadoop.fs.azurebfs.constants.HttpQueryParams.*;
 /**
  * AbfsClient.
  */
-public class AbfsClient {
+public class AbfsClient implements Closeable {
   public static final Logger LOG = LoggerFactory.getLogger(AbfsClient.class);
   private final URL baseUrl;
   private final SharedKeyCredentials sharedKeyCredentials;
-  private final String xMsVersion = "2018-06-17";
+  private final String xMsVersion = "2018-11-09";
   private final ExponentialRetryPolicy retryPolicy;
   private final String filesystem;
   private final AbfsConfiguration abfsConfiguration;
@@ -85,6 +88,13 @@ public class AbfsClient {
 
     this.userAgent = initializeUserAgent(abfsConfiguration, sslProviderName);
     this.tokenProvider = tokenProvider;
+  }
+
+  @Override
+  public void close() throws IOException {
+    if (tokenProvider instanceof Closeable) {
+      IOUtils.cleanupWithLogger(LOG, (Closeable) tokenProvider);
+    }
   }
 
   public String getFileSystem() {
@@ -169,6 +179,7 @@ public class AbfsClient {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RECURSIVE, String.valueOf(recursive));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_CONTINUATION, continuation);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_MAXRESULTS, String.valueOf(listMaxResults));
+    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
 
     final URL url = createRequestUrl(abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -289,7 +300,7 @@ public class AbfsClient {
     return op;
   }
 
-  public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData)
+  public AbfsRestOperation flush(final String path, final long position, boolean retainUncommittedData, boolean isClose)
       throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
     // JDK7 does not support PATCH, so to workaround the issue we will use
@@ -301,6 +312,7 @@ public class AbfsClient {
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_ACTION, FLUSH_ACTION);
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_POSITION, Long.toString(position));
     abfsUriQueryBuilder.addQuery(QUERY_PARAM_RETAIN_UNCOMMITTED_DATA, String.valueOf(retainUncommittedData));
+    abfsUriQueryBuilder.addQuery(QUERY_PARAM_CLOSE, String.valueOf(isClose));
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -337,14 +349,15 @@ public class AbfsClient {
     return op;
   }
 
-  public AbfsRestOperation getPathProperties(final String path) throws AzureBlobFileSystemException {
+  public AbfsRestOperation getPathStatus(final String path) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
+    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(abfsConfiguration.isUpnUsed()));
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
-            AbfsRestOperationType.GetPathProperties,
+            AbfsRestOperationType.GetPathStatus,
             this,
             HTTP_METHOD_HEAD,
             url,
@@ -483,10 +496,15 @@ public class AbfsClient {
   }
 
   public AbfsRestOperation getAclStatus(final String path) throws AzureBlobFileSystemException {
+    return getAclStatus(path, abfsConfiguration.isUpnUsed());
+  }
+
+  public AbfsRestOperation getAclStatus(final String path, final boolean useUPN) throws AzureBlobFileSystemException {
     final List<AbfsHttpHeader> requestHeaders = createDefaultHeaders();
 
     final AbfsUriQueryBuilder abfsUriQueryBuilder = createDefaultUriQueryBuilder();
     abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_ACTION, AbfsHttpConstants.GET_ACCESS_CONTROL);
+    abfsUriQueryBuilder.addQuery(HttpQueryParams.QUERY_PARAM_UPN, String.valueOf(useUPN));
 
     final URL url = createRequestUrl(path, abfsUriQueryBuilder.toString());
     final AbfsRestOperation op = new AbfsRestOperation(
@@ -564,6 +582,11 @@ public class AbfsClient {
       sb.append("; ");
       sb.append(sslProviderName);
     }
+    String tokenProviderField =
+        ExtensionHelper.getUserAgentSuffix(tokenProvider, "");
+    if (!tokenProviderField.isEmpty()) {
+      sb.append("; ").append(tokenProviderField);
+    }
     sb.append(")");
     final String userAgentComment = sb.toString();
     String customUserAgentId = abfsConfiguration.getCustomUserAgentPrefix();
@@ -571,7 +594,7 @@ public class AbfsClient {
       return String.format(Locale.ROOT, CLIENT_VERSION + " %s %s",
           userAgentComment, customUserAgentId);
     }
-    return String.format(CLIENT_VERSION + " %s", userAgentComment);
+    return String.format(Locale.ROOT, CLIENT_VERSION + " %s", userAgentComment);
   }
 
   @VisibleForTesting

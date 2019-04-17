@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ha.HAServiceProtocol;
 import org.apache.hadoop.hdfs.AddBlockFlag;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -112,7 +113,7 @@ public class RouterClientProtocol implements ClientProtocol {
   private final ActiveNamenodeResolver namenodeResolver;
 
   /** Identifier for the super user. */
-  private final String superUser;
+  private String superUser;
   /** Identifier for the super group. */
   private final String superGroup;
   /** Erasure coding calls. */
@@ -125,7 +126,13 @@ public class RouterClientProtocol implements ClientProtocol {
     this.namenodeResolver = rpcServer.getNamenodeResolver();
 
     // User and group for reporting
-    this.superUser = System.getProperty("user.name");
+    try {
+      this.superUser = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch (IOException ex) {
+      LOG.warn("Unable to get user name. Fall back to system property " +
+          "user.name", ex);
+      this.superUser = System.getProperty("user.name");
+    }
     this.superGroup = conf.get(
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY,
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
@@ -191,7 +198,8 @@ public class RouterClientProtocol implements ClientProtocol {
   public HdfsFileStatus create(String src, FsPermission masked,
       String clientName, EnumSetWritable<CreateFlag> flag,
       boolean createParent, short replication, long blockSize,
-      CryptoProtocolVersion[] supportedVersions, String ecPolicyName)
+      CryptoProtocolVersion[] supportedVersions, String ecPolicyName,
+      String storagePolicy)
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
@@ -212,9 +220,9 @@ public class RouterClientProtocol implements ClientProtocol {
         new Class<?>[] {String.class, FsPermission.class, String.class,
             EnumSetWritable.class, boolean.class, short.class,
             long.class, CryptoProtocolVersion[].class,
-            String.class},
+            String.class, String.class},
         createLocation.getDest(), masked, clientName, flag, createParent,
-        replication, blockSize, supportedVersions, ecPolicyName);
+        replication, blockSize, supportedVersions, ecPolicyName, storagePolicy);
     return (HdfsFileStatus) rpcClient.invokeSingle(createLocation, method);
   }
 
@@ -1533,8 +1541,20 @@ public class RouterClientProtocol implements ClientProtocol {
   }
 
   @Override
+  public void msync() throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+  }
+
+  @Override
   public void satisfyStoragePolicy(String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+  }
+
+  @Override
+  public HAServiceProtocol.HAServiceState getHAServiceState()
+      throws IOException {
+    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
+    return null;
   }
 
   /**

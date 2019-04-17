@@ -57,6 +57,8 @@ public enum Statistic {
       "Calls of delete()"),
   INVOCATION_EXISTS(CommonStatisticNames.OP_EXISTS,
       "Calls of exists()"),
+  INVOCATION_GET_DELEGATION_TOKEN(CommonStatisticNames.OP_GET_DELEGATION_TOKEN,
+      "Calls of getDelegationToken()"),
   INVOCATION_GET_FILE_CHECKSUM(CommonStatisticNames.OP_GET_FILE_CHECKSUM,
       "Calls of getFileChecksum()"),
   INVOCATION_GET_FILE_STATUS(CommonStatisticNames.OP_GET_FILE_STATUS,
@@ -100,6 +102,8 @@ public enum Statistic {
   OBJECT_PUT_BYTES("object_put_bytes", "number of bytes uploaded"),
   OBJECT_PUT_BYTES_PENDING("object_put_bytes_pending",
       "number of bytes queued for upload/being actively uploaded"),
+  OBJECT_SELECT_REQUESTS("object_select_requests",
+      "Count of S3 Select requests issued"),
   STREAM_ABORTED("stream_aborted",
       "Count of times the TCP stream was aborted"),
   STREAM_BACKWARD_SEEK_OPERATIONS("stream_backward_seek_operations",
@@ -112,13 +116,15 @@ public enum Statistic {
   STREAM_OPENED("stream_opened",
       "Total count of times an input stream to object store was opened"),
   STREAM_READ_EXCEPTIONS("stream_read_exceptions",
-      "Number of seek operations invoked on input streams"),
+      "Number of exceptions invoked on input streams"),
   STREAM_READ_FULLY_OPERATIONS("stream_read_fully_operations",
       "Count of readFully() operations in streams"),
   STREAM_READ_OPERATIONS("stream_read_operations",
       "Count of read() operations in streams"),
   STREAM_READ_OPERATIONS_INCOMPLETE("stream_read_operations_incomplete",
       "Count of incomplete read() operations in streams"),
+  STREAM_READ_VERSION_MISMATCHES("stream_read_version_mismatches",
+      "Count of version mismatches encountered while reading streams"),
   STREAM_SEEK_BYTES_BACKWARDS("stream_bytes_backwards_on_seek",
       "Count of bytes moved backwards during seek operations"),
   STREAM_SEEK_BYTES_READ("stream_bytes_read",
@@ -209,7 +215,10 @@ public enum Statistic {
       "s3guard_metadatastore_throttle_rate",
       "S3Guard metadata store throttle rate"),
 
-  STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried");
+  STORE_IO_THROTTLED("store_io_throttled", "Requests throttled and retried"),
+
+  DELEGATION_TOKENS_ISSUED("delegation_tokens_issued",
+      "Number of delegation tokens issued");
 
   private static final Map<String, Statistic> SYMBOL_MAP =
       new HashMap<>(Statistic.values().length);

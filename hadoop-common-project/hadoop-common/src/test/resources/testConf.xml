@@ -714,7 +714,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-checksum &lt;src&gt; \.\.\. :\s*</expected-output>
+          <expected-output>^-checksum \[-v\] &lt;src&gt; \.\.\. :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -1001,7 +1001,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^-tail \[-f\] &lt;file&gt; :\s*</expected-output>
+          <expected-output>^-tail \[-f\] \[-s &lt;sleep interval&gt;\] &lt;file&gt; :\s*</expected-output>
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
@@ -1010,6 +1010,10 @@
         <comparator>
           <type>RegexpComparator</type>
           <expected-output>^( |\t)*-f\s+Shows appended data as the file grows.( )*</expected-output>
+        </comparator>
+        <comparator>
+          <type>RegexpComparator</type>
+          <expected-output>^( |\t)*-s\s+With -f , defines the sleep interval between iterations in milliseconds.( )*</expected-output>
         </comparator>
       </comparators>
     </test>

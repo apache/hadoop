@@ -23,6 +23,10 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.DispatcherContext;
+
+import java.util.Set;
 
 /**
  * Dispatcher acts as the bridge between the transport layer and
@@ -36,14 +40,31 @@ public interface ContainerDispatcher {
   /**
    * Dispatches commands to container layer.
    * @param msg - Command Request
+   * @param context - Context info related to ContainerStateMachine
    * @return Command Response
    */
-  ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg);
+  ContainerCommandResponseProto dispatch(ContainerCommandRequestProto msg,
+      DispatcherContext context);
+
+  /**
+   * Validates whether the container command should be executed on the pipeline
+   * or not. Will be invoked by the leader node in the Ratis pipeline
+   * @param msg containerCommand
+   * @throws StorageContainerException
+   */
+  void validateContainerCommand(
+      ContainerCommandRequestProto msg) throws StorageContainerException;
 
   /**
    * Initialize the Dispatcher.
    */
   void init();
+
+  /**
+   * finds and builds the missing containers in case of a lost disk etc
+   * in the ContainerSet.
+   */
+  void buildMissingContainerSet(Set<Long> createdContainers);
 
   /**
    * Shutdown Dispatcher services.

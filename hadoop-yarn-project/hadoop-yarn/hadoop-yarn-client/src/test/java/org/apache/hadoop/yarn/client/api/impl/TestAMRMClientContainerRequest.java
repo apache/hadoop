@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.client.api.impl;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -254,7 +254,7 @@ public class TestAMRMClientContainerRequest {
 
     @Override
     public List<String> resolve(List<String> names) {
-      return Arrays.asList("/rack1");
+      return Collections.nCopies(names.size(), "/rack1");
     }
 
     @Override

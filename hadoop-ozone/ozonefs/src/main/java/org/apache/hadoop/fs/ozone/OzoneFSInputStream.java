@@ -18,13 +18,13 @@
 
 package org.apache.hadoop.fs.ozone;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSInputStream;
-import org.apache.hadoop.ozone.client.io.ChunkGroupInputStream;
-
-import java.io.IOException;
-import java.io.InputStream;
+import org.apache.hadoop.fs.Seekable;
 
 /**
  * The input stream for Ozone file system.
@@ -36,10 +36,10 @@ import java.io.InputStream;
 @InterfaceStability.Evolving
 public final class OzoneFSInputStream extends FSInputStream {
 
-  private final ChunkGroupInputStream inputStream;
+  private final InputStream inputStream;
 
   public OzoneFSInputStream(InputStream inputStream) {
-    this.inputStream = (ChunkGroupInputStream)inputStream;
+    this.inputStream = inputStream;
   }
 
   @Override
@@ -59,12 +59,12 @@ public final class OzoneFSInputStream extends FSInputStream {
 
   @Override
   public void seek(long pos) throws IOException {
-    inputStream.seek(pos);
+    ((Seekable) inputStream).seek(pos);
   }
 
   @Override
   public long getPos() throws IOException {
-    return inputStream.getPos();
+    return ((Seekable) inputStream).getPos();
   }
 
   @Override

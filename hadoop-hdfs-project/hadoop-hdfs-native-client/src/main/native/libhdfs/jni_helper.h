@@ -19,6 +19,8 @@
 #ifndef LIBHDFS_JNI_HELPER_H
 #define LIBHDFS_JNI_HELPER_H
 
+#include "jclasses.h"
+
 #include <jni.h>
 #include <stdio.h>
 
@@ -27,7 +29,6 @@
 #include <errno.h>
 
 #define PATH_SEPARATOR ':'
-
 
 /** Denote the method we want to invoke as STATIC or INSTANCE */
 typedef enum {
@@ -66,12 +67,12 @@ jthrowable newJavaStr(JNIEnv *env, const char *str, jstring *out);
 void destroyLocalReference(JNIEnv *env, jobject jObject);
 
 /** invokeMethod: Invoke a Static or Instance method.
- * className: Name of the class where the method can be found
  * methName: Name of the method
  * methSignature: the signature of the method "(arg-types)ret-type"
  * methType: The type of the method (STATIC or INSTANCE)
  * instObj: Required if the methType is INSTANCE. The object to invoke
    the method on.
+ * class: The CachedJavaClass to call the method on.
  * env: The JNIEnv pointer
  * retval: The pointer to a union type which will contain the result of the
    method invocation, e.g. if the method returns an Object, retval will be
@@ -83,17 +84,33 @@ void destroyLocalReference(JNIEnv *env, jobject jObject);
    a valid exception reference, and the result stored at retval is undefined.
  */
 jthrowable invokeMethod(JNIEnv *env, jvalue *retval, MethType methType,
-                 jobject instObj, const char *className, const char *methName, 
-                 const char *methSignature, ...);
+        jobject instObj, CachedJavaClass class,
+        const char *methName, const char *methSignature, ...);
 
-jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out, const char *className, 
-                                  const char *ctorSignature, ...);
+/**
+ * findClassAndInvokeMethod: Same as invokeMethod, but it calls FindClass on
+ * the given className first and then calls invokeMethod. This method exists
+ * mainly for test infrastructure, any production code should use
+ * invokeMethod. Calling FindClass repeatedly can introduce performance
+ * overhead, so users should prefer invokeMethod and supply a CachedJavaClass.
+ */
+jthrowable findClassAndInvokeMethod(JNIEnv *env, jvalue *retval,
+        MethType methType, jobject instObj, const char *className,
+        const char *methName, const char *methSignature, ...);
 
-jthrowable methodIdFromClass(const char *className, const char *methName, 
-                            const char *methSignature, MethType methType, 
-                            JNIEnv *env, jmethodID *out);
+jthrowable constructNewObjectOfClass(JNIEnv *env, jobject *out,
+        const char *className, const char *ctorSignature, ...);
 
-jthrowable globalClassReference(const char *className, JNIEnv *env, jclass *out);
+/**
+ * Same as constructNewObjectOfClass but it takes in a CachedJavaClass
+ * rather than a className. This avoids an extra call to FindClass.
+ */
+jthrowable constructNewObjectOfCachedClass(JNIEnv *env, jobject *out,
+        CachedJavaClass cachedJavaClass, const char *ctorSignature, ...);
+
+jthrowable methodIdFromClass(jclass cls, const char *className,
+        const char *methName, const char *methSignature, MethType methType,
+        JNIEnv *env, jmethodID *out);
 
 /** classNameOfObject: Get an object's class name.
  * @param jobj: The object.

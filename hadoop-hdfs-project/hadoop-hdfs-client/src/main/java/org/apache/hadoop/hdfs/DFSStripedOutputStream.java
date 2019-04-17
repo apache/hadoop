@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
@@ -275,6 +276,7 @@ public class DFSStripedOutputStream extends DFSOutputStream
   private final int numAllBlocks;
   private final int numDataBlocks;
   private ExtendedBlock currentBlockGroup;
+  private ExtendedBlock prevBlockGroup4Append;
   private final String[] favoredNodes;
   private final List<StripedDataStreamer> failedStreamers;
   private final Map<Integer, Integer> corruptBlockCountMap;
@@ -321,6 +323,16 @@ public class DFSStripedOutputStream extends DFSOutputStream
     }
     currentPackets = new DFSPacket[streamers.size()];
     setCurrentStreamer(0);
+  }
+
+  /** Construct a new output stream for appending to a file. */
+  DFSStripedOutputStream(DFSClient dfsClient, String src,
+      EnumSet<CreateFlag> flags, Progressable progress, LocatedBlock lastBlock,
+      HdfsFileStatus stat, DataChecksum checksum, String[] favoredNodes)
+      throws IOException {
+    this(dfsClient, src, stat, flags, progress, checksum, favoredNodes);
+    initialFileSize = stat.getLen(); // length of file when opened
+    prevBlockGroup4Append = lastBlock != null ? lastBlock.getBlock() : null;
   }
 
   private boolean useDirectBuffer() {
@@ -472,12 +484,17 @@ public class DFSStripedOutputStream extends DFSOutputStream
         + Arrays.asList(excludedNodes));
 
     // replace failed streamers
+    ExtendedBlock prevBlockGroup = currentBlockGroup;
+    if (prevBlockGroup4Append != null) {
+      prevBlockGroup = prevBlockGroup4Append;
+      prevBlockGroup4Append = null;
+    }
     replaceFailedStreamers();
 
     LOG.debug("Allocating new block group. The previous block group: "
-        + currentBlockGroup);
+        + prevBlockGroup);
     final LocatedBlock lb = addBlock(excludedNodes, dfsClient, src,
-        currentBlockGroup, fileId, favoredNodes, getAddBlockFlags());
+         prevBlockGroup, fileId, favoredNodes, getAddBlockFlags());
     assert lb.isStriped();
     // assign the new block to the current block group
     currentBlockGroup = lb.getBlock();
@@ -496,7 +513,10 @@ public class DFSStripedOutputStream extends DFSOutputStream
         // Set exception and close streamer as there is no block locations
         // found for the parity block.
         LOG.warn("Cannot allocate parity block(index={}, policy={}). " +
-            "Not enough datanodes? Exclude nodes={}", i,  ecPolicy.getName(),
+                "Exclude nodes={}. There may not be enough datanodes or " +
+                "racks. You can check if the cluster topology supports " +
+                "the enabled erasure coding policies by running the command " +
+                "'hdfs ec -verifyClusterSetup'.", i,  ecPolicy.getName(),
             excludedNodes);
         si.getLastException().set(
             new IOException("Failed to get parity block, index=" + i));
@@ -956,11 +976,22 @@ public class DFSStripedOutputStream extends DFSOutputStream
   @Override
   public void hflush() {
     // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hflush. "
+        + "Caller should check StreamCapabilities before calling.");
   }
 
   @Override
   public void hsync() {
     // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hsync. "
+        + "Caller should check StreamCapabilities before calling.");
+  }
+
+  @Override
+  public void hsync(EnumSet<SyncFlag> syncFlags) {
+    // not supported yet
+    LOG.debug("DFSStripedOutputStream does not support hsync {}. "
+        + "Caller should check StreamCapabilities before calling.", syncFlags);
   }
 
   @Override

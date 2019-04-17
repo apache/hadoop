@@ -102,7 +102,7 @@ public class SaslPropertiesResolver implements Configurable{
    */
   public Map<String, String> getServerProperties(InetAddress clientAddress,
       int ingressPort){
-    return properties;
+    return getServerProperties(clientAddress);
   }
 
   /**
@@ -122,7 +122,7 @@ public class SaslPropertiesResolver implements Configurable{
    */
   public Map<String, String> getClientProperties(InetAddress serverAddress,
       int ingressPort) {
-    return properties;
+    return getClientProperties(serverAddress);
   }
 
   /**

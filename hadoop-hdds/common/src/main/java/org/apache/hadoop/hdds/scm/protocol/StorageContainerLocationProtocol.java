@@ -17,22 +17,33 @@
 
 package org.apache.hadoop.hdds.scm.protocol;
 
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.ObjectStageChangeRequestProto;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.security.KerberosInfo;
 
 /**
  * ContainerLocationProtocol is used by an HDFS node to find the set of nodes
  * that currently host a container.
  */
-public interface StorageContainerLocationProtocol {
+@KerberosInfo(serverPrincipal = ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY)
+public interface StorageContainerLocationProtocol extends Closeable {
+
+  @SuppressWarnings("checkstyle:ConstantName")
+  /**
+   * Version 1: Initial version.
+   */
+  long versionID = 1L;
+
   /**
    * Asks SCM where a container should be allocated. SCM responds with the
    * set of datanodes that should be used creating this container.
@@ -73,7 +84,7 @@ public interface StorageContainerLocationProtocol {
    * searching range cannot exceed the value of count.
    *
    * @param startContainerID start container ID.
-   * @param count count, if count < 0, the max size is unlimited.(
+   * @param count count, if count {@literal <} 0, the max size is unlimited.(
    *              Usually the count will be replace with a very big
    *              value instead of being unlimited in case the db is very big)
    *
@@ -127,6 +138,23 @@ public interface StorageContainerLocationProtocol {
       throws IOException;
 
   /**
+   * Returns the list of active Pipelines.
+   *
+   * @return list of Pipeline
+   *
+   * @throws IOException in case of any exception
+   */
+  List<Pipeline> listPipelines() throws IOException;
+
+  /**
+   * Closes a pipeline given the pipelineID.
+   *
+   * @param pipelineID ID of the pipeline to demolish
+   * @throws IOException
+   */
+  void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
    * Returns information about SCM.
    *
    * @return {@link ScmInfo}
@@ -135,18 +163,18 @@ public interface StorageContainerLocationProtocol {
   ScmInfo getScmInfo() throws IOException;
 
   /**
-   * Check if SCM is in chill mode.
+   * Check if SCM is in safe mode.
    *
-   * @return Returns true if SCM is in chill mode else returns false.
+   * @return Returns true if SCM is in safe mode else returns false.
    * @throws IOException
    */
-  boolean inChillMode() throws IOException;
+  boolean inSafeMode() throws IOException;
 
   /**
-   * Force SCM out of Chill mode.
+   * Force SCM out of Safe mode.
    *
    * @return returns true if operation is successful.
    * @throws IOException
    */
-  boolean forceExitChillMode() throws IOException;
+  boolean forceExitSafeMode() throws IOException;
 }

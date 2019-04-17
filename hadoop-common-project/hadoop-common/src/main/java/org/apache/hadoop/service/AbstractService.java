@@ -306,7 +306,7 @@ public abstract class AbstractService implements Service {
    * a new configuration instance, and if so, updates the base class value
    * @param conf configuration
    * @throws Exception on a failure -these will be caught,
-   * possibly wrapped, and wil; trigger a service stop
+   * possibly wrapped, and will trigger a service stop
    */
   protected void serviceInit(Configuration conf) throws Exception {
     if (conf != config) {

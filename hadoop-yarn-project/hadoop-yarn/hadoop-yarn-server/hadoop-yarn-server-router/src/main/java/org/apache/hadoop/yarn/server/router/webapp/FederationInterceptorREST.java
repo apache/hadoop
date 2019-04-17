@@ -21,9 +21,11 @@ package org.apache.hadoop.yarn.server.router.webapp;
 import java.io.IOException;
 import java.security.Principal;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -84,6 +86,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.RMQueueAclInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationDeleteRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationSubmissionRequestInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ReservationUpdateRequestInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceInfo;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ResourceOptionInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.SchedulerTypeInfo;
 import org.apache.hadoop.yarn.server.router.RouterMetrics;
 import org.apache.hadoop.yarn.server.router.RouterServerUtil;
@@ -325,19 +329,19 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Base scenarios:
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into
-   * StateStore with the selected SubCluster (e.g. SC1) and the appId. • The
-   * State Store replies with the selected SubCluster (e.g. SC1). • The Router
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into
+   * StateStore with the selected SubCluster (e.g. SC1) and the appId. The
+   * State Store replies with the selected SubCluster (e.g. SC1). The Router
    * submits the request to the selected SubCluster.
    * <p>
    * In case of State Store failure:
    * <p>
-   * The client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • Due to the
+   * The client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. Due to the
    * State Store down the Router times out and it will retry depending on the
-   * FederationFacade settings. • The Router replies to the client with an error
+   * FederationFacade settings. The Router replies to the client with an error
    * message.
    * <p>
    * If State Store fails after inserting the tuple: identical behavior as
@@ -347,26 +351,26 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * Scenario 1 – Crash before submission to the ResourceManager
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * crashes. • The Client timeouts and resubmits the application. • The Router
-   * selects one SubCluster to forward the request. • The Router inserts a tuple
-   * into State Store with the selected SubCluster (e.g. SC2) and the appId. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * crashes. The Client timeouts and resubmits the application. The Router
+   * selects one SubCluster to forward the request. The Router inserts a tuple
+   * into State Store with the selected SubCluster (e.g. SC2) and the appId.
    * Because the tuple is already inserted in the State Store, it returns the
-   * previous selected SubCluster (e.g. SC1). • The Router submits the request
+   * previous selected SubCluster (e.g. SC1). The Router submits the request
    * to the selected SubCluster (e.g. SC1).
    * <p>
    * Scenario 2 – Crash after submission to the ResourceManager
    * <p>
-   * • The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The Router crashes. • The
-   * Client timeouts and resubmit the application. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC2) and the appId. • The State
-   * Store replies with the selected SubCluster (e.g. SC1). • The Router submits
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The Router crashes. The
+   * Client timeouts and resubmit the application. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC2) and the appId. The State
+   * Store replies with the selected SubCluster (e.g. SC1). The Router submits
    * the request to the selected SubCluster (e.g. SC1). When a client re-submits
    * the same application to the same RM, it does not raise an exception and
    * replies with operation successful message.
@@ -375,14 +379,14 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    * <p>
    * In case of ResourceManager failure:
    * <p>
-   * The Client submits an application to the Router. • The Router selects one
-   * SubCluster to forward the request. • The Router inserts a tuple into State
-   * Store with the selected SubCluster (e.g. SC1) and the appId. • The Router
-   * submits the request to the selected SubCluster. • The entire SubCluster is
-   * down – all the RMs in HA or the master RM is not reachable. • The Router
-   * times out. • The Router selects a new SubCluster to forward the request. •
+   * The Client submits an application to the Router. The Router selects one
+   * SubCluster to forward the request. The Router inserts a tuple into State
+   * Store with the selected SubCluster (e.g. SC1) and the appId. The Router
+   * submits the request to the selected SubCluster. The entire SubCluster is
+   * down – all the RMs in HA or the master RM is not reachable. The Router
+   * times out. The Router selects a new SubCluster to forward the request.
    * The Router update a tuple into State Store with the selected SubCluster
-   * (e.g. SC2) and the appId. • The State Store replies with OK answer. • The
+   * (e.g. SC2) and the appId. The State Store replies with OK answer. The
    * Router submits the request to the selected SubCluster (e.g. SC2).
    */
   @Override
@@ -779,6 +783,20 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   /**
+   * Get the active subclusters in the federation.
+   * @return Map from subcluster id to its info.
+   * @throws NotFoundException If the subclusters cannot be found.
+   */
+  private Map<SubClusterId, SubClusterInfo> getActiveSubclusters()
+      throws NotFoundException {
+    try {
+      return federationFacade.getSubClusters(true);
+    } catch (YarnException e) {
+      throw new NotFoundException(e.getMessage());
+    }
+  }
+
+  /**
    * The YARN Router will forward to the request to all the SubClusters to find
    * where the node is running.
    * <p>
@@ -796,65 +814,113 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
    */
   @Override
   public NodeInfo getNode(String nodeId) {
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
-    try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
-      throw new NotFoundException(e.getMessage());
-    }
-
+    final Map<SubClusterId, SubClusterInfo> subClustersActive =
+        getActiveSubclusters();
     if (subClustersActive.isEmpty()) {
       throw new NotFoundException(
           FederationPolicyUtils.NO_ACTIVE_SUBCLUSTER_AVAILABLE);
     }
+    final Map<SubClusterInfo, NodeInfo> results =
+        getNode(subClustersActive.values(), nodeId);
 
-    // Send the requests in parallel
-    CompletionService<NodeInfo> compSvc =
-        new ExecutorCompletionService<NodeInfo>(this.threadpool);
-
-    for (final SubClusterInfo info : subClustersActive.values()) {
-      compSvc.submit(new Callable<NodeInfo>() {
-        @Override
-        public NodeInfo call() {
-          DefaultRequestInterceptorREST interceptor =
-              getOrCreateInterceptorForSubCluster(
-                  info.getSubClusterId(), info.getRMWebServiceAddress());
-          try {
-            NodeInfo nodeInfo = interceptor.getNode(nodeId);
-            return nodeInfo;
-          } catch (Exception e) {
-            LOG.error("Subcluster {} failed to return nodeInfo.",
-                info.getSubClusterId());
-            return null;
-          }
-        }
-      });
-    }
-
-    // Collect all the responses in parallel
+    // Collect the responses
     NodeInfo nodeInfo = null;
-    for (int i = 0; i < subClustersActive.size(); i++) {
+    for (NodeInfo nodeResponse : results.values()) {
       try {
-        Future<NodeInfo> future = compSvc.take();
-        NodeInfo nodeResponse = future.get();
-
-        // Check if the node was found in this SubCluster
-        if (nodeResponse != null) {
-          // Check if the node was already found in a different SubCluster and
-          // it has an old health report
-          if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
-              nodeResponse.getLastHealthUpdate()) {
-            nodeInfo = nodeResponse;
-          }
+        // Check if the node was already found in a different SubCluster and
+        // it has an old health report
+        if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
+            nodeResponse.getLastHealthUpdate()) {
+          nodeInfo = nodeResponse;
         }
       } catch (Throwable e) {
         LOG.warn("Failed to get node report ", e);
       }
     }
+
     if (nodeInfo == null) {
       throw new NotFoundException("nodeId, " + nodeId + ", is not found");
     }
     return nodeInfo;
+  }
+
+  /**
+   * Get a node and the subcluster where it is.
+   * @param subClusters Subclusters where to search.
+   * @param nodeId Identifier of the node we are looking for.
+   * @return Map between subcluster and node.
+   */
+  private Map<SubClusterInfo, NodeInfo> getNode(
+      Collection<SubClusterInfo> subClusters, String nodeId) {
+
+    // Send the requests in parallel
+    CompletionService<NodeInfo> compSvc =
+        new ExecutorCompletionService<NodeInfo>(this.threadpool);
+    final Map<SubClusterInfo, Future<NodeInfo>> futures = new HashMap<>();
+    for (final SubClusterInfo subcluster : subClusters) {
+      final SubClusterId subclusterId = subcluster.getSubClusterId();
+      Future<NodeInfo> result = compSvc.submit(() -> {
+        try {
+          DefaultRequestInterceptorREST interceptor =
+              getOrCreateInterceptorForSubCluster(
+                  subclusterId, subcluster.getRMWebServiceAddress());
+          return interceptor.getNode(nodeId);
+        } catch (Exception e) {
+          LOG.error("Subcluster {} failed to return nodeInfo.",
+              subclusterId);
+          return null;
+        }
+      });
+      futures.put(subcluster, result);
+    }
+
+    // Collect the results
+    final Map<SubClusterInfo, NodeInfo> results = new HashMap<>();
+    for (Entry<SubClusterInfo, Future<NodeInfo>> entry : futures.entrySet()) {
+      try {
+        final Future<NodeInfo> future = entry.getValue();
+        final NodeInfo nodeInfo = future.get();
+        // Check if the node was found in this SubCluster
+        if (nodeInfo != null) {
+          SubClusterInfo subcluster = entry.getKey();
+          results.put(subcluster, nodeInfo);
+        }
+      } catch (Throwable e) {
+        LOG.warn("Failed to get node report ", e);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get the subcluster a node belongs to.
+   * @param nodeId Identifier of the node we are looking for.
+   * @return The subcluster containing the node.
+   * @throws NotFoundException If the node cannot be found.
+   */
+  private SubClusterInfo getNodeSubcluster(String nodeId)
+      throws NotFoundException {
+
+    final Collection<SubClusterInfo> subClusters =
+        getActiveSubclusters().values();
+    final Map<SubClusterInfo, NodeInfo> results =
+        getNode(subClusters, nodeId);
+    SubClusterInfo subcluster = null;
+    NodeInfo nodeInfo = null;
+    for (Entry<SubClusterInfo, NodeInfo> entry : results.entrySet()) {
+      NodeInfo nodeResponse = entry.getValue();
+      if (nodeInfo == null || nodeInfo.getLastHealthUpdate() <
+          nodeResponse.getLastHealthUpdate()) {
+        subcluster = entry.getKey();
+        nodeInfo = nodeResponse;
+      }
+    }
+    if (subcluster == null) {
+      throw new NotFoundException(
+          "Cannot find " + nodeId + " in any subcluster");
+    }
+    return subcluster;
   }
 
   /**
@@ -881,10 +947,10 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
 
     NodesInfo nodes = new NodesInfo();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
+      subClustersActive = getActiveSubclusters();
+    } catch (Exception e) {
       LOG.error("Cannot get nodes: {}", e.getMessage());
       return new NodesInfo();
     }
@@ -936,13 +1002,24 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public ResourceInfo updateNodeResource(HttpServletRequest hsr,
+      String nodeId, ResourceOptionInfo resourceOption) {
+    SubClusterInfo subcluster = getNodeSubcluster(nodeId);
+    DefaultRequestInterceptorREST interceptor =
+        getOrCreateInterceptorForSubCluster(
+            subcluster.getSubClusterId(),
+            subcluster.getRMWebServiceAddress());
+    return interceptor.updateNodeResource(hsr, nodeId, resourceOption);
+  }
+
+  @Override
   public ClusterMetricsInfo getClusterMetricsInfo() {
     ClusterMetricsInfo metrics = new ClusterMetricsInfo();
 
-    Map<SubClusterId, SubClusterInfo> subClustersActive = null;
+    final Map<SubClusterId, SubClusterInfo> subClustersActive;
     try {
-      subClustersActive = federationFacade.getSubClusters(true);
-    } catch (YarnException e) {
+      subClustersActive = getActiveSubclusters();
+    } catch (Exception e) {
       LOG.error(e.getLocalizedMessage());
       return metrics;
     }

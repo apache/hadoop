@@ -93,7 +93,7 @@ public class TestConfigurationNodeAttributesProvider {
         YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_FETCH_INTERVAL_MS, 1000);
     ConfigurationNodeAttributesProvider spyProvider =
         Mockito.spy(nodeAttributesProvider);
-    Mockito.when(spyProvider.parseAttributes(Mockito.anyString()))
+    Mockito.when(spyProvider.parseAttributes(Mockito.any()))
         .thenReturn(expectedAttributes1);
 
     spyProvider.init(conf);
@@ -107,7 +107,7 @@ public class TestConfigurationNodeAttributesProvider {
     expectedAttributes2.add(NodeAttribute
         .newInstance("test.io", "os",
             NodeAttributeType.STRING, "windows"));
-    Mockito.when(spyProvider.parseAttributes(Mockito.anyString()))
+    Mockito.when(spyProvider.parseAttributes(Mockito.any()))
         .thenReturn(expectedAttributes2);
 
     // Since we set fetch interval to 1s, it needs to wait for 1s until
@@ -152,11 +152,10 @@ public class TestConfigurationNodeAttributesProvider {
         YarnConfiguration.NM_NODE_ATTRIBUTES_PROVIDER_FETCH_INTERVAL_MS, -1);
     ConfigurationNodeAttributesProvider spyProvider =
         Mockito.spy(nodeAttributesProvider);
-    Mockito.when(spyProvider.parseAttributes(Mockito.anyString()))
+    Mockito.when(spyProvider.parseAttributes(Mockito.any()))
         .thenReturn(expectedAttributes1);
     spyProvider.init(conf);
     spyProvider.start();
-
     Assert.assertEquals(expectedAttributes1,
         spyProvider.getDescriptors());
 

@@ -39,8 +39,10 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.Mockito;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 
 @SuppressWarnings({ "rawtypes", "unchecked", "deprecation" })
 public class TestNativeCollectorOnlyHandler {
@@ -84,8 +86,8 @@ public class TestNativeCollectorOnlyHandler {
     handler.close();
     handler.close();
 
-    Mockito.verify(pusher, Mockito.times(1)).collect(Matchers.any(BytesWritable.class),
-        Matchers.any(BytesWritable.class), Matchers.anyInt());
+    Mockito.verify(pusher, Mockito.times(1)).collect(any(BytesWritable.class),
+        any(BytesWritable.class), anyInt());
 
     Mockito.verify(pusher, Mockito.times(1)).close();
     Mockito.verify(combiner, Mockito.times(1)).close();

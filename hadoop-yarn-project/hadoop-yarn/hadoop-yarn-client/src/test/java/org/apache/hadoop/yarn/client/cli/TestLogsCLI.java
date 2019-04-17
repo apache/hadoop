@@ -21,16 +21,16 @@ package org.apache.hadoop.yarn.client.cli;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Matchers.*;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
@@ -82,6 +82,7 @@ import org.apache.hadoop.yarn.logaggregation.LogCLIHelpers;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerContext;
 import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.Assert;
 import org.junit.Before;
@@ -181,6 +182,42 @@ public class TestLogsCLI {
         .contains("exceeds the number of AM containers"));
   }
 
+  @Test
+  public void testAMContainerInfoFetchFromTimelineReader() throws Exception {
+    Configuration conf = new YarnConfiguration();
+    conf.setBoolean(YarnConfiguration.TIMELINE_SERVICE_ENABLED, true);
+    conf.set(YarnConfiguration.TIMELINE_SERVICE_VERSIONS, "2.0f");
+    YarnClient mockYarnClient =
+        createMockYarnClient(YarnApplicationState.FINISHED,
+            UserGroupInformation.getCurrentUser().getShortUserName());
+    LogsCLI cli = spy(new LogsCLIForTest(mockYarnClient));
+
+    String appInfoEntity =
+        "[{\"metrics\":[],\"events\":[],\"createdtime\":1542273848613,\"idpref"
+            + "ix\":9223372036854775806,\"id\":\"appattempt_1542271570060_0002_"
+            + "000001\",\"type\":\"YARN_APPLICATION_ATTEMPT\",\"info\":{\"YARN_"
+            + "APPLICATION_ATTEMPT_MASTER_CONTAINER\":\"container_e01_154227157"
+            + "0060_0002_01_000001\"},\"configs\":{},\"isrelatedto\":{},\"relat"
+            + "esto\":{}}]";
+    JSONArray obj = new JSONArray(appInfoEntity);
+
+    ClientResponse response = mock(ClientResponse.class);
+    doReturn(obj).when(response).getEntity(JSONArray.class);
+
+    doReturn(response).when(cli)
+        .getClientResponseFromTimelineReader(any(Configuration.class),
+            any(String.class));
+    doThrow(new RuntimeException()).when(cli)
+        .getAMContainerInfoForRMWebService(any(Configuration.class),
+            any(String.class));
+
+    cli.setConf(conf);
+    int exitCode = cli.run(
+        new String[] {"-applicationId", "application_1542271570060_0002",
+            "-am", "1" });
+    assertTrue(exitCode == 0);
+  }
+
   @Test(timeout = 5000l)
   public void testUnknownApplicationId() throws Exception {
     Configuration conf = new YarnConfiguration();
@@ -246,6 +283,9 @@ public class TestLogsCLI {
     pw.println("                                              --client_max_retries to");
     pw.println("                                              create a retry client. The");
     pw.println("                                              default value is 1000.");
+    pw.println(" -clusterId <Cluster ID>                      ClusterId. By default, it");
+    pw.println("                                              will take default cluster id");
+    pw.println("                                              from the RM");
     pw.println(" -containerId <Container ID>                  ContainerId. By default, it");
     pw.println("                                              will print all available");
     pw.println("                                              logs. Work with -log_files");
@@ -835,7 +875,7 @@ public class TestLogsCLI {
     matchedLogTypes.put(containerId1.toString(), mockContainer1);
     matchedLogTypes.put(containerId2.toString(), mockContainer2);
     doReturn(matchedLogTypes).when(cli).getMatchedLogTypesForRunningApp(
-        anyListOf(ContainerLogsRequest.class), anyBoolean(),
+        anyList(), anyBoolean(),
         anyBoolean());
 
     cli.setConf(new YarnConfiguration());

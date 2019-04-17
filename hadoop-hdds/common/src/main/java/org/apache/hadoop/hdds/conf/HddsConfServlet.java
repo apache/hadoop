@@ -139,6 +139,9 @@ public class HddsConfServlet extends HttpServlet {
     }
   }
 
+  /**
+   * Exception for signal bad content type.
+   */
   public static class BadFormatException extends Exception {
 
     private static final long serialVersionUID = 1L;

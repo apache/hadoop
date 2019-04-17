@@ -16,37 +16,35 @@
  */
 package org.apache.hadoop.hdds.scm.protocolPB;
 
-import com.google.common.base.Preconditions;
-import com.google.protobuf.RpcController;
-import com.google.protobuf.ServiceException;
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.scm.ScmInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .AllocateScmBlockResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmKeyBlocksRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .DeleteScmKeyBlocksResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
-    .KeyBlocks;
-import org.apache.hadoop.ipc.ProtobufHelper;
-import org.apache.hadoop.ipc.ProtocolTranslator;
-import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateBlockResponse;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
+import org.apache.hadoop.hdds.scm.ScmInfo;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
+
+import com.google.common.base.Preconditions;
+import com.google.protobuf.RpcController;
+import com.google.protobuf.ServiceException;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -78,34 +76,51 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.
    * @param size - size of the block.
+   * @param num - number of blocks.
+   * @param type - replication type of the blocks.
+   * @param factor - replication factor of the blocks.
+   * @param excludeList - exclude list while allocating blocks.
    * @return allocated block accessing info (key, pipeline).
    * @throws IOException
    */
   @Override
-  public AllocatedBlock allocateBlock(long size,
+  public List<AllocatedBlock> allocateBlock(long size, int num,
       HddsProtos.ReplicationType type, HddsProtos.ReplicationFactor factor,
-      String owner) throws IOException {
+      String owner, ExcludeList excludeList) throws IOException {
     Preconditions.checkArgument(size > 0, "block size must be greater than 0");
 
     AllocateScmBlockRequestProto request =
-        AllocateScmBlockRequestProto.newBuilder().setSize(size).setType(type)
-            .setFactor(factor).setOwner(owner).build();
+        AllocateScmBlockRequestProto.newBuilder()
+            .setSize(size)
+            .setNumBlocks(num)
+            .setType(type)
+            .setFactor(factor)
+            .setOwner(owner)
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .setExcludeList(excludeList.getProtoBuf())
+            .build();
     final AllocateScmBlockResponseProto response;
     try {
       response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     if (response.getErrorCode() !=
         AllocateScmBlockResponseProto.Error.success) {
       throw new IOException(response.hasErrorMessage() ?
           response.getErrorMessage() : "Allocate block failed.");
     }
-    AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
-        .setBlockID(BlockID.getFromProtobuf(response.getBlockID()))
-        .setPipeline(Pipeline.getFromProtoBuf(response.getPipeline()))
-        .setShouldCreateContainer(response.getCreateContainer());
-    return builder.build();
+
+    List<AllocatedBlock> blocks = new ArrayList<>(response.getBlocksCount());
+    for (AllocateBlockResponse resp : response.getBlocksList()) {
+      AllocatedBlock.Builder builder = new AllocatedBlock.Builder()
+          .setContainerBlockID(
+              ContainerBlockID.getFromProtobuf(resp.getContainerBlockID()))
+          .setPipeline(Pipeline.getFromProtobuf(resp.getPipeline()));
+      blocks.add(builder.build());
+    }
+
+    return blocks;
   }
 
   /**
@@ -122,13 +137,15 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     List<KeyBlocks> keyBlocksProto = keyBlocksInfoList.stream()
         .map(BlockGroup::getProto).collect(Collectors.toList());
     DeleteScmKeyBlocksRequestProto request = DeleteScmKeyBlocksRequestProto
-        .newBuilder().addAllKeyBlocks(keyBlocksProto).build();
+        .newBuilder()
+        .addAllKeyBlocks(keyBlocksProto)
+        .build();
 
     final DeleteScmKeyBlocksResponseProto resp;
     try {
       resp = rpcProxy.deleteScmKeyBlocks(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     List<DeleteBlockGroupResult> results =
         new ArrayList<>(resp.getResultsCount());
@@ -138,6 +155,30 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
                 .convertBlockResultProto(result.getBlockResultsList())))
         .collect(Collectors.toList()));
     return results;
+  }
+
+  private IOException transformServiceException(
+      ServiceException se) throws IOException {
+    //TODO SCM has no perfect way to return with business exceptions. All
+    //the exceptions will be mapped to ServiceException.
+    //ServiceException is handled in a special way in hadoop rpc: the message
+    //contains the whole stack trace which is not required for the business
+    //exception. As of now I remove the stack trace (use first line only).
+    //Long term we need a proper way of the exception propagation.
+    Throwable cause = se.getCause();
+    if (cause == null) {
+      return new IOException(
+          new ServiceException(useFirstLine(se.getMessage()), se.getCause()));
+    }
+    return new IOException(useFirstLine(cause.getMessage()), cause.getCause());
+  }
+
+  private String useFirstLine(String message) {
+    if (message == null) {
+      return null;
+    } else {
+      return message.split("\n")[0];
+    }
   }
 
   /**
@@ -153,7 +194,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     try {
       resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
+      throw transformServiceException(e);
     }
     ScmInfo.Builder builder = new ScmInfo.Builder()
         .setClusterId(resp.getClusterId())

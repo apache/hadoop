@@ -539,8 +539,8 @@
 
       This property allows users to set ACLs of their choice instead of using
       the default mechanism. For fencing to work, the ACLs should be
-      carefully set differently on each ResourceManger such that all the
-      ResourceManagers have shared admin access and the Active ResourceManger
+      carefully set differently on each ResourceManager such that all the
+      ResourceManagers have shared admin access and the Active ResourceManager
       takes over (exclusively) the create-delete access.
     </description>
     <name>yarn.resourcemanager.zk-state-store.root-node.acl</name>
@@ -1191,6 +1191,14 @@
   </property>
 
   <property>
+    <description>The setting that controls whether yarn container events are
+      published to the timeline service or not by NM. This configuration setting
+      is for ATS V2.</description>
+    <name>yarn.nodemanager.emit-container-events</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Interval in between cache cleanups.</description>
     <name>yarn.nodemanager.localizer.cache.cleanup.interval-ms</name>
     <value>600000</value>
@@ -1754,6 +1762,13 @@
   </property>
 
   <property>
+    <description>Default option to decide whether to pull the latest image
+      or not.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.image-update</name>
+    <value>false</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines if privileged docker
       containers are allowed on this cluster. Privileged containers are granted
       the complete set of capabilities and are not subject to the limitations
@@ -1786,6 +1801,13 @@
       networks.</description>
     <name>yarn.nodemanager.runtime.linux.docker.default-container-network</name>
     <value>host</value>
+  </property>
+
+  <property>
+    <description>The set of runtimes allowed when launching containers using the
+      DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-runtimes</name>
+    <value>runc</value>
   </property>
 
   <property>
@@ -1919,6 +1941,29 @@
     <name>yarn.nodemanager.aux-services</name>
     <value></value>
     <!--<value>mapreduce_shuffle</value>-->
+  </property>
+
+  <property>
+    <description>Boolean indicating whether loading aux services from a manifest
+      is enabled. If enabled, aux services may be dynamically modified through
+      reloading the manifest via filesystem changes or a REST API. When
+      enabled, aux services configuration properties unrelated to the manifest
+      will be ignored.</description>
+    <name>yarn.nodemanager.aux-services.manifest.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>A file containing auxiliary service specifications.</description>
+    <name>yarn.nodemanager.aux-services.manifest</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>Length of time in ms to wait between reloading aux services
+      manifest. If 0 or less, manifest will not be reloaded.</description>
+    <name>yarn.nodemanager.aux-services.manifest.reload-ms</name>
+    <value>0</value>
   </property>
 
   <property>
@@ -2140,6 +2185,15 @@
      given then the proxy will run as part of the RM</description>
      <name>yarn.web-proxy.address</name>
      <value/>
+  </property>
+
+  <property>
+    <description>The actual address the web proxy will bind to. If this optional
+     address is set, it overrides only the hostname portion of yarn.web-proxy.address.
+     This is useful for making the web proxy server listen on all interfaces by setting
+     it to 0.0.0.0 </description>
+    <name>yarn.web-proxy.bind-host</name>
+    <value/>
   </property>
 
   <!-- Applications' Configuration -->
@@ -2544,6 +2598,13 @@
   </property>
 
   <property>
+    <description>The setting that decides the capacity of the queue to hold
+    asynchronous timeline entities.</description>
+    <name>yarn.timeline-service.writer.async.queue.capacity</name>
+    <value>100</value>
+  </property>
+
+  <property>
     <description>Time period till which the application collector will be alive
      in NM, after the  application master container finishes.</description>
     <name>yarn.timeline-service.app-collector.linger-period.ms</name>
@@ -2611,6 +2672,17 @@
     <name>yarn.timeline-service.hbase.configuration.file
     </name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+      Removes the UUID if represent and limit the the flowname length with
+      the given value for ATSv2. In case the value is negative or 0,
+      it only removes the UUID and does not limit the flow name.
+    </description>
+    <name>yarn.timeline-service.flowname.max-size
+    </name>
+    <value>0</value>
   </property>
 
   <!--  Shared Cache Configuration -->
@@ -2979,6 +3051,15 @@
     </description>
     <name>yarn.nodemanager.node-attributes.provider.configured-node-attributes</name>
     <value></value>
+  </property>
+
+  <property>
+    <description>
+      Interval at which NM syncs its node attributes with RM. NM will send its loaded
+      attributes every x intervals configured, along with heartbeat to RM.
+    </description>
+    <name>yarn.nodemanager.node-attributes.resync-interval-ms</name>
+    <value>120000</value>
   </property>
 
   <property>
@@ -3546,17 +3627,6 @@
     <name>yarn.timeline-service.http-cross-origin.enabled</name>
     <value>false</value>
   </property>
- 
-  <property>
-    <description>
-      Flag to enable cross-origin (CORS) support for timeline service v1.x or
-      Timeline Reader in timeline service v2. For timeline service v2, also add
-      org.apache.hadoop.security.HttpCrossOriginFilterInitializer to the
-      configuration hadoop.http.filter.initializers in core-site.xml.
-    </description>
-    <name>yarn.timeline-service.http-cross-origin.enabled</name>
-    <value>false</value>
-  </property>
 
   <property>
     <description>
@@ -3772,6 +3842,25 @@
 
   <property>
     <description>
+      This setting controls if pluggable device framework is enabled.
+      Disabled by default
+    </description>
+    <name>yarn.nodemanager.pluggable-device-framework.enabled</name>
+    <value>false</value>
+  </property>
+
+  <property>
+    <description>
+      Configure vendor device plugin class name here. Comma separated.
+      The class must be found in CLASSPATH. The pluggable device framework will
+      load these classes.
+    </description>
+    <name>yarn.nodemanager.pluggable-device-framework.device-classes</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
       When yarn.nodemanager.resource.gpu.allowed-gpu-devices=auto specified,
       YARN NodeManager needs to run GPU discovery binary (now only support
       nvidia-smi) to get GPU-related information.
@@ -3787,7 +3876,7 @@
     <description>
       Enable additional discovery/isolation of resources on the NodeManager,
       split by comma. By default, this is empty.
-      Acceptable values: { "yarn-io/gpu", "yarn-io/fpga"}.
+      Acceptable values: { "yarn.io/gpu", "yarn.io/fpga"}.
     </description>
     <name>yarn.nodemanager.resource-plugins</name>
     <value></value>
@@ -3868,9 +3957,37 @@
       At present, since we can only configure one major number in c-e.cfg, FPGA device is
       identified by their minor device number. A common approach to get minor
       device number of FPGA is using "aocl diagnose" and check uevent with device name.
+      A sample manual value for this is like "0,1"
     </description>
     <name>yarn.nodemanager.resource-plugins.fpga.allowed-fpga-devices</name>
-    <value>0,1</value>
+    <value>auto</value>
+  </property>
+
+  <property>
+    <description>
+      Absolute path to a script or executable that returns the available FPGA cards.
+      The returned string must be a single line and follow the format:
+      "deviceA/N:M,deviceB/X:Y". Example: "acl0/243:0,acl1/243:1". The numbers after
+      the "/" character are the device major and minor numbers.
+
+      When the script is enabled, auto-discovery is disabled the "aocl" command is not
+      invoked to verify the available cards.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.device-discovery-script</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      List of FPGA available devices in the given node.
+      The value must follow the format: "deviceA/N:M,deviceB/X:Y".
+      Example: "acl0/243:0,acl1/243:1". The numbers after
+      the "/" character are the device major and minor numbers.
+
+      When this property is used, both auto-discovery and external script are ignored.
+    </description>
+    <name>yarn.nodemanager.resource-plugins.fpga.available-devices</name>
+    <value></value>
   </property>
 
   <property>
@@ -4016,5 +4133,41 @@
     </description>
     <name>yarn.node-attribute.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore</value>
+  </property>
+
+  <!-- CSI configuration -->
+  <property>
+    <description>
+      CSI driver adaptor addresses on a node manager.
+      This configuration will be loaded by the resource manager to initiate
+      a client for each adaptor in order to communicate with CSI drivers.
+      Note, these addresses should be mapped to the adaptor addresses which
+      runs the controller plugin.
+    </description>
+    <name>yarn.nodemanager.csi-driver-adaptor.addresses</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      CSI driver names running on this node, multiple driver names need to
+      be delimited by comma. The driver name should be same value returned
+      by the getPluginInfo call.For each of the CSI driver name, it must
+      to define following two corresponding properties:
+        "yarn.nodemanager.csi-driver.${NAME}.endpoint"
+        "yarn.nodemanager.csi-driver-adaptor.${NAME}.address"
+      The 1st property defines where the driver's endpoint is;
+      2nd property defines where the mapping csi-driver-adaptor's address is.
+      What's more, an optional csi-driver-adaptor class can be defined
+      for each csi-driver:
+        "yarn.nodemanager.csi-driver.${NAME}.class"
+      once given, the adaptor will be initiated with the given class instead
+      of the default implementation
+      org.apache.hadoop.yarn.csi.adaptor.DefaultCsiAdaptorImpl. User can plug
+      customized adaptor code for csi-driver with this configuration
+      if necessary.
+    </description>
+    <name>yarn.nodemanager.csi-driver.names</name>
+    <value></value>
   </property>
 </configuration>

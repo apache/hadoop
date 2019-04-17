@@ -181,9 +181,31 @@
      <!-- More complex cleanup logic confuses findbugs -->
      <Match>
        <Class name="org.apache.hadoop.hdfs.qjournal.server.Journal" />
-       <Method name="persistPaxosData" />
-       <Bug pattern="OS_OPEN_STREAM" />
+       <Method name="getPersistedPaxosData" />
+       <Bug pattern="NP_NULL_PARAM_DEREF" />
      </Match>
+
+     <!-- guava 27.0 update: @Nullable is not detected, however it's there -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.qjournal.server.Journal" />
+       <Method name="persistPaxosData" />
+       <Bug pattern="NP_NULL_PARAM_DEREF" />
+     </Match>
+
+
+     <!-- guava 27.0 update: @Nullable is not detected, however it's there -->
+     <Match>
+       <Class name="org.apache.hadoop.hdfs.qjournal.server.JournalNode" />
+       <Method name="getLogDir" />
+       <Bug pattern="NP_NULL_PARAM_DEREF" />
+     </Match>
+
+      <!-- guava 27.0 update: redundant nullcheck (assert for not null) -->
+      <Match>
+        <Class name="org.apache.hadoop.hdfs.qjournal.server.JournalNode" />
+        <Method name="getLogDir" />
+        <Bug pattern="RCN_REDUNDANT_NULLCHECK_WOULD_HAVE_BEEN_A_NPE" />
+      </Match>
 
      <!-- Don't complain about LocalDatanodeInfo's anonymous class -->
      <Match>

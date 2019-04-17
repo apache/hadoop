@@ -18,32 +18,26 @@
 
 package org.apache.hadoop.utils;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.File;
+import java.io.IOException;
+import java.util.Optional;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+
+import com.google.common.annotations.VisibleForTesting;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF;
 import org.iq80.leveldb.Options;
 import org.rocksdb.BlockBasedTableConfig;
 import org.rocksdb.Statistics;
 import org.rocksdb.StatsLevel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Optional;
-import java.util.function.Supplier;
-
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_METADATA_STORE_IMPL_LEVELDB;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_METADATA_STORE_IMPL_ROCKSDB;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys
-    .OZONE_METADATA_STORE_ROCKSDB_STATISTICS_OFF;
 
 /**
  * Builder for metadata store.

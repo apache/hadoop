@@ -87,4 +87,11 @@ public class MutableGaugeInt extends MutableGauge {
       clearChanged();
     }
   }
+
+  /**
+   * @return  the value of the metric
+   */
+  public String toString() {
+    return value.toString();
+  }
 }

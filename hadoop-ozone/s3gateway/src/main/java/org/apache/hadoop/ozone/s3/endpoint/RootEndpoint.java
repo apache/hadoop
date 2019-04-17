@@ -18,10 +18,9 @@
 package org.apache.hadoop.ozone.s3.endpoint;
 
 import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
-import javax.ws.rs.core.Context;
-import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.Status;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Iterator;
@@ -30,9 +29,12 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.s3.commontypes.BucketMetadata;
 import org.apache.hadoop.ozone.s3.exception.OS3Exception;
+import org.apache.hadoop.ozone.s3.header.AuthenticationHeaderParser;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.ozone.s3.util.OzoneS3Util.getVolumeName;
 
 /**
  * Top level rest endpoint.
@@ -50,33 +52,33 @@ public class RootEndpoint extends EndpointBase {
    * for more details.
    */
   @GET
-  public ListBucketResponse get(@Context HttpHeaders headers)
+  public Response get()
       throws OS3Exception, IOException {
     OzoneVolume volume;
     ListBucketResponse response = new ListBucketResponse();
 
-    String volumeName = "s3" + parseUsername(headers).toLowerCase();
-    try {
-      //TODO: we need a specific s3bucketlist endpoint instead
-      // of reimplement the naming convention here
-      volume = getVolume(volumeName);
-    } catch (NotFoundException ex) {
-      return response;
-    } catch (IOException e) {
-      throw e;
+    AuthenticationHeaderParser authenticationHeaderParser =
+        getAuthenticationHeaderParser();
+
+    if (!authenticationHeaderParser.doesAuthenticationInfoExists()) {
+      return Response.status(Status.TEMPORARY_REDIRECT)
+          .header("Location", "/static/")
+          .build();
     }
+    String volumeName = getVolumeName(authenticationHeaderParser.
+        getAccessKeyID());
+    Iterator<? extends OzoneBucket> bucketIterator = listS3Buckets(volumeName,
+        null);
 
-    Iterator<? extends OzoneBucket> volABucketIter = volume.listBuckets(null);
-
-    while (volABucketIter.hasNext()) {
-      OzoneBucket next = volABucketIter.next();
+    while (bucketIterator.hasNext()) {
+      OzoneBucket next = bucketIterator.next();
       BucketMetadata bucketMetadata = new BucketMetadata();
       bucketMetadata.setName(next.getName());
-      bucketMetadata.setCreationDate(
-          Instant.ofEpochMilli(next.getCreationTime()));
+      bucketMetadata.setCreationDate(Instant.ofEpochMilli(next
+          .getCreationTime()));
       response.addBucket(bucketMetadata);
     }
 
-    return response;
+    return Response.ok(response).build();
   }
 }

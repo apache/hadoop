@@ -543,3 +543,31 @@ message RunSharedCacheCleanerTaskRequestProto {
 message RunSharedCacheCleanerTaskResponseProto {
   optional bool accepted = 1;
 }
+
+// Localization
+message GetLocalizationStatusesRequestProto {
+  repeated ContainerIdProto container_id = 1;
+}
+
+message GetLocalizationStatusesResponseProto {
+  repeated ContainerLocalizationStatusesProto cntn_localization_statuses = 1;
+  repeated ContainerExceptionMapProto failed_requests = 2;
+}
+
+enum LocalizationStateProto {
+  L_PENDING = 1;
+  L_COMPLETED = 2;
+  L_FAILED = 3;
+}
+
+
+message LocalizationStatusProto {
+  optional string resource_key = 1;
+  optional LocalizationStateProto localization_state= 2;
+  optional string diagnostics = 3;
+}
+
+message ContainerLocalizationStatusesProto {
+  optional ContainerIdProto container_id = 1;
+  repeated LocalizationStatusProto localization_statuses = 2;
+}

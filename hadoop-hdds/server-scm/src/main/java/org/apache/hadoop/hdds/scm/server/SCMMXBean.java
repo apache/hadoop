@@ -49,14 +49,19 @@ public interface SCMMXBean extends ServiceRuntimeInfo {
   Map<String, String> getContainerReport();
 
   /**
-   * Returns chill mode status.
+   * Returns safe mode status.
    * @return boolean
    */
-  boolean isInChillMode();
+  boolean isInSafeMode();
 
   /**
-   * Returns live chill mode container threshold.
+   * Returns live safe mode container threshold.
    * @return String
    */
-  double getChillModeCurrentContainerThreshold();
+  double getSafeModeCurrentContainerThreshold();
+
+  /**
+   * Returns the container count in all states.
+   */
+  Map<String, Integer> getContainerStateCount();
 }

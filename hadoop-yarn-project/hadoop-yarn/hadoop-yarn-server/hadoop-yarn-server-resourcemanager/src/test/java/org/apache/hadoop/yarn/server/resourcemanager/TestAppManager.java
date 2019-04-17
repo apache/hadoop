@@ -22,8 +22,8 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -98,10 +98,10 @@ import java.util.concurrent.ConcurrentMap;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyString;
-import static org.mockito.Matchers.isA;
-import static org.mockito.Matchers.matches;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.ArgumentMatchers.matches;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -115,7 +115,8 @@ import static org.mockito.Mockito.when;
  */
 
 public class TestAppManager extends AppManagerTestBase{
-  private Log LOG = LogFactory.getLog(TestAppManager.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestAppManager.class);
   private static RMAppEventType appEventType = RMAppEventType.KILL;
 
   private static String USER = "user_";
@@ -1069,6 +1070,7 @@ public class TestAppManager extends AppManagerTestBase{
     when(app.getState()).thenReturn(RMAppState.RUNNING);
     when(app.getApplicationType()).thenReturn("MAPREDUCE");
     when(app.getSubmitTime()).thenReturn(1000L);
+    when(app.getLaunchTime()).thenReturn(2000L);
     Map<String, Long> resourceSecondsMap = new HashMap<>();
     resourceSecondsMap.put(ResourceInformation.MEMORY_MB.getName(), 16384L);
     resourceSecondsMap.put(ResourceInformation.VCORES.getName(), 64L);
@@ -1089,6 +1091,7 @@ public class TestAppManager extends AppManagerTestBase{
     assertTrue(msg.contains("Multiline" + escaped +"UserName"));
     assertTrue(msg.contains("Multiline" + escaped +"QueueName"));
     assertTrue(msg.contains("submitTime=1000"));
+    assertTrue(msg.contains("launchTime=2000"));
     assertTrue(msg.contains("memorySeconds=16384"));
     assertTrue(msg.contains("vcoreSeconds=64"));
     assertTrue(msg.contains("preemptedAMContainers=1"));

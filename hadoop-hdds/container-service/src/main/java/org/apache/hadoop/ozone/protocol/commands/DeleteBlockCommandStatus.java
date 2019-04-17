@@ -24,13 +24,17 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerBlocksDeletionACKProto;
 
+/**
+ * Command status to report about block deletion.
+ */
 public class DeleteBlockCommandStatus extends CommandStatus {
 
   private ContainerBlocksDeletionACKProto blocksDeletionAck = null;
 
   public DeleteBlockCommandStatus(Type type, Long cmdId,
       StorageContainerDatanodeProtocolProtos.CommandStatus.Status status,
-      String msg, ContainerBlocksDeletionACKProto blocksDeletionAck) {
+      String msg,
+      ContainerBlocksDeletionACKProto blocksDeletionAck) {
     super(type, cmdId, status, msg);
     this.blocksDeletionAck = blocksDeletionAck;
   }
@@ -53,7 +57,8 @@ public class DeleteBlockCommandStatus extends CommandStatus {
   }
 
   @Override
-  public StorageContainerDatanodeProtocolProtos.CommandStatus getProtoBufMessage() {
+  public StorageContainerDatanodeProtocolProtos.CommandStatus
+      getProtoBufMessage() {
     StorageContainerDatanodeProtocolProtos.CommandStatus.Builder builder =
         StorageContainerDatanodeProtocolProtos.CommandStatus.newBuilder()
             .setCmdId(this.getCmdId())
@@ -68,6 +73,9 @@ public class DeleteBlockCommandStatus extends CommandStatus {
     return builder.build();
   }
 
+  /**
+   * Builder for DeleteBlockCommandStatus.
+   */
   public static final class DeleteBlockCommandStatusBuilder
       extends CommandStatusBuilder {
     private ContainerBlocksDeletionACKProto blocksDeletionAck = null;

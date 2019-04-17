@@ -18,28 +18,7 @@
 
 package org.apache.ratis;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.ratis.client.RaftClient;
-import org.apache.ratis.conf.RaftProperties;
-import org.apache.ratis.grpc.GrpcConfigKeys;
-import org.apache.ratis.protocol.RaftGroup;
-import org.apache.ratis.protocol.RaftGroupId;
-import org.apache.ratis.protocol.RaftPeer;
-import org.apache.ratis.protocol.RaftPeerId;
-import org.apache.ratis.retry.RetryPolicies;
-import org.apache.ratis.retry.RetryPolicy;
-import org.apache.ratis.rpc.RpcType;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-import org.apache.ratis.proto.RaftProtos;
-import org.apache.ratis.util.Preconditions;
-import org.apache.ratis.util.SizeInBytes;
-import org.apache.ratis.util.TimeDuration;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -49,8 +28,33 @@ import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.security.x509.SecurityConfig;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
+
+import org.apache.ratis.client.RaftClient;
+import org.apache.ratis.client.RaftClientConfigKeys;
+import org.apache.ratis.conf.RaftProperties;
+import org.apache.ratis.grpc.GrpcConfigKeys;
+import org.apache.ratis.grpc.GrpcFactory;
+import org.apache.ratis.grpc.GrpcTlsConfig;
+import org.apache.ratis.proto.RaftProtos;
+import org.apache.ratis.protocol.RaftGroup;
+import org.apache.ratis.protocol.RaftGroupId;
+import org.apache.ratis.protocol.RaftPeer;
+import org.apache.ratis.protocol.RaftPeerId;
+import org.apache.ratis.retry.RetryPolicies;
+import org.apache.ratis.retry.RetryPolicy;
+import org.apache.ratis.rpc.RpcType;
+import org.apache.ratis.rpc.SupportedRpcType;
+import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
+import org.apache.ratis.util.SizeInBytes;
+import org.apache.ratis.util.TimeDuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Ratis helper methods.
@@ -88,7 +92,7 @@ public interface RatisHelper {
   }
 
   static List<RaftPeer> toRaftPeers(Pipeline pipeline) {
-    return toRaftPeers(pipeline.getMachines());
+    return toRaftPeers(pipeline.getNodes());
   }
 
   static <E extends DatanodeDetails> List<RaftPeer> toRaftPeers(
@@ -125,43 +129,101 @@ public interface RatisHelper {
   }
 
   static RaftGroup newRaftGroup(Pipeline pipeline) {
-    return RaftGroup.valueOf(pipeline.getId().getRaftGroupID(),
+    return RaftGroup.valueOf(RaftGroupId.valueOf(pipeline.getId().getId()),
         toRaftPeers(pipeline));
   }
 
   static RaftClient newRaftClient(RpcType rpcType, Pipeline pipeline,
-      RetryPolicy retryPolicy) {
-    return newRaftClient(rpcType, toRaftPeerId(pipeline.getLeader()),
-        newRaftGroup(pipeline.getId().getRaftGroupID(), pipeline.getMachines()),
-        retryPolicy);
+      RetryPolicy retryPolicy, int maxOutStandingRequest,
+      GrpcTlsConfig tlsConfig, TimeDuration timeout) throws IOException {
+    return newRaftClient(rpcType, toRaftPeerId(pipeline.getFirstNode()),
+        newRaftGroup(RaftGroupId.valueOf(pipeline.getId().getId()),
+            pipeline.getNodes()), retryPolicy, maxOutStandingRequest, tlsConfig,
+        timeout);
+  }
+
+  static TimeDuration getClientRequestTimeout(Configuration conf) {
+    // Set the client requestTimeout
+    final TimeUnit timeUnit =
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getUnit();
+    final long duration = conf.getTimeDuration(
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
+        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
+            .getDuration(), timeUnit);
+    final TimeDuration clientRequestTimeout =
+        TimeDuration.valueOf(duration, timeUnit);
+    return clientRequestTimeout;
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
-      RetryPolicy retryPolicy) {
+      RetryPolicy retryPolicy, int maxOutstandingRequests,
+      GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
     return newRaftClient(rpcType, leader.getId(),
-        newRaftGroup(new ArrayList<>(Arrays.asList(leader))), retryPolicy);
+        newRaftGroup(new ArrayList<>(Arrays.asList(leader))), retryPolicy,
+        maxOutstandingRequests, tlsConfig, clientRequestTimeout);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeer leader,
-      RaftGroup group, RetryPolicy retryPolicy) {
-    return newRaftClient(rpcType, leader.getId(), group, retryPolicy);
+      RetryPolicy retryPolicy, int maxOutstandingRequests,
+      TimeDuration clientRequestTimeout) {
+    return newRaftClient(rpcType, leader.getId(),
+        newRaftGroup(new ArrayList<>(Arrays.asList(leader))), retryPolicy,
+        maxOutstandingRequests, null, clientRequestTimeout);
   }
 
   static RaftClient newRaftClient(RpcType rpcType, RaftPeerId leader,
-      RaftGroup group, RetryPolicy retryPolicy) {
+      RaftGroup group, RetryPolicy retryPolicy, int maxOutStandingRequest,
+      GrpcTlsConfig tlsConfig, TimeDuration clientRequestTimeout) {
     LOG.trace("newRaftClient: {}, leader={}, group={}", rpcType, leader, group);
     final RaftProperties properties = new RaftProperties();
     RaftConfigKeys.Rpc.setType(properties, rpcType);
+    RaftClientConfigKeys.Rpc
+        .setRequestTimeout(properties, clientRequestTimeout);
 
     GrpcConfigKeys.setMessageSizeMax(properties,
-        SizeInBytes.valueOf(OzoneConfigKeys.DFS_CONTAINER_CHUNK_MAX_SIZE));
+        SizeInBytes.valueOf(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE));
+    GrpcConfigKeys.OutputStream.setOutstandingAppendsMax(properties,
+        maxOutStandingRequest);
 
-    return RaftClient.newBuilder()
+    RaftClient.Builder builder =  RaftClient.newBuilder()
         .setRaftGroup(group)
         .setLeaderId(leader)
         .setProperties(properties)
-        .setRetryPolicy(retryPolicy)
-        .build();
+        .setRetryPolicy(retryPolicy);
+
+    // TODO: GRPC TLS only for now, netty/hadoop RPC TLS support later.
+    if (tlsConfig != null && rpcType == SupportedRpcType.GRPC) {
+      builder.setParameters(GrpcFactory.newRaftParameters(tlsConfig));
+    }
+    return builder.build();
+  }
+
+  static GrpcTlsConfig createTlsClientConfig(SecurityConfig conf) {
+    if (conf.isGrpcTlsEnabled()) {
+      if (conf.isGrpcMutualTlsRequired()) {
+        return new GrpcTlsConfig(
+            null, null, conf.getTrustStoreFile(), false);
+      } else {
+        return new GrpcTlsConfig(conf.getClientPrivateKeyFile(),
+            conf.getClientCertChainFile(), conf.getTrustStoreFile(), true);
+      }
+    }
+    return null;
+  }
+
+  static GrpcTlsConfig createTlsServerConfig(SecurityConfig conf) {
+    if (conf.isGrpcTlsEnabled()) {
+      if (conf.isGrpcMutualTlsRequired()) {
+        return new GrpcTlsConfig(
+            conf.getServerPrivateKeyFile(), conf.getServerCertChainFile(), null,
+            false);
+      } else {
+        return new GrpcTlsConfig(conf.getServerPrivateKeyFile(),
+            conf.getServerCertChainFile(), conf.getClientCertChainFile(), true);
+      }
+    }
+    return null;
   }
 
   static RetryPolicy createRetryPolicy(Configuration conf) {
@@ -172,32 +234,7 @@ public interface RatisHelper {
     long retryInterval = conf.getTimeDuration(OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_KEY, OzoneConfigKeys.
         DFS_RATIS_CLIENT_REQUEST_RETRY_INTERVAL_DEFAULT
-        .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long leaderElectionTimeout = conf.getTimeDuration(
-        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
-        DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long clientRequestTimeout = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    long retryCacheTimeout = conf.getTimeDuration(
-        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_KEY,
-        OzoneConfigKeys.DFS_RATIS_SERVER_RETRY_CACHE_TIMEOUT_DURATION_DEFAULT
-            .toInt(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
-    Preconditions
-        .assertTrue(maxRetryCount * retryInterval > 5 * leaderElectionTimeout,
-            "Please make sure dfs.ratis.client.request.max.retries * "
-                + "dfs.ratis.client.request.retry.interval > "
-                + "5 * dfs.ratis.leader.election.minimum.timeout.duration");
-    Preconditions.assertTrue(
-        maxRetryCount * (retryInterval + clientRequestTimeout)
-            < retryCacheTimeout,
-        "Please make sure "
-            + "(dfs.ratis.client.request.max.retries * "
-            + "(dfs.ratis.client.request.retry.interval + "
-            + "dfs.ratis.client.request.timeout.duration)) "
-            + "< dfs.ratis.server.retry-cache.timeout.duration");
+        .toIntExact(TimeUnit.MILLISECONDS), TimeUnit.MILLISECONDS);
     TimeDuration sleepDuration =
         TimeDuration.valueOf(retryInterval, TimeUnit.MILLISECONDS);
     RetryPolicy retryPolicy = RetryPolicies

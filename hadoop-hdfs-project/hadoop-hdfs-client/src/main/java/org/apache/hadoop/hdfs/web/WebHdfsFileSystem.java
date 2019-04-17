@@ -94,6 +94,7 @@ import org.apache.hadoop.hdfs.HdfsKMSUtil;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
+import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
@@ -1311,6 +1312,54 @@ public class WebHdfsFileSystem extends FileSystem
   }
 
   @Override
+  public void satisfyStoragePolicy(final Path p) throws IOException {
+    final HttpOpParam.Op op = PutOpParam.Op.SATISFYSTORAGEPOLICY;
+    new FsPathRunner(op, p).run();
+  }
+
+  public void enableECPolicy(String policyName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.ENABLE_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.ENABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
+  public void disableECPolicy(String policyName) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.DISABLE_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.DISABLEECPOLICY;
+    new FsPathRunner(op, null, new ECPolicyParam(policyName)).run();
+  }
+
+  public void setErasureCodingPolicy(Path p, String policyName)
+      throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.SET_EC_POLICY);
+    final HttpOpParam.Op op = PutOpParam.Op.SETECPOLICY;
+    new FsPathRunner(op, p, new ECPolicyParam(policyName)).run();
+  }
+
+  public void unsetErasureCodingPolicy(Path p) throws IOException {
+    statistics.incrementWriteOps(1);
+    storageStatistics.incrementOpCounter(OpType.UNSET_EC_POLICY);
+    final HttpOpParam.Op op = PostOpParam.Op.UNSETECPOLICY;
+    new FsPathRunner(op, p).run();
+  }
+
+  public ErasureCodingPolicy getErasureCodingPolicy(Path p)
+      throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_EC_POLICY);
+    final HttpOpParam.Op op =GetOpParam.Op.GETECPOLICY;
+    return new FsPathResponseRunner<ErasureCodingPolicy>(op, p) {
+      @Override
+      ErasureCodingPolicy decodeResponse(Map<?, ?> json) throws IOException {
+        return JsonUtilClient.toECPolicy((Map<?, ?>) json);
+      }
+    }.run();
+  }
+
+  @Override
   public Path createSnapshot(final Path path, final String snapshotName)
       throws IOException {
     statistics.incrementWriteOps(1);
@@ -1517,6 +1566,9 @@ public class WebHdfsFileSystem extends FileSystem
     } catch (IOException ioe) {
       LOG.debug("Token cancel failed: ", ioe);
     } finally {
+      if (connectionFactory != null) {
+        connectionFactory.destroy();
+      }
       super.close();
     }
   }

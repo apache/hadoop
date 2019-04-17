@@ -32,12 +32,16 @@ import org.apache.hadoop.hdds.scm.cli.container.CreateSubcommand;
 import org.apache.hadoop.hdds.scm.cli.container.DeleteSubcommand;
 import org.apache.hadoop.hdds.scm.cli.container.InfoSubcommand;
 import org.apache.hadoop.hdds.scm.cli.container.ListSubcommand;
+import org.apache.hadoop.hdds.scm.cli.pipeline.ClosePipelineSubcommand;
+import org.apache.hadoop.hdds.scm.cli.pipeline.ListPipelinesSubcommand;
 import org.apache.hadoop.hdds.scm.client.ContainerOperationClient;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
+import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -73,11 +77,14 @@ import picocli.CommandLine.Option;
         + "operations.",
     versionProvider = HddsVersionProvider.class,
     subcommands = {
+        SafeModeCommands.class,
         ListSubcommand.class,
         InfoSubcommand.class,
         DeleteSubcommand.class,
         CreateSubcommand.class,
-        CloseSubcommand.class
+        CloseSubcommand.class,
+        ListPipelinesSubcommand.class,
+        ClosePipelineSubcommand.class
     },
     mixinStandardHelpOptions = true)
 public class SCMCLI extends GenericCli {
@@ -129,12 +136,14 @@ public class SCMCLI extends GenericCli {
 
     RPC.setProtocolEngine(ozoneConf, StorageContainerLocationProtocolPB.class,
         ProtobufRpcEngine.class);
-    StorageContainerLocationProtocolClientSideTranslatorPB client =
+    StorageContainerLocationProtocol client =
+        TracingUtil.createProxy(
         new StorageContainerLocationProtocolClientSideTranslatorPB(
             RPC.getProxy(StorageContainerLocationProtocolPB.class, version,
                 scmAddress, UserGroupInformation.getCurrentUser(), ozoneConf,
                 NetUtils.getDefaultSocketFactory(ozoneConf),
-                Client.getRpcTimeout(ozoneConf)));
+                Client.getRpcTimeout(ozoneConf))),
+            StorageContainerLocationProtocol.class, ozoneConf);
     return new ContainerOperationClient(
         client, new XceiverClientManager(ozoneConf));
   }

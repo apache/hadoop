@@ -29,8 +29,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
@@ -110,7 +110,8 @@ import com.google.protobuf.BlockingService;
 public class AdminService extends CompositeService implements
     HAServiceProtocol, ResourceManagerAdministrationProtocol {
 
-  private static final Log LOG = LogFactory.getLog(AdminService.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(AdminService.class);
 
   private final ResourceManager rm;
   private String rmId;
@@ -360,6 +361,13 @@ public class AdminService extends CompositeService implements
       throw new ServiceFailedException(
           "Error when transitioning to Standby mode", e);
     }
+  }
+
+  @Override
+  public synchronized void transitionToObserver(
+      StateChangeRequestInfo reqInfo) throws IOException {
+    // Should NOT get here, as RMHAServiceTarget doesn't support observer.
+    throw new ServiceFailedException("Does not support transition to Observer");
   }
 
   /**
@@ -993,6 +1001,7 @@ public class AdminService extends CompositeService implements
         nodeAttributesManager.addNodeAttributes(nodeAttributeMapping);
         break;
       case REMOVE:
+        validateAttributesExists(nodesToAttributes);
         nodeAttributesManager.removeNodeAttributes(nodeAttributeMapping);
         break;
       case REPLACE:
@@ -1011,6 +1020,27 @@ public class AdminService extends CompositeService implements
         "AdminService");
     return recordFactory
         .newRecordInstance(NodesToAttributesMappingResponse.class);
+  }
+
+  private void validateAttributesExists(
+      List<NodeToAttributes> nodesToAttributes) throws IOException {
+    NodeAttributesManager nodeAttributesManager =
+        rm.getRMContext().getNodeAttributesManager();
+    for (NodeToAttributes nodeToAttrs : nodesToAttributes) {
+      String hostname = nodeToAttrs.getNode();
+      if (hostname == null) {
+        continue;
+      }
+      Set<NodeAttribute> attrs =
+          nodeAttributesManager.getAttributesForNode(hostname).keySet();
+      List<NodeAttribute> attributes = nodeToAttrs.getNodeAttributes();
+      for (NodeAttribute nodeAttr : attributes) {
+        if (!attrs.contains(nodeAttr)) {
+          throw new IOException("Node attribute [" + nodeAttr.getAttributeKey()
+              + "] doesn't exist on node " + nodeToAttrs.getNode());
+        }
+      }
+    }
   }
 
   /**

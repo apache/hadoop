@@ -86,6 +86,10 @@ public interface CSQueue extends SchedulerQueue<CSQueue> {
 
   public PrivilegedEntity getPrivilegedEntity();
 
+  Resource getMaximumAllocation();
+
+  Resource getMinimumAllocation();
+
   /**
    * Get the configured <em>capacity</em> of the queue.
    * @return configured queue capacity

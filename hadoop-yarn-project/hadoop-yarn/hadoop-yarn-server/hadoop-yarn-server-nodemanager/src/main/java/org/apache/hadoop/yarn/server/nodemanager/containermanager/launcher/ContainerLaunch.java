@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher;
 
 import static org.apache.hadoop.fs.CreateFlag.CREATE;
 import static org.apache.hadoop.fs.CreateFlag.OVERWRITE;
+import static org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.TOKEN_FILE_NAME_FMT;
 
 import org.apache.hadoop.yarn.server.nodemanager.executor.DeletionAsUserContext;
 
@@ -112,6 +113,7 @@ public class ContainerLaunch implements Callable<Integer> {
     Shell.appendScriptExtension("launch_container");
 
   public static final String FINAL_CONTAINER_TOKENS_FILE = "container_tokens";
+  public static final String SYSFS_DIR = "sysfs";
 
   public static final String KEYSTORE_FILE = "yarn_provided.keystore";
   public static final String TRUSTSTORE_FILE = "yarn_provided.truststore";
@@ -234,8 +236,7 @@ public class ContainerLaunch implements Callable<Integer> {
               + CONTAINER_SCRIPT);
       Path nmPrivateTokensPath = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
-              + String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
-              containerIdStr));
+              + String.format(TOKEN_FILE_NAME_FMT, containerIdStr));
       Path nmPrivateKeystorePath = dirsHandler.getLocalPathForWrite(
           getContainerPrivateDir(appIdStr, containerIdStr) + Path.SEPARATOR
               + KEYSTORE_FILE);
@@ -248,6 +249,10 @@ public class ContainerLaunch implements Callable<Integer> {
       // Select the working directory for the container
       Path containerWorkDir = deriveContainerWorkDir();
       recordContainerWorkDir(containerID, containerWorkDir.toString());
+
+      // Select a root dir for all csi volumes for the container
+      Path csiVolumesRoot = deriveCsiVolumesRootDir();
+      recordContainerCsiVolumesRootDir(containerID, csiVolumesRoot.toString());
 
       String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
       // pid file should be in nm private dir so that it is not
@@ -357,6 +362,7 @@ public class ContainerLaunch implements Callable<Integer> {
           .setUser(user)
           .setAppId(appIdStr)
           .setContainerWorkDir(containerWorkDir)
+          .setContainerCsiVolumesRootDir(csiVolumesRoot)
           .setLocalDirs(localDirs)
           .setLogDirs(logDirs)
           .setFilecacheDirs(filecacheDirs)
@@ -385,6 +391,27 @@ public class ContainerLaunch implements Callable<Integer> {
 
     handleContainerExitCode(ret, containerLogDir);
     return ret;
+  }
+
+  /**
+   * Volumes mount point root:
+   *   ${YARN_LOCAL_DIR}/usercache/${user}/filecache/csiVolumes/app/container
+   * CSI volumes may creates the mount point with different permission bits.
+   * If we create the volume mount under container work dir, it may
+   * mess up the existing permission structure, which is restricted by
+   * linux container executor. So we put all volume mounts under a same
+   * root dir so it is easier cleanup.
+   **/
+  private Path deriveCsiVolumesRootDir() throws IOException {
+    final String containerVolumePath =
+        ContainerLocalizer.USERCACHE + Path.SEPARATOR
+            + container.getUser() + Path.SEPARATOR
+            + ContainerLocalizer.FILECACHE + Path.SEPARATOR
+            + ContainerLocalizer.CSI_VOLIUME_MOUNTS_ROOT + Path.SEPARATOR
+            + app.getAppId().toString() + Path.SEPARATOR
+            + container.getContainerId().toString();
+    return dirsHandler.getLocalPathForWrite(containerVolumePath,
+        LocalDirAllocator.SIZE_UNKNOWN, false);
   }
 
   private Path deriveContainerWorkDir() throws IOException {
@@ -620,11 +647,8 @@ public class ContainerLaunch implements Callable<Integer> {
 
   protected void handleContainerExitCode(int exitCode, Path containerLogDir) {
     ContainerId containerId = container.getContainerId();
-
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Container " + containerId + " completed with exit code "
-          + exitCode);
-    }
+    LOG.debug("Container {} completed with exit code {}", containerId,
+        exitCode);
 
     StringBuilder diagnosticInfo =
         new StringBuilder("Container exited with a non-zero exit code ");
@@ -813,22 +837,17 @@ public class ContainerLaunch implements Callable<Integer> {
       return;
     }
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Getting pid for container " + containerIdStr
-          + " to send signal to from pid file "
-          + (pidFilePath != null ? pidFilePath.toString() : "null"));
-    }
+    LOG.debug("Getting pid for container {} to send signal to from pid"
+        + " file {}", containerIdStr,
+        (pidFilePath != null ? pidFilePath.toString() : "null"));
 
     try {
       // get process id from pid file if available
       // else if shell is still active, get it from the shell
       String processId = getContainerPid();
       if (processId != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Sending signal to pid " + processId
-              + " as user " + user
-              + " for container " + containerIdStr);
-        }
+        LOG.debug("Sending signal to pid {} as user {} for container {}",
+            processId, user, containerIdStr);
 
         boolean result = exec.signalContainer(
             new ContainerSignalContext.Builder()
@@ -986,10 +1005,8 @@ public class ContainerLaunch implements Callable<Integer> {
     String containerIdStr = 
         container.getContainerId().toString();
     String processId;
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Accessing pid for container " + containerIdStr
-          + " from pid file " + pidFilePath);
-    }
+    LOG.debug("Accessing pid for container {} from pid file {}",
+        containerIdStr, pidFilePath);
     int sleepCounter = 0;
     final int sleepInterval = 100;
 
@@ -998,10 +1015,7 @@ public class ContainerLaunch implements Callable<Integer> {
     while (true) {
       processId = ProcessIdFileReader.getProcessId(pidFilePath);
       if (processId != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-              "Got pid " + processId + " for container " + containerIdStr);
-        }
+        LOG.debug("Got pid {} for container {}", processId, containerIdStr);
         break;
       }
       else if ((sleepCounter*sleepInterval) > maxKillWaitTime) {
@@ -1296,7 +1310,7 @@ public class ContainerLaunch implements Callable<Integer> {
 
     @Override
     protected void link(Path src, Path dst) throws IOException {
-      line("ln -sf \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
+      line("ln -sf -- \"", src.toUri().getPath(), "\" \"", dst.toString(), "\"");
     }
 
     @Override
@@ -1751,6 +1765,12 @@ public class ContainerLaunch implements Callable<Integer> {
     }
   }
 
+  private void recordContainerCsiVolumesRootDir(ContainerId containerId,
+      String volumesRoot) throws IOException {
+    container.setCsiVolumesRootDir(volumesRoot);
+    // TODO persistent to the NM store...
+  }
+
   protected Path getContainerWorkDir() throws IOException {
     String containerWorkDir = container.getWorkDir();
     if (containerWorkDir == null
@@ -1772,6 +1792,8 @@ public class ContainerLaunch implements Callable<Integer> {
     deleteAsUser(new Path(containerWorkDir, CONTAINER_SCRIPT));
     // delete TokensPath
     deleteAsUser(new Path(containerWorkDir, FINAL_CONTAINER_TOKENS_FILE));
+    // delete sysfs dir
+    deleteAsUser(new Path(containerWorkDir, SYSFS_DIR));
 
     // delete symlinks because launch script will create symlinks again
     try {

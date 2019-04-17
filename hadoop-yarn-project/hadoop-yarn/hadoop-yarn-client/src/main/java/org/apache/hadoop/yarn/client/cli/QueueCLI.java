@@ -69,7 +69,7 @@ public class QueueCLI extends YarnCLI {
       printUsage(opts);
       return -1;
     }
-
+    createAndStartYarnClient();
     if (cliParser.hasOption(STATUS_CMD)) {
       if (args.length != 2) {
         printUsage(opts);

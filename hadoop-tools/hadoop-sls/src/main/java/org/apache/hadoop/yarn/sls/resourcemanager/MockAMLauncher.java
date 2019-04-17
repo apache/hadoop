@@ -45,13 +45,14 @@ public class MockAMLauncher extends ApplicationMasterLauncher
   private static final Logger LOG = LoggerFactory.getLogger(
       MockAMLauncher.class);
 
-  Map<String, AMSimulator> amMap;
+  private Map<ApplicationId, AMSimulator> appIdAMSim;
+
   SLSRunner se;
 
   public MockAMLauncher(SLSRunner se, RMContext rmContext,
-      Map<String, AMSimulator> amMap) {
+      Map<ApplicationId, AMSimulator> appIdAMSim) {
     super(rmContext);
-    this.amMap = amMap;
+    this.appIdAMSim = appIdAMSim;
     this.se = se;
   }
 
@@ -86,30 +87,28 @@ public class MockAMLauncher extends ApplicationMasterLauncher
           event.getAppAttempt().getAppAttemptId().getApplicationId();
 
       // find AMSimulator
-      for (AMSimulator ams : amMap.values()) {
-        if (ams.getApplicationId() != null && ams.getApplicationId().equals(
-            appId)) {
-          try {
-            Container amContainer = event.getAppAttempt().getMasterContainer();
+      AMSimulator ams = appIdAMSim.get(appId);
+      if (ams != null) {
+        try {
+          Container amContainer = event.getAppAttempt().getMasterContainer();
 
-            setupAMRMToken(event.getAppAttempt());
+          setupAMRMToken(event.getAppAttempt());
 
-            // Notify RMAppAttempt to change state
-            super.context.getDispatcher().getEventHandler().handle(
-                new RMAppAttemptEvent(event.getAppAttempt().getAppAttemptId(),
-                    RMAppAttemptEventType.LAUNCHED));
+          // Notify RMAppAttempt to change state
+          super.context.getDispatcher().getEventHandler().handle(
+              new RMAppAttemptEvent(event.getAppAttempt().getAppAttemptId(),
+                  RMAppAttemptEventType.LAUNCHED));
 
-            ams.notifyAMContainerLaunched(
-                event.getAppAttempt().getMasterContainer());
-            LOG.info("Notify AM launcher launched:" + amContainer.getId());
+          ams.notifyAMContainerLaunched(
+              event.getAppAttempt().getMasterContainer());
+          LOG.info("Notify AM launcher launched:" + amContainer.getId());
 
-            se.getNmMap().get(amContainer.getNodeId())
-                .addNewContainer(amContainer, 100000000L);
+          se.getNmMap().get(amContainer.getNodeId())
+              .addNewContainer(amContainer, 100000000L);
 
-            return;
-          } catch (Exception e) {
-            throw new YarnRuntimeException(e);
-          }
+          return;
+        } catch (Exception e) {
+          throw new YarnRuntimeException(e);
         }
       }
 
@@ -117,4 +116,5 @@ public class MockAMLauncher extends ApplicationMasterLauncher
           "Didn't find any AMSimulator for applicationId=" + appId);
     }
   }
+
 }

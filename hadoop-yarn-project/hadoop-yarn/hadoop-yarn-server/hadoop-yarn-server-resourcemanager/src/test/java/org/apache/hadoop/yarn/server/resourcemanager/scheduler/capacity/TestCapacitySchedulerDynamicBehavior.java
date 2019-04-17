@@ -24,8 +24,8 @@ import static org.junit.Assert.fail;
 
 import java.util.List;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.MockRM;
@@ -40,8 +40,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TestCapacitySchedulerDynamicBehavior {
-  private static final Log LOG = LogFactory
-      .getLog(TestCapacitySchedulerDynamicBehavior.class);
+  private static final Logger LOG = LoggerFactory
+      .getLogger(TestCapacitySchedulerDynamicBehavior.class);
   private static final String A = CapacitySchedulerConfiguration.ROOT + ".a";
   private static final String B = CapacitySchedulerConfiguration.ROOT + ".b";
   private static final String B1 = B + ".b1";

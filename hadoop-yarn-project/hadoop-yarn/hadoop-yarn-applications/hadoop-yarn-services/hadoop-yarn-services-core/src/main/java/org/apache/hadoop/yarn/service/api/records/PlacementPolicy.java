@@ -80,11 +80,11 @@ public class PlacementPolicy implements Serializable {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class PlacementPolicy {\n");
+    sb.append("class PlacementPolicy {\n")
 
-    sb.append("    constraints: ").append(toIndentedString(constraints))
-        .append("\n");
-    sb.append("}");
+        .append("    constraints: ").append(toIndentedString(constraints))
+        .append("\n")
+        .append("}");
     return sb.toString();
   }
 

@@ -26,6 +26,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlockLoader;
+import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MemoryMappableBlockLoader;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
@@ -62,6 +64,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       .DFS_CHECKSUM_TYPE_KEY;
   public static final String  DFS_CHECKSUM_TYPE_DEFAULT =
       HdfsClientConfigKeys.DFS_CHECKSUM_TYPE_DEFAULT;
+  @Deprecated
+  public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY =
+      HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY;
+  @Deprecated
   public static final String DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT =
       HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT;
   public static final String  DFS_WEBHDFS_NETTY_LOW_WATERMARK =
@@ -280,6 +286,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
       HdfsClientConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT;
   public static final String  DFS_PERMISSIONS_ENABLED_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_ENABLED_KEY;
+  public static final String  DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_KEY
+      = "dfs.permissions.ContentSummary.subAccess";
+  public static final boolean DFS_PERMISSIONS_CONTENT_SUMMARY_SUBACCESS_DEFAULT
+      = false;
   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
   public static final String  DFS_PERMISSIONS_SUPERUSERGROUP_KEY =
       HdfsClientConfigKeys.DeprecatedKeys.DFS_PERMISSIONS_SUPERUSERGROUP_KEY;
@@ -323,7 +333,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final int     DFS_NAMENODE_QUOTA_INIT_THREADS_DEFAULT = 4;
 
   public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD = "dfs.namenode.edit.log.autoroll.multiplier.threshold";
-  public static final float   DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT = 2.0f;
+  public static final float
+      DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT = 0.5f;
   public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS = "dfs.namenode.edit.log.autoroll.check.interval.ms";
   public static final int     DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT = 5*60*1000;
 
@@ -380,6 +391,23 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String DFS_DATANODE_CACHE_REVOCATION_POLLING_MS = "dfs.datanode.cache.revocation.polling.ms";
   public static final long DFS_DATANODE_CACHE_REVOCATION_POLLING_MS_DEFAULT = 500L;
+
+  // Currently, the available cache loaders are MemoryMappableBlockLoader,
+  // PmemMappableBlockLoader. MemoryMappableBlockLoader is the default cache
+  // loader to cache block replica to memory.
+  public static final String DFS_DATANODE_CACHE_LOADER_CLASS =
+      "dfs.datanode.cache.loader.class";
+  public static final Class<? extends MappableBlockLoader>
+      DFS_DATANODE_CACHE_LOADER_CLASS_DEFAULT =
+      MemoryMappableBlockLoader.class;
+  // Multiple dirs separated by "," are acceptable.
+  public static final String DFS_DATANODE_CACHE_PMEM_DIRS_KEY =
+      "dfs.datanode.cache.pmem.dirs";
+  public static final String DFS_DATANODE_CACHE_PMEM_DIRS_DEFAULT = "";
+  // The cache capacity of persistent memory
+  public static final String DFS_DATANODE_CACHE_PMEM_CAPACITY_KEY =
+      "dfs.datanode.cache.pmem.capacity";
+  public static final long DFS_DATANODE_CACHE_PMEM_CAPACITY_DEFAULT = 0L;
 
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
@@ -690,6 +718,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final String  DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_KEY = "dfs.namenode.ec.policies.max.cellsize";
   public static final int     DFS_NAMENODE_EC_POLICIES_MAX_CELLSIZE_DEFAULT = 4 * 1024 * 1024;
+  public static final String DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY =
+      "dfs.namenode.ec.userdefined.policy.allowed";
+  public static final boolean
+      DFS_NAMENODE_EC_POLICIES_USERPOLICIES_ALLOWED_KEY_DEFAULT = true;
   public static final String  DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY =
       "dfs.namenode.ec.system.default.policy";
   public static final String  DFS_NAMENODE_EC_SYSTEM_DEFAULT_POLICY_DEFAULT =
@@ -995,6 +1027,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   // Security-related configs
   public static final String DFS_ENCRYPT_DATA_TRANSFER_KEY = "dfs.encrypt.data.transfer";
+  public static final String DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_KEY =
+      "dfs.encrypt.data.overwrite.downstream.derived.qop";
+  public static final boolean DFS_ENCRYPT_DATA_OVERWRITE_DOWNSTREAM_DERIVED_QOP_DEFAULT =
+      false;
   public static final boolean DFS_ENCRYPT_DATA_TRANSFER_DEFAULT = false;
   public static final String DFS_XFRAME_OPTION_ENABLED = "dfs.xframe.enabled";
   public static final boolean DFS_XFRAME_OPTION_ENABLED_DEFAULT = true;
@@ -1074,6 +1110,9 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_JOURNALNODE_SYNC_INTERVAL_KEY =
       "dfs.journalnode.sync.interval";
   public static final long DFS_JOURNALNODE_SYNC_INTERVAL_DEFAULT = 2*60*1000L;
+  public static final String DFS_JOURNALNODE_EDIT_CACHE_SIZE_KEY =
+      "dfs.journalnode.edit-cache-size.bytes";
+  public static final int DFS_JOURNALNODE_EDIT_CACHE_SIZE_DEFAULT = 1024 * 1024;
 
   // Journal-node related configs for the client side.
   public static final String  DFS_QJOURNAL_QUEUE_SIZE_LIMIT_KEY = "dfs.qjournal.queued-edits.limit.mb";
@@ -1266,6 +1305,13 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
 
   public static final Class<DFSNetworkTopology> DFS_NET_TOPOLOGY_IMPL_DEFAULT =
       DFSNetworkTopology.class;
+
+  public static final String DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY =
+      HdfsClientConfigKeys.DFS_NAMENODE_RPC_ADDRESS_AUXILIARY_KEY;
+
+  public static final String DFS_NAMENODE_SEND_QOP_ENABLED =
+      "dfs.namenode.send.qop.enabled";
+  public static final boolean DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT = false;
 
   // dfs.client.retry confs are moved to HdfsClientConfigKeys.Retry 
   @Deprecated

@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
-import org.apache.hadoop.hdds.scm.XceiverClientRatis;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
@@ -88,12 +87,11 @@ public class RatisPipelineProvider implements PipelineProvider {
     }
   }
 
-
   @Override
   public Pipeline create(ReplicationFactor factor) throws IOException {
     // Get set of datanodes already used for ratis pipeline
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
-    stateManager.getPipelinesByType(ReplicationType.RATIS)
+    stateManager.getPipelines(ReplicationType.RATIS, factor)
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 
     // Get list of healthy nodes
@@ -107,12 +105,12 @@ public class RatisPipelineProvider implements PipelineProvider {
       String e = String
           .format("Cannot create pipeline of factor %d using %d nodes.",
               factor.getNumber(), dns.size());
-      throw new IOException(e);
+      throw new InsufficientDatanodesException(e);
     }
 
     Pipeline pipeline = Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(dns)
@@ -122,28 +120,18 @@ public class RatisPipelineProvider implements PipelineProvider {
   }
 
   @Override
-  public Pipeline create(List<DatanodeDetails> nodes) throws IOException {
-    ReplicationFactor factor = ReplicationFactor.valueOf(nodes.size());
-    if (factor == null) {
-      throw new IOException(String
-          .format("Nodes size=%d does not match any replication factor",
-              nodes.size()));
-    }
+  public Pipeline create(ReplicationFactor factor,
+      List<DatanodeDetails> nodes) {
     return Pipeline.newBuilder()
         .setId(PipelineID.randomId())
-        .setState(PipelineState.ALLOCATED)
+        .setState(PipelineState.OPEN)
         .setType(ReplicationType.RATIS)
         .setFactor(factor)
         .setNodes(nodes)
         .build();
   }
 
-  private void initializePipeline(Pipeline pipeline)
-      throws IOException {
-    // TODO: remove old code in XceiverClientRatis#newXceiverClientRatis
-    try (XceiverClientRatis client =
-        XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-      client.createPipeline();
-    }
+  protected void initializePipeline(Pipeline pipeline) throws IOException {
+    RatisPipelineUtils.createPipeline(pipeline, conf);
   }
 }

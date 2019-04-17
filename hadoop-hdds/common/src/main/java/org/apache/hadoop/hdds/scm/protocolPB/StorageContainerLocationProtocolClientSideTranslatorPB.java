@@ -20,16 +20,19 @@ import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ListPipelineResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ClosePipelineRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ForceExitSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InChillModeRequestProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InChillModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto
@@ -56,6 +59,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos.SCMListContainerResponseProto;
+import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
@@ -106,6 +110,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       String owner) throws IOException {
 
     ContainerRequestProto request = ContainerRequestProto.newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setReplicationFactor(factor)
         .setReplicationType(type)
         .setOwner(owner)
@@ -131,6 +136,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     GetContainerRequestProto request = GetContainerRequestProto
         .newBuilder()
         .setContainerID(containerID)
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .build();
     try {
       GetContainerResponseProto response =
@@ -150,6 +156,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Container ID cannot be negative");
     GetContainerWithPipelineRequestProto request =
         GetContainerWithPipelineRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
             .setContainerID(containerID).build();
     try {
       GetContainerWithPipelineResponseProto response =
@@ -175,13 +182,14 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         .newBuilder();
     builder.setStartContainerID(startContainerID);
     builder.setCount(count);
+    builder.setTraceID(TracingUtil.exportCurrentSpan());
     SCMListContainerRequestProto request = builder.build();
 
     try {
       SCMListContainerResponseProto response =
           rpcProxy.listContainer(NULL_RPC_CONTROLLER, request);
       List<ContainerInfo> containerList = new ArrayList<>();
-      for (HddsProtos.SCMContainerInfo containerInfoProto : response
+      for (HddsProtos.ContainerInfoProto containerInfoProto : response
           .getContainersList()) {
         containerList.add(ContainerInfo.fromProtobuf(containerInfoProto));
       }
@@ -205,6 +213,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Container ID cannot be negative");
     SCMDeleteContainerRequestProto request = SCMDeleteContainerRequestProto
         .newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setContainerID(containerID)
         .build();
     try {
@@ -229,6 +238,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
     Preconditions.checkNotNull(nodeStatuses);
     NodeQueryRequestProto request = NodeQueryRequestProto.newBuilder()
         .setState(nodeStatuses)
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setScope(queryScope).setPoolName(poolName).build();
     try {
       NodeQueryResponseProto response =
@@ -256,6 +266,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
         "Object id cannot be negative.");
     ObjectStageChangeRequestProto request =
         ObjectStageChangeRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
             .setType(type)
             .setId(id)
             .setOp(op)
@@ -281,6 +292,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       replicationType, HddsProtos.ReplicationFactor factor, HddsProtos
       .NodePool nodePool) throws IOException {
     PipelineRequestProto request = PipelineRequestProto.newBuilder()
+        .setTraceID(TracingUtil.exportCurrentSpan())
         .setNodePool(nodePool)
         .setReplicationFactor(factor)
         .setReplicationType(replicationType)
@@ -292,7 +304,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           PipelineResponseProto.Error.success) {
         Preconditions.checkState(response.hasPipeline(), "With success, " +
             "must come a pipeline");
-        return Pipeline.getFromProtoBuf(response.getPipeline());
+        return Pipeline.getFromProtobuf(response.getPipeline());
       } else {
         String errorMessage = String.format("create replication pipeline " +
                 "failed. code : %s Message: %s", response.getErrorCode(),
@@ -305,9 +317,45 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   }
 
   @Override
+  public List<Pipeline> listPipelines() throws IOException {
+    try {
+      ListPipelineRequestProto request = ListPipelineRequestProto
+          .newBuilder().setTraceID(TracingUtil.exportCurrentSpan())
+          .build();
+      ListPipelineResponseProto response = rpcProxy.listPipelines(
+          NULL_RPC_CONTROLLER, request);
+      List<Pipeline> list = new ArrayList<>();
+      for (HddsProtos.Pipeline pipeline : response.getPipelinesList()) {
+        Pipeline fromProtobuf = Pipeline.getFromProtobuf(pipeline);
+        list.add(fromProtobuf);
+      }
+      return list;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    try {
+      ClosePipelineRequestProto request =
+          ClosePipelineRequestProto.newBuilder()
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .setPipelineID(pipelineID)
+          .build();
+      rpcProxy.closePipeline(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
   public ScmInfo getScmInfo() throws IOException {
     HddsProtos.GetScmInfoRequestProto request =
-        HddsProtos.GetScmInfoRequestProto.getDefaultInstance();
+        HddsProtos.GetScmInfoRequestProto.newBuilder()
+            .setTraceID(TracingUtil.exportCurrentSpan())
+            .build();
     try {
       HddsProtos.GetScmInfoRespsonseProto resp = rpcProxy.getScmInfo(
           NULL_RPC_CONTROLLER, request);
@@ -322,38 +370,38 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
   }
 
   /**
-   * Check if SCM is in chill mode.
+   * Check if SCM is in safe mode.
    *
-   * @return Returns true if SCM is in chill mode else returns false.
+   * @return Returns true if SCM is in safe mode else returns false.
    * @throws IOException
    */
   @Override
-  public boolean inChillMode() throws IOException {
-    InChillModeRequestProto request =
-        InChillModeRequestProto.getDefaultInstance();
+  public boolean inSafeMode() throws IOException {
+    InSafeModeRequestProto request =
+        InSafeModeRequestProto.getDefaultInstance();
     try {
-      InChillModeResponseProto resp = rpcProxy.inChillMode(
+      InSafeModeResponseProto resp = rpcProxy.inSafeMode(
           NULL_RPC_CONTROLLER, request);
-      return resp.getInChillMode();
+      return resp.getInSafeMode();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
   }
 
   /**
-   * Force SCM out of Chill mode.
+   * Force SCM out of Safe mode.
    *
    * @return returns true if operation is successful.
    * @throws IOException
    */
   @Override
-  public boolean forceExitChillMode() throws IOException {
-    ForceExitChillModeRequestProto request =
-        ForceExitChillModeRequestProto.getDefaultInstance();
+  public boolean forceExitSafeMode() throws IOException {
+    ForceExitSafeModeRequestProto request =
+        ForceExitSafeModeRequestProto.getDefaultInstance();
     try {
-      ForceExitChillModeResponseProto resp = rpcProxy
-          .forceExitChillMode(NULL_RPC_CONTROLLER, request);
-      return resp.getExitedChillMode();
+      ForceExitSafeModeResponseProto resp = rpcProxy
+          .forceExitSafeMode(NULL_RPC_CONTROLLER, request);
+      return resp.getExitedSafeMode();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

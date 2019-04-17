@@ -56,17 +56,13 @@ public class DeleteBlocksCommand extends
     return SCMCommandProto.Type.deleteBlocksCommand;
   }
 
-  @Override
-  public byte[] getProtoBufMessage() {
-    return getProto().toByteArray();
-  }
-
   public static DeleteBlocksCommand getFromProtobuf(
       DeleteBlocksCommandProto deleteBlocksProto) {
     return new DeleteBlocksCommand(deleteBlocksProto
         .getDeletedBlocksTransactionsList(), deleteBlocksProto.getCmdId());
   }
 
+  @Override
   public DeleteBlocksCommandProto getProto() {
     return DeleteBlocksCommandProto.newBuilder()
         .setCmdId(getId())

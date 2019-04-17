@@ -20,7 +20,7 @@ package org.apache.hadoop.hdds.scm.node.states;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
+import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.node.DatanodeInfo;
 
 import java.util.*;
@@ -45,9 +45,9 @@ public class NodeStateMap {
    */
   private final ConcurrentHashMap<NodeState, Set<UUID>> stateMap;
   /**
-   * Represents the current stats of node.
+   * Node to set of containers on the node.
    */
-  private final ConcurrentHashMap<UUID, SCMNodeStat> nodeStats;
+  private final ConcurrentHashMap<UUID, Set<ContainerID>> nodeToContainer;
 
   private final ReadWriteLock lock;
 
@@ -58,7 +58,7 @@ public class NodeStateMap {
     lock = new ReentrantReadWriteLock();
     nodeMap = new ConcurrentHashMap<>();
     stateMap = new ConcurrentHashMap<>();
-    nodeStats = new ConcurrentHashMap<>();
+    nodeToContainer = new ConcurrentHashMap<>();
     initStateMap();
   }
 
@@ -88,6 +88,7 @@ public class NodeStateMap {
         throw new NodeAlreadyExistsException("Node UUID: " + id);
       }
       nodeMap.put(id, new DatanodeInfo(datanodeDetails));
+      nodeToContainer.put(id, Collections.emptySet());
       stateMap.get(nodeState).add(id);
     } finally {
       lock.writeLock().unlock();
@@ -116,20 +117,6 @@ public class NodeStateMap {
     } finally {
       lock.writeLock().unlock();
     }
-  }
-
-  /**
-   * Returns DatanodeDetails for the given node id.
-   *
-   * @param uuid Node Id
-   *
-   * @return DatanodeDetails of the node
-   *
-   * @throws NodeNotFoundException if the node is not present
-   */
-  public DatanodeDetails getNodeDetails(UUID uuid)
-      throws NodeNotFoundException {
-    return getNodeInfo(uuid);
   }
 
   /**
@@ -164,7 +151,7 @@ public class NodeStateMap {
   public List<UUID> getNodes(NodeState state) {
     lock.readLock().lock();
     try {
-      return new LinkedList<>(stateMap.get(state));
+      return new ArrayList<>(stateMap.get(state));
     } finally {
       lock.readLock().unlock();
     }
@@ -178,7 +165,7 @@ public class NodeStateMap {
   public List<UUID> getAllNodes() {
     lock.readLock().lock();
     try {
-      return new LinkedList<>(nodeMap.keySet());
+      return new ArrayList<>(nodeMap.keySet());
     } finally {
       lock.readLock().unlock();
     }
@@ -237,82 +224,30 @@ public class NodeStateMap {
     }
   }
 
-  /**
-   * Removes the node from NodeStateMap.
-   *
-   * @param uuid node id
-   *
-   * @throws NodeNotFoundException if the node is not found
-   */
-  public void removeNode(UUID uuid) throws NodeNotFoundException {
-    lock.writeLock().lock();
-    try {
-      if (nodeMap.containsKey(uuid)) {
-        for (Map.Entry<NodeState, Set<UUID>> entry : stateMap.entrySet()) {
-          if(entry.getValue().remove(uuid)) {
-            break;
-          }
-          nodeMap.remove(uuid);
-        }
-        throw new NodeNotFoundException("Node UUID: " + uuid);
-      }
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  /**
-   * Returns the current stats of the node.
-   *
-   * @param uuid node id
-   *
-   * @return SCMNodeStat of the specify node.
-   *
-   * @throws NodeNotFoundException if the node is not found
-   */
-  public SCMNodeStat getNodeStat(UUID uuid) throws NodeNotFoundException {
-    SCMNodeStat stat = nodeStats.get(uuid);
-    if (stat == null) {
+  public void setContainers(UUID uuid, Set<ContainerID> containers)
+      throws NodeNotFoundException{
+    if (!nodeToContainer.containsKey(uuid)) {
       throw new NodeNotFoundException("Node UUID: " + uuid);
     }
-    return stat;
+    nodeToContainer.put(uuid, containers);
   }
 
-  /**
-   * Returns a unmodifiable copy of nodeStats.
-   *
-   * @return map with node stats.
-   */
-  public Map<UUID, SCMNodeStat> getNodeStats() {
-    return Collections.unmodifiableMap(nodeStats);
-  }
-
-  /**
-   * Set the current stats of the node.
-   *
-   * @param uuid node id
-   *
-   * @param newstat stat that will set to the specify node.
-   */
-  public void setNodeStat(UUID uuid, SCMNodeStat newstat) {
-    nodeStats.put(uuid, newstat);
-  }
-
-  /**
-   * Remove the current stats of the specify node.
-   *
-   * @param uuid node id
-   *
-   * @return SCMNodeStat the stat removed from the node.
-   *
-   * @throws NodeNotFoundException if the node is not found
-   */
-  public SCMNodeStat removeNodeStat(UUID uuid) throws NodeNotFoundException {
-    SCMNodeStat stat = nodeStats.remove(uuid);
-    if (stat == null) {
+  public Set<ContainerID> getContainers(UUID uuid)
+      throws NodeNotFoundException {
+    Set<ContainerID> containers = nodeToContainer.get(uuid);
+    if (containers == null) {
       throw new NodeNotFoundException("Node UUID: " + uuid);
     }
-    return stat;
+    return Collections.unmodifiableSet(containers);
+  }
+
+  public void removeContainer(UUID uuid, ContainerID containerID) throws
+      NodeNotFoundException {
+    Set<ContainerID> containers = nodeToContainer.get(uuid);
+    if (containers == null) {
+      throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
+    containers.remove(containerID);
   }
 
   /**

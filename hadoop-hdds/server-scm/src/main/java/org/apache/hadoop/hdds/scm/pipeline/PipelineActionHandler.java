@@ -17,10 +17,10 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
-import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerDatanodeProtocolProtos.PipelineAction;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
-    .PipelineActionsFromDatanode;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.PipelineAction;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.PipelineActionsFromDatanode;
 
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
@@ -32,16 +32,19 @@ import java.io.IOException;
 /**
  * Handles pipeline actions from datanode.
  */
-public class PipelineActionHandler implements
-    EventHandler<PipelineActionsFromDatanode> {
+public class PipelineActionHandler
+    implements EventHandler<PipelineActionsFromDatanode> {
 
-  public static final Logger LOG = LoggerFactory.getLogger(
-      PipelineActionHandler.class);
+  public static final Logger LOG =
+      LoggerFactory.getLogger(PipelineActionHandler.class);
 
   private final PipelineManager pipelineManager;
+  private final Configuration ozoneConf;
 
-  public PipelineActionHandler(PipelineManager pipelineManager) {
+  public PipelineActionHandler(PipelineManager pipelineManager,
+      OzoneConfiguration conf) {
     this.pipelineManager = pipelineManager;
+    this.ozoneConf = conf;
   }
 
   @Override
@@ -53,7 +56,10 @@ public class PipelineActionHandler implements
         try {
           pipelineID = PipelineID.
               getFromProtobuf(action.getClosePipeline().getPipelineID());
-          pipelineManager.finalizePipeline(pipelineID);
+          Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
+          LOG.info("Received pipeline action {} for {} from datanode [}",
+              action.getAction(), pipeline, report.getDatanodeDetails());
+          pipelineManager.finalizeAndDestroyPipeline(pipeline, true);
         } catch (IOException ioe) {
           LOG.error("Could not execute pipeline action={} pipeline={} {}",
               action, pipelineID, ioe);

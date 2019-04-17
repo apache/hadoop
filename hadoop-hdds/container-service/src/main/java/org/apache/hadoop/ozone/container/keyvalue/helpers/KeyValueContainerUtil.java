@@ -96,19 +96,18 @@ public final class KeyValueContainerUtil {
 
   /**
    * remove Container if it is empty.
-   * <p/>
+   * <p>
    * There are three things we need to delete.
-   * <p/>
+   * <p>
    * 1. Container file and metadata file. 2. The Level DB file 3. The path that
    * we created on the data location.
    *
    * @param containerData - Data of the container to remove.
    * @param conf - configuration of the cluster.
-   * @param forceDelete - whether this container should be deleted forcibly.
    * @throws IOException
    */
   public static void removeContainer(KeyValueContainerData containerData,
-                                     Configuration conf, boolean forceDelete)
+                                     Configuration conf)
       throws IOException {
     Preconditions.checkNotNull(containerData);
     File containerMetaDataPath = new File(containerData

@@ -81,6 +81,8 @@ import org.apache.hadoop.hdfs.util.XMLUtils.Stanza;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ExitUtil.ExitException;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
@@ -974,17 +976,19 @@ public class TestEditLog {
   public void testFailedOpen() throws Exception {
     File logDir = new File(TEST_DIR, "testFailedOpen");
     logDir.mkdirs();
+    ExitUtil.disableSystemExit();
     FSEditLog log = FSImageTestUtil.createStandaloneEditLog(logDir);
     try {
       FileUtil.setWritable(logDir, false);
       log.openForWrite(NameNodeLayoutVersion.CURRENT_LAYOUT_VERSION);
       fail("Did no throw exception on only having a bad dir");
-    } catch (IOException ioe) {
+    } catch (ExitException ee) {
       GenericTestUtils.assertExceptionContains(
-          "too few journals successfully started", ioe);
+          "too few journals successfully started", ee);
     } finally {
       FileUtil.setWritable(logDir, true);
       log.close();
+      ExitUtil.resetFirstExitException();
     }
   }
   

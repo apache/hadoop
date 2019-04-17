@@ -17,8 +17,8 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
@@ -26,8 +26,8 @@ import org.apache.hadoop.yarn.api.records.Resource;
 @Private
 @Unstable
 public class DefaultResourceCalculator extends ResourceCalculator {
-  private static final Log LOG =
-      LogFactory.getLog(DefaultResourceCalculator.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(DefaultResourceCalculator.class);
 
   @Override
   public int compare(Resource unused, Resource lhs, Resource rhs,
@@ -57,7 +57,7 @@ public class DefaultResourceCalculator extends ResourceCalculator {
 
   @Override
   public float ratio(Resource a, Resource b) {
-    return (float)a.getMemorySize() / b.getMemorySize();
+    return divideSafelyAsFloat(a.getMemorySize(), b.getMemorySize());
   }
 
   @Override

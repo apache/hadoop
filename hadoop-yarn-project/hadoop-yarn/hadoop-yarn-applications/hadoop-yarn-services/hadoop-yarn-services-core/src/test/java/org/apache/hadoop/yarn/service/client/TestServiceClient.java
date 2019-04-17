@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.service.MockRunningServiceContext;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.ServiceTestUtils;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.service.api.records.ComponentContainers;
 import org.apache.hadoop.yarn.service.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.api.records.ServiceState;
@@ -51,7 +52,6 @@ import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Matchers;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -60,6 +60,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -143,10 +144,37 @@ public class TestServiceClient {
     ContainerId containerId = ContainerId.newContainerId(client.attemptId, 1L);
     comp.addContainer(new Container().id(containerId.toString()));
 
-    Container[] containers = client.getContainers(service.getName(),
-        Lists.newArrayList("compa"), "v1", null);
-    Assert.assertEquals("num containers", 2, containers.length);
+    ComponentContainers[] compContainers = client.getContainers(
+        service.getName(), Lists.newArrayList("compa"), "v1", null);
+    Assert.assertEquals("num comp", 1, compContainers.length);
+    Assert.assertEquals("comp name", "compa",
+        compContainers[0].getComponentName());
+    Assert.assertEquals("num containers", 2,
+        compContainers[0].getContainers().size());
     client.stop();
+  }
+
+  @Test
+  public void testUpgradeDisabledWhenAllCompsHaveNeverRestartPolicy()
+      throws Exception {
+    Service service = createService();
+    service.getComponents().forEach(comp ->
+        comp.setRestartPolicy(Component.RestartPolicyEnum.NEVER));
+
+    ServiceClient client = MockServiceClient.create(rule, service, true);
+
+    //upgrade the service
+    service.setVersion("v2");
+    try {
+      client.initiateUpgrade(service);
+    } catch (YarnException ex) {
+      Assert.assertEquals("All the components of the service " +
+              service.getName() + " have " + Component.RestartPolicyEnum.NEVER
+              + " restart policy, so it cannot be upgraded.",
+          ex.getMessage());
+      return;
+    }
+    Assert.fail();
   }
 
   private Service createService() throws IOException,
@@ -192,18 +220,18 @@ public class TestServiceClient {
           ApplicationAttemptReport.newInstance(client.attemptId, "localhost", 0,
               null, null, null,
               YarnApplicationAttemptState.RUNNING, null);
-      when(yarnClient.getApplicationAttemptReport(Matchers.any()))
+      when(yarnClient.getApplicationAttemptReport(any()))
           .thenReturn(attemptReport);
       when(yarnClient.getApplicationReport(client.appId)).thenReturn(appReport);
       when(client.amProxy.upgrade(
-          Matchers.any(UpgradeServiceRequestProto.class))).thenAnswer(
+          any(UpgradeServiceRequestProto.class))).thenAnswer(
           (Answer<UpgradeServiceResponseProto>) invocation -> {
               UpgradeServiceResponseProto response =
                   UpgradeServiceResponseProto.newBuilder().build();
               client.proxyResponse = response;
               return response;
             });
-      when(client.amProxy.upgrade(Matchers.any(
+      when(client.amProxy.upgrade(any(
           CompInstancesUpgradeRequestProto.class))).thenAnswer(
           (Answer<CompInstancesUpgradeResponseProto>) invocation -> {
               CompInstancesUpgradeResponseProto response =
@@ -212,21 +240,24 @@ public class TestServiceClient {
               return response;
             });
 
-      when(client.amProxy.getCompInstances(Matchers.any(
+      when(client.amProxy.getCompInstances(any(
           GetCompInstancesRequestProto.class))).thenAnswer(
           (Answer<GetCompInstancesResponseProto>) invocation -> {
 
-            GetCompInstancesRequestProto req = (GetCompInstancesRequestProto)
-                invocation.getArguments()[0];
-            List<Container> containers = FilterUtils.filterInstances(
-                client.context, req);
-            GetCompInstancesResponseProto response =
-                GetCompInstancesResponseProto.newBuilder().setCompInstances(
-                    ServiceApiUtil.CONTAINER_JSON_SERDE.toJson(
-                        containers.toArray(new Container[containers.size()])))
-                    .build();
-            client.proxyResponse = response;
-            return response;
+              GetCompInstancesRequestProto req = (GetCompInstancesRequestProto)
+                  invocation.getArguments()[0];
+
+              List<ComponentContainers> compContainers =
+                  FilterUtils.filterInstances(client.context, req);
+              GetCompInstancesResponseProto response =
+                  GetCompInstancesResponseProto.newBuilder().setCompInstances(
+                      ServiceApiUtil.COMP_CONTAINERS_JSON_SERDE.toJson(
+                          compContainers.toArray(
+                              new ComponentContainers[compContainers.size()])))
+                      .build();
+
+              client.proxyResponse = response;
+              return response;
           });
 
       client.setFileSystem(rule.getFs());
@@ -273,7 +304,7 @@ public class TestServiceClient {
   private static YarnClient createMockYarnClient() throws IOException,
       YarnException {
     YarnClient yarnClient = mock(YarnClient.class);
-    when(yarnClient.getApplications(Matchers.any(
+    when(yarnClient.getApplications(any(
         GetApplicationsRequest.class))).thenReturn(new ArrayList<>());
     return yarnClient;
   }

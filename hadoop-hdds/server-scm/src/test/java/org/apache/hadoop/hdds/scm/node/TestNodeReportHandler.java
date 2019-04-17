@@ -35,6 +35,9 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Test for the Node Report Handler.
+ */
 public class TestNodeReportHandler implements EventPublisher {
 
   private static final Logger LOG = LoggerFactory
@@ -60,8 +63,7 @@ public class TestNodeReportHandler implements EventPublisher {
     SCMNodeMetric nodeMetric = nodeManager.getNodeStat(dn);
     Assert.assertNull(nodeMetric);
 
-    nodeReportHandler.onMessage(
-        getNodeReport(dn, storageOne), this);
+    nodeManager.register(dn, getNodeReport(dn, storageOne).getReport(), null);
     nodeMetric = nodeManager.getNodeStat(dn);
 
     Assert.assertTrue(nodeMetric.get().getCapacity().get() == 100);

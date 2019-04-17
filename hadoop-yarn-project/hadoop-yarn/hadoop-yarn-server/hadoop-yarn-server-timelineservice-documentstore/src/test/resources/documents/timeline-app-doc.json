@@ -1,0 +1,203 @@
+{
+  "context": {
+    "clusterId": "yarn_cluster",
+    "userId": "test_user",
+    "flowName": "DistributedShell",
+    "flowRunId": 1533871599510,
+    "appId": "application_1533871545292_0001"
+  },
+  "flowVersion": "1",
+  "subApplicationUser": "test_user",
+  "metrics": {
+    "YARN_APPLICATION_NON_AM_CONTAINER_PREEMPTED": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_NON_AM_CONTAINER_PREEMPTED",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ],
+    "YARN_APPLICATION_RESOURCE_PREEMPTED_CPU": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_RESOURCE_PREEMPTED_CPU",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ],
+    "YARN_APPLICATION_CPU_PREEMPT_METRIC": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_CPU_PREEMPT_METRIC",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ],
+    "YARN_APPLICATION_MEMORY": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 19858,
+        "id": "YARN_APPLICATION_MEMORY",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 19858
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 19858
+        }
+      }
+    ],
+    "YARN_APPLICATION_MEM_PREEMPT_METRIC": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_MEM_PREEMPT_METRIC",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ],
+    "YARN_APPLICATION_CPU": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 19,
+        "id": "YARN_APPLICATION_CPU",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 19
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 19
+        }
+      }
+    ],
+    "YARN_APPLICATION_RESOURCE_PREEMPTED_MEMORY": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_RESOURCE_PREEMPTED_MEMORY",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ],
+    "YARN_APPLICATION_AM_CONTAINER_PREEMPTED": [
+      {
+        "valid": true,
+        "singleDataTimestamp": 1533871614645,
+        "singleDataValue": 0,
+        "id": "YARN_APPLICATION_AM_CONTAINER_PREEMPTED",
+        "type": "SINGLE_VALUE",
+        "values": {
+          "1533871614645": 0
+        },
+        "realtimeAggregationOp": "NOP",
+        "valuesJAXB": {
+          "1533871614645": 0
+        }
+      }
+    ]
+  },
+  "events": {
+    "YARN_APPLICATION_CREATED": [
+      {
+        "valid": true,
+        "id": "YARN_APPLICATION_CREATED",
+        "timestamp": 1533871599510,
+        "info": {}
+      }
+    ],
+    "YARN_APPLICATION_ACLS_UPDATED": [
+      {
+        "valid": true,
+        "id": "YARN_APPLICATION_ACLS_UPDATED",
+        "timestamp": 1533871599671,
+        "info": {}
+      }
+    ],
+    "YARN_APPLICATION_STATE_UPDATED": [
+      {
+        "valid": true,
+        "id": "YARN_APPLICATION_STATE_UPDATED",
+        "timestamp": 1533871608094,
+        "info": {
+          "YARN_APPLICATION_STATE": "RUNNING"
+        }
+      }
+    ],
+    "YARN_APPLICATION_FINISHED": [
+      {
+        "valid": true,
+        "id": "YARN_APPLICATION_FINISHED",
+        "timestamp": 1533871614645,
+        "info": {}
+      }
+    ]
+  },
+  "id": "yarn_cluster!test_user!DistributedShell!1533871599510!application_1533871545292_0001!YARN_APPLICATION!application_1533871545292_0001",
+  "type": "YARN_APPLICATION",
+  "createdTime": 1533871599510,
+  "info": {
+    "YARN_APPLICATION_VIEW_ACLS": "",
+    "YARN_APPLICATION_SUBMITTED_TIME": 1533871599446,
+    "YARN_AM_CONTAINER_LAUNCH_COMMAND": [
+      "{{JAVA_HOME}}/bin/java -Xmx10m org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster --container_memory 10 --container_vcores 1 --num_containers 1 --priority 0 1><LOG_DIR>/AppMaster.stdout 2><LOG_DIR>/AppMaster.stderr "
+    ],
+    "YARN_APPLICATION_NAME": "DistributedShell",
+    "YARN_APPLICATION_USER": "test_user",
+    "YARN_APPLICATION_QUEUE": "default",
+    "YARN_APPLICATION_TYPE": "YARN",
+    "YARN_APPLICATION_UNMANAGED_APPLICATION": false,
+    "YARN_APPLICATION_TAGS": [],
+    "YARN_APPLICATION_STATE": "FINISHED",
+    "YARN_APPLICATION_DIAGNOSTICS_INFO": "",
+    "YARN_APPLICATION_FINAL_STATUS": "SUCCEEDED",
+    "YARN_APPLICATION_LATEST_APP_ATTEMPT": "appattempt_1533871545292_0001_000001"
+  },
+  "configs": {
+    "YARN_AM_NODE_LABEL_EXPRESSION": "<DEFAULT_PARTITION>",
+    "YARN_APP_NODE_LABEL_EXPRESSION": "<Not set>"
+  },
+  "relatesToEntities": {},
+  "isRelatedToEntities": {}
+}

@@ -18,6 +18,7 @@
 
 #include "exception.h"
 #include "hdfs/hdfs.h"
+#include "jclasses.h"
 #include "jni_helper.h"
 #include "platform.h"
 
@@ -25,23 +26,6 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
-
-/* Some frequently used Java paths */
-#define HADOOP_CONF     "org/apache/hadoop/conf/Configuration"
-#define HADOOP_PATH     "org/apache/hadoop/fs/Path"
-#define HADOOP_LOCALFS  "org/apache/hadoop/fs/LocalFileSystem"
-#define HADOOP_FS       "org/apache/hadoop/fs/FileSystem"
-#define HADOOP_FSSTATUS "org/apache/hadoop/fs/FsStatus"
-#define HADOOP_BLK_LOC  "org/apache/hadoop/fs/BlockLocation"
-#define HADOOP_DFS      "org/apache/hadoop/hdfs/DistributedFileSystem"
-#define HADOOP_ISTRM    "org/apache/hadoop/fs/FSDataInputStream"
-#define HADOOP_OSTRM    "org/apache/hadoop/fs/FSDataOutputStream"
-#define HADOOP_STAT     "org/apache/hadoop/fs/FileStatus"
-#define HADOOP_FSPERM   "org/apache/hadoop/fs/permission/FsPermission"
-#define JAVA_NET_ISA    "java/net/InetSocketAddress"
-#define JAVA_NET_URI    "java/net/URI"
-#define JAVA_STRING     "java/lang/String"
-#define READ_OPTION     "org/apache/hadoop/fs/ReadOption"
 
 #define JAVA_VOID       "V"
 
@@ -109,9 +93,8 @@ int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics)
     }
 
     jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
-                  HADOOP_DFS,
-                  "getHedgedReadMetrics",
-                  "()Lorg/apache/hadoop/hdfs/DFSHedgedReadMetrics;");
+            JC_DISTRIBUTED_FILE_SYSTEM, "getHedgedReadMetrics",
+            "()Lorg/apache/hadoop/hdfs/DFSHedgedReadMetrics;");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetHedgedReadMetrics: getHedgedReadMetrics failed");
@@ -126,8 +109,7 @@ int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics)
     }
 
     jthr = invokeMethod(env, &jVal, INSTANCE, hedgedReadMetrics,
-                  "org/apache/hadoop/hdfs/DFSHedgedReadMetrics",
-                  "getHedgedReadOps", "()J");
+            JC_DFS_HEDGED_READ_METRICS, "getHedgedReadOps", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetHedgedReadStatistics: getHedgedReadOps failed");
@@ -136,8 +118,7 @@ int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics)
     m->hedgedReadOps = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, hedgedReadMetrics,
-                  "org/apache/hadoop/hdfs/DFSHedgedReadMetrics",
-                  "getHedgedReadWins", "()J");
+            JC_DFS_HEDGED_READ_METRICS, "getHedgedReadWins", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetHedgedReadStatistics: getHedgedReadWins failed");
@@ -146,8 +127,7 @@ int hdfsGetHedgedReadMetrics(hdfsFS fs, struct hdfsHedgedReadMetrics **metrics)
     m->hedgedReadOpsWin = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, hedgedReadMetrics,
-                  "org/apache/hadoop/hdfs/DFSHedgedReadMetrics",
-                  "getHedgedReadOpsInCurThread", "()J");
+            JC_DFS_HEDGED_READ_METRICS, "getHedgedReadOpsInCurThread", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetHedgedReadStatistics: getHedgedReadOpsInCurThread failed");
@@ -192,10 +172,9 @@ int hdfsFileGetReadStatistics(hdfsFile file,
         ret = EINVAL;
         goto done;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, file->file, 
-                  "org/apache/hadoop/hdfs/client/HdfsDataInputStream",
-                  "getReadStatistics",
-                  "()Lorg/apache/hadoop/hdfs/ReadStatistics;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, file->file,
+            JC_HDFS_DATA_INPUT_STREAM, "getReadStatistics",
+            "()Lorg/apache/hadoop/hdfs/ReadStatistics;");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getReadStatistics failed");
@@ -208,8 +187,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
         goto done;
     }
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/ReadStatistics",
-                  "getTotalBytesRead", "()J");
+            JC_READ_STATISTICS, "getTotalBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getTotalBytesRead failed");
@@ -218,8 +196,7 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     s->totalBytesRead = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/ReadStatistics",
-                  "getTotalLocalBytesRead", "()J");
+            JC_READ_STATISTICS, "getTotalLocalBytesRead", "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getTotalLocalBytesRead failed");
@@ -228,8 +205,8 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     s->totalLocalBytesRead = jVal.j;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/ReadStatistics",
-                  "getTotalShortCircuitBytesRead", "()J");
+            JC_READ_STATISTICS, "getTotalShortCircuitBytesRead",
+            "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getTotalShortCircuitBytesRead failed");
@@ -237,8 +214,8 @@ int hdfsFileGetReadStatistics(hdfsFile file,
     }
     s->totalShortCircuitBytesRead = jVal.j;
     jthr = invokeMethod(env, &jVal, INSTANCE, readStats,
-                  "org/apache/hadoop/hdfs/ReadStatistics",
-                  "getTotalZeroCopyBytesRead", "()J");
+            JC_READ_STATISTICS, "getTotalZeroCopyBytesRead",
+            "()J");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileGetReadStatistics: getTotalZeroCopyBytesRead failed");
@@ -280,8 +257,8 @@ int hdfsFileClearReadStatistics(hdfsFile file)
         goto done;
     }
     jthr = invokeMethod(env, NULL, INSTANCE, file->file,
-                  "org/apache/hadoop/hdfs/client/HdfsDataInputStream",
-                  "clearReadStatistics", "()V");
+            JC_HDFS_DATA_INPUT_STREAM, "clearReadStatistics",
+            "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFileClearReadStatistics: clearReadStatistics failed");
@@ -324,8 +301,7 @@ int hdfsDisableDomainSocketSecurity(void)
       errno = EINTERNAL;
       return -1;
     }
-    jthr = invokeMethod(env, NULL, STATIC, NULL,
-            "org/apache/hadoop/net/unix/DomainSocket",
+    jthr = invokeMethod(env, NULL, STATIC, NULL, JC_DOMAIN_SOCKET,
             "disableBindPathValidation", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -363,8 +339,8 @@ static jthrowable constructNewObjectOfPath(JNIEnv *env, const char *path,
     if (jthr)
         return jthr;
     //Construct the org.apache.hadoop.fs.Path object
-    jthr = constructNewObjectOfClass(env, &jPath, "org/apache/hadoop/fs/Path",
-                                     "(Ljava/lang/String;)V", jPathString);
+    jthr = constructNewObjectOfCachedClass(env, &jPath, JC_PATH,
+            "(Ljava/lang/String;)V", jPathString);
     destroyLocalReference(env, jPathString);
     if (jthr)
         return jthr;
@@ -383,8 +359,8 @@ static jthrowable hadoopConfGetStr(JNIEnv *env, jobject jConfiguration,
     if (jthr)
         goto done;
     jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration,
-            HADOOP_CONF, "get", JMETHOD1(JPARAM(JAVA_STRING),
-                                         JPARAM(JAVA_STRING)), jkey);
+            JC_CONFIGURATION, "get", JMETHOD1(JPARAM(JAVA_STRING),
+                    JPARAM(JAVA_STRING)), jkey);
     if (jthr)
         goto done;
     jRet = jVal.l;
@@ -407,7 +383,8 @@ int hdfsConfGetStr(const char *key, char **val)
         ret = EINTERNAL;
         goto done;
     }
-    jthr = constructNewObjectOfClass(env, &jConfiguration, HADOOP_CONF, "()V");
+    jthr = constructNewObjectOfCachedClass(env, &jConfiguration,
+            JC_CONFIGURATION, "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsConfGetStr(%s): new Configuration", key);
@@ -443,8 +420,8 @@ static jthrowable hadoopConfGetInt(JNIEnv *env, jobject jConfiguration,
     if (jthr)
         return jthr;
     jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration,
-            HADOOP_CONF, "getInt", JMETHOD2(JPARAM(JAVA_STRING), "I", "I"),
-            jkey, (jint)(*val));
+            JC_CONFIGURATION, "getInt",
+            JMETHOD2(JPARAM(JAVA_STRING), "I", "I"), jkey, (jint)(*val));
     destroyLocalReference(env, jkey);
     if (jthr)
         return jthr;
@@ -464,7 +441,8 @@ int hdfsConfGetInt(const char *key, int32_t *val)
       ret = EINTERNAL;
       goto done;
     }
-    jthr = constructNewObjectOfClass(env, &jConfiguration, HADOOP_CONF, "()V");
+    jthr = constructNewObjectOfCachedClass(env, &jConfiguration,
+            JC_CONFIGURATION, "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsConfGetInt(%s): new Configuration", key);
@@ -697,7 +675,8 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
     }
 
     //  jConfiguration = new Configuration();
-    jthr = constructNewObjectOfClass(env, &jConfiguration, HADOOP_CONF, "()V");
+    jthr = constructNewObjectOfCachedClass(env, &jConfiguration,
+            JC_CONFIGURATION, "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsBuilderConnect(%s)", hdfsBuilderToStr(bld, buf, sizeof(buf)));
@@ -719,9 +698,10 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
         // Get a local filesystem.
         if (bld->forceNewInstance) {
             // fs = FileSytem#newInstanceLocal(conf);
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS,
-                    "newInstanceLocal", JMETHOD1(JPARAM(HADOOP_CONF),
-                    JPARAM(HADOOP_LOCALFS)), jConfiguration);
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_FILE_SYSTEM, "newInstanceLocal",
+                    JMETHOD1(JPARAM(HADOOP_CONF), JPARAM(HADOOP_LOCALFS)),
+                    jConfiguration);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -731,10 +711,10 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
             jFS = jVal.l;
         } else {
             // fs = FileSytem#getLocal(conf);
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS, "getLocal",
-                             JMETHOD1(JPARAM(HADOOP_CONF),
-                                      JPARAM(HADOOP_LOCALFS)),
-                             jConfiguration);
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_FILE_SYSTEM, "getLocal",
+                    JMETHOD1(JPARAM(HADOOP_CONF), JPARAM(HADOOP_LOCALFS)),
+                    jConfiguration);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -746,10 +726,10 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
     } else {
         if (!strcmp(bld->nn, "default")) {
             // jURI = FileSystem.getDefaultUri(conf)
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS,
-                          "getDefaultUri",
-                          "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/URI;",
-                          jConfiguration);
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_FILE_SYSTEM, "getDefaultUri",
+                    "(Lorg/apache/hadoop/conf/Configuration;)Ljava/net/URI;",
+                    jConfiguration);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -769,9 +749,9 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
                     hdfsBuilderToStr(bld, buf, sizeof(buf)));
                 goto done;
             }
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, JAVA_NET_URI,
-                             "create", "(Ljava/lang/String;)Ljava/net/URI;",
-                             jURIString);
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_URI, "create",
+                    "(Ljava/lang/String;)Ljava/net/URI;", jURIString);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -799,11 +779,11 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
             goto done;
         }
         if (bld->forceNewInstance) {
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS,
-                    "newInstance", JMETHOD3(JPARAM(JAVA_NET_URI), 
-                        JPARAM(HADOOP_CONF), JPARAM(JAVA_STRING),
-                        JPARAM(HADOOP_FS)),
-                    jURI, jConfiguration, jUserString);
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_FILE_SYSTEM, "newInstance",
+                    JMETHOD3(JPARAM(JAVA_NET_URI), JPARAM(HADOOP_CONF),
+                             JPARAM(JAVA_STRING), JPARAM(HADOOP_FS)), jURI,
+                    jConfiguration, jUserString);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -812,10 +792,11 @@ hdfsFS hdfsBuilderConnect(struct hdfsBuilder *bld)
             }
             jFS = jVal.l;
         } else {
-            jthr = invokeMethod(env, &jVal, STATIC, NULL, HADOOP_FS, "get",
+            jthr = invokeMethod(env, &jVal, STATIC, NULL,
+                    JC_FILE_SYSTEM, "get",
                     JMETHOD3(JPARAM(JAVA_NET_URI), JPARAM(HADOOP_CONF),
-                        JPARAM(JAVA_STRING), JPARAM(HADOOP_FS)),
-                        jURI, jConfiguration, jUserString);
+                            JPARAM(JAVA_STRING), JPARAM(HADOOP_FS)), jURI,
+                            jConfiguration, jUserString);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsBuilderConnect(%s)",
@@ -877,8 +858,8 @@ int hdfsDisconnect(hdfsFS fs)
         return -1;
     }
 
-    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
-                     "close", "()V");
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "close", "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsDisconnect: FileSystem#close");
@@ -909,8 +890,9 @@ static jthrowable getDefaultBlockSize(JNIEnv *env, jobject jFS,
     jthrowable jthr;
     jvalue jVal;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                 "getDefaultBlockSize", JMETHOD1(JPARAM(HADOOP_PATH), "J"), jPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getDefaultBlockSize", JMETHOD1(JPARAM(HADOOP_PATH),
+                    "J"), jPath);
     if (jthr)
         return jthr;
     *out = jVal.j;
@@ -1013,7 +995,7 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
        return f{is|os};
     */
     int accmode = flags & O_ACCMODE;
-    jstring jStrBufferSize = NULL, jStrReplication = NULL;
+    jstring jStrBufferSize = NULL, jStrReplication = NULL, jCapabilityString = NULL;
     jobject jConfiguration = NULL, jPath = NULL, jFile = NULL;
     jobject jFS = (jobject)fs;
     jthrowable jthr;
@@ -1052,14 +1034,14 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     }
 
     if (accmode == O_RDONLY) {
-	method = "open";
-        signature = JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_ISTRM));
+        method = "open";
+        signature = JMETHOD2(JPARAM(HADOOP_PATH), "I", JPARAM(HADOOP_FSDISTRM));
     } else if (flags & O_APPEND) {
-	method = "append";
-	signature = JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_OSTRM));
+        method = "append";
+        signature = JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_FSDOSTRM));
     } else {
-	method = "create";
-	signature = JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_OSTRM));
+        method = "create";
+        signature = JMETHOD2(JPARAM(HADOOP_PATH), "ZISJ", JPARAM(HADOOP_FSDOSTRM));
     }
 
     /* Create an object of org.apache.hadoop.fs.Path */
@@ -1071,8 +1053,8 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     }
 
     /* Get the Configuration object from the FileSystem object */
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "getConf", JMETHOD1("", JPARAM(HADOOP_CONF)));
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getConf", JMETHOD1("", JPARAM(HADOOP_CONF)));
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsOpenFile(%s): FileSystem#getConf", path);
@@ -1092,9 +1074,9 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     }
 
     if (!bufferSize) {
-        jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
-                         HADOOP_CONF, "getInt", "(Ljava/lang/String;I)I",
-                         jStrBufferSize, 4096);
+        jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration,
+                JC_CONFIGURATION, "getInt",
+                "(Ljava/lang/String;I)I", jStrBufferSize, 4096);
         if (jthr) {
             ret = printExceptionAndFree(env, jthr, NOPRINT_EXC_FILE_NOT_FOUND |
                 NOPRINT_EXC_ACCESS_CONTROL | NOPRINT_EXC_UNRESOLVED_LINK,
@@ -1107,9 +1089,9 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
 
     if ((accmode == O_WRONLY) && (flags & O_APPEND) == 0) {
         if (!replication) {
-            jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration, 
-                             HADOOP_CONF, "getInt", "(Ljava/lang/String;I)I",
-                             jStrReplication, 1);
+            jthr = invokeMethod(env, &jVal, INSTANCE, jConfiguration,
+                             JC_CONFIGURATION, "getInt",
+                             "(Ljava/lang/String;I)I", jStrReplication, 1);
             if (jthr) {
                 ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsOpenFile(%s): Configuration#getInt(dfs.replication)",
@@ -1125,12 +1107,12 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
 
     // READ?
     if (accmode == O_RDONLY) {
-        jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                       method, signature, jPath, jBufferSize);
+        jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+                method, signature, jPath, jBufferSize);
     }  else if ((accmode == O_WRONLY) && (flags & O_APPEND)) {
         // WRITE/APPEND?
-       jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                       method, signature, jPath);
+       jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+               method, signature, jPath);
     } else {
         // WRITE/CREATE
         jboolean jOverWrite = 1;
@@ -1143,9 +1125,9 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
                 goto done;
             }
         }
-        jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                         method, signature, jPath, jOverWrite,
-                         jBufferSize, jReplication, jBlockSize);
+        jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+                method, signature, jPath, jOverWrite, jBufferSize,
+                jReplication, jBlockSize);
     }
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1171,16 +1153,23 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
-        // Try a test read to see if we can do direct reads
-        char buf;
-        if (readDirect(fs, file, &buf, 0) == 0) {
-            // Success - 0-byte read should return 0
+        // Check the StreamCapabilities of jFile to see if we can do direct reads
+        jthr = newJavaStr(env, "in:readbytebuffer", &jCapabilityString);
+        if (jthr) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                                        "hdfsOpenFile(%s): newJavaStr", path);
+            goto done;
+        }
+        jthr = invokeMethod(env, &jVal, INSTANCE, jFile,
+                JC_FS_DATA_INPUT_STREAM, "hasCapability",
+                "(Ljava/lang/String;)Z", jCapabilityString);
+        if (jthr) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                    "hdfsOpenFile(%s): FSDataInputStream#hasCapability", path);
+            goto done;
+        }
+        if (jVal.z) {
             file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
-        } else if (errno != ENOTSUP) {
-            // Unexpected error. Clear it, don't set the direct flag.
-            fprintf(stderr,
-                  "hdfsOpenFile(%s): WARN: Unexpected error %d when testing "
-                  "for direct read compatibility\n", path, errno);
         }
     }
     ret = 0;
@@ -1190,7 +1179,8 @@ done:
     destroyLocalReference(env, jStrReplication);
     destroyLocalReference(env, jConfiguration); 
     destroyLocalReference(env, jPath); 
-    destroyLocalReference(env, jFile); 
+    destroyLocalReference(env, jFile);
+    destroyLocalReference(env, jCapabilityString);
     if (ret) {
         if (file) {
             if (file->file) {
@@ -1236,9 +1226,9 @@ int hdfsTruncateFile(hdfsFS fs, const char* path, tOffset newlength)
         return -1;
     }
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                        "truncate", JMETHOD2(JPARAM(HADOOP_PATH), "J", "Z"),
-                        jPath, newlength);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "truncate", JMETHOD2(JPARAM(HADOOP_PATH), "J", "Z"),
+            jPath, newlength);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1265,11 +1255,11 @@ int hdfsUnbufferFile(hdfsFile file)
         ret = ENOTSUP;
         goto done;
     }
-    jthr = invokeMethod(env, NULL, INSTANCE, file->file, HADOOP_ISTRM,
-                     "unbuffer", "()V");
+    jthr = invokeMethod(env, NULL, INSTANCE, file->file,
+            JC_FS_DATA_INPUT_STREAM, "unbuffer", "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                HADOOP_ISTRM "#unbuffer failed:");
+                HADOOP_FSDISTRM "#unbuffer failed:");
         goto done;
     }
     ret = 0;
@@ -1286,7 +1276,7 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
     //  file.close 
 
     //The interface whose 'close' method to be called
-    const char *interface;
+    CachedJavaClass cachedJavaClass;
     const char *interfaceShortName;
 
     //Caught exception
@@ -1305,11 +1295,14 @@ int hdfsCloseFile(hdfsFS fs, hdfsFile file)
         return -1;
     }
 
-    interface = (file->type == HDFS_STREAM_INPUT) ?
-        HADOOP_ISTRM : HADOOP_OSTRM;
+    if (file->type == HDFS_STREAM_INPUT) {
+        cachedJavaClass = JC_FS_DATA_INPUT_STREAM;
+    } else {
+        cachedJavaClass = JC_FS_DATA_OUTPUT_STREAM;
+    }
   
-    jthr = invokeMethod(env, NULL, INSTANCE, file->file, interface,
-                     "close", "()V");
+    jthr = invokeMethod(env, NULL, INSTANCE, file->file,
+            cachedJavaClass, "close", "()V");
     if (jthr) {
         interfaceShortName = (file->type == HDFS_STREAM_INPUT) ? 
             "FSDataInputStream" : "FSDataOutputStream";
@@ -1353,7 +1346,7 @@ int hdfsExists(hdfsFS fs, const char *path)
             "hdfsExists: constructNewObjectOfPath");
         return -1;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
             "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"), jPath);
     destroyLocalReference(env, jPath);
     if (jthr) {
@@ -1396,7 +1389,6 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
     jobject jInputStream;
     jbyteArray jbRarray;
-    jint noReadBytes = length;
     jvalue jVal;
     jthrowable jthr;
     JNIEnv* env;
@@ -1435,8 +1427,8 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
         return -1;
     }
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream, HADOOP_ISTRM,
-                               "read", "([B)I", jbRarray);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream,
+            JC_FS_DATA_INPUT_STREAM, "read", "([B)I", jbRarray);
     if (jthr) {
         destroyLocalReference(env, jbRarray);
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1452,7 +1444,12 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
         errno = EINTR;
         return -1;
     }
-    (*env)->GetByteArrayRegion(env, jbRarray, 0, noReadBytes, buffer);
+    // We only copy the portion of the jbRarray that was actually filled by
+    // the call to FsDataInputStream#read; #read is not guaranteed to fill the
+    // entire buffer, instead it returns the number of bytes read into the
+    // buffer; we use the return value as the input in GetByteArrayRegion to
+    // ensure don't copy more bytes than necessary
+    (*env)->GetByteArrayRegion(env, jbRarray, 0, jVal.i, buffer);
     destroyLocalReference(env, jbRarray);
     if ((*env)->ExceptionCheck(env)) {
         errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
@@ -1494,7 +1491,8 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     }
 
     jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream,
-        HADOOP_ISTRM, "read", "(Ljava/nio/ByteBuffer;)I", bb);
+            JC_FS_DATA_INPUT_STREAM, "read",
+            "(Ljava/nio/ByteBuffer;)I", bb);
     destroyLocalReference(env, bb);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1545,8 +1543,9 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
             "hdfsPread: NewByteArray");
         return -1;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, f->file, HADOOP_ISTRM,
-                     "read", "(J[BII)I", position, jbRarray, 0, length);
+    jthr = invokeMethod(env, &jVal, INSTANCE, f->file,
+            JC_FS_DATA_INPUT_STREAM, "read", "(J[BII)I", position,
+            jbRarray, 0, length);
     if (jthr) {
         destroyLocalReference(env, jbRarray);
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1631,7 +1630,8 @@ tSize hdfsWrite(hdfsFS fs, hdfsFile f, const void* buffer, tSize length)
         return -1;
     }
     jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
-            HADOOP_OSTRM, "write", "([B)V", jbWarray);
+            JC_FS_DATA_OUTPUT_STREAM, "write", "([B)V",
+            jbWarray);
     destroyLocalReference(env, jbWarray);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -1666,7 +1666,7 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
 
     jInputStream = f->file;
     jthr = invokeMethod(env, NULL, INSTANCE, jInputStream,
-            HADOOP_ISTRM, "seek", "(J)V", desiredPos);
+            JC_FS_DATA_INPUT_STREAM, "seek", "(J)V", desiredPos);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsSeek(desiredPos=%" PRId64 ")"
@@ -1676,15 +1676,13 @@ int hdfsSeek(hdfsFS fs, hdfsFile f, tOffset desiredPos)
     return 0;
 }
 
-
-
 tOffset hdfsTell(hdfsFS fs, hdfsFile f)
 {
     // JAVA EQUIVALENT
     //  pos = f.getPos();
 
     jobject jStream;
-    const char *interface;
+    CachedJavaClass cachedJavaClass;
     jvalue jVal;
     jthrowable jthr;
 
@@ -1703,10 +1701,13 @@ tOffset hdfsTell(hdfsFS fs, hdfsFile f)
 
     //Parameters
     jStream = f->file;
-    interface = (f->type == HDFS_STREAM_INPUT) ?
-        HADOOP_ISTRM : HADOOP_OSTRM;
+    if (f->type == HDFS_STREAM_INPUT) {
+        cachedJavaClass = JC_FS_DATA_INPUT_STREAM;
+    } else {
+        cachedJavaClass = JC_FS_DATA_OUTPUT_STREAM;
+    }
     jthr = invokeMethod(env, &jVal, INSTANCE, jStream,
-                     interface, "getPos", "()J");
+            cachedJavaClass, "getPos", "()J");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsTell: %s#getPos",
@@ -1737,7 +1738,7 @@ int hdfsFlush(hdfsFS fs, hdfsFile f)
         return -1;
     }
     jthr = invokeMethod(env, NULL, INSTANCE, f->file,
-                     HADOOP_OSTRM, "flush", "()V");
+            JC_FS_DATA_OUTPUT_STREAM, "flush", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsFlush: FSDataInputStream#flush");
@@ -1766,7 +1767,7 @@ int hdfsHFlush(hdfsFS fs, hdfsFile f)
 
     jOutputStream = f->file;
     jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
-                     HADOOP_OSTRM, "hflush", "()V");
+            JC_FS_DATA_OUTPUT_STREAM, "hflush", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsHFlush: FSDataOutputStream#hflush");
@@ -1795,7 +1796,7 @@ int hdfsHSync(hdfsFS fs, hdfsFile f)
 
     jOutputStream = f->file;
     jthr = invokeMethod(env, NULL, INSTANCE, jOutputStream,
-                     HADOOP_OSTRM, "hsync", "()V");
+            JC_FS_DATA_OUTPUT_STREAM, "hsync", "()V");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsHSync: FSDataOutputStream#hsync");
@@ -1829,7 +1830,7 @@ int hdfsAvailable(hdfsFS fs, hdfsFile f)
     //Parameters
     jInputStream = f->file;
     jthr = invokeMethod(env, &jVal, INSTANCE, jInputStream,
-                     HADOOP_ISTRM, "available", "()I");
+            JC_FS_DATA_INPUT_STREAM, "available", "()I");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsAvailable: FSDataInputStream#available");
@@ -1874,8 +1875,8 @@ static int hdfsCopyImpl(hdfsFS srcFS, const char *src, hdfsFS dstFS,
     }
 
     //Create the org.apache.hadoop.conf.Configuration object
-    jthr = constructNewObjectOfClass(env, &jConfiguration,
-                                     HADOOP_CONF, "()V");
+    jthr = constructNewObjectOfCachedClass(env, &jConfiguration,
+            JC_CONFIGURATION, "()V");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsCopyImpl: Configuration constructor");
@@ -1883,8 +1884,8 @@ static int hdfsCopyImpl(hdfsFS srcFS, const char *src, hdfsFS dstFS,
     }
 
     //FileUtil#copy
-    jthr = invokeMethod(env, &jVal, STATIC,
-            NULL, "org/apache/hadoop/fs/FileUtil", "copy",
+    jthr = invokeMethod(env, &jVal, STATIC, NULL, JC_FILE_UTIL,
+            "copy",
             "(Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;"
             "Lorg/apache/hadoop/fs/FileSystem;Lorg/apache/hadoop/fs/Path;"
             "ZLorg/apache/hadoop/conf/Configuration;)Z",
@@ -1950,9 +1951,9 @@ int hdfsDelete(hdfsFS fs, const char *path, int recursive)
         return -1;
     }
     jRecursive = recursive ? JNI_TRUE : JNI_FALSE;
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "delete", "(Lorg/apache/hadoop/fs/Path;Z)Z",
-                     jPath, jRecursive);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "delete", "(Lorg/apache/hadoop/fs/Path;Z)Z", jPath,
+            jRecursive);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -2004,9 +2005,9 @@ int hdfsRename(hdfsFS fs, const char *oldPath, const char *newPath)
 
     // Rename the file
     // TODO: use rename2 here?  (See HDFS-3592)
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS, "rename",
-                     JMETHOD2(JPARAM(HADOOP_PATH), JPARAM(HADOOP_PATH), "Z"),
-                     jOldPath, jNewPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "rename", JMETHOD2(JPARAM(HADOOP_PATH), JPARAM
+            (HADOOP_PATH), "Z"), jOldPath, jNewPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsRename(oldPath=%s, newPath=%s): FileSystem#rename",
@@ -2049,9 +2050,8 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
     }
 
     //FileSystem#getWorkingDirectory()
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
-                     HADOOP_FS, "getWorkingDirectory",
-                     "()Lorg/apache/hadoop/fs/Path;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getWorkingDirectory", "()Lorg/apache/hadoop/fs/Path;");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetWorkingDirectory: FileSystem#getWorkingDirectory");
@@ -2066,9 +2066,8 @@ char* hdfsGetWorkingDirectory(hdfsFS fs, char* buffer, size_t bufferSize)
     }
 
     //Path#toString()
-    jthr = invokeMethod(env, &jVal, INSTANCE, jPath, 
-                     "org/apache/hadoop/fs/Path", "toString",
-                     "()Ljava/lang/String;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jPath, JC_PATH, "toString",
+            "()Ljava/lang/String;");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetWorkingDirectory: Path#toString");
@@ -2132,9 +2131,9 @@ int hdfsSetWorkingDirectory(hdfsFS fs, const char *path)
     }
 
     //FileSystem#setWorkingDirectory()
-    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
-                     "setWorkingDirectory", 
-                     "(Lorg/apache/hadoop/fs/Path;)V", jPath);
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "setWorkingDirectory", "(Lorg/apache/hadoop/fs/Path;)V",
+            jPath);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, NOPRINT_EXC_ILLEGAL_ARGUMENT,
@@ -2174,9 +2173,8 @@ int hdfsCreateDirectory(hdfsFS fs, const char *path)
 
     //Create the directory
     jVal.z = 0;
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "mkdirs", "(Lorg/apache/hadoop/fs/Path;)Z",
-                     jPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "mkdirs", "(Lorg/apache/hadoop/fs/Path;)Z", jPath);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr,
@@ -2224,9 +2222,9 @@ int hdfsSetReplication(hdfsFS fs, const char *path, int16_t replication)
     }
 
     //Create the directory
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "setReplication", "(Lorg/apache/hadoop/fs/Path;S)Z",
-                     jPath, replication);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "setReplication", "(Lorg/apache/hadoop/fs/Path;S)Z",
+            jPath, replication);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -2287,8 +2285,8 @@ int hdfsChown(hdfsFS fs, const char *path, const char *owner, const char *group)
     }
 
     //Create the directory
-    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
-            "setOwner", JMETHOD3(JPARAM(HADOOP_PATH), 
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "setOwner", JMETHOD3(JPARAM(HADOOP_PATH),
                     JPARAM(JAVA_STRING), JPARAM(JAVA_STRING), JAVA_VOID),
             jPath, jOwner, jGroup);
     if (jthr) {
@@ -2332,12 +2330,12 @@ int hdfsChmod(hdfsFS fs, const char *path, short mode)
     }
 
     // construct jPerm = FsPermission.createImmutable(short mode);
-    jthr = constructNewObjectOfClass(env, &jPermObj,
-                HADOOP_FSPERM,"(S)V",jmode);
+    jthr = constructNewObjectOfCachedClass(env, &jPermObj, JC_FS_PERMISSION,
+            "(S)V",jmode);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-            "constructNewObjectOfClass(%s)", HADOOP_FSPERM);
-        return -1;
+            "constructNewObjectOfCachedClass(%s)", HADOOP_FSPERM);
+        goto done;
     }
 
     //Create an object of org.apache.hadoop.fs.Path
@@ -2349,10 +2347,9 @@ int hdfsChmod(hdfsFS fs, const char *path, short mode)
     }
 
     //Create the directory
-    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
-            "setPermission",
-            JMETHOD2(JPARAM(HADOOP_PATH), JPARAM(HADOOP_FSPERM), JAVA_VOID),
-            jPath, jPermObj);
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "setPermission", JMETHOD2(JPARAM(HADOOP_PATH),
+                    JPARAM(HADOOP_FSPERM), JAVA_VOID), jPath, jPermObj);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr,
             NOPRINT_EXC_ACCESS_CONTROL | NOPRINT_EXC_FILE_NOT_FOUND |
@@ -2402,9 +2399,9 @@ int hdfsUtime(hdfsFS fs, const char *path, tTime mtime, tTime atime)
     jmtime = (mtime == NO_CHANGE) ? -1 : (mtime * (jlong)1000);
     jatime = (atime == NO_CHANGE) ? -1 : (atime * (jlong)1000);
 
-    jthr = invokeMethod(env, NULL, INSTANCE, jFS, HADOOP_FS,
-            "setTimes", JMETHOD3(JPARAM(HADOOP_PATH), "J", "J", JAVA_VOID),
-            jPath, jmtime, jatime);
+    jthr = invokeMethod(env, NULL, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "setTimes", JMETHOD3(JPARAM(HADOOP_PATH), "J", "J",
+                    JAVA_VOID), jPath, jmtime, jatime);
     destroyLocalReference(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr,
@@ -2480,6 +2477,8 @@ int hadoopRzOptionsSetByteBufferPool(
     JNIEnv *env;
     jthrowable jthr;
     jobject byteBufferPool = NULL;
+    jobject globalByteBufferPool = NULL;
+    int ret;
 
     env = getJNIEnv();
     if (!env) {
@@ -2496,15 +2495,37 @@ int hadoopRzOptionsSetByteBufferPool(
       if (jthr) {
           printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
               "hadoopRzOptionsSetByteBufferPool(className=%s): ", className);
-          errno = EINVAL;
-          return -1;
+          ret = EINVAL;
+          goto done;
       }
-    }
-    if (opts->byteBufferPool) {
-        // Delete any previous ByteBufferPool we had.
+      // Only set opts->byteBufferPool if creating a global reference is
+      // successful
+      globalByteBufferPool = (*env)->NewGlobalRef(env, byteBufferPool);
+      if (!globalByteBufferPool) {
+          printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+                  "hadoopRzOptionsSetByteBufferPool(className=%s): ",
+                  className);
+          ret = EINVAL;
+          goto done;
+      }
+      // Delete any previous ByteBufferPool we had before setting a new one.
+      if (opts->byteBufferPool) {
+          (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+      }
+      opts->byteBufferPool = globalByteBufferPool;
+    } else if (opts->byteBufferPool) {
+        // If the specified className is NULL, delete any previous
+        // ByteBufferPool we had.
         (*env)->DeleteGlobalRef(env, opts->byteBufferPool);
+        opts->byteBufferPool = NULL;
     }
-    opts->byteBufferPool = byteBufferPool;
+    ret = 0;
+done:
+    destroyLocalReference(env, byteBufferPool);
+    if (ret) {
+        errno = ret;
+        return -1;
+    }
     return 0;
 }
 
@@ -2544,28 +2565,28 @@ static jthrowable hadoopRzOptionsGetEnumSet(JNIEnv *env,
         goto done;
     }
     if (opts->skipChecksums) {
-        jthr = fetchEnumInstance(env, READ_OPTION,
+        jthr = fetchEnumInstance(env, HADOOP_RO,
                   "SKIP_CHECKSUMS", &enumInst);
         if (jthr) {
             goto done;
         }
-        jthr = invokeMethod(env, &jVal, STATIC, NULL,
-                "java/util/EnumSet", "of",
-                "(Ljava/lang/Enum;)Ljava/util/EnumSet;", enumInst);
+        jthr = invokeMethod(env, &jVal, STATIC, NULL, JC_ENUM_SET,
+                "of", "(Ljava/lang/Enum;)Ljava/util/EnumSet;", enumInst);
         if (jthr) {
             goto done;
         }
         enumSetObj = jVal.l;
     } else {
-        jclass clazz = (*env)->FindClass(env, READ_OPTION);
+        jclass clazz = (*env)->FindClass(env, HADOOP_RO);
         if (!clazz) {
-            jthr = newRuntimeError(env, "failed "
-                    "to find class for %s", READ_OPTION);
+            jthr = getPendingExceptionAndClear(env);
             goto done;
         }
-        jthr = invokeMethod(env, &jVal, STATIC, NULL,
-                "java/util/EnumSet", "noneOf",
-                "(Ljava/lang/Class;)Ljava/util/EnumSet;", clazz);
+        jthr = invokeMethod(env, &jVal, STATIC, NULL, JC_ENUM_SET,
+                "noneOf", "(Ljava/lang/Class;)Ljava/util/EnumSet;", clazz);
+        if (jthr) {
+            goto done;
+        }
         enumSetObj = jVal.l;
     }
     // create global ref
@@ -2594,7 +2615,7 @@ static int hadoopReadZeroExtractBuffer(JNIEnv *env,
     jarray array = NULL;
 
     jthr = invokeMethod(env, &jVal, INSTANCE, buffer->byteBuffer,
-                     "java/nio/ByteBuffer", "remaining", "()I");
+            JC_BYTE_BUFFER, "remaining", "()I");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hadoopReadZeroExtractBuffer: ByteBuffer#remaining failed: ");
@@ -2602,7 +2623,7 @@ static int hadoopReadZeroExtractBuffer(JNIEnv *env,
     }
     buffer->length = jVal.i;
     jthr = invokeMethod(env, &jVal, INSTANCE, buffer->byteBuffer,
-                     "java/nio/ByteBuffer", "position", "()I");
+            JC_BYTE_BUFFER, "position", "()I");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hadoopReadZeroExtractBuffer: ByteBuffer#position failed: ");
@@ -2633,7 +2654,7 @@ static int hadoopReadZeroExtractBuffer(JNIEnv *env,
     }
     // Get the backing array object of this buffer.
     jthr = invokeMethod(env, &jVal, INSTANCE, buffer->byteBuffer,
-                     "java/nio/ByteBuffer", "array", "()[B");
+            JC_BYTE_BUFFER, "array", "()[B");
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hadoopReadZeroExtractBuffer: ByteBuffer#array failed: ");
@@ -2686,6 +2707,7 @@ static int translateZCRException(JNIEnv *env, jthrowable exc)
     }
     if (!strcmp(className, "java.lang.UnsupportedOperationException")) {
         ret = EPROTONOSUPPORT;
+        destroyLocalReference(env, exc);
         goto done;
     }
     ret = printExceptionAndFree(env, exc, PRINT_EXC_ALL,
@@ -2726,9 +2748,10 @@ struct hadoopRzBuffer* hadoopReadZero(hdfsFile file,
                 "hadoopReadZero: hadoopRzOptionsGetEnumSet failed: ");
         goto done;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, file->file, HADOOP_ISTRM, "read",
-        "(Lorg/apache/hadoop/io/ByteBufferPool;ILjava/util/EnumSet;)"
-        "Ljava/nio/ByteBuffer;", opts->byteBufferPool, maxLength, enumSet);
+    jthr = invokeMethod(env, &jVal, INSTANCE, file->file,
+            JC_FS_DATA_INPUT_STREAM, "read",
+            "(Lorg/apache/hadoop/io/ByteBufferPool;ILjava/util/EnumSet;)"
+            "Ljava/nio/ByteBuffer;", opts->byteBufferPool, maxLength, enumSet);
     if (jthr) {
         ret = translateZCRException(env, jthr);
         goto done;
@@ -2791,8 +2814,8 @@ void hadoopRzBufferFree(hdfsFile file, struct hadoopRzBuffer *buffer)
     }
     if (buffer->byteBuffer) {
         jthr = invokeMethod(env, &jVal, INSTANCE, file->file,
-                    HADOOP_ISTRM, "releaseBuffer",
-                    "(Ljava/nio/ByteBuffer;)V", buffer->byteBuffer);
+                JC_FS_DATA_INPUT_STREAM, "releaseBuffer",
+                "(Ljava/nio/ByteBuffer;)V", buffer->byteBuffer);
         if (jthr) {
             printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hadoopRzBufferFree: releaseBuffer failed: ");
@@ -2841,8 +2864,8 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
             "hdfsGetHosts(path=%s): constructNewObjectOfPath", path);
         goto done;
     }
-    jthr = invokeMethod(env, &jFSVal, INSTANCE, jFS,
-            HADOOP_FS, "getFileStatus", "(Lorg/apache/hadoop/fs/Path;)"
+    jthr = invokeMethod(env, &jFSVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getFileStatus", "(Lorg/apache/hadoop/fs/Path;)"
             "Lorg/apache/hadoop/fs/FileStatus;", jPath);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, NOPRINT_EXC_FILE_NOT_FOUND,
@@ -2854,11 +2877,11 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
     jFileStatus = jFSVal.l;
 
     //org.apache.hadoop.fs.FileSystem#getFileBlockLocations
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
-                     HADOOP_FS, "getFileBlockLocations", 
-                     "(Lorg/apache/hadoop/fs/FileStatus;JJ)"
-                     "[Lorg/apache/hadoop/fs/BlockLocation;",
-                     jFileStatus, start, length);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getFileBlockLocations",
+            "(Lorg/apache/hadoop/fs/FileStatus;JJ)"
+            "[Lorg/apache/hadoop/fs/BlockLocation;", jFileStatus, start,
+            length);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"):"
@@ -2885,15 +2908,17 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
     for (i = 0; i < jNumFileBlocks; ++i) {
         jFileBlock =
             (*env)->GetObjectArrayElement(env, jBlockLocations, i);
-        if (!jFileBlock) {
-            ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr || !jFileBlock) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"):"
                 "GetObjectArrayElement(%d)", path, start, length, i);
             goto done;
         }
         
-        jthr = invokeMethod(env, &jVal, INSTANCE, jFileBlock, HADOOP_BLK_LOC,
-                         "getHosts", "()[Ljava/lang/String;");
+        jthr = invokeMethod(env, &jVal, INSTANCE, jFileBlock,
+                JC_BLOCK_LOCATION, "getHosts",
+                "()[Ljava/lang/String;");
         if (jthr) {
             ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"):"
@@ -2919,8 +2944,9 @@ hdfsGetHosts(hdfsFS fs, const char *path, tOffset start, tOffset length)
         //Now parse each hostname
         for (j = 0; j < jNumBlockHosts; ++j) {
             jHost = (*env)->GetObjectArrayElement(env, jFileBlockHosts, j);
-            if (!jHost) {
-                ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            jthr = (*env)->ExceptionOccurred(env);
+            if (jthr || !jHost) {
+                ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                     "hdfsGetHosts(path=%s, start=%"PRId64", length=%"PRId64"): "
                     "NewByteArray", path, start, length);
                 goto done;
@@ -2997,8 +3023,8 @@ tOffset hdfsGetDefaultBlockSize(hdfsFS fs)
     }
 
     //FileSystem#getDefaultBlockSize()
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "getDefaultBlockSize", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getDefaultBlockSize", "()J");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetDefaultBlockSize: FileSystem#getDefaultBlockSize");
@@ -3061,16 +3087,16 @@ tOffset hdfsGetCapacity(hdfsFS fs)
     }
 
     //FileSystem#getStatus
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetCapacity: FileSystem#getStatus");
         return -1;
     }
     fss = (jobject)jVal.l;
-    jthr = invokeMethod(env, &jVal, INSTANCE, fss, HADOOP_FSSTATUS,
-                     "getCapacity", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, fss,
+            JC_FS_STATUS, "getCapacity", "()J");
     destroyLocalReference(env, fss);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -3101,16 +3127,16 @@ tOffset hdfsGetUsed(hdfsFS fs)
     }
 
     //FileSystem#getStatus
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getStatus", "()Lorg/apache/hadoop/fs/FsStatus;");
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
             "hdfsGetUsed: FileSystem#getStatus");
         return -1;
     }
     fss = (jobject)jVal.l;
-    jthr = invokeMethod(env, &jVal, INSTANCE, fss, HADOOP_FSSTATUS,
-                     "getUsed", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, fss, JC_FS_STATUS,
+            HADOOP_FSSTATUS,"getUsed", "()J");
     destroyLocalReference(env, fss);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
@@ -3168,46 +3194,46 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     struct hdfsExtendedFileInfo *extInfo;
     size_t extOffset;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                     HADOOP_STAT, "isDir", "()Z");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS, "isDir",
+            "()Z");
     if (jthr)
         goto done;
     fileInfo->mKind = jVal.z ? kObjectKindDirectory : kObjectKindFile;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                     HADOOP_STAT, "getReplication", "()S");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "getReplication", "()S");
     if (jthr)
         goto done;
     fileInfo->mReplication = jVal.s;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                     HADOOP_STAT, "getBlockSize", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "getBlockSize", "()J");
     if (jthr)
         goto done;
     fileInfo->mBlockSize = jVal.j;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                     HADOOP_STAT, "getModificationTime", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "getModificationTime", "()J");
     if (jthr)
         goto done;
     fileInfo->mLastMod = jVal.j / 1000;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                     HADOOP_STAT, "getAccessTime", "()J");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "getAccessTime", "()J");
     if (jthr)
         goto done;
     fileInfo->mLastAccess = (tTime) (jVal.j / 1000);
 
     if (fileInfo->mKind == kObjectKindFile) {
-        jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                         HADOOP_STAT, "getLen", "()J");
+        jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+                "getLen", "()J");
         if (jthr)
             goto done;
         fileInfo->mSize = jVal.j;
     }
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
-                     "getPath", "()Lorg/apache/hadoop/fs/Path;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,  JC_FILE_STATUS,
+            "getPath", "()Lorg/apache/hadoop/fs/Path;");
     if (jthr)
         goto done;
     jPath = jVal.l;
@@ -3217,8 +3243,8 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
         goto done;
     }
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jPath, HADOOP_PATH,
-                     "toString", "()Ljava/lang/String;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jPath, JC_PATH, "toString",
+            "()Ljava/lang/String;");
     if (jthr)
         goto done;
     jPathName = jVal.l;
@@ -3230,8 +3256,8 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     }
     fileInfo->mName = strdup(cPathName);
     (*env)->ReleaseStringUTFChars(env, jPathName, cPathName);
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
-                    "getOwner", "()Ljava/lang/String;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS, "getOwner",
+            "()Ljava/lang/String;");
     if (jthr)
         goto done;
     jUserName = jVal.l;
@@ -3251,16 +3277,16 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     (*env)->ReleaseStringUTFChars(env, jUserName, cUserName);
     extInfo = getExtendedFileInfo(fileInfo);
     memset(extInfo, 0, sizeof(*extInfo));
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat,
-                    HADOOP_STAT, "isEncrypted", "()Z");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "isEncrypted", "()Z");
     if (jthr) {
         goto done;
     }
     if (jVal.z == JNI_TRUE) {
         extInfo->flags |= HDFS_EXTENDED_FILE_INFO_ENCRYPTED;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
-                    "getGroup", "()Ljava/lang/String;");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
+            "getGroup", "()Ljava/lang/String;");
     if (jthr)
         goto done;
     jGroupName = jVal.l;
@@ -3272,19 +3298,19 @@ getFileInfoFromStat(JNIEnv *env, jobject jStat, hdfsFileInfo *fileInfo)
     fileInfo->mGroup = strdup(cGroupName);
     (*env)->ReleaseStringUTFChars(env, jGroupName, cGroupName);
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, HADOOP_STAT,
+    jthr = invokeMethod(env, &jVal, INSTANCE, jStat, JC_FILE_STATUS,
             "getPermission",
             "()Lorg/apache/hadoop/fs/permission/FsPermission;");
     if (jthr)
         goto done;
     if (jVal.l == NULL) {
         jthr = newRuntimeError(env, "%s#getPermission returned NULL!",
-            HADOOP_STAT);
+            HADOOP_FILESTAT);
         goto done;
     }
     jPermission = jVal.l;
-    jthr = invokeMethod(env, &jVal, INSTANCE, jPermission, HADOOP_FSPERM,
-                         "toShort", "()S");
+    jthr = invokeMethod(env, &jVal, INSTANCE, jPermission,
+            JC_FS_PERMISSION, "toShort", "()S");
     if (jthr)
         goto done;
     fileInfo->mPermissions = jVal.s;
@@ -3318,18 +3344,17 @@ getFileInfo(JNIEnv *env, jobject jFS, jobject jPath, hdfsFileInfo **fileInfo)
     jvalue  jVal;
     jthrowable jthr;
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_FS,
-                     "exists", JMETHOD1(JPARAM(HADOOP_PATH), "Z"),
-                     jPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM, "exists",
+            JMETHOD1(JPARAM(HADOOP_PATH), "Z"), jPath);
     if (jthr)
         return jthr;
     if (jVal.z == 0) {
         *fileInfo = NULL;
         return NULL;
     }
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
-            HADOOP_FS, "getFileStatus",
-            JMETHOD1(JPARAM(HADOOP_PATH), JPARAM(HADOOP_STAT)), jPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, JC_FILE_SYSTEM,
+            "getFileStatus", JMETHOD1(JPARAM(HADOOP_PATH), JPARAM
+            (HADOOP_FILESTAT)), jPath);
     if (jthr)
         return jthr;
     jStat = jVal.l;
@@ -3379,9 +3404,9 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char *path, int *numEntries)
         goto done;
     }
 
-    jthr = invokeMethod(env, &jVal, INSTANCE, jFS, HADOOP_DFS, "listStatus",
-                     JMETHOD1(JPARAM(HADOOP_PATH), JARRPARAM(HADOOP_STAT)),
-                     jPath);
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFS,
+            JC_DISTRIBUTED_FILE_SYSTEM, "listStatus",
+            JMETHOD1(JPARAM(HADOOP_PATH), JARRPARAM(HADOOP_FILESTAT)), jPath);
     if (jthr) {
         ret = printExceptionAndFree(env, jthr,
             NOPRINT_EXC_ACCESS_CONTROL | NOPRINT_EXC_FILE_NOT_FOUND |
@@ -3408,8 +3433,9 @@ hdfsFileInfo* hdfsListDirectory(hdfsFS fs, const char *path, int *numEntries)
     //Save path information in pathList
     for (i=0; i < jPathListSize; ++i) {
         tmpStat = (*env)->GetObjectArrayElement(env, jPathList, i);
-        if (!tmpStat) {
-            ret = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+        jthr = (*env)->ExceptionOccurred(env);
+        if (jthr || !tmpStat) {
+            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
                 "hdfsListDirectory(%s): GetObjectArrayElement(%d out of %d)",
                 path, i, jPathListSize);
             goto done;

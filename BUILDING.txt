@@ -14,7 +14,6 @@ Requirements:
   Clang (community version), Clang (version for iOS 9 and later) (if compiling native code)
 * openssl devel (if compiling native hadoop-pipes and to get the best HDFS encryption performance)
 * Linux FUSE (Filesystem in Userspace) version 2.6 or above (if compiling fuse_dfs)
-* Jansson C XML parsing library ( if compiling libwebhdfs )
 * Doxygen ( if compiling libhdfspp and generating the documents )
 * Internet connection for first build (to fetch all Maven and Hadoop dependencies)
 * python (for releasedocs)
@@ -26,17 +25,9 @@ The easiest way to get an environment with all the appropriate tools is by means
 of the provided Docker config.
 This requires a recent version of docker (1.4.1 and higher are known to work).
 
-On Linux:
+On Linux / Mac:
     Install Docker and run this command:
 
-    $ ./start-build-env.sh
-
-On Mac:
-    First make sure Virtualbox and docker toolbox are installed.
-    You can use docker toolbox as described in http://docs.docker.com/mac/step_one/.
-    $ docker-machine create --driver virtualbox \
-                            --virtualbox-memory "4096" hadoopdev
-    $ eval $(docker-machine env hadoopdev)
     $ ./start-build-env.sh
 
 The prompt which is then presented is located at a mounted version of the source tree
@@ -83,8 +74,6 @@ Optional packages:
   (OR https://github.com/01org/isa-l)
 * Bzip2
   $ sudo apt-get install bzip2 libbz2-dev
-* Jansson (C Library for JSON)
-  $ sudo apt-get install libjansson-dev
 * Linux FUSE
   $ sudo apt-get install fuse libfuse-dev
 * ZStandard compression
@@ -93,17 +82,25 @@ Optional packages:
 ----------------------------------------------------------------------------------
 Maven main modules:
 
-  hadoop                            (Main Hadoop project)
-         - hadoop-project           (Parent POM for all Hadoop Maven modules.             )
-                                    (All plugins & dependencies versions are defined here.)
-         - hadoop-project-dist      (Parent POM for modules that generate distributions.)
-         - hadoop-annotations       (Generates the Hadoop doclet used to generated the Javadocs)
-         - hadoop-assemblies        (Maven assemblies used by the different modules)
-         - hadoop-common-project    (Hadoop Common)
-         - hadoop-hdfs-project      (Hadoop HDFS)
-         - hadoop-mapreduce-project (Hadoop MapReduce)
-         - hadoop-tools             (Hadoop tools like Streaming, Distcp, etc.)
-         - hadoop-dist              (Hadoop distribution assembler)
+  hadoop                                (Main Hadoop project)
+         - hadoop-project               (Parent POM for all Hadoop Maven modules.             )
+                                        (All plugins & dependencies versions are defined here.)
+         - hadoop-project-dist          (Parent POM for modules that generate distributions.)
+         - hadoop-annotations           (Generates the Hadoop doclet used to generated the Javadocs)
+         - hadoop-assemblies            (Maven assemblies used by the different modules)
+         - hadoop-maven-plugins         (Maven plugins used in project)
+         - hadoop-build-tools           (Build tools like checkstyle, etc.)
+         - hadoop-common-project        (Hadoop Common)
+         - hadoop-hdfs-project          (Hadoop HDFS)
+         - hadoop-yarn-project          (Hadoop YARN)
+         - hadoop-mapreduce-project     (Hadoop MapReduce)
+         - hadoop-ozone                 (Hadoop Ozone)
+         - hadoop-hdds                  (Hadoop Distributed Data Store)
+         - hadoop-tools                 (Hadoop tools like Streaming, Distcp, etc.)
+         - hadoop-dist                  (Hadoop distribution assembler)
+         - hadoop-client-modules        (Hadoop client modules)
+         - hadoop-minicluster           (Hadoop minicluster artifacts)
+         - hadoop-cloud-storage-project (Generates artifacts to access cloud storage like aws, azure, etc.)
 
 ----------------------------------------------------------------------------------
 Where to run Maven from?

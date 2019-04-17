@@ -58,6 +58,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 /**
  * Class on the NodeManager side that manages adding and removing collectors and
  * their lifecycle. Also instantiates the per-node collector webapp.
@@ -280,14 +281,21 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
     String bindAddress = null;
     String host =
         conf.getTrimmed(YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_BIND_HOST);
+    Configuration.IntegerRanges portRanges = conf.getRange(
+        YarnConfiguration.TIMELINE_SERVICE_COLLECTOR_BIND_PORT_RANGES, "");
+    int startPort = 0;
+    if (portRanges != null && !portRanges.isEmpty()) {
+      startPort = portRanges.getRangeStart();
+    }
     if (host == null || host.isEmpty()) {
       // if collector bind-host is not set, fall back to
       // timeline-service.bind-host to maintain compatibility
       bindAddress =
           conf.get(YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST,
-              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST) + ":0";
+              YarnConfiguration.DEFAULT_TIMELINE_SERVICE_BIND_HOST)
+              + ":" + startPort;
     } else {
-      bindAddress = host + ":0";
+      bindAddress = host + ":" + startPort;
     }
 
     try {
@@ -297,6 +305,9 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
           .addEndpoint(URI.create(
               (YarnConfiguration.useHttps(conf) ? "https://" : "http://") +
                   bindAddress));
+      if (portRanges != null && !portRanges.isEmpty()) {
+        builder.setPortRanges(portRanges);
+      }
       if (YarnConfiguration.useHttps(conf)) {
         builder = WebAppUtils.loadSslConfiguration(builder, conf);
       }
@@ -342,30 +353,22 @@ public class NodeTimelineCollectorManager extends TimelineCollectorManager {
         getNMCollectorService().getTimelineCollectorContext(request);
     String userId = response.getUserId();
     if (userId != null && !userId.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting the user in the context: " + userId);
-      }
+      LOG.debug("Setting the user in the context: {}", userId);
       collector.getTimelineEntityContext().setUserId(userId);
     }
     String flowName = response.getFlowName();
     if (flowName != null && !flowName.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting the flow name: " + flowName);
-      }
+      LOG.debug("Setting the flow name: {}", flowName);
       collector.getTimelineEntityContext().setFlowName(flowName);
     }
     String flowVersion = response.getFlowVersion();
     if (flowVersion != null && !flowVersion.isEmpty()) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting the flow version: " + flowVersion);
-      }
+      LOG.debug("Setting the flow version: {}", flowVersion);
       collector.getTimelineEntityContext().setFlowVersion(flowVersion);
     }
     long flowRunId = response.getFlowRunId();
     if (flowRunId != 0L) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Setting the flow run id: " + flowRunId);
-      }
+      LOG.debug("Setting the flow run id: {}", flowRunId);
       collector.getTimelineEntityContext().setFlowRunId(flowRunId);
     }
   }

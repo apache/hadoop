@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.monitor.capacity;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -94,8 +94,8 @@ public class ProportionalCapacityPreemptionPolicy
     PRIORITY_FIRST, USERLIMIT_FIRST;
   }
 
-  private static final Log LOG =
-    LogFactory.getLog(ProportionalCapacityPreemptionPolicy.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ProportionalCapacityPreemptionPolicy.class);
 
   private final Clock clock;
 
@@ -332,11 +332,9 @@ public class ProportionalCapacityPreemptionPolicy
         toPreemptPerSelector.values()) {
       toPreemptCount += containers.size();
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug(
-          "Starting to preempt containers for selectedCandidates and size:"
-              + toPreemptCount);
-    }
+    LOG.debug(
+        "Starting to preempt containers for selectedCandidates and size:{}",
+        toPreemptCount);
 
     // preempt (or kill) the selected containers
     // We need toPreemptPerSelector here to match list of containers to
@@ -566,10 +564,9 @@ public class ProportionalCapacityPreemptionPolicy
       Resource partitionResource, String partitionToLookAt) {
     TempQueuePerPartition ret;
     ReadLock readLock = curQueue.getReadLock();
+    // Acquire a read lock from Parent/LeafQueue.
+    readLock.lock();
     try {
-      // Acquire a read lock from Parent/LeafQueue.
-      readLock.lock();
-
       String queueName = curQueue.getQueueName();
       QueueCapacities qc = curQueue.getQueueCapacities();
       float absCap = qc.getAbsoluteCapacity(partitionToLookAt);

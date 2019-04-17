@@ -20,7 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager;
 
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -37,8 +37,8 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedule
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairSchedulerConfiguration;
 import org.junit.After;
 import org.junit.Assert;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
@@ -84,7 +84,8 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
   private static final String SUPER_GROUP = "superGroup";
   private static final String UNAVAILABLE = "N/A";
 
-  private static final Log LOG = LogFactory.getLog(TestApplicationACLs.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestApplicationACLs.class);
 
   private MockRM resourceManager;
   private Configuration conf;
@@ -465,7 +466,7 @@ public class TestApplicationACLs extends ParameterizedSchedulerTestBase {
     if (conf.get(YarnConfiguration.RM_SCHEDULER)
         .equals(FairScheduler.class.getName())) {
       Assert.assertTrue(appReport.getDiagnostics()
-          .contains("Application rejected by queue placement policy"));
+          .contains("user owner application rejected by placement rules."));
     } else {
       Assert.assertTrue(appReport.getDiagnostics()
           .contains("submitted by user owner to unknown queue: InvalidQueue"));

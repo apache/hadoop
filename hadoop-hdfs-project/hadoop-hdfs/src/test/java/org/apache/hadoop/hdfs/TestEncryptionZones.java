@@ -52,7 +52,6 @@ import org.apache.hadoop.crypto.key.JavaKeyStoreProvider;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSTestWrapper;
@@ -89,7 +88,6 @@ import org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsTestUtil;
-import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.AccessControlException;
@@ -114,10 +112,10 @@ import org.junit.rules.Timeout;
 import org.mockito.Mockito;
 
 import static org.junit.Assert.assertNotNull;
-import static org.mockito.Matchers.anyBoolean;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.anyObject;
-import static org.mockito.Matchers.anyShort;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyShort;
 import static org.mockito.Mockito.withSettings;
 import static org.mockito.Mockito.anyString;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
@@ -964,10 +962,8 @@ public class TestEncryptionZones {
               "fakeKey", "fakeVersion"))
           .build())
         .when(mcp)
-        .create(anyString(), (FsPermission) anyObject(), anyString(),
-          (EnumSetWritable<CreateFlag>) anyObject(), anyBoolean(),
-          anyShort(), anyLong(), (CryptoProtocolVersion[]) anyObject(),
-          anyObject());
+        .create(anyString(), any(), anyString(), any(), anyBoolean(),
+            anyShort(), anyLong(), any(), any(), any());
   }
 
   // This test only uses mocks. Called from the end of an existing test to

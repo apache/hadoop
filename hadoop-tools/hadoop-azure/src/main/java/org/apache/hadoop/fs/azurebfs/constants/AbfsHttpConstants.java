@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.azurebfs.constants;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.util.VersionInfo;
 
 /**
  * Responsible to keep all constant keys used in abfs rest client here.
@@ -36,13 +37,14 @@ public final class AbfsHttpConstants {
   public static final String SET_PROPERTIES_ACTION = "setProperties";
   public static final String SET_ACCESS_CONTROL = "setAccessControl";
   public static final String GET_ACCESS_CONTROL = "getAccessControl";
+  public static final String GET_STATUS = "getStatus";
   public static final String DEFAULT_TIMEOUT = "90";
 
   public static final String JAVA_VERSION = "java.version";
   public static final String OS_NAME = "os.name";
   public static final String OS_VERSION = "os.version";
 
-  public static final String CLIENT_VERSION = "Azure Blob FS/1.0";
+  public static final String CLIENT_VERSION = "Azure Blob FS/" + VersionInfo.getVersion();
 
   // Abfs Http Verb
   public static final String HTTP_METHOD_DELETE = "DELETE";
@@ -65,6 +67,7 @@ public final class AbfsHttpConstants {
   public static final String QUESTION_MARK = "?";
   public static final String AND_MARK = "&";
   public static final String SEMICOLON = ";";
+  public static final String AT = "@";
   public static final String HTTP_HEADER_PREFIX = "x-ms-";
 
   public static final String PLUS_ENCODE = "%20";
@@ -86,6 +89,7 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_OTHER = "default:other:";
   public static final String DEFAULT_SCOPE = "default:";
   public static final String PERMISSION_FORMAT = "%04d";
+  public static final String SUPER_USER = "$superuser";
 
   private AbfsHttpConstants() {}
 }

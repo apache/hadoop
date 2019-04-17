@@ -20,9 +20,9 @@ package org.apache.hadoop.hdds.scm.client;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerData;
+    .ContainerDataProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 
 import java.io.Closeable;
@@ -104,7 +104,7 @@ public interface ScmClient extends Closeable {
    * Lists a range of containers and get their info.
    *
    * @param startContainerID start containerID.
-   * @param count count must be > 0.
+   * @param count count must be {@literal >} 0.
    *
    * @return a list of pipeline.
    * @throws IOException
@@ -119,7 +119,7 @@ public interface ScmClient extends Closeable {
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerData readContainer(long containerID, Pipeline pipeline)
+  ContainerDataProto readContainer(long containerID, Pipeline pipeline)
       throws IOException;
 
   /**
@@ -128,7 +128,7 @@ public interface ScmClient extends Closeable {
    * @return ContainerInfo
    * @throws IOException
    */
-  ContainerData readContainer(long containerID)
+  ContainerDataProto readContainer(long containerID)
       throws IOException;
 
   /**
@@ -171,4 +171,36 @@ public interface ScmClient extends Closeable {
   Pipeline createReplicationPipeline(HddsProtos.ReplicationType type,
       HddsProtos.ReplicationFactor factor, HddsProtos.NodePool nodePool)
       throws IOException;
+
+  /**
+   * Returns the list of active Pipelines.
+   *
+   * @return list of Pipeline
+   * @throws IOException in case of any exception
+   */
+  List<Pipeline> listPipelines() throws IOException;
+
+  /**
+   * Closes the pipeline given a pipeline ID.
+   *
+   * @param pipelineID PipelineID to close.
+   * @throws IOException In case of exception while closing the pipeline
+   */
+  void closePipeline(HddsProtos.PipelineID pipelineID) throws IOException;
+
+  /**
+   * Check if SCM is in safe mode.
+   *
+   * @return Returns true if SCM is in safe mode else returns false.
+   * @throws IOException
+   */
+  boolean inSafeMode() throws IOException;
+
+  /**
+   * Force SCM out of safe mode.
+   *
+   * @return returns true if operation is successful.
+   * @throws IOException
+   */
+  boolean forceExitSafeMode() throws IOException;
 }

@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdfs.server.namenode.NNStorage.getInProgressEdit
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
@@ -50,7 +51,6 @@ import org.apache.hadoop.hdfs.server.namenode.JournalSet.JournalAndStream;
 import org.apache.hadoop.util.Shell;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import com.google.common.collect.ImmutableSet;
 /**
@@ -128,7 +128,7 @@ public class TestStorageRestore {
           EditLogOutputStream mockStream = spy(j.getCurrentStream());
           j.setCurrentStreamForTests(mockStream);
           doThrow(new IOException("Injected fault: write")).
-            when(mockStream).write(Mockito.<FSEditLogOp>anyObject());
+            when(mockStream).write(any());
         }
       }
     }

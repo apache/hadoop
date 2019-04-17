@@ -175,7 +175,7 @@ public final class ContainerUtils {
    * Verifies that this is indeed a new container.
    *
    * @param containerFile - Container File to verify
-   * @throws IOException
+   * @throws FileAlreadyExistsException
    */
   public static void verifyIsNewContainer(File containerFile) throws
       FileAlreadyExistsException {

@@ -28,8 +28,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 import org.apache.hadoop.security.AccessControlException;
@@ -78,7 +78,8 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 @Evolving
 public class ParentQueue extends AbstractCSQueue {
 
-  private static final Log LOG = LogFactory.getLog(ParentQueue.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ParentQueue.class);
 
   protected final List<CSQueue> childQueues;
   private final boolean rootQueue;
@@ -125,8 +126,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   protected void setupQueueConfigs(Resource clusterResource)
       throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       super.setupQueueConfigs(clusterResource);
       StringBuilder aclsString = new StringBuilder();
       for (Map.Entry<AccessType, AccessControlList> e : acls.entrySet()) {
@@ -136,8 +137,8 @@ public class ParentQueue extends AbstractCSQueue {
       StringBuilder labelStrBuilder = new StringBuilder();
       if (accessibleLabels != null) {
         for (String s : accessibleLabels) {
-          labelStrBuilder.append(s);
-          labelStrBuilder.append(",");
+          labelStrBuilder.append(s)
+              .append(",");
         }
       }
 
@@ -165,8 +166,8 @@ public class ParentQueue extends AbstractCSQueue {
   private static float PRECISION = 0.0005f; // 0.05% precision
 
   void setChildQueues(Collection<CSQueue> childQueues) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Validate
       float childCapacities = 0;
       Resource minResDefaultLabel = Resources.createResource(0, 0);
@@ -256,8 +257,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public QueueInfo getQueueInfo(
       boolean includeChildQueues, boolean recursive) {
+    readLock.lock();
     try {
-      readLock.lock();
       QueueInfo queueInfo = getQueueInfo();
 
       List<QueueInfo> childQueuesInfo = new ArrayList<>();
@@ -278,8 +279,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   private QueueUserACLInfo getUserAclInfo(
       UserGroupInformation user) {
+    readLock.lock();
     try {
-      readLock.lock();
       QueueUserACLInfo userAclInfo = recordFactory.newRecordInstance(
           QueueUserACLInfo.class);
       List<QueueACL> operations = new ArrayList<QueueACL>();
@@ -301,8 +302,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public List<QueueUserACLInfo> getQueueUserAclInfo(
       UserGroupInformation user) {
+    readLock.lock();
     try {
-      readLock.lock();
       List<QueueUserACLInfo> userAcls = new ArrayList<>();
 
       // Add parent queue acls
@@ -334,8 +335,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public void reinitialize(CSQueue newlyParsedQueue,
       Resource clusterResource) throws IOException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       if (!(newlyParsedQueue instanceof ParentQueue) || !newlyParsedQueue
           .getQueuePath().equals(getQueuePath())) {
@@ -429,9 +430,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public void submitApplication(ApplicationId applicationId, String user,
       String queue) throws AccessControlException {
-
+    writeLock.lock();
     try {
-      writeLock.lock();
       // Sanity check
       validateSubmitApplication(applicationId, user, queue);
 
@@ -455,8 +455,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   public void validateSubmitApplication(ApplicationId applicationId,
       String userName, String queue) throws AccessControlException {
+    writeLock.lock();
     try {
-      writeLock.lock();
       if (queue.equals(queueName)) {
         throw new AccessControlException(
             "Cannot submit application " + "to non-leaf queue: " + queueName);
@@ -486,9 +486,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   private void addApplication(ApplicationId applicationId,
       String user) {
-
+    writeLock.lock();
     try {
-      writeLock.lock();
       ++numApplications;
 
       LOG.info(
@@ -515,8 +514,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   private void removeApplication(ApplicationId applicationId,
       String user) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       --numApplications;
 
       LOG.info("Application removed -" + " appId: " + applicationId + " user: "
@@ -594,10 +593,8 @@ public class ParentQueue extends AbstractCSQueue {
         NodeType.NODE_LOCAL);
 
     while (canAssign(clusterResource, node)) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Trying to assign containers to child-queue of "
-            + getQueueName());
-      }
+      LOG.debug("Trying to assign containers to child-queue of {}",
+          getQueueName());
 
       // Are we over maximum-capacity for this queue?
       // This will also consider parent's limits and also continuous reservation
@@ -782,10 +779,8 @@ public class ParentQueue extends AbstractCSQueue {
     for (Iterator<CSQueue> iter = sortAndGetChildrenAllocationIterator(
         candidates.getPartition()); iter.hasNext(); ) {
       CSQueue childQueue = iter.next();
-      if(LOG.isDebugEnabled()) {
-        LOG.debug("Trying to assign to queue: " + childQueue.getQueuePath()
-          + " stats: " + childQueue);
-      }
+      LOG.debug("Trying to assign to queue: {} stats: {}",
+          childQueue.getQueuePath(), childQueue);
 
       // Get ResourceLimits of child queue before assign containers
       ResourceLimits childLimits =
@@ -853,15 +848,12 @@ public class ParentQueue extends AbstractCSQueue {
 
   private void internalReleaseResource(Resource clusterResource,
       FiCaSchedulerNode node, Resource releasedResource) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       super.releaseResource(clusterResource, releasedResource,
           node.getPartition());
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(
-            "completedContainer " + this + ", cluster=" + clusterResource);
-      }
+      LOG.debug("completedContainer {}, cluster={}", this, clusterResource);
 
     } finally {
       writeLock.unlock();
@@ -890,9 +882,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public void updateClusterResource(Resource clusterResource,
       ResourceLimits resourceLimits) {
+    writeLock.lock();
     try {
-      writeLock.lock();
-
       // Update effective capacity in all parent queue.
       Set<String> configuredNodelabels = csContext.getConfiguration()
           .getConfiguredNodeLabels(getQueuePath());
@@ -911,6 +902,10 @@ public class ParentQueue extends AbstractCSQueue {
 
       CSQueueUtils.updateQueueStatistics(resourceCalculator, clusterResource,
           this, labelManager, null);
+      // Update configured capacity/max-capacity for default partition only
+      CSQueueUtils.updateConfiguredCapacityMetrics(resourceCalculator,
+          labelManager.getResourceByLabel(null, clusterResource),
+          RMNodeLabelsManager.NO_LABEL, this);
     } finally {
       writeLock.unlock();
     }
@@ -1027,7 +1022,7 @@ public class ParentQueue extends AbstractCSQueue {
   private Resource getMinResourceNormalized(String name, Map<String, Float> effectiveMinRatio,
       Resource minResource) {
     Resource ret = Resource.newInstance(minResource);
-    int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
     for (int i = 0; i < maxLength; i++) {
       ResourceInformation nResourceInformation = minResource
           .getResourceInformation(i);
@@ -1051,7 +1046,7 @@ public class ParentQueue extends AbstractCSQueue {
       Resource configuredMinResources, Resource numeratorForMinRatio) {
     Map<String, Float> effectiveMinRatioPerResource = new HashMap<>();
     if (numeratorForMinRatio != null) {
-      int maxLength = ResourceUtils.getNumberOfKnownResourceTypes();
+      int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
       for (int i = 0; i < maxLength; i++) {
         ResourceInformation nResourceInformation = numeratorForMinRatio
             .getResourceInformation(i);
@@ -1128,8 +1123,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   @Override
   public List<CSQueue> getChildQueues() {
+    readLock.lock();
     try {
-      readLock.lock();
       return new ArrayList<CSQueue>(childQueues);
     } finally {
       readLock.unlock();
@@ -1148,8 +1143,8 @@ public class ParentQueue extends AbstractCSQueue {
     }
 
     // Careful! Locking order is important!
+    writeLock.lock();
     try {
-      writeLock.lock();
       FiCaSchedulerNode node = scheduler.getNode(
           rmContainer.getContainer().getNodeId());
       allocateResource(clusterResource,
@@ -1172,8 +1167,8 @@ public class ParentQueue extends AbstractCSQueue {
   @Override
   public void collectSchedulerApplications(
       Collection<ApplicationAttemptId> apps) {
+    readLock.lock();
     try {
-      readLock.lock();
       for (CSQueue queue : childQueues) {
         queue.collectSchedulerApplications(apps);
       }
@@ -1228,8 +1223,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   void allocateResource(Resource clusterResource,
       Resource resource, String nodePartition) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       super.allocateResource(clusterResource, resource, nodePartition);
 
       /**
@@ -1326,8 +1321,8 @@ public class ParentQueue extends AbstractCSQueue {
 
       // Do not modify queue when allocation from reserved container
       if (allocation.getAllocateFromReservedContainer() == null) {
+        writeLock.lock();
         try {
-          writeLock.lock();
           // Book-keeping
           // Note: Update headroom to account for current allocation too...
           allocateResource(cluster, allocation.getAllocatedOrReservedResource(),
@@ -1350,8 +1345,8 @@ public class ParentQueue extends AbstractCSQueue {
 
   @Override
   public void stopQueue() {
+    this.writeLock.lock();
     try {
-      this.writeLock.lock();
       if (getNumApplications() > 0) {
         updateQueueState(QueueState.DRAINING);
       } else {

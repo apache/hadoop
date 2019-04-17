@@ -21,13 +21,20 @@ package org.apache.hadoop.hdds.scm.server;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
+import org.apache.hadoop.hdds.scm.block.BlockManager;
+import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
+import org.apache.hadoop.hdds.scm.safemode.SafeModeHandler;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 /**
  * Test class for @{@link SCMClientProtocolServer}.
@@ -42,7 +49,14 @@ public class TestSCMClientProtocolServer {
     config = new OzoneConfiguration();
     eventQueue = new EventQueue();
     scmClientProtocolServer = new SCMClientProtocolServer(config, null);
-    eventQueue.addHandler(SCMEvents.CHILL_MODE_STATUS, scmClientProtocolServer);
+    BlockManager blockManager = Mockito.mock(BlockManagerImpl.class);
+    ReplicationManager replicationManager =
+        Mockito.mock(ReplicationManager.class);
+    PipelineManager pipelineManager = Mockito.mock(SCMPipelineManager.class);
+    SafeModeHandler safeModeHandler = new SafeModeHandler(config,
+        scmClientProtocolServer, blockManager, replicationManager,
+        pipelineManager);
+    eventQueue.addHandler(SCMEvents.SAFE_MODE_STATUS, safeModeHandler);
   }
 
   @After
@@ -50,9 +64,9 @@ public class TestSCMClientProtocolServer {
   }
 
   @Test
-  public void testAllocateContainerFailureInChillMode() throws Exception {
+  public void testAllocateContainerFailureInSafeMode() throws Exception {
     LambdaTestUtils.intercept(SCMException.class,
-        "hillModePrecheck failed for allocateContainer", () -> {
+        "SafeModePrecheck failed for allocateContainer", () -> {
           scmClientProtocolServer.allocateContainer(
               ReplicationType.STAND_ALONE, ReplicationFactor.ONE, "");
         });

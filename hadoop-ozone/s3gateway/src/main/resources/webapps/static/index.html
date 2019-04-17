@@ -1,0 +1,79 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!--
+   Licensed to the Apache Software Foundation (ASF) under one or more
+   contributor license agreements.  See the NOTICE file distributed with
+   this work for additional information regarding copyright ownership.
+   The ASF licenses this file to You under the Apache License, Version 2.0
+   (the "License"); you may not use this file except in compliance with
+   the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <meta name="description" content="Apache Hadoop Ozone S3 gateway">
+
+    <title>S3 gateway -- Apache Hadoop Ozone</title>
+
+    <link href="bootstrap-3.3.7/css/bootstrap.min.css" rel="stylesheet">
+    <link href="hadoop.css" rel="stylesheet">
+    <link href="ozone.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<header class="navbar navbar-inverse navbar-fixed-top bs-docs-nav">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed"
+                    data-toggle="collapse" data-target="#navbar"
+                    aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">Ozone S3G</a>
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav" id="ui-tabs">
+                <li><a href="docs">Documentation</a></li>
+
+            </ul>
+        </div><!--/.nav-collapse -->
+
+    </div>
+</header>
+
+
+<div class="container-fluid" style="margin: 12pt">
+
+    <h1>S3 gateway</h1>
+
+    <p>This is an endpoint of Apache Hadoop Ozone S3 gateway. Use it with any
+        AWS S3 compatible tool
+        with setting this url as an endpoint</p>
+
+    <p>For example with aws-cli:</p>
+
+    <pre>aws s3api --endpoint <script>document.write(window.location.href.replace("static/", ""))</script> create-bucket --bucket=wordcount</pre>
+
+    <p>For more information, please check the <a href="docs">documentation.</a>
+    </p>
+</div><!-- /.container -->
+
+<script src="static/bootstrap-3.3.7/js/bootstrap.min.js"></script>
+</body>
+</html>

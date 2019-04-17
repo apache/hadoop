@@ -83,8 +83,8 @@ public class MemoryPlacementConstraintManager
       Map<Set<String>, PlacementConstraint> constraintMap) {
     // Check if app already exists. If not, prepare its constraint map.
     Map<String, PlacementConstraint> constraintsForApp = new HashMap<>();
+    readLock.lock();
     try {
-      readLock.lock();
       if (appConstraints.get(appId) != null) {
         LOG.warn("Application {} has already been registered.", appId);
         return;
@@ -109,8 +109,8 @@ public class MemoryPlacementConstraintManager
           appId);
     }
     // Update appConstraints.
+    writeLock.lock();
     try {
-      writeLock.lock();
       appConstraints.put(appId, constraintsForApp);
     } finally {
       writeLock.unlock();
@@ -120,8 +120,8 @@ public class MemoryPlacementConstraintManager
   @Override
   public void addConstraint(ApplicationId appId, Set<String> sourceTags,
       PlacementConstraint placementConstraint, boolean replace) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       Map<String, PlacementConstraint> constraintsForApp =
           appConstraints.get(appId);
       if (constraintsForApp == null) {
@@ -140,8 +140,8 @@ public class MemoryPlacementConstraintManager
   @Override
   public void addGlobalConstraint(Set<String> sourceTags,
       PlacementConstraint placementConstraint, boolean replace) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       addConstraintToMap(globalConstraints, sourceTags, placementConstraint,
           replace);
     } finally {
@@ -181,13 +181,11 @@ public class MemoryPlacementConstraintManager
   @Override
   public Map<Set<String>, PlacementConstraint> getConstraints(
       ApplicationId appId) {
+    readLock.lock();
     try {
-      readLock.lock();
       if (appConstraints.get(appId) == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Application {} is not registered in the Placement "
-              + "Constraint Manager.", appId);
-        }
+        LOG.debug("Application {} is not registered in the Placement "
+            + "Constraint Manager.", appId);
         return null;
       }
 
@@ -212,13 +210,11 @@ public class MemoryPlacementConstraintManager
       return null;
     }
     String sourceTag = getValidSourceTag(sourceTags);
+    readLock.lock();
     try {
-      readLock.lock();
       if (appConstraints.get(appId) == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Application {} is not registered in the Placement "
-              + "Constraint Manager.", appId);
-        }
+        LOG.debug("Application {} is not registered in the Placement "
+            + "Constraint Manager.", appId);
         return null;
       }
       // TODO: Merge this constraint with the global one for this tag, if one
@@ -235,8 +231,8 @@ public class MemoryPlacementConstraintManager
       return null;
     }
     String sourceTag = getValidSourceTag(sourceTags);
+    readLock.lock();
     try {
-      readLock.lock();
       return globalConstraints.get(sourceTag);
     } finally {
       readLock.unlock();
@@ -284,8 +280,8 @@ public class MemoryPlacementConstraintManager
 
   @Override
   public void unregisterApplication(ApplicationId appId) {
+    writeLock.lock();
     try {
-      writeLock.lock();
       appConstraints.remove(appId);
     } finally {
       writeLock.unlock();
@@ -298,8 +294,8 @@ public class MemoryPlacementConstraintManager
       return;
     }
     String sourceTag = getValidSourceTag(sourceTags);
+    writeLock.lock();
     try {
-      writeLock.lock();
       globalConstraints.remove(sourceTag);
     } finally {
       writeLock.unlock();
@@ -308,8 +304,8 @@ public class MemoryPlacementConstraintManager
 
   @Override
   public int getNumRegisteredApplications() {
+    readLock.lock();
     try {
-      readLock.lock();
       return appConstraints.size();
     } finally {
       readLock.unlock();
@@ -318,8 +314,8 @@ public class MemoryPlacementConstraintManager
 
   @Override
   public int getNumGlobalConstraints() {
+    readLock.lock();
     try {
-      readLock.lock();
       return globalConstraints.size();
     } finally {
       readLock.unlock();

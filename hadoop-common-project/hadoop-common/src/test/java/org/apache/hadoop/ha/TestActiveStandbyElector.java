@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.zookeeper.AsyncCallback;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.KeeperException.Code;
@@ -44,6 +43,8 @@ import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.util.ZKUtil.ZKAuthInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+
+import static org.mockito.ArgumentMatchers.any;
 
 public class TestActiveStandbyElector {
 
@@ -438,8 +439,7 @@ public class TestActiveStandbyElector {
         Event.KeeperState.SyncConnected);
     elector.processWatchEvent(mockZK, mockEvent);
     Mockito.verify(mockZK, Mockito.times(0)).exists(Mockito.anyString(),
-        Mockito.anyBoolean(), Mockito.<AsyncCallback.StatCallback> anyObject(),
-        Mockito.<Object> anyObject());
+        Mockito.anyBoolean(), any(), any());
 
     // disconnection should enter safe mode
     Mockito.when(mockEvent.getState()).thenReturn(
@@ -663,38 +663,35 @@ public class TestActiveStandbyElector {
     byte[] data = new byte[8];
     Mockito.when(
         mockZK.getData(Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-            Mockito.<Stat> anyObject())).thenReturn(data);
+            any())).thenReturn(data);
     Assert.assertEquals(data, elector.getActiveData());
     Mockito.verify(mockZK, Mockito.times(1)).getData(
-        Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-        Mockito.<Stat> anyObject());
+        Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
 
     // active does not exist
     Mockito.when(
         mockZK.getData(Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-            Mockito.<Stat> anyObject())).thenThrow(
+            any())).thenThrow(
         new KeeperException.NoNodeException());
     try {
       elector.getActiveData();
       Assert.fail("ActiveNotFoundException expected");
     } catch(ActiveNotFoundException e) {
       Mockito.verify(mockZK, Mockito.times(2)).getData(
-          Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-          Mockito.<Stat> anyObject());
+          Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
     }
 
     // error getting active data rethrows keeperexception
     try {
       Mockito.when(
           mockZK.getData(Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-              Mockito.<Stat> anyObject())).thenThrow(
+              any())).thenThrow(
           new KeeperException.AuthFailedException());
       elector.getActiveData();
       Assert.fail("KeeperException.AuthFailedException expected");
     } catch(KeeperException.AuthFailedException ke) {
       Mockito.verify(mockZK, Mockito.times(3)).getData(
-          Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false),
-          Mockito.<Stat> anyObject());
+          Mockito.eq(ZK_LOCK_NAME), Mockito.eq(false), any());
     }
   }
 
@@ -729,7 +726,7 @@ public class TestActiveStandbyElector {
     };
 
     Mockito.when(mockZK.create(Mockito.anyString(), Mockito.eq(new byte[]{}),
-        Mockito.anyListOf(ACL.class),
+        Mockito.anyList(),
         Mockito.eq(CreateMode.PERSISTENT))).thenThrow(ke);
 
     elector.ensureParentZNode();

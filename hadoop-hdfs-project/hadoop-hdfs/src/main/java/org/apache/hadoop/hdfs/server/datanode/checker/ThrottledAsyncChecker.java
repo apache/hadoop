@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -35,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -88,7 +88,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    */
   private final Map<Checkable, LastCheckResult<V>> completedChecks;
 
-  ThrottledAsyncChecker(final Timer timer,
+  public ThrottledAsyncChecker(final Timer timer,
                         final long minMsBetweenChecks,
                         final long diskCheckTimeout,
                         final ExecutorService executorService) {
@@ -120,7 +120,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
   public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
                                                 K context) {
     if (checksInProgress.containsKey(target)) {
-      return Optional.absent();
+      return Optional.empty();
     }
 
     if (completedChecks.containsKey(target)) {
@@ -130,7 +130,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
         LOG.debug("Skipped checking {}. Time since last check {}ms " +
                 "is less than the min gap {}ms.",
             target, msSinceLastCheck, minMsBetweenChecks);
-        return Optional.absent();
+        return Optional.empty();
       }
     }
 
@@ -182,7 +182,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
               t, timer.monotonicNow()));
         }
       }
-    });
+    }, MoreExecutors.directExecutor());
   }
 
   /**

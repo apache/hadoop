@@ -563,7 +563,8 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * @return the first transaction ID in the current log segment
    */
-  synchronized long getCurSegmentTxId() {
+  @VisibleForTesting
+  public synchronized long getCurSegmentTxId() {
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;
@@ -762,16 +763,16 @@ public class FSEditLog implements LogsPurgeable {
     }
     lastPrintTime = now;
     StringBuilder buf = new StringBuilder();
-    buf.append("Number of transactions: ");
-    buf.append(numTransactions);
-    buf.append(" Total time for transactions(ms): ");
-    buf.append(totalTimeTransactions);
-    buf.append(" Number of transactions batched in Syncs: ");
-    buf.append(numTransactionsBatchedInSync.get());
-    buf.append(" Number of syncs: ");
-    buf.append(editLogStream.getNumSync());
-    buf.append(" SyncTimes(ms): ");
-    buf.append(journalSet.getSyncTimes());
+    buf.append("Number of transactions: ")
+        .append(numTransactions)
+        .append(" Total time for transactions(ms): ")
+        .append(totalTimeTransactions)
+        .append(" Number of transactions batched in Syncs: ")
+        .append(numTransactionsBatchedInSync.get())
+        .append(" Number of syncs: ")
+        .append(editLogStream.getNumSync())
+        .append(" SyncTimes(ms): ")
+        .append(journalSet.getSyncTimes());
     LOG.info(buf.toString());
   }
 
@@ -1382,10 +1383,15 @@ public class FSEditLog implements LogsPurgeable {
     try {
       editLogStream = journalSet.startLogSegment(segmentTxId, layoutVersion);
     } catch (IOException ex) {
-      throw new IOException("Unable to start log segment " +
-          segmentTxId + ": too few journals successfully started.", ex);
+      final String msg = "Unable to start log segment " + segmentTxId
+          + ": too few journals successfully started.";
+      LOG.error(msg, ex);
+      synchronized (journalSetLock) {
+        IOUtils.cleanupWithLogger(LOG, journalSet);
+      }
+      terminate(1, msg);
     }
-    
+
     curSegmentTxId = segmentTxId;
     state = State.IN_SEGMENT;
   }

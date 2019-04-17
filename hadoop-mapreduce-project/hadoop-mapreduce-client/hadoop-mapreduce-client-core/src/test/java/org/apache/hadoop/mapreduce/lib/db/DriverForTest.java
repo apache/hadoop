@@ -29,7 +29,7 @@ import java.sql.Statement;
 import java.util.Properties;
 import java.util.logging.Logger;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**

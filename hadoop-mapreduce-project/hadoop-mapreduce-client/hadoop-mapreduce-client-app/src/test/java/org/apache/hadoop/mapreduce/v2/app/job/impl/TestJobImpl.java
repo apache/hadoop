@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.job.impl;
 
-import static org.mockito.Matchers.any;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;

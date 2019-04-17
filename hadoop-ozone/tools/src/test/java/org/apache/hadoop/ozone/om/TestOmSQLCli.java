@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -44,10 +45,10 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
 
@@ -171,7 +172,7 @@ public class TestOmSQLCli {
     String dbOutPath =  GenericTestUtils.getTempPath(
         UUID.randomUUID() + "/out_sql.db");
 
-    String dbRootPath = conf.get(OzoneConfigKeys.OZONE_METADATA_DIRS);
+    String dbRootPath = conf.get(HddsConfigKeys.OZONE_METADATA_DIRS);
     String dbPath = dbRootPath + "/" + OM_DB_NAME;
     String[] args = {"-p", dbPath, "-o", dbOutPath};
 
@@ -181,7 +182,7 @@ public class TestOmSQLCli {
     String sql = "SELECT * FROM volumeList";
     ResultSet rs = executeQuery(conn, sql);
     List<String> expectedValues =
-        new LinkedList<>(Arrays.asList(volumeName0, volumeName1));
+        new ArrayList<>(Arrays.asList(volumeName0, volumeName1));
     while (rs.next()) {
       String userNameRs = rs.getString("userName");
       String volumeNameRs = rs.getString("volumeName");
@@ -193,7 +194,7 @@ public class TestOmSQLCli {
     sql = "SELECT * FROM volumeInfo";
     rs = executeQuery(conn, sql);
     expectedValues =
-        new LinkedList<>(Arrays.asList(volumeName0, volumeName1));
+        new ArrayList<>(Arrays.asList(volumeName0, volumeName1));
     while (rs.next()) {
       String adName = rs.getString("adminName");
       String ownerName = rs.getString("ownerName");
@@ -207,7 +208,7 @@ public class TestOmSQLCli {
     sql = "SELECT * FROM aclInfo";
     rs = executeQuery(conn, sql);
     expectedValues =
-        new LinkedList<>(Arrays.asList(volumeName0, volumeName1));
+        new ArrayList<>(Arrays.asList(volumeName0, volumeName1));
     while (rs.next()) {
       String adName = rs.getString("adminName");
       String ownerName = rs.getString("ownerName");

@@ -67,6 +67,8 @@ import java.util.concurrent.TimeoutException;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.BlockAliasMap;
+import org.apache.hadoop.hdfs.server.common.blockaliasmap.impl.InMemoryLevelDBAliasMapClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -1362,6 +1364,21 @@ public class MiniDFSCluster implements AutoCloseable {
     }
     return uri;
   }
+
+  URI getURIForAuxiliaryPort(int nnIndex) {
+    String hostPort =
+        getNN(nnIndex).nameNode.getNNAuxiliaryRpcAddress();
+    if (hostPort == null) {
+      throw new RuntimeException("No auxiliary port found");
+    }
+    URI uri = null;
+    try {
+      uri = new URI("hdfs://" + hostPort);
+    } catch (URISyntaxException e) {
+      NameNode.LOG.warn("unexpected URISyntaxException", e);
+    }
+    return uri;
+  }
   
   public int getInstanceId() {
     return instanceId;
@@ -1973,6 +1990,14 @@ public class MiniDFSCluster implements AutoCloseable {
     checkSingleNameNode();
     return getNameNodePort(0);
   }
+
+  /**
+   * Get the auxiliary port of NameNode, NameNode specified by index.
+   */
+  public int getNameNodeAuxiliaryPort() {
+    checkSingleNameNode();
+    return getNameNodeAuxiliaryPort(0);
+  }
     
   /**
    * Gets the rpc port used by the NameNode at the given index, because the
@@ -1980,6 +2005,22 @@ public class MiniDFSCluster implements AutoCloseable {
    */     
   public int getNameNodePort(int nnIndex) {
     return getNN(nnIndex).nameNode.getNameNodeAddress().getPort();
+  }
+
+  /**
+   * Gets the rpc port used by the NameNode at the given index, if the
+   * NameNode has multiple auxiliary ports configured, a arbitrary
+   * one is returned.
+   */
+  public int getNameNodeAuxiliaryPort(int nnIndex) {
+    Set<InetSocketAddress> allAuxiliaryAddresses =
+        getNN(nnIndex).nameNode.getAuxiliaryNameNodeAddresses();
+    if (allAuxiliaryAddresses.isEmpty()) {
+      return -1;
+    } else {
+      InetSocketAddress addr = allAuxiliaryAddresses.iterator().next();
+      return addr.getPort();
+    }
   }
 
   /**
@@ -2362,14 +2403,19 @@ public class MiniDFSCluster implements AutoCloseable {
     return restartDataNode(dnprop, false);
   }
 
-  private void waitDataNodeFullyStarted(final DataNode dn)
+  public void waitDatanodeFullyStarted(DataNode dn, int timeout)
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(new Supplier<Boolean>() {
       @Override
       public Boolean get() {
         return dn.isDatanodeFullyStarted();
       }
-    }, 100, 60000);
+    }, 100, timeout);
+  }
+
+  private void waitDataNodeFullyStarted(final DataNode dn)
+      throws TimeoutException, InterruptedException {
+    waitDatanodeFullyStarted(dn, 60000);
   }
 
   /**
@@ -2538,12 +2584,24 @@ public class MiniDFSCluster implements AutoCloseable {
     return getFileSystem(0);
   }
 
+  public DistributedFileSystem getFileSystemFromAuxiliaryPort()
+      throws IOException {
+    checkSingleNameNode();
+    return getFileSystemFromAuxiliaryPort(0);
+  }
+
   /**
    * Get a client handle to the DFS cluster for the namenode at given index.
    */
   public DistributedFileSystem getFileSystem(int nnIndex) throws IOException {
     return (DistributedFileSystem) addFileSystem(FileSystem.get(getURI(nnIndex),
         getNN(nnIndex).conf));
+  }
+
+  public DistributedFileSystem getFileSystemFromAuxiliaryPort(int nnIndex)
+      throws IOException {
+    return (DistributedFileSystem) addFileSystem(FileSystem.get(
+        getURIForAuxiliaryPort(nnIndex), getNN(nnIndex).conf));
   }
 
   /**
@@ -2593,8 +2651,20 @@ public class MiniDFSCluster implements AutoCloseable {
     getNameNode(nnIndex).getRpcServer().transitionToStandby(
         new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED));
   }
-  
-  
+
+  public void transitionToObserver(int nnIndex) throws IOException,
+      ServiceFailedException {
+    getNameNode(nnIndex).getRpcServer().transitionToObserver(
+        new StateChangeRequestInfo(RequestSource.REQUEST_BY_USER_FORCED));
+  }
+
+  public void rollEditLogAndTail(int nnIndex) throws Exception {
+    getNameNode(nnIndex).getRpcServer().rollEditLog();
+    for (int i = 2; i < getNumNameNodes(); i++) {
+      getNameNode(i).getNamesystem().getEditLogTailer().doTailEdits();
+    }
+  }
+
   public void triggerBlockReports()
       throws IOException {
     for (DataNode dn : getDataNodes()) {
@@ -3259,6 +3329,27 @@ public class MiniDFSCluster implements AutoCloseable {
     } finally {
       writer.close();
     }
+  }
+
+  /**
+   * Setup the namenode-level PROVIDED configurations, using the
+   * {@link InMemoryLevelDBAliasMapClient}.
+   *
+   * @param conf Configuration, which is modified, to enable provided storage.
+   *        This cannot be null.
+   */
+  public static void setupNamenodeProvidedConfiguration(Configuration conf) {
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_PROVIDED_ENABLED, true);
+    conf.setBoolean(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_ENABLED, true);
+    conf.setClass(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_CLASS,
+        InMemoryLevelDBAliasMapClient.class, BlockAliasMap.class);
+    File tempDirectory = new File(GenericTestUtils.getRandomizedTestDir(),
+        "in-memory-alias-map");
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_INMEMORY_LEVELDB_DIR,
+        tempDirectory.getAbsolutePath());
+    conf.setInt(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LOAD_RETRIES, 10);
+    conf.set(DFSConfigKeys.DFS_PROVIDED_ALIASMAP_LEVELDB_PATH,
+        tempDirectory.getAbsolutePath());
   }
 
   @Override

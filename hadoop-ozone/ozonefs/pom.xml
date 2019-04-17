@@ -19,12 +19,12 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-ozone</artifactId>
-    <version>0.4.0-SNAPSHOT</version>
+    <version>0.5.0-SNAPSHOT</version>
   </parent>
   <artifactId>hadoop-ozone-filesystem</artifactId>
   <name>Apache Hadoop Ozone FileSystem</name>
   <packaging>jar</packaging>
-  <version>0.4.0-SNAPSHOT</version>
+  <version>0.5.0-SNAPSHOT</version>
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
@@ -45,46 +45,6 @@
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-shade-plugin</artifactId>
-        <version>3.1.1</version>
-        <configuration>
-          <artifactSet>
-            <includes>
-              <include>com.google.guava:guava</include>
-              <include>org.slf4j:slf4j-api</include>
-              <include>com.google.protobuf:protobuf-java</include>
-              <include>com.nimbusds:nimbus-jose-jwt</include>
-              <include>com.github.stephenc.jcip:jcip-annotations</include>
-              <include>com.google.code.findbugs:jsr305</include>
-              <include>org.apache.hadoop:hadoop-ozone-client</include>
-              <include>org.apache.hadoop:hadoop-hdds-client</include>
-              <include>org.apache.hadoop:hadoop-hdds-common</include>
-              <include>org.fusesource.leveldbjni:leveldbjni-all</include>
-              <include>org.apache.ratis:ratis-server</include>
-              <include>org.apache.ratis:ratis-proto-shaded</include>
-              <include>com.google.auto.value:auto-value-annotations</include>
-              <include>com.squareup:javapoet</include>
-              <include>org.jctools:jctools-core</include>
-              <include>org.apache.ratis:ratis-common</include>
-              <include>org.apache.ratis:ratis-client</include>
-              <include>org.apache.ratis:ratis-netty</include>
-              <include>org.apache.ratis:ratis-grpc</include>
-              <include>org.rocksdb:rocksdbjni</include>
-              <include>org.apache.hadoop:hadoop-ozone-common</include>
-            </includes>
-          </artifactSet>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>package</phase>
-            <goals>
-              <goal>shade</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-dependency-plugin</artifactId>
         <executions>
           <execution>
@@ -96,7 +56,7 @@
             <configuration>
               <!-- build a shellprofile -->
               <outputFile>
-                ${project.basedir}/target/hadoop-tools-deps/${project.artifactId}.tools-optional.txt
+                ${project.basedir}/target/1hadoop-tools-deps/${project.artifactId}.tools-optional.txt
               </outputFile>
             </configuration>
           </execution>
@@ -110,7 +70,17 @@
             <include>ITestOzoneContract*.java</include>
           </includes>          
         </configuration>
-      </plugin>      
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>animal-sniffer-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>signature-check</id>
+            <phase></phase>
+          </execution>
+        </executions>
+      </plugin>
     </plugins>
   </build>
 
@@ -118,17 +88,12 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdfs</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdfs-client</artifactId>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
@@ -168,6 +133,13 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>findbugs</artifactId>
+      <version>3.0.1</version>
+      <scope>provided</scope>
+    </dependency>
+
+    <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-common</artifactId>
       <scope>test</scope>
@@ -193,6 +165,7 @@
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-all</artifactId>
+      <version>1.10.19</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -215,6 +188,30 @@
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+      <version>1.6.5</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.javassist</groupId>
+          <artifactId>javassist</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-mockito</artifactId>
+      <version>1.6.5</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.hamcrest</groupId>
+          <artifactId>hamcrest-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>

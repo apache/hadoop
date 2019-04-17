@@ -21,8 +21,10 @@ package org.apache.hadoop.ozone.genesis;
 import org.openjdk.jmh.profile.StackProfiler;
 import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.RunnerException;
-import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
+import picocli.CommandLine;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Command;
 
 /**
  * Main class that executes a set of HDDS/Ozone benchmarks.
@@ -32,28 +34,60 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
  * Hence, these classes do not use the Tool/Runner pattern of standard Hadoop
  * CLI.
  */
+@Command(name = "ozone genesis",
+    description = "Tool for running ozone benchmarks",
+    mixinStandardHelpOptions = true)
 public final class Genesis {
+
+  // After adding benchmark in genesis package add the benchmark name in the
+  // description for this option.
+  @Option(names = "-benchmark", split = ",", description =
+      "Option used for specifying benchmarks to run.\n"
+          + "Ex. ozone genesis -benchmark BenchMarkContainerStateMap,"
+          + "BenchMarkOMKeyAllocation.\n"
+          + "Possible benchmarks which can be used are "
+          + "{BenchMarkContainerStateMap, BenchMarkOMKeyAllocation, "
+          + "BenchMarkOzoneManager, BenchMarkOMClient, "
+          + "BenchMarkSCM, BenchMarkMetadataStoreReads, "
+          + "BenchMarkMetadataStoreWrites, BenchMarkDatanodeDispatcher, "
+          + "BenchMarkRocksDbStore}")
+  private static String[] benchmarks;
+
+  @Option(names = "-t", defaultValue = "4",
+      description = "Number of threads to use for the benchmark.\n"
+          + "This option can be overridden by threads mentioned in benchmark.")
+  private static int numThreads;
 
   private Genesis() {
   }
 
   public static void main(String[] args) throws RunnerException {
-    Options opt = new OptionsBuilder()
-        .include(BenchMarkContainerStateMap.class.getSimpleName())
-//        .include(BenchMarkMetadataStoreReads.class.getSimpleName())
-//        .include(BenchMarkMetadataStoreWrites.class.getSimpleName())
-//        .include(BenchMarkDatanodeDispatcher.class.getSimpleName())
-// Commenting this test out, till we support either a command line or a config
-        // file based ability to run tests.
-//        .include(BenchMarkRocksDbStore.class.getSimpleName())
-        .warmupIterations(5)
+    CommandLine commandLine = new CommandLine(new Genesis());
+    commandLine.parse(args);
+    if (commandLine.isUsageHelpRequested()) {
+      commandLine.usage(System.out);
+      return;
+    }
+
+    OptionsBuilder optionsBuilder = new OptionsBuilder();
+    if (benchmarks != null) {
+      // The OptionsBuilder#include takes a regular expression as argument.
+      // Therefore it is important to keep the benchmark names unique for
+      // running a benchmark. For example if there are two benchmarks -
+      // BenchMarkOM and BenchMarkOMClient and we include BenchMarkOM then
+      // both the benchmarks will be run.
+      for (String benchmark : benchmarks) {
+        optionsBuilder.include(benchmark);
+      }
+    }
+    optionsBuilder.warmupIterations(2)
         .measurementIterations(20)
         .addProfiler(StackProfiler.class)
         .shouldDoGC(true)
         .forks(1)
-        .build();
+        .threads(numThreads);
 
-    new Runner(opt).run();
+    new Runner(optionsBuilder.build()).run();
   }
 }
 

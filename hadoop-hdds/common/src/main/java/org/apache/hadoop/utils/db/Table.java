@@ -19,11 +19,9 @@
 
 package org.apache.hadoop.utils.db;
 
-import org.apache.hadoop.classification.InterfaceStability;
-import org.rocksdb.ColumnFamilyHandle;
-import org.rocksdb.WriteBatch;
-
 import java.io.IOException;
+
+import org.apache.hadoop.classification.InterfaceStability;
 
 /**
  * Interface for key-value store that stores ozone metadata. Ozone metadata is
@@ -32,7 +30,7 @@ import java.io.IOException;
  * different kind of tables.
  */
 @InterfaceStability.Evolving
-public interface Table extends AutoCloseable {
+public interface Table<KEY, VALUE> extends AutoCloseable {
 
   /**
    * Puts a key-value pair into the store.
@@ -40,7 +38,17 @@ public interface Table extends AutoCloseable {
    * @param key metadata key
    * @param value metadata value
    */
-  void put(byte[] key, byte[] value) throws IOException;
+  void put(KEY key, VALUE value) throws IOException;
+
+  /**
+   * Puts a key-value pair into the store as part of a bath operation.
+   *
+   * @param batch the batch operation
+   * @param key metadata key
+   * @param value metadata value
+   */
+  void putWithBatch(BatchOperation batch, KEY key, VALUE value)
+      throws IOException;
 
   /**
    * @return true if the metadata store is empty.
@@ -56,7 +64,7 @@ public interface Table extends AutoCloseable {
    * @return value in byte array or null if the key is not found.
    * @throws IOException on Failure
    */
-  byte[] get(byte[] key) throws IOException;
+  VALUE get(KEY key) throws IOException;
 
   /**
    * Deletes a key from the metadata store.
@@ -64,29 +72,23 @@ public interface Table extends AutoCloseable {
    * @param key metadata key
    * @throws IOException on Failure
    */
-  void delete(byte[] key) throws IOException;
+  void delete(KEY key) throws IOException;
 
   /**
-   * Return the Column Family handle. TODO: This leaks an RockDB abstraction
-   * into Ozone code, cleanup later.
+   * Deletes a key from the metadata store as part of a batch operation.
    *
-   * @return ColumnFamilyHandle
+   * @param batch the batch operation
+   * @param key metadata key
+   * @throws IOException on Failure
    */
-  ColumnFamilyHandle getHandle();
-
-  /**
-   * A batch of PUT, DELETE operations handled as a single atomic write.
-   *
-   * @throws IOException write fails
-   */
-  void writeBatch(WriteBatch operation) throws IOException;
+  void deleteWithBatch(BatchOperation batch, KEY key) throws IOException;
 
   /**
    * Returns the iterator for this metadata store.
    *
    * @return MetaStoreIterator
    */
-  TableIterator<KeyValue> iterator();
+  TableIterator<KEY, ? extends KeyValue<KEY, VALUE>> iterator();
 
   /**
    * Returns the Name of this Table.
@@ -98,53 +100,10 @@ public interface Table extends AutoCloseable {
   /**
    * Class used to represent the key and value pair of a db entry.
    */
-  class KeyValue {
+  interface KeyValue<KEY, VALUE> {
 
-    private final byte[] key;
-    private final byte[] value;
+    KEY getKey() throws IOException;
 
-    /**
-     * KeyValue Constructor, used to represent a key and value of a db entry.
-     *
-     * @param key - Key Bytes
-     * @param value - Value bytes
-     */
-    private KeyValue(byte[] key, byte[] value) {
-      this.key = key;
-      this.value = value;
-    }
-
-    /**
-     * Create a KeyValue pair.
-     *
-     * @param key - Key Bytes
-     * @param value - Value bytes
-     * @return KeyValue object.
-     */
-    public static KeyValue create(byte[] key, byte[] value) {
-      return new KeyValue(key, value);
-    }
-
-    /**
-     * Return key.
-     *
-     * @return byte[]
-     */
-    public byte[] getKey() {
-      byte[] result = new byte[key.length];
-      System.arraycopy(key, 0, result, 0, key.length);
-      return result;
-    }
-
-    /**
-     * Return value.
-     *
-     * @return byte[]
-     */
-    public byte[] getValue() {
-      byte[] result = new byte[value.length];
-      System.arraycopy(value, 0, result, 0, value.length);
-      return result;
-    }
+    VALUE getValue() throws IOException;
   }
 }

@@ -187,7 +187,8 @@ public class RMAdminCLI extends HAAdmin {
   private static void appendHAUsage(final StringBuilder usageBuilder) {
     for (Map.Entry<String,UsageInfo> cmdEntry : USAGE.entrySet()) {
       if (cmdEntry.getKey().equals("-help")
-          || cmdEntry.getKey().equals("-failover")) {
+          || cmdEntry.getKey().equals("-failover")
+          || cmdEntry.getKey().equals("-transitionToObserver")) {
         continue;
       }
       UsageInfo usageInfo = cmdEntry.getValue();
@@ -291,8 +292,8 @@ public class RMAdminCLI extends HAAdmin {
     if (isHAEnabled) {
       appendHAUsage(summary);
     }
-    summary.append(" [-help [cmd]]");
-    summary.append("\n");
+    summary.append(" [-help [cmd]]")
+        .append("\n");
 
     StringBuilder helpBuilder = new StringBuilder();
     System.out.println(summary);
@@ -302,7 +303,8 @@ public class RMAdminCLI extends HAAdmin {
     }
     if (isHAEnabled) {
       for (String cmdKey : USAGE.keySet()) {
-        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")) {
+        if (!cmdKey.equals("-help") && !cmdKey.equals("-failover")
+            && !cmdKey.equals("-transitionToObserver")) {
           buildHelpMsg(cmdKey, helpBuilder);
           helpBuilder.append("\n");
         }
@@ -511,8 +513,8 @@ public class RMAdminCLI extends HAAdmin {
       StringBuilder sb = new StringBuilder();
       sb.append(username + " :");
       for (String group : adminProtocol.getGroupsForUser(username)) {
-        sb.append(" ");
-        sb.append(group);
+        sb.append(" ")
+            .append(group);
       }
       System.out.println(sb);
     }

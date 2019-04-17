@@ -26,39 +26,50 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileUtil;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.NodeReportProto;
-import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.NodeReportProto;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.StorageReportProto;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
 import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
-import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
-import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher.NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
+import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
+import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
+    .NodeReportFromDatanode;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.security.authentication.client
+    .AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.event.Level;
 
 /**
  * Test DeadNodeHandler.
  */
 public class TestDeadNodeHandler {
 
+  private StorageContainerManager scm;
   private SCMNodeManager nodeManager;
   private ContainerManager containerManager;
   private NodeReportHandler nodeReportHandler;
@@ -68,14 +79,22 @@ public class TestDeadNodeHandler {
   private String storageDir;
 
   @Before
-  public void setup() throws IOException {
+  public void setup() throws IOException, AuthenticationException {
     OzoneConfiguration conf = new OzoneConfiguration();
     storageDir = GenericTestUtils.getTempPath(
         TestDeadNodeHandler.class.getSimpleName() + UUID.randomUUID());
-    conf.set(OzoneConfigKeys.OZONE_METADATA_DIRS, storageDir);
+    conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, storageDir);
     eventQueue = new EventQueue();
-    nodeManager = new SCMNodeManager(conf, "cluster1", null, eventQueue);
-    containerManager = new SCMContainerManager(conf, nodeManager, eventQueue);
+    scm = HddsTestUtils.getScm(conf);
+    nodeManager = (SCMNodeManager) scm.getScmNodeManager();
+    SCMPipelineManager manager =
+        (SCMPipelineManager)scm.getPipelineManager();
+    PipelineProvider mockRatisProvider =
+        new MockRatisPipelineProvider(nodeManager, manager.getStateManager(),
+            conf);
+    manager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
+        mockRatisProvider);
+    containerManager = scm.getContainerManager();
     deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);
@@ -84,11 +103,13 @@ public class TestDeadNodeHandler {
 
   @After
   public void teardown() {
+    scm.stop();
+    scm.join();
     FileUtil.fullyDelete(new File(storageDir));
   }
 
   @Test
-  public void testOnMessage() throws IOException {
+  public void testOnMessage() throws IOException, NodeNotFoundException {
     //GIVEN
     DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
     DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
@@ -131,32 +152,25 @@ public class TestDeadNodeHandler {
         TestUtils.allocateContainer(containerManager);
     ContainerInfo container3 =
         TestUtils.allocateContainer(containerManager);
+    ContainerInfo container4 =
+        TestUtils.allocateContainer(containerManager);
 
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container2.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container3.containerID(), HddsProtos.LifeCycleEvent.CREATED);
-
-    registerReplicas(datanode1, container1, container2);
-    registerReplicas(datanode2, container1, container3);
+    registerContainers(datanode1, container1, container2, container4);
+    registerContainers(datanode2, container1, container2);
+    registerContainers(datanode3, container3);
 
     registerReplicas(containerManager, container1, datanode1, datanode2);
-    registerReplicas(containerManager, container2, datanode1);
-    registerReplicas(containerManager, container3, datanode2);
+    registerReplicas(containerManager, container2, datanode1, datanode2);
+    registerReplicas(containerManager, container3, datanode3);
+    registerReplicas(containerManager, container4, datanode1);
 
     TestUtils.closeContainer(containerManager, container1.containerID());
     TestUtils.closeContainer(containerManager, container2.containerID());
-    TestUtils.closeContainer(containerManager, container3.containerID());
+    TestUtils.quasiCloseContainer(containerManager, container3.containerID());
+
+    GenericTestUtils.setLogLevel(DeadNodeHandler.getLogger(), Level.DEBUG);
+    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
+        .captureLogs(DeadNodeHandler.getLogger());
 
     deadNodeHandler.onMessage(datanode1, publisher);
 
@@ -168,65 +182,33 @@ public class TestDeadNodeHandler {
 
     Set<ContainerReplica> container2Replicas = containerManager
         .getContainerReplicas(new ContainerID(container2.getContainerID()));
-    Assert.assertEquals(0, container2Replicas.size());
+    Assert.assertEquals(1, container2Replicas.size());
+    Assert.assertEquals(datanode2,
+        container2Replicas.iterator().next().getDatanodeDetails());
 
     Set<ContainerReplica> container3Replicas = containerManager
             .getContainerReplicas(new ContainerID(container3.getContainerID()));
     Assert.assertEquals(1, container3Replicas.size());
-    Assert.assertEquals(datanode2,
+    Assert.assertEquals(datanode3,
         container3Replicas.iterator().next().getDatanodeDetails());
-  }
 
-  @Test
-  public void testStatisticsUpdate() throws Exception {
-    //GIVEN
-    DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
-    DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
+    // Replicate should be fired for container 1 and container 2 as now
+    // datanode 1 is dead, these 2 will not match with expected replica count
+    // and their state is one of CLOSED/QUASI_CLOSE.
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container1.getContainerID()));
+    Assert.assertTrue(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container2.getContainerID()));
 
-    String storagePath1 = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + datanode1.getUuidString());
-    String storagePath2 = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + datanode2.getUuidString());
+    // as container4 is still in open state, replicate event should not have
+    // fired for this.
+    Assert.assertFalse(logCapturer.getOutput().contains(
+        "Replicate Request fired for container " +
+            container4.getContainerID()));
 
-    StorageReportProto storageOne = TestUtils.createStorageReport(
-        datanode1.getUuid(), storagePath1, 100, 10, 90, null);
-    StorageReportProto storageTwo = TestUtils.createStorageReport(
-        datanode2.getUuid(), storagePath2, 200, 20, 180, null);
 
-    nodeManager.register(datanode1,
-        TestUtils.createNodeReport(storageOne), null);
-    nodeManager.register(datanode2,
-        TestUtils.createNodeReport(storageTwo), null);
-
-    nodeReportHandler.onMessage(getNodeReport(datanode1, storageOne),
-        Mockito.mock(EventPublisher.class));
-    nodeReportHandler.onMessage(getNodeReport(datanode2, storageTwo),
-        Mockito.mock(EventPublisher.class));
-
-    SCMNodeStat stat = nodeManager.getStats();
-    Assert.assertTrue(stat.getCapacity().get() == 300);
-    Assert.assertTrue(stat.getRemaining().get() == 270);
-    Assert.assertTrue(stat.getScmUsed().get() == 30);
-
-    SCMNodeMetric nodeStat = nodeManager.getNodeStat(datanode1);
-    Assert.assertTrue(nodeStat.get().getCapacity().get() == 100);
-    Assert.assertTrue(nodeStat.get().getRemaining().get() == 90);
-    Assert.assertTrue(nodeStat.get().getScmUsed().get() == 10);
-
-    //WHEN datanode1 is dead.
-    eventQueue.fireEvent(SCMEvents.DEAD_NODE, datanode1);
-    Thread.sleep(100);
-
-    //THEN statistics in SCM should changed.
-    stat = nodeManager.getStats();
-    Assert.assertTrue(stat.getCapacity().get() == 200);
-    Assert.assertTrue(stat.getRemaining().get() == 180);
-    Assert.assertTrue(stat.getScmUsed().get() == 20);
-
-    nodeStat = nodeManager.getNodeStat(datanode1);
-    Assert.assertTrue(nodeStat.get().getCapacity().get() == 0);
-    Assert.assertTrue(nodeStat.get().getRemaining().get() == 0);
-    Assert.assertTrue(nodeStat.get().getScmUsed().get() == 0);
   }
 
   @Test
@@ -258,36 +240,37 @@ public class TestDeadNodeHandler {
 
     ContainerInfo container1 =
         TestUtils.allocateContainer(containerManager);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATE);
-    containerManager.updateContainerState(
-        container1.containerID(), HddsProtos.LifeCycleEvent.CREATED);
     TestUtils.closeContainer(containerManager, container1.containerID());
-
-    registerReplicas(dn1, container1);
 
     deadNodeHandler.onMessage(dn1, eventQueue);
     Assert.assertTrue(logCapturer.getOutput().contains(
-        "Exception while removing container replica "));
+        "DeadNode event for a unregistered node"));
   }
 
-  private void registerReplicas(ContainerManager containerManager,
+  private void registerReplicas(ContainerManager contManager,
       ContainerInfo container, DatanodeDetails... datanodes)
       throws ContainerNotFoundException {
     for (DatanodeDetails datanode : datanodes) {
-      containerManager.updateContainerReplica(
+      contManager.updateContainerReplica(
           new ContainerID(container.getContainerID()),
           ContainerReplica.newBuilder()
+              .setContainerState(ContainerReplicaProto.State.OPEN)
               .setContainerID(container.containerID())
               .setDatanodeDetails(datanode).build());
     }
   }
 
-  private void registerReplicas(DatanodeDetails datanode,
+  /**
+   * Update containers available on the datanode.
+   * @param datanode
+   * @param containers
+   * @throws NodeNotFoundException
+   */
+  private void registerContainers(DatanodeDetails datanode,
       ContainerInfo... containers)
-      throws SCMException {
+      throws NodeNotFoundException {
     nodeManager
-        .addDatanodeInContainerMap(datanode.getUuid(),
+        .setContainers(datanode,
             Arrays.stream(containers)
                 .map(container -> new ContainerID(container.getContainerID()))
                 .collect(Collectors.toSet()));

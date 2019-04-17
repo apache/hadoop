@@ -222,6 +222,11 @@ public class TestNameNodeMXBean {
           "CorruptFiles"));
       assertEquals("Bad value for CorruptFiles", fsn.getCorruptFiles(),
           corruptFiles);
+      // get attribute CorruptFilesCount
+      int corruptFilesCount = (int) (mbs.getAttribute(mxbeanName,
+          "CorruptFilesCount"));
+      assertEquals("Bad value for CorruptFilesCount",
+          fsn.getCorruptFilesCount(), corruptFilesCount);
       // get attribute NameDirStatuses
       String nameDirStatuses = (String) (mbs.getAttribute(mxbeanName,
           "NameDirStatuses"));
@@ -1008,6 +1013,7 @@ public class TestNameNodeMXBean {
         expectedTotalReplicatedBlocks, totalReplicaBlocks.longValue());
     assertEquals("Unexpected total ec block groups!",
         expectedTotalECBlockGroups, totalECBlockGroups.longValue());
+    verifyEcClusterSetupVerifyResult(mbs);
   }
 
   private String getEnabledEcPoliciesMetric() throws Exception {
@@ -1016,5 +1022,23 @@ public class TestNameNodeMXBean {
         "Hadoop:service=NameNode,name=ECBlockGroupsState");
     return (String) (mbs.getAttribute(mxbeanName,
         "EnabledEcPolicies"));
+  }
+
+  private void verifyEcClusterSetupVerifyResult(MBeanServer mbs)
+      throws Exception{
+    ObjectName namenodeMXBeanName = new ObjectName(
+        "Hadoop:service=NameNode,name=NameNodeInfo");
+    String result = (String) mbs.getAttribute(namenodeMXBeanName,
+        "VerifyECWithTopologyResult");
+    ObjectMapper mapper = new ObjectMapper();
+    Map<String, String> resultMap = mapper.readValue(result, Map.class);
+    Boolean isSupported = Boolean.parseBoolean(resultMap.get("isSupported"));
+    String resultMessage = resultMap.get("resultMessage");
+
+    assertFalse("Test cluster does not support all enabled " +
+        "erasure coding policies.", isSupported);
+    assertTrue(resultMessage.contains("3 racks are required for " +
+        "the erasure coding policies: RS-6-3-1024k. " +
+        "The number of racks is only 1."));
   }
 }

@@ -23,7 +23,9 @@ package org.apache.hadoop.hdds.scm.server;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.google.protobuf.BlockingService;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -33,20 +35,30 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.safemode.SafeModePrecheck;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
+import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
-import org.apache.hadoop.hdds.scm.container.common.helpers.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException.ResultCodes;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolPB;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditLoggerType;
+import org.apache.hadoop.ozone.audit.AuditMessage;
+import org.apache.hadoop.ozone.audit.Auditor;
+import org.apache.hadoop.ozone.audit.SCMAction;
 import org.apache.hadoop.ozone.protocolPB
     .StorageContainerLocationProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -56,10 +68,11 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import static org.apache.hadoop.hdds.protocol.proto
     .StorageContainerLocationProtocolProtos
@@ -79,19 +92,22 @@ import static org.apache.hadoop.hdds.scm.server.StorageContainerManager
  * The RPC server that listens to requests from clients.
  */
 public class SCMClientProtocolServer implements
-    StorageContainerLocationProtocol, EventHandler<Boolean> {
+    StorageContainerLocationProtocol, Auditor {
   private static final Logger LOG =
       LoggerFactory.getLogger(SCMClientProtocolServer.class);
+  private static final AuditLogger AUDIT =
+      new AuditLogger(AuditLoggerType.SCMLOGGER);
   private final RPC.Server clientRpcServer;
   private final InetSocketAddress clientRpcAddress;
   private final StorageContainerManager scm;
   private final OzoneConfiguration conf;
-  private ChillModePrecheck chillModePrecheck = new ChillModePrecheck();
+  private SafeModePrecheck safeModePrecheck;
 
   public SCMClientProtocolServer(OzoneConfiguration conf,
       StorageContainerManager scm) throws IOException {
     this.scm = scm;
     this.conf = conf;
+    safeModePrecheck = new SafeModePrecheck(conf);
     final int handlerCount =
         conf.getInt(OZONE_SCM_HANDLER_COUNT_KEY,
             OZONE_SCM_HANDLER_COUNT_DEFAULT);
@@ -115,7 +131,10 @@ public class SCMClientProtocolServer implements
     clientRpcAddress =
         updateRPCListenAddress(conf, OZONE_SCM_CLIENT_ADDRESS_KEY,
             scmAddress, clientRpcServer);
-
+    if (conf.getBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      clientRpcServer.refreshServiceAcl(conf, SCMPolicyProvider.getInstance());
+    }
   }
 
   public RPC.Server getClientRpcServer() {
@@ -158,40 +177,97 @@ public class SCMClientProtocolServer implements
   public ContainerWithPipeline allocateContainer(HddsProtos.ReplicationType
       replicationType, HddsProtos.ReplicationFactor factor,
       String owner) throws IOException {
-    ScmUtils.preCheck(ScmOps.allocateContainer, chillModePrecheck);
-    String remoteUser = getRpcRemoteUsername();
-    getScm().checkAdminAccess(remoteUser);
+    ScmUtils.preCheck(ScmOps.allocateContainer, safeModePrecheck);
+    getScm().checkAdminAccess(getRpcRemoteUsername());
 
-    return scm.getContainerManager()
+    final ContainerInfo container = scm.getContainerManager()
         .allocateContainer(replicationType, factor, owner);
+    final Pipeline pipeline = scm.getPipelineManager()
+        .getPipeline(container.getPipelineID());
+    return new ContainerWithPipeline(container, pipeline);
   }
 
   @Override
   public ContainerInfo getContainer(long containerID) throws IOException {
     String remoteUser = getRpcRemoteUsername();
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("containerID", String.valueOf(containerID));
     getScm().checkAdminAccess(remoteUser);
-    return scm.getContainerManager()
-        .getContainer(ContainerID.valueof(containerID));
+    try {
+      return scm.getContainerManager()
+          .getContainer(ContainerID.valueof(containerID));
+    } catch (IOException ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.GET_CONTAINER, auditMap, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.GET_CONTAINER, auditMap)
+        );
+      }
+    }
+
   }
 
   @Override
   public ContainerWithPipeline getContainerWithPipeline(long containerID)
       throws IOException {
-    if (chillModePrecheck.isInChillMode()) {
-      ContainerInfo contInfo = scm.getContainerManager()
-          .getContainer(ContainerID.valueof(containerID));
-      if (contInfo.isOpen()) {
-        if (!hasRequiredReplicas(contInfo)) {
-          throw new SCMException("Open container " + containerID + " doesn't"
-              + " have enough replicas to service this operation in "
-              + "Chill mode.", ResultCodes.CHILL_MODE_EXCEPTION);
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("containerID", String.valueOf(containerID));
+    boolean auditSuccess = true;
+    try {
+      if (safeModePrecheck.isInSafeMode()) {
+        ContainerInfo contInfo = scm.getContainerManager()
+            .getContainer(ContainerID.valueof(containerID));
+        if (contInfo.isOpen()) {
+          if (!hasRequiredReplicas(contInfo)) {
+            throw new SCMException("Open container " + containerID + " doesn't"
+                + " have enough replicas to service this operation in "
+                + "Safe mode.", ResultCodes.SAFE_MODE_EXCEPTION);
+          }
         }
       }
+      getScm().checkAdminAccess(null);
+
+      final ContainerID id = ContainerID.valueof(containerID);
+      final ContainerInfo container = scm.getContainerManager().
+          getContainer(id);
+      final Pipeline pipeline;
+
+      if (container.isOpen()) {
+        // Ratis pipeline
+        pipeline = scm.getPipelineManager()
+            .getPipeline(container.getPipelineID());
+      } else {
+        pipeline = scm.getPipelineManager().createPipeline(
+            HddsProtos.ReplicationType.STAND_ALONE,
+            container.getReplicationFactor(),
+            scm.getContainerManager()
+                .getContainerReplicas(id).stream()
+                .map(ContainerReplica::getDatanodeDetails)
+                .collect(Collectors.toList()));
+      }
+
+      return new ContainerWithPipeline(container, pipeline);
+    } catch (IOException ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.GET_CONTAINER_WITH_PIPELINE,
+              auditMap, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.GET_CONTAINER_WITH_PIPELINE,
+                auditMap)
+        );
+      }
     }
-    String remoteUser = getRpcRemoteUsername();
-    getScm().checkAdminAccess(null);
-    return scm.getContainerManager()
-        .getContainerWithPipeline(ContainerID.valueof(containerID));
   }
 
   /**
@@ -213,16 +289,56 @@ public class SCMClientProtocolServer implements
   @Override
   public List<ContainerInfo> listContainer(long startContainerID,
       int count) throws IOException {
-    return scm.getContainerManager().
-        listContainer(ContainerID.valueof(startContainerID), count);
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("startContainerID", String.valueOf(startContainerID));
+    auditMap.put("count", String.valueOf(count));
+    try {
+      // To allow startcontainerId to take the value "0",
+      // "null" is assigned, so that its handled in the
+      // scm.getContainerManager().listContainer method
+      final ContainerID containerId = startContainerID != 0 ? ContainerID
+          .valueof(startContainerID) : null;
+      return scm.getContainerManager().
+          listContainer(containerId, count);
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.LIST_CONTAINER, auditMap, ex));
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.LIST_CONTAINER, auditMap));
+      }
+    }
+
   }
 
   @Override
   public void deleteContainer(long containerID) throws IOException {
     String remoteUser = getRpcRemoteUsername();
-    getScm().checkAdminAccess(remoteUser);
-    scm.getContainerManager().deleteContainer(ContainerID.valueof(containerID));
-
+    boolean auditSuccess = true;
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("containerID", String.valueOf(containerID));
+    auditMap.put("remoteUser", remoteUser);
+    try {
+      getScm().checkAdminAccess(remoteUser);
+      scm.getContainerManager().deleteContainer(
+          ContainerID.valueof(containerID));
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(SCMAction.DELETE_CONTAINER, auditMap, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logWriteSuccess(
+            buildAuditMessageForSuccess(SCMAction.DELETE_CONTAINER, auditMap)
+        );
+      }
+    }
   }
 
   @Override
@@ -256,30 +372,16 @@ public class SCMClientProtocolServer implements
     if (type == StorageContainerLocationProtocolProtos
         .ObjectStageChangeRequestProto.Type.container) {
       if (op == StorageContainerLocationProtocolProtos
-          .ObjectStageChangeRequestProto.Op.create) {
+          .ObjectStageChangeRequestProto.Op.close) {
         if (stage == StorageContainerLocationProtocolProtos
             .ObjectStageChangeRequestProto.Stage.begin) {
-          scm.getContainerManager().updateContainerState(
-              ContainerID.valueof(id), HddsProtos
-              .LifeCycleEvent.CREATE);
+          scm.getContainerManager()
+              .updateContainerState(ContainerID.valueof(id),
+                  HddsProtos.LifeCycleEvent.FINALIZE);
         } else {
-          scm.getContainerManager().updateContainerState(
-              ContainerID.valueof(id), HddsProtos
-              .LifeCycleEvent.CREATED);
-        }
-      } else {
-        if (op == StorageContainerLocationProtocolProtos
-            .ObjectStageChangeRequestProto.Op.close) {
-          if (stage == StorageContainerLocationProtocolProtos
-              .ObjectStageChangeRequestProto.Stage.begin) {
-            scm.getContainerManager().updateContainerState(
-                ContainerID.valueof(id), HddsProtos
-                .LifeCycleEvent.FINALIZE);
-          } else {
-            scm.getContainerManager().updateContainerState(
-                ContainerID.valueof(id), HddsProtos
-                .LifeCycleEvent.CLOSE);
-          }
+          scm.getContainerManager()
+              .updateContainerState(ContainerID.valueof(id),
+                  HddsProtos.LifeCycleEvent.CLOSE);
         }
       }
     } // else if (type == ObjectStageChangeRequestProto.Type.pipeline) {
@@ -299,34 +401,76 @@ public class SCMClientProtocolServer implements
   }
 
   @Override
+  public List<Pipeline> listPipelines() {
+    AUDIT.logReadSuccess(
+        buildAuditMessageForSuccess(SCMAction.LIST_PIPELINE, null));
+    return scm.getPipelineManager().getPipelines();
+  }
+
+  @Override
+  public void closePipeline(HddsProtos.PipelineID pipelineID)
+      throws IOException {
+    Map<String, String> auditMap = Maps.newHashMap();
+    auditMap.put("pipelineID", pipelineID.getId());
+    PipelineManager pipelineManager = scm.getPipelineManager();
+    Pipeline pipeline =
+        pipelineManager.getPipeline(PipelineID.getFromProtobuf(pipelineID));
+    pipelineManager.finalizeAndDestroyPipeline(pipeline, false);
+    AUDIT.logWriteSuccess(
+        buildAuditMessageForSuccess(SCMAction.CLOSE_PIPELINE, null)
+    );
+  }
+
+  @Override
   public ScmInfo getScmInfo() throws IOException {
-    ScmInfo.Builder builder =
-        new ScmInfo.Builder()
-            .setClusterId(scm.getScmStorage().getClusterID())
-            .setScmId(scm.getScmStorage().getScmId());
-    return builder.build();
+    boolean auditSuccess = true;
+    try{
+      ScmInfo.Builder builder =
+          new ScmInfo.Builder()
+              .setClusterId(scm.getScmStorageConfig().getClusterID())
+              .setScmId(scm.getScmStorageConfig().getScmId());
+      return builder.build();
+    } catch (Exception ex) {
+      auditSuccess = false;
+      AUDIT.logReadFailure(
+          buildAuditMessageForFailure(SCMAction.GET_SCM_INFO, null, ex)
+      );
+      throw ex;
+    } finally {
+      if(auditSuccess) {
+        AUDIT.logReadSuccess(
+            buildAuditMessageForSuccess(SCMAction.GET_SCM_INFO, null)
+        );
+      }
+    }
   }
 
   /**
-   * Check if SCM is in chill mode.
+   * Check if SCM is in safe mode.
    *
-   * @return Returns true if SCM is in chill mode else returns false.
+   * @return Returns true if SCM is in safe mode else returns false.
    * @throws IOException
    */
   @Override
-  public boolean inChillMode() throws IOException {
-    return scm.isInChillMode();
+  public boolean inSafeMode() throws IOException {
+    AUDIT.logReadSuccess(
+        buildAuditMessageForSuccess(SCMAction.IN_SAFE_MODE, null)
+    );
+    return scm.isInSafeMode();
   }
 
   /**
-   * Force SCM out of Chill mode.
+   * Force SCM out of Safe mode.
    *
    * @return returns true if operation is successful.
    * @throws IOException
    */
   @Override
-  public boolean forceExitChillMode() throws IOException {
-    return scm.exitChillMode();
+  public boolean forceExitSafeMode() throws IOException {
+    AUDIT.logWriteSuccess(
+        buildAuditMessageForSuccess(SCMAction.FORCE_EXIT_SAFE_MODE, null)
+    );
+    return scm.exitSafeMode();
   }
 
   /**
@@ -345,7 +489,7 @@ public class SCMClientProtocolServer implements
    */
   public List<DatanodeDetails> queryNode(HddsProtos.NodeState state) {
     Preconditions.checkNotNull(state, "Node Query set cannot be null");
-    return new LinkedList<>(queryNodeState(state));
+    return new ArrayList<>(queryNodeState(state));
   }
 
   @VisibleForTesting
@@ -354,18 +498,10 @@ public class SCMClientProtocolServer implements
   }
 
   /**
-   * Set chill mode status based on SCMEvents.CHILL_MODE_STATUS event.
+   * Set safe mode status based on .
    */
-  @Override
-  public void onMessage(Boolean inChillMOde, EventPublisher publisher) {
-    chillModePrecheck.setInChillMode(inChillMOde);
-  }
-
-  /**
-   * Set chill mode status based on .
-   */
-  public boolean getChillModeStatus() {
-    return chillModePrecheck.isInChillMode();
+  public boolean getSafeModeStatus() {
+    return safeModePrecheck.isInSafeMode();
   }
 
 
@@ -382,5 +518,49 @@ public class SCMClientProtocolServer implements
       returnSet.addAll(tmp);
     }
     return returnSet;
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForSuccess(
+      AuditAction op, Map<String, String> auditMap) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.SUCCESS.toString())
+        .withException(null)
+        .build();
+  }
+
+  @Override
+  public AuditMessage buildAuditMessageForFailure(AuditAction op, Map<String,
+      String> auditMap, Throwable throwable) {
+    return new AuditMessage.Builder()
+        .setUser((Server.getRemoteUser() == null) ? null :
+            Server.getRemoteUser().getUserName())
+        .atIp((Server.getRemoteIp() == null) ? null :
+            Server.getRemoteIp().getHostAddress())
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(AuditEventStatus.FAILURE.toString())
+        .withException(throwable)
+        .build();
+  }
+
+  @Override
+  public void close() throws IOException {
+    stop();
+  }
+
+  /**
+   * Set SafeMode status.
+   *
+   * @param safeModeStatus
+   */
+  public void setSafeModeStatus(boolean safeModeStatus) {
+    safeModePrecheck.setInSafeMode(safeModeStatus);
   }
 }

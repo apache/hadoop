@@ -18,17 +18,26 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
+import java.util.UUID;
+
+import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
+
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
 import org.apache.hadoop.fs.azurebfs.services.AbfsRestOperation;
-import org.junit.Assert;
-import org.junit.Test;
+
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
+import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ACCOUNT_KEY;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test continuation token which has equal sign.
  */
 public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
-  private static final int LIST_MAX_RESULTS = 5000;
+  private static final int LIST_MAX_RESULTS = 500;
 
   public ITestAbfsClient() throws Exception {
     super();
@@ -45,5 +54,23 @@ public final class ITestAbfsClient extends AbstractAbfsIntegrationTest {
     } catch (AbfsRestOperationException ex) {
       Assert.assertEquals("InvalidQueryParameterValue", ex.getErrorCode().getErrorCode());
     }
+  }
+
+  @Ignore("Enable this to verify the log warning message format for HostNotFoundException")
+  @Test
+  public void testUnknownHost() throws Exception {
+    // When hitting hostName not found exception, the retry will take about 14 mins until failed.
+    // This test is to verify that the "Unknown host name: %s. Retrying to resolve the host name..." is logged as warning during the retry.
+    AbfsConfiguration conf = this.getConfiguration();
+    String accountName = this.getAccountName();
+    String fakeAccountName = "fake" + UUID.randomUUID() + accountName.substring(accountName.indexOf("."));
+
+    String fsDefaultFS = conf.get(FS_DEFAULT_NAME_KEY);
+    conf.set(FS_DEFAULT_NAME_KEY, fsDefaultFS.replace(accountName, fakeAccountName));
+    conf.set(FS_AZURE_ACCOUNT_KEY + "." + fakeAccountName, this.getAccountKey());
+
+    intercept(AbfsRestOperationException.class,
+            "UnknownHostException: " + fakeAccountName,
+            () -> FileSystem.get(conf.getRawConfiguration()));
   }
 }

@@ -639,22 +639,6 @@
     <Bug pattern="MS_EXPOSE_REP" />
   </Match>
 
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="addNIOTCP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="addNIOUDP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-  <Match>
-    <Class name="org.apache.hadoop.registry.server.dns.RegistryDNS" />
-    <Method name="serveNIOTCP" />
-    <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE" />
-  </Match>
-
   <!-- EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC -->
   <Match>
     <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.AssignedGpuDevice" />
@@ -674,6 +658,43 @@
     <Class name="org.apache.hadoop.yarn.api.records.Resource" />
     <Method name="getResources" />
     <Bug pattern="EI_EXPOSE_REP" />
+  </Match>
+
+  <!-- The called method signature is String emptyToNull(@Nullable String string) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.NodeHealthCheckerService"/>
+    <Method name="getHealthReport" />
+    <Bug pattern="NP_NULL_PARAM_DEREF"/>
+  </Match>
+
+  <!-- The variable is not used, but it's defined for the document model. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineEventSubDoc"/>
+    <Method name="setValid" />
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- The variable is not used, but it's defined for the document model. -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.timelineservice.documentstore.collection.document.entity.TimelineMetricSubDoc"/>
+    <Method name="setValid" />
+    <Bug pattern="URF_UNREAD_FIELD"/>
+  </Match>
+
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore$UpdateAppTransition"/>
+    <Method name="transition" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
+  </Match>
+
+  <!-- The called method signature is public boolean set(@Nullable V value) in guava 27, so this should be ignored -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"/>
+    <Method name="updateApplicationPriority" />
+    <Local name="result" />
+    <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
 
 </FindBugsFilter>

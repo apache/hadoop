@@ -54,7 +54,29 @@ public final class ConfigurationKeys {
   public static final String FS_AZURE_ENABLE_FLUSH = "fs.azure.enable.flush";
   public static final String FS_AZURE_USER_AGENT_PREFIX_KEY = "fs.azure.user.agent.prefix";
   public static final String FS_AZURE_SSL_CHANNEL_MODE_KEY = "fs.azure.ssl.channel.mode";
-
+  public static final String FS_AZURE_USE_UPN = "fs.azure.use.upn";
+  /** User principal names (UPNs) have the format “{alias}@{domain}”. If true,
+   *  only {alias} is included when a UPN would otherwise appear in the output
+   *  of APIs like getFileStatus, getOwner, getAclStatus, etc. Default is false. **/
+  public static final String FS_AZURE_FILE_OWNER_ENABLE_SHORTNAME = "fs.azure.identity.transformer.enable.short.name";
+  /** If the domain name is specified and “fs.azure.identity.transformer.enable.short.name”
+   *  is true, then the {alias} part of a UPN can be specified as input to APIs like setOwner and
+   *  setAcl and it will be transformed to a UPN by appending @ and the domain specified by
+   *  this configuration property. **/
+  public static final String FS_AZURE_FILE_OWNER_DOMAINNAME = "fs.azure.identity.transformer.domain.name";
+  /** An Azure Active Directory object ID (oid) used as the replacement for names contained in the
+   * list specified by “fs.azure.identity.transformer.service.principal.substitution.list.
+   * Notice that instead of setting oid, you can also set $superuser.**/
+  public static final String FS_AZURE_OVERRIDE_OWNER_SP = "fs.azure.identity.transformer.service.principal.id";
+  /** A comma separated list of names to be replaced with the service principal ID specified by
+   * “fs.default.identity.transformer.service.principal.id”. This substitution occurs
+   * when setOwner, setAcl, modifyAclEntries, or removeAclEntries are invoked with identities
+   * contained in the substitution list. Notice that when in non-secure cluster, asterisk symbol "*"
+   * can be used to match all user/group. **/
+  public static final String FS_AZURE_OVERRIDE_OWNER_SP_LIST = "fs.azure.identity.transformer.service.principal.substitution.list";
+  /** By default this is set as false, so “$superuser” is replaced with the current user when it appears as the owner
+   * or owning group of a file or directory. To disable it, set it as true. **/
+  public static final String FS_AZURE_SKIP_SUPER_USER_REPLACEMENT = "fs.azure.identity.transformer.skip.superuser.replacement";
   public static final String AZURE_KEY_ACCOUNT_KEYPROVIDER = "fs.azure.account.keyprovider";
   public static final String AZURE_KEY_ACCOUNT_SHELLKEYPROVIDER_SCRIPT = "fs.azure.shellkeyprovider.script";
 

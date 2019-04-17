@@ -22,6 +22,8 @@ package org.apache.hadoop.yarn.server.nodemanager.executor;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.yarn.server.nodemanager.LocalDirsHandlerService;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 
 /**
  * Encapsulates information required for starting/launching containers.
@@ -32,7 +34,9 @@ import org.apache.hadoop.classification.InterfaceStability;
 public final class ContainerExecContext {
   private final String user;
   private final String appId;
-  private final String container;
+  private final Container container;
+  private String command;
+  private final LocalDirsHandlerService localDirsHandler;
 
   /**
    *  Builder for ContainerExecContext.
@@ -40,13 +44,15 @@ public final class ContainerExecContext {
   public static final class Builder {
     private String user;
     private String appId;
-    private String container;
+    private Container container;
+    private String command;
+    private LocalDirsHandlerService localDirsHandler;
 
     public Builder() {
     }
 
-    public Builder setContainer(String container) {
-      this.container = container;
+    public Builder setContainer(Container c) {
+      this.container = c;
       return this;
     }
 
@@ -63,12 +69,25 @@ public final class ContainerExecContext {
     public ContainerExecContext build() {
       return new ContainerExecContext(this);
     }
+
+    public Builder setNMLocalPath(
+        LocalDirsHandlerService ldhs) {
+      this.localDirsHandler = ldhs;
+      return this;
+    }
+
+    public Builder setShell(String command) {
+      this.command = command;
+      return this;
+    }
   }
 
   private ContainerExecContext(Builder builder) {
-    this.container = builder.container;
     this.user = builder.user;
     this.appId = builder.appId;
+    this.container = builder.container;
+    this.command = builder.command;
+    this.localDirsHandler = builder.localDirsHandler;
   }
 
   public String getUser() {
@@ -79,7 +98,15 @@ public final class ContainerExecContext {
     return this.appId;
   }
 
-  public String getContainerId() {
+  public Container getContainer() {
     return this.container;
+  }
+
+  public String getShell() {
+    return this.command;
+  }
+
+  public LocalDirsHandlerService getLocalDirsHandlerService() {
+    return this.localDirsHandler;
   }
 }

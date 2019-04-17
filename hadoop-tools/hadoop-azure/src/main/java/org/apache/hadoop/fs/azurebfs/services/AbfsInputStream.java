@@ -19,13 +19,16 @@
 package org.apache.hadoop.fs.azurebfs.services;
 
 import java.io.EOFException;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AbfsRestOperationException;
 import org.apache.hadoop.fs.azurebfs.contracts.exceptions.AzureBlobFileSystemException;
 
 /**
@@ -58,6 +61,7 @@ public class AbfsInputStream extends FSInputStream {
       final long contentLength,
       final int bufferSize,
       final int readAheadQueueDepth,
+      final boolean tolerateOobAppends,
       final String eTag) {
     this.client = client;
     this.statistics = statistics;
@@ -65,8 +69,8 @@ public class AbfsInputStream extends FSInputStream {
     this.contentLength = contentLength;
     this.bufferSize = bufferSize;
     this.readAheadQueueDepth = (readAheadQueueDepth >= 0) ? readAheadQueueDepth : Runtime.getRuntime().availableProcessors();
+    this.tolerateOobAppends = tolerateOobAppends;
     this.eTag = eTag;
-    this.tolerateOobAppends = false;
     this.readAheadEnabled = true;
   }
 
@@ -225,6 +229,12 @@ public class AbfsInputStream extends FSInputStream {
     try {
       op = client.read(path, position, b, offset, length, tolerateOobAppends ? "*" : eTag);
     } catch (AzureBlobFileSystemException ex) {
+      if (ex instanceof AbfsRestOperationException) {
+        AbfsRestOperationException ere = (AbfsRestOperationException) ex;
+        if (ere.getStatusCode() == HttpURLConnection.HTTP_NOT_FOUND) {
+          throw new FileNotFoundException(ere.getMessage());
+        }
+      }
       throw new IOException(ex);
     }
     long bytesRead = op.getResult().getBytesReceived();

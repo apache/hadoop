@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -69,9 +70,9 @@ public class TestMultipleContainerReadWrite {
   @BeforeClass
   public static void init() throws Exception {
     conf = new OzoneConfiguration();
-    // set to as small as 100 bytes per block.
-    conf.setLong(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_IN_MB, 1);
-    conf.setInt(ScmConfigKeys.OZONE_SCM_CONTAINER_PROVISION_BATCH_SIZE, 5);
+    conf.setStorageSize(OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE, 1,
+        StorageUnit.MB);
+    conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 5);
     cluster = MiniOzoneCluster.newBuilder(conf).build();
     cluster.waitForClusterToBeReady();
     storageHandler = new ObjectStoreHandler(conf).getStorageHandler();

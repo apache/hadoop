@@ -66,6 +66,7 @@ public class VolumeArgs extends UserArgs {
    * @param headers - http headers
    * @param groups - list of groups allowed to access the volume
    */
+  @SuppressWarnings("parameternumber")
   public VolumeArgs(String userName, String volumeName, String requestID,
                     String hostName, Request request, UriInfo info,
                     HttpHeaders headers, String[] groups) {

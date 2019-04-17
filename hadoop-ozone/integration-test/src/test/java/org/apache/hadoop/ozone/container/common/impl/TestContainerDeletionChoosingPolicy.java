@@ -24,6 +24,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomUtils;
@@ -72,11 +73,13 @@ public class TestContainerDeletionChoosingPolicy {
     int numContainers = 10;
     for (int i = 0; i < numContainers; i++) {
       KeyValueContainerData data = new KeyValueContainerData(i,
-          ContainerTestHelper.CONTAINER_MAX_SIZE);
+          ContainerTestHelper.CONTAINER_MAX_SIZE, UUID.randomUUID().toString(),
+          UUID.randomUUID().toString());
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
-          containerSet.getContainerMap().containsKey(data.getContainerID()));
+          containerSet.getContainerMapCopy()
+              .containsKey(data.getContainerID()));
     }
 
     ContainerDeletionChoosingPolicy deletionPolicy =
@@ -125,7 +128,9 @@ public class TestContainerDeletionChoosingPolicy {
       long containerId = RandomUtils.nextLong();
       KeyValueContainerData data =
           new KeyValueContainerData(containerId,
-              ContainerTestHelper.CONTAINER_MAX_SIZE);
+              ContainerTestHelper.CONTAINER_MAX_SIZE,
+              UUID.randomUUID().toString(),
+              UUID.randomUUID().toString());
       if (i != numContainers) {
         int deletionBlocks = random.nextInt(numContainers) + 1;
         data.incrPendingDeletionBlocks(deletionBlocks);
@@ -134,7 +139,7 @@ public class TestContainerDeletionChoosingPolicy {
       KeyValueContainer container = new KeyValueContainer(data, conf);
       containerSet.addContainer(container);
       Assert.assertTrue(
-          containerSet.getContainerMap().containsKey(containerId));
+          containerSet.getContainerMapCopy().containsKey(containerId));
     }
 
     ContainerDeletionChoosingPolicy deletionPolicy =

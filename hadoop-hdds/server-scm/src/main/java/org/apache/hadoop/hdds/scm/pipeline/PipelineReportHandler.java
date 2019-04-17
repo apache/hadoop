@@ -20,12 +20,14 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReport;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
-import org.apache.hadoop.hdds.scm.XceiverClientRatis;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
+import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server
     .SCMDatanodeHeartbeatDispatcher.PipelineReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -34,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Handles Pipeline Reports from datanode.
@@ -45,12 +48,21 @@ public class PipelineReportHandler implements
       .getLogger(PipelineReportHandler.class);
   private final PipelineManager pipelineManager;
   private final Configuration conf;
+  private final SCMSafeModeManager scmSafeModeManager;
+  private final boolean pipelineAvailabilityCheck;
 
-  public PipelineReportHandler(PipelineManager pipelineManager,
+  public PipelineReportHandler(SCMSafeModeManager scmSafeModeManager,
+      PipelineManager pipelineManager,
       Configuration conf) {
     Preconditions.checkNotNull(pipelineManager);
+    Objects.requireNonNull(scmSafeModeManager);
+    this.scmSafeModeManager = scmSafeModeManager;
     this.pipelineManager = pipelineManager;
     this.conf = conf;
+    this.pipelineAvailabilityCheck = conf.getBoolean(
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK,
+        HddsConfigKeys.HDDS_SCM_SAFEMODE_PIPELINE_AVAILABILITY_CHECK_DEFAULT);
+
   }
 
   @Override
@@ -71,30 +83,30 @@ public class PipelineReportHandler implements
             report, dn, e);
       }
     }
+    if (pipelineAvailabilityCheck && scmSafeModeManager.getInSafeMode()) {
+      publisher.fireEvent(SCMEvents.PROCESSED_PIPELINE_REPORT,
+          pipelineReportFromDatanode);
+    }
+
   }
 
   private void processPipelineReport(PipelineReport report, DatanodeDetails dn)
       throws IOException {
     PipelineID pipelineID = PipelineID.getFromProtobuf(report.getPipelineID());
-    Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
+    Pipeline pipeline;
+    try {
+      pipeline = pipelineManager.getPipeline(pipelineID);
+    } catch (PipelineNotFoundException e) {
+      RatisPipelineUtils.destroyPipeline(dn, pipelineID, conf);
+      return;
+    }
 
     if (pipeline.getPipelineState() == Pipeline.PipelineState.ALLOCATED) {
+      LOGGER.info("Pipeline {} reported by {}", pipeline.getId(), dn);
       pipeline.reportDatanode(dn);
       if (pipeline.isHealthy()) {
         // if all the dns have reported, pipeline can be moved to OPEN state
         pipelineManager.openPipeline(pipelineID);
-      }
-    } else if (pipeline.isClosed()) {
-      int numContainers = pipelineManager.getNumberOfContainers(pipelineID);
-      if (numContainers == 0) {
-        // if all the containers have been closed the pipeline can be destroyed
-        try (XceiverClientRatis client =
-            XceiverClientRatis.newXceiverClientRatis(pipeline, conf)) {
-          client.destroyPipeline();
-        }
-        // after successfully destroying the pipeline, the pipeline can be
-        // removed from the pipeline manager
-        pipelineManager.removePipeline(pipelineID);
       }
     } else {
       // In OPEN state case just report the datanode

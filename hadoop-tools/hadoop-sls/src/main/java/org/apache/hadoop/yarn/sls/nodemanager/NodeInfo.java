@@ -167,8 +167,10 @@ public class NodeInfo {
         list2.add(ContainerStatus.newInstance(cId, ContainerState.RUNNING, "", 
           ContainerExitStatus.SUCCESS));
       }
-      list.add(new UpdatedContainerInfo(new ArrayList<ContainerStatus>(), 
-        list2));
+      List<Map.Entry<ApplicationId, ContainerStatus>> needUpdateContainers =
+          new ArrayList<Map.Entry<ApplicationId, ContainerStatus>>();
+      list.add(new UpdatedContainerInfo(new ArrayList<ContainerStatus>(),
+          list2, needUpdateContainers));
       return list;
     }
 
@@ -234,6 +236,15 @@ public class NodeInfo {
     @Override
     public Resource getPhysicalResource() {
       return null;
+    }
+
+    @Override
+    public boolean isUpdatedCapability() {
+      return false;
+    }
+
+    @Override
+    public void resetUpdatedCapability() {
     }
   }
 

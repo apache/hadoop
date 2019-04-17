@@ -39,10 +39,6 @@
       <artifactId>guava</artifactId>
     </dependency>
     <dependency>
-      <groupId>commons-logging</groupId>
-      <artifactId>commons-logging</artifactId>
-    </dependency>
-    <dependency>
       <groupId>javax.xml.bind</groupId>
       <artifactId>jaxb-api</artifactId>
     </dependency>
@@ -77,6 +73,27 @@
       <scope>test</scope>
     </dependency>
     <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.vintage</groupId>
+      <artifactId>junit-vintage-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- Only required to run tests in an IDE that bundles an older version -->
+    <dependency>
+      <groupId>org.junit.platform</groupId>
+      <artifactId>junit-platform-launcher</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
     </dependency>
@@ -90,6 +107,12 @@
           <include>yarn-default.xml</include>
         </includes>
         <filtering>false</filtering>
+      </resource>
+      <resource>
+        <directory>src/main/resources</directory>
+        <includes>
+          <include>**/jaxb.properties</include>
+        </includes>
       </resource>
     </resources>
     <plugins>
@@ -124,6 +147,8 @@
                   <include>server/application_history_server.proto</include>
                   <include>client_SCM_protocol.proto</include>
                   <include>server/SCM_Admin_protocol.proto</include>
+                  <include>yarn_csi_adaptor.proto</include>
+                  <include>YarnCsiAdaptor.proto</include>
                 </includes>
               </source>
             </configuration>

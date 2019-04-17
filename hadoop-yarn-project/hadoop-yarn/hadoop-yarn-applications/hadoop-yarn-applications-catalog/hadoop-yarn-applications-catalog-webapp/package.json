@@ -1,0 +1,26 @@
+{
+    "name": "AppCatalog",
+    "private": true,
+    "version": "0.0.0",
+    "description": "YARN App Catalog",
+    "repository": "git://git.apache.org/hadoop.git",
+    "license": "Apache 2.0",
+    "dependencies": {
+        "jquery": "3.3.1",
+        "angular-loader": "~1.6.4",
+        "angular-mocks": "~1.6.4",
+        "angular-route": "~1.6.4",
+        "angular": "~1.6.4",
+        "bootstrap": "~3.3.7",
+        "roboto-fontface": "0.10.0"
+    },
+    "devDependencies": {
+        "requirejs": "^2.1.0",
+        "shelljs": "^0.2.6",
+        "apidoc": "0.17.7"
+    },
+    "scripts": {
+        "prestart": "npm install & mvn clean package",
+        "pretest": "npm install"
+    }
+}

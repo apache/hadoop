@@ -22,6 +22,8 @@ import org.apache.commons.lang3.builder.CompareToBuilder;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -32,15 +34,18 @@ import java.util.UUID;
 public final class ContainerReplica implements Comparable<ContainerReplica> {
 
   final private ContainerID containerID;
+  final private ContainerReplicaProto.State state;
   final private DatanodeDetails datanodeDetails;
   final private UUID placeOfBirth;
 
   private Long sequenceId;
 
 
-  private ContainerReplica(ContainerID containerID, DatanodeDetails datanode,
-      UUID originNodeId) {
+  private ContainerReplica(final ContainerID containerID,
+      final ContainerReplicaProto.State state, final DatanodeDetails datanode,
+      final UUID originNodeId) {
     this.containerID = containerID;
+    this.state = state;
     this.datanodeDetails = datanode;
     this.placeOfBirth = originNodeId;
   }
@@ -65,6 +70,15 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
    */
   public UUID getOriginDatanodeId() {
     return placeOfBirth;
+  }
+
+  /**
+   * Returns the state of this replica.
+   *
+   * @return replica state
+   */
+  public ContainerReplicaProto.State getState() {
+    return state;
   }
 
   /**
@@ -120,12 +134,23 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     return new ContainerReplicaBuilder();
   }
 
+  @Override
+  public String toString() {
+    return "ContainerReplica{" +
+        "containerID=" + containerID +
+        ", datanodeDetails=" + datanodeDetails +
+        ", placeOfBirth=" + placeOfBirth +
+        ", sequenceId=" + sequenceId +
+        '}';
+  }
+
   /**
    * Used for building ContainerReplica instance.
    */
   public static class ContainerReplicaBuilder {
 
     private ContainerID containerID;
+    private ContainerReplicaProto.State state;
     private DatanodeDetails datanode;
     private UUID placeOfBirth;
     private Long sequenceId;
@@ -133,12 +158,18 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     /**
      * Set Container Id.
      *
-     * @param containerId ContainerID
+     * @param cID ContainerID
      * @return ContainerReplicaBuilder
      */
     public ContainerReplicaBuilder setContainerID(
-        final ContainerID containerId) {
-      containerID = containerId;
+        final ContainerID cID) {
+      this.containerID = cID;
+      return this;
+    }
+
+    public ContainerReplicaBuilder setContainerState(
+        final ContainerReplicaProto.State  containerState) {
+      state = containerState;
       return this;
     }
 
@@ -184,9 +215,12 @@ public final class ContainerReplica implements Comparable<ContainerReplica> {
     public ContainerReplica build() {
       Preconditions.checkNotNull(containerID,
           "Container Id can't be null");
+      Preconditions.checkNotNull(state,
+          "Container state can't be null");
       Preconditions.checkNotNull(datanode,
           "DatanodeDetails can't be null");
-      ContainerReplica replica = new ContainerReplica(containerID, datanode,
+      ContainerReplica replica = new ContainerReplica(
+          containerID, state, datanode,
           Optional.ofNullable(placeOfBirth).orElse(datanode.getUuid()));
       Optional.ofNullable(sequenceId).ifPresent(replica::setSequenceId);
       return replica;

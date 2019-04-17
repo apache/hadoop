@@ -48,6 +48,9 @@ public interface DatanodeState<T> {
    *
    * @param time - Time
    * @param timeUnit - Unit of time.
+   * @throws InterruptedException
+   * @throws ExecutionException
+   * @throws TimeoutException
    */
   T await(long time, TimeUnit timeUnit)
       throws InterruptedException, ExecutionException, TimeoutException;

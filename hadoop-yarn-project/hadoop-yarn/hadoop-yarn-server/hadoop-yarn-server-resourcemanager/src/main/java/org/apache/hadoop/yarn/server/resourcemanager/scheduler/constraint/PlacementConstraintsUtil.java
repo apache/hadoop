@@ -20,8 +20,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.constraint;
 import java.util.Iterator;
 import java.util.Set;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.*;
@@ -48,8 +48,8 @@ import static org.apache.hadoop.yarn.api.resource.PlacementConstraints.NODE_PART
 @Public
 @Unstable
 public final class PlacementConstraintsUtil {
-  private static final Log LOG =
-      LogFactory.getLog(PlacementConstraintsUtil.class);
+  private static final Logger LOG =
+      LoggerFactory.getLogger(PlacementConstraintsUtil.class);
 
   // Suppresses default constructor, ensuring non-instantiability.
   private PlacementConstraintsUtil() {
@@ -154,18 +154,13 @@ public final class PlacementConstraintsUtil {
     if (schedulerNode.getNodeAttributes() == null ||
         !schedulerNode.getNodeAttributes().contains(requestAttribute)) {
       if (opCode == NodeAttributeOpCode.NE) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Incoming requestAttribute:" + requestAttribute
-              + "is not present in " + schedulerNode.getNodeID()
-              + ", however opcode is NE. Hence accept this node.");
-        }
+        LOG.debug("Incoming requestAttribute:{} is not present in {},"
+            + " however opcode is NE. Hence accept this node.",
+            requestAttribute, schedulerNode.getNodeID());
         return true;
       }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Incoming requestAttribute:" + requestAttribute
-            + "is not present in " + schedulerNode.getNodeID()
-            + ", skip such node.");
-      }
+      LOG.debug("Incoming requestAttribute:{} is not present in {},"
+          + " skip such node.", requestAttribute, schedulerNode.getNodeID());
       return false;
     }
 
@@ -183,21 +178,16 @@ public final class PlacementConstraintsUtil {
       }
       if (requestAttribute.equals(nodeAttribute)) {
         if (isOpCodeMatches(requestAttribute, nodeAttribute, opCode)) {
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-                "Incoming requestAttribute:" + requestAttribute
-                    + " matches with node:" + schedulerNode.getNodeID());
-          }
+          LOG.debug("Incoming requestAttribute:{} matches with node:{}",
+              requestAttribute, schedulerNode.getNodeID());
           found = true;
           return found;
         }
       }
     }
     if (!found) {
-      if (LOG.isDebugEnabled()) {
-        LOG.info("skip this node:" + schedulerNode.getNodeID()
-            + " for requestAttribute:" + requestAttribute);
-      }
+      LOG.debug("skip this node:{} for requestAttribute:{}",
+          schedulerNode.getNodeID(), requestAttribute);
       return false;
     }
     return true;
@@ -296,11 +286,8 @@ public final class PlacementConstraintsUtil {
       AllocationTagsManager atm)
       throws InvalidAllocationTagsQueryException {
     if (constraint == null) {
-      if(LOG.isDebugEnabled()) {
-        LOG.debug(
-            "Constraint is found empty during constraint validation for app:"
-                + appId);
-      }
+      LOG.debug("Constraint is found empty during constraint validation for"
+          + " app:{}", appId);
       return true;
     }
 
@@ -365,9 +352,7 @@ public final class PlacementConstraintsUtil {
   private static NodeAttribute getNodeConstraintFromRequest(String attrKey,
       String attrString) {
     NodeAttribute nodeAttribute = null;
-    if(LOG.isDebugEnabled()) {
-      LOG.debug("Incoming node attribute: " + attrKey + "=" + attrString);
-    }
+    LOG.debug("Incoming node attribute: {}={}", attrKey, attrString);
 
     // Input node attribute could be like 1.8
     String[] name = attrKey.split("/");

@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
-import com.google.common.base.Optional;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
@@ -126,7 +126,7 @@ public class TestDatasetVolumeChecker {
     GenericTestUtils.waitFor(() -> numCallbackInvocations.get() > 0, 5, 10000);
 
     // Ensure that the check was invoked at least once.
-    verify(volume, times(1)).check(anyObject());
+    verify(volume, times(1)).check(any());
     if (result) {
       assertThat(numCallbackInvocations.get(), is(1L));
     }
@@ -160,7 +160,7 @@ public class TestDatasetVolumeChecker {
 
     // Ensure each volume's check() method was called exactly once.
     for (FsVolumeSpi volume : volumes) {
-      verify(volume, times(1)).check(anyObject());
+      verify(volume, times(1)).check(any());
     }
   }
 
@@ -217,10 +217,10 @@ public class TestDatasetVolumeChecker {
       when(volume.getStorageLocation()).thenReturn(location);
 
       if (health != null) {
-        when(volume.check(anyObject())).thenReturn(health);
+        when(volume.check(any())).thenReturn(health);
       } else {
         final DiskErrorException de = new DiskErrorException("Fake Exception");
-        when(volume.check(anyObject())).thenThrow(de);
+        when(volume.check(any())).thenThrow(de);
       }
       volumes.add(volume);
     }
