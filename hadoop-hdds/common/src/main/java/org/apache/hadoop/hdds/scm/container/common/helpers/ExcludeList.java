@@ -102,10 +102,4 @@ public class ExcludeList {
     });
     return excludeList;
   }
-
-  public void clear() {
-    datanodes.clear();
-    containerIds.clear();
-    pipelineIds.clear();
-  }
 }
