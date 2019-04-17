@@ -234,7 +234,6 @@ public class TestBlockOutputStreamWithFailures {
     // and one flush for partial chunk
     key.flush();
 
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
         .getIoException()) instanceof ContainerNotOpenException);
 
@@ -250,7 +249,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -373,7 +372,6 @@ public class TestBlockOutputStreamWithFailures {
     key.flush();
     Assert.assertEquals(2, raftClient.getCommitInfoMap().size());
 
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     // now close the stream, It will update the ack length after watchForCommit
     key.close();
     Assert
@@ -384,7 +382,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -517,14 +515,13 @@ public class TestBlockOutputStreamWithFailures {
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // now close the stream, It will update the ack length after watchForCommit
-
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     key.close();
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert
         .assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -541,7 +538,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     validateData(keyName, data1);
   }
 
@@ -640,7 +637,6 @@ public class TestBlockOutputStreamWithFailures {
     // and one flush for partial chunk
     key.flush();
 
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
         .getIoException()) instanceof ContainerNotOpenException);
     // Make sure the retryCount is reset after the exception is handled
@@ -656,6 +652,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -666,7 +663,7 @@ public class TestBlockOutputStreamWithFailures {
         metrics.getContainerOpCountMetrics(ContainerProtos.Type.PutBlock));
     Assert.assertEquals(totalOpCount + 9,
         metrics.getTotalOpCount());
-    Assert.assertTrue(keyOutputStream.getStreamEntries().size() == 0);
+    Assert.assertTrue(keyOutputStream.getStreamEntries().size() == 2);
     // Written the same data twice
     String dataString = new String(data1, UTF_8);
     validateData(keyName, dataString.concat(dataString).getBytes());
@@ -777,6 +774,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -787,7 +785,7 @@ public class TestBlockOutputStreamWithFailures {
         metrics.getContainerOpCountMetrics(ContainerProtos.Type.PutBlock));
     Assert.assertEquals(totalOpCount + 9,
         metrics.getTotalOpCount());
-    Assert.assertTrue(keyOutputStream.getStreamEntries().size() == 0);
+    Assert.assertTrue(keyOutputStream.getStreamEntries().size() == 2);
     // Written the same data twice
     String dataString = new String(data1, UTF_8);
     validateData(keyName, dataString.concat(dataString).getBytes());
@@ -913,7 +911,6 @@ public class TestBlockOutputStreamWithFailures {
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // commitInfoMap will remain intact as there is no server failure
     Assert.assertEquals(1, raftClient.getCommitInfoMap().size());
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     // now close the stream, It will update the ack length after watchForCommit
     key.close();
     // make sure the bufferPool is empty
@@ -922,7 +919,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(dataLength, blockOutputStream.getTotalAckDataLength());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -1049,7 +1046,6 @@ public class TestBlockOutputStreamWithFailures {
     Assert.assertEquals(1, raftClient.getCommitInfoMap().size());
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     // now close the stream, It will update the ack length after watchForCommit
     key.close();
     Assert
@@ -1058,7 +1054,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -1075,7 +1071,6 @@ public class TestBlockOutputStreamWithFailures {
         metrics.getContainerOpCountMetrics(ContainerProtos.Type.PutBlock));
     Assert.assertEquals(totalOpCount + 22,
         metrics.getTotalOpCount());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
     // Written the same data twice
     String dataString = new String(data1, UTF_8);
     cluster.restartHddsDatanode(pipeline.getNodes().get(0), true);
@@ -1203,7 +1198,7 @@ public class TestBlockOutputStreamWithFailures {
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(0, keyOutputStream.getStreamEntries().size());
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
