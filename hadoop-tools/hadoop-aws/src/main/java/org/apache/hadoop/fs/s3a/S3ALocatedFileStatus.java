@@ -24,14 +24,14 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 /**
  * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
  */
-public class S3LocatedFileStatus extends LocatedFileStatus {
+public class S3ALocatedFileStatus extends LocatedFileStatus {
 
   private static final long serialVersionUID = 3597192103662929338L;
 
   private final String eTag;
   private final String versionId;
 
-  public S3LocatedFileStatus(S3AFileStatus status, BlockLocation[] locations,
+  public S3ALocatedFileStatus(S3AFileStatus status, BlockLocation[] locations,
       String eTag, String versionId) {
     super(status, locations);
     this.eTag = eTag;

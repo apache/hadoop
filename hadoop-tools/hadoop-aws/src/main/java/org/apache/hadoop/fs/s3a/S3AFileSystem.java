@@ -1265,10 +1265,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       Path parentPath = keyToQualifiedPath(srcKey);
-      RemoteIterator<S3LocatedFileStatus> iterator =
+      RemoteIterator<S3ALocatedFileStatus> iterator =
           listFilesAndEmptyDirectories(parentPath, true);
       while (iterator.hasNext()) {
-        S3LocatedFileStatus status = iterator.next();
+        S3ALocatedFileStatus status = iterator.next();
         long length = status.getLen();
         String key = pathToKey(status.getPath());
         if (status.isDirectory() && !key.endsWith("/")) {
@@ -3541,14 +3541,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   @Retries.OnceTranslated
-  public RemoteIterator<S3LocatedFileStatus> listFilesAndEmptyDirectories(
+  public RemoteIterator<S3ALocatedFileStatus> listFilesAndEmptyDirectories(
       Path f, boolean recursive) throws IOException {
     return innerListFiles(f, recursive,
         new Listing.AcceptAllButS3nDirs());
   }
 
   @Retries.OnceTranslated
-  private RemoteIterator<S3LocatedFileStatus> innerListFiles(Path f, boolean
+  private RemoteIterator<S3ALocatedFileStatus> innerListFiles(Path f, boolean
       recursive, Listing.FileStatusAcceptor acceptor) throws IOException {
     entryPoint(INVOCATION_LIST_FILES);
     Path path = qualify(f);
@@ -3677,14 +3677,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Build a {@link S3LocatedFileStatus} from a {@link FileStatus} instance.
+   * Build a {@link S3ALocatedFileStatus} from a {@link FileStatus} instance.
    * @param status file status
    * @return a located status with block locations set up from this FS.
    * @throws IOException IO Problems.
    */
-  S3LocatedFileStatus toLocatedFileStatus(S3AFileStatus status)
+  S3ALocatedFileStatus toLocatedFileStatus(S3AFileStatus status)
       throws IOException {
-    return new S3LocatedFileStatus(status,
+    return new S3ALocatedFileStatus(status,
         status.isFile() ?
           getFileBlockLocations(status, 0, status.getLen())
           : null, status.getETag(), status.getVersionId());

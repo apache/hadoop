@@ -82,9 +82,9 @@ public class TestListing extends AbstractS3AMockTest {
 
     RemoteIterator<S3AFileStatus> sourceIterator = new MockRemoteIterator(
         statuses);
-    RemoteIterator<S3LocatedFileStatus> locatedIterator =
+    RemoteIterator<S3ALocatedFileStatus> locatedIterator =
         listing.createLocatedFileStatusIterator(sourceIterator);
-    RemoteIterator<S3LocatedFileStatus> reconcilingIterator =
+    RemoteIterator<S3ALocatedFileStatus> reconcilingIterator =
         listing.createTombstoneReconcilingIterator(locatedIterator, tombstones);
 
     Set<Path> expectedPaths = new HashSet<>();
