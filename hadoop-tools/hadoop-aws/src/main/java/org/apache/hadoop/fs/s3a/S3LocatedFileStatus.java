@@ -25,6 +25,9 @@ import org.apache.hadoop.fs.LocatedFileStatus;
  * {@link LocatedFileStatus} extended to also carry ETag and object version ID.
  */
 public class S3LocatedFileStatus extends LocatedFileStatus {
+
+  private static final long serialVersionUID = 3597192103662929338L;
+
   private final String eTag;
   private final String versionId;
 
