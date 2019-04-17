@@ -1152,7 +1152,7 @@ class DataStreamer extends Daemon {
             one = ackQueue.getFirst();
           }
           if (one.getSeqno() != seqno) {
-            throw new IOException("ResponseProcessor: Expecting seqno " +
+            throw new IOException("ResponseProcessor: Expecting seqno" +
                 " for block " + block +
                 one.getSeqno() + " but received " + seqno);
           }
@@ -1386,7 +1386,7 @@ class DataStreamer extends Daemon {
         if (dfsClient.dtpReplaceDatanodeOnFailureReplication > 0 && nodes.length
             >= dfsClient.dtpReplaceDatanodeOnFailureReplication) {
           DFSClient.LOG.warn(
-              "Failed to find a new datanode to add to the write pipeline, "
+              "Failed to find a new datanode to add to the write pipeline,"
                   + " continue to write to the pipeline with " + nodes.length
                   + " nodes since it's no less than minimum replication: "
                   + dfsClient.dtpReplaceDatanodeOnFailureReplication
