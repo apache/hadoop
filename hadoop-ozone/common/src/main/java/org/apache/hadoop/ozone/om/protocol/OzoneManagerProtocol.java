@@ -450,5 +450,45 @@ public interface OzoneManagerProtocol
    *                     invalid arguments
    */
   OmKeyInfo lookupFile(OmKeyArgs keyArgs) throws IOException;
+
+  /**
+   * Rename input file or directory.
+   *
+   * @param keyArgs   Key args
+   * @param toKeyName new name for the file or directory. In case of a file it
+   *                  is the new absolute path for the file. In case of a
+   *                  directory it is the absolute path of the new parent.
+   * @throws IOException if there is a rename from/to root
+   *                     For a file rename, if file or folder already exists at
+   *                     the destination
+   *                     For a directory rename, if file exists or destination
+   *                     directory is not empty or rename to a subdirectory
+   */
+  void renameFSEntry(OmKeyArgs keyArgs, String toKeyName) throws IOException;
+
+  /**
+   * Deletes the input file or directory
+   *
+   * @param keyArgs   Key args
+   * @param recursive For deletion of non-empty directory recursive flag must
+   *                  be true
+   * @throws IOException if deletion for a root
+   *                     if recursive flag is false and directory is not empty
+   */
+  void deleteFSEntry(OmKeyArgs keyArgs, boolean recursive) throws IOException;
+
+  /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param keyArgs    Key args
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  List<OzoneFileStatus> listStatus(OmKeyArgs keyArgs, boolean recursive,
+      String startKey, long numEntries) throws IOException;
 }
 

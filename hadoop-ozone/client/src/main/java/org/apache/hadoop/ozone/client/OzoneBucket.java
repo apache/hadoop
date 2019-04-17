@@ -529,6 +529,54 @@ public class OzoneBucket extends WithMetadata {
   }
 
   /**
+   * Rename input file or directory.
+   *
+   * @param keyName    Absolute path of the entry to be renamed
+   * @param toKeyName new name for the file or directory. In case of a file it
+   *                  is the new absolute path for the file. In case of a
+   *                  directory it is the absolute path of the new parent.
+   * @throws IOException if there is a rename from/to root
+   *                     For a file rename, if file or folder already exists at
+   *                     the destination
+   *                     For a directory rename, if file exists or destination
+   *                     directory is not empty or rename to a subdirectory
+   */
+  public void renameFSEntry(String keyName, String toKeyName)
+      throws IOException {
+    proxy.renameFSEntry(volumeName, name, keyName, toKeyName);
+  }
+
+  /**
+   * Deletes the input file or directory
+   *
+   * @param keyName    Absolute path of the entry to be deleted
+   * @param recursive For deletion of non-empty directory recursive flag must
+   *                  be true
+   * @throws IOException if deletion for a root
+   *                     if recursive flag is false and directory is not empty
+   */
+  public void deleteFSEntry(String keyName, boolean recursive)
+      throws IOException {
+    proxy.deleteFSEntry(volumeName, name, keyName, recursive);
+  }
+
+  /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param keyName    Absolute path of the entry to be listed
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    return proxy
+        .listStatus(volumeName, name, keyName, recursive, startKey, numEntries);
+  }
+  /**
    * An Iterator to iterate over {@link OzoneKey} list.
    */
   private class KeyIterator implements Iterator<OzoneKey> {

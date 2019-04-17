@@ -195,13 +195,7 @@ public class RDBStore implements DBStore {
   @Override
   public <KEY, VALUE> void move(KEY key, Table<KEY, VALUE> source,
                                 Table<KEY, VALUE> dest) throws IOException {
-    try (BatchOperation batchOperation = initBatchOperation()) {
-
-      VALUE value = source.get(key);
-      dest.putWithBatch(batchOperation, key, value);
-      source.deleteWithBatch(batchOperation, key);
-      commitBatchOperation(batchOperation);
-    }
+    move(key, key, source.get(key), source, dest);
   }
 
   @Override
@@ -214,11 +208,23 @@ public class RDBStore implements DBStore {
   public <KEY, VALUE> void move(KEY sourceKey, KEY destKey, VALUE value,
                                 Table<KEY, VALUE> source,
                                 Table<KEY, VALUE> dest) throws IOException {
-    try (BatchOperation batchOperation = initBatchOperation()) {
-      dest.putWithBatch(batchOperation, destKey, value);
-      source.deleteWithBatch(batchOperation, sourceKey);
-      commitBatchOperation(batchOperation);
-    }
+    BatchOperation batch = initBatchOperation();
+    moveWithBatch(sourceKey, destKey, value, source, dest, batch);
+    commitBatchOperation(batch);
+  }
+
+  @Override
+  public <KEY, VALUE> void moveWithBatch(KEY key, Table<KEY, VALUE> source,
+      Table<KEY, VALUE> dest, BatchOperation batch) throws IOException {
+    moveWithBatch(key, key, source.get(key), source, dest, batch);
+  }
+
+  @Override
+  public <KEY, VALUE> void moveWithBatch(KEY sourceKey, KEY destKey,
+      VALUE value, Table<KEY, VALUE> source, Table<KEY, VALUE> dest,
+      BatchOperation batch) throws IOException {
+    dest.putWithBatch(batch, destKey, value);
+    source.deleteWithBatch(batch, sourceKey);
   }
 
   @Override

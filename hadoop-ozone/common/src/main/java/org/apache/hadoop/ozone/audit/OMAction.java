@@ -58,7 +58,10 @@ public enum OMAction implements AuditAction {
   GET_FILE_STATUS,
   CREATE_DIRECTORY,
   CREATE_FILE,
-  LOOKUP_FILE;
+  LOOKUP_FILE,
+  RENAME_FS_ENTRY,
+  DELETE_FS_ENTRY,
+  LIST_STATUS;
 
   @Override
   public String getAction() {

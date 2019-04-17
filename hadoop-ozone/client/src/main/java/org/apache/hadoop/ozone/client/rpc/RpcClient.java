@@ -987,6 +987,41 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         factor);
   }
 
+  @Override
+  public void renameFSEntry(String volumeName, String bucketName, String keyName,
+      String toKeyName) throws IOException {
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    ozoneManagerClient.renameFSEntry(keyArgs, toKeyName);
+  }
+
+  @Override
+  public void deleteFSEntry(String volumeName, String bucketName, String keyName,
+      boolean recursive) throws IOException {
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    ozoneManagerClient.deleteFSEntry(keyArgs, recursive);
+  }
+
+  @Override
+  public List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException {
+    OmKeyArgs keyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .build();
+    return ozoneManagerClient
+        .listStatus(keyArgs, recursive, startKey, numEntries);
+  }
+
   private OzoneInputStream createInputStream(OmKeyInfo keyInfo,
       String requestId) throws IOException {
     LengthInputStream lengthInputStream = KeyInputStream

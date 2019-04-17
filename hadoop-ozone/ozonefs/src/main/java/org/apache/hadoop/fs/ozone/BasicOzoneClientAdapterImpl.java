@@ -21,12 +21,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -37,7 +38,6 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
-import org.apache.hadoop.ozone.client.OzoneKey;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -188,12 +188,6 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     }
   }
 
-  @Override
-  public void renameKey(String key, String newKeyName) throws IOException {
-    incrementCounter(Statistic.OBJECTS_RENAMED);
-    bucket.renameKey(key, newKeyName);
-  }
-
   /**
    * Helper method to create an directory specified by key name in bucket.
    *
@@ -215,25 +209,6 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     return true;
   }
 
-  /**
-   * Helper method to delete an object specified by key name in bucket.
-   *
-   * @param keyName key name to be deleted
-   * @return true if the key is deleted, false otherwise
-   */
-  @Override
-  public boolean deleteObject(String keyName) {
-    LOG.trace("issuing delete for key" + keyName);
-    try {
-      incrementCounter(Statistic.OBJECTS_DELETED);
-      bucket.deleteKey(keyName);
-      return true;
-    } catch (IOException ioe) {
-      LOG.error("delete key failed " + ioe.getMessage());
-      return false;
-    }
-  }
-
   public OzoneFileStatus getFileStatus(String pathKey) throws IOException {
     try {
       incrementCounter(Statistic.OBJECTS_QUERY);
@@ -247,10 +222,53 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     }
   }
 
-  @Override
-  public Iterator<BasicKeyInfo> listKeys(String pathKey) {
-    incrementCounter(Statistic.OBJECTS_LIST);
-    return new IteratorAdapter(bucket.listKeys(pathKey));
+  public boolean rename(String keyName, String toKeyName) throws IOException {
+    try {
+      incrementCounter(Statistic.OBJECTS_RENAMED);
+      bucket.renameFSEntry(keyName, toKeyName);
+      return true;
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_ALREADY_EXISTS
+          || e.getResult() == OMException.ResultCodes.DIRECTORY_ALREADY_EXISTS
+          || e.getResult() == OMException.ResultCodes.DIRECTORY_NOT_EMPTY) {
+        throw new FileAlreadyExistsException(e.getMessage());
+      } else if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND
+          || e.getResult()
+          == OMException.ResultCodes.ROOT_DIRECTORY_RENAME_NOT_ALLOWED) {
+        return false;
+      }
+      throw e;
+    }
+  }
+
+  public boolean delete(String keyName, boolean recursive) throws IOException {
+    try {
+      incrementCounter(Statistic.OBJECTS_DELETED);
+      bucket.deleteFSEntry(keyName, recursive);
+      return true;
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.DIRECTORY_NOT_EMPTY) {
+        throw new PathIsNotEmptyDirectoryException(e.getMessage());
+      } else if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND
+          || e.getResult()
+          == OMException.ResultCodes.ROOT_DIRECTORY_DELETE_NOT_ALLOWED) {
+        return false;
+      }
+      throw e;
+    }
+  }
+
+  public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    try {
+      incrementCounter(Statistic.OBJECTS_LIST);
+      return bucket.listStatus(keyName, recursive, startKey, numEntries);
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
+        throw new FileNotFoundException(e.getMessage());
+      }
+      throw e;
+    }
   }
 
   @Override
@@ -325,37 +343,6 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
       OzoneClient ozoneClient =
           OzoneClientFactory.getRpcClient(conf);
       ozoneClient.getObjectStore().cancelDelegationToken(ozoneDt);
-    }
-  }
-
-  /**
-   * Adapter to convert OzoneKey to a safe and simple Key implementation.
-   */
-  public static class IteratorAdapter implements Iterator<BasicKeyInfo> {
-
-    private Iterator<? extends OzoneKey> original;
-
-    public IteratorAdapter(Iterator<? extends OzoneKey> listKeys) {
-      this.original = listKeys;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return original.hasNext();
-    }
-
-    @Override
-    public BasicKeyInfo next() {
-      OzoneKey next = original.next();
-      if (next == null) {
-        return null;
-      } else {
-        return new BasicKeyInfo(
-            next.getName(),
-            next.getModificationTime(),
-            next.getDataSize()
-        );
-      }
     }
   }
 }

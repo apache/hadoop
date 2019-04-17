@@ -85,6 +85,9 @@ enum Type {
   CreateDirectory = 71;
   CreateFile = 72;
   LookupFile = 73;
+  RenameFSEntry = 74;
+  DeleteFSEntry = 75;
+  ListStatus = 76;
 }
 
 message OMRequest {
@@ -141,6 +144,9 @@ message OMRequest {
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
   optional CreateFileRequest                createFileRequest              = 72;
   optional LookupFileRequest                lookupFileRequest              = 73;
+  optional RenameFSEntryRequest             renameFSEntryRequest           = 74;
+  optional DeleteFSEntryRequest             deleteFSEntryRequest           = 75;
+  optional ListStatusRequest                listStatusRequest              = 76;
 }
 
 message OMResponse {
@@ -200,6 +206,9 @@ message OMResponse {
   optional CreateDirectoryResponse            createDirectoryResponse      = 71;
   optional CreateFileResponse                 createFileResponse           = 72;
   optional LookupFileResponse                 lookupFileResponse           = 73;
+  optional RenameFSEntryResponse              renameFSEntryResponse        = 74;
+  optional DeleteFSEntryResponse              deleteFSEntryResponse        = 75;
+  optional ListStatusResponse                 listStatusResponse           = 76;
 }
 
 enum Status {
@@ -252,9 +261,14 @@ enum Status {
     TOKEN_CREATION_ERROR = 43;
 
     FILE_NOT_FOUND = 44;
-    DIRECTORY_NOT_FOUND = 45;
-    FILE_ALREADY_EXISTS = 46;
-    NOT_A_FILE = 47;
+    FILE_ALREADY_EXISTS = 45;
+    DIRECTORY_NOT_FOUND = 46;
+    DIRECTORY_ALREADY_EXISTS = 47;
+    DIRECTORY_NOT_EMPTY = 48;
+    NOT_A_FILE = 49;
+    ROOT_DIRECTORY_DELETE_NOT_ALLOWED = 50;
+    ROOT_DIRECTORY_RENAME_NOT_ALLOWED = 51;
+    RENAME_TO_SUB_DIRECTORY_NOT_ALLOWED = 52;
 }
 
 
@@ -561,12 +575,16 @@ message KeyInfo {
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
 }
 
+message OzoneFileStatusProto {
+    required hadoop.fs.FileStatusProto status = 1;
+}
+
 message GetFileStatusRequest {
     required KeyArgs keyArgs = 1;
 }
 
 message GetFileStatusResponse {
-    required hadoop.fs.FileStatusProto status = 1;
+    required OzoneFileStatusProto status = 1;
 }
 
 message CreateDirectoryRequest {
@@ -597,6 +615,33 @@ message LookupFileRequest {
 
 message LookupFileResponse {
     optional KeyInfo keyInfo = 1;
+}
+
+message RenameFSEntryRequest {
+    required KeyArgs keyArgs = 1;
+    required string toKeyName = 2;
+}
+
+message RenameFSEntryResponse {
+}
+
+message DeleteFSEntryRequest {
+    required KeyArgs keyArgs = 1;
+    required bool recursive = 2;
+}
+
+message DeleteFSEntryResponse {
+}
+
+message ListStatusRequest {
+    required KeyArgs keyArgs = 1;
+    required bool recursive = 2;
+    required string startKey = 3;
+    required uint64 numEntries = 4;
+}
+
+message ListStatusResponse {
+    repeated OzoneFileStatusProto statuses = 1;
 }
 
 message CreateKeyRequest {

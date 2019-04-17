@@ -40,6 +40,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -346,6 +347,17 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         OzoneManagerProtocolProtos.LookupFileResponse lookupFileResponse =
             lookupFile(request.getLookupFileRequest());
         responseBuilder.setLookupFileResponse(lookupFileResponse);
+        break;
+      case RenameFSEntry:
+        renameFSEntry(request.getRenameFSEntryRequest());
+        break;
+      case DeleteFSEntry:
+        deleteFSEntry(request.getDeleteFSEntryRequest());
+        break;
+      case ListStatus:
+        OzoneManagerProtocolProtos.ListStatusResponse listStatusResponse =
+            listStatus(request.getListStatusRequest());
+        responseBuilder.setListStatusResponse(listStatusResponse);
         break;
       default:
         responseBuilder.setSuccess(false);
@@ -1030,5 +1042,49 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
   protected OzoneManagerServerProtocol getOzoneManagerServerProtocol() {
     return impl;
+  }
+
+  private void renameFSEntry(
+      OzoneManagerProtocolProtos.RenameFSEntryRequest request)
+      throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+    impl.renameFSEntry(omKeyArgs, request.getToKeyName());
+  }
+
+  private void deleteFSEntry(
+      OzoneManagerProtocolProtos.DeleteFSEntryRequest request)
+      throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+    impl.deleteFSEntry(omKeyArgs, request.getRecursive());
+  }
+
+  private OzoneManagerProtocolProtos.ListStatusResponse listStatus(
+      OzoneManagerProtocolProtos.ListStatusRequest request) throws IOException {
+    KeyArgs keyArgs = request.getKeyArgs();
+    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .build();
+    List<OzoneFileStatus> statuses =
+        impl.listStatus(omKeyArgs, request.getRecursive(),
+            request.getStartKey(), request.getNumEntries());
+    OzoneManagerProtocolProtos.ListStatusResponse.Builder
+        listStatusResponseBuilder =
+        OzoneManagerProtocolProtos.ListStatusResponse.newBuilder();
+    for (OzoneFileStatus status : statuses) {
+      listStatusResponseBuilder.addStatuses(status.getProtobuf());
+    }
+    return listStatusResponseBuilder.build();
   }
 }

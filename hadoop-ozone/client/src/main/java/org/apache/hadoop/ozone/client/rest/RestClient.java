@@ -1113,4 +1113,26 @@ public class RestClient implements ClientProtocol {
     throw new UnsupportedOperationException(
         "Ozone REST protocol does not " + "support this operation.");
   }
+
+  @Override
+  public void renameFSEntry(String volumeName, String bucketName, String keyName,
+      String toKeyName) throws IOException {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public void deleteFSEntry(String volumeName, String bucketName, String keyName,
+      boolean recursive) throws IOException {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
 }

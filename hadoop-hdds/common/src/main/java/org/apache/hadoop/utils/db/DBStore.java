@@ -121,6 +121,37 @@ public interface DBStore extends AutoCloseable {
       throws IOException;
 
   /**
+   * Adds operations in the batch for moving a key from the Source Table to the
+   * destination Table.
+   *
+   * @param key - Key to move.
+   * @param source - Source Table.
+   * @param dest - Destination Table.
+   * @param batch - Batch operation
+   * @throws IOException on Failure
+   */
+  <KEY, VALUE> void moveWithBatch(KEY key, Table<KEY, VALUE> source,
+      Table<KEY, VALUE> dest, BatchOperation batch) throws IOException;
+
+  /**
+   * Adds operations in the batch for moving a key from the Source Table to the
+   * destination Table and updating the destination with the new key name and
+   * value. This is similar to deleting an entry in one table and adding an
+   * entry in another table, here it is done atomically.
+   *
+   * @param sourceKey - Key to move.
+   * @param destKey - Destination key name.
+   * @param value - new value to write to the destination table.
+   * @param source - Source Table.
+   * @param dest - Destination Table.
+   * @param batch - Batch operation
+   * @throws IOException on Failure
+   */
+  <KEY, VALUE> void moveWithBatch(KEY sourceKey, KEY destKey, VALUE value,
+      Table<KEY, VALUE> source, Table<KEY, VALUE> dest, BatchOperation batch)
+      throws IOException;
+
+  /**
    * Returns an estimated count of keys in this DB.
    *
    * @return long, estimate of keys in the DB.

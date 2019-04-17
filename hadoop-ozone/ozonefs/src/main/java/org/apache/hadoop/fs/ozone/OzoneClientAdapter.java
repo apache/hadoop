@@ -26,7 +26,7 @@ import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.Iterator;
+import java.util.List;
 
 /**
  * Lightweight adapter to separate hadoop/ozone classes.
@@ -44,13 +44,14 @@ public interface OzoneClientAdapter {
   OzoneFSOutputStream createFile(String key, boolean overWrite,
       boolean recursive) throws IOException;
 
-  void renameKey(String key, String newKeyName) throws IOException;
-
   boolean createDirectory(String keyName) throws IOException;
 
-  boolean deleteObject(String keyName);
+  boolean rename(String keyName, String toKeyName) throws IOException;
 
-  Iterator<BasicKeyInfo> listKeys(String pathKey);
+  boolean delete(String keyName, boolean recursive) throws IOException;
+
+  List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException;
 
   Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException;
