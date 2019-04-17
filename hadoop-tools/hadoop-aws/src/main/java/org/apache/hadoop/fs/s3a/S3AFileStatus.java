@@ -45,7 +45,7 @@ public class S3AFileStatus extends FileStatus {
   public S3AFileStatus(boolean isemptydir,
       Path path,
       String owner) {
-    this(Tristate.fromBool(isemptydir), path, owner, owner, 0, 0, null);
+    this(Tristate.fromBool(isemptydir), path, owner);
   }
 
   /**
@@ -57,30 +57,12 @@ public class S3AFileStatus extends FileStatus {
   public S3AFileStatus(Tristate isemptydir,
       Path path,
       String owner) {
-    this(isemptydir, path, owner, owner, 0, 0, null);
-  }
-
-  /**
-   * Create a directory status.
-   * @param isemptydir is this an empty directory?
-   * @param path the path
-   * @param owner the owner
-   * @param group the group
-   * @param modification_time the modification time
-   * @param access_time the access time
-   * @param permission the permission
-   */
-  public S3AFileStatus(Tristate isemptydir,
-      Path path,
-      String owner,
-      String group,
-      long modification_time,
-      long access_time,
-      FsPermission permission) {
-    super(0, true, 1, 0, modification_time,
-        access_time, permission, owner, groupOrOwner(group, owner), null,
+    super(0, true, 1, 0, 0, 0,
+        null, null, null, null,
         path, false, true, false);
     isEmptyDirectory = isemptydir;
+    setOwner(owner);
+    setGroup(owner);
   }
 
   /**
@@ -104,30 +86,6 @@ public class S3AFileStatus extends FileStatus {
   }
 
   /**
-   * A simple file.
-   * @param length file length
-   * @param modification_time mod time
-   * @param access_time  access time
-   * @param path path
-   * @param blockSize block size
-   * @param owner owner
-   * @param group group
-   * @param permission permission
-   * @param eTag eTag of the S3 object if available, else null
-   * @param versionId versionId of the S3 object if available, else null
-   */
-  public S3AFileStatus(long length, long modification_time, long access_time,
-      Path path, long blockSize, String owner, String group,
-      FsPermission permission, String eTag, String versionId) {
-    super(length, false, 1, blockSize, modification_time,
-        access_time, permission, owner, groupOrOwner(group, owner), null,
-        path, false, true, false);
-    isEmptyDirectory = Tristate.FALSE;
-    this.eTag = eTag;
-    this.versionId = versionId;
-  }
-
-  /**
    * Convenience constructor for creating from a vanilla FileStatus plus
    * an isEmptyDirectory flag.
    * @param source FileStatus to convert to S3AFileStatus
@@ -141,22 +99,14 @@ public class S3AFileStatus extends FileStatus {
       Tristate isEmptyDirectory, String eTag, String versionId) {
     if (source.isDirectory()) {
       return new S3AFileStatus(isEmptyDirectory, source.getPath(),
-          source.getOwner(), source.getGroup(), source.getModificationTime(),
-          source.getAccessTime(), source.getPermission());
+          source.getOwner());
     } else {
       return new S3AFileStatus(source.getLen(), source.getModificationTime(),
-          source.getAccessTime(), source.getPath(), source.getBlockSize(),
-          source.getOwner(), source.getGroup(), source.getPermission(),
+          source.getPath(), source.getBlockSize(), source.getOwner(),
           eTag, versionId);
     }
   }
 
-  private static String groupOrOwner(String group, String owner) {
-    if (group != null && !group.isEmpty()) {
-      return group;
-    }
-    return owner;
-  }
 
   /**
    * @return FALSE if status is not a directory, or its a dir, but known to
@@ -213,7 +163,7 @@ public class S3AFileStatus extends FileStatus {
    */
   @Override
   public long getModificationTime(){
-    if(isDirectory() && super.getModificationTime() == 0){
+    if(isDirectory()){
       return System.currentTimeMillis();
     } else {
       return super.getModificationTime();

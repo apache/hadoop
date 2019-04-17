@@ -200,9 +200,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  protected void verifyDirStatus(FileStatus status) {
-    S3ATestUtils.verifyDirStatus(status, REPLICATION, getModTime(),
-        getAccessTime(), OWNER, GROUP, PERMISSION);
+  protected void verifyDirStatus(S3AFileStatus status) {
+    S3ATestUtils.verifyDirStatus(status, REPLICATION, OWNER);
   }
 
 }

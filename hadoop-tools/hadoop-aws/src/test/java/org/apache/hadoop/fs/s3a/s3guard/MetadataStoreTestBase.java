@@ -62,11 +62,13 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   /** Some dummy values for sanity-checking FileStatus contents. */
   static final long BLOCK_SIZE = 32 * 1024 * 1024;
   static final int REPLICATION = 1;
-  static final FsPermission PERMISSION = new FsPermission((short)0755);
   static final String OWNER = "bob";
-  static final String GROUP = "uncles";
-  private final long accessTime = System.currentTimeMillis();
-  private final long modTime = accessTime - 5000;
+  private final long modTime = System.currentTimeMillis() - 5000;
+
+  // attributes not supported by S3AFileStatus
+  static final FsPermission PERMISSION = null;
+  static final String GROUP = null;
+  private final long accessTime = 0;
 
   /**
    * Each test should override this.  Will use a new Configuration instance.
@@ -992,7 +994,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   /**
    * Verify the directory file status. Subclass may verify additional fields.
    */
-  void verifyDirStatus(FileStatus status) {
+  void verifyDirStatus(S3AFileStatus status) {
     assertTrue("Is a dir", status.isDirectory());
     assertEquals("zero length", 0, status.getLen());
   }
