@@ -44,6 +44,7 @@ import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RpcInvocationHandler;
+import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -67,7 +68,8 @@ import com.google.common.annotations.VisibleForTesting;
 @InterfaceStability.Evolving
 public class ObserverReadProxyProvider<T extends ClientProtocol>
     extends AbstractNNFailoverProxyProvider<T> {
-  private static final Logger LOG = LoggerFactory.getLogger(
+  @VisibleForTesting
+  static final Logger LOG = LoggerFactory.getLogger(
       ObserverReadProxyProvider.class);
 
   /** Configuration key for {@link #autoMsyncPeriodMs}. */
@@ -256,17 +258,35 @@ public class ObserverReadProxyProvider<T extends ClientProtocol>
     currentProxy = null;
     currentIndex = (currentIndex + 1) % nameNodeProxies.size();
     currentProxy = createProxyIfNeeded(nameNodeProxies.get(currentIndex));
-    try {
-      HAServiceState state = currentProxy.proxy.getHAServiceState();
-      currentProxy.setCachedState(state);
-    } catch (IOException e) {
-      LOG.info("Failed to connect to {}. Setting cached state to Standby",
-          currentProxy.getAddress(), e);
-      currentProxy.setCachedState(HAServiceState.STANDBY);
-    }
+    currentProxy.setCachedState(getHAServiceState(currentProxy));
     LOG.debug("Changed current proxy from {} to {}",
         initial == null ? "none" : initial.proxyInfo,
         currentProxy.proxyInfo);
+  }
+
+  /**
+   * Fetch the service state from a proxy. If it is unable to be fetched,
+   * assume it is in standby state, but log the exception.
+   */
+  private HAServiceState getHAServiceState(NNProxyInfo<T> proxyInfo) {
+    IOException ioe;
+    try {
+      return proxyInfo.proxy.getHAServiceState();
+    } catch (RemoteException re) {
+      // Though a Standby will allow a getHAServiceState call, it won't allow
+      // delegation token lookup, so if DT is used it throws StandbyException
+      if (re.unwrapRemoteException() instanceof StandbyException) {
+        LOG.debug("NameNode {} threw StandbyException when fetching HAState",
+            proxyInfo.getAddress());
+        return HAServiceState.STANDBY;
+      }
+      ioe = re;
+    } catch (IOException e) {
+      ioe = e;
+    }
+    LOG.info("Failed to connect to {}. Assuming Standby state",
+        proxyInfo.getAddress(), ioe);
+    return HAServiceState.STANDBY;
   }
 
   /**
