@@ -27,6 +27,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Set;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.times;
@@ -230,7 +231,8 @@ public class TestProportionalCapacityPreemptionPolicyPreemptToBalance
         FifoCandidatesSelector pcs = (FifoCandidatesSelector) pc.getKey();
         if (pcs.getAllowQueuesBalanceAfterAllQueuesSatisfied() == true) {
           hasFifoSelector = true;
-          assertEquals(pcs.getMaximumKillWaitTimeMs(), FB_MAX_BEFORE_KILL);
+          assertThat(pcs.getMaximumKillWaitTimeMs()).
+              isEqualTo(FB_MAX_BEFORE_KILL);
         }
       }
     }

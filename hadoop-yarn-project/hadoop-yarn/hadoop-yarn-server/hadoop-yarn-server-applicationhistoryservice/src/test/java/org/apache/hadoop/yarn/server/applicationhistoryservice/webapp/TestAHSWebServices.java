@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -678,7 +679,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
 
     r = resource();
     response = r.path("ws").path("v1")
@@ -689,7 +690,7 @@ public class TestAHSWebServices extends JerseyTestBase {
         .accept(MediaType.TEXT_PLAIN)
         .get(ClientResponse.class);
     responseText = response.getEntity(String.class);
-    assertEquals(responseText.getBytes().length, fullTextSize);
+    assertThat(responseText.getBytes()).hasSize(fullTextSize);
   }
 
   @Test(timeout = 10000)
@@ -880,8 +881,8 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
         assertEquals(logInfo.getLogType(),
@@ -908,11 +909,11 @@ public class TestAHSWebServices extends JerseyTestBase {
         List<ContainerLogFileInfo> logMeta = logInfo
             .getContainerLogsInfo();
         assertTrue(logMeta.size() == 1);
-        assertEquals(logMeta.get(0).getFileName(), fileName);
-        assertEquals(logMeta.get(0).getFileSize(), String.valueOf(
+        assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+        assertThat(logMeta.get(0).getFileSize()).isEqualTo(String.valueOf(
             content.length()));
       } else {
-        assertEquals(logInfo.getLogType(),
+        assertThat(logInfo.getLogType()).isEqualTo(
             ContainerLogAggregationType.LOCAL.toString());
       }
     }
@@ -946,8 +947,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     List<ContainerLogFileInfo> logMeta = responseText.get(0)
         .getContainerLogsInfo();
     assertTrue(logMeta.size() == 1);
-    assertEquals(logMeta.get(0).getFileName(), fileName);
-    assertEquals(logMeta.get(0).getFileSize(),
+    assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
+    assertThat(logMeta.get(0).getFileSize()).isEqualTo(
         String.valueOf(content.length()));
   }
 

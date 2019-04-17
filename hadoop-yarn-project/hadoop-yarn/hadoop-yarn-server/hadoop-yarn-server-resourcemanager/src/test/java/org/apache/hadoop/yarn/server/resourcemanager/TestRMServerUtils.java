@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.api.records.ContainerUpdateType.INCREASE_RESOURCE;
 import static org.apache.hadoop.yarn.server.resourcemanager.RMServerUtils.RESOURCE_OUTSIDE_ALLOWED_RANGE;
 
@@ -140,22 +141,22 @@ public class TestRMServerUtils {
     List<RMNode> result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.SHUTDOWN));
     Assert.assertTrue(result.size() != 0);
-    Assert.assertEquals(result.get(0), rmNode1);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.DECOMMISSIONED);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.DECOMMISSIONED));
     Assert.assertTrue(result.size() != 0);
-    Assert.assertEquals(result.get(0), rmNode1);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.LOST);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.LOST));
     Assert.assertTrue(result.size() != 0);
-    Assert.assertEquals(result.get(0), rmNode1);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
     when(rmNode1.getState()).thenReturn(NodeState.REBOOTED);
     result = RMServerUtils.queryRMNodes(rmContext,
         EnumSet.of(NodeState.REBOOTED));
     Assert.assertTrue(result.size() != 0);
-    Assert.assertEquals(result.get(0), rmNode1);
+    assertThat(result.get(0)).isEqualTo(rmNode1);
   }
 
   @Test

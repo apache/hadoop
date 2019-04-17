@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.recovery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.fusesource.leveldbjni.JniDBFactory.bytes;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -36,6 +37,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.File;
 import java.io.IOException;
+
 import java.io.Serializable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -1350,9 +1352,9 @@ public class TestNMLeveldbStateStoreService {
   @Test
   public void testAMRMProxyStorage() throws IOException {
     RecoveredAMRMProxyState state = stateStore.loadAMRMProxyState();
-    assertEquals(state.getCurrentMasterKey(), null);
-    assertEquals(state.getNextMasterKey(), null);
-    assertEquals(state.getAppContexts().size(), 0);
+    assertThat(state.getCurrentMasterKey()).isNull();
+    assertThat(state.getNextMasterKey()).isNull();
+    assertThat(state.getAppContexts()).isEmpty();
 
     ApplicationId appId1 = ApplicationId.newInstance(1, 1);
     ApplicationId appId2 = ApplicationId.newInstance(1, 2);
@@ -1384,18 +1386,18 @@ public class TestNMLeveldbStateStoreService {
       state = stateStore.loadAMRMProxyState();
       assertEquals(state.getCurrentMasterKey(),
           secretManager.getCurrentMasterKeyData().getMasterKey());
-      assertEquals(state.getNextMasterKey(), null);
-      assertEquals(state.getAppContexts().size(), 2);
+      assertThat(state.getNextMasterKey()).isNull();
+      assertThat(state.getAppContexts()).hasSize(2);
       // app1
       Map<String, byte[]> map = state.getAppContexts().get(attemptId1);
       assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
       // app2
       map = state.getAppContexts().get(attemptId2);
       assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
 
@@ -1414,14 +1416,14 @@ public class TestNMLeveldbStateStoreService {
       assertEquals(state.getAppContexts().size(), 2);
       // app1
       map = state.getAppContexts().get(attemptId1);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 2);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(2);
       assertTrue(Arrays.equals(map.get(key1), data1));
       assertTrue(Arrays.equals(map.get(key2), data2));
       // app2
       map = state.getAppContexts().get(attemptId2);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 1);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(1);
       assertTrue(Arrays.equals(map.get(key2), data2));
 
       // Activate next master key and remove all entries of app1
@@ -1434,12 +1436,12 @@ public class TestNMLeveldbStateStoreService {
       state = stateStore.loadAMRMProxyState();
       assertEquals(state.getCurrentMasterKey(),
           secretManager.getCurrentMasterKeyData().getMasterKey());
-      assertEquals(state.getNextMasterKey(), null);
-      assertEquals(state.getAppContexts().size(), 1);
+      assertThat(state.getNextMasterKey()).isNull();
+      assertThat(state.getAppContexts()).hasSize(1);
       // app2 only
       map = state.getAppContexts().get(attemptId2);
-      assertNotEquals(map, null);
-      assertEquals(map.size(), 1);
+      assertThat(map).isNotNull();
+      assertThat(map).hasSize(1);
       assertTrue(Arrays.equals(map.get(key2), data2));
     } finally {
       secretManager.stop();

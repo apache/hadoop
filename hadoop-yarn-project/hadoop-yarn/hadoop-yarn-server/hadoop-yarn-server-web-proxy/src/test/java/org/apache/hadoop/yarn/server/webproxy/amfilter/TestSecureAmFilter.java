@@ -25,7 +25,7 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.HashMap;
 
-import static org.junit.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -137,7 +137,7 @@ public class TestSecureAmFilter {
 
     assertTrue(spy.isValidUrl(rm1Url));
     assertFalse(spy.isValidUrl(rm2Url));
-    assertEquals(spy.findRedirectUrl(), rm1Url);
+    assertThat(spy.findRedirectUrl()).isEqualTo(rm1Url);
   }
 
   private String startSecureHttpServer() throws Exception {

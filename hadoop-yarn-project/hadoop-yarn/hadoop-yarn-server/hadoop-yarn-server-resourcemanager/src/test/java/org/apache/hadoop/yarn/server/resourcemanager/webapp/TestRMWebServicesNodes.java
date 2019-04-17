@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -1088,8 +1089,8 @@ public class TestRMWebServicesNodes extends JerseyTestBase {
       for (int j=0; j<tagsInfo.length(); j++) {
         JSONObject tagInfo = tagsInfo.getJSONObject(j);
         String expectedTag = it.next();
-        assertEquals(tagInfo.getString("allocationTag"), expectedTag);
-        assertEquals(tagInfo.getLong("allocationsCount"),
+        assertThat(tagInfo.getString("allocationTag")).isEqualTo(expectedTag);
+        assertThat(tagInfo.getLong("allocationsCount")).isEqualTo(
             expectedTags.get(expectedTag).longValue());
       }
     }

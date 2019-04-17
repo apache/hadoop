@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -1325,15 +1326,15 @@ public class TestResourceLocalizationService {
     // hence its not removed despite ref cnt being 0.
     LocalizedResource rsrc1 = tracker.getLocalizedResource(req1);
     assertNotNull(rsrc1);
-    assertEquals(rsrc1.getState(), ResourceState.LOCALIZED);
-    assertEquals(rsrc1.getRefCount(), 0);
+    assertThat(rsrc1.getState()).isEqualTo(ResourceState.LOCALIZED);
+    assertThat(rsrc1.getRefCount()).isEqualTo(0);
 
     // Container c1 was killed but this resource is referenced by container c2
     // as well hence its ref cnt is 1.
     LocalizedResource rsrc2 = tracker.getLocalizedResource(req2);
     assertNotNull(rsrc2);
-    assertEquals(rsrc2.getState(), ResourceState.DOWNLOADING);
-    assertEquals(rsrc2.getRefCount(), 1);
+    assertThat(rsrc2.getState()).isEqualTo(ResourceState.DOWNLOADING);
+    assertThat(rsrc2.getRefCount()).isEqualTo(1);
 
     // As container c1 was killed and this resource was not referenced by any
     // other container, hence its removed.

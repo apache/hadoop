@@ -22,6 +22,7 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
@@ -52,8 +53,10 @@ public class TestConfigurableResource {
   public void testGetResourceWithAbsolute() {
     ConfigurableResource configurableResource =
         new ConfigurableResource(Resources.createResource(3072, 3));
-    assertEquals(configurableResource.getResource().getMemorySize(), 3072);
-    assertEquals(configurableResource.getResource().getVirtualCores(), 3);
+    assertThat(configurableResource.getResource().getMemorySize()).
+        isEqualTo(3072);
+    assertThat(configurableResource.getResource().getVirtualCores()).
+        isEqualTo(3);
 
     assertEquals(
         configurableResource.getResource(clusterResource).getMemorySize(),
@@ -62,7 +65,9 @@ public class TestConfigurableResource {
         configurableResource.getResource(clusterResource).getVirtualCores(),
         3);
 
-    assertEquals(configurableResource.getResource(null).getMemorySize(), 3072);
-    assertEquals(configurableResource.getResource(null).getVirtualCores(), 3);
+    assertThat(configurableResource.getResource(null).getMemorySize()).
+        isEqualTo(3072);
+    assertThat(configurableResource.getResource(null).getVirtualCores()).
+        isEqualTo(3);
   }
 }

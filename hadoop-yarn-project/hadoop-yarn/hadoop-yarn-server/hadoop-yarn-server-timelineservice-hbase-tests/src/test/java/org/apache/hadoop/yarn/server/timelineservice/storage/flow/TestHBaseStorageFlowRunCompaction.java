@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.storage.flow;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
@@ -119,7 +120,8 @@ public class TestHBaseStorageFlowRunCompaction {
     Cell actualValue = r.getColumnLatestCell(
         FlowRunColumnFamily.INFO.getBytes(), columnNameBytes);
     assertNotNull(CellUtil.cloneValue(actualValue));
-    assertEquals(Bytes.toString(CellUtil.cloneValue(actualValue)), value);
+    assertThat(Bytes.toString(CellUtil.cloneValue(actualValue))).
+        isEqualTo(value);
   }
 
   @Test

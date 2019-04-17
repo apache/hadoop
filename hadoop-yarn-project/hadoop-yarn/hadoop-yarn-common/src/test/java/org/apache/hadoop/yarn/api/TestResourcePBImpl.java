@@ -34,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -294,7 +295,7 @@ public class TestResourcePBImpl {
         ResourceUtils.getResourceTypes().get("resource3");
     Assert.assertTrue(info.getAttributes().isEmpty());
     Assert.assertFalse(info.getTags().isEmpty());
-    Assert.assertEquals(info.getTags().size(), 2);
+    assertThat(info.getTags()).hasSize(2);
     info.getTags().remove("resource3_tag_1");
     info.getTags().remove("resource3_tag_2");
     Assert.assertTrue(info.getTags().isEmpty());

@@ -93,6 +93,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -416,7 +417,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     List<ApplicationReport> expectedReports = ((MockYarnClient)client).getReports();
 
     List<ApplicationReport>  reports = client.getApplications();
-    Assert.assertEquals(reports, expectedReports);
+    assertThat(reports).isEqualTo(expectedReports);
 
     Set<String> appTypes = new HashSet<>();
     appTypes.add("YARN");
@@ -424,7 +425,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
 
     reports =
         client.getApplications(appTypes, null);
-    Assert.assertEquals(reports.size(), 2);
+    assertThat(reports).hasSize(2);
     Assert
         .assertTrue((reports.get(0).getApplicationType().equals("YARN") && reports
             .get(1).getApplicationType().equals("NON-YARN"))
@@ -439,7 +440,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     appStates.add(YarnApplicationState.FINISHED);
     appStates.add(YarnApplicationState.FAILED);
     reports = client.getApplications(null, appStates);
-    Assert.assertEquals(reports.size(), 2);
+    assertThat(reports).hasSize(2);
     Assert
     .assertTrue((reports.get(0).getApplicationType().equals("NON-YARN") && reports
         .get(1).getApplicationType().equals("NON-MAPREDUCE"))
@@ -469,9 +470,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     List<ApplicationAttemptReport> reports = client
         .getApplicationAttempts(applicationId);
     Assert.assertNotNull(reports);
-    Assert.assertEquals(reports.get(0).getApplicationAttemptId(),
+    assertThat(reports.get(0).getApplicationAttemptId()).isEqualTo(
         ApplicationAttemptId.newInstance(applicationId, 1));
-    Assert.assertEquals(reports.get(1).getApplicationAttemptId(),
+    assertThat(reports.get(1).getApplicationAttemptId()).isEqualTo(
         ApplicationAttemptId.newInstance(applicationId, 2));
     client.stop();
   }
@@ -492,7 +493,7 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     ApplicationAttemptReport report = client
         .getApplicationAttemptReport(appAttemptId);
     Assert.assertNotNull(report);
-    Assert.assertEquals(report.getApplicationAttemptId().toString(),
+    assertThat(report.getApplicationAttemptId().toString()).isEqualTo(
         expectedReports.get(0).getCurrentApplicationAttemptId().toString());
     client.stop();
   }
@@ -512,11 +513,11 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
         applicationId, 1);
     List<ContainerReport> reports = client.getContainers(appAttemptId);
     Assert.assertNotNull(reports);
-    Assert.assertEquals(reports.get(0).getContainerId(),
+    assertThat(reports.get(0).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 1)));
-    Assert.assertEquals(reports.get(1).getContainerId(),
+    assertThat(reports.get(1).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 2)));
-    Assert.assertEquals(reports.get(2).getContainerId(),
+    assertThat(reports.get(2).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 3)));
     
     //First2 containers should come from RM with updated state information and 
@@ -554,9 +555,9 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     List<ContainerReport> reports = client.getContainers(appAttemptId);
     Assert.assertNotNull(reports);
     Assert.assertTrue(reports.size() == 2);
-    Assert.assertEquals(reports.get(0).getContainerId(),
+    assertThat(reports.get(0).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 1)));
-    Assert.assertEquals(reports.get(1).getContainerId(),
+    assertThat(reports.get(1).getContainerId()).isEqualTo(
         (ContainerId.newContainerId(appAttemptId, 2)));
 
     //Only 2 running containers from RM are present when AHS throws exception
@@ -586,13 +587,13 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     ContainerId containerId = ContainerId.newContainerId(appAttemptId, 1);
     ContainerReport report = client.getContainerReport(containerId);
     Assert.assertNotNull(report);
-    Assert.assertEquals(report.getContainerId().toString(),
+    assertThat(report.getContainerId().toString()).isEqualTo(
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 1)).toString());
     containerId = ContainerId.newContainerId(appAttemptId, 3);
     report = client.getContainerReport(containerId);
     Assert.assertNotNull(report);
-    Assert.assertEquals(report.getContainerId().toString(),
+    assertThat(report.getContainerId().toString()).isEqualTo(
         (ContainerId.newContainerId(expectedReports.get(0)
             .getCurrentApplicationAttemptId(), 3)).toString());
     Assert.assertNotNull(report.getExecutionType());
@@ -609,16 +610,16 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     Map<String, Set<NodeId>> expectedLabelsToNodes =
         ((MockYarnClient)client).getLabelsToNodesMap();
     Map<String, Set<NodeId>> labelsToNodes = client.getLabelsToNodes();
-    Assert.assertEquals(labelsToNodes, expectedLabelsToNodes);
-    Assert.assertEquals(labelsToNodes.size(), 3);
+    assertThat(labelsToNodes).isEqualTo(expectedLabelsToNodes);
+    assertThat(labelsToNodes).hasSize(3);
 
     // Get labels to nodes for selected labels
     Set<String> setLabels = new HashSet<>(Arrays.asList("x", "z"));
     expectedLabelsToNodes =
         ((MockYarnClient)client).getLabelsToNodesMap(setLabels);
     labelsToNodes = client.getLabelsToNodes(setLabels);
-    Assert.assertEquals(labelsToNodes, expectedLabelsToNodes);
-    Assert.assertEquals(labelsToNodes.size(), 2);
+    assertThat(labelsToNodes).isEqualTo(expectedLabelsToNodes);
+    assertThat(labelsToNodes).hasSize(2);
 
     client.stop();
     client.close();
@@ -634,8 +635,8 @@ public class TestYarnClient extends ParameterizedSchedulerTestBase {
     Map<NodeId, Set<String>> expectedNodesToLabels = ((MockYarnClient) client)
         .getNodeToLabelsMap();
     Map<NodeId, Set<String>> nodesToLabels = client.getNodeToLabels();
-    Assert.assertEquals(nodesToLabels, expectedNodesToLabels);
-    Assert.assertEquals(nodesToLabels.size(), 1);
+    assertThat(nodesToLabels).isEqualTo(expectedNodesToLabels);
+    assertThat(nodesToLabels).hasSize(1);
 
     client.stop();
     client.close();

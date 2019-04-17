@@ -50,6 +50,7 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.client.api.AppAdminClient.YARN_APP_ADMIN_CLIENT_PREFIX;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.DEPENDENCY_TARBALL_PATH;
 import static org.apache.hadoop.yarn.service.conf.YarnServiceConf.YARN_SERVICE_BASE_PATH;
@@ -172,7 +173,7 @@ public class TestServiceCLI {
         "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test (timeout = 180000)
@@ -182,7 +183,7 @@ public class TestServiceCLI {
         "-autoFinalize",
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test
@@ -194,7 +195,7 @@ public class TestServiceCLI {
         "-instances", "comp1-0,comp1-1",
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test
@@ -206,7 +207,7 @@ public class TestServiceCLI {
         "-components", "comp1,comp2",
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test
@@ -218,7 +219,7 @@ public class TestServiceCLI {
         "-components", "comp1,comp2",
         "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test
@@ -229,7 +230,7 @@ public class TestServiceCLI {
     String[] args = {"app", "-upgrade", "app-1",
         "-cancel", "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
+    assertThat(result).isEqualTo(0);
   }
 
   @Test (timeout = 180000)

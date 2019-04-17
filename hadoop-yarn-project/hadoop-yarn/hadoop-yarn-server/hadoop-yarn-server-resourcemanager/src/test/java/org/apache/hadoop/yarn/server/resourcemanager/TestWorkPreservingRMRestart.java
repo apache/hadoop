@@ -100,6 +100,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
 
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler
@@ -263,7 +265,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
       scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers().contains(
       scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
@@ -421,7 +424,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         .contains(scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers()
         .contains(scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
@@ -775,8 +779,9 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
     ApplicationReport report = rm2.getApplicationReport(app.getApplicationId());
     assertEquals(report.getFinalApplicationStatus(),
         FinalApplicationStatus.KILLED);
-    assertEquals(report.getYarnApplicationState(), YarnApplicationState.KILLED);
-    assertEquals(report.getDiagnostics(), diagnostics);
+    assertThat(report.getYarnApplicationState()).
+        isEqualTo(YarnApplicationState.KILLED);
+    assertThat(report.getDiagnostics()).isEqualTo(diagnostics);
 
     //Reload previous state with cloned app sub context object
     RMState newState = memStore2.reloadStateWithClonedAppSubCtxt(state);
@@ -1730,7 +1735,8 @@ public class TestWorkPreservingRMRestart extends ParameterizedSchedulerTestBase 
         .contains(scheduler.getRMContainer(amContainer.getContainerId())));
     assertTrue(schedulerAttempt.getLiveContainers()
         .contains(scheduler.getRMContainer(runningContainer.getContainerId())));
-    assertEquals(schedulerAttempt.getCurrentConsumption(), usedResources);
+    assertThat(schedulerAttempt.getCurrentConsumption()).
+        isEqualTo(usedResources);
 
     // *********** check appSchedulingInfo state ***********
     assertEquals((1L << 40) + 1L, schedulerAttempt.getNewContainerId());
