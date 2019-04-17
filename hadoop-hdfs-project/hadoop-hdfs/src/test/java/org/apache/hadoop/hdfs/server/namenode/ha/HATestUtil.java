@@ -265,24 +265,34 @@ public abstract class HATestUtil {
   /** Sets the required configurations for performing failover.  */
   public static void setFailoverConfigurations(MiniDFSCluster cluster,
       Configuration conf, String logicalName, int nsIndex) {
+    setFailoverConfigurations(cluster, conf, logicalName, nsIndex,
+        ConfiguredFailoverProxyProvider.class);
+  }
+
+  /** Sets the required configurations for performing failover.  */
+  public static <P extends FailoverProxyProvider<?>> void
+      setFailoverConfigurations(MiniDFSCluster cluster, Configuration conf,
+      String logicalName, int nsIndex, Class<P> classFPP) {
     MiniDFSCluster.NameNodeInfo[] nns = cluster.getNameNodeInfos(nsIndex);
     List<InetSocketAddress> nnAddresses = new ArrayList<InetSocketAddress>(3);
     for (MiniDFSCluster.NameNodeInfo nn : nns) {
       nnAddresses.add(nn.nameNode.getNameNodeAddress());
     }
-    setFailoverConfigurations(conf, logicalName, nnAddresses);
+    setFailoverConfigurations(conf, logicalName, nnAddresses, classFPP);
   }
 
   public static void setFailoverConfigurations(Configuration conf, String logicalName,
       InetSocketAddress ... nnAddresses){
-    setFailoverConfigurations(conf, logicalName, Arrays.asList(nnAddresses));
+    setFailoverConfigurations(conf, logicalName, Arrays.asList(nnAddresses),
+        ConfiguredFailoverProxyProvider.class);
   }
 
   /**
    * Sets the required configurations for performing failover
    */
-  public static void setFailoverConfigurations(Configuration conf,
-      String logicalName, List<InetSocketAddress> nnAddresses) {
+  public static <P extends FailoverProxyProvider<?>> void
+      setFailoverConfigurations(Configuration conf, String logicalName,
+      List<InetSocketAddress> nnAddresses, Class<P> classFPP) {
     setFailoverConfigurations(conf, logicalName,
         Iterables.transform(nnAddresses, new Function<InetSocketAddress, String>() {
 
@@ -291,7 +301,7 @@ public abstract class HATestUtil {
           public String apply(InetSocketAddress addr) {
             return "hdfs://" + addr.getHostName() + ":" + addr.getPort();
           }
-        }), ConfiguredFailoverProxyProvider.class);
+        }), classFPP);
   }
 
   public static <P extends FailoverProxyProvider<?>>
