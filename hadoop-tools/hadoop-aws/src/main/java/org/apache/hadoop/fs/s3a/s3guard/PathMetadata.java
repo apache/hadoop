@@ -94,10 +94,7 @@ public class PathMetadata extends ExpirableMetadata {
 
   void setIsEmptyDirectory(Tristate isEmptyDirectory) {
     this.isEmptyDirectory = isEmptyDirectory;
-    if (fileStatus.isDirectory()) {
-      fileStatus = new S3AFileStatus(
-          isEmptyDirectory, fileStatus.getPath(), fileStatus.getOwner());
-    }
+    fileStatus.setIsEmptyDirectory(isEmptyDirectory);
   }
 
   public boolean isDeleted() {

@@ -118,6 +118,14 @@ public class S3AFileStatus extends FileStatus {
   }
 
   /**
+   * Update isEmptyDirectory attribute.
+   * @param isEmptyDirectory new isEmptyDirectory value
+   */
+  public void setIsEmptyDirectory(Tristate isEmptyDirectory) {
+    this.isEmptyDirectory = isEmptyDirectory;
+  }
+
+  /**
    * @return the S3 object eTag when available, else null.
    */
   public String getETag() {
