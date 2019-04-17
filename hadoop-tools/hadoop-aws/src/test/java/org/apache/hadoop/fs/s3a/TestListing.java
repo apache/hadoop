@@ -57,10 +57,7 @@ public class TestListing extends AbstractS3AMockTest {
   }
 
   private S3AFileStatus blankFileStatus(Path path) {
-    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
-    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
-        fileStatus, Tristate.UNKNOWN, null, null);
-    return s3aStatus;
+    return new S3AFileStatus(Tristate.UNKNOWN, path, null);
   }
 
   @Test
@@ -100,10 +97,9 @@ public class TestListing extends AbstractS3AMockTest {
 
   @Test
   public void testProvidedFileStatusIteratorEnd() throws Exception {
-    FileStatus status = new FileStatus(100, false, 1, 8192, 0,
-        new Path("s3a://blah/blah"));
-    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(status,
-        Tristate.FALSE, null, null);
+    S3AFileStatus s3aStatus = new S3AFileStatus(
+        100, 0, new Path("s3a://blah/blah"),
+        8192, null, null, null);
 
     S3AFileStatus[] statuses = {
         s3aStatus

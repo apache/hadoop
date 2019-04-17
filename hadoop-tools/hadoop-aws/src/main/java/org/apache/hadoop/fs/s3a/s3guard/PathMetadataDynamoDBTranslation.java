@@ -151,9 +151,8 @@ final class PathMetadataDynamoDBTranslation {
       long block = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
       String eTag = item.getString(ETAG);
       String versionId = item.getString(VERSION_ID);
-      fileStatus = S3AFileStatus.fromFileStatus(
-          new FileStatus(len, false, 1, block, modTime, 0, null,
-              username, username, path), Tristate.UNKNOWN, eTag, versionId);
+      fileStatus = new S3AFileStatus(
+          len, modTime, path, block, username, eTag, versionId);
     }
     lastUpdated =
         !IGNORED_FIELDS.contains(LAST_UPDATED)

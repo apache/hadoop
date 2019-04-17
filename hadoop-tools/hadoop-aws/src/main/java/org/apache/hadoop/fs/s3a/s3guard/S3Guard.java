@@ -466,10 +466,7 @@ public final class S3Guard {
     while (!parent.isRoot()) {
       PathMetadata directory = metadataStore.get(parent);
       if (directory == null || directory.isDeleted()) {
-        FileStatus status = new FileStatus(0, true, 1, 0, 0, 0, null, username,
-            null, parent);
-        S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
-            status, Tristate.FALSE, null, null);
+        S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.FALSE, parent, username);
         PathMetadata meta = new PathMetadata(s3aStatus, Tristate.FALSE, false);
         newDirs.add(meta);
       } else {

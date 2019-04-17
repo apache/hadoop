@@ -170,9 +170,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   private static void populateEntry(Cache<Path, LocalMetadataEntry> cache,
       Path path) {
-    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
-    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
-        fileStatus, Tristate.UNKNOWN, null, null);
+    S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.UNKNOWN, path, null);
     cache.put(path, new LocalMetadataEntry(new PathMetadata(s3aStatus)));
   }
 

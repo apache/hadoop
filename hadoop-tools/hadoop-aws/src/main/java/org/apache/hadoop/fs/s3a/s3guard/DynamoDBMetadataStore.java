@@ -620,11 +620,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @return new FileStatus
    */
   private S3AFileStatus makeDirStatus(String owner, Path path) {
-    FileStatus fileStatus = new FileStatus(0, true, 1, 0, 0, 0, null,
-        owner, null, path);
-
-    return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
-        null, null);
+    return new S3AFileStatus(Tristate.UNKNOWN, path, owner);
   }
 
   @Override
@@ -936,12 +932,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /** Create a directory FileStatus using current system time as mod time. */
   static S3AFileStatus makeDirStatus(Path f, String owner) {
-    FileStatus fileStatus =
-        new FileStatus(0, true, 1, 0, System.currentTimeMillis(), 0,
-        null, owner, owner, f);
-    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
-        fileStatus, Tristate.UNKNOWN, null, null);
-    return s3aStatus;
+    return new S3AFileStatus(Tristate.UNKNOWN, f, owner);
   }
 
   /**

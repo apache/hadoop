@@ -650,8 +650,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     createNewDirs("/pruneFiles");
 
     long oldTime = getTime();
-    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime,
-        oldTime)));
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime)));
     DirListingMetadata ls2 = ms.listChildren(strToPath("/pruneFiles"));
     if (!allowMissing()) {
       assertListingsEqual(ls2.getListing(), "/pruneFiles/old");
@@ -662,8 +661,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     Thread.sleep(1);
     long cutoff = System.currentTimeMillis();
     long newTime = getTime();
-    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime,
-        newTime)));
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime)));
 
     DirListingMetadata ls;
     ls = ms.listChildren(strToPath("/pruneFiles"));
@@ -694,7 +692,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     long oldTime = getTime();
     ms.put(new PathMetadata(makeFileStatus("/pruneDirs/dir/file",
-        1, oldTime, oldTime)));
+        1, oldTime)));
 
     // It's possible for the Local implementation to get from the old
     // modification time to here in under 1ms, causing it to not get pruned
@@ -718,10 +716,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     createNewDirs(rootDir, grandparentDir, parentDir);
     long time = System.currentTimeMillis();
     ms.put(new PathMetadata(
-        basicFileStatus(0, false, 0, 0, time - 1, strToPath(staleFile)),
+        basicFileStatus(0, false, 0, time - 1, strToPath(staleFile)),
         Tristate.FALSE, false));
     ms.put(new PathMetadata(
-        basicFileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
+        basicFileStatus(0, false, 0, time + 1, strToPath(freshFile)),
         Tristate.FALSE, false));
 
     // set parent dir as authoritative
@@ -755,10 +753,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     createNewDirs(rootDir, grandparentDir, parentDir);
     long time = System.currentTimeMillis();
     ms.put(new PathMetadata(
-        basicFileStatus(0, false, 0, 0, time + 1, strToPath(staleFile)),
+        basicFileStatus(0, false, 0, time + 1, strToPath(staleFile)),
         Tristate.FALSE, false));
     ms.put(new PathMetadata(
-        basicFileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
+        basicFileStatus(0, false, 0, time + 1, strToPath(freshFile)),
         Tristate.FALSE, false));
 
     if (!allowMissing()) {
@@ -953,34 +951,40 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   S3AFileStatus basicFileStatus(Path path, int size, boolean isDir) throws
       IOException {
-    return basicFileStatus(path, size, isDir, modTime, accessTime);
+    return basicFileStatus(path, size, isDir, modTime);
   }
 
-  S3AFileStatus basicFileStatus(int size, boolean isDir, int blockReplication,
+  S3AFileStatus basicFileStatus(int size, boolean isDir,
       long blockSize, long modificationTime, Path path) {
-    FileStatus fileStatus = new FileStatus(size, isDir, blockReplication,
-        blockSize, modificationTime, path);
-    return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
-        null, null);
+    if (isDir) {
+      return new S3AFileStatus(Tristate.UNKNOWN, path, null);
+    }
+    else {
+      return new S3AFileStatus(size, modificationTime, path, blockSize, null,
+          null, null);
+    }
   }
 
   public static S3AFileStatus basicFileStatus(Path path, int size,
-      boolean isDir, long newModTime, long newAccessTime) throws IOException {
-    FileStatus fileStatus = new FileStatus(size, isDir, REPLICATION, BLOCK_SIZE,
-        newModTime, newAccessTime, PERMISSION, OWNER, GROUP, path);
-    return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
-        null, null);
+      boolean isDir, long newModTime) throws IOException {
+    if (isDir) {
+      return new S3AFileStatus(Tristate.UNKNOWN, path, OWNER);
+    }
+    else {
+      return new S3AFileStatus(size, newModTime, path, BLOCK_SIZE, OWNER,
+          null, null);
+    }
   }
 
   private S3AFileStatus makeFileStatus(String pathStr, int size) throws
       IOException {
-    return makeFileStatus(pathStr, size, modTime, accessTime);
+    return makeFileStatus(pathStr, size, modTime);
   }
 
-  private S3AFileStatus makeFileStatus(String pathStr, int size, long newModTime,
-      long newAccessTime) throws IOException {
+  private S3AFileStatus makeFileStatus(String pathStr, int size,
+      long newModTime) throws IOException {
     return basicFileStatus(strToPath(pathStr), size, false,
-        newModTime, newAccessTime);
+        newModTime);
   }
 
   void verifyFileStatus(FileStatus status, long size) {
@@ -988,7 +992,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   }
 
   private S3AFileStatus makeDirStatus(String pathStr) throws IOException {
-    return basicFileStatus(strToPath(pathStr), 0, true, modTime, accessTime);
+    return basicFileStatus(strToPath(pathStr), 0, true, modTime);
   }
 
   /**

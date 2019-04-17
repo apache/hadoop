@@ -90,15 +90,13 @@ public class TestS3Guard extends Assert {
 
   private S3AFileStatus makeFileStatus(String pathStr, boolean isDir) {
     Path p = new Path(pathStr);
-    FileStatus fileStatus;
+    S3AFileStatus fileStatus;
     if (isDir) {
-      fileStatus = new FileStatus(0, true, 1, 1,
-          System.currentTimeMillis(), p);
+      fileStatus = new S3AFileStatus(Tristate.UNKNOWN, p, null);
     } else {
-      fileStatus = new FileStatus(100, false, 1, 1,
-          System.currentTimeMillis(), p);
+      fileStatus = new S3AFileStatus(
+          100, System.currentTimeMillis(), p, 1, null, null, null);
     }
-    return S3AFileStatus.fromFileStatus(fileStatus, Tristate.UNKNOWN,
-        null, null);
+    return fileStatus;
   }
 }

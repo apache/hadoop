@@ -226,7 +226,7 @@ public class ITestDynamoDBMetadataStoreScale
             long pruneItems = 0;
             for (long i = 0; i < iterations; i++) {
               Path longPath = pathOfDepth(BATCH_SIZE, String.valueOf(i));
-              S3AFileStatus status = basicFileStatus(longPath, 0, false, 12345,
+              S3AFileStatus status = basicFileStatus(longPath, 0, false,
                   12345);
               PathMetadata pm = new PathMetadata(status);
               synchronized (toCleanup) {

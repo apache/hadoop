@@ -44,10 +44,9 @@ public class PathMetadata extends ExpirableMetadata {
    * @return the entry.
    */
   public static PathMetadata tombstone(Path path) {
-    long now = System.currentTimeMillis();
-    FileStatus status = new FileStatus(0, false, 0, 0, now, path);
-    S3AFileStatus s3aStatus = S3AFileStatus.fromFileStatus(
-        status, Tristate.UNKNOWN, null, null);
+    S3AFileStatus s3aStatus = new S3AFileStatus(0,
+        System.currentTimeMillis(), path, 0, null,
+        null, null);
     return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
   }
 
