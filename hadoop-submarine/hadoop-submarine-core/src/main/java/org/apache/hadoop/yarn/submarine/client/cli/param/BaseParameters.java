@@ -14,8 +14,6 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.param;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.CliConstants;
@@ -30,15 +28,15 @@ import java.io.IOException;
 public abstract class BaseParameters {
   private String name;
 
-  public void updateParametersByParsedCommandline(CommandLine parsedCommandLine,
-      Options options, ClientContext clientContext)
+  public void updateParameters(ParametersHolder parametersHolder,
+      ClientContext clientContext)
       throws ParseException, IOException, YarnException {
-    String name = parsedCommandLine.getOptionValue(CliConstants.NAME);
+    String name = parametersHolder.getOptionValue(CliConstants.NAME);
     if (name == null) {
       throw new ParseException("--name is absent");
     }
 
-    if (parsedCommandLine.hasOption(CliConstants.VERBOSE)) {
+    if (parametersHolder.hasOption(CliConstants.VERBOSE)) {
       SubmarineLogs.verboseOn();
     }
 

@@ -23,6 +23,7 @@
     <field name="type_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
     <field name="org_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
     <field name="name_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
+    <field name="app_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
     <field name="desc_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
     <field name="icon_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />
     <field name="yarnfile_s" type="string" indexed="true" stored="true" required="false" multiValued="false" docValues="true" />

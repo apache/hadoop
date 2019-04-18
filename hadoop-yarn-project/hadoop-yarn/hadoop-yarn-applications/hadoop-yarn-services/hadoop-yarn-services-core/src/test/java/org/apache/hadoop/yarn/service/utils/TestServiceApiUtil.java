@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.service.conf.RestApiConstants.DEFAULT_UNLIMITED_LIFETIME;
 import static org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages.*;
 import static org.junit.Assert.assertEquals;
@@ -268,7 +269,7 @@ public class TestServiceApiUtil extends ServiceTestUtils {
       Assert.fail(NO_EXCEPTION_PREFIX + e.getMessage());
     }
 
-    assertEquals(app.getLifetime(), DEFAULT_UNLIMITED_LIFETIME);
+    assertThat(app.getLifetime()).isEqualTo(DEFAULT_UNLIMITED_LIFETIME);
   }
 
   private static Resource createValidResource() {

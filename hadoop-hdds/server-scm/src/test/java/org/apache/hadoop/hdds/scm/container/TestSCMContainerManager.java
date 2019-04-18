@@ -44,12 +44,15 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * Tests for Container ContainerManager.
@@ -104,8 +107,8 @@ public class TestSCMContainerManager {
   }
 
   @Before
-  public void clearChillMode() {
-    nodeManager.setChillmode(false);
+  public void clearSafeMode() {
+    nodeManager.setSafemode(false);
   }
 
   @Test
@@ -195,6 +198,47 @@ public class TestSCMContainerManager {
   }
 
   @Test
+  public void testGetContainerReplicaWithParallelUpdate() throws Exception {
+    testGetContainerWithPipeline();
+    final Optional<ContainerID> id = containerManager.getContainerIDs()
+        .stream().findFirst();
+    Assert.assertTrue(id.isPresent());
+    final ContainerID cId = id.get();
+    final Optional<ContainerReplica> replica = containerManager
+        .getContainerReplicas(cId).stream().findFirst();
+    Assert.assertTrue(replica.isPresent());
+    final ContainerReplica cReplica = replica.get();
+    final AtomicBoolean runUpdaterThread =
+        new AtomicBoolean(true);
+
+    Thread updaterThread = new Thread(() -> {
+      while (runUpdaterThread.get()) {
+        try {
+          containerManager.removeContainerReplica(cId, cReplica);
+          containerManager.updateContainerReplica(cId, cReplica);
+        } catch (ContainerException e) {
+          Assert.fail("Container Exception: " + e.getMessage());
+        }
+      }
+    });
+
+    updaterThread.setDaemon(true);
+    updaterThread.start();
+
+    IntStream.range(0, 100).forEach(i -> {
+      try {
+        Assert.assertNotNull(containerManager
+            .getContainerReplicas(cId)
+            .stream().map(ContainerReplica::getDatanodeDetails)
+            .collect(Collectors.toSet()));
+      } catch (ContainerNotFoundException e) {
+        Assert.fail("Missing Container " + id);
+      }
+    });
+    runUpdaterThread.set(false);
+  }
+
+  @Test
   public void testgetNoneExistentContainer() {
     try {
       containerManager.getContainer(ContainerID.valueof(
@@ -222,7 +266,7 @@ public class TestSCMContainerManager {
    */
   private ContainerInfo createContainer()
       throws IOException {
-    nodeManager.setChillmode(false);
+    nodeManager.setSafemode(false);
     return containerManager
         .allocateContainer(xceiverClientManager.getType(),
             xceiverClientManager.getFactor(), containerOwner);

@@ -105,6 +105,17 @@ public interface RMNode {
   public Resource getTotalCapability();
 
   /**
+   * If the total available resources has been updated.
+   * @return If the capability has been updated.
+   */
+  boolean isUpdatedCapability();
+
+  /**
+   * Mark that the updated event has been processed.
+   */
+  void resetUpdatedCapability();
+
+  /**
    * the aggregated resource utilization of the containers.
    * @return the aggregated resource utilization of the containers.
    */

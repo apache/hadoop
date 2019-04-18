@@ -44,6 +44,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
+import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
@@ -112,10 +113,6 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     });
     containerDbServiceProvider = injector.getInstance(
         ContainerDBServiceProvider.class);
-  }
-
-  @Test
-  public void testGetKeysForContainer() throws Exception {
 
     //Write Data to OM
     Pipeline pipeline = getRandomPipeline();
@@ -162,6 +159,25 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     writeDataToOm(omMetadataManager,
         "key_two", "bucketOne", "sampleVol", infoGroups);
 
+    List<OmKeyLocationInfo> omKeyLocationInfoList2 = new ArrayList<>();
+    BlockID blockID5 = new BlockID(2, 2);
+    OmKeyLocationInfo omKeyLocationInfo5 = getOmKeyLocationInfo(blockID5,
+        pipeline);
+    omKeyLocationInfoList2.add(omKeyLocationInfo5);
+
+    BlockID blockID6 = new BlockID(2, 3);
+    OmKeyLocationInfo omKeyLocationInfo6 = getOmKeyLocationInfo(blockID6,
+        pipeline);
+    omKeyLocationInfoList2.add(omKeyLocationInfo6);
+
+    OmKeyLocationInfoGroup omKeyLocationInfoGroup2 = new
+        OmKeyLocationInfoGroup(0, omKeyLocationInfoList2);
+
+    //key = key_three, Blocks = [ {CID = 2, LID = 2}, {CID = 2, LID = 3} ]
+    writeDataToOm(omMetadataManager,
+        "key_three", "bucketOne", "sampleVol",
+        Collections.singletonList(omKeyLocationInfoGroup2));
+
     //Take snapshot of OM DB and copy over to Recon OM DB.
     DBCheckpoint checkpoint = omMetadataManager.getStore()
         .getCheckpoint(true);
@@ -176,6 +192,10 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     ContainerKeyMapperTask containerKeyMapperTask = new ContainerKeyMapperTask(
         ozoneManagerServiceProvider, containerDbServiceProvider);
     containerKeyMapperTask.run();
+  }
+
+  @Test
+  public void testGetKeysForContainer() {
 
     Response response = containerKeyService.getKeysForContainer(1L);
 
@@ -206,6 +226,27 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     response = containerKeyService.getKeysForContainer(3L);
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertTrue(keyMetadataList.isEmpty());
+  }
+
+  @Test
+  public void testGetContainers() {
+
+    Response response = containerKeyService.getContainers();
+
+    List<ContainerMetadata> containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+
+    assertTrue(containers.size() == 2);
+
+    Iterator<ContainerMetadata> iterator = containers.iterator();
+
+    ContainerMetadata containerMetadata = iterator.next();
+    assertTrue(containerMetadata.getContainerID() == 1L);
+    assertTrue(containerMetadata.getNumberOfKeys() == 3L);
+
+    containerMetadata = iterator.next();
+    assertTrue(containerMetadata.getContainerID() == 2L);
+    assertTrue(containerMetadata.getNumberOfKeys() == 2L);
   }
 
   /**

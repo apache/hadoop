@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.isA;
@@ -609,7 +610,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     MockAM am2 = launchAM(app1, rm1, nm1);
 
     Assert.assertEquals(1, rmAppState.size());
-    Assert.assertEquals(app1.getState(), RMAppState.RUNNING);
+    assertThat(app1.getState()).isEqualTo(RMAppState.RUNNING);
     Assert.assertEquals(app1.getAppAttempts()
         .get(app1.getCurrentAppAttempt().getAppAttemptId())
         .getAppAttemptState(), RMAppAttemptState.RUNNING);
@@ -665,7 +666,7 @@ public class TestRMRestart extends ParameterizedSchedulerTestBase {
     rmApp = rm3.getRMContext().getRMApps().get(app1.getApplicationId());
     // application should be in ACCEPTED state
     rm3.waitForState(app1.getApplicationId(), RMAppState.ACCEPTED);
-    Assert.assertEquals(rmApp.getState(), RMAppState.ACCEPTED);
+    assertThat(rmApp.getState()).isEqualTo(RMAppState.ACCEPTED);
     // new attempt should not be started
     Assert.assertEquals(3, rmApp.getAppAttempts().size());
     // am1 and am2 attempts should be in FAILED state where as am3 should be

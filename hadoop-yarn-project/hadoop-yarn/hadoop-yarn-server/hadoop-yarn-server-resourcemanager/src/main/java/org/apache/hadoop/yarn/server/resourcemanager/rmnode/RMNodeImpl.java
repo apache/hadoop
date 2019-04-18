@@ -126,6 +126,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   /* Snapshot of total resources before receiving decommissioning command */
   private volatile Resource originalTotalCapability;
   private volatile Resource totalCapability;
+  private volatile boolean updatedCapability = false;
   private final Node node;
 
   private String healthReport;
@@ -454,6 +455,16 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public Resource getTotalCapability() {
     return this.totalCapability;
+  }
+
+  @Override
+  public boolean isUpdatedCapability() {
+    return this.updatedCapability;
+  }
+
+  @Override
+  public void resetUpdatedCapability() {
+    this.updatedCapability = false;
   }
 
   @Override
@@ -814,11 +825,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
         .handle(new RMAppRunningOnNodeEvent(appId, nodeId));
   }
   
-  private static void updateNodeResourceFromEvent(RMNodeImpl rmNode, 
-     RMNodeResourceUpdateEvent event){
-      ResourceOption resourceOption = event.getResourceOption();
-      // Set resource on RMNode
-      rmNode.totalCapability = resourceOption.getResource();
+  private static void updateNodeResourceFromEvent(RMNodeImpl rmNode,
+      RMNodeResourceUpdateEvent event){
+    ResourceOption resourceOption = event.getResourceOption();
+    // Set resource on RMNode
+    rmNode.totalCapability = resourceOption.getResource();
+    rmNode.updatedCapability = true;
   }
 
   private static NodeHealthStatus updateRMNodeFromStatusEvents(

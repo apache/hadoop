@@ -1,0 +1,114 @@
+<!---
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License. See accompanying LICENSE file.
+-->
+<div class="container content">
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12">
+        <div class="form-group">
+          <h1>Upgrade Application</h1>
+        </div>
+        <div class="form-group">
+          <label>Application Name</label>
+          <input type=text name="name" class="form-control" ng-model="details.name" readonly />
+        </div>
+        <div class="form-group">
+          <label>Version</label>
+          <input type=text name="version" class="form-control" ng-model="details.version" />
+        </div>
+        <div class="form-group">
+          <label>Quick Link</label>
+          <textarea json-text name="quicklink" class="form-control" ng-model="details.quicklinks"/></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12" ng-repeat="docker in details.components track by $index">
+        <div class="panel">
+          <div class="form-group">
+            <label>Component Name</label>
+            <input type=text name="name" class="form-control" ng-model="docker.name" readonly />
+          </div>
+          <div class="form-group">
+            <label>Artifact</label>
+            <input type=text name="artifact_id" class="form-control" ng-model="docker.artifact.id" />
+          </div>
+          <div class="form-group">
+            <label>Number of containers</label>
+            <input type=text name="artifact_id" class="form-control" ng-model="docker.number_of_containers" readonly />
+          </div>
+          <div class="form-group">
+            <label>Launch Command</label>
+            <input type=text name="launch_command" class="form-control" ng-model="docker.launch_command" />
+          </div>
+          <div class="form-group">
+            <label>CPU</label>
+            <input type=text name="cpus" class="form-control" ng-model="docker.resource.cpus" readonly />
+          </div>
+          <div class="form-group">
+            <label>Memory</label>
+            <input type=text name="memory" class="form-control" ng-model="docker.resource.memory" readonly />
+          </div>
+          <div class="form-group">
+            <input type="checkbox" ng-attr-id="{{'checkbox-priv-' + $index}}" ng-model="docker.run_privileged_container">
+            <label for="checkbox-priv-{{$index}}"> Privileged Container</label>
+          </div>
+          <div class="form-group">
+            <label>Dependencies</label>
+            <input json-text type=text name="dependencies" class="form-control" ng-model="docker.dependencies" />
+          </div>
+          <div class="form-group">
+            <label>Placement Policy</label>
+            <input type=text name="placement" class="form-control" ng-model="docker.placement_policy.constraints" readonly />
+          </div>
+          <div class="form-group">
+            <label>Environments</label>
+            <textarea json-text name="env" class="form-control" ng-model="docker.configuration.env"/></textarea>
+          </div>
+          <div class="form-group">
+            <label>Properties</label>
+            <textarea json-text name="properties" class="form-control" ng-model="docker.configuration.properties"/></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <br>
+    <div class="row">
+      <div class="col-xs-12 col-md-12 col-lg-12">
+        <p>
+        <a class="btn btn-secondary" ng-click="upgradeApp(details)">Upgrade</a>
+        <a class="btn btn-secondary" href="/#!/app/{{details.name}}">CANCEL</a>
+      </div>
+    </div>
+
+    <div class="modal fade" id="myModal" role="dialog">
+      <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h4 class="modal-title" ng-if="message">Info</h4>
+            <h4 class="modal-title" ng-if="error">Error</h4>
+          </div>
+          <div class="modal-body">
+            <p class="infobox bg-info" ng-if="message">{{message}}</p>
+            <div id="error-message"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>

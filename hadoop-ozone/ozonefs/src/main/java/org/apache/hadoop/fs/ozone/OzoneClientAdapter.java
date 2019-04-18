@@ -29,7 +29,7 @@ import java.net.URI;
 import java.util.Iterator;
 
 /**
- * Lightweight adapter to separte hadoop/ozone classes.
+ * Lightweight adapter to separate hadoop/ozone classes.
  * <p>
  * This class contains only the bare minimum Ozone classes in the signature.
  * It could be loaded by a different classloader because only the objects in

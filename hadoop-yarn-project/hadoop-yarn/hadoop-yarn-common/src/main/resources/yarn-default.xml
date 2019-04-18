@@ -1804,6 +1804,13 @@
   </property>
 
   <property>
+    <description>The set of runtimes allowed when launching containers using the
+      DockerContainerRuntime.</description>
+    <name>yarn.nodemanager.runtime.linux.docker.allowed-container-runtimes</name>
+    <value>runc</value>
+  </property>
+
+  <property>
     <description>This configuration setting determines whether the host's PID
       namespace is allowed for docker containers on this cluster.
       Use with care.</description>
@@ -2588,6 +2595,13 @@
     flushes the timeline writer.</description>
     <name>yarn.timeline-service.writer.flush-interval-seconds</name>
     <value>60</value>
+  </property>
+
+  <property>
+    <description>The setting that decides the capacity of the queue to hold
+    asynchronous timeline entities.</description>
+    <name>yarn.timeline-service.writer.async.queue.capacity</name>
+    <value>100</value>
   </property>
 
   <property>

@@ -34,7 +34,7 @@ import "hdds.proto";
 * Request send to SCM asking where the container should be created.
 */
 message ContainerRequestProto {
-  // Ozone only support replciation of either 1 or 3.
+  // Ozone only support replication of either 1 or 3.
   required ReplicationFactor replicationFactor = 2;
   required ReplicationType  replicationType = 3;
   required string owner = 4;
@@ -176,20 +176,20 @@ message ClosePipelineRequestProto {
 message ClosePipelineResponseProto {
 }
 
-message InChillModeRequestProto {
+message InSafeModeRequestProto {
   optional string traceID = 1;
 }
 
-message InChillModeResponseProto {
-  required bool inChillMode = 1;
+message InSafeModeResponseProto {
+  required bool inSafeMode = 1;
 }
 
-message ForceExitChillModeRequestProto {
+message ForceExitSafeModeRequestProto {
   optional string traceID = 1;
 }
 
-message ForceExitChillModeResponseProto {
-  required bool exitedChillMode = 1;
+message ForceExitSafeModeResponseProto {
+  required bool exitedSafeMode = 1;
 }
 
 /**
@@ -262,17 +262,17 @@ service StorageContainerLocationProtocolService {
   *  Returns information about SCM.
   */
   rpc getScmInfo(GetScmInfoRequestProto)
-      returns (GetScmInfoRespsonseProto);
+      returns (GetScmInfoResponseProto);
 
   /**
-  *  Checks if SCM is in ChillMode.
+  *  Checks if SCM is in SafeMode.
   */
-  rpc inChillMode(InChillModeRequestProto)
-  returns (InChillModeResponseProto);
+  rpc inSafeMode(InSafeModeRequestProto)
+  returns (InSafeModeResponseProto);
 
   /**
   *  Returns information about SCM.
   */
-  rpc forceExitChillMode(ForceExitChillModeRequestProto)
-  returns (ForceExitChillModeResponseProto);
+  rpc forceExitSafeMode(ForceExitSafeModeRequestProto)
+  returns (ForceExitSafeModeResponseProto);
 }

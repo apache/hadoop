@@ -21,7 +21,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 
 import org.apache.hadoop.hdds.scm.block.BlockManager;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
 import org.apache.hadoop.hdds.scm.metadata.SCMMetadataStore;
@@ -48,7 +48,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority
  * ContainerManager containerManager;
  * BlockManager scmBlockManager;
  * ReplicationManager replicationManager;
- * SCMChillModeManager scmChillModeManager;
+ * SCMSafeModeManager scmSafeModeManager;
  * CertificateServer certificateServer;
  * SCMMetadata scmMetadataStore.
  *
@@ -62,7 +62,7 @@ public final class SCMConfigurator {
   private ContainerManager containerManager;
   private BlockManager scmBlockManager;
   private ReplicationManager replicationManager;
-  private SCMChillModeManager scmChillModeManager;
+  private SCMSafeModeManager scmSafeModeManager;
   private CertificateServer certificateServer;
   private SCMMetadataStore metadataStore;
 
@@ -111,12 +111,12 @@ public final class SCMConfigurator {
   }
 
   /**
-   * Allows user to specify a custom version of Chill Mode Manager to use
+   * Allows user to specify a custom version of Safe Mode Manager to use
    * with this SCM.
-   * @param scmChillModeManager - ChillMode Manager.
+   * @param scmSafeModeManager - SafeMode Manager.
    */
-  public void setScmChillModeManager(SCMChillModeManager scmChillModeManager) {
-    this.scmChillModeManager = scmChillModeManager;
+  public void setScmSafeModeManager(SCMSafeModeManager scmSafeModeManager) {
+    this.scmSafeModeManager = scmSafeModeManager;
   }
 
   /**
@@ -178,11 +178,11 @@ public final class SCMConfigurator {
   }
 
   /**
-   * Gets Chill Mode Manager.
-   * @return Chill Mode manager.
+   * Gets Safe Mode Manager.
+   * @return Safe Mode manager.
    */
-  public SCMChillModeManager getScmChillModeManager() {
-    return scmChillModeManager;
+  public SCMSafeModeManager getScmSafeModeManager() {
+    return scmSafeModeManager;
   }
 
   /**

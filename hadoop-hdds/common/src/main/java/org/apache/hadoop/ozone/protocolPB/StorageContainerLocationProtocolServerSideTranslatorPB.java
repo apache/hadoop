@@ -24,13 +24,13 @@ import io.opentracing.Scope;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeRequestProto;
+    .StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.InChillModeResponseProto;
+    .StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeRequestProto;
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto
-    .StorageContainerLocationProtocolProtos.ForceExitChillModeResponseProto;
+    .StorageContainerLocationProtocolProtos.ForceExitSafeModeResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -265,13 +265,13 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
+  public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
     try (Scope scope = TracingUtil
         .importAndCreateScope("getScmInfo", req.getTraceID())) {
       ScmInfo scmInfo = impl.getScmInfo();
-      return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
+      return HddsProtos.GetScmInfoResponseProto.newBuilder()
           .setClusterId(scmInfo.getClusterId())
           .setScmId(scmInfo.getScmId())
           .build();
@@ -282,26 +282,26 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public InChillModeResponseProto inChillMode(
+  public InSafeModeResponseProto inSafeMode(
       RpcController controller,
-      InChillModeRequestProto request) throws ServiceException {
+      InSafeModeRequestProto request) throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("inChillMode", request.getTraceID())) {
-      return InChillModeResponseProto.newBuilder()
-          .setInChillMode(impl.inChillMode()).build();
+        .importAndCreateScope("inSafeMode", request.getTraceID())) {
+      return InSafeModeResponseProto.newBuilder()
+          .setInSafeMode(impl.inSafeMode()).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
   }
 
   @Override
-  public ForceExitChillModeResponseProto forceExitChillMode(
-      RpcController controller, ForceExitChillModeRequestProto request)
+  public ForceExitSafeModeResponseProto forceExitSafeMode(
+      RpcController controller, ForceExitSafeModeRequestProto request)
       throws ServiceException {
     try (Scope scope = TracingUtil
-        .importAndCreateScope("forceExitChillMode", request.getTraceID())) {
-      return ForceExitChillModeResponseProto.newBuilder()
-          .setExitedChillMode(impl.forceExitChillMode()).build();
+        .importAndCreateScope("forceExitSafeMode", request.getTraceID())) {
+      return ForceExitSafeModeResponseProto.newBuilder()
+          .setExitedSafeMode(impl.forceExitSafeMode()).build();
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }

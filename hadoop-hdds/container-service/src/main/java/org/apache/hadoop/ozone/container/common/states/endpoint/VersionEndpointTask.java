@@ -106,7 +106,8 @@ public class VersionEndpointTask implements
           volumeSet.writeUnlock();
         }
 
-        ozoneContainer.getDispatcher().setScmId(scmId);
+        // Start the container services after getting the version information
+        ozoneContainer.start(scmId);
 
         EndpointStateMachine.EndPointStates nextState =
             rpcEndPoint.getState().getNextState();

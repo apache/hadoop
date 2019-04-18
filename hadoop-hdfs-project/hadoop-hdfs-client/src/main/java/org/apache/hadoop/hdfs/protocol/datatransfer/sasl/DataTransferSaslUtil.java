@@ -49,6 +49,7 @@ import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
+import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.HandshakeSecretProto;
 import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.CipherOptionProto;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.security.SaslPropertiesResolver;
@@ -249,6 +250,51 @@ public final class DataTransferSaslUtil {
     }
   }
 
+  static class SaslMessageWithHandshake {
+    private final byte[] payload;
+    private final byte[] secret;
+    private final String bpid;
+
+    SaslMessageWithHandshake(byte[] payload, byte[] secret, String bpid) {
+      this.payload = payload;
+      this.secret = secret;
+      this.bpid = bpid;
+    }
+
+    byte[] getPayload() {
+      return payload;
+    }
+
+    byte[] getSecret() {
+      return secret;
+    }
+
+    String getBpid() {
+      return bpid;
+    }
+  }
+
+  public static SaslMessageWithHandshake readSaslMessageWithHandshakeSecret(
+      InputStream in) throws IOException {
+    DataTransferEncryptorMessageProto proto =
+        DataTransferEncryptorMessageProto.parseFrom(vintPrefixed(in));
+    if (proto.getStatus() == DataTransferEncryptorStatus.ERROR_UNKNOWN_KEY) {
+      throw new InvalidEncryptionKeyException(proto.getMessage());
+    } else if (proto.getStatus() == DataTransferEncryptorStatus.ERROR) {
+      throw new IOException(proto.getMessage());
+    } else {
+      byte[] payload = proto.getPayload().toByteArray();
+      byte[] secret = null;
+      String bpid = null;
+      if (proto.hasHandshakeSecret()) {
+        HandshakeSecretProto handshakeSecret = proto.getHandshakeSecret();
+        secret = handshakeSecret.getSecret().toByteArray();
+        bpid = handshakeSecret.getBpid();
+      }
+      return new SaslMessageWithHandshake(payload, secret, bpid);
+    }
+  }
+
   /**
    * Negotiate a cipher option which server supports.
    *
@@ -375,6 +421,12 @@ public final class DataTransferSaslUtil {
     sendSaslMessage(out, DataTransferEncryptorStatus.SUCCESS, payload, null);
   }
 
+  public static void sendSaslMessageHandshakeSecret(OutputStream out,
+      byte[] payload, byte[] secret, String bpid) throws IOException {
+    sendSaslMessageHandshakeSecret(out, DataTransferEncryptorStatus.SUCCESS,
+        payload, null, secret, bpid);
+  }
+
   /**
    * Send a SASL negotiation message and negotiation cipher options to server.
    *
@@ -497,6 +549,13 @@ public final class DataTransferSaslUtil {
   public static void sendSaslMessage(OutputStream out,
       DataTransferEncryptorStatus status, byte[] payload, String message)
       throws IOException {
+    sendSaslMessage(out, status, payload, message, null);
+  }
+
+  public static void sendSaslMessage(OutputStream out,
+      DataTransferEncryptorStatus status, byte[] payload, String message,
+      HandshakeSecretProto handshakeSecret)
+      throws IOException {
     DataTransferEncryptorMessageProto.Builder builder =
         DataTransferEncryptorMessageProto.newBuilder();
 
@@ -507,10 +566,23 @@ public final class DataTransferSaslUtil {
     if (message != null) {
       builder.setMessage(message);
     }
+    if (handshakeSecret != null) {
+      builder.setHandshakeSecret(handshakeSecret);
+    }
 
     DataTransferEncryptorMessageProto proto = builder.build();
     proto.writeDelimitedTo(out);
     out.flush();
+  }
+
+  public static void sendSaslMessageHandshakeSecret(OutputStream out,
+      DataTransferEncryptorStatus status, byte[] payload, String message,
+      byte[] secret, String bpid) throws IOException {
+    HandshakeSecretProto.Builder builder =
+        HandshakeSecretProto.newBuilder();
+    builder.setSecret(ByteString.copyFrom(secret));
+    builder.setBpid(bpid);
+    sendSaslMessage(out, status, payload, message, builder.build());
   }
 
   /**

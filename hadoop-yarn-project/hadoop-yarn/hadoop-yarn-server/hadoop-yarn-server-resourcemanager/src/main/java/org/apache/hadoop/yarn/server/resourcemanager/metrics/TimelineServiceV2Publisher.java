@@ -473,10 +473,15 @@ public class TimelineServiceV2Publisher extends AbstractSystemMetricsPublisher {
       }
       TimelineCollector timelineCollector =
           rmTimelineCollectorManager.get(appId);
-      TimelineEntities entities = new TimelineEntities();
-      entities.addEntity(entity);
-      timelineCollector.putEntities(entities,
-          UserGroupInformation.getCurrentUser());
+      if (timelineCollector != null) {
+        TimelineEntities entities = new TimelineEntities();
+        entities.addEntity(entity);
+        timelineCollector.putEntities(entities,
+                UserGroupInformation.getCurrentUser());
+      } else {
+        LOG.debug("Cannot find active collector while publishing entity "
+            + entity);
+      }
     } catch (IOException e) {
       LOG.error("Error when publishing entity " + entity);
       LOG.debug("Error when publishing entity {}", entity, e);

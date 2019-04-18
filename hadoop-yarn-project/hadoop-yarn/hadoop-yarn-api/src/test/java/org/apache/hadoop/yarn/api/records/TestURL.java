@@ -17,19 +17,19 @@
  */
 package org.apache.hadoop.yarn.api.records;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /** Test for the URL class. */
-public class TestURL {
+class TestURL {
 
   @Test
-  public void testConversion() throws Exception {
+  void testConversion() throws Exception {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.IPC_RECORD_FACTORY_CLASS,
         RecordFactoryForTest.class.getName());

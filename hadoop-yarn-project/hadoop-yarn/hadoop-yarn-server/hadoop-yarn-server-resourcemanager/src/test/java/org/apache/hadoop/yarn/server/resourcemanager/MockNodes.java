@@ -191,6 +191,15 @@ public class MockNodes {
     }
 
     @Override
+    public boolean isUpdatedCapability() {
+      return false;
+    }
+
+    @Override
+    public void resetUpdatedCapability() {
+    }
+
+    @Override
     public String getRackName() {
       return this.rackName;
     }

@@ -260,7 +260,7 @@ public class TestMiniOzoneCluster {
 
     // DN should successfully register with the SCM after SCM is restarted.
     // Restart the SCM
-    cluster.restartStorageContainerManager();
+    cluster.restartStorageContainerManager(true);
     // Wait for DN to register
     cluster.waitForClusterToBeReady();
     // DN should be in HEARTBEAT state after registering with the SCM

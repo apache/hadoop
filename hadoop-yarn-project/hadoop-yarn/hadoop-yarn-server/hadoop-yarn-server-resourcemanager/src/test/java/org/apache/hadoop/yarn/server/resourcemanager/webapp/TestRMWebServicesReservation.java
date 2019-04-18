@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -770,7 +771,7 @@ public class TestRMWebServicesReservation extends JerseyTestBase {
       return;
     }
 
-    assertEquals(json.getJSONArray("reservations").length(), 2);
+    assertThat(json.getJSONArray("reservations").length()).isEqualTo(2);
 
     testRDLHelper(json.getJSONArray("reservations").getJSONObject(0));
     testRDLHelper(json.getJSONArray("reservations").getJSONObject(1));

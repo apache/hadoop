@@ -222,4 +222,13 @@ public class RMNodeWrapper implements RMNode {
   public Resource getPhysicalResource() {
     return null;
   }
+
+  @Override
+  public boolean isUpdatedCapability() {
+    return false;
+  }
+
+  @Override
+  public void resetUpdatedCapability() {
+  }
 }

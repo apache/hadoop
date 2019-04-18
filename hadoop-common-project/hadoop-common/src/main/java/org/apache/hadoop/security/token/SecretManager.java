@@ -167,7 +167,7 @@ public abstract class SecretManager<T extends TokenIdentifier> {
    * @param key the secret key
    * @return the bytes of the generated password
    */
-  protected static byte[] createPassword(byte[] identifier, 
+  public static byte[] createPassword(byte[] identifier,
                                          SecretKey key) {
     Mac mac = threadLocalMac.get();
     try {

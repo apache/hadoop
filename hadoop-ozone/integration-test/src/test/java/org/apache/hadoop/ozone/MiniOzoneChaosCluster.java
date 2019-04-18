@@ -66,6 +66,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
 
     this.executorService =  Executors.newSingleThreadScheduledExecutor();
     this.numDatanodes = getHddsDatanodes().size();
+    LOG.info("Starting MiniOzoneChaosCluster with:{} datanodes" + numDatanodes);
     LogUtils.setLogLevel(GrpcClientProtocolClient.LOG, Level.WARN);
   }
 
@@ -86,11 +87,15 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
   }
 
   private void failNodes() {
-    for (int i = 0; i < getNumberOfNodesToFail(); i++) {
+    final int numNodesToFail = getNumberOfNodesToFail();
+    LOG.info("Will restart {} nodes to simulate failure", numNodesToFail);
+    for (int i = 0; i < numNodesToFail; i++) {
       boolean failureMode = isFastRestart();
       int failedNodeIndex = getNodeToFail();
       try {
+        LOG.info("Restarting DataNodeIndex {}", failedNodeIndex);
         restartHddsDatanode(failedNodeIndex, failureMode);
+        LOG.info("Completed restarting DataNodeIndex {}", failedNodeIndex);
       } catch (Exception e) {
 
       }
@@ -117,21 +122,27 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
   }
 
   void startChaos(long initialDelay, long period, TimeUnit timeUnit) {
+    LOG.info("Starting Chaos with failure period:{} unit:{} numDataNodes:{}",
+        period, timeUnit, numDatanodes);
     scheduledFuture = executorService.scheduleAtFixedRate(this::fail,
         initialDelay, period, timeUnit);
   }
 
   void stopChaos() throws Exception {
-    scheduledFuture.cancel(false);
-    scheduledFuture.get();
+    if (scheduledFuture != null) {
+      scheduledFuture.cancel(false);
+      scheduledFuture.get();
+    }
   }
 
   public void shutdown() {
-    super.shutdown();
     try {
       stopChaos();
       executorService.shutdown();
       executorService.awaitTermination(1, TimeUnit.DAYS);
+      //this should be called after stopChaos to be sure that the
+      //datanode collection is not modified during the shutdown
+      super.shutdown();
     } catch (Exception e) {
       LOG.error("failed to shutdown MiniOzoneChaosCluster", e);
     }
@@ -192,6 +203,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
           1, TimeUnit.SECONDS);
       conf.setTimeDuration(HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL, 1,
           TimeUnit.SECONDS);
+      conf.setInt(OzoneConfigKeys.OZONE_CONTAINER_CACHE_SIZE, 8);
     }
 
     @Override

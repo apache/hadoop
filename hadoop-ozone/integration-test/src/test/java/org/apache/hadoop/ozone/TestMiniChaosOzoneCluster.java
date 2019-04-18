@@ -29,7 +29,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine;
 
-
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -55,6 +56,10 @@ public class TestMiniChaosOzoneCluster implements Runnable {
       description = "total run time")
   private static int numMinutes = 1440; // 1 day by default
 
+  @Option(names = {"-n", "--numClients"},
+      description = "no of clients writing to OM")
+  private static int numClients = 3;
+
   @Option(names = {"-i", "--failureInterval"},
       description = "time between failure events in seconds")
   private static int failureInterval = 5; // 5 second period between failures.
@@ -74,9 +79,12 @@ public class TestMiniChaosOzoneCluster implements Runnable {
     store.createVolume(volumeName);
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
-    OzoneBucket ozoneBucket = volume.getBucket(bucketName);
+    List<OzoneBucket> ozoneBuckets = new ArrayList<>(numClients);
+    for (int i = 0; i < numClients; i++) {
+      ozoneBuckets.add(volume.getBucket(bucketName));
+    }
     loadGenerator =
-        new MiniOzoneLoadGenerator(ozoneBucket, numThreads, numBuffers);
+        new MiniOzoneLoadGenerator(ozoneBuckets, numThreads, numBuffers);
   }
 
   /**
@@ -96,7 +104,7 @@ public class TestMiniChaosOzoneCluster implements Runnable {
   public void run() {
     try {
       init();
-      cluster.startChaos(5, failureInterval, TimeUnit.SECONDS);
+      cluster.startChaos(failureInterval, failureInterval, TimeUnit.SECONDS);
       loadGenerator.startIO(numMinutes, TimeUnit.MINUTES);
     } catch (Exception e) {
     } finally {
@@ -109,8 +117,8 @@ public class TestMiniChaosOzoneCluster implements Runnable {
   }
 
   @Test
-  public void testReadWriteWithChaosCluster() throws Exception {
-    cluster.startChaos(5, 1, TimeUnit.SECONDS);
+  public void testReadWriteWithChaosCluster() {
+    cluster.startChaos(5, 10, TimeUnit.SECONDS);
     loadGenerator.startIO(1, TimeUnit.MINUTES);
   }
 }

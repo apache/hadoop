@@ -159,17 +159,17 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   /**
-   * Waits for SCM to be out of Chill Mode. Many tests can be run iff we are out
-   * of Chill mode.
+   * Waits for SCM to be out of Safe Mode. Many tests can be run iff we are out
+   * of Safe mode.
    *
    * @throws TimeoutException
    * @throws InterruptedException
    */
   @Override
-  public void waitTobeOutOfChillMode()
+  public void waitTobeOutOfSafeMode()
       throws TimeoutException, InterruptedException {
     GenericTestUtils.waitFor(() -> {
-      if (!scm.isInChillMode()) {
+      if (!scm.isInSafeMode()) {
         return true;
       }
       LOG.info("Waiting for cluster to be ready. No datanodes found");
@@ -250,14 +250,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
   }
 
   @Override
-  public void restartStorageContainerManager()
+  public void restartStorageContainerManager(boolean waitForDatanode)
       throws TimeoutException, InterruptedException, IOException,
       AuthenticationException {
     scm.stop();
     scm.join();
     scm = StorageContainerManager.createSCM(null, conf);
     scm.start();
-    waitForClusterToBeReady();
+    if (waitForDatanode) {
+      waitForClusterToBeReady();
+    }
   }
 
   @Override
@@ -540,13 +542,18 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
         Path metaDir = Paths.get(datanodeBaseDir, "meta");
         Path dataDir = Paths.get(datanodeBaseDir, "data", "containers");
         Path ratisDir = Paths.get(datanodeBaseDir, "data", "ratis");
+        Path wrokDir = Paths.get(datanodeBaseDir, "data", "replication",
+            "work");
         Files.createDirectories(metaDir);
         Files.createDirectories(dataDir);
         Files.createDirectories(ratisDir);
+        Files.createDirectories(wrokDir);
         dnConf.set(HddsConfigKeys.OZONE_METADATA_DIRS, metaDir.toString());
         dnConf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDir.toString());
         dnConf.set(OzoneConfigKeys.DFS_CONTAINER_RATIS_DATANODE_STORAGE_DIR,
             ratisDir.toString());
+        dnConf.set(OzoneConfigKeys.OZONE_CONTAINER_COPY_WORKDIR,
+            wrokDir.toString());
 
         hddsDatanodes.add(
             HddsDatanodeService.createHddsDatanodeService(args, dnConf));

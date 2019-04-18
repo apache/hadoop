@@ -86,6 +86,7 @@ public class TestDatanodeStateMachine {
     conf.setTimeDuration(OZONE_SCM_HEARTBEAT_RPC_TIMEOUT, 500,
         TimeUnit.MILLISECONDS);
     conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT, true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
     serverAddresses = new ArrayList<>();
     scmServers = new ArrayList<>();
     mockServers = new ArrayList<>();
@@ -154,8 +155,6 @@ public class TestDatanodeStateMachine {
 
   /**
    * Assert that starting statemachine executes the Init State.
-   *
-   * @throws InterruptedException
    */
   @Test
   public void testStartStopDatanodeStateMachine() throws IOException,
@@ -167,9 +166,9 @@ public class TestDatanodeStateMachine {
           stateMachine.getConnectionManager();
       GenericTestUtils.waitFor(
           () -> {
-            LOG.info("connectionManager.getValues().size() is {}",
-                connectionManager.getValues().size());
-            return connectionManager.getValues().size() == 1;
+            int size = connectionManager.getValues().size();
+            LOG.info("connectionManager.getValues().size() is {}", size);
+            return size == 1;
           }, 1000, 30000);
 
       stateMachine.stopDaemon();
@@ -260,6 +259,21 @@ public class TestDatanodeStateMachine {
 
       task.execute(executorService);
       newState = task.await(10, TimeUnit.SECONDS);
+
+      // Wait for GetVersion call (called by task.execute) to finish. After
+      // Earlier task.execute called into GetVersion. Wait for the execution
+      // to finish and the endPointState to move to REGISTER state.
+      GenericTestUtils.waitFor(() -> {
+        for (EndpointStateMachine endpoint :
+            stateMachine.getConnectionManager().getValues()) {
+          if (endpoint.getState() !=
+              EndpointStateMachine.EndPointStates.REGISTER) {
+            return false;
+          }
+        }
+        return true;
+      }, 1000, 50000);
+
       // If we are in running state, we should be in running.
       Assert.assertEquals(DatanodeStateMachine.DatanodeStates.RUNNING,
           newState);

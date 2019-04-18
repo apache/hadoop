@@ -2413,10 +2413,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     for (CryptoProtocolVersion c : supportedVersions) {
       if (c.equals(CryptoProtocolVersion.UNKNOWN)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Ignoring unknown CryptoProtocolVersion provided by " +
-              "client: " + c.getUnknownValue());
-        }
+        LOG.debug("Ignoring unknown CryptoProtocolVersion provided by " +
+            "client: {}", c.getUnknownValue());
         continue;
       }
       if (c.equals(required)) {
@@ -3693,9 +3691,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         if (deleteblock) {
           // This may be a retry attempt so ignore the failure
           // to locate the block.
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("Block (=" + oldBlock + ") not found");
-          }
+          LOG.debug("Block (={}) not found", oldBlock);
           return;
         } else {
           throw new IOException("Block (=" + oldBlock + ") not found");
@@ -3729,9 +3725,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       if ((!iFile.isUnderConstruction() || storedBlock.isComplete()) &&
           iFile.getLastBlock().isComplete()) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Unexpected block (=" + oldBlock
-                    + ") since the file (=" + iFile.getLocalName()
-                    + ") is not under construction");
+          LOG.debug("Unexpected block (={}) since the file (={}) is not "
+                + "under construction", oldBlock, iFile.getLocalName());
         }
         return;
       }
@@ -5636,9 +5631,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
       cookieTab[0] = String.valueOf(skip);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("list corrupt file blocks returned: " + count);
-      }
+      LOG.debug("list corrupt file blocks returned: {}", count);
       return corruptFiles;
     } finally {
       readUnlock("listCorruptFileBlocks");
@@ -6370,9 +6363,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         }
       }
     } catch (StandbyException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Get corrupt file blocks returned error: " + e.getMessage());
-      }
+      LOG.debug("Get corrupt file blocks returned error: {}", e.getMessage());
     } catch (IOException e) {
       LOG.warn("Get corrupt file blocks returned error", e);
     }
@@ -7406,7 +7397,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       Metadata metadata = FSDirEncryptionZoneOp.ensureKeyIsInitialized(dir,
           keyName, src);
       final FSPermissionChecker pc = getPermissionChecker();
-      checkSuperuserPrivilege(pc);
       checkOperation(OperationCategory.WRITE);
       final FileStatus resultingStat;
       writeLock();
@@ -7468,7 +7458,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    checkSuperuserPrivilege(pc);
     readLock();
     try {
       checkOperation(OperationCategory.READ);
@@ -7506,7 +7495,6 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     boolean success = false;
     checkOperation(OperationCategory.READ);
     final FSPermissionChecker pc = getPermissionChecker();
-    checkSuperuserPrivilege(pc);
     readLock();
     try {
       checkOperation(OperationCategory.READ);

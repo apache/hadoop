@@ -279,6 +279,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static String keyProviderUriKeyName =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
 
+
   private OzoneManager(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
@@ -335,7 +336,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       LOG.error("Fail to create Key Provider");
     }
 
-    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider());
+    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider(),
+        isRatisEnabled);
     metrics = OMMetrics.create();
 
     s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
@@ -1645,6 +1647,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return volumeList;
   }
 
+  @Override
   public void applyCreateVolume(OmVolumeArgs omVolumeArgs,
       VolumeList volumeList) throws IOException {
     // TODO: Need to add metrics and Audit log for HA requests
@@ -1706,6 +1709,66 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     volumeManager.applyDeleteVolume(volume, owner, newVolumeList);
   }
 
+
+  @Override
+  public OmBucketInfo startCreateBucket(OmBucketInfo omBucketInfo)
+      throws IOException {
+    Preconditions.checkNotNull(omBucketInfo);
+    if(isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
+          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName(), null);
+    }
+
+    return bucketManager.createBucket(omBucketInfo);
+  }
+
+  @Override
+  public void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    bucketManager.applyCreateBucket(omBucketInfo);
+  }
+
+
+  @Override
+  public void startDeleteBucket(String volumeName, String bucketName)
+      throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    if(isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
+          volumeName, bucketName, null);
+    }
+
+    bucketManager.deleteBucket(volumeName, bucketName);
+  }
+
+
+  @Override
+  public void applyDeleteBucket(String volumeName, String bucketName)
+      throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    bucketManager.applyDeleteBucket(volumeName, bucketName);
+  }
+
+
+  @Override
+  public OmBucketInfo startSetBucketProperty(OmBucketArgs omBucketArgs)
+      throws IOException {
+    Preconditions.checkNotNull(omBucketArgs);
+    // TODO: Need to add metrics and Audit log for HA requests
+    if(isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
+          omBucketArgs.getVolumeName(), omBucketArgs.getBucketName(), null);
+    }
+    return bucketManager.setBucketProperty(omBucketArgs);
+  }
+
+
+  @Override
+  public void applySetBucketProperty(OmBucketInfo omBucketInfo)
+      throws IOException {
+    // TODO: Need to add metrics and Audit log for HA requests
+    bucketManager.applySetBucketProperty(omBucketInfo);
+  }
 
   /**
    * Checks if current caller has acl permissions.

@@ -25,7 +25,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
-import org.apache.hadoop.hdds.scm.chillmode.SCMChillModeManager;
+import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -94,8 +94,8 @@ public class BenchMarkOzoneManager {
             .getPipelines(ReplicationType.RATIS, ReplicationFactor.THREE)) {
           pipelineManager.openPipeline(pipeline.getId());
         }
-        scm.getEventQueue().fireEvent(SCMEvents.CHILL_MODE_STATUS,
-            new SCMChillModeManager.ChillModeStatus(false));
+        scm.getEventQueue().fireEvent(SCMEvents.SAFE_MODE_STATUS,
+            new SCMSafeModeManager.SafeModeStatus(false));
         Thread.sleep(1000);
 
         // prepare OM

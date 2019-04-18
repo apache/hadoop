@@ -34,6 +34,7 @@
     <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
+    <guice.version>4.0</guice.version>
   </properties>
   <modules>
     <module>common</module>
@@ -50,6 +51,7 @@
     <module>dist</module>
     <module>ozone-recon</module>
     <module>ozone-recon-codegen</module>
+    <module>upgrade</module>
   </modules>
 
   <repositories>
@@ -163,6 +165,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-ozone-recon</artifactId>
+        <version>${ozone.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-upgrade</artifactId>
         <version>${ozone.version}</version>
       </dependency>
       <dependency>
