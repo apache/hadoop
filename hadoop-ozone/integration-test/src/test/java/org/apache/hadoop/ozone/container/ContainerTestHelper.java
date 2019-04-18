@@ -728,8 +728,9 @@ public final class ContainerTestHelper {
     List<Long> containerIdList = new ArrayList<>();
     for (OmKeyLocationInfo info : locationInfoList) {
       long id = info.getContainerID();
-      if (!containerIdList.contains(id))
-      containerIdList.add(id);
+      if (!containerIdList.contains(id)) {
+        containerIdList.add(id);
+      }
     }
     Assert.assertTrue(!containerIdList.isEmpty());
     waitForContainerClose(cluster, containerIdList.toArray(new Long[0]));

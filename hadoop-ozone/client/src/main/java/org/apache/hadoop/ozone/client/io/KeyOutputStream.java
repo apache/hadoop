@@ -316,8 +316,8 @@ public class KeyOutputStream extends OutputStream {
         BlockOutputStreamEntry current = streamEntries.get(currentStreamIndex);
 
         // length(len) will be in int range if the call is happening through
-        // write API of blockOutputStream. Length can be in long range if it comes
-        // via Exception path.
+        // write API of blockOutputStream. Length can be in long range if it
+        // comes via Exception path.
         int writeLen = Math.min((int) len, (int) current.getRemaining());
         long currentPos = current.getWrittenDataLength();
         try {
@@ -619,8 +619,8 @@ public class KeyOutputStream extends OutputStream {
           try {
             Collection<DatanodeDetails> failedServers =
                 entry.getFailedServers();
-            // failed servers can be null in case there is no data written in the
-            // stream
+            // failed servers can be null in case there is no data written in
+            // the stream
             if (failedServers != null && !failedServers.isEmpty()) {
               excludeList.addDatanodes(failedServers);
             }
