@@ -40,6 +40,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries;
+import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
@@ -144,6 +145,7 @@ public final class S3Guard {
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
    */
+  @RetryTranslated
   public static S3AFileStatus putAndReturn(MetadataStore ms,
       S3AFileStatus status,
       S3AInstrumentation instrumentation) throws IOException {
