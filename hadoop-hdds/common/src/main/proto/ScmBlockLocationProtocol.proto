@@ -138,5 +138,5 @@ service ScmBlockLocationProtocolService {
    * Gets the scmInfo from SCM.
    */
   rpc getScmInfo(hadoop.hdds.GetScmInfoRequestProto)
-      returns (hadoop.hdds.GetScmInfoRespsonseProto);
+      returns (hadoop.hdds.GetScmInfoResponseProto);
 }

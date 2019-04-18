@@ -265,13 +265,13 @@ public final class StorageContainerLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
+  public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
     try (Scope scope = TracingUtil
         .importAndCreateScope("getScmInfo", req.getTraceID())) {
       ScmInfo scmInfo = impl.getScmInfo();
-      return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
+      return HddsProtos.GetScmInfoResponseProto.newBuilder()
           .setClusterId(scmInfo.getClusterId())
           .setScmId(scmInfo.getScmId())
           .build();
