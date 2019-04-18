@@ -295,14 +295,6 @@ Following are the basic configurations to start Timeline service v.2:
   <name>yarn.system-metrics-publisher.enabled</name>
   <value>true</value>
 </property>
-
-<property>
-  <description>The setting that controls whether yarn container events are
-  published to the timeline service or not by RM. This configuration setting
-  is for ATS V2.</description>
-  <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
-  <value>true</value>
-</property>
 ```
 
 In addition, you may want to set the YARN cluster name to a reasonably unique value in case you
