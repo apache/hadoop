@@ -190,5 +190,10 @@ add_executable(test-oom-listener
         main/native/oom-listener/impl/oom_listener.h
         main/native/oom-listener/test/oom_listener_test_main.cc
 )
-target_link_libraries(test-oom-listener gtest rt)
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin")
+    # macOS doesn't have librt
+    target_link_libraries(test-oom-listener gtest)
+else()
+    target_link_libraries(test-oom-listener gtest rt)
+endif()
 output_directory(test-oom-listener test)
