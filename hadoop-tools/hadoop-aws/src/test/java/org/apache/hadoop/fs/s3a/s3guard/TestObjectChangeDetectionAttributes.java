@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.mockito.hamcrest.MockitoHamcrest.argThat;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collection;
 
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CompleteMultipartUploadRequest;
@@ -40,34 +38,68 @@ import com.amazonaws.services.s3.model.PutObjectResult;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.util.Arrays;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.hamcrest.Matcher;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3AMockTest;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Test;
+
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_SERVER;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_ETAG;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_VERSION_ID;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 /**
- * Tests to ensure object eTag and versionId are captured on S3 PUT and used on
- * GET.
+ * Unit tests to ensure object eTag and versionId are captured on S3 PUT and
+ * used on GET.  Further (integration) testing is performed in
+ * {@link org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged}.
  */
+@RunWith(Parameterized.class)
 public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
-  private ChangeDetectionPolicy changeDetectionPolicy;
+  private final String changeDetectionSource;
 
-  @Before
-  public void before() {
-    changeDetectionPolicy = fs.getChangeDetectionPolicy();
+  public TestObjectChangeDetectionAttributes(String changeDetectionSource) {
+    this.changeDetectionSource = changeDetectionSource;
+  }
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {CHANGE_DETECT_SOURCE_ETAG},
+        {CHANGE_DETECT_SOURCE_VERSION_ID}
+    });
+  }
+
+  @Override
+  public void setup() throws Exception {
+    super.setup();
+  }
+
+  @Override
+  public Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    conf.setClass(Constants.S3_METADATA_STORE_IMPL,
+        LocalMetadataStore.class, MetadataStore.class);
+    conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
+    conf.set(CHANGE_DETECT_MODE, CHANGE_DETECT_MODE_SERVER);
+    return conf;
   }
 
   /**
@@ -230,12 +262,12 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
         if (item instanceof GetObjectRequest) {
           GetObjectRequest getObjectRequest = (GetObjectRequest) item;
           if (getObjectRequest.getKey().equals(key)) {
-            if (changeDetectionPolicy.getSource().equals(
-                Source.ETag)) {
+            if (changeDetectionSource.equals(
+                CHANGE_DETECT_SOURCE_ETAG)) {
               return getObjectRequest.getMatchingETagConstraints()
                   .contains(eTag);
-            } else if (changeDetectionPolicy.getSource().equals(
-                Source.VersionId)) {
+            } else if (changeDetectionSource.equals(
+                CHANGE_DETECT_SOURCE_VERSION_ID)) {
               return getObjectRequest.getVersionId().equals(versionId);
             }
           }
@@ -246,7 +278,7 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
       @Override
       public void describeTo(Description description) {
         description.appendText("key and "
-            + changeDetectionPolicy.getSource()
+            + changeDetectionSource
             + " matches");
       }
     };
