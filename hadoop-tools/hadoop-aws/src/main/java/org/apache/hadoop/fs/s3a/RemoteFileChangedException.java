@@ -32,7 +32,7 @@ import org.apache.hadoop.fs.PathIOException;
 @InterfaceStability.Unstable
 public class RemoteFileChangedException extends PathIOException {
 
-  public static final String PRECONDITIONS_NOT_MET =
+  public static final String PRECONDITIONS_FAILED =
       "Constraints of request were unsatisfiable";
 
   /**

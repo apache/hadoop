@@ -18,23 +18,24 @@
 
 package org.apache.hadoop.fs.s3a;
 
-import com.amazonaws.AmazonServiceException;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
-import org.apache.hadoop.fs.PathIOException;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.test.HadoopTestBase;
+import org.apache.http.HttpStatus;
 
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.createPolicy;
@@ -246,9 +247,9 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     // 412 is translated to RemoteFileChangedException
     AmazonServiceException awsException =
         new AmazonServiceException("aws exception");
-    awsException.setStatusCode(412);
+    awsException.setStatusCode(HttpStatus.SC_PRECONDITION_FAILED);
     expectChangeException(tracker, awsException, "copy",
-        RemoteFileChangedException.PRECONDITIONS_NOT_MET);
+        RemoteFileChangedException.PRECONDITIONS_FAILED);
 
     // processing another type of exception does nothing
     tracker.processException(new RuntimeException(), "copy");

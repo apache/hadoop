@@ -27,8 +27,6 @@ import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.fs.s3a.NoVersionAttributeException;
-import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,9 +34,12 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.NoVersionAttributeException;
 import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.http.HttpStatus.SC_PRECONDITION_FAILED;
 
 /**
  * Change tracking for input streams: the version ID or etag of the object is
@@ -216,10 +217,10 @@ public class ChangeTracker {
       RemoteFileChangedException {
     if (e instanceof AmazonServiceException) {
       AmazonServiceException serviceException = (AmazonServiceException) e;
-      if (serviceException.getStatusCode() == 412) {
+      if (serviceException.getStatusCode() == SC_PRECONDITION_FAILED) {
         versionMismatches.incrementAndGet();
         throw new RemoteFileChangedException(uri, operation, String.format(
-            RemoteFileChangedException.PRECONDITIONS_NOT_MET
+            RemoteFileChangedException.PRECONDITIONS_FAILED
                 + " on %s."
                 + " Version %s was unavailable",
             getSource(),
