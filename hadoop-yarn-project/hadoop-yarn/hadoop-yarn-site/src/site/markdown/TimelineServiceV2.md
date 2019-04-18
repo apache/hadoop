@@ -330,14 +330,6 @@ Following are the basic configurations to start Timeline service v.2:
   <name>yarn.system-metrics-publisher.enabled</name>
   <value>true</value>
 </property>
-
-<property>
-  <description>The setting that controls whether yarn container events are
-  published to the timeline service or not by RM. This configuration setting
-  is for ATS V2.</description>
-  <name>yarn.rm.system-metrics-publisher.emit-container-events</name>
-  <value>true</value>
-</property>
 ```
 
 If using an aux services manifest instead of setting aux services through the Configuration, ensure that the manifest services array includes the timeline\_collector service as follows:
