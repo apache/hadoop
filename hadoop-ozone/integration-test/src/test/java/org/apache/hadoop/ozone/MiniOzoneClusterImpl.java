@@ -619,7 +619,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       currentAvailablePort++; //the previous one is already allocated.
       while (currentAvailablePort < 65536) {
         try {
-          new ServerSocket(currentAvailablePort);
+          new ServerSocket(currentAvailablePort).close();
           return currentAvailablePort;
         } catch (IOException ex) {
           //port is not available, let's try the next one.
