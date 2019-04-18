@@ -133,7 +133,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
   }
 
   @Override
-  public HddsProtos.GetScmInfoRespsonseProto getScmInfo(
+  public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
     ScmInfo scmInfo;
@@ -142,7 +142,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     } catch (IOException ex) {
       throw new ServiceException(ex);
     }
-    return HddsProtos.GetScmInfoRespsonseProto.newBuilder()
+    return HddsProtos.GetScmInfoResponseProto.newBuilder()
         .setClusterId(scmInfo.getClusterId())
         .setScmId(scmInfo.getScmId())
         .build();

@@ -190,7 +190,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   public ScmInfo getScmInfo() throws IOException {
     HddsProtos.GetScmInfoRequestProto request =
         HddsProtos.GetScmInfoRequestProto.getDefaultInstance();
-    HddsProtos.GetScmInfoRespsonseProto resp;
+    HddsProtos.GetScmInfoResponseProto resp;
     try {
       resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {

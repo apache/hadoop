@@ -262,7 +262,7 @@ service StorageContainerLocationProtocolService {
   *  Returns information about SCM.
   */
   rpc getScmInfo(GetScmInfoRequestProto)
-      returns (GetScmInfoRespsonseProto);
+      returns (GetScmInfoResponseProto);
 
   /**
   *  Checks if SCM is in SafeMode.
