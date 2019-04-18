@@ -322,14 +322,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               // to SCM as in this case, it is the raft client which is not
               // able to connect to leader in the pipeline, though the
               // pipeline can still be functional.
-              IOException exception = null;
-              if (reply.getNotLeaderException() != null) {
-                exception = reply.getNotLeaderException();
-              } else if (reply.getNotReplicatedException() != null) {
-                exception = reply.getNotReplicatedException();
-              } else if (reply.getStateMachineException() != null) {
-                exception = reply.getStateMachineException();
-              }
+              IOException exception = reply.getException();
               Preconditions.checkNotNull(exception);
               throw new CompletionException(exception);
             }

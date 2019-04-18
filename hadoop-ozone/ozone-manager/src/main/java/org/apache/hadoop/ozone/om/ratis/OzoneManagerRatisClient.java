@@ -176,14 +176,7 @@ public final class OzoneManagerRatisClient implements Closeable {
               try {
                 Preconditions.checkNotNull(reply);
                 if (!reply.isSuccess()) {
-                  IOException exception = null;
-                  if (reply.getNotLeaderException() != null) {
-                    exception = reply.getNotLeaderException();
-                  } else if (reply.getNotReplicatedException() != null) {
-                    exception = reply.getNotReplicatedException();
-                  } else if (reply.getStateMachineException() != null) {
-                    exception = reply.getStateMachineException();
-                  }
+                  IOException exception = reply.getException();
                   Preconditions.checkNotNull(exception);
                   throw new CompletionException(exception);
                 }
