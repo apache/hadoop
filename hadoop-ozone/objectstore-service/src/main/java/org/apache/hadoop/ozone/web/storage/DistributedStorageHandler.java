@@ -90,6 +90,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final int bytesPerChecksum;
   private final boolean verifyChecksum;
   private final int maxRetryCount;
+  private final long retryInterval;
 
   /**
    * Creates a new DistributedStorageHandler.
@@ -159,6 +160,9 @@ public final class DistributedStorageHandler implements StorageHandler {
     this.maxRetryCount =
         conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
             OZONE_CLIENT_MAX_RETRIES_DEFAULT);
+    this.retryInterval = conf.getLong(
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS_DEFAULT);
     boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
@@ -464,6 +468,7 @@ public final class DistributedStorageHandler implements StorageHandler {
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
             .setMaxRetryCount(maxRetryCount)
+            .setRetryInterval(retryInterval)
             .build();
     keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),

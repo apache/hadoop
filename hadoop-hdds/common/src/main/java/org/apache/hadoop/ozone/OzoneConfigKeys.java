@@ -140,7 +140,11 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_CLIENT_MAX_RETRIES =
       "ozone.client.max.retries";
-  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 5;
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 100;
+  public static final String OZONE_CLIENT_RETRY_INTERVAL_MS =
+      "ozone.client.retry.interval";
+  public static final long OZONE_CLIENT_RETRY_INTERVAL_MS_DEFAULT = 500;
+
 
 
   // This defines the overall connection limit for the connection pool used in

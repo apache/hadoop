@@ -429,10 +429,18 @@
   </property>
   <property>
     <name>ozone.client.max.retries</name>
-    <value>5</value>
+    <value>100</value>
     <tag>OZONE, CLIENT</tag>
     <description>Maximum number of retries by Ozone Client on encountering
       exception while writing a key.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.retry.interval.ms</name>
+    <value>500</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Indicates the time duration in milliseconds a client will wait
+      before retrying a write key request on encountering an exception.
     </description>
   </property>
   <property>

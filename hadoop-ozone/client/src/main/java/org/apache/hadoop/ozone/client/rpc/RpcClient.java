@@ -128,6 +128,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   private final long watchTimeout;
   private final ClientId clientId = ClientId.randomId();
   private final int maxRetryCount;
+  private final long retryInterval;
   private Text dtService;
 
    /**
@@ -214,6 +215,9 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     maxRetryCount =
         conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
             OZONE_CLIENT_MAX_RETRIES_DEFAULT);
+    retryInterval = conf.getLong(
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS_DEFAULT);
     dtService =
         getOMProxyProvider().getProxy().getDelegationTokenService();
     boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
@@ -861,6 +865,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
             .setMultipartUploadID(uploadID)
             .setIsMultipartKey(true)
             .setMaxRetryCount(maxRetryCount)
+            .setRetryInterval(retryInterval)
             .build();
     keyOutputStream.addPreallocateBlocks(
         openKey.getKeyInfo().getLatestVersionLocations(),
@@ -1022,7 +1027,9 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
             .setBlockSize(blockSize)
             .setChecksumType(checksumType)
             .setBytesPerChecksum(bytesPerChecksum)
-            .setMaxRetryCount(maxRetryCount).build();
+            .setMaxRetryCount(maxRetryCount)
+            .setRetryInterval(retryInterval)
+            .build();
     keyOutputStream
         .addPreallocateBlocks(openKey.getKeyInfo().getLatestVersionLocations(),
             openKey.getOpenVersion());
