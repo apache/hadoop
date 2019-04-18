@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone;
 
 import java.io.File;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -388,6 +389,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    */
   public static class Builder extends MiniOzoneCluster.Builder {
 
+    private int currentAvailablePort = 10000;
+
     /**
      * Creates a new Builder.
      *
@@ -530,10 +533,11 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     List<HddsDatanodeService> createHddsDatanodes(
         StorageContainerManager scm) throws IOException {
       configureHddsDatanodes();
-      String scmAddress =  scm.getDatanodeRpcAddress().getHostString() +
+      String scmAddress = scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
       String[] args = new String[] {};
       conf.setStrings(ScmConfigKeys.OZONE_SCM_NAMES, scmAddress);
+
       List<HddsDatanodeService> hddsDatanodes = new ArrayList<>();
       for (int i = 0; i < numOfDatanodes; i++) {
         OzoneConfiguration dnConf = new OzoneConfiguration(conf);
@@ -563,10 +567,14 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     }
 
     private void configureSCM() {
-      conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY,
+          "127.0.0.1:" + findPort());
+      conf.set(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY,
+          "127.0.0.1:" + findPort());
+      conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY,
+          "127.0.0.1:" + findPort());
+      conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY,
+          "127.0.0.1:" + findPort());
       conf.setInt(ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY, numOfScmHandlers);
       configureSCMheartbeat();
     }
@@ -597,14 +605,37 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
 
 
     private void configureOM() {
-      conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "127.0.0.1:0");
-      conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
+      conf.set(OMConfigKeys.OZONE_OM_ADDRESS_KEY, "127.0.0.1:" + findPort());
+      conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
+          "127.0.0.1:" + findPort());
       conf.setInt(OMConfigKeys.OZONE_OM_HANDLER_COUNT_KEY, numOfOmHandlers);
     }
 
+    /**
+     * Return an available TCP port if available.
+     * <p>
+     * Guaranteed to be unique per MiniOzoneClusterBuilder.
+     */
+    private int findPort() {
+      currentAvailablePort++; //the previous one is already allocated.
+      while (currentAvailablePort < 65536) {
+        try {
+          new ServerSocket(currentAvailablePort);
+          return currentAvailablePort;
+        } catch (IOException ex) {
+          //port is not available, let's try the next one.
+          currentAvailablePort++;
+          continue;
+        }
+      }
+      throw new RuntimeException("No available port");
+    }
+
     private void configureHddsDatanodes() {
-      conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY, "0.0.0.0:0");
-      conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+      conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY,
+          "0.0.0.0:" + findPort());
+      conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY,
+          "0.0.0.0:" + findPort());
       conf.set(HDDS_DATANODE_PLUGINS_KEY,
           "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
       conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
