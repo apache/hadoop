@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.net;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
 
+import java.util.List;
+
 /**
  * Network topology schema to housekeeper relevant information.
  */
@@ -59,13 +61,15 @@ public final class NodeSchema {
   }
 
   // default cost
-  private final int cost;
+  private int cost;
   // layer Type, mandatory property
-  private final LayerType type;
+  private LayerType type;
   // default name, can be null or ""
-  private final String defaultName;
+  private String defaultName;
   // layer prefix, can be null or ""
-  private final String prefix;
+  private String prefix;
+  // sublayer
+  private List<NodeSchema> sublayer;
 
   /**
    * Builder for NodeSchema.
@@ -123,6 +127,14 @@ public final class NodeSchema {
     this.defaultName = defaultName;
   }
 
+  /**
+   * Constructor. This constructor is only used when build NodeSchema from
+   * YAML file.
+   */
+  public NodeSchema() {
+    this.type = LayerType.INNER_NODE;
+  }
+
   public boolean matchPrefix(String name) {
     if (name == null || name.isEmpty() || prefix == null || prefix.isEmpty()) {
       return false;
@@ -134,15 +146,38 @@ public final class NodeSchema {
     return this.type;
   }
 
+  public void setType(LayerType type) {
+    this.type = type;
+  }
+
   public String getPrefix() {
     return this.prefix;
+  }
+
+  public void setPrefix(String prefix) {
+    this.prefix = prefix;
   }
 
   public String getDefaultName() {
     return this.defaultName;
   }
 
+  public void setDefaultName(String name) {
+    this.defaultName = name;
+  }
+
   public int getCost() {
     return this.cost;
+  }
+  public void setCost(int cost) {
+    this.cost = cost;
+  }
+
+  public void setSublayer(List<NodeSchema> sublayer) {
+    this.sublayer = sublayer;
+  }
+
+  public List<NodeSchema> getSublayer() {
+    return sublayer;
   }
 }

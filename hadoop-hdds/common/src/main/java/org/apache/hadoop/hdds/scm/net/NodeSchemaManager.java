@@ -59,13 +59,20 @@ public final class NodeSchemaManager {
     /**
      * Load schemas from network topology schema configuration file
      */
+    String schemaFileType = conf.get(
+            ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_TYPE);
+
     String schemaFile = conf.get(
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT);
 
     NodeSchemaLoadResult result;
     try {
-      result = NodeSchemaLoader.getInstance().loadSchemaFromFile(schemaFile);
+      if (schemaFileType.toLowerCase().compareTo("yaml") == 0) {
+        result = NodeSchemaLoader.getInstance().loadSchemaFromYaml(schemaFile);
+      } else {
+        result = NodeSchemaLoader.getInstance().loadSchemaFromXml(schemaFile);
+      }
       allSchema = result.getSchemaList();
       enforcePrefix = result.isEnforePrefix();
       maxLevel = allSchema.size();
