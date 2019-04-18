@@ -137,6 +137,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>opentracing-util</artifactId>
       <version>0.31.0</version>
     </dependency>
+    <dependency>
+      <groupId>org.yaml</groupId>
+      <artifactId>snakeyaml</artifactId>
+      <version>1.16</version>
+    </dependency>
   </dependencies>
 
   <build>
