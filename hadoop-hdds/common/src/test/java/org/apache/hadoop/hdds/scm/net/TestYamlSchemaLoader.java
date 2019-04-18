@@ -34,17 +34,17 @@ import static org.junit.Assert.fail;
 
 /** Test the node schema loader. */
 @RunWith(Parameterized.class)
-public class TestNodeSchemaLoader {
+public class TestYamlSchemaLoader {
   private static final Logger LOG =
-      LoggerFactory.getLogger(TestNodeSchemaLoader.class);
+      LoggerFactory.getLogger(TestYamlSchemaLoader.class);
   private ClassLoader classLoader =
       Thread.currentThread().getContextClassLoader();
 
-  public TestNodeSchemaLoader(String schemaFile, String errMsg) {
+  public TestYamlSchemaLoader(String schemaFile, String errMsg) {
     try {
       String filePath = classLoader.getResource(
           "./networkTopologyTestFiles/" + schemaFile).getPath();
-      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
+      NodeSchemaLoader.getInstance().loadSchemaFromYaml(filePath);
       fail("expect exceptions");
     } catch (Throwable e) {
       assertTrue(e.getMessage().contains(errMsg));
@@ -57,33 +57,19 @@ public class TestNodeSchemaLoader {
   @Parameters
   public static Collection<Object[]> getSchemaFiles() {
     Object[][] schemaFiles = new Object[][]{
-        {"enforce-error.xml", "layer without prefix defined"},
-        {"invalid-cost.xml", "Cost should be positive number or 0"},
-        {"multiple-leaf.xml", "Multiple LEAF layers are found"},
-        {"multiple-root.xml", "Multiple ROOT layers are found"},
-        {"no-leaf.xml", "No LEAF layer is found"},
-        {"no-root.xml", "No ROOT layer is found"},
-        {"path-layers-size-mismatch.xml",
-            "Topology path depth doesn't match layer element numbers"},
-        {"path-with-id-reference-failure.xml",
-            "No layer found for id"},
-        {"unknown-layer-type.xml", "Unsupported layer type"},
-        {"wrong-path-order-1.xml",
-            "Topology path doesn't start with ROOT layer"},
-        {"wrong-path-order-2.xml", "Topology path doesn't end with LEAF layer"},
-        {"no-topology.xml", "no or multiple <topology> element"},
-        {"multiple-topology.xml", "no or multiple <topology> element"},
-        {"invalid-version.xml", "Bad layoutversion value"},
+        {"multiple-root.yaml", "Multiple root"},
+        {"middle-leaf.yaml", "Leaf node in the middle"},
     };
     return Arrays.asList(schemaFiles);
   }
+
 
   @Test
   public void testGood() {
     try {
       String filePath = classLoader.getResource(
-          "./networkTopologyTestFiles/good.xml").getPath();
-      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
+              "./networkTopologyTestFiles/good.yaml").getPath();
+      NodeSchemaLoader.getInstance().loadSchemaFromYaml(filePath);
     } catch (Throwable e) {
       fail("should succeed");
     }
@@ -100,4 +86,5 @@ public class TestNodeSchemaLoader {
       assertTrue(e.getMessage().contains("file " + filePath + " is not found"));
     }
   }
+
 }
