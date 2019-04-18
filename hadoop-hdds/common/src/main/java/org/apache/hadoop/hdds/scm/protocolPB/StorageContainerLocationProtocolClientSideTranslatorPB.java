@@ -357,7 +357,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
             .setTraceID(TracingUtil.exportCurrentSpan())
             .build();
     try {
-      HddsProtos.GetScmInfoRespsonseProto resp = rpcProxy.getScmInfo(
+      HddsProtos.GetScmInfoResponseProto resp = rpcProxy.getScmInfo(
           NULL_RPC_CONTROLLER, request);
       ScmInfo.Builder builder = new ScmInfo.Builder()
           .setClusterId(resp.getClusterId())
