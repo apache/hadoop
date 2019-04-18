@@ -1462,14 +1462,22 @@ static int check_privileges(const char *user) {
     exit(INITIALIZE_USER_FAILED);
   }
 
+#ifdef __linux__
   int rc = getgrouplist(user, pw->pw_gid, groups, &ngroups);
+#else
+  int rc = getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups);
+#endif
   if (rc < 0) {
     groups = (gid_t *) alloc_and_clear_memory(ngroups, sizeof(gid_t));
     if (groups == NULL) {
       fprintf(ERRORFILE, "Failed to allocate buffer for group lookup for user %s.\n", user);
       exit(OUT_OF_MEMORY);
     }
+#ifdef __linux__
     if (getgrouplist(user, pw->pw_gid, groups, &ngroups) == -1) {
+#else
+    if (getgrouplist(user, pw->pw_gid, (int *)groups, &ngroups) == -1) {
+#endif
       fprintf(ERRORFILE, "Fail to lookup groups for user %s.\n", user);
       ret = 2;
     }
