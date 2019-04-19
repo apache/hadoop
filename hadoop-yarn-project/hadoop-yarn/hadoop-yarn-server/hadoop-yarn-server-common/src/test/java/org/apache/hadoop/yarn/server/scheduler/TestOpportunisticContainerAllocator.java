@@ -198,18 +198,6 @@ public class TestOpportunisticContainerAllocator {
         Arrays.asList(
             ResourceRequest.newBuilder().allocationRequestId(1)
                 .priority(Priority.newInstance(1))
-                .resourceName("/r1")
-                .capability(Resources.createResource(1 * GB))
-                .relaxLocality(true)
-                .executionType(ExecutionType.OPPORTUNISTIC).build(),
-            ResourceRequest.newBuilder().allocationRequestId(1)
-                .priority(Priority.newInstance(1))
-                .resourceName("h1")
-                .capability(Resources.createResource(1 * GB))
-                .relaxLocality(true)
-                .executionType(ExecutionType.OPPORTUNISTIC).build(),
-            ResourceRequest.newBuilder().allocationRequestId(1)
-                .priority(Priority.newInstance(1))
                 .resourceName(ResourceRequest.ANY)
                 .capability(Resources.createResource(1 * GB))
                 .relaxLocality(true)
@@ -227,6 +215,24 @@ public class TestOpportunisticContainerAllocator {
                 .relaxLocality(true)
                 .executionType(ExecutionType.OPPORTUNISTIC).build(),
             ResourceRequest.newBuilder().allocationRequestId(2)
+                .priority(Priority.newInstance(1))
+                .resourceName(ResourceRequest.ANY)
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
+                .priority(Priority.newInstance(1))
+                .resourceName("/r1")
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
+                .priority(Priority.newInstance(1))
+                .resourceName("h1")
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
                 .priority(Priority.newInstance(1))
                 .resourceName(ResourceRequest.ANY)
                 .capability(Resources.createResource(1 * GB))
@@ -247,14 +253,14 @@ public class TestOpportunisticContainerAllocator {
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     LOG.info("Containers: {}", containers);
-    Set<String> allocatedHosts = new HashSet<>();
+    // all 3 containers should be allocated.
+    Assert.assertEquals(3, containers.size());
+    // container with allocation id 2 and 3 should be allocated on node h1
     for (Container c : containers) {
-      allocatedHosts.add(c.getNodeHttpAddress());
+      if (c.getAllocationRequestId() == 2 || c.getAllocationRequestId() == 3) {
+        Assert.assertEquals("h1:1234", c.getNodeHttpAddress());
+      }
     }
-    Assert.assertEquals(2, containers.size());
-    Assert.assertTrue(allocatedHosts.contains("h1:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h2:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
   }
 
   @Test
