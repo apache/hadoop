@@ -174,7 +174,7 @@ public class TestDefaultCertificateClient {
     X509Certificate cert = omCertClient.getCertificate();
     assertNull(cert);
     omCertClient.storeCertificate(getPEMEncodedString(x509Certificate),
-        true);
+        true, false);
 
     cert = omCertClient.getCertificate(
         x509Certificate.getSerialNumber().toString());
@@ -327,9 +327,9 @@ public class TestDefaultCertificateClient {
     X509Certificate cert2 = generateX509Cert(keyPair);
     X509Certificate cert3 = generateX509Cert(keyPair);
 
-    dnCertClient.storeCertificate(getPEMEncodedString(cert1), true);
-    dnCertClient.storeCertificate(getPEMEncodedString(cert2), true);
-    dnCertClient.storeCertificate(getPEMEncodedString(cert3), true);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert1), true, false);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert2), true, false);
+    dnCertClient.storeCertificate(getPEMEncodedString(cert3), true, false);
 
     assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
         .toString()));
