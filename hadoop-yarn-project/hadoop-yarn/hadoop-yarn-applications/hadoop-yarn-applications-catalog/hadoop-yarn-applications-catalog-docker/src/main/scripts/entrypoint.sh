@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -32,25 +32,49 @@ template_generator() {
 
 export JAVA_HOME=/usr/lib/jvm/jre
 export HADOOP_CONF_DIR=/etc/hadoop/conf
-/opt/apache/solr/bin/solr start -p 8983 -force
+
+SOLR_OPTS=()
+
+if [ "${SOLR_STORAGE_TYPE}" == "hdfs" ]; then
+  SOLR_OPTS+=("-Dsolr.directoryFactory=HdfsDirectoryFactory")
+  SOLR_OPTS+=("-Dsolr.lock.type=hdfs")
+  if [ -e "$HADOOP_CONF_DIR" ]; then
+    SOLR_OPTS+=("-Dsolr.hdfs.confdir=${HADOOP_CONF_DIR}")
+  fi
+fi
+
+if [ "${SOLR_DATA_DIR}" != "" ]; then
+  SOLR_OPTS+=("-Dsolr.data.dir=$SOLR_DATA_DIR")
+ fi
+
+if [ -e "$KEYTAB" ]; then
+  SOLR_OPTS+=("-Dsolr.hdfs.security.kerberos.enabled=true")
+  SOLR_OPTS+=("-Dsolr.hdfs.security.kerberos.keytabfile=${KEYTAB}")
+  SOLR_OPTS+=("-Dsolr.hdfs.security.kerberos.principal=${PRINCIPAL}")
+  export JAVA_OPTS="$JAVA_OPTS -Djava.security.auth.login.config=/etc/tomcat/jaas.config -Djava.security.krb5.conf=/etc/krb5.conf -Djavax.security.auth.useSubjectCredsOnly=false"
+  template_generator /etc/tomcat/jaas.config.template /etc/tomcat/jaas.config
+fi
+
+export SOLR_OPTS
+
+/opt/apache/solr/bin/solr start "${SOLR_OPTS[@]}" -p 8983 -force
 /opt/apache/solr/bin/solr create_core -c appcatalog -force
 /opt/apache/solr/bin/post -c appcatalog /tmp/samples.xml
 if [ -d /etc/hadoop/conf ]; then
   sed -i.bak 's/shared.loader=.*$/shared.loader=\/etc\/hadoop\/conf/g' /etc/tomcat/catalina.properties
 fi
-if [ -e "$KEYTAB" ]; then
-  export JAVA_OPTS="$JAVA_OPTS -Djava.security.auth.login.config=/etc/tomcat/jaas.config -Djava.security.krb5.conf=/etc/krb5.conf -Djavax.security.auth.useSubjectCredsOnly=false"
-  template_generator /etc/tomcat/jaas.config.template /etc/tomcat/jaas.config
-fi
+
 if [ -e "$SPNEGO_KEYTAB" ]; then
   sed -i.bak 's/authentication.type=.*$/authentication.type=kerberos/g' /etc/tomcat/catalina.properties
   sed -i.bak 's/simple.anonymous.allowed=.*$/simple.anonymous.allowed=false/g' /etc/tomcat/catalina.properties
-  if [ -z "$SPNEGO_PRINCIPAL" ]; then
-    echo "kerberos.principal=HTTP/$HOSTNAME" >> /etc/tomcat/catalina.properties
-  else
-    echo "kerberos.principal=$SPNEGO_PRINCIPAL" >> /etc/tomcat/catalina.properties
-  fi
-  echo "kerberos.keytab=$SPNEGO_KEYTAB" >> /etc/tomcat/catalina.properties
-  echo "hostname=$HOSTNAME" >> /etc/tomcat/catalina.properties
+  {
+    if [ -z "$SPNEGO_PRINCIPAL" ]; then
+      echo "kerberos.principal=HTTP/$HOSTNAME"
+    else
+      echo "kerberos.principal=$SPNEGO_PRINCIPAL"
+    fi
+    echo "kerberos.keytab=$SPNEGO_KEYTAB"
+    echo "hostname=$HOSTNAME"
+  } >> /etc/tomcat/catalina.properties
 fi
 /usr/libexec/tomcat/server start
