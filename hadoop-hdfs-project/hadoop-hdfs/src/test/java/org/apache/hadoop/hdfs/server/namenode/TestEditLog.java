@@ -141,8 +141,8 @@ public class TestEditLog {
 
   // This test creates NUM_THREADS threads and each thread does
   // 2 * NUM_TRANSACTIONS Transactions concurrently.
-  static final int NUM_TRANSACTIONS = 100;
-  static final int NUM_THREADS = 100;
+  static final int NUM_TRANSACTIONS = 1000;
+  static final int NUM_THREADS = 1000;
   
   static final File TEST_DIR = PathUtils.getTestDir(TestEditLog.class);
   
@@ -206,6 +206,13 @@ public class TestEditLog {
         editLog.logOpenFile("/filename" + (startIndex + i), inode, false, false);
         editLog.logCloseFile("/filename" + (startIndex + i), inode);
         editLog.logSync();
+        if(i % 100 ==0){
+          try {
+            editLog.rollEditLog();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
+        }
       }
     }
   }

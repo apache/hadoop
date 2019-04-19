@@ -212,6 +212,12 @@ public class FSEditLog implements LogsPurgeable {
     }
   };
 
+  private static final ThreadLocal<Boolean> isEndCurrentLogSegment = new ThreadLocal<Boolean>() {
+    @Override
+    protected synchronized Boolean initialValue() {
+      return false;
+    }
+  };
   /**
    * Constructor for FSEditLog. Underlying journals are constructed, but 
    * no streams are opened until open() is called.
@@ -585,6 +591,10 @@ public class FSEditLog implements LogsPurgeable {
           while (mytxid > synctxid && isSyncRunning) {
             try {
               wait(1000);
+              //              avoid mytxid <= synctxid , get out loop but isSyncRunning == true
+              //              then other thread get lock and finish logSync, make synctxid updated and synctxid >= mytxid
+              if(isEndCurrentLogSegment.get()==true)
+                mytxid = txid;
             } catch (InterruptedException ie) {
             }
           }
@@ -663,6 +673,8 @@ public class FSEditLog implements LogsPurgeable {
           synctxid = syncStart;
           isSyncRunning = false;
         }
+        if(isEndCurrentLogSegment.get()==true)
+          isEndCurrentLogSegment.set(false);
         this.notifyAll();
      }
     }
@@ -1218,6 +1230,7 @@ public class FSEditLog implements LogsPurgeable {
     if (writeEndTxn) {
       logEdit(LogSegmentOp.getInstance(cache.get(), 
           FSEditLogOpCodes.OP_END_LOG_SEGMENT));
+      isEndCurrentLogSegment.set(true);
       logSync();
     }
 
