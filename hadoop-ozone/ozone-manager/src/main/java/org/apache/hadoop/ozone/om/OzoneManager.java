@@ -1461,10 +1461,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         getEncodedString(csr));
 
     try {
-      client.storeCertificate(pemEncodedCert, true);
+      client.storeCertificate(pemEncodedCert, true, false);
       // Persist om cert serial id.
       omStore.setOmCertSerialId(CertificateCodec.
           getX509Certificate(pemEncodedCert).getSerialNumber().toString());
+
+      // Get SCM CA certificate and store it in filesystem.
+      String pemEncodedRootCert = secureScmClient.getCACertificate();
+      client.storeCertificate(pemEncodedRootCert, true, true);
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
