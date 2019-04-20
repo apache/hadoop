@@ -685,7 +685,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore$UpdateAppTransition"/>
     <Method name="transition" />
-    <Local name="result" />
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
 
@@ -693,7 +692,6 @@
   <Match>
     <Class name="org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler"/>
     <Method name="updateApplicationPriority" />
-    <Local name="result" />
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
 
