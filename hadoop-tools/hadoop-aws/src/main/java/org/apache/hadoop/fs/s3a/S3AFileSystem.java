@@ -89,6 +89,8 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -242,6 +244,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private S3Guard.ITtlTimeProvider ttlTimeProvider;
 
+  private String bucketLocation;
+
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
   private static void addDeprecatedKeys() {
@@ -358,6 +362,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // the encryption algorithms)
       bindAWSClient(name, delegationTokensEnabled);
 
+      try {
+        bucketLocation = getBucketLocation();
+      } catch (IOException e) {
+        LOG.warn("Location of bucket {} unknown: {} ",
+            getUri(), e.toString());
+        LOG.debug("getBucketLocation() failed", e);
+      }
       initTransferManager();
 
       initCannedAcls(conf);
@@ -1284,9 +1295,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           removeKeys(keysToDelete, true, false);
         }
       }
-      if (!keysToDelete.isEmpty()) {
-        removeKeys(keysToDelete, false, false);
-      }
+      removeKeys(keysToDelete, false, false);
 
       // We moved all the children, now move the top-level dir
       // Empty directory should have been added as the object summary
@@ -1903,7 +1912,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * A helper method to delete a list of keys on a s3-backend.
+   * Delete a list of keys on a s3-backend.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
@@ -1914,11 +1923,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
    * be deleted in a multiple object delete operation.
-   * @throws AmazonClientException amazon-layer failure.
+   * The number of rejected objects will be added to the metric
+   * {@link Statistic#FILES_DELETE_REJECTED}.
+   * @throws AmazonClientException other amazon-layer failure.
    */
-  @VisibleForTesting
   @Retries.RetryRaw
-  void removeKeys(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+  private void removeKeysS3(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       boolean clearKeys, boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
@@ -1929,22 +1939,78 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
       blockRootDelete(keyVersion.getKey());
     }
-    if (enableMultiObjectsDelete) {
-      deleteObjects(new DeleteObjectsRequest(bucket)
-          .withKeys(keysToDelete)
-          .withQuiet(true));
-    } else {
-      for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
-        deleteObject(keyVersion.getKey());
+    try {
+      if (enableMultiObjectsDelete) {
+        deleteObjects(new DeleteObjectsRequest(bucket)
+            .withKeys(keysToDelete)
+            .withQuiet(true));
+      } else {
+        for (DeleteObjectsRequest.KeyVersion keyVersion : keysToDelete) {
+          deleteObject(keyVersion.getKey());
+        }
       }
+    } catch (MultiObjectDeleteException ex) {
+      // partial delete.
+      // Update the stats with the count of the actual number of successful
+      // deletions.
+      int rejected = ex.getErrors().size();
+      noteDeleted(keysToDelete.size() - rejected, deleteFakeDir);
+      incrementStatistic(FILES_DELETE_REJECTED, rejected);
+      throw ex;
     }
-    if (!deleteFakeDir) {
-      instrumentation.fileDeleted(keysToDelete.size());
-    } else {
-      instrumentation.fakeDirsDeleted(keysToDelete.size());
-    }
+    noteDeleted(keysToDelete.size(), deleteFakeDir);
     if (clearKeys) {
       keysToDelete.clear();
+    }
+  }
+
+  /**
+   * Note the deletion of files or fake directories deleted.
+   * @param count count of keys deleted.
+   * @param deleteFakeDir are the deletions fake directories?
+   */
+  private void noteDeleted(final int count, final boolean deleteFakeDir) {
+    if (!deleteFakeDir) {
+      instrumentation.fileDeleted(count);
+    } else {
+      instrumentation.fakeDirsDeleted(count);
+    }
+  }
+
+  /**
+   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
+   * {@code MultiObjectDeleteException} in which S3Guard is updated with all
+   * deleted entries, before the exception is rethrown.
+   *
+   * @param keysToDelete collection of keys to delete on the s3-backend.
+   *        if empty, no request is made of the object store.
+   * @param clearKeys clears the keysToDelete-list after processing the list
+   *            when set to true
+   * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @throws InvalidRequestException if the request was rejected due to
+   * a mistaken attempt to delete the root directory.
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted in a multiple object delete operation.
+   * @throws AmazonClientException amazon-layer failure.
+   * @throws IOException other IO Exception.
+   */
+  @VisibleForTesting
+  @Retries.RetryMixed
+  void removeKeys(
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final boolean clearKeys,
+      final boolean deleteFakeDir)
+      throws MultiObjectDeleteException, AmazonClientException,
+      IOException {
+    try {
+      removeKeysS3(keysToDelete, clearKeys, deleteFakeDir);
+    } catch (MultiObjectDeleteException ex) {
+      LOG.debug("Partial delete failure");
+      // what to do if an IOE was raised? Given an exception was being
+      // raised anyway, and the failures are logged, do nothing.
+      new MultiObjectDeleteSupport(createStoreContext())
+          .processDeleteFailure(ex, keysToDelete);
+      throw ex;
     }
   }
 
@@ -2048,10 +2114,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           if (objects.isTruncated()) {
             objects = continueListObjects(request, objects);
           } else {
-            if (!keys.isEmpty()) {
-              // TODO: HADOOP-13761 S3Guard: retries
-              removeKeys(keys, false, false);
-            }
+            removeKeys(keys, false, false);
             break;
           }
         }
@@ -2270,6 +2333,35 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   public UserGroupInformation getOwner() {
     return owner;
+  }
+
+  /**
+   * Build an immutable store context.
+   * If called while the FS is being initialized,
+   * some of the context will be incomplete.
+   * new store context instances should be created as appropriate.
+   * @return the store context of this FS.
+   */
+  public StoreContext createStoreContext() {
+    return new StoreContext(
+        getUri(),
+        getBucket(),
+        getConf(),
+        getUsername(),
+        owner,
+        boundedThreadPool,
+        invoker,
+        directoryAllocator,
+        getInstrumentation(),
+        getStorageStatistics(),
+        getInputPolicy(),
+        changeDetectionPolicy,
+        enableMultiObjectsDelete,
+        metadataStore,
+        this::keyToQualifiedPath,
+        bucketLocation,
+        useListV1,
+        false);
   }
 
   /**

@@ -87,6 +87,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateMultiObjectDeleteException;
 
 /**
  * Utility methods for S3A code.
@@ -449,40 +450,6 @@ public final class S3AUtils {
       result = new AWSServiceIOException(message, ddbException);
     }
     return result;
-  }
-
-  /**
-   * A MultiObjectDeleteException is raised if one or more delete objects
-   * listed in a bulk DELETE operation failed.
-   * The top-level exception is therefore just "something wasn't deleted",
-   * but doesn't include the what or the why.
-   * This translation will extract an AccessDeniedException if that's one of
-   * the causes, otherwise grabs the status code and uses it in the
-   * returned exception.
-   * @param message text for the exception
-   * @param ex exception to translate
-   * @return an IOE with more detail.
-   */
-  public static IOException translateMultiObjectDeleteException(String message,
-      MultiObjectDeleteException ex) {
-    List<String> keys;
-    StringBuffer result = new StringBuffer(ex.getErrors().size() * 100);
-    result.append(message).append(": ");
-    String exitCode = "";
-    for (MultiObjectDeleteException.DeleteError error : ex.getErrors()) {
-      String code = error.getCode();
-      result.append(String.format("%s: %s: %s%n", code, error.getKey(),
-          error.getMessage()));
-      if (exitCode.isEmpty() ||  "AccessDenied".equals(code)) {
-        exitCode = code;
-      }
-    }
-    if ("AccessDenied".equals(exitCode)) {
-      return (IOException) new AccessDeniedException(result.toString())
-          .initCause(ex);
-    } else {
-      return new AWSS3IOException(result.toString(), ex);
-    }
   }
 
   /**

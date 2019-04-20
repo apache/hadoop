@@ -42,6 +42,8 @@ public enum Statistic {
       "Total number of files created through the object store."),
   FILES_DELETED("files_deleted",
       "Total number of files deleted from the object store."),
+  FILES_DELETE_REJECTED("files_delete_rejected",
+      "Total number of files whose delete request was rejected"),
   FAKE_DIRECTORIES_CREATED("fake_directories_created",
       "Total number of fake directory entries created in the object store."),
   FAKE_DIRECTORIES_DELETED("fake_directories_deleted",

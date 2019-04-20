@@ -186,7 +186,8 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       S3GUARD_METADATASTORE_RETRY,
       S3GUARD_METADATASTORE_THROTTLED,
       STORE_IO_THROTTLED,
-      DELEGATION_TOKENS_ISSUED
+      DELEGATION_TOKENS_ISSUED,
+      FILES_DELETE_REJECTED
   };
 
   private static final Statistic[] GAUGES_TO_CREATE = {

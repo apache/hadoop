@@ -662,11 +662,13 @@ public class ContractTestUtils extends Assert {
    * Touch a file.
    * @param fs filesystem
    * @param path path
+   * @return the patch created.
    * @throws IOException IO problems
    */
-  public static void touch(FileSystem fs,
+  public static Path touch(FileSystem fs,
                            Path path) throws IOException {
     createFile(fs, path, true, null);
+    return path;
   }
 
   /**
