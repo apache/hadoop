@@ -260,6 +260,29 @@ public class TestDelegationToken {
   }
 
   @Test
+  public void testDelegationTokenCount() throws Exception {
+    final TestDelegationTokenSecretManager dtSecretManager =
+        new TestDelegationTokenSecretManager(24*60*60*1000,
+            3*1000, 1*1000, 3600000);
+    try {
+      dtSecretManager.startThreads();
+      Assert.assertEquals(dtSecretManager.getCurrentTokensSize(), 0);
+      final Token<TestDelegationTokenIdentifier> token1 =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      Assert.assertEquals(dtSecretManager.getCurrentTokensSize(), 1);
+      final Token<TestDelegationTokenIdentifier> token2 =
+          generateDelegationToken(dtSecretManager, "SomeUser", "JobTracker");
+      Assert.assertEquals(dtSecretManager.getCurrentTokensSize(), 2);
+      dtSecretManager.cancelToken(token1, "JobTracker");
+      Assert.assertEquals(dtSecretManager.getCurrentTokensSize(), 1);
+      dtSecretManager.cancelToken(token2, "JobTracker");
+      Assert.assertEquals(dtSecretManager.getCurrentTokensSize(), 0);
+    } finally {
+      dtSecretManager.stopThreads();
+    }
+  }
+
+  @Test
   public void testDelegationTokenSecretManager() throws Exception {
     final TestDelegationTokenSecretManager dtSecretManager = 
       new TestDelegationTokenSecretManager(24*60*60*1000,
