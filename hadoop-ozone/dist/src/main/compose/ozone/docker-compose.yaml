@@ -36,7 +36,6 @@ services:
          - 9874:9874
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
