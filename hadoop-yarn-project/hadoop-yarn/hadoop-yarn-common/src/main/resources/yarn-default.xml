@@ -3342,6 +3342,15 @@
 
   <property>
     <description>
+      Maximum number of opportunistic containers to be allocated per
+      Application Master heartbeat.
+    </description>
+    <name>yarn.resourcemanager.opportunistic.max.container-allocation.per.am.heartbeat</name>
+    <value>-1</value>
+  </property>
+
+  <property>
+    <description>
     Number of nodes to be used by the Opportunistic Container Allocator for
     dispatching containers during container allocation.
     </description>
