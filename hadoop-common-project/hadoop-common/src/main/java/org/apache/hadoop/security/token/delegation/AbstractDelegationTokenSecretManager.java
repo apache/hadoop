@@ -145,7 +145,14 @@ extends AbstractDelegationTokenIdentifier>
     setDelegationTokenSeqNum(0);
     currentTokens.clear();
   }
-  
+
+  /**
+   * Total count of active delegation tokens.
+   */
+  public long getCurrentTokensSize() {
+    return currentTokens.size();
+  }
+
   /** 
    * Add a previously used master key to cache (when NN restarts), 
    * should be called before activate(). 
