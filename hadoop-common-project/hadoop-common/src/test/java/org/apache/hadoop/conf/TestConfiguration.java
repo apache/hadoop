@@ -1401,6 +1401,10 @@ public class TestConfiguration {
   @Test
   public void testTimeDuration() {
     Configuration conf = new Configuration(false);
+
+    assertEquals(7000L,
+        conf.getTimeDuration("test.time.a", 7L, SECONDS, MILLISECONDS));
+
     conf.setTimeDuration("test.time.a", 7L, SECONDS);
     assertEquals("7s", conf.get("test.time.a"));
     assertEquals(0L, conf.getTimeDuration("test.time.a", 30, MINUTES));
