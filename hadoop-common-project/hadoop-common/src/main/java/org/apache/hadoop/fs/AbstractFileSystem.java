@@ -51,6 +51,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
@@ -456,8 +457,16 @@ public abstract class AbstractFileSystem {
    * @return current user's home directory.
    */
   public Path getHomeDirectory() {
-    return new Path("/user/"+System.getProperty("user.name")).makeQualified(
-                                                                getUri(), null);
+    String username;
+    try {
+      username = UserGroupInformation.getCurrentUser().getShortUserName();
+    } catch(IOException ex) {
+      LOG.warn("Unable to get user name. Fall back to system property " +
+          "user.name", ex);
+      username = System.getProperty("user.name");
+    }
+    return new Path("/user/" + username)
+        .makeQualified(getUri(), null);
   }
   
   /**
