@@ -1840,7 +1840,7 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       TimeUnit defaultUnit, TimeUnit returnUnit) {
     String vStr = get(name);
     if (null == vStr) {
-      return defaultValue;
+      return returnUnit.convert(defaultValue, defaultUnit);
     } else {
       return getTimeDurationHelper(name, vStr, defaultUnit, returnUnit);
     }
