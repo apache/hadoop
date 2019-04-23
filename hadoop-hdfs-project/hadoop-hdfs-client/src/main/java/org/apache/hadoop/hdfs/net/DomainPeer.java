@@ -20,10 +20,12 @@ package org.apache.hadoop.hdfs.net;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.channels.ReadableByteChannel;
 
-import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.net.unix.DomainSocket;
 
 /**
  * Represents a peer that we communicate with by using blocking I/O
@@ -35,12 +37,21 @@ public class DomainPeer implements Peer {
   private final OutputStream out;
   private final InputStream in;
   private final ReadableByteChannel channel;
+  private final boolean isLocal;
+  private final URI localURI;
+  private final URI remoteURI;
 
   public DomainPeer(DomainSocket socket) {
     this.socket = socket;
     this.out = socket.getOutputStream();
     this.in = socket.getInputStream();
     this.channel = socket.getChannel();
+
+    // For a domain socket, both clients share the same socket file and only
+    // local communication is supported
+    this.isLocal = true;
+    this.localURI = getURI(socket.getPath());
+    this.remoteURI = this.localURI;
   }
 
   @Override
@@ -90,6 +101,16 @@ public class DomainPeer implements Peer {
   }
 
   @Override
+  public URI getRemoteURI() {
+    return this.remoteURI;
+  }
+
+  @Override
+  public URI getLocalURI() {
+    return this.localURI;
+  }
+
+  @Override
   public InputStream getInputStream() throws IOException {
     return in;
   }
@@ -101,13 +122,7 @@ public class DomainPeer implements Peer {
 
   @Override
   public boolean isLocal() {
-    /* UNIX domain sockets can only be used for local communication. */
-    return true;
-  }
-
-  @Override
-  public String toString() {
-    return "DomainPeer(" + getRemoteAddressString() + ")";
+    return this.isLocal;
   }
 
   @Override
@@ -128,5 +143,32 @@ public class DomainPeer implements Peer {
     // launch a man-in-the-middle attach on UNIX domain socket traffic.
     //
     return true;
+  }
+
+  @Override
+  public String toString() {
+    return "DomainPeer [isLocal=" + isLocal + ", localURI=" + localURI
+        + ", remoteURI=" + remoteURI + "]";
+  }
+
+  /**
+   * Given a host name and port, create a DN URI. Turn checked exception into
+   * runtime. Exception should never happen because the inputs are captures from
+   * an exiting socket and not parsed from an external source.
+   *
+   * Processes reference Unix domain sockets as file system inodes, so two
+   * processes can communicate by opening the same socket. Therefore the URI
+   * host is always "localhost" and the URI path is the file path to the socket
+   * file.
+   *
+   * @param path The path to the Unix domain socket file
+   * @return A URI
+   */
+  private URI getURI(final String path) {
+    try {
+      return new URI("hdfs+dn+unix", "127.0.0.1", path, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException(e);
+    }
   }
 }

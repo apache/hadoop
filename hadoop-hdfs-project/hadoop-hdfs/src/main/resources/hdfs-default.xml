@@ -1417,6 +1417,15 @@
 </property>
 
 <property>
+  <name>dfs.datanode.transfer.threads.ttl</name>
+  <value>60</value>
+  <description>
+        The maximum time (seconds) that excess idle transfer threads will wait
+        for new tasks before terminating.
+  </description>
+</property>
+
+<property>
   <name>dfs.datanode.scan.period.hours</name>
   <value>504</value>
   <description>

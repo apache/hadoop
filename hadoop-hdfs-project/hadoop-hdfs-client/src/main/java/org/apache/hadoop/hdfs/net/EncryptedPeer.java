@@ -24,6 +24,7 @@ import org.apache.hadoop.net.unix.DomainSocket;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
 import java.nio.channels.ReadableByteChannel;
 
 /**
@@ -108,6 +109,16 @@ public class EncryptedPeer implements Peer {
   @Override
   public String getLocalAddressString() {
     return enclosedPeer.getLocalAddressString();
+  }
+
+  @Override
+  public URI getRemoteURI() {
+    return enclosedPeer.getRemoteURI();
+  }
+
+  @Override
+  public URI getLocalURI() {
+    return enclosedPeer.getLocalURI();
   }
 
   @Override

@@ -69,6 +69,7 @@ import java.util.Random;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -481,7 +482,8 @@ public class TestDataNodeHotSwapVolumes {
     dn.data = Mockito.spy(data);
 
     final int newVolumeCount = 40;
-    List<Thread> addVolumeDelayedThreads = new ArrayList<>();
+    List<Thread> addVolumeDelayedThreads =
+        Collections.synchronizedList(new ArrayList<>());
     AtomicBoolean addVolumeError = new AtomicBoolean(false);
     AtomicBoolean listStorageError = new AtomicBoolean(false);
     CountDownLatch addVolumeCompletionLatch =
@@ -492,16 +494,18 @@ public class TestDataNodeHotSwapVolumes {
     final Thread listStorageThread = new Thread(new Runnable() {
       @Override
       public void run() {
-        while (addVolumeCompletionLatch.getCount() != newVolumeCount) {
-          int i = 0;
-          while(i++ < 1000) {
-            try {
-              dn.getStorage().listStorageDirectories();
-            } catch (Exception e) {
-              listStorageError.set(true);
-              LOG.error("Error listing storage: " + e);
+        try {
+          while (!addVolumeCompletionLatch.await(0, TimeUnit.MILLISECONDS)) {
+            for (int i = 0; i < 100; i++) {
+              try {
+                dn.getStorage().listStorageDirectories();
+              } catch (Exception e) {
+                listStorageError.set(true);
+                LOG.error("Error listing storage", e);
+              }
             }
           }
+        } catch (InterruptedException e) {
         }
       }
     });
@@ -511,23 +515,21 @@ public class TestDataNodeHotSwapVolumes {
     doAnswer(new Answer<Object>() {
       @Override
       public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
-        final Random r = new Random();
         Thread addVolThread =
             new Thread(new Runnable() {
               @Override
               public void run() {
                 try {
-                  r.setSeed(Time.now());
                   // Let 50% of add volume operations
                   // start after an initial delay.
-                  if (r.nextInt(10) > 4) {
-                    int s = r.nextInt(10) + 1;
-                    Thread.sleep(s * 100);
+                  if (ThreadLocalRandom.current().nextFloat() >= 0.5f) {
+                    Thread.sleep(
+                        ThreadLocalRandom.current().nextLong(100L, 1000L));
                   }
                   invocationOnMock.callRealMethod();
                 } catch (Throwable throwable) {
                   addVolumeError.set(true);
-                  LOG.error("Error adding volume: " + throwable);
+                  LOG.error("Error adding volume", throwable);
                 } finally {
                   addVolumeCompletionLatch.countDown();
                 }
@@ -541,6 +543,9 @@ public class TestDataNodeHotSwapVolumes {
 
     addVolumes(newVolumeCount, addVolumeCompletionLatch);
     numVolumes += newVolumeCount;
+
+    // Wait for all the volumes to be added
+    addVolumeCompletionLatch.await(180, TimeUnit.SECONDS);
 
     // Wait for all addVolume and listStorage Threads to complete
     for (Thread t : addVolumeDelayedThreads) {

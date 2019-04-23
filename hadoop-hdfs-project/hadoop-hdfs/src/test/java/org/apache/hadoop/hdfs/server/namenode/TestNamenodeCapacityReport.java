@@ -207,6 +207,10 @@ public class TestNamenodeCapacityReport {
         HdfsClientConfigKeys.BlockWrite.LOCATEFOLLOWINGBLOCK_RETRIES_KEY, 1);
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_MAINTENANCE_REPLICATION_MIN_KEY,
         minMaintenanceR);
+
+    // Turn off thread re-use so that we get consistent ouput for this test
+    conf.setLong(DFSConfigKeys.DFS_DATANODE_RECEIVER_THREADS_TTL, 0L);
+
     MiniDFSCluster cluster = null;
 
     final int nodes = 8;

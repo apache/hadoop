@@ -51,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -59,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.google.common.collect.Iterators;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -715,39 +717,52 @@ public class TestBlockRecovery {
 
     Configuration conf = new HdfsConfiguration();
     conf.set(DFSConfigKeys.DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY, "1000");
-    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
-        .numDataNodes(1).build();
+    MiniDFSCluster cluster = null;
+
     try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
       cluster.waitClusterUp();
-      DistributedFileSystem fs = cluster.getFileSystem();
-      Path path = new Path("/test");
-      FSDataOutputStream out = fs.create(path);
+
+      final DistributedFileSystem fs = cluster.getFileSystem();
+      final Path path = new Path("/test");
+      final FSDataOutputStream out = fs.create(path);
       out.writeBytes("data");
       out.hsync();
-      
-      List<LocatedBlock> blocks = DFSTestUtil.getAllBlocks(fs.open(path));
+
+      final List<LocatedBlock> blocks = DFSTestUtil.getAllBlocks(fs.open(path));
       final LocatedBlock block = blocks.get(0);
       final DataNode dataNode = cluster.getDataNodes().get(0);
-      
+      final CountDownLatch syncPoint = new CountDownLatch(2);
+
       final AtomicBoolean recoveryInitResult = new AtomicBoolean(true);
+
       Thread recoveryThread = new Thread() {
         @Override
         public void run() {
           try {
             DatanodeInfo[] locations = block.getLocations();
-            final RecoveringBlock recoveringBlock = new RecoveringBlock(
-                block.getBlock(), locations, block.getBlock()
-                    .getGenerationStamp() + 1);
-            try(AutoCloseableLock lock = dataNode.data.acquireDatasetLock()) {
+            final RecoveringBlock recoveringBlock =
+                new RecoveringBlock(block.getBlock(), locations,
+                    block.getBlock().getGenerationStamp() + 1);
+            try (AutoCloseableLock lock = dataNode.data.acquireDatasetLock()) {
+              // Wait for XCeiver thread to timeout (1s timeout)
               Thread.sleep(2000);
               dataNode.initReplicaRecovery(recoveringBlock);
+
+              // Replica recover has began, allow main thread to close the file
+              syncPoint.countDown();
             }
           } catch (Exception e) {
             recoveryInitResult.set(false);
           }
         }
       };
+
       recoveryThread.start();
+
+      // Wait for recovery thread to start recovery on this thread's open file
+      syncPoint.countDown();
+
       try {
         out.close();
       } catch (IOException e) {
@@ -756,16 +771,16 @@ public class TestBlockRecovery {
       } finally {
         recoveryThread.join();
       }
+
       Assert.assertTrue("Recovery should be initiated successfully",
           recoveryInitResult.get());
-      
-      dataNode.updateReplicaUnderRecovery(block.getBlock(), block.getBlock()
-          .getGenerationStamp() + 1, block.getBlock().getBlockId(),
-          block.getBlockSize());
+
+      dataNode.updateReplicaUnderRecovery(block.getBlock(),
+          block.getBlock().getGenerationStamp() + 1,
+          block.getBlock().getBlockId(), block.getBlockSize());
     } finally {
-      if (null != cluster) {
-        cluster.shutdown();
-        cluster = null;
+      if (cluster != null) {
+        cluster.close();
       }
     }
   }
@@ -961,8 +976,6 @@ public class TestBlockRecovery {
     Assert.assertEquals(
         TEST_STOP_WORKER_XCEIVER_STOP_TIMEOUT_MILLIS,
         dn.getDnConf().getXceiverStopTimeout());
-    final TestStopWorkerSemaphore progressParent =
-      new TestStopWorkerSemaphore();
     final TestStopWorkerSemaphore terminateSlowWriter =
       new TestStopWorkerSemaphore();
     final AtomicReference<String> failure =
@@ -972,6 +985,7 @@ public class TestBlockRecovery {
     final RecoveringBlock recoveringBlock =
         Iterators.get(recoveringBlocks.iterator(), 0);
     final ExtendedBlock block = recoveringBlock.getBlock();
+    final CountDownLatch syncPoint = new CountDownLatch(2);
     Thread slowWriterThread = new Thread(new Runnable() {
       @Override
       public void run() {
@@ -982,9 +996,12 @@ public class TestBlockRecovery {
               spyDN.data.createRbw(StorageType.DISK, null, block, false);
           replicaHandler.close();
           LOG.debug("slowWriter created rbw");
-          // Tell the parent thread to start progressing.
-          progressParent.sem.release();
+          syncPoint.countDown();
           terminateSlowWriter.uninterruptiblyAcquire(60000);
+
+          // Give up ownership of the replica
+          replicaHandler.getReplica().attemptToSetWriter(Thread.currentThread(),
+              null);
           LOG.debug("slowWriter exiting");
         } catch (Throwable t) {
           LOG.error("slowWriter got exception", t);
@@ -996,7 +1013,10 @@ public class TestBlockRecovery {
     // Start the slow worker thread and wait for it to take ownership of the
     // ReplicaInPipeline
     slowWriterThread.start();
-    progressParent.uninterruptiblyAcquire(60000);
+
+    // Will only free the main test thread if the slowWriter has ownership of
+    // the ReplicaInPipeline and test thread has reached this point
+    syncPoint.countDown();
 
     // Start a worker thread which will attempt to stop the writer.
     Thread stopWriterThread = new Thread(new Runnable() {

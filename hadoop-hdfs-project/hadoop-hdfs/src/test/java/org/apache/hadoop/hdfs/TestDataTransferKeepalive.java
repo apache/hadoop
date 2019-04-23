@@ -22,6 +22,7 @@ import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_MAX_
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_RECEIVER_THREADS_TTL;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_DATANODE_SOCKET_WRITE_TIMEOUT_KEY;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -61,7 +62,10 @@ public class TestDataTransferKeepalive {
         KEEPALIVE_TIMEOUT);
     conf.setInt(DFS_CLIENT_MAX_BLOCK_ACQUIRE_FAILURES_KEY,
         0);
-    
+
+    // Threads are re-used, waiting up to 1 second for new work before exiting
+    conf.setLong(DFS_DATANODE_RECEIVER_THREADS_TTL, 1L);
+
     cluster = new MiniDFSCluster.Builder(conf)
       .numDataNodes(1).build();
     dn = cluster.getDataNodes().get(0);
@@ -94,8 +98,11 @@ public class TestDataTransferKeepalive {
 
     DFSTestUtil.createFile(fs, TEST_FILE, 1L, (short)1, 0L);
 
-    // Clients that write aren't currently re-used.
     assertEquals(0, peerCache.size());
+
+    // Clients that write are re-used if they are not idle for too long
+    // Thread TTL set to 1 second in test suit init
+    Thread.sleep(1500L);
     assertXceiverCount(0);
 
     // Reads the file, so we should get a
@@ -105,10 +112,9 @@ public class TestDataTransferKeepalive {
     assertXceiverCount(1);
 
     // Sleep for a bit longer than the keepalive timeout
-    // and make sure the xceiver died.
-    Thread.sleep(DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT + 50);
+    Thread.sleep(DFS_DATANODE_SOCKET_REUSE_KEEPALIVE_DEFAULT + 50L + 1000L);
     assertXceiverCount(0);
-    
+
     // The socket is still in the cache, because we don't
     // notice that it's closed until we try to read
     // from it again.
@@ -139,8 +145,11 @@ public class TestDataTransferKeepalive {
 
     DFSTestUtil.createFile(fs, TEST_FILE, 1L, (short)1, 0L);
 
-    // Clients that write aren't currently re-used.
     assertEquals(0, peerCache.size());
+
+    // Clients that write are currently re-used unless TTL time passes
+    // So sleep first
+    Thread.sleep(1500L);
     assertXceiverCount(0);
 
     // Reads the file, so we should get a
@@ -209,6 +218,9 @@ public class TestDataTransferKeepalive {
     // Make a small file
     Configuration clientConf = new Configuration(conf);
     clientConf.set(DFS_CLIENT_CONTEXT, "testManyClosedSocketsInCache");
+
+    // Increase TTL of items in cache to 30s so they endure this entire test
+    clientConf.setLong(DFS_CLIENT_SOCKET_CACHE_EXPIRY_MSEC_KEY, 30000L);
     DistributedFileSystem fs =
         (DistributedFileSystem)FileSystem.get(cluster.getURI(),
             clientConf);
@@ -227,13 +239,13 @@ public class TestDataTransferKeepalive {
         IOUtils.copyBytes(stm, new IOUtils.NullOutputStream(), 1024);
       }
     } finally {
-      IOUtils.cleanup(null, stms);
+      IOUtils.closeStreams(stms);
     }
-    
+
     assertEquals(5, peerCache.size());
-    
-    // Let all the xceivers timeout
-    Thread.sleep(1500);
+
+    // Let all the xceivers timeout (1s timeout)
+    Thread.sleep(3000);
     assertXceiverCount(0);
 
     // Client side still has the sockets cached
