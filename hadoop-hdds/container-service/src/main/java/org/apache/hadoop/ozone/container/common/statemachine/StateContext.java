@@ -19,9 +19,10 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
@@ -34,8 +35,6 @@ import org.apache.hadoop.ozone.container.common.states.datanode
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
-import org.apache.hadoop.ozone.protocol.commands.CommandStatus
-    .CommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands
     .DeleteBlockCommandStatus.DeleteBlockCommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -432,27 +431,14 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    final Optional<CommandStatusBuilder> cmdStatusBuilder;
-    switch (cmd.getType()) {
-    case replicateContainerCommand:
-      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
-      break;
-    case deleteBlocksCommand:
-      cmdStatusBuilder = Optional.of(
-          DeleteBlockCommandStatusBuilder.newBuilder());
-      break;
-    case deleteContainerCommand:
-      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
-      break;
-    default:
-      cmdStatusBuilder = Optional.empty();
+    if (cmd.getType() == SCMCommandProto.Type.deleteBlocksCommand) {
+      addCmdStatus(cmd.getId(),
+          DeleteBlockCommandStatusBuilder.newBuilder()
+              .setCmdId(cmd.getId())
+              .setStatus(Status.PENDING)
+              .setType(cmd.getType())
+              .build());
     }
-    cmdStatusBuilder.ifPresent(statusBuilder ->
-        addCmdStatus(cmd.getId(), statusBuilder
-            .setCmdId(cmd.getId())
-            .setStatus(Status.PENDING)
-            .setType(cmd.getType())
-            .build()));
   }
 
   /**

@@ -421,15 +421,10 @@ public class TestEndPoint {
           serverAddress, 3000);
       Map<Long, CommandStatus> map = stateContext.getCommandStatusMap();
       assertNotNull(map);
-      assertEquals("Should have 2 objects", 2, map.size());
-      assertTrue(map.containsKey(Long.valueOf(2)));
-      assertTrue(map.containsKey(Long.valueOf(3)));
-      assertTrue(map.get(Long.valueOf(2)).getType()
-          .equals(Type.replicateContainerCommand));
-      assertTrue(
-          map.get(Long.valueOf(3)).getType().equals(Type.deleteBlocksCommand));
-      assertTrue(map.get(Long.valueOf(2)).getStatus().equals(Status.PENDING));
-      assertTrue(map.get(Long.valueOf(3)).getStatus().equals(Status.PENDING));
+      assertEquals("Should have 1 objects", 1, map.size());
+      assertTrue(map.containsKey(3L));
+      assertEquals(Type.deleteBlocksCommand, map.get(3L).getType());
+      assertEquals(Status.PENDING, map.get(3L).getStatus());
 
       scmServerImpl.clearScmCommandRequests();
     }
