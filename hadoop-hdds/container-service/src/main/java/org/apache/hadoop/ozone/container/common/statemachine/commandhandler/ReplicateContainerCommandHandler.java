@@ -61,25 +61,17 @@ public class ReplicateContainerCommandHandler implements CommandHandler {
   public void handle(SCMCommand command, OzoneContainer container,
       StateContext context, SCMConnectionManager connectionManager) {
 
-    ReplicateContainerCommand replicateCommand =
+    final ReplicateContainerCommand replicateCommand =
         (ReplicateContainerCommand) command;
-    try {
-      List<DatanodeDetails> sourceDatanodes =
-          replicateCommand.getSourceDatanodes();
-      long containerID = replicateCommand.getContainerID();
+    final List<DatanodeDetails> sourceDatanodes =
+        replicateCommand.getSourceDatanodes();
+    final long containerID = replicateCommand.getContainerID();
 
-      Preconditions.checkArgument(sourceDatanodes.size() > 0,
-          String.format("Replication command is received for container %d "
-              + "but the size of source datanodes was 0.", containerID));
+    Preconditions.checkArgument(sourceDatanodes.size() > 0,
+        String.format("Replication command is received for container %d "
+            + "but the size of source datanodes was 0.", containerID));
 
-      ReplicationTask replicationTask =
-          new ReplicationTask(containerID, sourceDatanodes);
-      supervisor.addTask(replicationTask);
-
-    } finally {
-      updateCommandStatus(context, command,
-          (cmdStatus) -> cmdStatus.setStatus(true), LOG);
-    }
+    supervisor.addTask(new ReplicationTask(containerID, sourceDatanodes));
   }
 
   @Override

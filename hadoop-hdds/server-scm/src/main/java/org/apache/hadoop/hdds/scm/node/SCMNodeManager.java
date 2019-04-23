@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
@@ -83,8 +82,7 @@ import java.util.stream.Collectors;
  */
 public class SCMNodeManager implements NodeManager {
 
-  @VisibleForTesting
-  static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(SCMNodeManager.class);
 
   private final NodeStateManager nodeStateManager;

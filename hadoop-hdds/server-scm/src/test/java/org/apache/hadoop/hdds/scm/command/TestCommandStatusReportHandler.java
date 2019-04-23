@@ -74,13 +74,8 @@ public class TestCommandStatusReportHandler implements EventPublisher {
     cmdStatusReportHandler.onMessage(report, this);
     assertTrue(logCapturer.getOutput().contains("firing event of type " +
         "Delete_Block_Status"));
-    assertTrue(logCapturer.getOutput().contains("firing event of type " +
-        "Replicate_Command_Status"));
-
     assertTrue(logCapturer.getOutput().contains("type: " +
         "deleteBlocksCommand"));
-    assertTrue(logCapturer.getOutput().contains("type: " +
-        "replicateContainerCommand"));
 
   }
 

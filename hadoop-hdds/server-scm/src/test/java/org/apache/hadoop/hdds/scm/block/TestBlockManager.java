@@ -37,8 +37,6 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.hdds.server.events.EventHandler;
-import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.container.common.SCMTestUtils;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -57,7 +55,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.MB;
 /**
  * Tests for SCM Block Manager.
  */
-public class TestBlockManager implements EventHandler<Boolean> {
+public class TestBlockManager {
   private StorageContainerManager scm;
   private SCMContainerManager mapping;
   private MockNodeManager nodeManager;
@@ -103,7 +101,8 @@ public class TestBlockManager implements EventHandler<Boolean> {
     eventQueue = new EventQueue();
     eventQueue.addHandler(SCMEvents.SAFE_MODE_STATUS,
         scm.getSafeModeHandler());
-    eventQueue.addHandler(SCMEvents.START_REPLICATION, this);
+    eventQueue.addHandler(SCMEvents.SAFE_MODE_STATUS,
+        scm.getSafeModeHandler());
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, mapping);
     eventQueue.addHandler(SCMEvents.CLOSE_CONTAINER, closeContainerHandler);
@@ -282,8 +281,4 @@ public class TestBlockManager implements EventHandler<Boolean> {
     Assert.assertEquals(1, pipelineManager.getPipelines(type, factor).size());
   }
 
-  @Override
-  public void onMessage(Boolean aBoolean, EventPublisher publisher) {
-    System.out.println("test");
-  }
 }
