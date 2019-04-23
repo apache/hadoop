@@ -479,6 +479,13 @@ public class ParentQueue extends AbstractCSQueue {
   }
 
   @Override
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp) {
+    throw new UnsupportedOperationException("Submission of application attempt"
+        + " to parent queue is not supported");
+  }
+
+  @Override
   public void finishApplicationAttempt(FiCaSchedulerApp application,
       String queue) {
     // finish attempt logic.

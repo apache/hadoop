@@ -2431,7 +2431,7 @@ public class CapacityScheduler extends
         if (!app.isStopped()) {
           source.finishApplicationAttempt(app, sourceQueueName);
           // Submit to a new queue
-          dest.submitApplicationAttempt(app, user);
+          dest.submitApplicationAttempt(app, user, true);
         }
         // Finish app & update metrics
         app.move(dest);
