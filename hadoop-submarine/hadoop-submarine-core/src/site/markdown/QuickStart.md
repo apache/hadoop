@@ -89,9 +89,9 @@ usage: job run
 ```
 
 #### Notes:
-When using `localization` option to make a collection of dependency Python 
+When using `localization` option to make a collection of dependency Python
 scripts available to entry python script in the container, you may also need to
- set `PYTHONPATH` environment variable as below to avoid module import error 
+set `PYTHONPATH` environment variable as below to avoid module import error
 reported from `entry_script.py`.
 
 ```

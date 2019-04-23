@@ -166,6 +166,9 @@ public class RunJobCli extends AbstractCli {
         " parameter" + CliConstants.KEYTAB + " on cluster machines will be " +
         "used");
     options.addOption("h", "help", false, "Print help");
+    options.addOption("insecure", false, "Cluster is not Kerberos enabled.");
+    options.addOption("conf", true,
+        "User specified configuration, as key=val pairs.");
     return options;
   }
 

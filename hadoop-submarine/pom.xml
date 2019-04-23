@@ -37,6 +37,7 @@
   <modules>
     <module>hadoop-submarine-core</module>
     <module>hadoop-submarine-yarnservice-runtime</module>
+    <module>hadoop-submarine-tony-runtime</module>
   </modules>
 
  <profiles>

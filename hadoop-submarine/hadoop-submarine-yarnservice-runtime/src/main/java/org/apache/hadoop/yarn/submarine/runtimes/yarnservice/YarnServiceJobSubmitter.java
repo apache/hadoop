@@ -110,7 +110,7 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
     return serviceResource;
   }
 
-  private String getValueOfEnvionment(String envar) {
+  private String getValueOfEnvironment(String envar) {
     // extract value from "key=value" form
     if (envar == null || !envar.contains("=")) {
       return "";
@@ -133,10 +133,10 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
 
     for (String envar : parameters.getEnvars()) {
       if (envar.startsWith("DOCKER_HADOOP_HDFS_HOME=")) {
-        hdfsHome = getValueOfEnvionment(envar);
+        hdfsHome = getValueOfEnvironment(envar);
         hadoopEnv = true;
       } else if (envar.startsWith("DOCKER_JAVA_HOME=")) {
-        javaHome = getValueOfEnvionment(envar);
+        javaHome = getValueOfEnvironment(envar);
       }
     }
 
