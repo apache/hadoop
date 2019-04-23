@@ -44,8 +44,8 @@ spec:
             - om
             - --init
           env:
-            - name: "WAITFOR"
-              value: "scm-0.scm:9876"
+            - name: "ENSURE_OM_INITIALIZED"
+              value: "/data/metadata/om/current/VERSION"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
@@ -59,8 +59,8 @@ spec:
             - ozone
             - om
           env:
-            - name: "WAITFOR"
-              value: "scm-0.scm:9876"
+            - name: "ENSURE_OM_INITIALIZED"
+              value: "/data/metadata/om/current/VERSION"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
