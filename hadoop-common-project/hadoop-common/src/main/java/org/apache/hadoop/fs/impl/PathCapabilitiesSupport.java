@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.impl;
 
+import java.util.Locale;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
@@ -32,12 +34,14 @@ public class PathCapabilitiesSupport {
    * Validate the arguments to {@code PathCapabilities.hadCapability()}.
    * @param path path to query the capability of.
    * @param capability non-null, non-empty string to query the path for support.
+   * @return the string to use in a switch statement.
    * @throws IllegalArgumentException if a an argument is invalid.
    */
-  public static void validatehasPathCapabilityArgs(
+  public static String validatePathCapabilityArgs(
       final Path path, final String capability) {
     checkArgument(path != null, "null path");
     checkArgument(capability != null && !capability.isEmpty(),
         "null/empty capability");
+    return capability.toLowerCase(Locale.ENGLISH);
   }
 }

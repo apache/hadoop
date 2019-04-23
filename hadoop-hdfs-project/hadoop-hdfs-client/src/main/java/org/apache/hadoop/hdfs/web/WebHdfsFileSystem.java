@@ -135,6 +135,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /** A FileSystem for HDFS over the web. */
 public class WebHdfsFileSystem extends FileSystem
     implements DelegationTokenRenewer.Renewable,
@@ -2096,9 +2098,9 @@ public class WebHdfsFileSystem extends FileSystem
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
+
     case CommonPathCapabilities.FS_ACLS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CHECKSUMS:
@@ -2113,7 +2115,7 @@ public class WebHdfsFileSystem extends FileSystem
       // so always return true.
       return true;
     default:
-      return superCapability;
+      return super.hasPathCapability(p, capability);
     }
   }
 

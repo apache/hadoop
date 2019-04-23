@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.viewfs;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.viewfs.Constants.PERMISSION_555;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE;
 import static org.apache.hadoop.fs.viewfs.Constants.CONFIG_VIEWFS_ENABLE_INNER_CACHE_DEFAULT;
@@ -33,7 +34,6 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -58,12 +58,10 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.AclUtil;
@@ -1041,11 +1039,8 @@ public class ViewFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(Path path, String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    // qualify the path to make sure that it refers to the current FS.
-    Path p = makeQualified(path);
-
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_CONCAT:
       // concat is not supported, as it may be invoked across filesystems.
       return false;
@@ -1059,7 +1054,7 @@ public class ViewFileSystem extends FileSystem {
           capability);
     } catch (FileNotFoundException e) {
       // no mount point, nothing will work.
-      throw new NotInMountpointException(path, "hasPathCapability");
+      throw new NotInMountpointException(p, "hasPathCapability");
     }
   }
 

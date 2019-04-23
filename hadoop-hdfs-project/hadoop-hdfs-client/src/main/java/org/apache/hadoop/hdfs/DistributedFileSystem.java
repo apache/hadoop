@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
 import org.apache.hadoop.fs.InvalidPathHandleException;
-import org.apache.hadoop.fs.PathCapabilities;
 import org.apache.hadoop.fs.PathHandle;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Options;
@@ -64,7 +63,6 @@ import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.UnresolvedLinkException;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.XAttrSetFlag;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -120,9 +118,10 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * Implementation of the abstract FileSystem for the DFS system.
@@ -3417,11 +3416,10 @@ public class DistributedFileSystem extends FileSystem
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
 
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
     case CommonPathCapabilities.FS_ACLS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CHECKSUMS:
@@ -3436,7 +3434,7 @@ public class DistributedFileSystem extends FileSystem
     case CommonPathCapabilities.FS_SYMLINKS:
       return FileSystem.areSymlinksEnabled();
     default:
-      return super.hasPathCapability(path, capability);
+      return super.hasPathCapability(p, capability);
     }
   }
 }

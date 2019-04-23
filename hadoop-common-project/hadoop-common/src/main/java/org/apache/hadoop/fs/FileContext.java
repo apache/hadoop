@@ -70,6 +70,8 @@ import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /**
  * The FileContext class provides an interface for users of the Hadoop
  * file system. It exposes a number of file system operations, e.g. create,
@@ -2947,7 +2949,7 @@ public class FileContext implements PathCapabilities {
    */
   public boolean hasPathCapability(Path path, String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
+    validatePathCapabilityArgs(path, capability);
     return FsLinkResolution.resolve(this,
         fixRelativePart(path),
         (fs, p) -> fs.hasPathCapability(p, capability));

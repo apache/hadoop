@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Locale;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -72,6 +71,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.VersionInfo;
 
 import static org.apache.hadoop.fs.adl.AdlConfKeys.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * A FileSystem to access Azure Data Lake Store.
@@ -1039,17 +1039,16 @@ public class AdlFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    // qualify the path to make sure that it refers to the current FS.
-    // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
+
     case CommonPathCapabilities.FS_ACLS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
     case CommonPathCapabilities.FS_PERMISSIONS:
       return true;
     default:
-      return superCapability;
+      return super.hasPathCapability(path, capability);
     }
   }
 }

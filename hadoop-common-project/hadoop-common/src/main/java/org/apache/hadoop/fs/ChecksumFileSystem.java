@@ -43,6 +43,8 @@ import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /****************************************************************
  * Abstract Checksumed FileSystem.
  * It provide a basic implementation of a Checksumed FileSystem,
@@ -875,21 +877,20 @@ public abstract class ChecksumFileSystem extends FilterFileSystem {
   }
 
   /**
-   * Disable those operations which are disabled so as to guarantee
-   * checksumming of all created files.
+   * Disable those operations which the checksummed FS blocks.
    * {@inheritDoc}
    */
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
       return false;
     default:
-      return superCapability;
+      return super.hasPathCapability(p, capability);
     }
   }
 

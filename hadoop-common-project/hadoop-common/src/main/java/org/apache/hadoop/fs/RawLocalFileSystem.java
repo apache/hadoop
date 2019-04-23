@@ -41,19 +41,19 @@ import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Optional;
-import java.util.Locale;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.StringUtils;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * Implement the FileSystem API for the raw local filesystem.
@@ -1066,8 +1066,7 @@ public class RawLocalFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
     case CommonPathCapabilities.FS_PATHHANDLES:

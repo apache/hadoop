@@ -35,7 +35,6 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
@@ -59,7 +58,6 @@ import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -90,6 +88,7 @@ import org.slf4j.LoggerFactory;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.*;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /****************************************************************
  * An abstract base class for a fairly generic filesystem.  It
@@ -3271,16 +3270,10 @@ public abstract class FileSystem extends Configured
    */
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
     case CommonPathCapabilities.FS_SYMLINKS:
       // delegate to the existing supportsSymlinks() call.
       return supportsSymlinks() && areSymlinksEnabled();
-    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
-      // this is less efficient than it should be.
-      return getCanonicalServiceName() != null;
     default:
       // the feature is not implemented.
       return false;

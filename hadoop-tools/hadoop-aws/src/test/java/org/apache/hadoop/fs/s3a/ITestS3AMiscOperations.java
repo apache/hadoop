@@ -35,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.store.EtagChecksum;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertHasPathCapabilities;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertLacksPathCapabilities;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 
@@ -143,8 +145,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
     LOG.info("Checksum for {}: {}", file1, checksum1);
-    assertTrue("FS checksum support disabled",
-        fs.hasPathCapability(file1, CommonPathCapabilities.FS_CHECKSUMS));
+    assertHasPathCapabilities(fs, file1,
+        CommonPathCapabilities.FS_CHECKSUMS);
     assertNotNull("Null file 1 checksum", checksum1);
     assertNotEquals("file 1 checksum", 0, checksum1.getLength());
     assertEquals("checksums", checksum1,
@@ -162,8 +164,8 @@ public class ITestS3AMiscOperations extends AbstractS3ATestBase {
     final S3AFileSystem fs = getFileSystem();
     Path file1 = touchFile("file1");
     EtagChecksum checksum1 = fs.getFileChecksum(file1, 0);
-    assertFalse("FS checksum support enabled",
-        fs.hasPathCapability(file1, CommonPathCapabilities.FS_CHECKSUMS));
+    assertLacksPathCapabilities(fs, file1,
+        CommonPathCapabilities.FS_CHECKSUMS);
     assertNull("Checksums are being generated", checksum1);
   }
 

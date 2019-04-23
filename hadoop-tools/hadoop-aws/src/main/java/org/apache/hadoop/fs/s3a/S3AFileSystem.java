@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -123,7 +122,6 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.delegation.AWSPolicyProvider;
@@ -154,6 +152,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 
 import static org.apache.hadoop.fs.impl.AbstractFSBuilderImpl.rejectUnknownMandatoryKeys;
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
@@ -4089,10 +4088,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
 
     case CommitConstants.STORE_CAPABILITY_MAGIC_COMMITTER:
       // capability depends on FS configuration
@@ -4108,7 +4105,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ETAG_CHECKSUM_ENABLED_DEFAULT);
 
     default:
-      return super.hasPathCapability(path, capability);
+      return super.hasPathCapability(p, capability);
     }
   }
 

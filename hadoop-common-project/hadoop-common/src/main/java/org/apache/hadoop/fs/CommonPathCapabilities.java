@@ -18,10 +18,6 @@
 
 package org.apache.hadoop.fs;
 
-import java.util.List;
-
-import org.apache.hadoop.fs.permission.FsPermission;
-
 /**
  * Common path capabilities.
  */
@@ -31,56 +27,49 @@ public final class CommonPathCapabilities {
   }
 
   /**
-   * Does the Filesystem support
-   * {@link FileSystem#setAcl(Path, List)},
-   * {@link FileSystem#getAclStatus(Path)}
+   * Does the store support
+   * {@code FileSystem.setAcl(Path, List)},
+   * {@code FileSystem.getAclStatus(Path)}
    * and related methods?
    * Value: {@value}.
    */
   public static final String FS_ACLS = "fs.paths.acls";
 
   /**
-   * Does the Filesystem support {@link FileSystem#append(Path)}?
+   * Does the store support {@code FileSystem.append(Path)}?
    * Value: {@value}.
    */
   public static final String FS_APPEND = "fs.paths.append";
 
   /**
-   * Does the FS support {@link FileSystem#getFileChecksum(Path)}?
+   * Does the store support {@code FileSystem.getFileChecksum(Path)}?
    * Value: {@value}.
    */
   public static final String FS_CHECKSUMS = "fs.paths.checksums";
 
   /**
-   * Does the FS support {@link FileSystem#concat(Path, Path[])}?
+   * Does the store support {@code FileSystem.concat(Path, Path[])}?
    * Value: {@value}.
    */
   public static final String FS_CONCAT = "fs.paths.concat";
 
   /**
-   * Does the filesystem support Delegation Tokens?
-   * Value: {@value}.
-   */
-  public static final String FS_DELEGATION_TOKENS =
-      "fs.paths.delegation.tokens";
-
-  /**
-   * Does the FS support {@link FileSystem#listCorruptFileBlocks(Path)} ()}?
+   * Does the store support {@code FileSystem.listCorruptFileBlocks(Path)} ()}?
    * Value: {@value}.
    */
   public static final String FS_LIST_CORRUPT_FILE_BLOCKS =
       "fs.paths.list-corrupt-file-blocks";
 
   /**
-   * Does the FS support
-   * {@link FileSystem#createPathHandle(FileStatus, Options.HandleOpt...)}
+   * Does the store support
+   * {@code FileSystem.createPathHandle(FileStatus, Options.HandleOpt...)}
    * and related methods?
    * Value: {@value}.
    */
   public static final String FS_PATHHANDLES = "fs.paths.pathhandles";
 
   /**
-   * Does the FS support {@link FileSystem#setPermission(Path, FsPermission)}
+   * Does the store support {@code FileSystem.setPermission(Path, FsPermission)}
    * and related methods?
    * Value: {@value}.
    */
@@ -98,14 +87,14 @@ public final class CommonPathCapabilities {
       "fs.paths.read-only-connector";
 
   /**
-   * Does the FS support snapshots through
-   * {@link FileSystem#createSnapshot(Path)} and related methods??
+   * Does the store support snapshots through
+   * {@code FileSystem.createSnapshot(Path)} and related methods??
    * Value: {@value}.
    */
   public static final String FS_SNAPSHOTS = "fs.paths.snapshots";
 
   /**
-   * Does the FS support {@link FileSystem#setStoragePolicy(Path, String)}
+   * Does the store support {@code FileSystem.setStoragePolicy(Path, String)}
    * and related methods?
    * Value: {@value}.
    */
@@ -113,23 +102,23 @@ public final class CommonPathCapabilities {
       "fs.paths.storagepolicy";
 
   /**
-   * Does the FS support symlinks through
-   * {@link FileSystem#createSymlink(Path, Path, boolean)} and related methods?
+   * Does the store support symlinks through
+   * {@code FileSystem.createSymlink(Path, Path, boolean)} and related methods?
    * Value: {@value}.
    */
   public static final String FS_SYMLINKS =
       "fs.paths.symlinks";
 
   /**
-   * Does the FS support {@link FileSystem#truncate(Path, long)} ?
+   * Does the store support {@code FileSystem#truncate(Path, long)} ?
    * Value: {@value}.
    */
   public static final String FS_TRUNCATE =
       "fs.paths.truncate";
 
   /**
-   * Does the Filesystem support XAttributes through
-   * {@link FileSystem#setXAttr(Path, String, byte[])} and related methods?
+   * Does the store support XAttributes through
+   * {@code FileSystem#.setXAttr()} and related methods?
    * Value: {@value}.
    */
   public static final String FS_XATTRS = "fs.paths.xattrs";

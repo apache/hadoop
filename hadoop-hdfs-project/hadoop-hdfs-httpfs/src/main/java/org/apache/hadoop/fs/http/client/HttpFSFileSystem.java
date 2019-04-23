@@ -89,6 +89,8 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
+
 /**
  * HttpFSServer implementation of the FileSystemAccess FileSystem.
  * <p>
@@ -1573,9 +1575,8 @@ public class HttpFSFileSystem extends FileSystem
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
     // query the superclass, which triggers argument validation.
-    boolean superCapability = super.hasPathCapability(path, capability);
-
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_ACLS:
     case CommonPathCapabilities.FS_APPEND:
     case CommonPathCapabilities.FS_CONCAT:
@@ -1587,7 +1588,7 @@ public class HttpFSFileSystem extends FileSystem
     case CommonPathCapabilities.FS_SYMLINKS:
       return false;
     default:
-      return superCapability;
+      return super.hasPathCapability(p, capability);
     }
   }
 }

@@ -29,7 +29,6 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -46,7 +45,6 @@ import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Options.CreateOpts;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -61,6 +59,8 @@ import org.apache.hadoop.util.Progressable;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * This class provides an interface for implementors of a Hadoop file system
@@ -1384,16 +1384,10 @@ public abstract class AbstractFileSystem implements PathCapabilities {
   public boolean hasPathCapability(final Path path,
       final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    switch (validatePathCapabilityArgs(makeQualified(path), capability)) {
     case CommonPathCapabilities.FS_SYMLINKS:
       // delegate to the existing supportsSymlinks() call.
       return supportsSymlinks();
-    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
-      // this is less efficient than it should be.
-      return getCanonicalServiceName() != null;
     default:
       // the feature is not implemented.
       return false;

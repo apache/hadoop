@@ -18,7 +18,6 @@
 package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.Options.HandleOpt;
 import org.apache.hadoop.io.IOUtils;
@@ -36,6 +35,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.util.*;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * This is an implementation of the Hadoop Archive 
@@ -908,8 +909,7 @@ public class HarFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    switch (validatePathCapabilityArgs(path, capability)) {
     case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
       return true;
     default:

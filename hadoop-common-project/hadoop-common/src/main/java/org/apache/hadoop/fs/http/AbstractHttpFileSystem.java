@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
 
@@ -37,7 +36,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
-import java.util.Locale;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 abstract class AbstractHttpFileSystem extends FileSystem {
   private static final long DEFAULT_BLOCK_SIZE = 4096;
@@ -121,9 +121,7 @@ abstract class AbstractHttpFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
-
-    switch (capability.toLowerCase(Locale.ENGLISH)) {
+    switch (validatePathCapabilityArgs(path, capability)) {
     case CommonPathCapabilities.FS_READ_ONLY_CONNECTOR:
       return true;
     default:

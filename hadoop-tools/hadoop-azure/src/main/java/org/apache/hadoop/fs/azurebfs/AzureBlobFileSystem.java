@@ -67,7 +67,6 @@ import org.apache.hadoop.fs.azurebfs.contracts.services.AzureServiceErrorCode;
 import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizationException;
 import org.apache.hadoop.fs.azurebfs.extensions.AbfsAuthorizer;
 import org.apache.hadoop.fs.azurebfs.security.AbfsDelegationTokenManager;
-import org.apache.hadoop.fs.impl.PathCapabilitiesSupport;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -77,6 +76,8 @@ import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
+
+import static org.apache.hadoop.fs.impl.PathCapabilitiesSupport.validatePathCapabilityArgs;
 
 /**
  * A {@link org.apache.hadoop.fs.FileSystem} for reading and writing files stored on <a
@@ -1135,20 +1136,16 @@ public class AzureBlobFileSystem extends FileSystem {
   @Override
   public boolean hasPathCapability(final Path path, final String capability)
       throws IOException {
-    PathCapabilitiesSupport.validatehasPathCapabilityArgs(path, capability);
     // qualify the path to make sure that it refers to the current FS.
-    makeQualified(path);
-
-    switch (capability) {
+    final Path p = makeQualified(path);
+    switch (validatePathCapabilityArgs(p, capability)) {
     case CommonPathCapabilities.FS_PERMISSIONS:
     case CommonPathCapabilities.FS_APPEND:
       return true;
     case CommonPathCapabilities.FS_ACLS:
       return getIsNamespaceEnabled();
-    case CommonPathCapabilities.FS_DELEGATION_TOKENS:
-      return delegationTokenEnabled;
     default:
-      return super.hasPathCapability(path, capability);
+      return super.hasPathCapability(p, capability);
     }
   }
 }

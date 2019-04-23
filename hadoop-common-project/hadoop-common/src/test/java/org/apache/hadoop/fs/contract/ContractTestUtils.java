@@ -1520,8 +1520,29 @@ public class ContractTestUtils extends Assert {
       final Path path,
       final String...capabilities) throws IOException {
 
-    for (String shouldHaveCapability : capabilities) {
-      assertTrue("Should have capability: " + shouldHaveCapability,
+    for (String shouldHaveCapability: capabilities) {
+      assertTrue("Should have capability: " + shouldHaveCapability
+              + " under " + path,
+          source.hasPathCapability(path, shouldHaveCapability));
+    }
+  }
+
+  /**
+   * Custom assert to test that the named {@link PathCapabilities}
+   * are not supported.
+   *
+   * @param source source (FS, FC, etc)
+   * @param path path to check
+   * @param capabilities The array of unexpected capabilities
+   */
+  public static void assertLacksPathCapabilities(
+      final PathCapabilities source,
+      final Path path,
+      final String...capabilities) throws IOException {
+
+    for (String shouldHaveCapability: capabilities) {
+      assertFalse("Path  must not support capability: " + shouldHaveCapability
+              + " under " + path,
           source.hasPathCapability(path, shouldHaveCapability));
     }
   }
