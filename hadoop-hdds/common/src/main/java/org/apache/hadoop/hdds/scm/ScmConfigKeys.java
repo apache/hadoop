@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hdds.scm;
 
+import java.util.concurrent.TimeUnit;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.TimeDuration;
-
-import java.util.concurrent.TimeUnit;
 
 /**
  * This class contains constants for configuration keys used in SCM.
@@ -369,7 +369,7 @@ public final class ScmConfigKeys {
 
   // Network topology
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_TYPE =
-          "ozone.scm.network.topology.schema.file.type";
+      "ozone.scm.network.topology.schema.file.type";
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE =
       "ozone.scm.network.topology.schema.file";
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT =

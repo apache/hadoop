@@ -2287,11 +2287,19 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.network.topology.schema.file</name>
-    <value>network-topology-default.xm</value>
+    <name>ozone.scm.network.topology.schema.file.type</name>
+    <value>xml</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The schema file defines the ozone network topology
+      The type of schema file that defines the ozone network topology.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.network.topology.schema.file</name>
+    <value>network-topology-default.xml</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      The schema file defines the ozone network topology.
     </description>
   </property>
   <property>
