@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -81,32 +82,12 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private CertificateClient dnCertClient;
   private String component;
   private HddsDatanodeHttpServer httpServer;
+  private boolean printBanner;
+  private String[] args;
 
-  /**
-   * Default constructor.
-   */
-  public HddsDatanodeService() {
-    this(null);
-  }
-
-  /**
-   * Constructs {@link HddsDatanodeService} using the provided {@code conf}
-   * value.
-   *
-   * @param conf OzoneConfiguration
-   */
-  public HddsDatanodeService(Configuration conf) {
-    if (conf == null) {
-      this.conf = new OzoneConfiguration();
-    } else {
-      this.conf = new OzoneConfiguration(conf);
-    }
-  }
-
-  @VisibleForTesting
-  public static HddsDatanodeService createHddsDatanodeService(
-      String[] args, Configuration conf) {
-    return createHddsDatanodeService(args, conf, false);
+  public HddsDatanodeService(boolean printBanner, String[] args) {
+    this.printBanner = printBanner;
+    this.args = args != null ? Arrays.copyOf(args, args.length) : null;
   }
 
   /**
@@ -115,30 +96,32 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    * This method is intended for unit tests only. It suppresses the
    * startup/shutdown message and skips registering Unix signal handlers.
    *
+   * @param args      command line arguments.
+   * @return Datanode instance
+   */
+  @VisibleForTesting
+  public static HddsDatanodeService createHddsDatanodeService(
+      String[] args) {
+    return createHddsDatanodeService(args, false);
+  }
+
+  /**
+   * Create an Datanode instance based on the supplied command-line arguments.
+   *
    * @param args        command line arguments.
-   * @param conf        HDDS configuration
    * @param printBanner if true, then log a verbose startup message.
    * @return Datanode instance
    */
   private static HddsDatanodeService createHddsDatanodeService(
-      String[] args, Configuration conf, boolean printBanner) {
-    if (args.length == 0 && printBanner) {
-      StringUtils
-          .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
-
-    }
-    return new HddsDatanodeService(conf);
+      String[] args, boolean printBanner) {
+    return new HddsDatanodeService(printBanner, args);
   }
 
   public static void main(String[] args) {
     try {
-      Configuration conf = new OzoneConfiguration();
       HddsDatanodeService hddsDatanodeService =
-          createHddsDatanodeService(args, conf, true);
-      if (hddsDatanodeService != null) {
-        hddsDatanodeService.start(null);
-        hddsDatanodeService.join();
-      }
+          createHddsDatanodeService(args, true);
+      hddsDatanodeService.run(args);
     } catch (Throwable e) {
       LOG.error("Exception in HddsDatanodeService.", e);
       terminate(1, e);
@@ -149,6 +132,21 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     return LOG;
   }
 
+  @Override
+  public Void call() throws Exception {
+    if (printBanner) {
+      StringUtils
+          .startupShutdownMessage(HddsDatanodeService.class, args, LOG);
+    }
+    start(createOzoneConfiguration());
+    join();
+    return null;
+  }
+
+  public void setConfiguration(OzoneConfiguration configuration) {
+    this.conf = configuration;
+  }
+
   /**
    * Starts HddsDatanode services.
    *
@@ -156,12 +154,21 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
    */
   @Override
   public void start(Object service) {
+    if (service instanceof Configurable) {
+      start(new OzoneConfiguration(((Configurable) service).getConf()));
+    } else {
+      start(new OzoneConfiguration());
+    }
+  }
 
+  public void start(OzoneConfiguration configuration) {
+    setConfiguration(configuration);
+    start();
+  }
+
+  public void start() {
     DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
-    if (service instanceof Configurable) {
-      conf = new OzoneConfiguration(((Configurable) service).getConf());
-    }
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
         String hostname = HddsUtils.getHostName(conf);
@@ -404,11 +411,13 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   }
 
   public void join() {
-    try {
-      datanodeStateMachine.join();
-    } catch (InterruptedException e) {
-      Thread.currentThread().interrupt();
-      LOG.info("Interrupted during StorageContainerManager join.");
+    if (datanodeStateMachine != null) {
+      try {
+        datanodeStateMachine.join();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.info("Interrupted during StorageContainerManager join.");
+      }
     }
   }
 

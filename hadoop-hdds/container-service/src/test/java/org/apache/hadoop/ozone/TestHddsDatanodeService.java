@@ -24,7 +24,6 @@ import static org.junit.Assert.assertNotNull;
 import java.io.File;
 import java.io.IOException;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -40,7 +39,7 @@ import org.junit.Test;
  */
 public class TestHddsDatanodeService {
   private File testDir;
-  private Configuration conf;
+  private OzoneConfiguration conf;
   private HddsDatanodeService service;
   private String[] args = new String[] {};
 
@@ -64,8 +63,8 @@ public class TestHddsDatanodeService {
 
   @Test
   public void testStartup() throws IOException {
-    service = HddsDatanodeService.createHddsDatanodeService(args, conf);
-    service.start(null);
+    service = HddsDatanodeService.createHddsDatanodeService(args);
+    service.start(conf);
     service.join();
 
     assertNotNull(service.getDatanodeDetails());

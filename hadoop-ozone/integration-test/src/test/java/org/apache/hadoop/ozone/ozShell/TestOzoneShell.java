@@ -361,21 +361,19 @@ public class TestOzoneShell {
     String expectedError = "Incomplete command";
     String[] args = new String[] {}; //executing 'ozone sh'
 
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh [-hV] [--verbose] [-D=<String=String>]..." +
-            " [COMMAND]");
+    executeWithError(shell, args, expectedError);
 
     args = new String[] {"volume"}; //executing 'ozone sh volume'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh volume [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
 
     args = new String[] {"bucket"}; //executing 'ozone sh bucket'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh bucket [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
 
     args = new String[] {"key"}; //executing 'ozone sh key'
-    executeWithError(shell, args, expectedError,
-        "Usage: ozone sh key [-hV] [COMMAND]");
+    executeWithError(shell, args, MissingSubcommandException.class,
+        expectedError);
   }
 
   @Test
@@ -475,32 +473,11 @@ public class TestOzoneShell {
   }
 
   /**
-   * Execute command, assert exception message and returns true if error
-   * was thrown.
+   * Execute command, assert exception message and exception class
+   * and returns true if error was thrown.
    */
   private void executeWithError(Shell ozoneShell, String[] args,
-      Class exception) {
-    if (Objects.isNull(exception)) {
-      execute(ozoneShell, args);
-    } else {
-      try {
-        execute(ozoneShell, args);
-        fail("Exception is expected from command execution " + Arrays
-            .asList(args));
-      } catch (Exception ex) {
-        LOG.error("Exception: ", ex);
-        assertTrue(ex.getCause().getClass().getCanonicalName()
-            .equals(exception.getCanonicalName()));
-      }
-    }
-  }
-
-  /**
-   * Execute command, assert exception message and returns true if error
-   * was thrown and contains the specified usage string.
-   */
-  private void executeWithError(Shell ozoneShell, String[] args,
-      String expectedError, String usage) {
+                                Class expectedException, String expectedError) {
     if (Strings.isNullOrEmpty(expectedError)) {
       execute(ozoneShell, args);
     } else {
@@ -517,15 +494,33 @@ public class TestOzoneShell {
           Assert.assertTrue(
               String.format(
                   "Error of shell code doesn't contain the " +
-                      "exception [%s] in [%s]",
+                      "expectedException [%s] in [%s]",
                   expectedError, exceptionToCheck.getMessage()),
               exceptionToCheck.getMessage().contains(expectedError));
-          Assert.assertTrue(
-              exceptionToCheck instanceof MissingSubcommandException);
-          Assert.assertTrue(
-              ((MissingSubcommandException)exceptionToCheck)
-                  .getUsage().contains(usage));
+          assertTrue(ex.getClass().getCanonicalName()
+              .equals(expectedException.getCanonicalName()));
         }
+      }
+    }
+  }
+
+  /**
+   * Execute command, assert exception cause message and returns true if error
+   * was thrown.
+   */
+  private void executeWithError(Shell ozoneShell, String[] args,
+      Class expectedCause) {
+    if (Objects.isNull(expectedCause)) {
+      execute(ozoneShell, args);
+    } else {
+      try {
+        execute(ozoneShell, args);
+        fail("Exception is expected from command execution " + Arrays
+            .asList(args));
+      } catch (Exception ex) {
+        LOG.error("Exception: ", ex);
+        assertTrue(ex.getCause().getClass().getCanonicalName()
+            .equals(expectedCause.getCanonicalName()));
       }
     }
   }

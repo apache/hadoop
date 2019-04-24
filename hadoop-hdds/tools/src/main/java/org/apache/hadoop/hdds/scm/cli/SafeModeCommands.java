@@ -54,7 +54,6 @@ public class SafeModeCommands implements Callable<Void> {
   @Override
   public Void call() throws Exception {
     throw new MissingSubcommandException(
-        this.parent.getCmd().getSubcommands().get("safemode").
-        getUsageMessage());
+        this.parent.getCmd().getSubcommands().get("safemode"));
   }
 }
