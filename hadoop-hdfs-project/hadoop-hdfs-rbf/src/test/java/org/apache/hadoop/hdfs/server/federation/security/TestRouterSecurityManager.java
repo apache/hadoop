@@ -18,9 +18,15 @@
 
 package org.apache.hadoop.hdfs.server.federation.security;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.router.RouterHDFSContract;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.router.security.RouterSecurityManager;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -31,7 +37,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
 
+import org.hamcrest.core.StringContains;
 import java.io.IOException;
 
 import org.slf4j.Logger;
@@ -64,21 +73,19 @@ public class TestRouterSecurityManager {
 
   @Test
   public void testDelegationTokens() throws IOException {
-    String[] groupsForTesting = new String[1];
-    groupsForTesting[0] = "router_group";
+    UserGroupInformation.reset();
     UserGroupInformation.setLoginUser(UserGroupInformation
-        .createUserForTesting("router", groupsForTesting));
+        .createUserForTesting("router", getUserGroupForTesting()));
 
     // Get a delegation token
     Token<DelegationTokenIdentifier> token =
         securityManager.getDelegationToken(new Text("some_renewer"));
     assertNotNull(token);
-
     // Renew the delegation token
     UserGroupInformation.setLoginUser(UserGroupInformation
-        .createUserForTesting("some_renewer", groupsForTesting));
+        .createUserForTesting("some_renewer", getUserGroupForTesting()));
     long updatedExpirationTime = securityManager.renewDelegationToken(token);
-    assertTrue(updatedExpirationTime >= token.decodeIdentifier().getMaxDate());
+    assertTrue(updatedExpirationTime <= token.decodeIdentifier().getMaxDate());
 
     // Cancel the delegation token
     securityManager.cancelDelegationToken(token);
@@ -89,5 +96,72 @@ public class TestRouterSecurityManager {
 
     // This throws an exception as token has been cancelled.
     securityManager.renewDelegationToken(token);
+  }
+
+  @Test
+  public void testVerifyToken() throws IOException {
+    UserGroupInformation.reset();
+    UserGroupInformation.setLoginUser(UserGroupInformation
+        .createUserForTesting("router", getUserGroupForTesting()));
+
+    // Get a delegation token
+    Token<DelegationTokenIdentifier> token =
+        securityManager.getDelegationToken(new Text("some_renewer"));
+    assertNotNull(token);
+
+    // Verify the password in delegation token
+    securityManager.verifyToken(token.decodeIdentifier(),
+        token.getPassword());
+
+    // Verify an invalid password
+    String exceptionCause = "password doesn't match";
+    exceptionRule.expect(SecretManager.InvalidToken.class);
+    exceptionRule.expectMessage(
+        StringContains.containsString(exceptionCause));
+
+    securityManager.verifyToken(token.decodeIdentifier(), new byte[10]);
+  }
+
+  @Test
+  public void testCreateCredentials() throws Exception {
+    Configuration conf = initSecurity();
+
+    // Start routers with only an RPC service
+    Configuration routerConf = new RouterConfigBuilder()
+        .metrics()
+        .rpc()
+        .build();
+
+    conf.addResource(routerConf);
+    Router router = new Router();
+    router.init(conf);
+    router.start();
+
+    UserGroupInformation ugi =
+        UserGroupInformation.createUserForTesting(
+        "router", getUserGroupForTesting());
+    Credentials creds = RouterSecurityManager.createCredentials(
+        router, ugi, "some_renewer");
+    for (Token token : creds.getAllTokens()) {
+      assertNotNull(token);
+      // Verify properties of the token
+      assertEquals("HDFS_DELEGATION_TOKEN", token.getKind().toString());
+      DelegationTokenIdentifier identifier = (DelegationTokenIdentifier)
+          token.decodeIdentifier();
+      assertNotNull(identifier);
+      String owner = identifier.getOwner().toString();
+      // Windows will not reverse name lookup "127.0.0.1" to "localhost".
+      String host = Path.WINDOWS ? "127.0.0.1" : "localhost";
+      String expectedOwner = "router/"+ host + "@EXAMPLE.COM";
+      assertEquals(expectedOwner, owner);
+      assertEquals("some_renewer", identifier.getRenewer().toString());
+    }
+    RouterHDFSContract.destroyCluster();
+  }
+
+
+  private static String[] getUserGroupForTesting() {
+    String[] groupsForTesting = {"router_group"};
+    return groupsForTesting;
   }
 }
