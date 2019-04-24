@@ -575,7 +575,7 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public KeyOutputStream build() throws IOException {
+    public KeyOutputStream build() {
       return new KeyOutputStream(openHandler, xceiverManager, omClient,
           chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksumType,
