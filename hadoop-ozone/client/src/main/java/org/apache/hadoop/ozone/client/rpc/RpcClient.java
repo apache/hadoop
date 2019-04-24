@@ -85,6 +85,7 @@ import org.apache.hadoop.hdds.scm.protocolPB
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.io.Text;
@@ -215,9 +216,9 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     maxRetryCount =
         conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
             OZONE_CLIENT_MAX_RETRIES_DEFAULT);
-    retryInterval = conf.getLong(
-        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS,
-        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS_DEFAULT);
+    retryInterval = OzoneUtils.getTimeDurationInMS(conf,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_DEFAULT);
     dtService =
         getOMProxyProvider().getProxy().getDelegationTokenService();
     boolean isUnsafeByteOperationsEnabled = conf.getBoolean(

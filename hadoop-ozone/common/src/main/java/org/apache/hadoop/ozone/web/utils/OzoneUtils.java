@@ -26,6 +26,7 @@ import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
+import org.apache.ratis.util.TimeDuration;
 
 /**
  * Set of Utility functions used in ozone.
@@ -214,4 +216,24 @@ public final class OzoneUtils {
     }
   }
 
+  /**
+   * Return the TimeDuration configured for the given key. If not configured,
+   * return the default value.
+   */
+  public static TimeDuration getTimeDuration(Configuration conf, String key,
+      TimeDuration defaultValue) {
+    TimeUnit defaultTimeUnit = defaultValue.getUnit();
+    long timeDurationInDefaultUnit = conf.getTimeDuration(key,
+        defaultValue.getDuration(), defaultTimeUnit);
+    return TimeDuration.valueOf(timeDurationInDefaultUnit, defaultTimeUnit);
+  }
+
+  /**
+   * Return the time configured for the given key in milliseconds.
+   */
+  public static long getTimeDurationInMS(Configuration conf, String key,
+      TimeDuration defaultValue) {
+    return getTimeDuration(conf, key, defaultValue)
+        .toLong(TimeUnit.MILLISECONDS);
+  }
 }

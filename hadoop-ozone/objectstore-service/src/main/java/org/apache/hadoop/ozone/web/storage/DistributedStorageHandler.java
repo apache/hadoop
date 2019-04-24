@@ -57,6 +57,7 @@ import org.apache.hadoop.ozone.web.handlers.VolumeArgs;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.response.*;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,9 +161,9 @@ public final class DistributedStorageHandler implements StorageHandler {
     this.maxRetryCount =
         conf.getInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, OzoneConfigKeys.
             OZONE_CLIENT_MAX_RETRIES_DEFAULT);
-    this.retryInterval = conf.getLong(
-        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS,
-        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_MS_DEFAULT);
+    this.retryInterval = OzoneUtils.getTimeDurationInMS(conf,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL,
+        OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_DEFAULT);
     boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);

@@ -436,11 +436,12 @@
     </description>
   </property>
   <property>
-    <name>ozone.client.retry.interval.ms</name>
-    <value>500</value>
+    <name>ozone.client.retry.interval</name>
+    <value>0ms</value>
     <tag>OZONE, CLIENT</tag>
-    <description>Indicates the time duration in milliseconds a client will wait
-      before retrying a write key request on encountering an exception.
+    <description>Indicates the time duration a client will wait before
+      retrying a write key request on encountering an exception. Be default
+      there is no wait.
     </description>
   </property>
   <property>
