@@ -203,6 +203,9 @@ public class RouterRpcServer extends AbstractService
   private final RouterClientProtocol clientProto;
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
+  /** Super user credentials that a thread may use. */
+  private static final ThreadLocal<UserGroupInformation> CUR_USER =
+      new ThreadLocal<>();
 
   /**
    * Construct a router RPC server.
@@ -1514,8 +1517,23 @@ public class RouterRpcServer extends AbstractService
    * @throws IOException If we cannot get the user information.
    */
   public static UserGroupInformation getRemoteUser() throws IOException {
-    UserGroupInformation ugi = Server.getRemoteUser();
+    UserGroupInformation ugi = CUR_USER.get();
+    ugi = (ugi != null) ? ugi : Server.getRemoteUser();
     return (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
+  }
+
+  /**
+   * Set super user credentials if needed.
+   */
+  static void setCurrentUser(UserGroupInformation ugi) {
+    CUR_USER.set(ugi);
+  }
+
+  /**
+   * Reset to discard super user credentials.
+   */
+  static void resetCurrentUser() {
+    CUR_USER.set(null);
   }
 
   /**

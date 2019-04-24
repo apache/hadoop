@@ -37,6 +37,8 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.common.TokenVerifier;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -76,7 +78,8 @@ import com.google.common.annotations.VisibleForTesting;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class Router extends CompositeService {
+public class Router extends CompositeService implements
+    TokenVerifier<DelegationTokenIdentifier> {
 
   private static final Logger LOG = LoggerFactory.getLogger(Router.class);
 
@@ -468,6 +471,12 @@ public class Router extends CompositeService {
       return httpServer.getHttpAddress();
     }
     return null;
+  }
+
+  @Override
+  public void verifyToken(DelegationTokenIdentifier tokenId, byte[] password)
+      throws IOException {
+    getRpcServer().getRouterSecurityManager().verifyToken(tokenId, password);
   }
 
   /////////////////////////////////////////////////////////
