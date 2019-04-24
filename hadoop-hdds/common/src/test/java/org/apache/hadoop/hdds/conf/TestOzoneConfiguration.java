@@ -97,6 +97,35 @@ public class TestOzoneConfiguration {
         .getProperty("dfs.cblock.trace.io"));
   }
 
+  @Test
+  public void getConfigurationObject() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set("ozone.scm.client.address", "address");
+    conf.set("ozone.scm.client.bind.host", "host");
+    conf.set("ozone.scm.client.enabled", "true");
+    conf.set("ozone.scm.client.port", "5555");
+
+    SimpleConfiguration configuration =
+        conf.getObject(SimpleConfiguration.class);
+
+    Assert.assertEquals("host", configuration.getBindHost());
+    Assert.assertEquals("address", configuration.getClientAddress());
+    Assert.assertEquals(true, configuration.isEnabled());
+    Assert.assertEquals(5555, configuration.getPort());
+  }
+
+  @Test
+  public void getConfigurationObjectWithDefault() {
+    OzoneConfiguration conf = new OzoneConfiguration();
+
+    SimpleConfiguration configuration =
+        conf.getObject(SimpleConfiguration.class);
+
+    Assert.assertEquals(false, configuration.isEnabled());
+    Assert.assertEquals(9860, configuration.getPort());
+  }
+
+
   private void appendProperty(BufferedWriter out, String name, String val)
       throws IOException {
     this.appendProperty(out, name, val, false);
