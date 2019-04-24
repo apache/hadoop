@@ -584,8 +584,8 @@ public class KeyOutputStream extends OutputStream {
     }
 
     public KeyOutputStream build() throws IOException {
-      return new KeyOutputStream(openHandler, xceiverManager,
-          omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
+      return new KeyOutputStream(openHandler, xceiverManager, omClient,
+          chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksumType,
           bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey,
           maxRetryCount, retryInterval);
