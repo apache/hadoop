@@ -30,8 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
-import org.apache.hadoop.fs.s3a.S3AEncryptionMethods;
-import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
@@ -97,7 +95,7 @@ public class StoreContext {
   private final ChangeDetectionPolicy changeDetectionPolicy;
 
   /** Evaluated options. */
-  private final boolean enableMultiObjectsDelete;
+  private final boolean multiObjectDeleteEnabled;
 
   /** List algorithm. */
   private final boolean useListV1;
@@ -127,7 +125,7 @@ public class StoreContext {
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
       final ChangeDetectionPolicy changeDetectionPolicy,
-      final boolean enableMultiObjectsDelete,
+      final boolean multiObjectDeleteEnabled,
       final MetadataStore metadataStore,
       final Function<String, Path> keyToPathQualifier,
       final String bucketLocation,
@@ -145,7 +143,7 @@ public class StoreContext {
     this.storageStatistics = storageStatistics;
     this.inputPolicy = inputPolicy;
     this.changeDetectionPolicy = changeDetectionPolicy;
-    this.enableMultiObjectsDelete = enableMultiObjectsDelete;
+    this.multiObjectDeleteEnabled = multiObjectDeleteEnabled;
     this.metadataStore = metadataStore;
     this.keyToPathQualifier = keyToPathQualifier;
     this.bucketLocation = Optional.ofNullable(bucketLocation);
@@ -202,8 +200,8 @@ public class StoreContext {
     return changeDetectionPolicy;
   }
 
-  public boolean isEnableMultiObjectsDelete() {
-    return enableMultiObjectsDelete;
+  public boolean isMultiObjectDeleteEnabled() {
+    return multiObjectDeleteEnabled;
   }
 
   public MetadataStore getMetadataStore() {

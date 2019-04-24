@@ -46,6 +46,8 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcom
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.touchFiles;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
@@ -106,13 +108,18 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   /**
    * Test array for parameterized test runs.
+   * <ul>
+   *   <li>Run 0: single deletes</li>
+   *   <li>Run 1: multi deletes</li>
+   * </ul>
+   *
    * @return a list of parameter tuples.
    */
   @Parameterized.Parameters
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
-        {true},
         {false},
+        {true},
     });
   }
 
@@ -174,6 +181,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Configuration createAssumedRoleConfig(String roleARN) {
     Configuration conf = newAssumedRoleConfig(getContract().getConf(),
         roleARN);
+    String bucketName = getTestBucketName(conf);
+
+    removeBucketOverrides(bucketName, conf, ENABLE_MULTI_DELETE);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
     return conf;
   }
@@ -200,6 +210,15 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     forbidden("touching the empty child " + readonlyChild,
         "",
         () -> ContractTestUtils.touch(roleFS, readonlyChild));
+  }
+
+  @Test
+  public void testMultiDeleteOptionPropagated() throws Throwable {
+    describe("Verify the test parameter propagates to the store context");
+    StoreContext ctx = roleFS.createStoreContext();
+    Assertions.assertThat(ctx.isMultiObjectDeleteEnabled())
+        .as(ctx.toString())
+        .isEqualTo(multiDelete);
   }
 
   /**
@@ -255,20 +274,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // rename will fail in the delete phase
     AccessDeniedException deniedException = expectRenameForbidden(
         readOnlyFile, destDir);
-    if (multiDelete) {
-      // look in that exception for a multidelete
-      Throwable cause = deniedException.getCause();
-      if (!(cause instanceof MultiObjectDeleteException)) {
-        throw new AssertionError("Expected a MultiObjectDeleteException "
-            + "as the cause ", deniedException);
-      }
-      MultiObjectDeleteException mde = (MultiObjectDeleteException) cause;
-      final List<Path> undeleted
-          = extractUndeletedPaths(mde, fs::keyToQualifiedPath);
-      Assertions.assertThat(undeleted)
-          .as("files which could not be deleted")
-          .containsExactly(readOnlyFile);
-    }
+
 
     // and the source file is still there
     assertIsFile(readOnlyFile);
@@ -312,7 +318,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // create a set of files
     // this is done in parallel as it is 10x faster on a long-haul test run.
     int filecount = 10;
-    touchFiles(fs, readOnlyDir, filecount);
+    List<Path> createdFiles = touchFiles(fs, readOnlyDir, filecount);
     // are they all there?
     assertFileCount("files ready to rename", roleFS,
         readOnlyDir, (long) filecount);
@@ -320,8 +326,25 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // try to rename the directory
     LOG.info("Renaming readonly files {} to {}", readOnlyDir, destDir);
 
-    AccessDeniedException ex = expectRenameForbidden(readOnlyDir, destDir);
-    LOG.info("Result of renaming read-only files is AccessDeniedException", ex);
+    AccessDeniedException deniedException = expectRenameForbidden(readOnlyDir, destDir);
+    if (multiDelete) {
+      // look in that exception for a multidelete
+      Throwable cause = deniedException.getCause();
+      if (!(cause instanceof MultiObjectDeleteException)) {
+        throw new AssertionError("Expected a MultiObjectDeleteException "
+            + "as the cause ", deniedException);
+      }
+      MultiObjectDeleteException mde = (MultiObjectDeleteException) cause;
+      final List<Path> undeleted
+          = extractUndeletedPaths(mde, fs::keyToQualifiedPath);
+      Assertions.assertThat(undeleted)
+          .as("files which could not be deleted")
+          .hasSize(filecount)
+          .containsAll(createdFiles)
+          .containsOnlyElementsOf(createdFiles);
+    }
+    LOG.info("Result of renaming read-only files is AccessDeniedException",
+        deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, (long) filecount);
 

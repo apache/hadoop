@@ -2342,6 +2342,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * new store context instances should be created as appropriate.
    * @return the store context of this FS.
    */
+  @InterfaceAudience.Private
   public StoreContext createStoreContext() {
     return new StoreContext(
         getUri(),
