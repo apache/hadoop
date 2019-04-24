@@ -2288,10 +2288,12 @@
   </property>
   <property>
     <name>ozone.scm.network.topology.schema.file</name>
-    <value>network-topology-default.xm</value>
+    <value>network-topology-default.xml</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The schema file defines the ozone network topology
+      The schema file defines the ozone network topology. We currently support
+      xml(default) and yaml format. Refer to the samples in the topology
+      awareness document for xml and yaml topology definition samples.
     </description>
   </property>
   <property>

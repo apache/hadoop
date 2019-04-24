@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.net;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaLoader.NodeSchemaLoadResult;
 import org.slf4j.Logger;
@@ -59,16 +60,14 @@ public final class NodeSchemaManager {
     /**
      * Load schemas from network topology schema configuration file
      */
-    String schemaFileType = conf.get(
-            ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_TYPE);
-
     String schemaFile = conf.get(
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
         ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE_DEFAULT);
 
     NodeSchemaLoadResult result;
     try {
-      if (schemaFileType.toLowerCase().compareTo("yaml") == 0) {
+      if (FilenameUtils.getExtension(schemaFile).toLowerCase()
+          .compareTo("yaml") == 0) {
         result = NodeSchemaLoader.getInstance().loadSchemaFromYaml(schemaFile);
       } else {
         result = NodeSchemaLoader.getInstance().loadSchemaFromXml(schemaFile);
