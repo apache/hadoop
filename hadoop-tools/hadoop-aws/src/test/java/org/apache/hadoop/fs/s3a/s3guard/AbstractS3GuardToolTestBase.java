@@ -59,6 +59,7 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
@@ -71,7 +72,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
 
   protected static final String OWNER = "hdfs";
-  protected static final String DYNAMODB_TABLE = "dynamodb://ireland-team";
+  protected static final String DYNAMODB_TABLE = "ireland-team";
   protected static final String S3A_THIS_BUCKET_DOES_NOT_EXIST
       = "s3a://this-bucket-does-not-exist-00000000000";
 
@@ -520,7 +521,8 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     ByteArrayOutputStream buf = new ByteArrayOutputStream();
     S3GuardTool.Diff cmd = new S3GuardTool.Diff(fs.getConf());
     cmd.setStore(ms);
-    exec(0, "", cmd, buf, "diff", "-meta", DYNAMODB_TABLE, testPath.toString());
+    String table = "dynamo://" + getTestTableName(DYNAMODB_TABLE);
+    exec(0, "", cmd, buf, "diff", "-meta", table, testPath.toString());
 
     Set<Path> actualOnS3 = new HashSet<>();
     Set<Path> actualOnMS = new HashSet<>();
