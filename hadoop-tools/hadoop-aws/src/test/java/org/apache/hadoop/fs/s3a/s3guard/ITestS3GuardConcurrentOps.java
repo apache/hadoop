@@ -106,7 +106,9 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
     try {
       DynamoDB db = ms.getDynamoDB();
 
-      String tableName = "testConcurrentTableCreations" + new Random().nextInt();
+      String tableName =
+          getTestTableName("testConcurrentTableCreations" +
+              new Random().nextInt());
       conf.setBoolean(Constants.S3GUARD_DDB_TABLE_CREATE_KEY, true);
       conf.set(Constants.S3GUARD_DDB_TABLE_NAME_KEY, tableName);
 

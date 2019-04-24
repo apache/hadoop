@@ -709,6 +709,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Get the prefix for DynamoDB table names used in tests.
+   * @param conf configuration to scan.
+   * @return the table name prefix
+   */
+  public static String getTestDynamoTablePrefix(final Configuration conf) {
+    return getTestProperty(conf, TEST_S3GUARD_DYNAMO_TABLE_PREFIX,
+        TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT);
+  }
+
+  /**
    * Remove any values from a bucket.
    * @param bucket bucket whose overrides are to be removed. Can be null/empty
    * @param conf config

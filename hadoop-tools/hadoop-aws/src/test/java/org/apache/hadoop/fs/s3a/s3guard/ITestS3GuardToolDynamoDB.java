@@ -44,6 +44,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
@@ -80,7 +81,8 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testInvalidRegion() throws Exception {
-    final String testTableName = "testInvalidRegion" + new Random().nextInt();
+    final String testTableName =
+        getTestTableName("testInvalidRegion" + new Random().nextInt());
     final String testRegion = "invalidRegion";
     // Initialize MetadataStore
     final Init initCmd = new Init(getFileSystem().getConf());
@@ -117,7 +119,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     );
 
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
-        "testDynamoTableTagging-" + UUID.randomUUID());
+        getTestTableName("testDynamoTableTagging-" + UUID.randomUUID()));
     S3GuardTool.Init cmdR = new S3GuardTool.Init(conf);
     Map<String, String> tagMap = new HashMap<>();
     tagMap.put("hello", "dynamo");
@@ -165,7 +167,8 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testDynamoDBInitDestroyCycle() throws Throwable {
-    String testTableName = "testDynamoDBInitDestroy" + new Random().nextInt();
+    String testTableName =
+        getTestTableName("testDynamoDBInitDestroy" + new Random().nextInt());
     String testS3Url = path(testTableName).toString();
     S3AFileSystem fs = getFileSystem();
     DynamoDB db = null;
@@ -284,7 +287,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   public void testDestroyUnknownTable() throws Throwable {
     run(S3GuardTool.Destroy.NAME,
         "-region", "us-west-2",
-        "-meta", DYNAMODB_TABLE);
+        "-meta", "dynamodb://" + getTestTableName(DYNAMODB_TABLE));
   }
 
 }
