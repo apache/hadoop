@@ -32,6 +32,7 @@ import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.nio.charset.CharsetEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ import org.apache.hadoop.fs.azurebfs.services.AuthType;
 import org.apache.hadoop.fs.azurebfs.services.ExponentialRetryPolicy;
 import org.apache.hadoop.fs.azurebfs.services.SharedKeyCredentials;
 import org.apache.hadoop.fs.azurebfs.utils.Base64;
+import org.apache.hadoop.fs.azurebfs.utils.CRC64;
 import org.apache.hadoop.fs.azurebfs.utils.UriUtils;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
@@ -92,7 +94,18 @@ import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EQUALS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_FORWARD_SLASH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYPHEN;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EXCLAMATION_POINT;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
+import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
 import static org.apache.hadoop.fs.azurebfs.constants.ConfigurationKeys.AZURE_ABFS_ENDPOINT;
+
 /**
  * Provides the bridging logic between Hadoop's abstract filesystem and Azure Storage.
  */
@@ -106,6 +119,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   private String userName;
   private String primaryUserGroup;
   private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss 'GMT'";
+  private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 500;
 
@@ -522,15 +536,38 @@ public class AzureBlobFileSystemStore implements Closeable {
             eTag);
   }
 
+  /**
+   * @param path The list path.
+   * @return the entries in the path.
+   * */
   public FileStatus[] listStatus(final Path path) throws IOException {
-    LOG.debug("listStatus filesystem: {} path: {}",
+    return listStatus(path, null);
+  }
+
+  /**
+   * @param path Path the list path.
+   * @param startFrom the entry name that list results should start with.
+   *                  Notice that startFrom can be a non-existent entry, then the list request response contains
+   *                  all entries after this non-existent entry in lexical order.
+   * @return the entries in the path in lexical order from "startFrom".
+   * */
+  public FileStatus[] listStatus(final Path path, final String startFrom) throws IOException {
+    LOG.debug("listStatus filesystem: {} path: {}, startFrom: {}",
             client.getFileSystem(),
-           path);
+            path,
+            startFrom);
 
-    String relativePath = path.isRoot() ? AbfsHttpConstants.EMPTY_STRING : getRelativePath(path);
+    final String relativePath = path.isRoot() ? AbfsHttpConstants.EMPTY_STRING : getRelativePath(path);
     String continuation = null;
-    ArrayList<FileStatus> fileStatuses = new ArrayList<>();
 
+    // generate continuation token if a valid startFrom is provided.
+    if (startFrom != null && !startFrom.isEmpty()) {
+      continuation = getIsNamespaceEnabled()
+              ? generateContinuationTokenForXns(startFrom)
+              : generateContinuationTokenForNonXns(path.isRoot() ? ROOT_PATH : relativePath, startFrom);
+    }
+
+    ArrayList<FileStatus> fileStatuses = new ArrayList<>();
     do {
       AbfsRestOperation op = client.listPath(relativePath, false, LIST_MAX_RESULTS, continuation);
       continuation = op.getResult().getResponseHeader(HttpHeaderConfigurations.X_MS_CONTINUATION);
@@ -581,6 +618,69 @@ public class AzureBlobFileSystemStore implements Closeable {
     } while (continuation != null && !continuation.isEmpty());
 
     return fileStatuses.toArray(new FileStatus[fileStatuses.size()]);
+  }
+
+  // generate continuation token for xns account
+  private String generateContinuationTokenForXns(final String firstEntryName) {
+    if (firstEntryName == null || firstEntryName.isEmpty() || firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH)) {
+      throw new IllegalArgumentException("startFrom must be a dir/file name and it can not be a full path");
+    }
+
+    StringBuilder sb = new StringBuilder();
+    sb.append(firstEntryName).append("#$").append("0");
+
+    CRC64 crc64 = new CRC64();
+    StringBuilder token = new StringBuilder();
+    token.append(crc64.compute(sb.toString().getBytes(StandardCharsets.UTF_8)))
+            .append(SINGLE_WHITE_SPACE)
+            .append("0")
+            .append(SINGLE_WHITE_SPACE)
+            .append(firstEntryName);
+
+    return Base64.encode(token.toString().getBytes(StandardCharsets.UTF_8));
+  }
+
+  // generate continuation token for non-xns account
+  private String generateContinuationTokenForNonXns(final String path, final String firstEntryName) {
+    if (firstEntryName == null || firstEntryName.isEmpty() || firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH)) {
+      throw new IllegalArgumentException("startFrom must be a dir/file name and it can not be a full path");
+    }
+
+    // Notice: non-xns continuation token requires full path (first "/" is not included) for startFrom
+    final String startFrom = (path.isEmpty() || path.equals(ROOT_PATH))
+            ? firstEntryName
+            : path + ROOT_PATH + firstEntryName;
+
+    SimpleDateFormat simpleDateFormat = new SimpleDateFormat(TOKEN_DATE_PATTERN, Locale.US);
+    String date = simpleDateFormat.format(new Date());
+
+    StringBuilder sb = new StringBuilder(path.length() + startFrom.length() + date.length() + 24);
+    sb.append(String.format("%06d", path.length())).append(CHAR_EXCLAMATION_POINT)
+            .append(path).append(CHAR_EXCLAMATION_POINT)
+            .append(String.format("%06d", startFrom.length())).append(CHAR_EXCLAMATION_POINT)
+            .append(startFrom).append(CHAR_EXCLAMATION_POINT)
+            .append(String.format("%06d", date.length())).append(CHAR_EXCLAMATION_POINT)
+            .append(date).append(CHAR_EXCLAMATION_POINT);
+
+    String base64EncodedToken = Base64.encode(sb.toString().getBytes(StandardCharsets.UTF_8));
+
+    StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 3);
+    encodedTokenBuilder.append(TOKEN_VERSION).append(CHAR_EXCLAMATION_POINT)
+            .append(base64EncodedToken.length()).append(CHAR_EXCLAMATION_POINT);
+
+    for (int i = 0; i < base64EncodedToken.length(); i++) {
+      char current = base64EncodedToken.charAt(i);
+      if (CHAR_FORWARD_SLASH == current) {
+        current = CHAR_UNDERSCORE;
+      } else if (CHAR_PLUS == current) {
+        current = CHAR_STAR;
+      } else if (CHAR_EQUALS == current) {
+        current = CHAR_HYPHEN;
+      }
+      encodedTokenBuilder.append(current);
+    }
+
+    return encodedTokenBuilder.toString();
   }
 
   public void setOwner(final Path path, final String owner, final String group) throws
@@ -1002,7 +1102,7 @@ public class AzureBlobFileSystemStore implements Closeable {
 
       FileStatus other = (FileStatus) obj;
 
-      if (!other.equals(this)) {// compare the path
+      if (!this.getPath().equals(other.getPath())) {// compare the path
         return false;
       }
 
