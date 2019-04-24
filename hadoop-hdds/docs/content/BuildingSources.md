@@ -35,12 +35,11 @@ the ozone build command. This instruction assumes that you have all the
 dependencies to build Hadoop on your build machine. If you need instructions
 on how to build Hadoop, please look at the Apache Hadoop Website.
 
-{{< highlight bash >}}
-mvn clean package -DskipTests=true -Dmaven.javadoc.skip=true -Phdds -Pdist -Dtar -DskipShade
-{{< /highlight >}}
+```bash
+mvn -f pom.ozone.xml clean package -DskipTests=true
+```
 
-
-This will build an ozone-\<version\>.tar.gz in your target directory.
+This will build an ozone-\<version\>.tar.gz in your `hadoop-ozone/dist/target` directory.
 
 You can copy this tarball and use this instead of binary artifacts that are
 provided along with the official release.
@@ -48,7 +47,20 @@ provided along with the official release.
 ## How to test the build
 You can run the acceptance tests in the hadoop-ozone directory to make sure
 that  your build is functional. To launch the acceptance tests, please follow
- the instructions in the **README.md** in the
- ```$hadoop_src/hadoop-ozone/acceptance-test``` directory. Acceptance tests
+ the instructions in the **README.md** in the `smoketest` directory. 
+
+```bash
+cd smoketest
+./test.sh
+```
+
+ You can also execute only a minimal subset of the tests:
+
+```bash
+cd smoketest
+./test.sh --env ozone basic
+```
+
+Acceptance tests
  will start a small ozone cluster and verify that ozone shell and ozone file
  system is fully functional.

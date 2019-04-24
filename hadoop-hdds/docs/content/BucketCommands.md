@@ -2,8 +2,8 @@
 title: Bucket Commands
 menu:
    main:
-      parent: Client
-      weight: 3
+      parent: OzoneShell
+      weight: 2
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
