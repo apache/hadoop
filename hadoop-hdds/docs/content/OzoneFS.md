@@ -1,10 +1,12 @@
 ---
 title: Ozone File System
+weight: 1
 date: 2017-09-14
 menu: main
 menu:
    main:
-      parent: Client
+      parent: Starting
+      weight: 4
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
