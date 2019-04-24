@@ -83,9 +83,11 @@ public class TestRouterHDFSContractDelegationToken
     assertTrue(identifier.getMaxDate() >= identifier.getIssueDate());
 
     // Renew delegation token
-    token.renew(initSecurity());
+    long expiryTime = token.renew(initSecurity());
     assertNotNull(token);
-    assertTrue(token.decodeIdentifier().getMaxDate() >= existingMaxTime);
+    assertEquals(existingMaxTime, token.decodeIdentifier().getMaxDate());
+    // Expiry time after renewal should never exceed max time of the token.
+    assertTrue(expiryTime <= existingMaxTime);
     // Renewal should retain old master key id and sequence number
     identifier = token.decodeIdentifier();
     assertEquals(identifier.getMasterKeyId(), masterKeyId);
