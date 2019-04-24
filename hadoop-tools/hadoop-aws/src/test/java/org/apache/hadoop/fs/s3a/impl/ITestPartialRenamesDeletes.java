@@ -20,14 +20,22 @@ package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.google.common.base.Charsets;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,23 +44,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
-import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.touchFiles;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
-import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
+import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
+import static org.apache.hadoop.fs.s3a.Constants.MAX_THREADS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.reset;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
@@ -61,10 +75,17 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_ALL_BUCKETS;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_BUCKET_READ_OPERATIONS;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_PATH_RW_OPERATIONS;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_S3GUARD_CLIENT;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
+import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
@@ -76,7 +97,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * All these test have a unique path for each run, with a roleFS having
  * full RW access to part of it, and R/O access to a restricted subdirectory
  */
-@SuppressWarnings({"IOResourceOpenedButNotSafelyClosed", "ThrowableNotThrown"})
+@SuppressWarnings("ThrowableNotThrown")
 @RunWith(Parameterized.class)
 public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
@@ -87,6 +108,23 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
       = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
+
+  /** Many threads for scale performance: {@value}. */
+  public static final int EXECUTOR_THREAD_COUNT = 64;
+
+  /**
+   * For submitting work.
+   */
+  private static final ListeningExecutorService executor =
+      BlockingThreadPoolExecutorService.newInstance(
+          EXECUTOR_THREAD_COUNT,
+          EXECUTOR_THREAD_COUNT * 2,
+          30, TimeUnit.SECONDS,
+          "test-operations");
+
+  public static final int FILE_COUNT_NON_SCALED = 10;
+
+  public static final int FILE_COUNT_SCALED = 2000;
 
   /**
    * A role FS; if non-null it is closed in teardown.
@@ -105,6 +143,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private final boolean multiDelete;
 
   private Configuration assumedRoleConfig;
+
+  private int filecount;
 
   /**
    * Test array for parameterized test runs.
@@ -148,6 +188,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
             .addResources(directory(destDir))
     );
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(assumedRoleConfig);
+    boolean scaleTest = getTestPropertyBool(
+        getConfiguration(),
+        KEY_SCALE_TESTS_ENABLED,
+        DEFAULT_SCALE_TESTS_ENABLED);
+    filecount = scaleTest ? FILE_COUNT_SCALED : FILE_COUNT_NON_SCALED;
   }
 
   @Override
@@ -187,6 +232,22 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
     return conf;
   }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    String bucketName = getTestBucketName(conf);
+
+    // ramp up the number of connections we can have for maximum PUT
+    // performance
+    removeBucketOverrides(bucketName, conf, MAX_THREADS, MAXIMUM_CONNECTIONS);
+    conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
+    conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
+    conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
+
+    return conf;
+  }
+
 
   /**
    * Create a unique path, which includes method name,
@@ -317,8 +378,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // create a set of files
     // this is done in parallel as it is 10x faster on a long-haul test run.
-    int filecount = 10;
-    List<Path> createdFiles = touchFiles(fs, readOnlyDir, filecount);
+    List<Path> createdFiles = createFiles(fs, readOnlyDir, filecount);
     // are they all there?
     assertFileCount("files ready to rename", roleFS,
         readOnlyDir, (long) filecount);
@@ -329,25 +389,20 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     AccessDeniedException deniedException = expectRenameForbidden(readOnlyDir, destDir);
     if (multiDelete) {
       // look in that exception for a multidelete
-      Throwable cause = deniedException.getCause();
-      if (!(cause instanceof MultiObjectDeleteException)) {
-        throw new AssertionError("Expected a MultiObjectDeleteException "
-            + "as the cause ", deniedException);
-      }
-      MultiObjectDeleteException mde = (MultiObjectDeleteException) cause;
+      MultiObjectDeleteException mde = extractCause(
+          MultiObjectDeleteException.class, deniedException);
       final List<Path> undeleted
           = extractUndeletedPaths(mde, fs::keyToQualifiedPath);
       Assertions.assertThat(undeleted)
           .as("files which could not be deleted")
           .hasSize(filecount)
           .containsAll(createdFiles)
-          .containsOnlyElementsOf(createdFiles);
+          .containsExactlyInAnyOrderElementsOf(createdFiles);
     }
     LOG.info("Result of renaming read-only files is AccessDeniedException",
         deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, (long) filecount);
-
   }
 
   /**
@@ -362,20 +417,28 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // the full FS
     S3AFileSystem fs = getFileSystem();
 
-    int range = 10;
-    List<Path> readOnlyFiles = touchFiles(fs, readOnlyDir, range);
+    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, filecount);
+    List<Path> deletableFiles = createFiles(fs, destDir, filecount);
+
+    // as a safety check, verify that one of the deletable files can be deleted
+    Path head = deletableFiles.remove(0);
+    assertTrue("delete " + head + " failed",
+        roleFS.delete(head, false));
+    List<Path> allFiles = Stream.concat(
+        readOnlyFiles.stream(),
+        deletableFiles.stream())
+        .collect(Collectors.toList());
 
     // this set can be deleted by the role FS
     MetricDiff rejectionCount = new MetricDiff(roleFS, FILES_DELETE_REJECTED);
     MetricDiff deleteVerbCount = new MetricDiff(roleFS, OBJECT_DELETE_REQUESTS);
 
-    describe("Trying to delete read only directory with files %s",
-        ls(readOnlyDir));
+    describe("Trying to delete read only directory");
     AccessDeniedException ex = expectDeleteForbidden(readOnlyDir);
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      rejectionCount.assertDiffEquals("Wrong rejection count", range);
+      rejectionCount.assertDiffEquals("Wrong rejection count", filecount);
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
       reset(rejectionCount, deleteVerbCount);
     }
@@ -387,15 +450,25 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      rejectionCount.assertDiffEquals("Wrong rejection count", range);
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
-      reset(rejectionCount, deleteVerbCount);
+      MultiObjectDeleteException mde = extractCause(
+          MultiObjectDeleteException.class, ex);
+      final List<Path> undeleted
+          = removeUndeletedPaths(mde, allFiles, fs::keyToQualifiedPath);
+      Assertions.assertThat(undeleted)
+          .as("files which could not be deleted")
+          .containsExactlyInAnyOrderElementsOf(readOnlyFiles);
+      Assertions.assertThat(allFiles)
+          .as("files which were deleted")
+          .containsExactlyInAnyOrderElementsOf(deletableFiles);
+      rejectionCount.assertDiffEquals("Wrong rejection count", filecount);
     }
+    reset(rejectionCount, deleteVerbCount);
 
     // build the set of all paths under the directory tree through
     // a directory listing (i.e. not getFileStatus()).
     // small risk of observed inconsistency here on unguarded stores.
-    final Set<Path> roFListing = filesUnderPath(readOnlyDir, true);
+    final Set<Path> roFListing = listFilesUnderPath(readOnlyDir, true);
 
     String directoryList = roFListing
         .stream()
@@ -458,7 +531,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @return an unordered set of the paths.
    * @throws IOException failure
    */
-  private Set<Path> filesUnderPath(Path path, boolean recursive) throws IOException {
+  private Set<Path> listFilesUnderPath(Path path, boolean recursive) throws IOException {
     Set<Path> files = new TreeSet<>();
     applyLocatedFiles(getFileSystem().listFiles(path, recursive),
         (status) -> {
@@ -466,4 +539,79 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         });
     return files;
   }
+
+  /**
+   * Submit something async.
+   * @param call call to invoke
+   * @param <T> type
+   * @return the future to wait for
+   */
+  private static <T> CompletableFuture<T> submit(
+      final Callable<T> call) {
+    return CompletableFuture.supplyAsync(
+        new CallableSupplier<T>(call), executor);
+  }
+
+  private static class CallableSupplier<T> implements Supplier {
+
+    final Callable<T> call;
+
+    CallableSupplier(final Callable<T> call) {
+      this.call = call;
+    }
+
+    @Override
+    public Object get() {
+      try {
+        return call.call();
+      } catch (RuntimeException e) {
+        throw e;
+      } catch (IOException e) {
+        throw new WrappedIOException(e);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  /**
+   * Write the text to a file asynchronously. Logs the operation too
+   * @param fs filesystem
+   * @param path path
+   * @return future to the patch created.
+   */
+  private static CompletableFuture<Path> put(FileSystem fs,
+      Path path, String text) {
+    return submit(() -> {
+      try (DurationInfo ignore =
+               new DurationInfo(LOG, "Creating %s", path)) {
+        createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
+        return path;
+      }
+    });
+  }
+
+  /**
+   * Parallel-touch a set of files in the destination directory.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param range range 1..range inclusive of files to create.
+   * @return the list of paths created.
+   */
+  @SuppressWarnings("unchecked")
+  public static List<Path> createFiles(final FileSystem fs,
+      final Path destDir,
+      final int range) throws IOException {
+    CompletableFuture<Path>[] futures = new CompletableFuture[range];
+    List<Path> paths = new ArrayList<>(range);
+    for (int i = 0; i < range; i++) {
+      String name = "file-" + i;
+      Path p = new Path(destDir, name);
+      paths.add(p);
+      futures[i] = put(fs, p, name);
+    }
+    CompletableFuture.allOf(futures).join();
+    return paths;
+  }
+
 }

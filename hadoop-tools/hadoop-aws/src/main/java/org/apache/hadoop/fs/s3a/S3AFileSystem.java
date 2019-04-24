@@ -88,10 +88,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FileStatus;
@@ -1320,6 +1322,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
+   * Expose the superclass rename for ease of testing.
+   * This is inefficient as it calls getFileStatus on source and dest
+   * twice, but it always throws exceptions on failures, which is good.
+   * @param src path to be renamed
+   * @param dst new path after rename
+   * @param options rename options.
+   * @throws IOException failure.
+   */
+  @VisibleForTesting
+  public void rename(final Path src, final Path dst,
+      final Options.Rename... options) throws IOException {
+    super.rename(src, dst, options);
+  }
+
+  /**
    * Low-level call to get at the object metadata.
    * @param path path to the object
    * @return metadata
@@ -1529,16 +1546,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     incrementReadOperations();
     incrementStatistic(OBJECT_LIST_REQUESTS);
     validateListArguments(request);
-    return invoker.retryUntranslated(
-        request.toString(),
-        true,
-        () -> {
-          if (useListV1) {
-            return S3ListResult.v1(s3.listObjects(request.getV1()));
-          } else {
-            return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
-          }
-        });
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, false, "LIST")) {
+      return invoker.retryUntranslated(
+          request.toString(),
+          true,
+          () -> {
+            if (useListV1) {
+              return S3ListResult.v1(s3.listObjects(request.getV1()));
+            } else {
+              return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+            }
+          });
+    }
   }
 
   /**
@@ -1566,20 +1586,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       S3ListResult prevResult) throws IOException {
     incrementReadOperations();
     validateListArguments(request);
-    return invoker.retryUntranslated(
-        request.toString(),
-        true,
-        () -> {
-          incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
-          if (useListV1) {
-            return S3ListResult.v1(
-                s3.listNextBatchOfObjects(prevResult.getV1()));
-          } else {
-            request.getV2().setContinuationToken(prevResult.getV2()
-                .getNextContinuationToken());
-            return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
-          }
-        });
+
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, false, "LIST (continued)")) {
+      return invoker.retryUntranslated(
+          request.toString(),
+          true,
+          () -> {
+            incrementStatistic(OBJECT_CONTINUE_LIST_REQUESTS);
+            if (useListV1) {
+              return S3ListResult.v1(
+                  s3.listNextBatchOfObjects(prevResult.getV1()));
+            } else {
+              request.getV2().setContinuationToken(prevResult.getV2()
+                  .getNextContinuationToken());
+              return S3ListResult.v2(s3.listObjectsV2(request.getV2()));
+            }
+          });
+    }
   }
 
   /**
@@ -1617,6 +1641,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws AmazonClientException, IOException {
     blockRootDelete(key);
     incrementWriteOperations();
+    LOG.debug("DELETE {}", key);
     invoker.retryUntranslated("Delete "+ bucket + ":/" + key,
         DELETE_CONSIDERED_IDEMPOTENT,
         ()-> {
@@ -1675,7 +1700,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void deleteObjects(DeleteObjectsRequest deleteRequest)
       throws MultiObjectDeleteException, AmazonClientException, IOException {
     incrementWriteOperations();
-    try {
+    try(DurationInfo ignored = new DurationInfo(LOG,
+        false, "DELETE %d keys", deleteRequest.getKeys().size())) {
       invoker.retryUntranslated("delete",
           DELETE_CONSIDERED_IDEMPOTENT,
           () -> {
@@ -2119,7 +2145,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         }
       }
-      metadataStore.deleteSubtree(f);
+      try(DurationInfo ignored =
+              new DurationInfo(LOG, false, "Delete metastore")) {
+        metadataStore.deleteSubtree(f);
+      }
     } else {
       LOG.debug("delete: Path is a file");
       deleteObjectAtPath(f, key, true);

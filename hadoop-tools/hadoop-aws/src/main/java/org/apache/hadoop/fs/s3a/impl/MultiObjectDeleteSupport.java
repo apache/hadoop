@@ -113,8 +113,8 @@ public final class MultiObjectDeleteSupport {
   }
 
   /**
-   * Process a multi object delete exception by removing all undeleted paths
-   * from the list of paths being deleted.
+   * Process a {@code MultiObjectDeleteException} by
+   * removing all undeleted paths from the list of paths being deleted.
    * The original list is updated, and so becomes the list of successfully
    * deleted paths.
    * @param deleteException the delete exception.
@@ -122,7 +122,7 @@ public final class MultiObjectDeleteSupport {
    * This has all undeleted paths removed, leaving only those deleted.
    * @return the list of undeleted entries
    */
-  public static List<Path> splitUndeleted(
+  public static List<Path> removeUndeletedPaths(
       final MultiObjectDeleteException deleteException,
       final Collection<Path> pathsBeingDeleted,
       final Function<String, Path> qualifier) {
@@ -155,7 +155,7 @@ public final class MultiObjectDeleteSupport {
     // Take this is list of paths
     // extract all undeleted entries contained in the exception and
     // then removes them from the original list.
-    List<Path> undeleted = splitUndeleted(deleteException, pathsBeingDeleted,
+    List<Path> undeleted = removeUndeletedPaths(deleteException, pathsBeingDeleted,
         qualifier);
     return Pair.of(undeleted, pathsBeingDeleted);
   }

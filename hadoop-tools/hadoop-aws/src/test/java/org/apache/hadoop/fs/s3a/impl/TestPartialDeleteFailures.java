@@ -54,7 +54,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.ACCESS_DENIED;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.splitUndeleted;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -81,7 +81,7 @@ public class TestPartialDeleteFailures {
     List<Path> rejected = pathList("a/b");
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
-    List<Path> undeleted = splitUndeleted(ex, src,
+    List<Path> undeleted = removeUndeletedPaths(ex, src,
         TestPartialDeleteFailures::qualify);
     assertEquals(rejected, undeleted);
   }
