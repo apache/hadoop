@@ -41,8 +41,8 @@ public class TestTableMapping {
   public void testResolve() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testResolve", ".txt");
-    Files.write(hostName1 + " /rack1\n" +
-                hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+        hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
@@ -64,8 +64,8 @@ public class TestTableMapping {
   public void testTableCaching() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testTableCaching", ".txt");
-    Files.write(hostName1 + " /rack1\n" +
-        hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+        hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 
@@ -128,8 +128,8 @@ public class TestTableMapping {
   public void testClearingCachedMappings() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testClearingCachedMappings", ".txt");
-    Files.write(hostName1 + " /rack1\n" +
-                hostName2 + "\t/rack2\n", mapFile, Charsets.UTF_8);
+    Files.asCharSink(mapFile, Charsets.UTF_8).write(
+        hostName1 + " /rack1\n" + hostName2 + "\t/rack2\n");
     mapFile.deleteOnExit();
 
     TableMapping mapping = new TableMapping();
@@ -147,7 +147,7 @@ public class TestTableMapping {
     assertEquals("/rack1", result.get(0));
     assertEquals("/rack2", result.get(1));
 
-    Files.write("", mapFile, Charsets.UTF_8);
+    Files.asCharSink(mapFile, Charsets.UTF_8).write("");
 
     mapping.reloadCachedMappings();
 
@@ -166,7 +166,7 @@ public class TestTableMapping {
   public void testBadFile() throws IOException {
     File mapFile = File.createTempFile(getClass().getSimpleName() +
         ".testBadFile", ".txt");
-    Files.write("bad contents", mapFile, Charsets.UTF_8);
+    Files.asCharSink(mapFile, Charsets.UTF_8).write("bad contents");
     mapFile.deleteOnExit();
     TableMapping mapping = new TableMapping();
 

@@ -434,7 +434,8 @@ public class TestSecurityUtil {
     Configuration conf = new Configuration();
     File passwordTxtFile = File.createTempFile(
         getClass().getSimpleName() +  ".testAuthAtPathNotation-", ".txt");
-    Files.write(ZK_AUTH_VALUE, passwordTxtFile, StandardCharsets.UTF_8);
+    Files.asCharSink(passwordTxtFile, StandardCharsets.UTF_8)
+        .write(ZK_AUTH_VALUE);
     try {
       conf.set(CommonConfigurationKeys.ZK_AUTH,
           "@" + passwordTxtFile.getAbsolutePath());

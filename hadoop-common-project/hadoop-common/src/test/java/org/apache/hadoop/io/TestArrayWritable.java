@@ -106,7 +106,7 @@ public class TestArrayWritable {
     String[] original = { "test1", "test2", "test3" };
     ArrayWritable arrayWritable = new ArrayWritable(original);
     assertEquals("testArrayWritableStringConstructor class error!!!", 
-        UTF8.class, arrayWritable.getValueClass());
+        Text.class, arrayWritable.getValueClass());
     assertArrayEquals("testArrayWritableStringConstructor toString error!!!",
       original, arrayWritable.toStrings());
   }
