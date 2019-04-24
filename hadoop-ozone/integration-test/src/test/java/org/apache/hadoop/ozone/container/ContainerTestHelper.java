@@ -33,6 +33,7 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.commons.math3.stat.descriptive.rank.Min;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -745,7 +746,10 @@ public final class ContainerTestHelper {
         keyOutputStream.getLocationInfoList();
     List<Long> containerIdList = new ArrayList<>();
     for (OmKeyLocationInfo info : locationInfoList) {
-      containerIdList.add(info.getContainerID());
+      long id = info.getContainerID();
+      if (!containerIdList.contains(id)) {
+        containerIdList.add(id);
+      }
     }
     Assert.assertTrue(!containerIdList.isEmpty());
     waitForPipelineClose(cluster, waitForContainerCreation,
@@ -784,6 +788,12 @@ public final class ContainerTestHelper {
         }
       }
     }
+    waitForPipelineClose(pipelineList, cluster);
+  }
+
+  public static void waitForPipelineClose(List<Pipeline> pipelineList,
+      MiniOzoneCluster cluster)
+      throws TimeoutException, InterruptedException, IOException {
     for (Pipeline pipeline1 : pipelineList) {
       // issue pipeline destroy command
       cluster.getStorageContainerManager().getPipelineManager()
