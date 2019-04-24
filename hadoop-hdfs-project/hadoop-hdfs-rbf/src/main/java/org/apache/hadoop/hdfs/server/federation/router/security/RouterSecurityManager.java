@@ -24,8 +24,10 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
@@ -36,6 +38,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.lang.reflect.Constructor;
 
 /**
@@ -183,6 +186,12 @@ public class RouterSecurityManager {
     return token;
   }
 
+  /**
+   * @param token token to renew
+   * @return new expiryTime of the token
+   * @throws SecretManager.InvalidToken if {@code token} is invalid
+   * @throws IOException on errors
+   */
   public long renewDelegationToken(Token<DelegationTokenIdentifier> token)
           throws SecretManager.InvalidToken, IOException {
     LOG.debug("Renew delegation token");
@@ -211,6 +220,10 @@ public class RouterSecurityManager {
     return expiryTime;
   }
 
+  /**
+   * @param token token to cancel
+   * @throws IOException on error
+   */
   public void cancelDelegationToken(Token<DelegationTokenIdentifier> token)
           throws IOException {
     LOG.debug("Cancel delegation token");
@@ -231,6 +244,34 @@ public class RouterSecurityManager {
     } finally {
       logAuditEvent(success, operationName, tokenId);
     }
+  }
+
+  /**
+   * A utility method for creating credentials.
+   * Used by web hdfs to return url encoded token.
+   */
+  public static Credentials createCredentials(
+      final Router router, final UserGroupInformation ugi,
+      final String renewer) throws IOException {
+    final Token<DelegationTokenIdentifier> token =
+        router.getRpcServer().getDelegationToken(new Text(renewer));
+    if (token == null) {
+      return null;
+    }
+    final InetSocketAddress addr = router.getRpcServerAddress();
+    SecurityUtil.setTokenService(token, addr);
+    final Credentials c = new Credentials();
+    c.addToken(new Text(ugi.getShortUserName()), token);
+    return c;
+  }
+
+  /**
+   * Delegation token verification.
+   * Used by web hdfs to verify url encoded token.
+   */
+  public void verifyToken(DelegationTokenIdentifier identifier,
+      byte[] password) throws SecretManager.InvalidToken {
+    this.dtSecretManager.verifyToken(identifier, password);
   }
 
   /**
