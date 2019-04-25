@@ -28,20 +28,14 @@ public final class CsiConfigurationValues {
   public static final String OZONE_S3_ADDRESS =
       "ozone.s3g.address";
 
-  public static final String OZONE_CSI_MOUNT_COMMAND =
-      "ozone.csi.mount";
-
-  public static final String OZONE_CSI_MOUNT_COMMAND_DEFAULT =
-      "goofys --endpoint %s %s %s";
-
-  public static final String OZONE_CSI_UMOUNT_COMMAND =
-      "ozone.csi.umount";
-
-  public static final String OZONE_CSI_UMOUNT_COMMAND_DEFAULT =
-      "fusermount -u %s";
-
   public static final String OZONE_CSI_SOCKET =
       "ozone.csi.socket";
+
+  public static final String OZONE_CSI_DEFAULT_VOLUME_SIZE =
+      "ozone.csi.default-volume-size";
+
+  public static final long OZONE_CSI_DEFAULT_VOLUME_SIZE_DEFAULT =
+      1_000_000_000;
 
   public static final String OZONE_CSI_SOCKET_DEFAULT = "/tmp/csi.sock";
 

@@ -2374,8 +2374,8 @@
     <value>true</value>
     <tag>OZONE, HDDS</tag>
     <description>If enabled, tracing information is sent to tracing server.</description>
-   <property>
    </property>
+  <property>
     <name>ozone.s3g.address</name>
     <value/>
     <tag>OZONE, MANAGEMENT</tag>

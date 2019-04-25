@@ -48,7 +48,7 @@ public class IdentitiyService extends IdentityImplBase {
   @Override
   public void getPluginCapabilities(
       csi.v1.Csi.GetPluginCapabilitiesRequest request,
-      StreamObserver<csi.v1.Csi.GetPluginCapabilitiesResponse> responseObserver) {
+      StreamObserver<GetPluginCapabilitiesResponse> responseObserver) {
     GetPluginCapabilitiesResponse response =
         GetPluginCapabilitiesResponse.newBuilder()
             .addCapabilities(PluginCapability.newBuilder().setService(

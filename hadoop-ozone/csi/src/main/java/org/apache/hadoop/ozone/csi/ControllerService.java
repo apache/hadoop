@@ -43,9 +43,12 @@ import io.grpc.stub.StreamObserver;
  */
 public class ControllerService extends ControllerImplBase {
 
+  private long defaultVolumeSize;
+
   private OzoneClient ozoneClient;
 
-  public ControllerService(OzoneClient ozoneClient) {
+  public ControllerService(OzoneClient ozoneClient, long volumeSize) {
+    this.defaultVolumeSize = volumeSize;
     this.ozoneClient = ozoneClient;
   }
 
@@ -75,10 +78,10 @@ public class ControllerService extends ControllerImplBase {
       return capacityRange.getRequiredBytes();
     } else {
       if (capacityRange.getLimitBytes() != 0) {
-        return Math.min(1000_000_000, capacityRange.getLimitBytes());
+        return Math.min(defaultVolumeSize, capacityRange.getLimitBytes());
       } else {
         //~1 gig
-        return 1000_000_000;
+        return defaultVolumeSize;
       }
     }
   }

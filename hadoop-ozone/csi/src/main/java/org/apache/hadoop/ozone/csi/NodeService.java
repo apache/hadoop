@@ -52,6 +52,7 @@ public class NodeService extends NodeImplBase {
   public NodeService(OzoneConfiguration configuration) {
     this.s3Endpoint =
         configuration.get(CsiConfigurationValues.OZONE_S3_ADDRESS);
+
   }
 
   @Override
@@ -65,7 +66,7 @@ public class NodeService extends NodeImplBase {
               s3Endpoint,
               request.getVolumeId(),
               request.getTargetPath());
-      LOG.info("Executing " + mountCommand);
+      LOG.info("Executing {}", mountCommand);
 
       executeCommand(mountCommand);
 
@@ -89,7 +90,7 @@ public class NodeService extends NodeImplBase {
         IOUtils.toString(exec.getErrorStream(), "UTF-8"));
     if (exec.exitValue() != 0) {
       throw new RuntimeException(String
-          .format("Return code of the command {} was {} ()", mountCommand,
+          .format("Return code of the command %s was %d", mountCommand,
               exec.exitValue()));
     }
   }
@@ -99,7 +100,7 @@ public class NodeService extends NodeImplBase {
       StreamObserver<NodeUnpublishVolumeResponse> responseObserver) {
     String umountCommand =
         String.format("fusermount -u %s", request.getTargetPath());
-    LOG.info("Executing " + umountCommand);
+    LOG.info("Executing {}", umountCommand);
 
     try {
       executeCommand(umountCommand);

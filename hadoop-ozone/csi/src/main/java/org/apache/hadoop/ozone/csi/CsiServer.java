@@ -50,18 +50,23 @@ public class CsiServer extends GenericCli implements Callable<Void> {
     OzoneClient rpcClient = OzoneClientFactory.getRpcClient(ozoneConfiguration);
 
     EpollEventLoopGroup group = new EpollEventLoopGroup();
+
+    long defaultVolumeSize = ozoneConfiguration
+        .getLongBytes(CsiConfigurationValues.OZONE_CSI_DEFAULT_VOLUME_SIZE,
+            CsiConfigurationValues.OZONE_CSI_DEFAULT_VOLUME_SIZE_DEFAULT);
     Server server =
         NettyServerBuilder.forAddress(new DomainSocketAddress(unixSocket))
             .channelType(EpollServerDomainSocketChannel.class)
             .workerEventLoopGroup(group)
             .bossEventLoopGroup(group)
             .addService(new IdentitiyService())
-            .addService(new ControllerService(rpcClient))
+            .addService(new ControllerService(rpcClient, defaultVolumeSize))
             .addService(new NodeService(ozoneConfiguration))
             .build();
 
     server.start();
     server.awaitTermination();
+    rpcClient.close();
     return null;
   }
 
