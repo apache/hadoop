@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdds.conf;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Example configuration to test the configuration injection.
  */
@@ -30,6 +32,8 @@ public class SimpleConfiguration {
   private boolean enabled;
 
   private int port = 1234;
+
+  private long waitTime = 1;
 
   @Config(key = "address")
   public void setClientAddress(String clientAddress) {
@@ -51,6 +55,12 @@ public class SimpleConfiguration {
     this.port = port;
   }
 
+  @Config(key = "wait", type = ConfigType.TIME, timeUnit =
+      TimeUnit.SECONDS)
+  public void setWaitTime(long waitTime) {
+    this.waitTime = waitTime;
+  }
+
   public String getClientAddress() {
     return clientAddress;
   }
@@ -65,5 +75,9 @@ public class SimpleConfiguration {
 
   public int getPort() {
     return port;
+  }
+
+  public long getWaitTime() {
+    return waitTime;
   }
 }

@@ -127,9 +127,9 @@ public class OzoneConfiguration extends Configuration {
             setterMethod.invoke(configuration,
                 getLong(key, 0));
             break;
-          case MILLISECONDS:
+          case TIME:
             setterMethod.invoke(configuration,
-                getTimeDuration(key, 0, TimeUnit.MILLISECONDS));
+                getTimeDuration(key, 0, configAnnotation.timeUnit()));
             break;
           default:
             throw new ConfigurationException(

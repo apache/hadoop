@@ -21,14 +21,27 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Mark field to be configuratble from ozone-site.xml.
+ * Mark field to be configurable from ozone-site.xml.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)
 public @interface Config {
+
+  /**
+   * Configuration fragment relative to the prefix defined with @ConfigGroup.
+   */
   String key();
 
+  /**
+   * Type of configuration. Use AUTO to decide it based on the java type.
+   */
   ConfigType type() default ConfigType.AUTO;
+
+  /**
+   * If type == TIME the unit should be defined with this attribute.
+   */
+  TimeUnit timeUnit() default TimeUnit.MILLISECONDS;
 }

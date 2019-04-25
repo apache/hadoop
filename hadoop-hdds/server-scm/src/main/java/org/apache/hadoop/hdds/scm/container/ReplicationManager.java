@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -759,12 +760,14 @@ public class ReplicationManager {
      */
     private long eventTimeout = 10 * 60 * 1000;
 
-    @Config(key = "thread.interval", type = ConfigType.MILLISECONDS)
+    @Config(key = "thread.interval", type = ConfigType.TIME, timeUnit =
+        TimeUnit.MILLISECONDS)
     public void setInterval(long interval) {
       this.interval = interval;
     }
 
-    @Config(key = "event.timeout", type = ConfigType.MILLISECONDS)
+    @Config(key = "event.timeout", type = ConfigType.TIME, timeUnit =
+        TimeUnit.MILLISECONDS)
     public void setEventTimeout(long eventTimeout) {
       this.eventTimeout = eventTimeout;
     }

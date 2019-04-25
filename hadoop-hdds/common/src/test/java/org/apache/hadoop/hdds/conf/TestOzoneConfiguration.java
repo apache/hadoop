@@ -29,6 +29,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Test class for OzoneConfiguration.
@@ -102,8 +103,9 @@ public class TestOzoneConfiguration {
     OzoneConfiguration ozoneConfig = new OzoneConfiguration();
     ozoneConfig.set("ozone.scm.client.address", "address");
     ozoneConfig.set("ozone.scm.client.bind.host", "host");
-    ozoneConfig.set("ozone.scm.client.enabled", "true");
-    ozoneConfig.set("ozone.scm.client.port", "5555");
+    ozoneConfig.setBoolean("ozone.scm.client.enabled", true);
+    ozoneConfig.setInt("ozone.scm.client.port", 5555);
+    ozoneConfig.setTimeDuration("ozone.scm.client.wait", 10, TimeUnit.MINUTES);
 
     SimpleConfiguration configuration =
         ozoneConfig.getObject(SimpleConfiguration.class);
@@ -112,6 +114,7 @@ public class TestOzoneConfiguration {
     Assert.assertEquals("address", configuration.getClientAddress());
     Assert.assertEquals(true, configuration.isEnabled());
     Assert.assertEquals(5555, configuration.getPort());
+    Assert.assertEquals(600, configuration.getWaitTime());
   }
 
   @Test
