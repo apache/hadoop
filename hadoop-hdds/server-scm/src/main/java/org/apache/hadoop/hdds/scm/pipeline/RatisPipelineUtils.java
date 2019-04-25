@@ -182,15 +182,11 @@ public final class RatisPipelineUtils {
           }
         });
       }).get();
-    } catch (ExecutionException ex) {
-      LOG.error("Execution exception occurred during createPipeline", ex);
-      throw new IOException("Execution exception occurred during " +
+    } catch (ExecutionException | RejectedExecutionException ex) {
+      LOG.error(ex.getClass().getName() + " exception occurred during " +
           "createPipeline", ex);
-    } catch (RejectedExecutionException ex) {
-      LOG.error("RejectedExecutionException, occurred during " +
-          "createPipeline", ex);
-      throw new IOException("RejectedExecutionException occurred during " +
-          "createPipeline", ex);
+      throw new IOException(ex.getClass().getName() + " exception occurred " +
+          "during createPipeline", ex);
     } catch(InterruptedException ex) {
       Thread.currentThread().interrupt();
       throw new IOException("Interrupt exception occurred during " +
