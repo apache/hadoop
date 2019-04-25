@@ -99,14 +99,14 @@ public class TestOzoneConfiguration {
 
   @Test
   public void getConfigurationObject() {
-    OzoneConfiguration conf = new OzoneConfiguration();
-    conf.set("ozone.scm.client.address", "address");
-    conf.set("ozone.scm.client.bind.host", "host");
-    conf.set("ozone.scm.client.enabled", "true");
-    conf.set("ozone.scm.client.port", "5555");
+    OzoneConfiguration ozoneConfig = new OzoneConfiguration();
+    ozoneConfig.set("ozone.scm.client.address", "address");
+    ozoneConfig.set("ozone.scm.client.bind.host", "host");
+    ozoneConfig.set("ozone.scm.client.enabled", "true");
+    ozoneConfig.set("ozone.scm.client.port", "5555");
 
     SimpleConfiguration configuration =
-        conf.getObject(SimpleConfiguration.class);
+        ozoneConfig.getObject(SimpleConfiguration.class);
 
     Assert.assertEquals("host", configuration.getBindHost());
     Assert.assertEquals("address", configuration.getClientAddress());
@@ -116,10 +116,10 @@ public class TestOzoneConfiguration {
 
   @Test
   public void getConfigurationObjectWithDefault() {
-    OzoneConfiguration conf = new OzoneConfiguration();
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
 
     SimpleConfiguration configuration =
-        conf.getObject(SimpleConfiguration.class);
+        ozoneConfiguration.getObject(SimpleConfiguration.class);
 
     Assert.assertEquals(false, configuration.isEnabled());
     Assert.assertEquals(9860, configuration.getPort());

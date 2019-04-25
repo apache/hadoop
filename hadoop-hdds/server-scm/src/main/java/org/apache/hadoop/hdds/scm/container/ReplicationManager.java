@@ -743,6 +743,9 @@ public class ReplicationManager {
     }
   }
 
+  /**
+   * Configuration used by the Replication Manager.
+   */
   @ConfigGroup(prefix = "hdds.scm.replication")
   public static class ReplicationManagerConfiguration {
     /**
