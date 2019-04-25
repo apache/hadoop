@@ -36,6 +36,16 @@ public @interface Config {
   String key();
 
   /**
+   * Default value to use if not set.
+   */
+  String defaultValue();
+
+  /**
+   * Custom description as a help.
+   */
+  String description() default "";
+
+  /**
    * Type of configuration. Use AUTO to decide it based on the java type.
    */
   ConfigType type() default ConfigType.AUTO;
@@ -44,4 +54,6 @@ public @interface Config {
    * If type == TIME the unit should be defined with this attribute.
    */
   TimeUnit timeUnit() default TimeUnit.MILLISECONDS;
+
+  ConfigTag[] tags() default {ConfigTag.OZONE};
 }

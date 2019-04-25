@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * Example configuration to test the configuration injection.
  */
 @ConfigGroup(prefix = "ozone.scm.client")
-public class SimpleConfiguration {
+public class ConfigurationExample {
 
   private String clientAddress;
 
@@ -50,13 +50,13 @@ public class SimpleConfiguration {
     this.enabled = enabled;
   }
 
-  @Config(key = "port", defaultValue = "9878")
+  @Config(key = "port", defaultValue = "1234")
   public void setPort(int port) {
     this.port = port;
   }
 
   @Config(key = "wait", type = ConfigType.TIME, timeUnit =
-      TimeUnit.SECONDS, defaultValue = "10m")
+      TimeUnit.SECONDS, defaultValue = "30m")
   public void setWaitTime(long waitTime) {
     this.waitTime = waitTime;
   }

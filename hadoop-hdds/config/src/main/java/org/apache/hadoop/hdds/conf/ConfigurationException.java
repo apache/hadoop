@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdds.conf;
 
 /**
- * Exeception to throw in case of a configuration problem.
+ * Exception to throw in case of a configuration problem.
  */
 public class ConfigurationException extends RuntimeException {
   public ConfigurationException() {
