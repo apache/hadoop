@@ -26,7 +26,7 @@ start_docker_env
 execute_robot_test scm ozonefs/ozonefs.robot
 
 
-## TODO: As of the hhe o3fs tests are unstable.
+## TODO: As of now the o3fs tests are unstable.
 
 export OZONE_HOME=/opt/ozone
 

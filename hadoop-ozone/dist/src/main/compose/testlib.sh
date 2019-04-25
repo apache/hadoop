@@ -77,7 +77,7 @@ execute_robot_test(){
   TEST_NAME=$(basename "$TEST")
   TEST_NAME=${TEST_NAME%.*}
   set +e
-  TEST_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
+  OUTPUT_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
   docker-compose -f "$COMPOSE_FILE" exec -e  SECURITY_ENABLED="${SECURITY_ENABLED}" -T "$CONTAINER" python -m robot --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$RESULT_DIR_INSIDE/robot-$OUTPUT_NAME.xml" "$SMOKETEST_DIR_INSIDE/$TEST"
   set -e
 
