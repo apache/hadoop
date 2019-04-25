@@ -57,13 +57,13 @@ Refer to [Write Dockerfile](WriteDockerfile.md) to build a Docker image or use p
 
 ```
 yarn jar path/to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
-   job run --name tf-job-001 --verbose --docker_image hadoopsubmarine/tf-1.8.0-gpu:0.0.1 \
+   job run --name tf-job-001 --verbose --docker_image tf-1.13.1-gpu:0.0.1 \
    --input_path hdfs://default/dataset/cifar-10-data \
    --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/
-   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0
+   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current
    --num_workers 1 --worker_resources memory=8G,vcores=2,gpu=1 \
    --worker_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=10000 --eval-batch-size=16 --train-batch-size=16 --num-gpus=2 --sync" \
-   --tensorboard --tensorboard_docker_image wtan/tf-1.8.0-cpu:0.0.3
+   --tensorboard --tensorboard_docker_image tf-1.13.1-cpu:0.0.1
 ```
 
 Explanations:
@@ -75,16 +75,16 @@ Explanations:
 
 ```
 yarn jar path/to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
-   job run --name tf-job-001 --verbose --docker_image hadoopsubmarine/tf-1.8.0-gpu:0.0.1 \
+   job run --name tf-job-001 --verbose --docker_image tf-1.13.1-gpu:0.0.1 \
    --input_path hdfs://default/dataset/cifar-10-data \
    --env(s) (same as standalone)
    --num_workers 2 \
    --worker_resources memory=8G,vcores=2,gpu=1 \
    --worker_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --train-steps=10000 --eval-batch-size=16 --train-batch-size=16 --num-gpus=2 --sync"  \
-   --ps_docker_image wtan/tf-1.8.0-cpu:0.0.3 \
+   --ps_docker_image tf-1.13.1-cpu:0.0.1 \
    --num_ps 1 --ps_resources memory=4G,vcores=2,gpu=0  \
    --ps_launch_cmd "cd /test/models/tutorials/image/cifar10_estimator && python cifar10_main.py --data-dir=%input_path% --job-dir=%checkpoint_path% --num-gpus=0" \
-   --tensorboard --tensorboard_docker_image wtan/tf-1.8.0-cpu:0.0.3
+   --tensorboard --tensorboard_docker_image tf-1.13.1-cpu:0.0.1
 ```
 
 Explanations:

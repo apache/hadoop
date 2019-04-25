@@ -14,9 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM tf-1.8.0-cpu-base:0.0.1
+FROM tf-1.13.1-cpu-base:0.0.1
 
 # Include models
 RUN mkdir /test
-ADD cifar10_estimator_tf_1.8.0 /test/cifar10_estimator
+ADD cifar10_estimator_tf_1.13.1 /test/cifar10_estimator
 RUN chown -R nobody /test

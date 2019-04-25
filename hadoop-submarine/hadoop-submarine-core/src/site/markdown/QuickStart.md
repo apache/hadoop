@@ -22,8 +22,17 @@ Must:
 
 Optional:
 
-- Enable YARN DNS. (When distributed training is required.)
+- Enable YARN DNS. (When yarn service runtime is required.)
 - Enable GPU on YARN support. (When GPU-based training is required.)
+- Docker images for submarine jobs. (When docker container is required.)
+```
+  # Get prebuilt docker images (No liability)
+  docker pull hadoopsubmarine/tf-1.13.1-gpu:0.0.1
+  # Or build your own docker images
+  docker build . -f Dockerfile.gpu.tf_1.13.1 -t tf-1.13.1-gpu-base:0.0.1
+```
+More details, please refer to
+[How to write Dockerfile for Submarine jobs](WriteDockerfile.html)
 
 ## Run jobs
 
@@ -122,7 +131,7 @@ For submarine internal configuration, please create a `submarine.xml` which shou
 ```
 yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
-  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name tf-job-001 \
+  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name tf-job-001 \
   --docker_image <your-docker-image> \
   --input_path hdfs://default/dataset/cifar-10-data  \
   --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
@@ -153,11 +162,11 @@ See below screenshot:
 
 ```
 yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
- --name tf-job-001 --docker_image <your docker image> \
+ --name tf-job-001 --docker_image <your-docker-image> \
  --input_path hdfs://default/dataset/cifar-10-data \
  --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
- --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
  --num_workers 2 \
  --worker_resources memory=8G,vcores=2,gpu=1 --worker_launch_cmd "cmd for worker ..." \
  --num_ps 2 \
@@ -183,11 +192,11 @@ yarn jar hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job show --name t
 Output looks like:
 ```
 Job Meta Info:
-	Application Id: application_1532131617202_0005
-	Input Path: hdfs://default/dataset/cifar-10-data
-	Checkpoint Path: hdfs://default/tmp/cifar-10-jobdir
-	Run Parameters: --name tf-job-001 --docker_image wtan/tf-1.8.0-gpu:0.0.3
-	                (... all your commandline before run the job)
+  Application Id: application_1532131617202_0005
+  Input Path: hdfs://default/dataset/cifar-10-data
+  Checkpoint Path: hdfs://default/tmp/cifar-10-jobdir
+  Run Parameters: --name tf-job-001 --docker_image <your-docker-image>
+                  (... all your commandline before run the job)
 ```
 
 After that, you can run ```tensorboard --logdir=<checkpoint-path>``` to view Tensorboard of the job.
@@ -198,9 +207,9 @@ After that, you can run ```tensorboard --logdir=<checkpoint-path>``` to view Ten
 # Cleanup previous service if needed
 yarn app -destroy tensorboard-service; \
 yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
-  job run --name tensorboard-service --verbose --docker_image wtan/tf-1.8.0-cpu:0.0.3 \
+  job run --name tensorboard-service --verbose --docker_image <your-docker-image> \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
-  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
   --num_workers 0 --tensorboard
 ```
 
@@ -216,3 +225,11 @@ There're two ways to get training job logs, one is from YARN UI (new or old):
 ![alt text](./images/job-logs-ui.png "Job logs UI")
 
 Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
+
+## Build from source code
+
+If you want to build submarine project by yourself, you can follow the steps:
+
+- Run 'mvn install -DskipTests' from Hadoop source top level once.
+
+- Navigate to hadoop-submarine folder and run 'mvn clean package'.
