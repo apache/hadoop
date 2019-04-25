@@ -81,6 +81,16 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private MetadataStore ms;
   private S3AFileSystem rawFs;
 
+  /**
+   * The test timeout is increased in case previous tests have created
+   * many tombstone markers which now need to be purged.
+   * @return the test timeout.
+   */
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  }
+
   protected static void expectResult(int expected,
       String message,
       S3GuardTool tool,

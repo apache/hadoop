@@ -48,6 +48,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
+import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -58,6 +59,8 @@ import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_THREADS;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
@@ -121,7 +124,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   public static final int FILE_COUNT_NON_SCALED = 10;
 
-  public static final int FILE_COUNT_SCALED = 1000;
+  /**
+   * The number of files for a scaled test. This is still
+   * less than half the amount which can be fitted into a delete
+   * request, so that even with this many R/W and R/O files,
+   * both can fit in the same request.
+   * Then, when a partial delete occurs, we can make assertions
+   * knowing that all R/W files should have been deleted and all
+   * R/O files rejected.
+   */
+  public static final int FILE_COUNT_SCALED = 400;
 
   /**
    * A role FS; if non-null it is closed in teardown.
@@ -205,6 +217,17 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     super.teardown();
   }
 
+  @Override
+  protected void deleteTestDirInTeardown() throws IOException {
+    super.deleteTestDirInTeardown();
+    Path path = getContract().getTestPath();
+    try {
+      prune(path);
+    } catch (IOException e) {
+      LOG.warn("When pruning the test directory {}", path, e);
+    }
+  }
+
   private void assumeRoleTests() {
     assume("No ARN for role tests", !getAssumedRoleARN().isEmpty());
   }
@@ -248,7 +271,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
     conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
-
+    // turn off prune delays, so as to stop scale tests creating
+    // so much cruft that future CLI prune commands take forever
+    conf.setInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, 0);
     return conf;
   }
 
@@ -487,13 +512,15 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   private AccessDeniedException expectDeleteForbidden(Path path) throws Exception {
-    return forbidden("Expected an error deleting "  + path,
-        "",
-        () -> {
-          boolean r = roleFS.delete(path, true);
-          return " delete=" + r + " " + ls(path.getParent());
-        }
-    );
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, true, "delete %s", path)) {
+      return forbidden("Expected an error deleting "  + path,
+          "",
+          () -> {
+            boolean r = roleFS.delete(path, true);
+            return " delete=" + r + " " + ls(path.getParent());
+          });
+    }
   }
 
   /**
@@ -505,13 +532,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private AccessDeniedException expectRenameForbidden(Path src, Path dest)
       throws Exception {
-    return forbidden(
-        "Renaming " + src + " to " + dest,
-        "",
-        () -> {
-          roleFS.rename(src, dest);
-          return ContractTestUtils.ls(getFileSystem(), src.getParent());
-        });
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, true, "rename")) {
+      return forbidden(
+          "Renaming " + src + " to " + dest,
+          "",
+          () -> {
+            roleFS.rename(src, dest);
+            return ContractTestUtils.ls(getFileSystem(), src.getParent());
+          });
+    }
   }
 
   /**
@@ -531,6 +561,21 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   /**
+   * Prune the store for everything under the test path.
+   * @param path path.
+   * @throws IOException on failure.
+   */
+  private void prune(Path path) throws IOException {
+    S3AFileSystem fs = getFileSystem();
+    if (fs.hasMetadataStore()) {
+      MetadataStore store = fs.getMetadataStore();
+      try(DurationInfo ignored = new DurationInfo(LOG, true, "prune %s", path)) {
+        store.prune(System.currentTimeMillis(), fs.pathToKey(path));
+      }
+    }
+  }
+
+  /**
    * List all files under a path.
    * @param path path to list
    * @param recursive recursive listing?
@@ -547,7 +592,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   /**
-   * Write the text to a file asynchronously. Logs the operation too
+   * Write the text to a file asynchronously. Logs the operation duration.
    * @param fs filesystem
    * @param path path
    * @return future to the patch created.

@@ -919,6 +919,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Retries.OnceRaw
   private void innerPut(Collection<DDBPathMetadata> metas) throws IOException {
+    if (metas.isEmpty()) {
+      // this seems to appear in the logs, so log the full stack to
+      // identify it.
+      LOG.debug("Ignoring empty list of entries to put",
+          new Exception("source"));
+      return;
+    }
     Item[] items = pathMetadataToItem(completeAncestry(metas));
     LOG.debug("Saving batch of {} items to table {}, region {}", items.length,
         tableName, region);
@@ -1086,25 +1093,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
           S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT,
           TimeUnit.MILLISECONDS);
       Set<Path> parentPathSet = new HashSet<>();
+      Set<Path> clearedParentPathSet = new HashSet<>();
       for (Item item : expiredFiles(modTime, keyPrefix)) {
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
         Path path = md.getFileStatus().getPath();
         deletionBatch.add(path);
 
-        // add parent path of what we remove
+        // add parent path of what we remove if it has not
+        // already been processed
         Path parentPath = path.getParent();
-        if (parentPath != null) {
+        if (parentPath != null && !clearedParentPathSet.contains(parentPath)) {
           parentPathSet.add(parentPath);
         }
 
         itemCount++;
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
-          Thread.sleep(delay);
+          if (delay > 0) {
+            Thread.sleep(delay);
+          }
           processBatchWriteRequest(pathToKey(deletionBatch), null);
 
           // set authoritative false for each pruned dir listing
           removeAuthoritativeDirFlag(parentPathSet);
+          // already cleared parent paths.
+          clearedParentPathSet.addAll(parentPathSet);
           parentPathSet.clear();
 
           deletionBatch.clear();
@@ -1151,7 +1164,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     try {
       LOG.debug("innerPut on metas: {}", metas);
-      innerPut(metas);
+      if (!metas.isEmpty()) {
+        innerPut(metas);
+      }
     } catch (IOException e) {
       String msg = String.format("IOException while setting false "
           + "authoritative directory flag on: %s.", metas);
