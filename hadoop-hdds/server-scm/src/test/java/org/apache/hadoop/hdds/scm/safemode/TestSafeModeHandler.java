@@ -68,7 +68,8 @@ public class TestSafeModeHandler {
         Mockito.mock(ContainerManager.class);
     Mockito.when(containerManager.getContainerIDs())
         .thenReturn(new HashSet<>());
-    replicationManager = new ReplicationManager(new ReplicationManagerConfiguration(),
+    replicationManager = new ReplicationManager(
+        new ReplicationManagerConfiguration(),
         containerManager, Mockito.mock(ContainerPlacementPolicy.class),
         eventQueue, new LockManager(configuration));
     scmPipelineManager = Mockito.mock(SCMPipelineManager.class);

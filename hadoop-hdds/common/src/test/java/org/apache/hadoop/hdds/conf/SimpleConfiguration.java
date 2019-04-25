@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hdds.conf;
 
+/**
+ * Example configuration to test the configuration injection.
+ */
 @ConfigGroup(prefix = "ozone.scm.client")
 public class SimpleConfiguration {
 
