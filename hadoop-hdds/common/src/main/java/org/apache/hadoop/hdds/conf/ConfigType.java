@@ -29,5 +29,6 @@ public enum ConfigType {
   BOOLEAN,
   INT,
   LONG,
-  MILLISECONDS
+  TIME,
+  SIZE
 }
