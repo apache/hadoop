@@ -19,12 +19,21 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.impl.WrappedIOException;
+import org.apache.hadoop.util.DurationInfo;
+
+import static org.apache.hadoop.fs.impl.FutureIOSupport.raiseInnerCause;
 
 /**
  * A bridge from Callable to Supplier; catching exceptions
@@ -33,7 +42,10 @@ import org.apache.hadoop.fs.impl.WrappedIOException;
  */
 public final class CallableSupplier<T> implements Supplier {
 
-  final Callable<T> call;
+  private static final Logger LOG =
+      LoggerFactory.getLogger(CallableSupplier.class);
+
+  private final Callable<T> call;
 
   CallableSupplier(final Callable<T> call) {
     this.call = call;
@@ -68,6 +80,32 @@ public final class CallableSupplier<T> implements Supplier {
       final Callable<T> call) {
     return CompletableFuture.supplyAsync(
         new CallableSupplier<T>(call), executor);
+  }
+
+  /**
+   * Wait for a list of futures to complete
+   * @param futures list of futures.
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
+   */
+  public static <T> void waitForCompletion(
+      final List<CompletableFuture<T>> futures)
+      throws IOException {
+    if (futures.isEmpty()) {
+      return;
+    }
+    // await completion
+    CompletableFuture<Void> all = CompletableFuture.allOf(
+        futures.toArray(
+            new CompletableFuture[futures.size()]));
+    try(DurationInfo ignore =
+            new DurationInfo(LOG, false, "Waiting for task completion")) {
+      all.join();
+    } catch (CancellationException e) {
+      throw new IOException(e);
+    } catch (CompletionException e) {
+      raiseInnerCause(e);
+    }
   }
 
 }

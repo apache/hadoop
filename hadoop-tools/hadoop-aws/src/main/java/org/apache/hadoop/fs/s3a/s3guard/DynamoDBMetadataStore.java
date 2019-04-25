@@ -84,6 +84,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
@@ -109,6 +110,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowAllDynamoDBOperations;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3GuardClientOperations;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
@@ -251,6 +253,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
+
+  /**
+   * The maximum number of oustanding operations to submit at a time
+   * in any operation whch submits work through the executors.
+   * Value: {@value}.
+   */
+  private static final int S3GUARD_DDB_SUBMITTED_TASK_LIMIT = 50;
 
   private AmazonDynamoDB amazonDynamoDB;
   private DynamoDB dynamoDB;
@@ -555,10 +564,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
         innerDelete(pathToDelete, true);
         return null;
       }));
+      if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+        // first batch done; block for completion.
+        waitForCompletion(futures);
+      }
     }
-    // await completion
-    CompletableFuture.allOf(futures.toArray(
-        new CompletableFuture[futures.size()])).join();
+    waitForCompletion(futures);
   }
 
   /**

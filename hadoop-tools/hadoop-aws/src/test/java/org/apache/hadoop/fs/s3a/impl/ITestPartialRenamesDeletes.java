@@ -59,7 +59,6 @@ import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
 import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
 import static org.apache.hadoop.fs.s3a.Constants.MAX_THREADS;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
@@ -83,6 +82,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatemen
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
 import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
@@ -96,6 +96,17 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  *
  * All these test have a unique path for each run, with a roleFS having
  * full RW access to part of it, and R/O access to a restricted subdirectory
+ *
+ * The tests are parameterized to single/multi delete, which control which
+ * of the two delete mechanisms are used.
+ * In multi delete, in a scale test run, a significantly larger set of files
+ * is created and then deleted.
+ * This isn't done in the single delete as it is much slower and it is not
+ * the situation we are trying to create.
+ *
+ * This test manages to create lots of load on the s3guard prune command
+ * when that is tested; too many tombstone files for the test to complete.
+ * An attempt is made in teardown to prune the test files.
  */
 @SuppressWarnings("ThrowableNotThrown")
 @RunWith(Parameterized.class)
@@ -190,6 +201,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     fs.delete(basePath, true);
     fs.mkdirs(destDir);
+
+    // create the baseline assumed role
     assumedRoleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(assumedRoleConfig,
         STATEMENT_S3GUARD_CLIENT,
@@ -198,14 +211,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(destDir))
     );
+    // the role configured to that set of restrictions
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(assumedRoleConfig);
+
+    // switch to the big set of files iff this is a multidelete run
+    // with -Dscale set.
+    // without that the DELETE calls become a key part of the bottleneck
     scaleTest = multiDelete && getTestPropertyBool(
         getConfiguration(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
-    // switch to the big set of files iff this is a multidelete run
-    // with -Dscale set.
-    // without that the DELETE calls become a key part of the bottleneck
     filecount = scaleTest
         ? FILE_COUNT_SCALED
         : FILE_COUNT_NON_SCALED;
@@ -276,7 +291,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     conf.setInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, 0);
     return conf;
   }
-
 
   /**
    * Create a unique path, which includes method name,
@@ -620,15 +634,17 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       final int range) throws IOException {
     List<CompletableFuture<Path>> futures = new ArrayList<>(range);
     List<Path> paths = new ArrayList<>(range);
-    for (int i = 0; i < range; i++) {
-      String name = "file-" + i;
-      Path p = new Path(destDir, name);
-      paths.add(p);
-      futures.add(put(fs, p, name));
+    try(DurationInfo ignore =
+            new DurationInfo(LOG, "Creating %d files", range)) {
+      for (int i = 0; i < range; i++) {
+        String name = "file-" + i;
+        Path p = new Path(destDir, name);
+        paths.add(p);
+        futures.add(put(fs, p, name));
+      }
+      waitForCompletion(futures);
+      return paths;
     }
-    CompletableFuture.allOf(futures.toArray(
-        new CompletableFuture[futures.size()])).join();
-    return paths;
   }
 
 }
