@@ -140,13 +140,14 @@ public class RouterAdmin extends Configured implements Tool {
     }
     if (cmd.equals("-add")) {
       return "\t[-add <source> <nameservice1, nameservice2, ...> <destination> "
-          + "[-readonly] [-faulttolerant] [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+          + "[-readonly] [-faulttolerant] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
     } else if (cmd.equals("-update")) {
       return "\t[-update <source>"
           + " [<nameservice1, nameservice2, ...> <destination>] "
-          + "[-readonly true|false] [-faulttolerant true|false]"
-          + " [-order HASH|LOCAL|RANDOM|HASH_ALL] "
+          + "[-readonly true|false] [-faulttolerant true|false] "
+          + "[-order HASH|LOCAL|RANDOM|HASH_ALL|SPACE] "
           + "-owner <owner> -group <group> -mode <mode>]";
     } else if (cmd.equals("-rm")) {
       return "\t[-rm <source>]";
