@@ -178,6 +178,25 @@ public class TestRunJobCliParsing {
   }
 
   @Test
+  public void testJobWithoutName() throws Exception {
+    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
+    String expectedErrorMessage =
+        "--" + CliConstants.NAME + " is absent";
+    String actualMessage = "";
+    try {
+      runJobCli.run(
+          new String[]{"--docker_image", "tf-docker:1.1.0",
+              "--num_workers", "0", "--tensorboard", "--verbose",
+              "--tensorboard_resources", "memory=2G,vcores=2",
+              "--tensorboard_docker_image", "tb_docker_image:001"});
+    } catch (ParseException e) {
+      actualMessage = e.getMessage();
+      e.printStackTrace();
+    }
+    assertEquals(expectedErrorMessage, actualMessage);
+  }
+
+  @Test
   public void testLaunchCommandPatternReplace() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
     Assert.assertFalse(SubmarineLogs.isVerbose());
