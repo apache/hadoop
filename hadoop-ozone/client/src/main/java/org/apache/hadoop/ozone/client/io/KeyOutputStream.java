@@ -817,8 +817,8 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public Builder setRetryInterval(long retryInterval) {
-      this.retryInterval = retryInterval;
+    public Builder setRetryInterval(long retryIntervalInMS) {
+      this.retryInterval = retryIntervalInMS;
       return this;
     }
 

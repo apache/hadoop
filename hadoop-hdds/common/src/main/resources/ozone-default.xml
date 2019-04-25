@@ -440,7 +440,7 @@
     <value>0ms</value>
     <tag>OZONE, CLIENT</tag>
     <description>Indicates the time duration a client will wait before
-      retrying a write key request on encountering an exception. Be default
+      retrying a write key request on encountering an exception. By default
       there is no wait.
     </description>
   </property>
