@@ -87,7 +87,7 @@ import java.util.concurrent.ExecutionException;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateMultiObjectDeleteException;
+import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.translateDeleteException;
 
 /**
  * Utility methods for S3A code.
@@ -288,7 +288,7 @@ public final class S3AUtils {
       case 200:
         if (exception instanceof MultiObjectDeleteException) {
           // failure during a bulk delete
-          return translateMultiObjectDeleteException(message,
+          return translateDeleteException(message,
               (MultiObjectDeleteException) exception);
         }
         // other 200: FALL THROUGH

@@ -376,8 +376,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     roleFS.delete(destDir, true);
     roleFS.mkdirs(destDir);
     // rename will fail in the delete phase
-    AccessDeniedException deniedException = expectRenameForbidden(
-        readOnlyFile, destDir);
+    expectRenameForbidden(readOnlyFile, destDir);
 
 
     // and the source file is still there
@@ -513,14 +512,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // build the set of all paths under the directory tree through
     // a directory listing (i.e. not getFileStatus()).
     // small risk of observed inconsistency here on unguarded stores.
-    final Set<Path> roFListing = listFilesUnderPath(readOnlyDir, true);
+    final Set<Path> readOnlyListing = listFilesUnderPath(readOnlyDir, true);
 
-    String directoryList = roFListing
-        .stream()
+    String directoryList = readOnlyListing.stream()
         .map(Path::toString)
         .collect(Collectors.joining(", ", "[", "]"));
 
-    Assertions.assertThat(roFListing)
+    Assertions.assertThat(readOnlyListing)
         .as("ReadOnly directory " + directoryList)
         .containsAll(readOnlyFiles);
   }
@@ -583,7 +581,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs.hasMetadataStore()) {
       MetadataStore store = fs.getMetadataStore();
-      try(DurationInfo ignored = new DurationInfo(LOG, true, "prune %s", path)) {
+      try(DurationInfo ignored =
+              new DurationInfo(LOG, true, "prune %s", path)) {
         store.prune(System.currentTimeMillis(), fs.pathToKey(path));
       }
     }
@@ -598,10 +597,13 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private Set<Path> listFilesUnderPath(Path path, boolean recursive) throws IOException {
     Set<Path> files = new TreeSet<>();
-    applyLocatedFiles(getFileSystem().listFiles(path, recursive),
-        (status) -> {
-          files.add(status.getPath());
-        });
+      try (DurationInfo ignore =
+               new DurationInfo(LOG, "ls -R %s", path)) {
+        applyLocatedFiles(getFileSystem().listFiles(path, recursive),
+            (status) -> {
+              files.add(status.getPath());
+            });
+      }
     return files;
   }
 

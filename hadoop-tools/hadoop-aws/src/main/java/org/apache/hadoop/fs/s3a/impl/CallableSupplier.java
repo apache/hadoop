@@ -83,7 +83,7 @@ public final class CallableSupplier<T> implements Supplier {
   }
 
   /**
-   * Wait for a list of futures to complete
+   * Wait for a list of futures to complete.
    * @param futures list of futures.
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
@@ -96,8 +96,7 @@ public final class CallableSupplier<T> implements Supplier {
     }
     // await completion
     CompletableFuture<Void> all = CompletableFuture.allOf(
-        futures.toArray(
-            new CompletableFuture[futures.size()]));
+        futures.toArray(new CompletableFuture[0]));
     try(DurationInfo ignore =
             new DurationInfo(LOG, false, "Waiting for task completion")) {
       all.join();

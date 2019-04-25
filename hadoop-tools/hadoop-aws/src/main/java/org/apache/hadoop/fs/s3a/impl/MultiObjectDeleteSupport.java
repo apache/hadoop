@@ -50,6 +50,10 @@ public final class MultiObjectDeleteSupport {
 
   private final StoreContext context;
 
+  /**
+   * Initiate with a store context.
+   * @param context store context.
+   */
   public MultiObjectDeleteSupport(final StoreContext context) {
     this.context = context;
   }
@@ -61,7 +65,7 @@ public final class MultiObjectDeleteSupport {
   public static final String ACCESS_DENIED = "AccessDenied";
 
   /**
-   * A {@code }MultiObjectDeleteException} is raised if one or more
+   * A {@code MultiObjectDeleteException} is raised if one or more
    * paths listed in a bulk DELETE operation failed.
    * The top-level exception is therefore just "something wasn't deleted",
    * but doesn't include the what or the why.
@@ -72,7 +76,7 @@ public final class MultiObjectDeleteSupport {
    * @param deleteException the delete exception. to translate
    * @return an IOE with more detail.
    */
-  public static IOException translateMultiObjectDeleteException(
+  public static IOException translateDeleteException(
       final String message,
       final MultiObjectDeleteException deleteException) {
     final StringBuilder result = new StringBuilder(
@@ -94,6 +98,72 @@ public final class MultiObjectDeleteSupport {
     } else {
       return new AWSS3IOException(result.toString(), deleteException);
     }
+  }
+
+  /**
+   * Process a multi object delete exception by building two paths from
+   * the delete request: one of all deleted files, one of all undeleted values.
+   * The latter are those rejected in the delete call.
+   * @param deleteException the delete exception.
+   * @param keysToDelete the keys in the delete request
+   * @return tuple of (undeleted, deleted) paths.
+   */
+  public Pair<List<Path>, List<Path>> splitUndeletedKeys(
+      final MultiObjectDeleteException deleteException,
+      final Collection<DeleteObjectsRequest.KeyVersion> keysToDelete) {
+    LOG.debug("Processing delete failure; keys to delete count = {};"
+            + " errors in exception {}; successful deletions = {}",
+        keysToDelete.size(),
+        deleteException.getErrors().size(),
+        deleteException.getDeletedObjects().size());
+    Function<String, Path> qualifier = context.getKeyToPathQualifier();
+    // convert the collection of keys being deleted into paths
+    final List<Path> pathsBeingDeleted = keysToDelete.stream()
+        .map((keyVersion) -> qualifier.apply(keyVersion.getKey()))
+        .collect(Collectors.toList());
+    // Take this is list of paths
+    // extract all undeleted entries contained in the exception and
+    // then removes them from the original list.
+    List<Path> undeleted = removeUndeletedPaths(deleteException, pathsBeingDeleted,
+        qualifier);
+    return Pair.of(undeleted, pathsBeingDeleted);
+  }
+
+  /**
+   * Process a delete failure by removing from the metastore all entries
+   * which where deleted, as inferred from the delete failures exception
+   * and the original list of files to delete declares to have been deleted.
+   * @param deleteException the delete exception.
+   * @param keysToDelete collection of keys which had been requested.
+   * @return a tuple of (undeleted, deleted, failures)
+   */
+  public Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
+  processDeleteFailure(
+      final MultiObjectDeleteException deleteException,
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
+    final MetadataStore metadataStore =
+        checkNotNull(context.getMetadataStore(), "context metadatastore");
+    final List<Pair<Path, IOException>> failures = new ArrayList<>();
+    final Pair<List<Path>, List<Path>> outcome = splitUndeletedKeys(
+        deleteException, keysToDelete);
+    List<Path> deleted = outcome.getRight();
+    List<Path> undeleted = outcome.getLeft();
+    // delete the paths but recover
+    deleted.forEach(path -> {
+      try {
+        metadataStore.delete(path);
+      } catch (IOException e) {
+        // trouble: we failed to delete the far end entry
+        // try with the next one.
+        // if this is a big network failure, this is going to be noisy.
+        LOG.warn("Failed to update S3Guard store with deletion of {}", path);
+        failures.add(Pair.of(path, e));
+      }
+    });
+    if (LOG.isDebugEnabled()) {
+      undeleted.forEach(p -> LOG.debug("Deleted {}", p));
+    }
+    return Triple.of(undeleted, deleted, failures);
   }
 
   /**
@@ -129,73 +199,6 @@ public final class MultiObjectDeleteSupport {
     List<Path> undeleted = extractUndeletedPaths(deleteException, qualifier);
     pathsBeingDeleted.removeAll(undeleted);
     return undeleted;
-  }
-
-  /**
-   * Process a multi object delete exception by building two paths from
-   * the delete request: one of all deleted files, one of all undeleted values.
-   * The latter are those rejected in the delete call.
-   * @param deleteException the delete exception.
-   * @param keysToDelete the keys in the delete request
-   * @return tuple of (undeleted, deleted) paths.
-   */
-  public Pair<List<Path>, List<Path>> splitUndeletedKeys(
-      final MultiObjectDeleteException deleteException,
-      final Collection<DeleteObjectsRequest.KeyVersion> keysToDelete) {
-    LOG.debug("Processing delete failure; keys to delete count = {};"
-            + " errors in exception {}; successful deletions = {}",
-        keysToDelete.size(),
-        deleteException.getErrors().size(),
-        deleteException.getDeletedObjects().size());
-    Function<String, Path> qualifier = context.getKeyToPathQualifier();
-    // convert the collection of keys being deleted into paths
-    final List<Path> pathsBeingDeleted = keysToDelete.stream()
-        .map((keyVersion) -> qualifier.apply(keyVersion.getKey()))
-        .collect(Collectors.toList());
-    // Take this is list of paths
-    // extract all undeleted entries contained in the exception and
-    // then removes them from the original list.
-    List<Path> undeleted = removeUndeletedPaths(deleteException, pathsBeingDeleted,
-        qualifier);
-    return Pair.of(undeleted, pathsBeingDeleted);
-  }
-
-  /**
-   * Process a delete failure by removing from the metastore all entries
-   * which where deleted, as inferred from the delete failures exception
-   * and the original list of files to delete declares to have been delted.
-   * @param deleteException the delete exception.
-   * @param keysToDelete collection of keys which had been requested.
-   * @param qualifierFn qualifier to convert keys to paths
-   * @return a tuple of (undeleted, deleted, failures)
-   */
-  public Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
-  processDeleteFailure(
-      final MultiObjectDeleteException deleteException,
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
-    final MetadataStore metadataStore =
-        checkNotNull(context.getMetadataStore(), "context metadatastore");
-    final List<Pair<Path, IOException>> failures = new ArrayList<>();
-    final Pair<List<Path>, List<Path>> outcome = splitUndeletedKeys(
-        deleteException, keysToDelete);
-    List<Path> deleted = outcome.getRight();
-    List<Path> undeleted = outcome.getLeft();
-    // delete the paths but recover
-    deleted.forEach(path -> {
-      try {
-        metadataStore.delete(path);
-      } catch (IOException e) {
-        // trouble: we failed to delete the far end entry
-        // try with the next one.
-        // if this is a big network failure, this is going to be noisy.
-        LOG.warn("Failed to update S3Guard store with deletion of {}", path);
-        failures.add(Pair.of(path, e));
-      }
-    });
-    if (LOG.isDebugEnabled()) {
-      undeleted.forEach(p -> LOG.debug("Deleted {}", p));
-    }
-    return Triple.of(undeleted, deleted, failures);
   }
 
 }
