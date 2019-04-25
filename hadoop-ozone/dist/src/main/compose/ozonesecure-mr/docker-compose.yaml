@@ -113,7 +113,7 @@ services:
       WAIT_FOR: rm:8088
     command: ["yarn","timelineserver"]
   spark:
-    image: ahadoop/spark:v1
+    image: ahadoop/spark-2.4:hadoop-3.2
     hostname: spark
     volumes:
       - ../..:/opt/hadoop
