@@ -24,11 +24,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.junit.Assert.assertTrue;
@@ -38,6 +41,9 @@ import static org.junit.Assert.assertTrue;
  */
 @InterfaceAudience.Private
 public class ExtraAssertions {
+
+  private static final Logger LOG = LoggerFactory.getLogger(
+      ExtraAssertions.class);
 
   /**
    * Assert that the number of files in a destination matches that expected.
@@ -51,8 +57,11 @@ public class ExtraAssertions {
       Path path, long expected)
       throws IOException {
     List<String> files = new ArrayList<>();
-    applyLocatedFiles(fs.listFiles(path, true),
-        (status) -> files.add(status.getPath().toString()));
+    try (DurationInfo ignored = new DurationInfo(LOG, false,
+        "Counting files in %s", path)) {
+      applyLocatedFiles(fs.listFiles(path, true),
+          (status) -> files.add(status.getPath().toString()));
+    }
     long actual = files.size();
     if (actual != expected) {
       String ls = files.stream().collect(Collectors.joining("\n"));

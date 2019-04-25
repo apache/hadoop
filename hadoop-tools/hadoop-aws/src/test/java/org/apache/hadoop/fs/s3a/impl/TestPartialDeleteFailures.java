@@ -42,6 +42,7 @@ import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
@@ -201,6 +202,7 @@ public class TestPartialDeleteFailures {
             4,
             10, TimeUnit.SECONDS,
             "s3a-transfer-shared"),
+        Constants.DEFAULT_EXECUTOR_CAPACITY,
         new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT),
         null,
         new S3AInstrumentation(name),

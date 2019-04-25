@@ -202,6 +202,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private TransferManager transfers;
   private ListeningExecutorService boundedThreadPool;
   private ExecutorService unboundedThreadPool;
+  private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
   private static final Logger PROGRESS =
@@ -343,14 +344,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           maxThreads,
           maxThreads + totalTasks,
           keepAliveTime, TimeUnit.SECONDS,
-          "s3a-transfer-shared");
+          "s3a-transfer-shared-" + bucket);
       unboundedThreadPool = new ThreadPoolExecutor(
           maxThreads, Integer.MAX_VALUE,
           keepAliveTime, TimeUnit.SECONDS,
           new LinkedBlockingQueue<Runnable>(),
           BlockingThreadPoolExecutorService.newDaemonThreadFactory(
-              "s3a-transfer-unbounded"));
-
+              "s3a-transfer-unbounded-" + bucket));
+      executorCapacity = intOption(conf,
+          EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
       if (listVersion < 1 || listVersion > 2) {
         LOG.warn("Configured fs.s3a.list.version {} is invalid, forcing " +
@@ -2380,6 +2382,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         getUsername(),
         owner,
         boundedThreadPool,
+        executorCapacity,
         invoker,
         directoryAllocator,
         getInstrumentation(),

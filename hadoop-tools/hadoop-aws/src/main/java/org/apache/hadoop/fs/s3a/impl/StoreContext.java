@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 
 /**
  * This class provides the core context of the S3A filesystem to subsidiary
@@ -77,7 +78,12 @@ public class StoreContext {
   /**
    * Bounded thread pool for async operations.
    */
-  private final ListeningExecutorService boundedThreadPool;
+  private final ListeningExecutorService executor;
+
+  /**
+   * Capacity of new executors created.
+   */
+  private final int executorCapacity;
 
   /** Invoker of operations. */
   private final Invoker invoker;
@@ -113,13 +119,16 @@ public class StoreContext {
   /** Function to take a key and return a path. */
   private final Function<String, Path> keyToPathQualifier;
 
+  /**
+   * Instantiate.
+   */
   public StoreContext(final URI fsURI,
       final String bucket,
       final Configuration configuration,
       final String username,
       final UserGroupInformation owner,
-      final ListeningExecutorService boundedThreadPool,
-      final Invoker invoker,
+      final ListeningExecutorService executor,
+      final int executorCapacity, final Invoker invoker,
       final LocalDirAllocator directoryAllocator,
       final S3AInstrumentation instrumentation,
       final S3AStorageStatistics storageStatistics,
@@ -136,7 +145,8 @@ public class StoreContext {
     this.configuration = configuration;
     this.username = username;
     this.owner = owner;
-    this.boundedThreadPool = boundedThreadPool;
+    this.executor = executor;
+    this.executorCapacity = executorCapacity;
     this.invoker = invoker;
     this.directoryAllocator = directoryAllocator;
     this.instrumentation = instrumentation;
@@ -176,8 +186,8 @@ public class StoreContext {
     return bucketLocation;
   }
 
-  public ListeningExecutorService getBoundedThreadPool() {
-    return boundedThreadPool;
+  public ListeningExecutorService getExecutor() {
+    return executor;
   }
 
   public Invoker getInvoker() {
@@ -228,7 +238,6 @@ public class StoreContext {
     return storageStatistics;
   }
 
-
   /**
    * Increment a statistic by 1.
    * This increments both the instrumentation and storage statistics.
@@ -267,5 +276,34 @@ public class StoreContext {
     instrumentation.incrementGauge(statistic, count);
   }
 
+  /**
+   * Create a new executor service with a given capacity.
+   * This executor submits works to the {@link #executor}, using a
+   * {@link SemaphoredDelegatingExecutor} to limit the number
+   * of requests coming in from a specific client.
+   *
+   * Because this delegates to an existing thread pool, the cost of
+   * creating a new instance here is low.
+   * As the throttling is per instance, separate instances
+   * should be created for each operation which wishes to execute work in
+   * parallel <i>without</i> saturating the base executor.
+   * This is important if either the duration of each operation is long
+   * or the submission rate of work is high.
+   * @param capacity maximum capacity of this executor.
+   * @return an executor for submitting work.
+   */
+  public ListeningExecutorService createThrottledExecutor(int capacity) {
+    return new SemaphoredDelegatingExecutor(executor,
+        capacity, true);
+  }
+
+  /**
+   * Create a new executor with the capacity defined in
+   * {@link #executorCapacity}
+   * @return a new executor for exclusive use by the caller.
+   */
+  public ListeningExecutorService createThrottledExecutor() {
+    return createThrottledExecutor(executorCapacity);
+  }
 
 }

@@ -26,10 +26,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,9 +45,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
-import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
@@ -83,6 +79,7 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_S3GUARD_CLIEN
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
@@ -124,7 +121,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   public static final int FILE_COUNT_NON_SCALED = 10;
 
-  public static final int FILE_COUNT_SCALED = 2000;
+  public static final int FILE_COUNT_SCALED = 1000;
 
   /**
    * A role FS; if non-null it is closed in teardown.
@@ -145,6 +142,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private Configuration assumedRoleConfig;
 
   private int filecount;
+
+  private boolean scaleTest;
 
   /**
    * Test array for parameterized test runs.
@@ -188,11 +187,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
             .addResources(directory(destDir))
     );
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(assumedRoleConfig);
-    boolean scaleTest = getTestPropertyBool(
+    scaleTest = multiDelete && getTestPropertyBool(
         getConfiguration(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
-    filecount = scaleTest ? FILE_COUNT_SCALED : FILE_COUNT_NON_SCALED;
+    // switch to the big set of files iff this is a multidelete run
+    // with -Dscale set.
+    // without that the DELETE calls become a key part of the bottleneck
+    filecount = scaleTest
+        ? FILE_COUNT_SCALED
+        : FILE_COUNT_NON_SCALED;
   }
 
   @Override
@@ -442,8 +446,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
       reset(rejectionCount, deleteVerbCount);
     }
-    // all the files are still there
-    readOnlyFiles.forEach(this::pathMustExist);
+    // all the files are still there? (avoid in scale test due to cost)
+    if (!scaleTest) {
+      readOnlyFiles.forEach(this::pathMustExist);
+    }
 
     describe("Trying to delete upper-level directory");
     ex = expectDeleteForbidden(basePath);
@@ -541,40 +547,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   /**
-   * Submit something async.
-   * @param call call to invoke
-   * @param <T> type
-   * @return the future to wait for
-   */
-  private static <T> CompletableFuture<T> submit(
-      final Callable<T> call) {
-    return CompletableFuture.supplyAsync(
-        new CallableSupplier<T>(call), executor);
-  }
-
-  private static class CallableSupplier<T> implements Supplier {
-
-    final Callable<T> call;
-
-    CallableSupplier(final Callable<T> call) {
-      this.call = call;
-    }
-
-    @Override
-    public Object get() {
-      try {
-        return call.call();
-      } catch (RuntimeException e) {
-        throw e;
-      } catch (IOException e) {
-        throw new WrappedIOException(e);
-      } catch (Exception e) {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  /**
    * Write the text to a file asynchronously. Logs the operation too
    * @param fs filesystem
    * @param path path
@@ -582,7 +554,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private static CompletableFuture<Path> put(FileSystem fs,
       Path path, String text) {
-    return submit(() -> {
+    return submit(executor, () -> {
       try (DurationInfo ignore =
                new DurationInfo(LOG, "Creating %s", path)) {
         createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
@@ -598,19 +570,19 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @param range range 1..range inclusive of files to create.
    * @return the list of paths created.
    */
-  @SuppressWarnings("unchecked")
   public static List<Path> createFiles(final FileSystem fs,
       final Path destDir,
       final int range) throws IOException {
-    CompletableFuture<Path>[] futures = new CompletableFuture[range];
+    List<CompletableFuture<Path>> futures = new ArrayList<>(range);
     List<Path> paths = new ArrayList<>(range);
     for (int i = 0; i < range; i++) {
       String name = "file-" + i;
       Path p = new Path(destDir, name);
       paths.add(p);
-      futures[i] = put(fs, p, name);
+      futures.add(put(fs, p, name));
     }
-    CompletableFuture.allOf(futures).join();
+    CompletableFuture.allOf(futures.toArray(
+        new CompletableFuture[futures.size()])).join();
     return paths;
   }
 

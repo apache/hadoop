@@ -35,6 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -72,6 +73,7 @@ import com.amazonaws.waiters.WaiterTimedOutException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,15 +97,18 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.auth.RoleModel;
 import org.apache.hadoop.fs.s3a.auth.RolePolicies;
 import org.apache.hadoop.fs.s3a.auth.delegation.AWSPolicyProvider;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowAllDynamoDBOperations;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3GuardClientOperations;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
 
@@ -296,6 +301,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private AtomicInteger throttleEventCount = new AtomicInteger(0);
 
+  private ListeningExecutorService executor;
+
   /**
    * A utility function to create DynamoDB instance.
    * @param conf the file system configuration
@@ -386,8 +393,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
   void bindToOwnerFilesystem(final S3AFileSystem fs) {
     owner = fs;
     conf = owner.getConf();
-    instrumentation = owner.getInstrumentation().getS3GuardInstrumentation();
-    username = owner.getUsername();
+    StoreContext context = owner.createStoreContext();
+    instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
+    username = context.getUsername();
+    executor = context.createThrottledExecutor();
   }
 
   /**
@@ -432,6 +441,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
     dynamoDB = createDynamoDB(conf, region, null, credentials);
 
     username = UserGroupInformation.getCurrentUser().getShortUserName();
+    // without an executor from the owner FS, create one using
+    // the executor capacity for work.
+    int executorCapacity = intOption(conf,
+        EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
+    executor = BlockingThreadPoolExecutorService.newInstance(
+        executorCapacity,
+        executorCapacity * 2,
+        longOption(conf, KEEPALIVE_TIME,
+            DEFAULT_KEEPALIVE_TIME, 0),
+        TimeUnit.SECONDS,
+        "s3a-ddb-" + tableName);
+
     initDataAccessRetries(conf);
 
     initTable();
@@ -525,10 +546,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return;
     }
 
+    // bulk execute. This needs to be paged better.
+    List<CompletableFuture<Void>> futures = new ArrayList<>();
     for (DescendantsIterator desc = new DescendantsIterator(this, meta);
          desc.hasNext();) {
-      innerDelete(desc.next().getPath(), true);
+      final Path pathToDelete = desc.next().getPath();
+      futures.add(submit(executor, () -> {
+        innerDelete(pathToDelete, true);
+        return null;
+      }));
     }
+    // await completion
+    CompletableFuture.allOf(futures.toArray(
+        new CompletableFuture[futures.size()])).join();
   }
 
   /**

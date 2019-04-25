@@ -965,7 +965,7 @@ public final class S3AUtils {
    * @return the value
    * @throws IllegalArgumentException if the value is below the minimum
    */
-  static int intOption(Configuration conf, String key, int defVal, int min) {
+  public static int intOption(Configuration conf, String key, int defVal, int min) {
     int v = conf.getInt(key, defVal);
     Preconditions.checkArgument(v >= min,
         String.format("Value of %s: %d is below the minimum value %d",
@@ -983,7 +983,7 @@ public final class S3AUtils {
    * @return the value
    * @throws IllegalArgumentException if the value is below the minimum
    */
-  static long longOption(Configuration conf,
+  public static long longOption(Configuration conf,
       String key,
       long defVal,
       long min) {
