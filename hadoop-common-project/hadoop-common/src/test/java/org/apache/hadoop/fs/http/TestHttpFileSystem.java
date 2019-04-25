@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,5 +64,39 @@ public class TestHttpFileSystem {
       RecordedRequest req = server.takeRequest();
       assertEquals("/foo", req.getPath());
     }
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testHttpFileSystemWithNegativeHttpConnectTimeout() throws Exception {
+    URI mockURI = new URI("dummyURI");
+
+    Configuration conf = new Configuration(false);
+    conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
+    conf.set("yarn.nodemanager.localizer.http.connect.timeout.ms", "-1");
+    conf.set("yarn.nodemanager.localizer.http.read.timeout.ms", "1000");
+
+    Path mockPath = Mockito.mock(Path.class);
+
+    HttpFileSystem httpFileSystem = new HttpFileSystem();
+    httpFileSystem.initialize(mockURI, conf);
+
+    httpFileSystem.open(mockPath, 1000);
+  }
+
+  @Test(expected = IllegalStateException.class)
+  public void testHttpFileSystemWithNegativeHttpReadTimeout() throws Exception {
+    URI mockURI = new URI("dummyURI");
+
+    Configuration conf = new Configuration(false);
+    conf.set("fs.http.impl", HttpFileSystem.class.getCanonicalName());
+    conf.set("yarn.nodemanager.localizer.http.connect.timeout.ms", "1000");
+    conf.set("yarn.nodemanager.localizer.http.read.timeout.ms", "-1");
+
+    Path mockPath = Mockito.mock(Path.class);
+
+    HttpFileSystem httpFileSystem = new HttpFileSystem();
+    httpFileSystem.initialize(mockURI, conf);
+
+    httpFileSystem.open(mockPath, 1000);
   }
 }
