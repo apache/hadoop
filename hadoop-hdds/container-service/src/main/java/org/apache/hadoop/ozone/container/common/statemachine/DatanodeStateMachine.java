@@ -35,6 +35,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.NodeReportProto;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.ozone.HddsDatanodeService;
+import org.apache.hadoop.ozone.HddsDatanodeStopService;
 import org.apache.hadoop.ozone.container.common.report.ReportManager;
 import org.apache.hadoop.ozone.container.common.statemachine.commandhandler
     .CloseContainerCommandHandler;
@@ -85,7 +86,7 @@ public class DatanodeStateMachine implements Closeable {
 
   private JvmPauseMonitor jvmPauseMonitor;
   private CertificateClient dnCertClient;
-  private final HddsDatanodeService hddsDatanodeService;
+  private final HddsDatanodeStopService hddsDatanodeStopService;
 
   /**
    * Constructs a a datanode state machine.
@@ -96,8 +97,8 @@ public class DatanodeStateMachine implements Closeable {
    */
   public DatanodeStateMachine(DatanodeDetails datanodeDetails,
       Configuration conf, CertificateClient certClient,
-      HddsDatanodeService hddsDatanodeService) throws IOException {
-    this.hddsDatanodeService = hddsDatanodeService;
+      HddsDatanodeStopService hddsDatanodeStopService) throws IOException {
+    this.hddsDatanodeStopService = hddsDatanodeStopService;
     this.conf = conf;
     this.datanodeDetails = datanodeDetails;
     executorService = HadoopExecutors.newCachedThreadPool(
@@ -203,9 +204,9 @@ public class DatanodeStateMachine implements Closeable {
     // If we have got some exception in stateMachine we set the state to
     // shutdown to stop the stateMachine thread. Along with this we should
     // also stop the datanode.
-    if (context.getShutdownStateMachine()) {
+    if (context.getShutdownOnError()) {
       LOG.error("DatanodeStateMachine Shutdown due to an critical error");
-      hddsDatanodeService.terminateDatanode();
+      hddsDatanodeStopService.stopService();
     }
   }
 

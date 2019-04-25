@@ -73,7 +73,7 @@ public class StateContext {
   private final Queue<ContainerAction> containerActions;
   private final Queue<PipelineAction> pipelineActions;
   private DatanodeStateMachine.DatanodeStates state;
-  private boolean shutdownStateMachine = false;
+  private boolean shutdownOnError = false;
 
   /**
    * Starting with a 2 sec heartbeat frequency which will be updated to the
@@ -154,20 +154,20 @@ public class StateContext {
   }
 
   /**
-   * Sets the shutdownStateMachine. This method needs to be called when we
+   * Sets the shutdownOnError. This method needs to be called when we
    * set DatanodeState to SHUTDOWN when executing a task of a DatanodeState.
    * @param value
    */
-  public void setShutdownStateMachine(boolean value) {
-    this.shutdownStateMachine = value;
+  private void setShutdownOnError(boolean value) {
+    this.shutdownOnError = value;
   }
 
   /**
    * Get shutdownStateMachine.
    * @return boolean
    */
-  public boolean getShutdownStateMachine() {
-    return shutdownStateMachine;
+  public boolean getShutdownOnError() {
+    return shutdownOnError;
   }
   /**
    * Adds the report to report queue.
@@ -390,7 +390,7 @@ public class StateContext {
             "shutDownMachine");
         // When some exception occurred, set shutdownStateMachine to true, so
         // that we can terminate the datanode.
-        setShutdownStateMachine(true);
+        setShutdownOnError(true);
       }
     }
   }
