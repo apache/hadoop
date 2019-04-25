@@ -43,9 +43,6 @@ spec:
             - ozone
             - om
             - --init
-          env:
-            - name: "ENSURE_OM_INITIALIZED"
-              value: "/data/metadata/om/current/VERSION"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
@@ -58,9 +55,6 @@ spec:
           args:
             - ozone
             - om
-          env:
-            - name: "ENSURE_OM_INITIALIZED"
-              value: "/data/metadata/om/current/VERSION"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
