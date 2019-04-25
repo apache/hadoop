@@ -1020,7 +1020,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     // shutdown RatisPipelineUtils pool.
-    RatisPipelineUtils.POOL.shutdown();
+    RatisPipelineUtils.POOL.shutdownNow();
   }
 
   /**

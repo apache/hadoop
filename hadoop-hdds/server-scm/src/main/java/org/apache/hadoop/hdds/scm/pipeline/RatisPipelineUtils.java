@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Utility class for Ratis pipelines. Contains methods to create and destroy
@@ -183,8 +184,17 @@ public final class RatisPipelineUtils {
       }).get();
     } catch (ExecutionException ex) {
       LOG.error("Execution exception occurred during createPipeline", ex);
-    } catch (InterruptedException ex) {
+      throw new IOException("Execution exception occurred during " +
+          "createPipeline", ex);
+    } catch (RejectedExecutionException ex) {
+      LOG.error("RejectedExecutionException, occurred during " +
+          "createPipeline", ex);
+      throw new IOException("RejectedExecutionException occurred during " +
+          "createPipeline", ex);
+    } catch(InterruptedException ex) {
       Thread.currentThread().interrupt();
+      throw new IOException("Interrupt exception occurred during " +
+          "createPipeline", ex);
     }
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
