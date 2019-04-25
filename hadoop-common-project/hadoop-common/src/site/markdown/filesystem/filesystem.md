@@ -537,15 +537,6 @@ atomic. The combined operation, including `mkdirs(parent(F))` MAY be atomic.
 The return value is always true&mdash;even if a new directory is not created
  (this is defined in HDFS).
 
-#### Implementation Notes: Local FileSystem
-
-The local FileSystem does not raise an exception if `mkdirs(p)` is invoked
-on a path that exists and is a file. Instead the operation returns false.
-
-    if isFile(FS, p):
-       FS' = FS
-       result = False
-
 ### `FSDataOutputStream create(Path, ...)`
 
 
@@ -617,7 +608,7 @@ Implementations MAY throw `UnsupportedOperationException`.
 
     if not exists(FS, p) : raise FileNotFoundException
 
-    if not isFile(FS, p) : raise [FileNotFoundException, IOException]
+    if not isFile(FS, p) : raise [FileAlreadyExistsException, FileNotFoundException, IOException]
 
 #### Postconditions
 
