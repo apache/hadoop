@@ -22,7 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.GeneratedMessage;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
-import org.apache.hadoop.hdds.conf.ConfigTag;
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.Config;
@@ -58,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
