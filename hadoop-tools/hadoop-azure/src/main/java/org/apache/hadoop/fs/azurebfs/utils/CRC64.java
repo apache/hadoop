@@ -44,6 +44,7 @@ public class CRC64 {
    * Initialize a table constructed from POLY (0x9a6c9329ac4bc9b5L).
    * */
   private void init() {
+    value = -1;
     for (int n = 0; n < TABLE_LENGTH; ++n) {
       long crc = n;
       for (int i = 0; i < 8; ++i) {

@@ -48,6 +48,7 @@ import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -622,9 +623,9 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   // generate continuation token for xns account
   private String generateContinuationTokenForXns(final String firstEntryName) {
-    if (firstEntryName == null || firstEntryName.isEmpty() || firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH)) {
-      throw new IllegalArgumentException("startFrom must be a dir/file name and it can not be a full path");
-    }
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(firstEntryName)
+            && !firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH),
+            "startFrom must be a dir/file name and it can not be a full path");
 
     StringBuilder sb = new StringBuilder();
     sb.append(firstEntryName).append("#$").append("0");
@@ -642,9 +643,9 @@ public class AzureBlobFileSystemStore implements Closeable {
 
   // generate continuation token for non-xns account
   private String generateContinuationTokenForNonXns(final String path, final String firstEntryName) {
-    if (firstEntryName == null || firstEntryName.isEmpty() || firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH)) {
-      throw new IllegalArgumentException("startFrom must be a dir/file name and it can not be a full path");
-    }
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(firstEntryName)
+            && !firstEntryName.startsWith(AbfsHttpConstants.ROOT_PATH),
+            "startFrom must be a dir/file name and it can not be a full path");
 
     // Notice: non-xns continuation token requires full path (first "/" is not included) for startFrom
     final String startFrom = (path.isEmpty() || path.equals(ROOT_PATH))
@@ -655,11 +656,11 @@ public class AzureBlobFileSystemStore implements Closeable {
     String date = simpleDateFormat.format(new Date());
 
     StringBuilder sb = new StringBuilder(path.length() + startFrom.length() + date.length() + 24);
-    sb.append(String.format("%06d", path.length())).append(CHAR_EXCLAMATION_POINT)
+    sb.append(String.format("%06d!", path.length()))
             .append(path).append(CHAR_EXCLAMATION_POINT)
-            .append(String.format("%06d", startFrom.length())).append(CHAR_EXCLAMATION_POINT)
+            .append(String.format("%06d!", startFrom.length()))
             .append(startFrom).append(CHAR_EXCLAMATION_POINT)
-            .append(String.format("%06d", date.length())).append(CHAR_EXCLAMATION_POINT)
+            .append(String.format("%06d!", date.length()))
             .append(date).append(CHAR_EXCLAMATION_POINT);
 
     String base64EncodedToken = Base64.encode(sb.toString().getBytes(StandardCharsets.UTF_8));

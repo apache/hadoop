@@ -25,6 +25,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 
@@ -121,13 +122,13 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
   // compare the file status
   private void verifyFileStatus(FileStatus[] listResult, Path parentPath, int startIndexInSortedName) throws IOException {
     if (startIndexInSortedName == -1) {
-      Assert.assertTrue("Expected empty FileStatus array", listResult.length == 0);
+      Assert.assertEquals("Expected empty FileStatus array", 0, listResult.length);
       return;
     }
 
     FileStatus[] allFileStatuses = fs.listStatus(parentPath);
-    Assert.assertTrue("number of dir/file doesn't match",
-            allFileStatuses.length == SORTED_ENTRY_NAMES.length);
+    Assert.assertEquals("number of dir/file doesn't match",
+            SORTED_ENTRY_NAMES.length, allFileStatuses.length);
     int indexInResult = 0;
     for (int index = startIndexInSortedName; index < SORTED_ENTRY_NAMES.length; index++) {
       Assert.assertEquals("fileStatus doesn't match", allFileStatuses[index], listResult[indexInResult++]);
@@ -142,8 +143,8 @@ public class ITestAzureBlobFileSystemStoreListStatusWithRange extends
       Assert.assertTrue(fs.mkdirs(levelOnePath));
       for (String fileName : SORTED_ENTRY_NAMES) {
         Path filePath = new Path(levelOnePath, fileName);
-        fs.create(filePath);
-        Assert.assertTrue(fs.exists(filePath));
+        ContractTestUtils.touch(fs, filePath);
+        ContractTestUtils.assertIsFile(fs, filePath);
       }
     }
   }
