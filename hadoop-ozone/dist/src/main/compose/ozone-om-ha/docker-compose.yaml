@@ -36,7 +36,6 @@ services:
          - 9890:9872
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
@@ -50,7 +49,6 @@ services:
          - 9892:9872
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
          - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
@@ -64,7 +62,6 @@ services:
          - 9894:9872
       environment:
          ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
-         WAITFOR: scm:9876
       env_file:
          - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]

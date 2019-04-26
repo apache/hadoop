@@ -51,7 +51,6 @@ services:
     ports:
       - 9874:9874
     environment:
-      WAITFOR: scm:9876
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
     env_file:
       - docker-config
