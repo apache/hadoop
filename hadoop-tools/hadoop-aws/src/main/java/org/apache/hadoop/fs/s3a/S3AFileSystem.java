@@ -88,7 +88,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
@@ -146,6 +145,8 @@ import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.allowS3Operations;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.TokenIssuingPolicy.NoTokensAvailable;
 import static org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens.hasDelegationTokenBinding;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.submit;
+import static org.apache.hadoop.fs.s3a.impl.CallableSupplier.waitForCompletion;
 import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 
 /**
@@ -1268,21 +1269,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       while (iterator.hasNext()) {
         LocatedFileStatus status = iterator.next();
         long length = status.getLen();
-        String key = pathToKey(status.getPath());
-        if (status.isDirectory() && !key.endsWith("/")) {
-          key += "/";
-        }
+        String k = pathToKey(status.getPath());
+        String key = (status.isDirectory() && !k.endsWith("/"))
+            ? k + "/"
+            : k;
         keysToDelete
             .add(new DeleteObjectsRequest.KeyVersion(key));
         String newDstKey =
             dstKey + key.substring(srcKey.length());
-        copyFile(key, newDstKey, length);
+        Path childSrc = keyToQualifiedPath(key);
+        Path childDst = keyToQualifiedPath(newDstKey);
+
+        // set up for async operation but run in sync mode initially.
+        // we will need to parallelize updates to metastore
+        // for that.
+        CompletableFuture<Path> copy = submit(boundedThreadPool,
+            () -> copySourceAndUpdateMetastore(status, key, newDstKey,
+                childDst);
+        waitForCompletion(copy);
 
         if (hasMetadataStore()) {
           // with a metadata store, the object entries need to be updated,
           // including, potentially, the ancestors
-          Path childSrc = keyToQualifiedPath(key);
-          Path childDst = keyToQualifiedPath(newDstKey);
           if (objectRepresentsDirectory(key, length)) {
             S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
                 childDst, username);
@@ -1323,19 +1331,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return true;
   }
 
-  /**
-   * Expose the superclass rename for ease of testing.
-   * This is inefficient as it calls getFileStatus on source and dest
-   * twice, but it always throws exceptions on failures, which is good.
-   * @param src path to be renamed
-   * @param dst new path after rename
-   * @param options rename options.
-   * @throws IOException failure.
-   */
-  @VisibleForTesting
-  public void rename(final Path src, final Path dst,
-      final Options.Rename... options) throws IOException {
-    super.rename(src, dst, options);
+  private Path copySourceAndUpdateMetastore(
+      final LocatedFileStatus sourceStatus,
+      final String srcKey,
+      final String destKey,
+      final Path destPath) throws IOException {
+    copyFile(srcKey, destKey, sourceStatus.getLen());
+    return destPath;
   }
 
   /**

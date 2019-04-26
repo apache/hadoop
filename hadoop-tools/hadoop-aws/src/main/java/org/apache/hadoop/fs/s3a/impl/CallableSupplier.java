@@ -95,11 +95,22 @@ public final class CallableSupplier<T> implements Supplier {
       return;
     }
     // await completion
-    CompletableFuture<Void> all = CompletableFuture.allOf(
-        futures.toArray(new CompletableFuture[0]));
+    waitForCompletion(CompletableFuture.allOf(
+        futures.toArray(new CompletableFuture[0])));
+  }
+
+  /**
+   * Wait for a single of future to complete, extracting IOEs afterwards.
+   * @param future future to wait for.
+   * @throws IOException if one of the called futures raised an IOE.
+   * @throws RuntimeException if one of the futures raised one.
+   */
+  public static <T> void waitForCompletion(
+      final CompletableFuture<T> future)
+      throws IOException {
     try(DurationInfo ignore =
             new DurationInfo(LOG, false, "Waiting for task completion")) {
-      all.join();
+      future.join();
     } catch (CancellationException e) {
       throw new IOException(e);
     } catch (CompletionException e) {

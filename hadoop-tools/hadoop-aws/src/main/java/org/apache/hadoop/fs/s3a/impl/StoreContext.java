@@ -44,6 +44,10 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
  * components, without exposing the entire parent class.
  * This is eliminate explicit recursive coupling.
  *
+ * Where methods on the FS are to be invoked, they are all passed in
+ * via functional interfaces, so test setups can pass in mock callbacks
+ * instead.
+ *
  * <i>Warning:</i> this really is private and unstable. Do not use
  * outside the org.apache.hadoop.fs.s3a package.
  */
@@ -51,22 +55,19 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
 @InterfaceStability.Unstable
 public class StoreContext {
 
-  /*
-   * Foundational fields.
-   */
   /** Filesystem URI. */
   private final URI fsURI;
 
   /** Bucket name */
   private final String bucket;
 
-  /* FS configuration after all per-bucket overrides applied. */
+  /** FS configuration after all per-bucket overrides applied. */
   private final Configuration configuration;
 
   /** Username. */
   private final String username;
 
-  /** Principal who created the FS*/
+  /** Principal who created the FS. */
   private final UserGroupInformation owner;
 
   /**
@@ -302,6 +303,10 @@ public class StoreContext {
    */
   public ListeningExecutorService createThrottledExecutor() {
     return createThrottledExecutor(executorCapacity);
+  }
+
+  public UserGroupInformation getOwner() {
+    return owner;
   }
 
   public File createTempFile(String pathStr, long size) throws IOException {

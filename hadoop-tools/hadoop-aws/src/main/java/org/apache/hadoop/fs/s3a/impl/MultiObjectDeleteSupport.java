@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import com.amazonaws.services.s3.model.MultiObjectDeleteException;
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -174,6 +175,7 @@ public final class MultiObjectDeleteSupport {
    * @param qualifierFn function to qualify paths
    * @return the possibly empty list of paths.
    */
+  @VisibleForTesting
   public static List<Path> extractUndeletedPaths(
       final MultiObjectDeleteException deleteException,
       final Function<String, Path> qualifierFn) {
@@ -192,7 +194,8 @@ public final class MultiObjectDeleteSupport {
    * This has all undeleted paths removed, leaving only those deleted.
    * @return the list of undeleted entries
    */
-  public static List<Path> removeUndeletedPaths(
+  @VisibleForTesting
+  static List<Path> removeUndeletedPaths(
       final MultiObjectDeleteException deleteException,
       final Collection<Path> pathsBeingDeleted,
       final Function<String, Path> qualifier) {
