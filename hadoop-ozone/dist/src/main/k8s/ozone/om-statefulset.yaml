@@ -43,9 +43,6 @@ spec:
             - ozone
             - om
             - --init
-          env:
-            - name: "WAITFOR"
-              value: "scm-0.scm:9876"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
@@ -58,9 +55,6 @@ spec:
           args:
             - ozone
             - om
-          env:
-            - name: "WAITFOR"
-              value: "scm-0.scm:9876"
           volumeMounts:
             - name: "data"
               mountPath: "/data"
