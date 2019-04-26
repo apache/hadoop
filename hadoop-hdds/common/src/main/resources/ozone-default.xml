@@ -970,7 +970,25 @@
       Timeout value for the RPC from Datanode to SCM.
     </description>
   </property>
+  <property>
+    <name>ozone.scm.heartbeat.thread.interval</name>
+    <value>3s</value>
+    <tag>OZONE, MANAGEMENT</tag>
+    <description>
+      When a heartbeat from the data node arrives on SCM, It is queued for
+      processing with the time stamp of when the heartbeat arrived. There is a
+      heartbeat processing thread inside SCM that runs at a specified interval.
+      This value controls how frequently this thread is run.
 
+      There are some assumptions build into SCM such as this value should allow
+      the heartbeat processing thread to run at least three times more
+      frequently than heartbeats and at least five times more than stale node
+      detection time. If you specify a wrong value, SCM will gracefully refuse
+      to run. For more info look at the node manager tests in SCM.
+
+      In short, you don't need to change this.
+    </description>
+  </property>
   <property>
     <name>ozone.scm.http-address</name>
     <value>0.0.0.0:9876</value>
