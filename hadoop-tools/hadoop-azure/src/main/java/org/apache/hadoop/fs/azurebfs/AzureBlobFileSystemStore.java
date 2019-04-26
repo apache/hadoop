@@ -654,20 +654,12 @@ public class AzureBlobFileSystemStore implements Closeable {
 
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat(TOKEN_DATE_PATTERN, Locale.US);
     String date = simpleDateFormat.format(new Date());
+    String token = String.format("%06d!%s!%06d!%s!%06d!%s!",
+            path.length(),path, startFrom.length(), startFrom, date.length(), date);
+    String base64EncodedToken = Base64.encode(token.getBytes(StandardCharsets.UTF_8));
 
-    StringBuilder sb = new StringBuilder(path.length() + startFrom.length() + date.length() + 24);
-    sb.append(String.format("%06d!", path.length()))
-            .append(path).append(CHAR_EXCLAMATION_POINT)
-            .append(String.format("%06d!", startFrom.length()))
-            .append(startFrom).append(CHAR_EXCLAMATION_POINT)
-            .append(String.format("%06d!", date.length()))
-            .append(date).append(CHAR_EXCLAMATION_POINT);
-
-    String base64EncodedToken = Base64.encode(sb.toString().getBytes(StandardCharsets.UTF_8));
-
-    StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 3);
-    encodedTokenBuilder.append(TOKEN_VERSION).append(CHAR_EXCLAMATION_POINT)
-            .append(base64EncodedToken.length()).append(CHAR_EXCLAMATION_POINT);
+    StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 4);
+    encodedTokenBuilder.append(String.format("%s!%d!", TOKEN_VERSION, base64EncodedToken.length()));
 
     for (int i = 0; i < base64EncodedToken.length(); i++) {
       char current = base64EncodedToken.charAt(i);
