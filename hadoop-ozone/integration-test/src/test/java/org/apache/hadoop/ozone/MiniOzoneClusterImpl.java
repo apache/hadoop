@@ -64,6 +64,7 @@ import java.nio.file.Paths;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
@@ -389,7 +390,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
    */
   public static class Builder extends MiniOzoneCluster.Builder {
 
-    private int currentAvailablePort = 10000;
+    private static AtomicInteger lastUsedPort =
+        new AtomicInteger(1000);
 
     /**
      * Creates a new Builder.
@@ -614,17 +616,17 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     /**
      * Return an available TCP port if available.
      * <p>
-     * Guaranteed to be unique per MiniOzoneClusterBuilder.
+     * As we have a static counter the port should be unique inside the JVM..
      */
     private int findPort() {
-      currentAvailablePort++; //the previous one is already allocated.
-      while (currentAvailablePort < 65536) {
+      while (lastUsedPort.get() < 65536) {
         try {
-          new ServerSocket(currentAvailablePort).close();
-          return currentAvailablePort;
+          int nextPort = lastUsedPort.incrementAndGet();
+          ServerSocket socket = new ServerSocket(nextPort);
+          socket.close();
+          return nextPort;
         } catch (IOException ex) {
           //port is not available, let's try the next one.
-          currentAvailablePort++;
           continue;
         }
       }
