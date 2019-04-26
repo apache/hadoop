@@ -18,17 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapred.JobConf;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Full integration test for the Magic Committer.
@@ -93,6 +96,13 @@ public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
   @Override
   protected void customPostExecutionValidation(Path destPath,
       SuccessData successData) throws Exception {
-    assertPathDoesNotExist("No cleanup", new Path(destPath, MAGIC));
+    Path magicDir = new Path(destPath, MAGIC);
+
+    // if an FNFE isn't raised on getFileStatus, list out the directory
+    // contents
+    intercept(FileNotFoundException.class, () -> {
+      getFileSystem().getFileStatus(magicDir);
+      return ContractTestUtils.ls(getFileSystem(), magicDir);
+    });
   }
 }
