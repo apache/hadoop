@@ -127,10 +127,11 @@ public final class OzoneClientUtils {
     return keyInfo;
   }
 
-  public static RetryPolicy createRetryPolicy(int maxRetryCount) {
+  public static RetryPolicy createRetryPolicy(int maxRetryCount,
+      long retryInterval) {
     // just retry without sleep
     RetryPolicy retryPolicy = RetryPolicies
-        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, 0,
+        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, retryInterval,
             TimeUnit.MILLISECONDS);
     return retryPolicy;
   }
