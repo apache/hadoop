@@ -204,7 +204,6 @@ public class TestPartialDeleteFailures {
             "s3a-transfer-shared"),
         Constants.DEFAULT_EXECUTOR_CAPACITY,
         new Invoker(RetryPolicies.TRY_ONCE_THEN_FAIL, Invoker.LOG_EVENT),
-        null,
         new S3AInstrumentation(name),
         new S3AStorageStatistics(),
         S3AInputPolicy.Normal,
@@ -215,7 +214,8 @@ public class TestPartialDeleteFailures {
         TestPartialDeleteFailures::qualify,
         "us-west",
         false,
-        false);
+        false,
+        null);
   }
 
   /**

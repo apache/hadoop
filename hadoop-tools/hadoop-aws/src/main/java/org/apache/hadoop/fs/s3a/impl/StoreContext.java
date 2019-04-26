@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
 import java.util.function.Function;
@@ -27,7 +29,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Invoker;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
@@ -88,8 +89,6 @@ public class StoreContext {
   /** Invoker of operations. */
   private final Invoker invoker;
 
-  private final LocalDirAllocator directoryAllocator;
-
   /* Instrumentation and statistics. */
   private final S3AInstrumentation instrumentation;
   private final S3AStorageStatistics storageStatistics;
@@ -109,7 +108,6 @@ public class StoreContext {
   /** Is the store versioned? */
   private final boolean versioned;
 
-
   /**
    * To allow this context to be passed down to the metastore, this field
    * wll be null until initialized.
@@ -118,6 +116,9 @@ public class StoreContext {
 
   /** Function to take a key and return a path. */
   private final Function<String, Path> keyToPathQualifier;
+
+  /** Factory for temporary files. */
+  private final TempFileFactory tempFileFactory;
 
   /**
    * Instantiate.
@@ -128,8 +129,8 @@ public class StoreContext {
       final String username,
       final UserGroupInformation owner,
       final ListeningExecutorService executor,
-      final int executorCapacity, final Invoker invoker,
-      final LocalDirAllocator directoryAllocator,
+      final int executorCapacity,
+      final Invoker invoker,
       final S3AInstrumentation instrumentation,
       final S3AStorageStatistics storageStatistics,
       final S3AInputPolicy inputPolicy,
@@ -139,7 +140,8 @@ public class StoreContext {
       final Function<String, Path> keyToPathQualifier,
       final String bucketLocation,
       final boolean useListV1,
-      final boolean versioned) {
+      final boolean versioned,
+      final TempFileFactory tempFileFactory) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -148,7 +150,6 @@ public class StoreContext {
     this.executor = executor;
     this.executorCapacity = executorCapacity;
     this.invoker = invoker;
-    this.directoryAllocator = directoryAllocator;
     this.instrumentation = instrumentation;
     this.storageStatistics = storageStatistics;
     this.inputPolicy = inputPolicy;
@@ -159,6 +160,7 @@ public class StoreContext {
     this.bucketLocation = Optional.ofNullable(bucketLocation);
     this.useListV1 = useListV1;
     this.versioned = versioned;
+    this.tempFileFactory = tempFileFactory;
   }
 
   @Override
@@ -192,10 +194,6 @@ public class StoreContext {
 
   public Invoker getInvoker() {
     return invoker;
-  }
-
-  public LocalDirAllocator getDirectoryAllocator() {
-    return directoryAllocator;
   }
 
   public S3AInstrumentation getInstrumentation() {
@@ -306,4 +304,17 @@ public class StoreContext {
     return createThrottledExecutor(executorCapacity);
   }
 
+  public File createTempFile(String pathStr, long size) throws IOException {
+    return tempFileFactory.createTempFile(pathStr, size);
+  }
+
+  /**
+   * The interface for temporary files.
+   * The standard Java 8 BiFunction cannot be used as it doesn't raise an
+   * IOE.
+   */
+  @FunctionalInterface
+  public interface TempFileFactory {
+    File createTempFile(String pathStr, long size) throws IOException;
+  }
 }

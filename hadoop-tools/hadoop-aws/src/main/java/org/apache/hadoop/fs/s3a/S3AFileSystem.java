@@ -2384,7 +2384,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         boundedThreadPool,
         executorCapacity,
         invoker,
-        directoryAllocator,
         getInstrumentation(),
         getStorageStatistics(),
         getInputPolicy(),
@@ -2394,7 +2393,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         this::keyToQualifiedPath,
         bucketLocation,
         useListV1,
-        false);
+        false,
+        (prefix, len) -> createTmpFileForWrite(prefix, len, getConf()));
   }
 
   /**
