@@ -87,7 +87,14 @@ public class ContainerRelaunch extends ContainerLaunch {
       Path nmPrivateTruststorePath = (container.getCredentials().getSecretKey(
           AMSecretKeys.YARN_APPLICATION_AM_TRUSTSTORE) == null) ? null :
           getNmPrivateTruststorePath(appIdStr, containerIdStr);
-      pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      try {
+        // try to locate existing pid file.
+        pidFilePath = getPidFilePath(appIdStr, containerIdStr);
+      } catch (IOException e) {
+        // reset pid file path if it did not exist.
+        String pidFileSubpath = getPidFileSubpath(appIdStr, containerIdStr);
+        pidFilePath = dirsHandler.getLocalPathForWrite(pidFileSubpath);
+      }
 
       LOG.info("Relaunch container with "
           + "workDir = " + containerWorkDir.toString()
