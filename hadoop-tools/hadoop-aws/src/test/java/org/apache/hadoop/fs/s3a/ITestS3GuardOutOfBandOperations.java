@@ -24,8 +24,10 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -260,6 +262,244 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   @Test
   public void testListingDelete() throws Exception {
     deleteFileInListing();
+  }
+
+  /**
+   * Handle OOB deletions and creation of a file which has a tombstone marker.
+   * Tests the following behavior:
+   * create guarded; delete raw; open guarded; read guarded -> fail after retry
+   */
+  @Test
+  public void testSeqCreateDeleteRawOpenRead() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("CDOR-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+
+    String text = "some text";
+
+    S3AInstrumentation storageStat = guardedFs.getInstrumentation();
+
+    try {
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, text, true);
+      // wait until the file is created
+      final FileStatus status = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("File should be created.", status);
+
+      // DELETE RAW
+      rawFS.delete(testFilePath, true);
+
+      // OPEN GUARDED
+      final FSDataInputStream is = guardedFs.open(testFilePath);
+      assertNotNull("Input stream should not be null", is);
+
+      // READ GUARDED
+      LOG.info("{}: {} ", Statistic.IGNORED_ERRORS.getSymbol(),
+          storageStat.getCounterValue(Statistic.IGNORED_ERRORS));
+
+      expectExceptionWhenReading(testFilePath, text);
+    } finally {
+      LOG.info("{}: {} ", Statistic.IGNORED_ERRORS.getSymbol(),
+          storageStat.getCounterValue(Statistic.IGNORED_ERRORS));
+      guardedFs.delete(testFilePath, true);
+    }
+  }
+
+  /**
+   * Handle OOB deletions and creation of a file which has a tombstone marker.
+   * Tests the following behavior:
+   * create guarded; delete guarded; open guarded; read guarded -> fail after
+   * retry
+   */
+  @Test
+  public void testSeqCreateDeleteGuardedOpenRead() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("CDOR-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String text = "some text";
+    S3AInstrumentation storageStat = guardedFs.getInstrumentation();
+
+    try {
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, text, true);
+      // wait until the file is created
+      final FileStatus status = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("File should be created.", status);
+
+      // DELETE with fs from parameter
+      guardedFs.delete(testFilePath, true);
+
+      // OPEN GUARDED
+      final FSDataInputStream is = guardedFs.open(testFilePath);
+      assertNotNull("Input stream should not be null", is);
+
+      // READ GUARDED
+      LOG.info("{}: {} ", Statistic.IGNORED_ERRORS.getSymbol(),
+          storageStat.getCounterValue(Statistic.IGNORED_ERRORS));
+
+      expectExceptionWhenReading(testFilePath, text);
+    } finally {
+      guardedFs.delete(testFilePath, true);
+    }
+  }
+
+  /**
+   * Handle OOB deletions and creation of a file which has a tombstone marker.
+   * Tests the following behavior:
+   * create guarded; open guarded; read guarded; delete raw; read guarded ->
+   * fail fast on the second read
+   */
+  @Test
+  public void testSeqCreateOpenReadDeleteRawRead() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("CORDR-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String text = "some test";
+
+    try {
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, text, true);
+      // wait until the file is created
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+
+      // OPEN GUARDED
+      final FSDataInputStream in = guardedFs.open(testFilePath);
+      assertNotNull("Input stream should not be null", in);
+
+      // READ GUARDED
+      byte[] firstRead = new byte[text.length()];
+      in.read(firstRead, 0, firstRead.length);
+
+      // DELETE with fs from param
+      rawFS.delete(testFilePath, true);
+
+      // READ GUARDED
+
+      // TODO: readfully will throw an exception when the inputstream is
+      //  created but the file is deleted
+      //      in.readFully(0, bytes);
+      //  read won't throw an exception, just return -1. We should at
+      //  least log, or throw an exception. Fix this.
+
+      // READ GUARDED
+      byte[] bytes = new byte[text.length()];
+      final int numBytes = in.read(bytes, 0, bytes.length);
+      LOG.info("array: {}, numbytes: {}", bytes, numBytes);
+
+    } finally {
+      guardedFs.delete(testFilePath, true);
+    }
+  }
+
+  /**
+   * Handle OOB deletions and creation of a file which has a tombstone marker.
+   * Tests the following behavior:
+   * create guarded; open guarded; read guarded; delete raw; read guarded ->
+   * fail fast on the second read
+   */
+  @Test
+   public void testSeqCreateOpenReadDeleteGuardedRead() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("CORDR-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String text = "some test";
+
+    try {
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, text, true);
+      // wait until the file is created
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+
+      // OPEN GUARDED
+      final FSDataInputStream in = guardedFs.open(testFilePath);
+      assertNotNull("Input stream should not be null", in);
+
+      // READ GUARDED
+      byte[] firstRead = new byte[text.length()];
+      in.read(firstRead, 0, firstRead.length);
+
+      // DELETE with fs from param
+      guardedFs.delete(testFilePath, true);
+
+      // READ GUARDED
+      byte[] bytes = new byte[text.length()];
+      final int numBytes = in.read(bytes, 0, bytes.length);
+      LOG.info("array: {}, numbytes: {}", bytes, numBytes);
+
+    } finally {
+      guardedFs.delete(testFilePath, true);
+    }
+  }
+
+
+  /**
+   * Tests that tombstone expiry is implemented, so if a file is created raw
+   * while the tombstone exist in ms for with the same name then S3Guard will
+   * check S3 for the file.
+   *
+   * Seq: create guarded; delete guarded; create raw (same path); read guarded;
+   * This will fail if no tombstone expiry is set
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testTombstoneExpiryGuardedDeleteRawCreate() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("TEGDRC-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String text = "some test";
+    String newText = "the new text for test";
+
+    final S3Guard.ITtlTimeProvider originalTimeProvider =
+        guardedFs.getTtlTimeProvider();
+    try {
+      final AtomicLong now = new AtomicLong(0);
+      final AtomicLong authDirTtl = new AtomicLong(1);
+      // todo add ttl for entries
+      // final AtomicLong entriesTtl = new AtomicLong(1);
+
+      // SET TTL TIME PROVIDER FOR TESTING
+      S3Guard.ITtlTimeProvider testTimeProvider =
+          new S3Guard.ITtlTimeProvider() {
+            @Override public long getNow() {
+              return now.get();
+            }
+
+            @Override public long getAuthoritativeDirTtl() {
+              return authDirTtl.get();
+            }
+          };
+      guardedFs.setTtlTimeProvider(testTimeProvider);
+
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, text, true);
+      // wait until the file is created
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+
+      // DELETE GUARDED
+      guardedFs.delete(testFilePath, true);
+
+      // CREATE RAW
+      writeTextFile(rawFS, testFilePath, newText, true);
+      awaitFileStatus(rawFS, testFilePath);
+
+      // CHANGE TTL SO ENTRY (& TOMBSTONE METADATA) WILL EXPIRE
+      now.set(2);
+      // this call should not fail after the implementation of metadata expiry
+      // the guardedFS will detect that the metadata expired, so it will read
+      // from S3
+      final FSDataInputStream in = guardedFs.open(testFilePath);
+
+      // READ GUARDEDßß
+      byte[] bytes = new byte[text.length()];
+      in.read(bytes, 0, bytes.length);
+
+      // we can assert that the text is the new one, which created raw
+      assertTrue(new String(bytes).equals(newText));
+    } finally {
+      guardedFs.delete(testFilePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
   }
 
   /**
