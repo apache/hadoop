@@ -55,7 +55,9 @@ public class OzoneConfiguration extends Configuration {
     super(conf);
     //load the configuration from the classloader of the original conf.
     setClassLoader(conf.getClassLoader());
-    loadDefaults();
+    if (!(conf instanceof OzoneConfiguration)) {
+      loadDefaults();
+    }
   }
 
   private void loadDefaults() {

@@ -36,8 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Set;
 
 /**
- * Annotation processor to generate ozone-site-generated fragments from
- * @Config annotations.
+ * Annotation processor to generate config fragments from Config annotations.
  */
 @SupportedAnnotationTypes("org.apache.hadoop.hdds.conf.ConfigGroup")
 public class ConfigFileGenerator extends AbstractProcessor {
