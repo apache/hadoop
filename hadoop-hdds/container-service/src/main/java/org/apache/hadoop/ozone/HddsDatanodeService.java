@@ -56,6 +56,7 @@ import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec.getX509Certificate;
 import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
@@ -84,6 +85,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   private HddsDatanodeHttpServer httpServer;
   private boolean printBanner;
   private String[] args;
+  private volatile AtomicBoolean isStopped = new AtomicBoolean(false);
 
   public HddsDatanodeService(boolean printBanner, String[] args) {
     this.printBanner = printBanner;
@@ -209,7 +211,7 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
           initializeCertificateClient(conf);
         }
         datanodeStateMachine = new DatanodeStateMachine(datanodeDetails, conf,
-            dnCertClient);
+            dnCertClient, this::terminateDatanode);
         try {
           httpServer = new HddsDatanodeHttpServer(conf);
           httpServer.start();
@@ -421,29 +423,37 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     }
   }
 
+  public void terminateDatanode() {
+    stop();
+    terminate(1);
+  }
+
+
   @Override
   public void stop() {
-    if (plugins != null) {
-      for (ServicePlugin plugin : plugins) {
+    if (!isStopped.get()) {
+      isStopped.set(true);
+      if (plugins != null) {
+        for (ServicePlugin plugin : plugins) {
+          try {
+            plugin.stop();
+            LOG.info("Stopped plug-in {}", plugin);
+          } catch (Throwable t) {
+            LOG.warn("ServicePlugin {} could not be stopped", plugin, t);
+          }
+        }
+      }
+      if (datanodeStateMachine != null) {
+        datanodeStateMachine.stopDaemon();
+      }
+      if (httpServer != null) {
         try {
-          plugin.stop();
-          LOG.info("Stopped plug-in {}", plugin);
-        } catch (Throwable t) {
-          LOG.warn("ServicePlugin {} could not be stopped", plugin, t);
+          httpServer.stop();
+        } catch (Exception e) {
+          LOG.error("Stopping HttpServer is failed.", e);
         }
       }
     }
-    if (datanodeStateMachine != null) {
-      datanodeStateMachine.stopDaemon();
-    }
-    if (httpServer != null) {
-      try {
-        httpServer.stop();
-      } catch (Exception e) {
-        LOG.error("Stopping HttpServer is failed.", e);
-      }
-    }
-
   }
 
   @Override
