@@ -35,28 +35,33 @@ public class SimpleConfiguration {
 
   private long waitTime = 1;
 
-  @Config(key = "address", defaultValue = "localhost")
+  @Config(key = "address", defaultValue = "localhost", description = "Just "
+      + "for testing", tags = ConfigTag.MANAGEMENT)
   public void setClientAddress(String clientAddress) {
     this.clientAddress = clientAddress;
   }
 
-  @Config(key = "bind.host", defaultValue = "0.0.0.0")
+  @Config(key = "bind.host", defaultValue = "0.0.0.0", description = "Just "
+      + "for testing", tags = ConfigTag.MANAGEMENT)
   public void setBindHost(String bindHost) {
     this.bindHost = bindHost;
   }
 
-  @Config(key = "enabled", defaultValue = "true")
+  @Config(key = "enabled", defaultValue = "true", description = "Just for "
+      + "testing", tags = ConfigTag.MANAGEMENT)
   public void setEnabled(boolean enabled) {
     this.enabled = enabled;
   }
 
-  @Config(key = "port", defaultValue = "9878")
+  @Config(key = "port", defaultValue = "9878", description = "Just for "
+      + "testing", tags = ConfigTag.MANAGEMENT)
   public void setPort(int port) {
     this.port = port;
   }
 
   @Config(key = "wait", type = ConfigType.TIME, timeUnit =
-      TimeUnit.SECONDS, defaultValue = "10m")
+      TimeUnit.SECONDS, defaultValue = "10m", description = "Just for "
+      + "testing", tags = ConfigTag.MANAGEMENT)
   public void setWaitTime(long waitTime) {
     this.waitTime = waitTime;
   }

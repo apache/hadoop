@@ -37,7 +37,7 @@ import java.util.Set;
 
 /**
  * Annotation processor to generate ozone-site-generated fragments from
- * ozone-site.xml.
+ * @Config annotations.
  */
 @SupportedAnnotationTypes("org.apache.hadoop.hdds.conf.ConfigGroup")
 public class ConfigFileGenerator extends AbstractProcessor {
@@ -52,7 +52,6 @@ public class ConfigFileGenerator extends AbstractProcessor {
     }
 
     Filer filer = processingEnv.getFiler();
-    System.out.println("round");
 
     try {
 

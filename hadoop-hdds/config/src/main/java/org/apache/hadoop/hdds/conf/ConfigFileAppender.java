@@ -36,8 +36,8 @@ import org.w3c.dom.Element;
 /**
  * Simple DOM based config file writer.
  * <p>
- * This class can init/load existing ozone-site.xml fragments and append
- * new entries and write to the file system.
+ * This class can init/load existing ozone-default-generated.xml fragments
+ * and append new entries and write to the file system.
  */
 public class ConfigFileAppender {
 

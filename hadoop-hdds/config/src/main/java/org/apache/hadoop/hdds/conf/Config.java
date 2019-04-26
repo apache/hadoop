@@ -43,7 +43,7 @@ public @interface Config {
   /**
    * Custom description as a help.
    */
-  String description() default "";
+  String description();
 
   /**
    * Type of configuration. Use AUTO to decide it based on the java type.
@@ -55,5 +55,5 @@ public @interface Config {
    */
   TimeUnit timeUnit() default TimeUnit.MILLISECONDS;
 
-  ConfigTag[] tags() default {ConfigTag.OZONE};
+  ConfigTag[] tags();
 }
