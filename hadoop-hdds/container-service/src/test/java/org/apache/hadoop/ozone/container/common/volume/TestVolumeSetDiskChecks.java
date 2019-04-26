@@ -38,6 +38,8 @@ import org.apache.curator.shaded.com.google.common.collect.ImmutableSet;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.hamcrest.CoreMatchers.is;
 import org.junit.After;
+
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import org.junit.Rule;
@@ -125,14 +127,14 @@ public class TestVolumeSetDiskChecks {
   }
 
   /**
-   * Verify that initialization fails if all volumes are bad.
+   * Verify that all volumes are added to fail list if all volumes are bad.
    */
   @Test
   public void testAllVolumesAreBad() throws IOException {
     final int numVolumes = 5;
 
     conf = getConfWithDataNodeDirs(numVolumes);
-    thrown.expect(IOException.class);
+
     final VolumeSet volumeSet = new VolumeSet(
         UUID.randomUUID().toString(), conf) {
       @Override
@@ -141,6 +143,9 @@ public class TestVolumeSetDiskChecks {
         return new DummyChecker(configuration, new Timer(), numVolumes);
       }
     };
+
+    assertEquals(volumeSet.getFailedVolumesList().size(), numVolumes);
+    assertEquals(volumeSet.getVolumesList().size(), 0);
   }
 
   /**
