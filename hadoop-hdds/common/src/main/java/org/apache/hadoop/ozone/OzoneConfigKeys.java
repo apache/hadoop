@@ -27,7 +27,9 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.util.TimeDuration;
 
-/**
+import java.util.concurrent.TimeUnit;
+
+ /**
  * This class contains constants for configuration keys used in Ozone.
  */
 @InterfaceAudience.Public
@@ -140,8 +142,11 @@ public final class OzoneConfigKeys {
 
   public static final String OZONE_CLIENT_MAX_RETRIES =
       "ozone.client.max.retries";
-  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 5;
-
+  public static final int OZONE_CLIENT_MAX_RETRIES_DEFAULT = 100;
+  public static final String OZONE_CLIENT_RETRY_INTERVAL =
+      "ozone.client.retry.interval";
+  public static final TimeDuration OZONE_CLIENT_RETRY_INTERVAL_DEFAULT =
+      TimeDuration.valueOf(0, TimeUnit.MILLISECONDS);
 
   // This defines the overall connection limit for the connection pool used in
   // RestClient.

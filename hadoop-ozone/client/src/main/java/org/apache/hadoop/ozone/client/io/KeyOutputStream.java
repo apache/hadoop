@@ -164,7 +164,8 @@ public class KeyOutputStream extends OutputStream {
       String requestId, ReplicationFactor factor, ReplicationType type,
       long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
       ChecksumType checksumType, int bytesPerChecksum,
-      String uploadID, int partNumber, boolean isMultipart, int maxRetryCount) {
+      String uploadID, int partNumber, boolean isMultipart,
+      int maxRetryCount, long retryInterval) {
     this.streamEntries = new ArrayList<>();
     this.currentStreamIndex = 0;
     this.omClient = omClient;
@@ -199,7 +200,8 @@ public class KeyOutputStream extends OutputStream {
     this.bufferPool =
         new BufferPool(chunkSize, (int)streamBufferMaxSize / chunkSize);
     this.excludeList = new ExcludeList();
-    this.retryPolicy = OzoneClientUtils.createRetryPolicy(maxRetryCount);
+    this.retryPolicy = OzoneClientUtils.createRetryPolicy(maxRetryCount,
+        retryInterval);
     this.retryCount = 0;
   }
 
@@ -726,6 +728,7 @@ public class KeyOutputStream extends OutputStream {
     private int multipartNumber;
     private boolean isMultipartKey;
     private int maxRetryCount;
+    private long retryInterval;
 
 
     public Builder setMultipartUploadID(String uploadID) {
@@ -814,12 +817,17 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
+    public Builder setRetryInterval(long retryIntervalInMS) {
+      this.retryInterval = retryIntervalInMS;
+      return this;
+    }
+
     public KeyOutputStream build() throws IOException {
       return new KeyOutputStream(openHandler, xceiverManager,
           omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksumType,
           bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey,
-          maxRetryCount);
+          maxRetryCount, retryInterval);
     }
   }
 
