@@ -108,4 +108,26 @@ public class TestReplicaMap {
     map.add(bpid, new FinalizedReplica(block, null, null));
     assertNotNull(map.remove(bpid, block.getBlockId()));
   }
+
+  @Test
+  public void testMergeAll() {
+    ReplicaMap temReplicaMap = new ReplicaMap(new AutoCloseableLock());
+    Block tmpBlock = new Block(5678, 5678, 5678);
+    temReplicaMap.add(bpid, new FinalizedReplica(tmpBlock, null, null));
+
+    map.mergeAll(temReplicaMap);
+    assertNotNull(map.get(bpid, 1234));
+    assertNotNull(map.get(bpid, 5678));
+  }
+
+  @Test
+  public void testAddAll() {
+    ReplicaMap temReplicaMap = new ReplicaMap(new AutoCloseableLock());
+    Block tmpBlock = new Block(5678, 5678, 5678);
+    temReplicaMap.add(bpid, new FinalizedReplica(tmpBlock, null, null));
+
+    map.addAll(temReplicaMap);
+    assertNull(map.get(bpid, 1234));
+    assertNotNull(map.get(bpid, 5678));
+  }
 }

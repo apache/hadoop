@@ -419,7 +419,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
         LOG.error(errorMsg);
         throw new IOException(errorMsg);
       }
-      volumeMap.addAll(replicaMap);
+      volumeMap.mergeAll(replicaMap);
       storageMap.put(sd.getStorageUuid(),
           new DatanodeStorage(sd.getStorageUuid(),
               DatanodeStorage.State.NORMAL,
