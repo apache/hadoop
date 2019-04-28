@@ -420,6 +420,74 @@ public class TestDataNodeHotSwapVolumes {
     verifyFileLength(cluster.getFileSystem(), testFile, numBlocks);
   }
 
+  /**
+   * Test re-adding one volume with some blocks on a running MiniDFSCluster
+   * with only one NameNode to reproduce HDFS-13677.
+   */
+  @Test(timeout=60000)
+  public void testReAddVolumeWithBlocks()
+      throws IOException, ReconfigurationException,
+      InterruptedException, TimeoutException {
+    startDFSCluster(1, 1);
+    String bpid = cluster.getNamesystem().getBlockPoolId();
+    final int numBlocks = 10;
+
+    Path testFile = new Path("/test");
+    createFile(testFile, numBlocks);
+
+    List<Map<DatanodeStorage, BlockListAsLongs>> blockReports =
+        cluster.getAllBlockReports(bpid);
+    assertEquals(1, blockReports.size());  // 1 DataNode
+    assertEquals(2, blockReports.get(0).size());  // 2 volumes
+
+    // Now remove the second volume
+    DataNode dn = cluster.getDataNodes().get(0);
+    Collection<String> oldDirs = getDataDirs(dn);
+    String newDirs = oldDirs.iterator().next();  // Keep the first volume.
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, newDirs),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
+    assertFileLocksReleased(
+        new ArrayList<String>(oldDirs).subList(1, oldDirs.size()));
+
+    // Now create another file - the first volume should have 15 blocks
+    // and 5 blocks on the previously removed volume
+    createFile(new Path("/test2"), numBlocks);
+    dn.scheduleAllBlockReport(0);
+    blockReports = cluster.getAllBlockReports(bpid);
+
+    assertEquals(1, blockReports.size());  // 1 DataNode
+    assertEquals(1, blockReports.get(0).size());  // 1 volume
+    for (BlockListAsLongs blockList : blockReports.get(0).values()) {
+      assertEquals(15, blockList.getNumberOfBlocks());
+    }
+
+    // Now add the original volume back again and ensure 15 blocks are reported
+    assertThat(
+        "DN did not update its own config",
+        dn.reconfigurePropertyImpl(
+            DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, String.join(",", oldDirs)),
+        is(dn.getConf().get(DFS_DATANODE_DATA_DIR_KEY)));
+    dn.scheduleAllBlockReport(0);
+    blockReports = cluster.getAllBlockReports(bpid);
+
+    assertEquals(1, blockReports.size());  // 1 DataNode
+    assertEquals(2, blockReports.get(0).size());  // 2 volumes
+
+    // The order of the block reports is not guaranteed. As we expect 2, get the
+    // max block count and the min block count and then assert on that.
+    int minNumBlocks = Integer.MAX_VALUE;
+    int maxNumBlocks = Integer.MIN_VALUE;
+    for (BlockListAsLongs blockList : blockReports.get(0).values()) {
+      minNumBlocks = Math.min(minNumBlocks, blockList.getNumberOfBlocks());
+      maxNumBlocks = Math.max(maxNumBlocks, blockList.getNumberOfBlocks());
+    }
+    assertEquals(5, minNumBlocks);
+    assertEquals(15, maxNumBlocks);
+  }
+
   @Test(timeout=60000)
   public void testAddVolumesDuringWrite()
       throws IOException, InterruptedException, TimeoutException,

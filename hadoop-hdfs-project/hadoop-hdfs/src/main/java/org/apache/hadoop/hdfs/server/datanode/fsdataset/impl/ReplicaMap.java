@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.hadoop.HadoopIllegalArgumentException;
@@ -173,15 +172,13 @@ class ReplicaMap {
    * Merge all entries from the given replica map into the local replica map.
    */
   void mergeAll(ReplicaMap other) {
-    try (AutoCloseableLock l = lock.acquire()) {
-      other.map.forEach(
-          (bp, replicaInfos) -> {
-            replicaInfos.forEach(
-                replicaInfo -> add(bp, replicaInfo)
-            );
-          }
-      );
-    }
+    other.map.forEach(
+        (bp, replicaInfos) -> {
+          replicaInfos.forEach(
+              replicaInfo -> add(bp, replicaInfo)
+          );
+        }
+    );
   }
   
   /**
