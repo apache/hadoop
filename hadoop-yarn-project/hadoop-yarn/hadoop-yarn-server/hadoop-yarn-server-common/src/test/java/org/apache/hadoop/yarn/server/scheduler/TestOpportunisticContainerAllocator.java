@@ -198,18 +198,6 @@ public class TestOpportunisticContainerAllocator {
         Arrays.asList(
             ResourceRequest.newBuilder().allocationRequestId(1)
                 .priority(Priority.newInstance(1))
-                .resourceName("/r1")
-                .capability(Resources.createResource(1 * GB))
-                .relaxLocality(true)
-                .executionType(ExecutionType.OPPORTUNISTIC).build(),
-            ResourceRequest.newBuilder().allocationRequestId(1)
-                .priority(Priority.newInstance(1))
-                .resourceName("h1")
-                .capability(Resources.createResource(1 * GB))
-                .relaxLocality(true)
-                .executionType(ExecutionType.OPPORTUNISTIC).build(),
-            ResourceRequest.newBuilder().allocationRequestId(1)
-                .priority(Priority.newInstance(1))
                 .resourceName(ResourceRequest.ANY)
                 .capability(Resources.createResource(1 * GB))
                 .relaxLocality(true)
@@ -227,6 +215,24 @@ public class TestOpportunisticContainerAllocator {
                 .relaxLocality(true)
                 .executionType(ExecutionType.OPPORTUNISTIC).build(),
             ResourceRequest.newBuilder().allocationRequestId(2)
+                .priority(Priority.newInstance(1))
+                .resourceName(ResourceRequest.ANY)
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
+                .priority(Priority.newInstance(1))
+                .resourceName("/r1")
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
+                .priority(Priority.newInstance(1))
+                .resourceName("h1")
+                .capability(Resources.createResource(1 * GB))
+                .relaxLocality(true)
+                .executionType(ExecutionType.OPPORTUNISTIC).build(),
+            ResourceRequest.newBuilder().allocationRequestId(3)
                 .priority(Priority.newInstance(1))
                 .resourceName(ResourceRequest.ANY)
                 .capability(Resources.createResource(1 * GB))
@@ -247,14 +253,14 @@ public class TestOpportunisticContainerAllocator {
     List<Container> containers = allocator.allocateContainers(
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     LOG.info("Containers: {}", containers);
-    Set<String> allocatedHosts = new HashSet<>();
+    // all 3 containers should be allocated.
+    Assert.assertEquals(3, containers.size());
+    // container with allocation id 2 and 3 should be allocated on node h1
     for (Container c : containers) {
-      allocatedHosts.add(c.getNodeHttpAddress());
+      if (c.getAllocationRequestId() == 2 || c.getAllocationRequestId() == 3) {
+        Assert.assertEquals("h1:1234", c.getNodeHttpAddress());
+      }
     }
-    Assert.assertEquals(2, containers.size());
-    Assert.assertTrue(allocatedHosts.contains("h1:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h2:1234"));
-    Assert.assertFalse(allocatedHosts.contains("h3:1234"));
   }
 
   @Test
@@ -636,5 +642,191 @@ public class TestOpportunisticContainerAllocator {
         blacklistRequest, reqs, appAttId, oppCntxt, 1L, "luser");
     Assert.assertEquals(1, containers.size());
     Assert.assertEquals(0, oppCntxt.getOutstandingOpReqs().size());
+  }
+
+  /**
+   * Tests maximum number of opportunistic containers that can be allocated in
+   * AM heartbeat.
+   * @throws Exception
+   */
+  @Test
+  public void testMaxAllocationsPerAMHeartbeat() throws Exception {
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            new ArrayList<>(), new ArrayList<>());
+    allocator.setMaxAllocationsPerAMHeartbeat(2);
+    final Priority priority = Priority.newInstance(1);
+    final ExecutionTypeRequest oppRequest = ExecutionTypeRequest.newInstance(
+        ExecutionType.OPPORTUNISTIC, true);
+    final Resource resource = Resources.createResource(1 * GB);
+    List<ResourceRequest> reqs =
+        Arrays.asList(
+            ResourceRequest.newInstance(priority, "*",
+                resource, 3, true, null, oppRequest),
+            ResourceRequest.newInstance(priority, "h6",
+                resource, 3, true, null, oppRequest),
+            ResourceRequest.newInstance(priority, "/r3",
+                resource, 3, true, null, oppRequest));
+    ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(0L, 1), 1);
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h3", 1234), "h3:1234", "/r2"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h2", 1234), "h2:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h5", 1234), "h5:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h4", 1234), "h4:1234", "/r2")));
+
+    List<Container> containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
+    LOG.info("Containers: {}", containers);
+    // Although capacity is present, but only 2 containers should be allocated
+    // as max allocation per AM heartbeat is set to 2.
+    Assert.assertEquals(2, containers.size());
+    containers = allocator.allocateContainers(
+        blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
+    LOG.info("Containers: {}", containers);
+    // Remaining 1 container should be allocated.
+    Assert.assertEquals(1, containers.size());
+  }
+
+  /**
+   * Tests maximum opportunistic container allocation per AM heartbeat for
+   * allocation requests with different scheduler key.
+   * @throws Exception
+   */
+  @Test
+  public void testMaxAllocationsPerAMHeartbeatDifferentSchedKey()
+      throws Exception {
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            new ArrayList<>(), new ArrayList<>());
+    allocator.setMaxAllocationsPerAMHeartbeat(2);
+    final ExecutionTypeRequest oppRequest = ExecutionTypeRequest.newInstance(
+        ExecutionType.OPPORTUNISTIC, true);
+    final Resource resource = Resources.createResource(1 * GB);
+    List<ResourceRequest> reqs =
+        Arrays.asList(
+            ResourceRequest.newInstance(Priority.newInstance(1), "*",
+                resource, 1, true, null, oppRequest),
+            ResourceRequest.newInstance(Priority.newInstance(2), "h6",
+                resource, 2, true, null, oppRequest),
+            ResourceRequest.newInstance(Priority.newInstance(3), "/r3",
+                resource, 2, true, null, oppRequest));
+    ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(0L, 1), 1);
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h3", 1234), "h3:1234", "/r2"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h2", 1234), "h2:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h5", 1234), "h5:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h4", 1234), "h4:1234", "/r2")));
+
+    List<Container> containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
+    LOG.info("Containers: {}", containers);
+    // Although capacity is present, but only 2 containers should be allocated
+    // as max allocation per AM heartbeat is set to 2.
+    Assert.assertEquals(2, containers.size());
+    containers = allocator.allocateContainers(
+        blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
+    LOG.info("Containers: {}", containers);
+    // 2 more containers should be allocated from pending allocation requests.
+    Assert.assertEquals(2, containers.size());
+    containers = allocator.allocateContainers(
+        blacklistRequest, new ArrayList<>(), appAttId, oppCntxt, 1L, "user1");
+    LOG.info("Containers: {}", containers);
+    // Remaining 1 container should be allocated.
+    Assert.assertEquals(1, containers.size());
+  }
+
+  /**
+   * Tests maximum opportunistic container allocation per AM heartbeat when
+   * limit is set to -1.
+   * @throws Exception
+   */
+  @Test
+  public void testMaxAllocationsPerAMHeartbeatWithNoLimit() throws Exception {
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            new ArrayList<>(), new ArrayList<>());
+    allocator.setMaxAllocationsPerAMHeartbeat(-1);
+
+    Priority priority = Priority.newInstance(1);
+    Resource capability = Resources.createResource(1 * GB);
+    List<ResourceRequest> reqs = new ArrayList<>();
+    for (int i = 0; i < 20; i++) {
+      reqs.add(ResourceRequest.newBuilder().allocationRequestId(i + 1)
+          .priority(priority)
+          .resourceName("h1")
+          .capability(capability)
+          .relaxLocality(true)
+          .executionType(ExecutionType.OPPORTUNISTIC).build());
+    }
+    ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(0L, 1), 1);
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h1", 1234), "h1:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h2", 1234), "h2:1234", "/r1")));
+
+    List<Container> containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
+
+    // all containers should be allocated in single heartbeat.
+    Assert.assertEquals(20, containers.size());
+  }
+
+  /**
+   * Tests maximum opportunistic container allocation per AM heartbeat when
+   * limit is set to higher value.
+   * @throws Exception
+   */
+  @Test
+  public void testMaxAllocationsPerAMHeartbeatWithHighLimit()
+      throws Exception {
+    ResourceBlacklistRequest blacklistRequest =
+        ResourceBlacklistRequest.newInstance(
+            new ArrayList<>(), new ArrayList<>());
+    allocator.setMaxAllocationsPerAMHeartbeat(100);
+
+    Priority priority = Priority.newInstance(1);
+    Resource capability = Resources.createResource(1 * GB);
+    List<ResourceRequest> reqs = new ArrayList<>();
+    for (int i = 0; i < 20; i++) {
+      reqs.add(ResourceRequest.newBuilder().allocationRequestId(i + 1)
+          .priority(priority)
+          .resourceName("h1")
+          .capability(capability)
+          .relaxLocality(true)
+          .executionType(ExecutionType.OPPORTUNISTIC).build());
+    }
+    ApplicationAttemptId appAttId = ApplicationAttemptId.newInstance(
+        ApplicationId.newInstance(0L, 1), 1);
+
+    oppCntxt.updateNodeList(
+        Arrays.asList(
+            RemoteNode.newInstance(
+                NodeId.newInstance("h1", 1234), "h1:1234", "/r1"),
+            RemoteNode.newInstance(
+                NodeId.newInstance("h2", 1234), "h2:1234", "/r1")));
+
+    List<Container> containers = allocator.allocateContainers(
+        blacklistRequest, reqs, appAttId, oppCntxt, 1L, "user1");
+
+    // all containers should be allocated in single heartbeat.
+    Assert.assertEquals(20, containers.size());
   }
 }

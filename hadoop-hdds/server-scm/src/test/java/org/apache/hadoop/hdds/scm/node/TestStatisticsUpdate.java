@@ -31,6 +31,7 @@ import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .NodeReportFromDatanode;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
@@ -69,7 +70,8 @@ public class TestStatisticsUpdate {
     final StorageContainerManager scm = HddsTestUtils.getScm(conf);
     nodeManager = scm.getScmNodeManager();
     final DeadNodeHandler deadNodeHandler = new DeadNodeHandler(
-        nodeManager, scm.getContainerManager());
+        nodeManager, Mockito.mock(PipelineManager.class),
+        scm.getContainerManager());
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     nodeReportHandler = new NodeReportHandler(nodeManager);
   }

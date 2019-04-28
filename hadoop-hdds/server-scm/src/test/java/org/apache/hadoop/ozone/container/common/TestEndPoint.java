@@ -175,6 +175,10 @@ public class TestEndPoint {
   @Test
   public void testCheckVersionResponse() throws Exception {
     OzoneConfiguration conf = SCMTestUtils.getConf();
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
+        true);
+    conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
+        true);
     try (EndpointStateMachine rpcEndPoint = createEndpoint(conf,
         serverAddress, 1000)) {
       GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
@@ -421,15 +425,10 @@ public class TestEndPoint {
           serverAddress, 3000);
       Map<Long, CommandStatus> map = stateContext.getCommandStatusMap();
       assertNotNull(map);
-      assertEquals("Should have 2 objects", 2, map.size());
-      assertTrue(map.containsKey(Long.valueOf(2)));
-      assertTrue(map.containsKey(Long.valueOf(3)));
-      assertTrue(map.get(Long.valueOf(2)).getType()
-          .equals(Type.replicateContainerCommand));
-      assertTrue(
-          map.get(Long.valueOf(3)).getType().equals(Type.deleteBlocksCommand));
-      assertTrue(map.get(Long.valueOf(2)).getStatus().equals(Status.PENDING));
-      assertTrue(map.get(Long.valueOf(3)).getStatus().equals(Status.PENDING));
+      assertEquals("Should have 1 objects", 1, map.size());
+      assertTrue(map.containsKey(3L));
+      assertEquals(Type.deleteBlocksCommand, map.get(3L).getType());
+      assertEquals(Status.PENDING, map.get(3L).getStatus());
 
       scmServerImpl.clearScmCommandRequests();
     }
@@ -483,7 +482,7 @@ public class TestEndPoint {
 
     // Create a datanode state machine for stateConext used by endpoint task
     try (DatanodeStateMachine stateMachine = new DatanodeStateMachine(
-        TestUtils.randomDatanodeDetails(), conf, null);
+        TestUtils.randomDatanodeDetails(), conf, null, null);
          EndpointStateMachine rpcEndPoint =
             createEndpoint(conf, scmAddress, rpcTimeout)) {
       HddsProtos.DatanodeDetailsProto datanodeDetailsProto =

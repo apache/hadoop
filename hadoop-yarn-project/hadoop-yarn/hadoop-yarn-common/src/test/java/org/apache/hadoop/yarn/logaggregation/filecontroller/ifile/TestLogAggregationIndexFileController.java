@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.logaggregation.filecontroller.ifile;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.mock;
@@ -288,7 +289,7 @@ public class TestLogAggregationIndexFileController {
     // We can only get the logs/logmeta from the first write.
     meta = fileFormat.readAggregatedLogsMeta(
         logRequest);
-    Assert.assertEquals(meta.size(), 1);
+    assertThat(meta.size()).isEqualTo(1);
     for (ContainerLogMeta log : meta) {
       Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
       Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));
@@ -319,7 +320,7 @@ public class TestLogAggregationIndexFileController {
     fileFormat.closeWriter();
     meta = fileFormat.readAggregatedLogsMeta(
             logRequest);
-    Assert.assertEquals(meta.size(), 2);
+    assertThat(meta.size()).isEqualTo(2);
     for (ContainerLogMeta log : meta) {
       Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
       Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));
@@ -347,7 +348,7 @@ public class TestLogAggregationIndexFileController {
     Assert.assertTrue(status.length == 2);
     meta = fileFormat.readAggregatedLogsMeta(
         logRequest);
-    Assert.assertEquals(meta.size(), 3);
+    assertThat(meta.size()).isEqualTo(3);
     for (ContainerLogMeta log : meta) {
       Assert.assertTrue(log.getContainerId().equals(containerId.toString()));
       Assert.assertTrue(log.getNodeId().equals(nodeId.toString()));

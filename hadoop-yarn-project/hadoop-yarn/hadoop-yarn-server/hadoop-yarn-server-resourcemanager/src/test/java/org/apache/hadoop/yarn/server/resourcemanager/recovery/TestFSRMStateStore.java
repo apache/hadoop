@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.recovery;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -125,8 +126,8 @@ public class TestFSRMStateStore extends RMStateStoreTestBase {
           YarnConfiguration.YARN_INTERMEDIATE_DATA_ENCRYPTION, true);
       }
       this.store = new TestFileSystemRMStore(conf);
-      Assert.assertEquals(store.getNumRetries(), 8);
-      Assert.assertEquals(store.getRetryInterval(), 900L);
+      assertThat(store.getNumRetries()).isEqualTo(8);
+      assertThat(store.getRetryInterval()).isEqualTo(900L);
       Assert.assertTrue(store.fs.getConf() == store.fsConf);
       FileSystem previousFs = store.fs;
       store.startInternal();

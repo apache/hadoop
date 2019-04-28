@@ -21,12 +21,12 @@ set -e
 
 cd base/ubuntu-16.04
 
-docker build . -f Dockerfile.cpu.tf_1.8.0 -t tf-1.8.0-cpu-base:0.0.1
-docker build . -f Dockerfile.gpu.tf_1.8.0 -t tf-1.8.0-gpu-base:0.0.1
+docker build . -f Dockerfile.cpu.tf_1.13.1 -t tf-1.13.1-cpu-base:0.0.1
+docker build . -f Dockerfile.gpu.tf_1.13.1 -t tf-1.13.1-gpu-base:0.0.1
 
 echo "Finished building base images"
 
 cd ../../with-cifar10-models/ubuntu-16.04
 
-docker build . -f Dockerfile.cpu.tf_1.8.0 -t tf-1.8.0-cpu:0.0.1
-docker build . -f Dockerfile.gpu.tf_1.8.0 -t tf-1.8.0-gpu:0.0.1
+docker build . -f Dockerfile.cpu.tf_1.13.1 -t tf-1.13.1-cpu:0.0.1
+docker build . -f Dockerfile.gpu.tf_1.13.1 -t tf-1.13.1-gpu:0.0.1

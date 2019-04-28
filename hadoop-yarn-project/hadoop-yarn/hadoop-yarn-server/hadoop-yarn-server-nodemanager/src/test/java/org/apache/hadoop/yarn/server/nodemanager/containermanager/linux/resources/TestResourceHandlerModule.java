@@ -20,6 +20,8 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -71,7 +73,7 @@ public class TestResourceHandlerModule {
         List<ResourceHandler> resourceHandlers = resourceHandlerChain
             .getResourceHandlerList();
         //Exactly one resource handler in chain
-        Assert.assertEquals(resourceHandlers.size(), 1);
+        assertThat(resourceHandlers).hasSize(1);
         //Same instance is expected to be in the chain.
         Assert.assertTrue(resourceHandlers.get(0) == resourceHandler);
       } else {
@@ -102,7 +104,7 @@ public class TestResourceHandlerModule {
       List<ResourceHandler> resourceHandlers =
           resourceHandlerChain.getResourceHandlerList();
       // Exactly one resource handler in chain
-      Assert.assertEquals(resourceHandlers.size(), 1);
+      assertThat(resourceHandlers).hasSize(1);
       // Same instance is expected to be in the chain.
       Assert.assertTrue(resourceHandlers.get(0) == handler);
     } else {

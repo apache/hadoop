@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -1616,7 +1617,7 @@ public class TestAMRMClient extends BaseAMRMClientTest{
         for(ContainerStatus cStatus :allocResponse
             .getCompletedContainersStatuses()) {
           if(releases.contains(cStatus.getContainerId())) {
-            assertEquals(cStatus.getState(), ContainerState.COMPLETE);
+            assertThat(cStatus.getState()).isEqualTo(ContainerState.COMPLETE);
             assertEquals(-100, cStatus.getExitStatus());
             releases.remove(cStatus.getContainerId());
           }

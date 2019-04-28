@@ -83,10 +83,10 @@ public class TestHddsSecureDatanodeInit {
         ServicePlugin.class);
     securityConfig = new SecurityConfig(conf);
 
-    service = HddsDatanodeService.createHddsDatanodeService(args, conf);
+    service = HddsDatanodeService.createHddsDatanodeService(args);
     dnLogs = GenericTestUtils.LogCapturer.captureLogs(getLogger());
     callQuietly(() -> {
-      service.start(null);
+      service.start(conf);
       return null;
     });
     callQuietly(() -> {

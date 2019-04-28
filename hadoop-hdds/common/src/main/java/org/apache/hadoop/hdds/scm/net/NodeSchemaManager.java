@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.net;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.net.NodeSchemaLoader.NodeSchemaLoadResult;
 import org.slf4j.Logger;
@@ -65,7 +66,12 @@ public final class NodeSchemaManager {
 
     NodeSchemaLoadResult result;
     try {
-      result = NodeSchemaLoader.getInstance().loadSchemaFromFile(schemaFile);
+      if (FilenameUtils.getExtension(schemaFile).toLowerCase()
+          .compareTo("yaml") == 0) {
+        result = NodeSchemaLoader.getInstance().loadSchemaFromYaml(schemaFile);
+      } else {
+        result = NodeSchemaLoader.getInstance().loadSchemaFromXml(schemaFile);
+      }
       allSchema = result.getSchemaList();
       enforcePrefix = result.isEnforePrefix();
       maxLevel = allSchema.size();

@@ -19,9 +19,10 @@ package org.apache.hadoop.ozone.container.common.statemachine;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.GeneratedMessage;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.PipelineAction;
 import org.apache.hadoop.hdds.protocol.proto
@@ -34,8 +35,6 @@ import org.apache.hadoop.ozone.container.common.states.datanode
 import org.apache.hadoop.ozone.container.common.states.datanode
     .RunningDatanodeState;
 import org.apache.hadoop.ozone.protocol.commands.CommandStatus;
-import org.apache.hadoop.ozone.protocol.commands.CommandStatus
-    .CommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands
     .DeleteBlockCommandStatus.DeleteBlockCommandStatusBuilder;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -74,6 +73,7 @@ public class StateContext {
   private final Queue<ContainerAction> containerActions;
   private final Queue<PipelineAction> pipelineActions;
   private DatanodeStateMachine.DatanodeStates state;
+  private boolean shutdownOnError = false;
 
   /**
    * Starting with a 2 sec heartbeat frequency which will be updated to the
@@ -153,6 +153,22 @@ public class StateContext {
     this.state = state;
   }
 
+  /**
+   * Sets the shutdownOnError. This method needs to be called when we
+   * set DatanodeState to SHUTDOWN when executing a task of a DatanodeState.
+   * @param value
+   */
+  private void setShutdownOnError(boolean value) {
+    this.shutdownOnError = value;
+  }
+
+  /**
+   * Get shutdownStateMachine.
+   * @return boolean
+   */
+  public boolean getShutdownOnError() {
+    return shutdownOnError;
+  }
   /**
    * Adds the report to report queue.
    *
@@ -368,6 +384,14 @@ public class StateContext {
         }
         this.setState(newState);
       }
+
+      if (this.state == DatanodeStateMachine.DatanodeStates.SHUTDOWN) {
+        LOG.error("Critical error occurred in StateMachine, setting " +
+            "shutDownMachine");
+        // When some exception occurred, set shutdownStateMachine to true, so
+        // that we can terminate the datanode.
+        setShutdownOnError(true);
+      }
     }
   }
 
@@ -432,27 +456,14 @@ public class StateContext {
    * @param cmd - {@link SCMCommand}.
    */
   public void addCmdStatus(SCMCommand cmd) {
-    final Optional<CommandStatusBuilder> cmdStatusBuilder;
-    switch (cmd.getType()) {
-    case replicateContainerCommand:
-      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
-      break;
-    case deleteBlocksCommand:
-      cmdStatusBuilder = Optional.of(
-          DeleteBlockCommandStatusBuilder.newBuilder());
-      break;
-    case deleteContainerCommand:
-      cmdStatusBuilder = Optional.of(CommandStatusBuilder.newBuilder());
-      break;
-    default:
-      cmdStatusBuilder = Optional.empty();
+    if (cmd.getType() == SCMCommandProto.Type.deleteBlocksCommand) {
+      addCmdStatus(cmd.getId(),
+          DeleteBlockCommandStatusBuilder.newBuilder()
+              .setCmdId(cmd.getId())
+              .setStatus(Status.PENDING)
+              .setType(cmd.getType())
+              .build());
     }
-    cmdStatusBuilder.ifPresent(statusBuilder ->
-        addCmdStatus(cmd.getId(), statusBuilder
-            .setCmdId(cmd.getId())
-            .setStatus(Status.PENDING)
-            .setType(cmd.getType())
-            .build()));
   }
 
   /**

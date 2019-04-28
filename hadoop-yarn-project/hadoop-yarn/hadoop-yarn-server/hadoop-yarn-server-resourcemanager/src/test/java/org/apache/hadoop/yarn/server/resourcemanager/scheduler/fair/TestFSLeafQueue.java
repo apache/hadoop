@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -90,8 +91,9 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     String queueName = "root.queue1";
     FSLeafQueue schedulable = new FSLeafQueue(queueName, scheduler, null);
     schedulable.setMaxShare(new ConfigurableResource(maxResource));
-    assertEquals(schedulable.getMetrics().getMaxApps(), Integer.MAX_VALUE);
-    assertEquals(schedulable.getMetrics().getSchedulingPolicy(),
+    assertThat(schedulable.getMetrics().getMaxApps()).
+        isEqualTo(Integer.MAX_VALUE);
+    assertThat(schedulable.getMetrics().getSchedulingPolicy()).isEqualTo(
         SchedulingPolicy.DEFAULT_POLICY.getName());
 
     FSAppAttempt app = mock(FSAppAttempt.class);
@@ -124,8 +126,8 @@ public class TestFSLeafQueue extends FairSchedulerTestBase {
     resourceManager.start();
     scheduler = (FairScheduler) resourceManager.getResourceScheduler();
     for(FSQueue queue: scheduler.getQueueManager().getQueues()) {
-      assertEquals(queue.getMetrics().getMaxApps(), Integer.MAX_VALUE);
-      assertEquals(queue.getMetrics().getSchedulingPolicy(),
+      assertThat(queue.getMetrics().getMaxApps()).isEqualTo(Integer.MAX_VALUE);
+      assertThat(queue.getMetrics().getSchedulingPolicy()).isEqualTo(
           SchedulingPolicy.DEFAULT_POLICY.getName());
     }
 

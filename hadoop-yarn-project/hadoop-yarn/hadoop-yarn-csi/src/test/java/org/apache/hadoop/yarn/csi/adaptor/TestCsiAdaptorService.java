@@ -52,6 +52,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.AccessMode.MULTI_NODE_MULTI_WRITER;
 import static org.apache.hadoop.yarn.api.protocolrecords.ValidateVolumeCapabilitiesRequest.VolumeType.FILE_SYSTEM;
 
@@ -333,8 +334,8 @@ public class TestCsiAdaptorService {
     // Test getPluginInfo
     GetPluginInfoResponse pluginInfo =
         adaptorClient.getPluginInfo(GetPluginInfoRequest.newInstance());
-    Assert.assertEquals(pluginInfo.getDriverName(), "customized-driver");
-    Assert.assertEquals(pluginInfo.getVersion(), "1.0");
+    assertThat(pluginInfo.getDriverName()).isEqualTo("customized-driver");
+    assertThat(pluginInfo.getVersion()).isEqualTo("1.0");
 
     // Test validateVolumeCapacity
     ValidateVolumeCapabilitiesRequest request =
@@ -412,8 +413,8 @@ public class TestCsiAdaptorService {
     // Test getPluginInfo
     GetPluginInfoResponse pluginInfo =
         client1.getPluginInfo(GetPluginInfoRequest.newInstance());
-    Assert.assertEquals(pluginInfo.getDriverName(), "customized-driver-1");
-    Assert.assertEquals(pluginInfo.getVersion(), "1.0");
+    assertThat(pluginInfo.getDriverName()).isEqualTo("customized-driver-1");
+    assertThat(pluginInfo.getVersion()).isEqualTo("1.0");
 
     // Test validateVolumeCapacity
     ValidateVolumeCapabilitiesRequest request =
@@ -440,8 +441,8 @@ public class TestCsiAdaptorService {
                 driver2Addr.getLocalPort()));
     GetPluginInfoResponse pluginInfo2 =
         client2.getPluginInfo(GetPluginInfoRequest.newInstance());
-    Assert.assertEquals(pluginInfo2.getDriverName(), "customized-driver-2");
-    Assert.assertEquals(pluginInfo2.getVersion(), "1.0");
+    assertThat(pluginInfo2.getDriverName()).isEqualTo("customized-driver-2");
+    assertThat(pluginInfo2.getVersion()).isEqualTo("1.0");
 
     services.stop();
   }

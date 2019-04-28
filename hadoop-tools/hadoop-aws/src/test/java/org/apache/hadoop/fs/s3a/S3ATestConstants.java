@@ -158,6 +158,10 @@ public interface S3ATestConstants {
   String TEST_S3GUARD_IMPLEMENTATION_DYNAMO = "dynamo";
   String TEST_S3GUARD_IMPLEMENTATION_NONE = "none";
 
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX =
+      "fs.s3a.s3guard.test.dynamo.table.prefix";
+  String TEST_S3GUARD_DYNAMO_TABLE_PREFIX_DEFAULT = "s3guard.test.";
+
   /**
    * Timeout in Milliseconds for standard tests: {@value}.
    */

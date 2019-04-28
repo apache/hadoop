@@ -429,10 +429,19 @@
   </property>
   <property>
     <name>ozone.client.max.retries</name>
-    <value>5</value>
+    <value>100</value>
     <tag>OZONE, CLIENT</tag>
     <description>Maximum number of retries by Ozone Client on encountering
       exception while writing a key.
+    </description>
+  </property>
+  <property>
+    <name>ozone.client.retry.interval</name>
+    <value>0ms</value>
+    <tag>OZONE, CLIENT</tag>
+    <description>Indicates the time duration a client will wait before
+      retrying a write key request on encountering an exception. By default
+      there is no wait.
     </description>
   </property>
   <property>
@@ -2288,10 +2297,12 @@
   </property>
   <property>
     <name>ozone.scm.network.topology.schema.file</name>
-    <value>network-topology-default.xm</value>
+    <value>network-topology-default.xml</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The schema file defines the ozone network topology
+      The schema file defines the ozone network topology. We currently support
+      xml(default) and yaml format. Refer to the samples in the topology
+      awareness document for xml and yaml topology definition samples.
     </description>
   </property>
   <property>

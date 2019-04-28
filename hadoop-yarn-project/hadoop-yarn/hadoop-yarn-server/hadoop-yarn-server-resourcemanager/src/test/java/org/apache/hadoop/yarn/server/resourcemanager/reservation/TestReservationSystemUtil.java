@@ -17,6 +17,7 @@
  *******************************************************************************/
 package org.apache.hadoop.yarn.server.resourcemanager.reservation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.yarn.api.records.ReservationAllocationState;
@@ -49,9 +50,9 @@ public class TestReservationSystemUtil {
             .convertAllocationsToReservationInfo(
               Collections.singleton(allocation), true);
 
-    Assert.assertEquals(infoList.size(), 1);
-    Assert.assertEquals(infoList.get(0).getReservationId().toString(),
-            id.toString());
+    assertThat(infoList).hasSize(1);
+    assertThat(infoList.get(0).getReservationId().toString()).isEqualTo(
+        id.toString());
     Assert.assertFalse(infoList.get(0).getResourceAllocationRequests()
             .isEmpty());
   }
@@ -104,7 +105,7 @@ public class TestReservationSystemUtil {
             .convertAllocationsToReservationInfo(
                     Collections.<ReservationAllocation>emptySet(), false);
 
-    Assert.assertEquals(infoList.size(), 0);
+    assertThat(infoList).isEmpty();
   }
 
   private ReservationAllocation createReservationAllocation(long startTime,

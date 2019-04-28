@@ -19,8 +19,9 @@ package org.apache.hadoop.hdds.scm.command;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
+    .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.CommandStatus;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationManager;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .CommandStatusReportFromDatanode;
@@ -54,32 +55,14 @@ public class CommandStatusReportHandler implements
     cmdStatusList.forEach(cmdStatus -> {
       LOGGER.trace("Emitting command status for id:{} type: {}", cmdStatus
           .getCmdId(), cmdStatus.getType());
-      switch (cmdStatus.getType()) {
-      case replicateContainerCommand:
-        publisher.fireEvent(SCMEvents.REPLICATION_STATUS, new
-            ReplicationStatus(cmdStatus));
-        if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
-          publisher.fireEvent(SCMEvents.REPLICATION_COMPLETE,
-              new ReplicationManager.ReplicationCompleted(
-                  cmdStatus.getCmdId()));
-        }
-        break;
-      case deleteBlocksCommand:
+      if (cmdStatus.getType() == SCMCommandProto.Type.deleteBlocksCommand) {
         if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
           publisher.fireEvent(SCMEvents.DELETE_BLOCK_STATUS,
               new DeleteBlockStatus(cmdStatus));
         }
-        break;
-      case deleteContainerCommand:
-        if (cmdStatus.getStatus() == CommandStatus.Status.EXECUTED) {
-          publisher.fireEvent(SCMEvents.DELETE_CONTAINER_COMMAND_COMPLETE,
-              new ReplicationManager.DeleteContainerCommandCompleted(
-                  cmdStatus.getCmdId()));
-        }
-      default:
+      } else {
         LOGGER.debug("CommandStatus of type:{} not handled in " +
             "CommandStatusReportHandler.", cmdStatus.getType());
-        break;
       }
     });
   }
@@ -106,24 +89,6 @@ public class CommandStatusReportHandler implements
     @Override
     public long getId() {
       return cmdStatus.getCmdId();
-    }
-  }
-
-  /**
-   * Wrapper event for Replicate Command.
-   */
-  public static class ReplicationStatus extends CommandStatusEvent {
-    public ReplicationStatus(CommandStatus cmdStatus) {
-      super(cmdStatus);
-    }
-  }
-
-  /**
-   * Wrapper event for CloseContainer Command.
-   */
-  public static class CloseContainerStatus extends CommandStatusEvent {
-    public CloseContainerStatus(CommandStatus cmdStatus) {
-      super(cmdStatus);
     }
   }
 

@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.util.resource;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.protocolrecords.ResourceTypes;
@@ -501,27 +503,25 @@ public class TestResourceUtils {
         ResourceInformation.newInstance("yarn.io/test-volume", "", 3));
 
     Resource addedResource = Resources.add(resourceA, resourceB);
-    Assert.assertEquals(addedResource.getMemorySize(), 5);
-    Assert.assertEquals(addedResource.getVirtualCores(), 10);
-    Assert.assertEquals(
-        addedResource.getResourceInformation("resource1").getValue(), 8);
+    assertThat(addedResource.getMemorySize()).isEqualTo(5);
+    assertThat(addedResource.getVirtualCores()).isEqualTo(10);
+    assertThat(addedResource.getResourceInformation("resource1").getValue()).
+        isEqualTo(8);
 
     // Verify that value of resourceA and resourceB is not added up for
     // "yarn.io/test-volume".
-    Assert.assertEquals(
-        addedResource.getResourceInformation("yarn.io/test-volume").getValue(),
-        2);
+    assertThat(addedResource.getResourceInformation("yarn.io/test-volume").
+        getValue()).isEqualTo(2);
 
     Resource mulResource = Resources.multiplyAndRoundDown(resourceA, 3);
-    Assert.assertEquals(mulResource.getMemorySize(), 6);
-    Assert.assertEquals(mulResource.getVirtualCores(), 12);
-    Assert.assertEquals(
-        mulResource.getResourceInformation("resource1").getValue(), 15);
+    assertThat(mulResource.getMemorySize()).isEqualTo(6);
+    assertThat(mulResource.getVirtualCores()).isEqualTo(12);
+    assertThat(mulResource.getResourceInformation("resource1").getValue()).
+        isEqualTo(15);
 
     // Verify that value of resourceA is not multiplied up for
     // "yarn.io/test-volume".
-    Assert.assertEquals(
-        mulResource.getResourceInformation("yarn.io/test-volume").getValue(),
-        2);
+    assertThat(mulResource.getResourceInformation("yarn.io/test-volume").
+        getValue()).isEqualTo(2);
   }
 }

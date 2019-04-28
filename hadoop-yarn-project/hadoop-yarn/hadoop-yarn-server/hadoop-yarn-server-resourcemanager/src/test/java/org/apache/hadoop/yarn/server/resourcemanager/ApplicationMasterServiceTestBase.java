@@ -464,6 +464,10 @@ public abstract class ApplicationMasterServiceTestBase {
     allocateRequest.setTrackingUrl(newTrackingUrl);
 
     am1.allocate(allocateRequest);
+
+    // wait until RMAppAttemptEventType.STATUS_UPDATE is handled
+    rm.drainEvents();
+
     Assert.assertEquals(newTrackingUrl, rm.getRMContext().getRMApps().get(
         app1.getApplicationId()).getOriginalTrackingUrl());
 

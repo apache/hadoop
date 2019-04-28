@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.client.api.impl;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -80,14 +81,14 @@ public class TestAHSv2ClientImpl {
     when(spyTimelineReaderClient.getApplicationEntity(appId, "ALL", null))
         .thenReturn(createApplicationTimelineEntity(appId, true, false));
     ContainerReport report = client.getContainerReport(containerId);
-    Assert.assertEquals(report.getContainerId(), containerId);
-    Assert.assertEquals(report.getAssignedNode().getHost(), "test host");
-    Assert.assertEquals(report.getAssignedNode().getPort(), 100);
-    Assert.assertEquals(report.getAllocatedResource().getVirtualCores(), 8);
-    Assert.assertEquals(report.getCreationTime(), 123456);
-    Assert.assertEquals(report.getLogUrl(),
-        "https://localhost:8188/ahs/logs/test host:100/"
-            + "container_0_0001_01_000001/container_0_0001_01_000001/user1");
+    assertThat(report.getContainerId()).isEqualTo(containerId);
+    assertThat(report.getAssignedNode().getHost()).isEqualTo("test host");
+    assertThat(report.getAssignedNode().getPort()).isEqualTo(100);
+    assertThat(report.getAllocatedResource().getVirtualCores()).isEqualTo(8);
+    assertThat(report.getCreationTime()).isEqualTo(123456);
+    assertThat(report.getLogUrl()).isEqualTo("https://localhost:8188/ahs/logs/"
+        + "test host:100/container_0_0001_01_000001/"
+        + "container_0_0001_01_000001/user1");
   }
 
   @Test
@@ -100,10 +101,10 @@ public class TestAHSv2ClientImpl {
         .thenReturn(createAppAttemptTimelineEntity(appAttemptId));
     ApplicationAttemptReport report =
         client.getApplicationAttemptReport(appAttemptId);
-    Assert.assertEquals(report.getApplicationAttemptId(), appAttemptId);
-    Assert.assertEquals(report.getFinishTime(), Integer.MAX_VALUE + 2L);
-    Assert.assertEquals(report.getOriginalTrackingUrl(),
-        "test original tracking url");
+    assertThat(report.getApplicationAttemptId()).isEqualTo(appAttemptId);
+    assertThat(report.getFinishTime()).isEqualTo(Integer.MAX_VALUE + 2L);
+    assertThat(report.getOriginalTrackingUrl()).
+        isEqualTo("test original tracking url");
   }
 
   @Test
@@ -112,11 +113,12 @@ public class TestAHSv2ClientImpl {
     when(spyTimelineReaderClient.getApplicationEntity(appId, "ALL", null))
         .thenReturn(createApplicationTimelineEntity(appId, false, false));
     ApplicationReport report = client.getApplicationReport(appId);
-    Assert.assertEquals(report.getApplicationId(), appId);
-    Assert.assertEquals(report.getAppNodeLabelExpression(), "test_node_label");
+    assertThat(report.getApplicationId()).isEqualTo(appId);
+    assertThat(report.getAppNodeLabelExpression()).
+        isEqualTo("test_node_label");
     Assert.assertTrue(report.getApplicationTags().contains("Test_APP_TAGS_1"));
-    Assert.assertEquals(report.getYarnApplicationState(),
-        YarnApplicationState.FINISHED);
+    assertThat(report.getYarnApplicationState()).
+        isEqualTo(YarnApplicationState.FINISHED);
   }
 
   private static TimelineEntity createApplicationTimelineEntity(

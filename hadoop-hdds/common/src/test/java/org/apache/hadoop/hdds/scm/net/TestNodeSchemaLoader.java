@@ -44,7 +44,7 @@ public class TestNodeSchemaLoader {
     try {
       String filePath = classLoader.getResource(
           "./networkTopologyTestFiles/" + schemaFile).getPath();
-      NodeSchemaLoader.getInstance().loadSchemaFromFile(filePath);
+      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
       fail("expect exceptions");
     } catch (Throwable e) {
       assertTrue(e.getMessage().contains(errMsg));
@@ -83,7 +83,7 @@ public class TestNodeSchemaLoader {
     try {
       String filePath = classLoader.getResource(
           "./networkTopologyTestFiles/good.xml").getPath();
-      NodeSchemaLoader.getInstance().loadSchemaFromFile(filePath);
+      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
     } catch (Throwable e) {
       fail("should succeed");
     }
@@ -94,7 +94,7 @@ public class TestNodeSchemaLoader {
     String filePath = classLoader.getResource(
         "./networkTopologyTestFiles/good.xml").getPath() + ".backup";
     try {
-      NodeSchemaLoader.getInstance().loadSchemaFromFile(filePath);
+      NodeSchemaLoader.getInstance().loadSchemaFromXml(filePath);
       fail("should fail");
     } catch (Throwable e) {
       assertTrue(e.getMessage().contains("file " + filePath + " is not found"));

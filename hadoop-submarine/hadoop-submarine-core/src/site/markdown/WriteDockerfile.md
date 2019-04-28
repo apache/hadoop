@@ -56,6 +56,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -yq krb5-user libpam-krb5 && apt-get clean
+
 RUN curl -O https://bootstrap.pypa.io/get-pip.py && \
     python get-pip.py && \
     rm get-pip.py
@@ -74,14 +76,18 @@ RUN pip --no-cache-dir install \
     python -m ipykernel.kernelspec
 
 RUN pip --no-cache-dir install \
-    http://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-1.8.0-cp27-none-linux_x86_64.whl
+    http://storage.googleapis.com/tensorflow/linux/cpu/tensorflow-1.13.1-cp27-none-linux_x86_64.whl
 ```
 
 On top of above image, add files, install packages to access HDFS
 ```
 RUN apt-get update && apt-get install -y openjdk-8-jdk wget
-RUN wget http://apache.cs.utah.edu/hadoop/common/hadoop-3.1.0/hadoop-3.1.0.tar.gz
-RUN tar zxf hadoop-3.1.0.tar.gz
+# Install hadoop
+ENV HADOOP_VERSION="3.1.2"
+RUN wget http://mirrors.hust.edu.cn/apache/hadoop/common/hadoop-${HADOOP_VERSION}/hadoop-${HADOOP_VERSION}.tar.gz
+RUN tar zxf hadoop-${HADOOP_VERSION}.tar.gz
+RUN ln -s hadoop-${HADOOP_VERSION} hadoop-current
+RUN rm hadoop-${HADOOP_VERSION}.tar.gz
 ```
 
 Build and push to your own docker registry: Use ```docker build ... ``` and ```docker push ...``` to finish this step.
@@ -90,12 +96,12 @@ Build and push to your own docker registry: Use ```docker build ... ``` and ```d
 
 We provided following examples for you to build tensorflow docker images.
 
-For Tensorflow 1.8.0 (Precompiled to CUDA 9.x)
+For Tensorflow 1.13.1 (Precompiled to CUDA 10.x)
 
-- *docker/base/ubuntu-16.04/Dockerfile.cpu.tf_1.8.0*: Tensorflow 1.8.0 supports CPU only.
-- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.cpu.tf_1.8.0*: Tensorflow 1.8.0 supports CPU only, and included models
-- *docker/base/ubuntu-16.04/Dockerfile.gpu.cuda_9.0.tf_1.8.0*: Tensorflow 1.8.0 supports GPU, which is prebuilt to CUDA9.
-- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.gpu.cuda_8.0.tf_1.8.0*: Tensorflow 1.8.0 supports GPU, which is prebuilt to CUDA9, with models.
+- *docker/base/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only.
+- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only, and included models
+- *docker/base/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10.
+- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10, with models.
 
 ## Build Docker images
 
@@ -103,15 +109,15 @@ For Tensorflow 1.8.0 (Precompiled to CUDA 9.x)
 
 Under `docker/` directory, run `build-all.sh` to build Docker images. It will build following images:
 
-- `tf-1.8.0-gpu-base:0.0.1` for base Docker image which includes Hadoop, Tensorflow, GPU base libraries.
-- `tf-1.8.0-gpu-base:0.0.1` for base Docker image which includes Hadoop. Tensorflow.
-- `tf-1.8.0-gpu:0.0.1` which includes cifar10 model
-- `tf-1.8.0-cpu:0.0.1` which inclues cifar10 model (cpu only).
+- `tf-1.13.1-gpu-base:0.0.1` for base Docker image which includes Hadoop, Tensorflow, GPU base libraries.
+- `tf-1.13.1-gpu-base:0.0.1` for base Docker image which includes Hadoop. Tensorflow.
+- `tf-1.13.1-gpu:0.0.1` which includes cifar10 model
+- `tf-1.13.1-cpu:0.0.1` which inclues cifar10 model (cpu only).
 
 ### Use prebuilt images
 
 (No liability)
 You can also use prebuilt images for convenience:
 
-- hadoopsubmarine/tf-1.8.0-gpu:0.0.1
-- hadoopsubmarine/tf-1.8.0-cpu:0.0.1
+- hadoopsubmarine/tf-1.13.1-gpu:0.0.1
+- hadoopsubmarine/tf-1.13.1-cpu:0.0.1

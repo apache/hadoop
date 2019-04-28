@@ -56,9 +56,11 @@ public class RunJobParameters extends RunParameters {
   private boolean waitJobFinish = false;
   private boolean distributed = false;
 
+  private boolean securityDisabled = false;
   private String keytab;
   private String principal;
   private boolean distributeKeytab = false;
+  private List<String> confPairs = new ArrayList<>();
 
   @Override
   public void updateParameters(ParametersHolder parametersHolder,
@@ -95,6 +97,10 @@ public class RunJobParameters extends RunParameters {
     } else if (nWorkers <= 1 && nPS > 0) {
       throw new ParseException("Only specified one worker but non-zero PS, "
           + "please double check.");
+    }
+
+    if (parametersHolder.hasOption(CliConstants.INSECURE_CLUSTER)) {
+      setSecurityDisabled(true);
     }
 
     String kerberosKeytab = parametersHolder.getOptionValue(
@@ -181,6 +187,9 @@ public class RunJobParameters extends RunParameters {
     boolean distributeKerberosKeytab = parametersHolder.hasOption(CliConstants
         .DISTRIBUTE_KEYTAB);
 
+    List<String> configPairs = parametersHolder
+        .getOptionValues(CliConstants.ARG_CONF);
+
     this.setInputPath(input).setCheckpointPath(jobDir)
         .setNumPS(nPS).setNumWorkers(nWorkers)
         .setPSLaunchCmd(psLaunchCommand).setWorkerLaunchCmd(workerLaunchCmd)
@@ -188,7 +197,8 @@ public class RunJobParameters extends RunParameters {
         .setTensorboardEnabled(tensorboard)
         .setKeytab(kerberosKeytab)
         .setPrincipal(kerberosPrincipal)
-        .setDistributeKeytab(distributeKerberosKeytab);
+        .setDistributeKeytab(distributeKerberosKeytab)
+        .setConfPairs(configPairs);
 
     super.updateParameters(parametersHolder, clientContext);
   }
@@ -283,8 +293,16 @@ public class RunJobParameters extends RunParameters {
     return psDockerImage;
   }
 
+  public void setPsDockerImage(String psDockerImage) {
+    this.psDockerImage = psDockerImage;
+  }
+
   public String getWorkerDockerImage() {
     return workerDockerImage;
+  }
+
+  public void setWorkerDockerImage(String workerDockerImage) {
+    this.workerDockerImage = workerDockerImage;
   }
 
   public boolean isDistributed() {
@@ -301,6 +319,10 @@ public class RunJobParameters extends RunParameters {
 
   public String getTensorboardDockerImage() {
     return tensorboardDockerImage;
+  }
+
+  public void setTensorboardDockerImage(String tensorboardDockerImage) {
+    this.tensorboardDockerImage = tensorboardDockerImage;
   }
 
   public List<Quicklink> getQuicklinks() {
@@ -329,6 +351,14 @@ public class RunJobParameters extends RunParameters {
     return this;
   }
 
+  public boolean isSecurityDisabled() {
+    return securityDisabled;
+  }
+
+  public void setSecurityDisabled(boolean securityDisabled) {
+    this.securityDisabled = securityDisabled;
+  }
+
   public boolean isDistributeKeytab() {
     return distributeKeytab;
   }
@@ -337,6 +367,19 @@ public class RunJobParameters extends RunParameters {
       boolean distributeKerberosKeytab) {
     this.distributeKeytab = distributeKerberosKeytab;
     return this;
+  }
+
+  public List<String> getConfPairs() {
+    return confPairs;
+  }
+
+  public RunJobParameters setConfPairs(List<String> confPairs) {
+    this.confPairs = confPairs;
+    return this;
+  }
+
+  public void setDistributed(boolean distributed) {
+    this.distributed = distributed;
   }
 
   @VisibleForTesting

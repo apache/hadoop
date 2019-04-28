@@ -17,6 +17,8 @@
  */
 
 package org.apache.hadoop.yarn.server.resourcemanager.nodelabels;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -88,37 +90,37 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p1"),
         toNodeId("n2"), toSet("p2"), toNodeId("n3"), toSet("p3")));
 
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null), EMPTY_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel("p2", null), EMPTY_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel("p3", null), EMPTY_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null),
-        EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p2", null)).isEqualTo(EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p3", null)).isEqualTo(EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null)).
+        isEqualTo(EMPTY_RESOURCE);
 
     // active two NM to n1, one large and one small
     mgr.activateNode(NodeId.newInstance("n1", 1), SMALL_RESOURCE);
     mgr.activateNode(NodeId.newInstance("n1", 2), LARGE_NODE);
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(
         Resources.add(SMALL_RESOURCE, LARGE_NODE));
 
     // check add labels multiple times shouldn't overwrite
     // original attributes on labels like resource
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1", "p4"));
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(
         Resources.add(SMALL_RESOURCE, LARGE_NODE));
     Assert.assertEquals(mgr.getResourceByLabel("p4", null), EMPTY_RESOURCE);
 
     // change the large NM to small, check if resource updated
     mgr.updateNodeResource(NodeId.newInstance("n1", 2), SMALL_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
 
     // deactive one NM, and check if resource updated
     mgr.deactivateNode(NodeId.newInstance("n1", 1));
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null), SMALL_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(SMALL_RESOURCE);
 
     // continus deactive, check if resource updated
     mgr.deactivateNode(NodeId.newInstance("n1", 2));
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null), EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(EMPTY_RESOURCE);
 
     // Add two NM to n1 back
     mgr.activateNode(NodeId.newInstance("n1", 1), SMALL_RESOURCE);
@@ -126,8 +128,8 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
 
     // And remove p1, now the two NM should come to default label,
     mgr.removeFromClusterNodeLabels(ImmutableSet.of("p1"));
-    Assert.assertEquals(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null),
-        Resources.add(SMALL_RESOURCE, LARGE_NODE));
+    assertThat(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null)).
+        isEqualTo(Resources.add(SMALL_RESOURCE, LARGE_NODE));
   }
   
   @Test(timeout = 5000)
@@ -152,10 +154,10 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
 
     // change label of n1 to p2
     mgr.replaceLabelsOnNode(ImmutableMap.of(toNodeId("n1"), toSet("p2")));
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null), EMPTY_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel("p2", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(EMPTY_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p2", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
-    Assert.assertEquals(mgr.getResourceByLabel("p3", null), SMALL_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p3", null)).isEqualTo(SMALL_RESOURCE);
 
     // add more labels
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p4", "p5", "p6"));
@@ -180,17 +182,17 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     mgr.activateNode(NodeId.newInstance("n9", 1), SMALL_RESOURCE);
 
     // check varibles
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null), SMALL_RESOURCE);
-    Assert.assertEquals(mgr.getResourceByLabel("p2", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(SMALL_RESOURCE);
+    assertThat(mgr.getResourceByLabel("p2", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 3));
-    Assert.assertEquals(mgr.getResourceByLabel("p3", null),
+    assertThat(mgr.getResourceByLabel("p3", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
-    Assert.assertEquals(mgr.getResourceByLabel("p4", null),
+    assertThat(mgr.getResourceByLabel("p4", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 1));
-    Assert.assertEquals(mgr.getResourceByLabel("p5", null),
+    assertThat(mgr.getResourceByLabel("p5", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 1));
-    Assert.assertEquals(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null),
-        Resources.multiply(SMALL_RESOURCE, 1));
+    assertThat(mgr.getResourceByLabel(RMNodeLabelsManager.NO_LABEL, null)).
+        isEqualTo(Resources.multiply(SMALL_RESOURCE, 1));
 
     // change a bunch of nodes -> labels
     // n4 -> p2
@@ -212,17 +214,17 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
         toNodeId("n9"), toSet("p1")));
 
     // check varibles
-    Assert.assertEquals(mgr.getResourceByLabel("p1", null),
+    assertThat(mgr.getResourceByLabel("p1", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
-    Assert.assertEquals(mgr.getResourceByLabel("p2", null),
+    assertThat(mgr.getResourceByLabel("p2", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 3));
-    Assert.assertEquals(mgr.getResourceByLabel("p3", null),
+    assertThat(mgr.getResourceByLabel("p3", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
-    Assert.assertEquals(mgr.getResourceByLabel("p4", null),
+    assertThat(mgr.getResourceByLabel("p4", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 0));
-    Assert.assertEquals(mgr.getResourceByLabel("p5", null),
+    assertThat(mgr.getResourceByLabel("p5", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 0));
-    Assert.assertEquals(mgr.getResourceByLabel("", null),
+    assertThat(mgr.getResourceByLabel("", null)).isEqualTo(
         Resources.multiply(SMALL_RESOURCE, 2));
   }
   
@@ -413,9 +415,9 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
     mgr.activateNode(NodeId.newInstance("n1", 4), SMALL_RESOURCE);
     
     // check resource of no label, it should be small * 4
-    Assert.assertEquals(
-        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null),
-        Resources.multiply(SMALL_RESOURCE, 4));
+    assertThat(
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null)).
+        isEqualTo(Resources.multiply(SMALL_RESOURCE, 4));
     
     // change two of these nodes to p1, check resource of no_label and P1
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(toSet("p1"));
@@ -423,12 +425,12 @@ public class TestRMNodeLabelsManager extends NodeLabelTestBase {
         toNodeId("n1:2"), toSet("p1")));
     
     // check resource
-    Assert.assertEquals(
-        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null),
-        Resources.multiply(SMALL_RESOURCE, 2));    
-    Assert.assertEquals(
-            mgr.getResourceByLabel("p1", null),
-            Resources.multiply(SMALL_RESOURCE, 2));
+    assertThat(
+        mgr.getResourceByLabel(CommonNodeLabelsManager.NO_LABEL, null)).
+        isEqualTo(Resources.multiply(SMALL_RESOURCE, 2));
+    assertThat(
+        mgr.getResourceByLabel("p1", null)).isEqualTo(
+        Resources.multiply(SMALL_RESOURCE, 2));
   }
 
   @Test(timeout = 5000)

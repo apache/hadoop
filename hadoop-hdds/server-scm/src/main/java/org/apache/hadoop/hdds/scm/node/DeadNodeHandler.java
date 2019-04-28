@@ -18,121 +18,155 @@
 
 package org.apache.hadoop.hdds.scm.node;
 
-import java.util.Set;
+import java.io.IOException;
+import java.util.Optional;
 
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.ContainerException;
-import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ContainerNotFoundException;
-import org.apache.hadoop.hdds.scm.container.ContainerReplica;
-import org.apache.hadoop.hdds.scm.container.replication.ReplicationRequest;
-import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.hdds.scm.events.SCMEvents.CLOSE_CONTAINER;
+
 /**
  * Handles Dead Node event.
  */
 public class DeadNodeHandler implements EventHandler<DatanodeDetails> {
 
-  private final ContainerManager containerManager;
-
   private final NodeManager nodeManager;
+  private final PipelineManager pipelineManager;
+  private final ContainerManager containerManager;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DeadNodeHandler.class);
 
-  public DeadNodeHandler(NodeManager nodeManager,
-      ContainerManager containerManager) {
-    this.containerManager = containerManager;
+  public DeadNodeHandler(final NodeManager nodeManager,
+                         final PipelineManager pipelineManager,
+                         final ContainerManager containerManager) {
     this.nodeManager = nodeManager;
+    this.pipelineManager = pipelineManager;
+    this.containerManager = containerManager;
   }
 
   @Override
-  public void onMessage(DatanodeDetails datanodeDetails,
-      EventPublisher publisher) {
+  public void onMessage(final DatanodeDetails datanodeDetails,
+                        final EventPublisher publisher) {
 
-    // TODO: check if there are any pipeline on this node and fire close
-    // pipeline event
-    Set<ContainerID> ids =
-        null;
     try {
-      ids = nodeManager.getContainers(datanodeDetails);
-    } catch (NodeNotFoundException e) {
+
+      /*
+       * We should have already destroyed all the pipelines on this datanode
+       * when it was marked as stale. Destroy pipeline should also have closed
+       * all the containers on this datanode.
+       *
+       * Ideally we should not have any pipeline or OPEN containers now.
+       *
+       * To be on a safer side, we double check here and take appropriate
+       * action.
+       */
+
+      destroyPipelines(datanodeDetails);
+      closeContainers(datanodeDetails, publisher);
+
+      // Remove the container replicas associated with the dead node.
+      removeContainerReplicas(datanodeDetails);
+
+    } catch (NodeNotFoundException ex) {
       // This should not happen, we cannot get a dead node event for an
-      // unregistered node!
+      // unregistered datanode!
       LOG.error("DeadNode event for a unregistered node: {}!", datanodeDetails);
     }
-    if (ids == null) {
-      LOG.info("There's no containers in dead datanode {}, no replica will be"
-          + " removed from the in-memory state.", datanodeDetails.getUuid());
-      return;
-    }
-    LOG.info("Datanode {}  is dead. Removing replications from the in-memory" +
-            " state.", datanodeDetails.getUuid());
-    for (ContainerID id : ids) {
-      try {
-        final ContainerInfo container = containerManager.getContainer(id);
-        // TODO: For open containers, trigger close on other nodes
-        if (!container.isOpen()) {
-          Set<ContainerReplica> replicas = containerManager
-              .getContainerReplicas(id);
-          replicas.stream()
-              .filter(r -> r.getDatanodeDetails().equals(datanodeDetails))
-              .findFirst()
-              .ifPresent(replica -> {
-                try {
-                  containerManager.removeContainerReplica(id, replica);
-                  ContainerInfo containerInfo =
-                      containerManager.getContainer(id);
-                  replicateIfNeeded(containerInfo, publisher);
-                } catch (ContainerException ex) {
-                  LOG.warn("Exception while removing container replica #{} " +
-                      "for container #{}.", replica, container, ex);
-                }
-              });
-        }
-      } catch (ContainerNotFoundException cnfe) {
-        LOG.warn("Container Not found!", cnfe);
-      }
-    }
   }
 
   /**
-   * Compare the existing replication number with the expected one.
+   * Destroys all the pipelines on the given datanode if there are any.
+   *
+   * @param datanodeDetails DatanodeDetails
    */
-  private void replicateIfNeeded(ContainerInfo container,
-      EventPublisher publisher) throws ContainerNotFoundException {
-    // Replicate only closed and Quasi closed containers
-    if (container.getState() == HddsProtos.LifeCycleState.CLOSED ||
-        container.getState() == HddsProtos.LifeCycleState.QUASI_CLOSED) {
-      final int existingReplicas = containerManager
-          .getContainerReplicas(container.containerID()).size();
-      final int expectedReplicas = container.getReplicationFactor().getNumber();
-      if (existingReplicas != expectedReplicas) {
-        LOG.debug("Replicate Request fired for container {}, exisiting " +
-                "replica count {}, expected replica count {}",
-            container.getContainerID(), existingReplicas, expectedReplicas);
-        publisher.fireEvent(SCMEvents.REPLICATE_CONTAINER,
-            new ReplicationRequest(
-                container.getContainerID(), existingReplicas,
-                expectedReplicas));
-      }
-    }
+  private void destroyPipelines(final DatanodeDetails datanodeDetails) {
+    Optional.ofNullable(nodeManager.getPipelines(datanodeDetails))
+        .ifPresent(pipelines ->
+            pipelines.forEach(id -> {
+              try {
+                pipelineManager.finalizeAndDestroyPipeline(
+                    pipelineManager.getPipeline(id), false);
+              } catch (PipelineNotFoundException ignore) {
+                // Pipeline is not there in pipeline manager,
+                // should we care?
+              } catch (IOException ex) {
+                LOG.warn("Exception while finalizing pipeline {}",
+                    id, ex);
+              }
+            }));
   }
 
   /**
-   * Returns logger.
-   * */
-  // TODO: remove this.
-  public static Logger getLogger() {
-    return LOG;
+   * Sends CloseContainerCommand to all the open containers on the
+   * given datanode.
+   *
+   * @param datanodeDetails DatanodeDetails
+   * @param publisher EventPublisher
+   * @throws NodeNotFoundException
+   */
+  private void closeContainers(final DatanodeDetails datanodeDetails,
+                               final EventPublisher publisher)
+      throws NodeNotFoundException {
+    nodeManager.getContainers(datanodeDetails)
+        .forEach(id -> {
+          try {
+            final ContainerInfo container = containerManager.getContainer(id);
+            if (container.getState() == HddsProtos.LifeCycleState.OPEN) {
+              publisher.fireEvent(CLOSE_CONTAINER, id);
+            }
+          } catch (ContainerNotFoundException cnfe) {
+            LOG.warn("Container {} is not managed by ContainerManager.",
+                id, cnfe);
+          }
+        });
   }
+
+  /**
+   * Removes the ContainerReplica of the dead datanode from the containers
+   * which are hosted by that datanode.
+   *
+   * @param datanodeDetails DatanodeDetails
+   * @throws NodeNotFoundException
+   */
+  private void removeContainerReplicas(final DatanodeDetails datanodeDetails)
+      throws NodeNotFoundException {
+    nodeManager.getContainers(datanodeDetails)
+        .forEach(id -> {
+          try {
+            final ContainerInfo container = containerManager.getContainer(id);
+            // Identify and remove the ContainerReplica of dead node
+            containerManager.getContainerReplicas(id)
+                .stream()
+                .filter(r -> r.getDatanodeDetails().equals(datanodeDetails))
+                .findFirst()
+                .ifPresent(replica -> {
+                  try {
+                    containerManager.removeContainerReplica(id, replica);
+                  } catch (ContainerException ex) {
+                    LOG.warn("Exception while removing container replica #{} " +
+                        "of container {}.", replica, container, ex);
+                  }
+                });
+          } catch (ContainerNotFoundException cnfe) {
+            LOG.warn("Container {} is not managed by ContainerManager.",
+                id, cnfe);
+          }
+        });
+  }
+
+
 }

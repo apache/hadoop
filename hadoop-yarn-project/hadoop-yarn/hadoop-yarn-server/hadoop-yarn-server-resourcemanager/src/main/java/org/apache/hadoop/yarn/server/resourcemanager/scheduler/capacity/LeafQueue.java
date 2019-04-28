@@ -578,6 +578,12 @@ public class LeafQueue extends AbstractCSQueue {
   @Override
   public void submitApplicationAttempt(FiCaSchedulerApp application,
       String userName) {
+    submitApplicationAttempt(application, userName, false);
+  }
+
+  @Override
+  public void submitApplicationAttempt(FiCaSchedulerApp application,
+      String userName, boolean isMoveApp) {
     // Careful! Locking order is important!
     writeLock.lock();
     try {
@@ -592,7 +598,7 @@ public class LeafQueue extends AbstractCSQueue {
     }
 
     // We don't want to update metrics for move app
-    if (application.isPending()) {
+    if (!isMoveApp) {
       metrics.submitAppAttempt(userName);
     }
 

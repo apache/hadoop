@@ -45,6 +45,7 @@ import org.apache.hadoop.hdds.scm.container.ContainerReplica;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineProvider;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.MockRatisPipelineProvider;
@@ -62,7 +63,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-import org.slf4j.event.Level;
 
 /**
  * Test DeadNodeHandler.
@@ -95,7 +95,8 @@ public class TestDeadNodeHandler {
     manager.setPipelineProvider(HddsProtos.ReplicationType.RATIS,
         mockRatisProvider);
     containerManager = scm.getContainerManager();
-    deadNodeHandler = new DeadNodeHandler(nodeManager, containerManager);
+    deadNodeHandler = new DeadNodeHandler(nodeManager,
+        Mockito.mock(PipelineManager.class), containerManager);
     eventQueue.addHandler(SCMEvents.DEAD_NODE, deadNodeHandler);
     publisher = Mockito.mock(EventPublisher.class);
     nodeReportHandler = new NodeReportHandler(nodeManager);
@@ -168,10 +169,6 @@ public class TestDeadNodeHandler {
     TestUtils.closeContainer(containerManager, container2.containerID());
     TestUtils.quasiCloseContainer(containerManager, container3.containerID());
 
-    GenericTestUtils.setLogLevel(DeadNodeHandler.getLogger(), Level.DEBUG);
-    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
-        .captureLogs(DeadNodeHandler.getLogger());
-
     deadNodeHandler.onMessage(datanode1, publisher);
 
     Set<ContainerReplica> container1Replicas = containerManager
@@ -191,60 +188,6 @@ public class TestDeadNodeHandler {
     Assert.assertEquals(1, container3Replicas.size());
     Assert.assertEquals(datanode3,
         container3Replicas.iterator().next().getDatanodeDetails());
-
-    // Replicate should be fired for container 1 and container 2 as now
-    // datanode 1 is dead, these 2 will not match with expected replica count
-    // and their state is one of CLOSED/QUASI_CLOSE.
-    Assert.assertTrue(logCapturer.getOutput().contains(
-        "Replicate Request fired for container " +
-            container1.getContainerID()));
-    Assert.assertTrue(logCapturer.getOutput().contains(
-        "Replicate Request fired for container " +
-            container2.getContainerID()));
-
-    // as container4 is still in open state, replicate event should not have
-    // fired for this.
-    Assert.assertFalse(logCapturer.getOutput().contains(
-        "Replicate Request fired for container " +
-            container4.getContainerID()));
-
-
-  }
-
-  @Test
-  public void testOnMessageReplicaFailure() throws Exception {
-
-    DatanodeDetails datanode1 = TestUtils.randomDatanodeDetails();
-    DatanodeDetails datanode2 = TestUtils.randomDatanodeDetails();
-    DatanodeDetails datanode3 = TestUtils.randomDatanodeDetails();
-
-    String storagePath = GenericTestUtils.getRandomizedTempPath()
-        .concat("/" + datanode1.getUuidString());
-
-    StorageReportProto storageOne = TestUtils.createStorageReport(
-        datanode1.getUuid(), storagePath, 100, 10, 90, null);
-
-    nodeManager.register(datanode1,
-        TestUtils.createNodeReport(storageOne), null);
-    nodeManager.register(datanode2,
-        TestUtils.createNodeReport(storageOne), null);
-    nodeManager.register(datanode3,
-        TestUtils.createNodeReport(storageOne), null);
-
-    DatanodeDetails dn1 = TestUtils.randomDatanodeDetails();
-    GenericTestUtils.LogCapturer logCapturer = GenericTestUtils.LogCapturer
-        .captureLogs(DeadNodeHandler.getLogger());
-
-    nodeReportHandler.onMessage(getNodeReport(dn1, storageOne),
-        Mockito.mock(EventPublisher.class));
-
-    ContainerInfo container1 =
-        TestUtils.allocateContainer(containerManager);
-    TestUtils.closeContainer(containerManager, container1.containerID());
-
-    deadNodeHandler.onMessage(dn1, eventQueue);
-    Assert.assertTrue(logCapturer.getOutput().contains(
-        "DeadNode event for a unregistered node"));
   }
 
   private void registerReplicas(ContainerManager contManager,

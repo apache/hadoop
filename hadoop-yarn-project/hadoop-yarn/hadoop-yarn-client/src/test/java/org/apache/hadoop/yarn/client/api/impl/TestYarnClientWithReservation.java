@@ -62,6 +62,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.stream.Collectors;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 
 /**
  * This class is to test class {@link YarnClient) and {@link YarnClientImpl}
@@ -432,7 +434,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       duration = 30000;
       deadline = sRequest.getReservationDefinition().getDeadline();
@@ -447,7 +449,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       arrival = clock.getTime();
       // List reservations, search by end time before the reservation start
@@ -460,7 +462,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
       // List reservations, search by very small end time.
       request = ReservationListRequest
@@ -470,7 +472,7 @@ public class TestYarnClientWithReservation {
 
       // Ensure all reservations are filtered out.
       Assert.assertNotNull(response);
-      Assert.assertEquals(response.getReservationAllocationState().size(), 0);
+      assertThat(response.getReservationAllocationState()).isEmpty();
 
     } finally {
       // clean-up
