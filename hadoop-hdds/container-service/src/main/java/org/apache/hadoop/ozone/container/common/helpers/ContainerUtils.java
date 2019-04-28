@@ -211,11 +211,7 @@ public final class ContainerUtils {
         throw new IOException("Unable to create datanode ID directories.");
       }
     }
-    try (FileOutputStream out = new FileOutputStream(path)) {
-      HddsProtos.DatanodeDetailsProto proto =
-          datanodeDetails.getProtoBufMessage();
-      proto.writeTo(out);
-    }
+    DatanodeIdYaml.createDatanodeIdFile(datanodeDetails, path);
   }
 
   /**
@@ -230,9 +226,8 @@ public final class ContainerUtils {
     if (!path.exists()) {
       throw new IOException("Datanode ID file not found.");
     }
-    try(FileInputStream in = new FileInputStream(path)) {
-      return DatanodeDetails.getFromProtoBuf(
-          HddsProtos.DatanodeDetailsProto.parseFrom(in));
+    try {
+      return DatanodeIdYaml.readDatanodeIdFile(path);
     } catch (IOException e) {
       throw new IOException("Failed to parse DatanodeDetails from "
           + path.getAbsolutePath(), e);
