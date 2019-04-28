@@ -80,7 +80,7 @@ public class DatanodeIdYaml {
       } catch (Exception e) {
         throw new IOException("Unable to parse yaml file.", e);
       }
-      
+
       DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
       builder.setUuid(datanodeDetailsYaml.getUuid().toString())
           .setIpAddress(datanodeDetailsYaml.getIpAddress())
