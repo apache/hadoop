@@ -1524,7 +1524,7 @@
 
 <property>
   <name>fs.s3a.metadatastore.fail.on.write.error</name>
-  <value>false</value>
+  <value>true</value>
   <description>
     When true (default), FileSystem write operations generate
     org.apache.hadoop.fs.s3a.MetadataPersistenceException if the metadata
