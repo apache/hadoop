@@ -59,7 +59,13 @@ public class OzoneFileSystem extends BasicOzoneFileSystem
   @Override
   public DelegationTokenIssuer[] getAdditionalTokenIssuers()
       throws IOException {
-    KeyProvider keyProvider = getKeyProvider();
+    KeyProvider keyProvider;
+    try {
+      keyProvider = getKeyProvider();
+    } catch (IOException ioe) {
+      LOG.error("Error retrieving KeyProvider.", ioe);
+      return null;
+    }
     if (keyProvider instanceof DelegationTokenIssuer) {
       return new DelegationTokenIssuer[]{(DelegationTokenIssuer)keyProvider};
     }
