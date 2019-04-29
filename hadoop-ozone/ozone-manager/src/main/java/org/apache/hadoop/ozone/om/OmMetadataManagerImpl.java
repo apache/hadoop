@@ -350,7 +350,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     // TODO : Throw if the Bucket is null?
     builder.append(OM_KEY_PREFIX).append(bucket);
     if (StringUtil.isNotBlank(key)) {
-      builder.append(OM_KEY_PREFIX).append(key);
+      builder.append(OM_KEY_PREFIX);
+      if (!key.equals(OM_KEY_PREFIX)) {
+        builder.append(key);
+      }
     }
     return builder.toString();
   }

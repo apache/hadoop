@@ -44,6 +44,9 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Set;
+import java.util.TreeSet;
+
 import org.junit.rules.Timeout;
 
 import static org.junit.Assert.assertEquals;
@@ -172,7 +175,7 @@ public class TestOzoneFileSystem {
   public void testListStatus() throws Exception {
     Path parent = new Path("/testListStatus");
     Path file1 = new Path(parent, "key1");
-    Path file2 = new Path(parent, "key1/key2");
+    Path file2 = new Path(parent, "key2");
     ContractTestUtils.touch(fs, file1);
     ContractTestUtils.touch(fs, file2);
 
@@ -217,6 +220,32 @@ public class TestOzoneFileSystem {
     String fileStatus2 = fileStatuses[1].getPath().toUri().getPath();
     assertFalse(fileStatus1.equals(dir12.toString()));
     assertFalse(fileStatus2.equals(dir12.toString()));
+  }
+
+  /**
+   * Tests listStatus operation on root directory.
+   */
+  @Test
+  public void testListStatusOnLargeDirectory() throws Exception {
+    Path root = new Path("/");
+    Set<String> paths = new TreeSet<>();
+    int numDirs = 5111;
+    for(int i = 0; i < numDirs; i++) {
+      Path p = new Path(root, String.valueOf(i));
+      fs.mkdirs(p);
+      paths.add(p.getName());
+    }
+
+    // ListStatus on root should return dir1 (even though /dir1 key does not
+    // exist) and dir2 only. dir12 is not an immediate child of root and
+    // hence should not be listed.
+    FileStatus[] fileStatuses = o3fs.listStatus(root);
+    assertEquals("FileStatus should return only the immediate children", numDirs,
+        fileStatuses.length);
+
+    for (int i=0; i < numDirs; i++) {
+      assertTrue(paths.contains(fileStatuses[i].getPath().getName()));
+    }
   }
 
   /**

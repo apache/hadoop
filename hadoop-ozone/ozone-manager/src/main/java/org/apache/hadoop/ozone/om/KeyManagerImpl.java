@@ -32,8 +32,8 @@ import java.util.concurrent.TimeUnit;
 import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 
+import com.google.common.base.Strings;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
@@ -67,6 +67,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -104,6 +105,8 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
+import org.apache.hadoop.utils.db.Table;
+import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1355,15 +1358,15 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
+      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
       // Check if this is the root of the filesystem.
       if (keyName.length() == 0) {
         validateBucket(volumeName, bucketName);
-        return new OzoneFileStatus(keyName);
+        return new OzoneFileStatus(OZONE_URI_DELIMITER);
       }
 
-      //Check if the key is a file.
+      // Check if the key is a file.
       String fileKeyBytes = metadataManager.getOzoneKey(
           volumeName, bucketName, keyName);
       OmKeyInfo fileKeyInfo = metadataManager.getKeyTable().get(fileKeyBytes);
@@ -1372,7 +1375,7 @@ public class KeyManagerImpl implements KeyManager {
         return new OzoneFileStatus(fileKeyInfo, scmBlockSize, false);
       }
 
-      String dirKey = addTrailingSlashIfNeeded(keyName);
+      String dirKey = OzoneFSUtils.addTrailingSlashIfNeeded(keyName);
       String dirKeyBytes = metadataManager.getOzoneKey(
           volumeName, bucketName, dirKey);
       OmKeyInfo dirKeyInfo = metadataManager.getKeyTable().get(dirKeyBytes);
@@ -1390,7 +1393,7 @@ public class KeyManagerImpl implements KeyManager {
           " bucket:" + bucketName + " key:" + keyName + " with error no " +
           "such file exists:");
       throw new OMException("Unable to get file status: volume: " +
-          volumeName + "bucket: " + bucketName + "key: " + keyName,
+          volumeName + " bucket: " + bucketName + " key: " + keyName,
           ResultCodes.FILE_NOT_FOUND);
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
@@ -1416,44 +1419,47 @@ public class KeyManagerImpl implements KeyManager {
     try {
       metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
-      // verify bucket exists
-      OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
-
       // Check if this is the root of the filesystem.
       if (keyName.length() == 0) {
         return;
       }
 
-      verifyNoFilesInPath(volumeName, bucketName, Paths.get(keyName), false);
-      String dir = addTrailingSlashIfNeeded(keyName);
-      String dirDbKey =
-          metadataManager.getOzoneKey(volumeName, bucketName, dir);
-      FileEncryptionInfo encInfo = getFileEncryptionInfo(bucketInfo);
+      Path keyPath = Paths.get(keyName);
+      OzoneFileStatus status =
+          verifyNoFilesInPath(volumeName, bucketName, keyPath, false);
+      if (status != null && OzoneFSUtils.pathToKey(status.getPath())
+          .equals(keyPath.toString())) {
+        // if directory already exists
+        return;
+      }
       OmKeyInfo dirDbKeyInfo =
-          createDirectoryKeyInfo(volumeName, bucketName, dir, new ArrayList<>(),
-              ReplicationFactor.ONE, ReplicationType.RATIS, encInfo);
+          createDirectoryKey(volumeName, bucketName, keyName);
+      String dirDbKey = metadataManager
+          .getOzoneKey(volumeName, bucketName, dirDbKeyInfo.getKeyName());
       metadataManager.getKeyTable().put(dirDbKey, dirDbKeyInfo);
-
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
   }
 
-  private OmKeyInfo createDirectoryKeyInfo(String volumeName, String bucketName,
-      String keyName, List<OmKeyLocationInfo> locations,
-      ReplicationFactor factor, ReplicationType type,
-      FileEncryptionInfo encInfo) {
+  private OmKeyInfo createDirectoryKey(String volumeName, String bucketName,
+      String keyName) throws IOException {
+    // verify bucket exists
+    OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
+
+    String dir = OzoneFSUtils.addTrailingSlashIfNeeded(keyName);
+    FileEncryptionInfo encInfo = getFileEncryptionInfo(bucketInfo);
     return new OmKeyInfo.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .setKeyName(keyName)
+        .setKeyName(dir)
         .setOmKeyLocationInfos(Collections.singletonList(
-            new OmKeyLocationInfoGroup(0, locations)))
+            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
         .setCreationTime(Time.now())
         .setModificationTime(Time.now())
         .setDataSize(0)
-        .setReplicationType(type)
-        .setReplicationFactor(factor)
+        .setReplicationType(ReplicationType.RATIS)
+        .setReplicationFactor(ReplicationFactor.ONE)
         .setFileEncryptionInfo(encInfo)
         .build();
   }
@@ -1547,6 +1553,101 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   /**
+   * List the status for a file or a directory and its contents.
+   *
+   * @param args       Key args
+   * @param recursive  For a directory if true all the descendants of a
+   *                   particular directory are listed
+   * @param startKey   Key from which listing needs to start. If startKey exists
+   *                   its status is included in the final list.
+   * @param numEntries Number of entries to list from the start key
+   * @return list of file status
+   */
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    Preconditions.checkNotNull(args, "Key args can not be null");
+    String volumeName = args.getVolumeName();
+    String bucketName = args.getBucketName();
+    String keyName = args.getKeyName();
+
+    List<OzoneFileStatus> fileStatusList = new ArrayList<>();
+    try {
+      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+      if (Strings.isNullOrEmpty(startKey)) {
+        OzoneFileStatus fileStatus = getFileStatus(args);
+        if (fileStatus.isFile()) {
+          return Collections.singletonList(fileStatus);
+        }
+        startKey = OzoneFSUtils.addTrailingSlashIfNeeded(keyName);
+      }
+
+      String seekKeyInDb =
+          metadataManager.getOzoneKey(volumeName, bucketName, startKey);
+      String keyInDb = OzoneFSUtils.addTrailingSlashIfNeeded(
+          metadataManager.getOzoneKey(volumeName, bucketName, keyName));
+      TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
+          iterator = metadataManager.getKeyTable().iterator();
+      iterator.seek(seekKeyInDb);
+
+      if (!iterator.hasNext()) {
+        return Collections.emptyList();
+      }
+
+      if (iterator.key().equals(keyInDb)) {
+        // skip the key which needs to be listed
+        iterator.next();
+      }
+
+      while (iterator.hasNext() && numEntries - fileStatusList.size() > 0) {
+        String entryInDb = iterator.key();
+        OmKeyInfo value = iterator.value().getValue();
+        if (entryInDb.startsWith(keyInDb)) {
+          String entryKeyName = value.getKeyName();
+          if (recursive) {
+            // for recursive list all the entries
+            fileStatusList.add(new OzoneFileStatus(value, scmBlockSize,
+                !OzoneFSUtils.isFile(entryKeyName)));
+            iterator.next();
+          } else {
+            // get the child of the directory to list from the entry. For
+            // example if directory to list is /a and entry is /a/b/c where
+            // c is a file. The immediate child is b which is a directory. c
+            // should not be listed as child of a.
+            String immediateChild = OzoneFSUtils
+                .getImmediateChild(entryKeyName, keyName);
+            boolean isFile = OzoneFSUtils.isFile(immediateChild);
+            if (isFile) {
+              fileStatusList
+                  .add(new OzoneFileStatus(value, scmBlockSize, !isFile));
+              iterator.next();
+            } else {
+              // if entry is a directory
+              fileStatusList.add(new OzoneFileStatus(immediateChild));
+              // skip the other descendants of this child directory.
+              iterator.seek(
+                  getNextGreaterString(volumeName, bucketName, immediateChild));
+            }
+          }
+        } else {
+          break;
+        }
+      }
+    } finally {
+      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
+    return fileStatusList;
+  }
+
+  private String getNextGreaterString(String volumeName, String bucketName,
+      String keyPrefix) {
+    // TODO: Use string codec
+    // Increment the last character of the string and return the new ozone key.
+    String nextPrefix = keyPrefix.substring(0, keyPrefix.length() - 1) +
+        String.valueOf((char) (keyPrefix.charAt(keyPrefix.length() - 1) + 1));
+    return metadataManager.getOzoneKey(volumeName, bucketName, nextPrefix);
+  }
+
+  /**
    * Verify that none of the parent path exists as file in the filesystem.
    *
    * @param volumeName         Volume name
@@ -1555,6 +1656,8 @@ public class KeyManagerImpl implements KeyManager {
    *                           directory for the ozone filesystem.
    * @param directoryMustExist throws exception if true and given path does not
    *                           exist as directory
+   * @return OzoneFileStatus of the first directory found in path in reverse
+   * order
    * @throws OMException if ancestor exists as file in the filesystem
    *                     if directoryMustExist flag is true and parent does
    *                     not exist
@@ -1562,8 +1665,9 @@ public class KeyManagerImpl implements KeyManager {
    * @throws IOException if there is error in the db
    *                     invalid arguments
    */
-  private void verifyNoFilesInPath(String volumeName, String bucketName,
-      Path path, boolean directoryMustExist) throws IOException {
+  private OzoneFileStatus verifyNoFilesInPath(String volumeName,
+      String bucketName, Path path, boolean directoryMustExist)
+      throws IOException {
     OmKeyArgs.Builder argsBuilder = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName);
@@ -1580,7 +1684,7 @@ public class KeyManagerImpl implements KeyManager {
                   + "bucket: " + bucketName + "key: " + keyName,
               ResultCodes.FILE_ALREADY_EXISTS);
         } else if (fileStatus.isDirectory()) {
-          break;
+          return fileStatus;
         }
       } catch (OMException ex) {
         if (ex.getResult() != ResultCodes.FILE_NOT_FOUND) {
@@ -1594,6 +1698,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       path = path.getParent();
     }
+    return null;
   }
 
   private FileEncryptionInfo getFileEncryptionInfo(OmBucketInfo bucketInfo)
@@ -1617,11 +1722,4 @@ public class KeyManagerImpl implements KeyManager {
     return encInfo;
   }
 
-  private String addTrailingSlashIfNeeded(String key) {
-    if (StringUtils.isNotEmpty(key) && !key.endsWith(OZONE_URI_DELIMITER)) {
-      return key + OZONE_URI_DELIMITER;
-    } else {
-      return key;
-    }
-  }
 }

@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  * Lightweight adapter to separate hadoop/ozone classes.
@@ -51,6 +52,9 @@ public interface OzoneClientAdapter {
   boolean deleteObject(String keyName);
 
   Iterator<BasicKeyInfo> listKeys(String pathKey);
+
+  List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException;
 
   Token<OzoneTokenIdentifier> getDelegationToken(String renewer)
       throws IOException;
