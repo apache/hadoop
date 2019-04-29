@@ -97,6 +97,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.impl.RenameHelper;
 import org.apache.hadoop.fs.s3a.auth.SignerManager;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationOperations;
 import org.apache.hadoop.fs.s3a.auth.delegation.DelegationTokenProvider;
@@ -1348,6 +1349,70 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         + "by S3AFileSystem");
   }
 
+  /**
+   * The initial implementation of this duplicates checks for
+   * files existing etc, but directly calls {@link #innerRename(Path, Path)}
+   * for explicit failures.
+   *
+   * @param source path to be renamed
+   * @param dest new path after rename
+   * @param options rename options.
+   * @throws IOException on failure.
+   */
+  @Override
+  @Retries.RetryTranslated
+  public void rename(final Path source,
+      final Path dest,
+      final Options.Rename... options) throws IOException {
+    entryPoint(INVOCATION_RENAME);
+    final Path sourcePath = makeQualified(source);
+    final Path destPath = makeQualified(dest);
+    // Default implementation
+    final Optional<FileStatus> destStatus = Optional.of(
+        innerGetFileStatus(destPath, true, StatusProbeEnum.ALL));
+    final FileStatus srcStatus = innerGetFileStatus(sourcePath, false,
+        StatusProbeEnum.ALL);
+    new RenameHelper(this, LOG).validateRenameOptions(
+        sourcePath,
+        srcStatus,
+        destPath,
+        destStatus,
+        this::hasChildren,
+        this::deleteEmptyDirectory,
+        options);
+    // now call rename throwing exceptions on failures
+    try {
+      innerRename(sourcePath, destPath);
+    } catch (AmazonClientException e) {
+      throw translateException("rename(" + sourcePath + ", "
+          + destPath + ")", sourcePath, e);
+    }
+  }
+
+  /**
+   * The check for parenthood here asks S3Guard if
+   * it knows whether or not the dest directory is empty or not.
+   * As such, it saves a LIST request.
+   * @param directory the file status of the destination.
+   * @return true if the path has one or more child entries.
+   * @throws IOException for IO problems.
+   */
+  @Override
+  @Retries.RetryTranslated
+  protected boolean hasChildren(final FileStatus directory)
+      throws IOException {
+    if (directory instanceof S3AFileStatus) {
+      S3AFileStatus st = (S3AFileStatus) directory;
+      if (st.isEmptyDirectory() == Tristate.TRUE) {
+        return false;
+      }
+      if (st.isEmptyDirectory() == Tristate.FALSE) {
+        return true;
+      }
+    }
+    FileStatus[] list = listStatus(directory.getPath());
+    return list != null && list.length != 0;
+  }
 
   /**
    * Renames Path src to Path dst.  Can take place on local fs
@@ -1374,6 +1439,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean rename(Path src, Path dst) throws IOException {
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "rename(%s, %s", src, dst)) {
+      entryPoint(INVOCATION_RENAME);
       long bytesCopied = innerRename(src, dst);
       LOG.debug("Copied {} bytes", bytesCopied);
       return true;
@@ -2651,6 +2717,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws FileNotFoundException when the path does not exist;
    *         IOException see specific implementation
    */
+  @Retries.RetryTranslated
   public FileStatus[] listStatus(Path f) throws FileNotFoundException,
       IOException {
     return once("listStatus", f.toString(), () -> innerListStatus(f));

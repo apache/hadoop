@@ -59,6 +59,7 @@ import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.impl.AbstractFSBuilderImpl;
 import org.apache.hadoop.fs.impl.FutureDataInputStreamBuilderImpl;
 import org.apache.hadoop.fs.impl.OpenFileParameters;
+import org.apache.hadoop.fs.impl.RenameHelper;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
@@ -1540,6 +1541,7 @@ public abstract class FileSystem extends Configured
    *
    * @param source path to be renamed
    * @param dest new path after rename
+   * @param options rename options.
    * @throws FileNotFoundException source path does not exist, or the parent
    * path of dest does not exist.
    * @throws FileAlreadyExistsException dest path exists and is a file
@@ -1549,81 +1551,27 @@ public abstract class FileSystem extends Configured
    */
   public void rename(final Path source, final Path dest,
       final Rename... options) throws IOException {
-    final Path src = makeQualified(source);
-    final Path dst = makeQualified(dest);
+    final Path sourcePath = makeQualified(source);
+    final Path destPath = makeQualified(dest);
     // Default implementation
-    final String srcStr = src.toUri().getPath();
-    final String dstStr = dst.toUri().getPath();
-    if (dstStr.startsWith(srcStr)
-        && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
-      throw new PathIOException(src.toString(),
-          String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
-    }
-    if ("/".equals(srcStr)) {
-      throw new PathIOException(src.toString(), RENAME_SOURCE_IS_ROOT);
-    }
-    if ("/".equals(dstStr)) {
-      throw new PathIOException(src.toString(), RENAME_DEST_IS_ROOT);
-    }
-    if (srcStr.equals(dstStr)) {
-      throw new FileAlreadyExistsException(
-          String.format(RENAME_DEST_EQUALS_SOURCE, src, dst));
-    }
-    final FileStatus srcStatus = getFileLinkStatus(src);
-    if (srcStatus == null) {
-      throw new FileNotFoundException(
-          String.format(RENAME_SOURCE_NOT_FOUND, src));
-    }
-
-    boolean overwrite = false;
-    if (null != options) {
-      for (Rename option : options) {
-        if (option == Rename.OVERWRITE) {
-          overwrite = true;
-        }
-      }
-    }
-
-    FileStatus dstStatus;
+    final FileStatus srcStatus = getFileLinkStatus(sourcePath);
+    Optional<FileStatus> destStatus;
     try {
-      dstStatus = getFileLinkStatus(dst);
+      destStatus = Optional.ofNullable(getFileLinkStatus(destPath));
     } catch (IOException e) {
-      dstStatus = null;
+      destStatus = Optional.empty();
     }
-    if (dstStatus != null) {
-      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
-        throw new PathIOException(src.toString(),
-            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, src, dst));
-      }
-      if (!overwrite) {
-        throw new FileAlreadyExistsException(
-            String.format(RENAME_DEST_EXISTS, dst));
-      }
-      // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDirectory()) {
-        // list children. This may be expensive in time or memory.
-        if (hasChildren(dst)) {
-          throw new PathIOException(src.toString(),
-              String.format(RENAME_DEST_NOT_EMPTY, dst));
-        }
-      }
-      delete(dst, false);
-    } else {
-      final Path parent = dst.getParent();
-      final FileStatus parentStatus = getFileStatus(parent);
-      if (parentStatus == null) {
-        throw new FileNotFoundException(
-            String.format(RENAME_DEST_NO_PARENT, parent));
-      }
-      if (!parentStatus.isDirectory()) {
-        throw new ParentNotDirectoryException(
-            String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, parent));
-      }
-    }
-    if (!rename(source, dest)) {
+    new RenameHelper(this, LOGGER).validateRenameOptions(
+        sourcePath,
+        srcStatus,
+        destPath, destStatus,
+        this::hasChildren,
+        this::deleteEmptyDirectory,
+        options);
+    if (!rename(sourcePath, destPath)) {
       // inner rename failed, no obvious cause
       throw new PathIOException(source.toString(),
-          String.format(RENAME_FAILED, source, dest));
+          String.format(RENAME_FAILED, source, destPath));
     }
   }
 
@@ -1634,13 +1582,32 @@ public abstract class FileSystem extends Configured
    * children is expensive, but probing for the existence of one or more
    * children inexpensive, may substitute their own implementation. This
    * is particularly relevant for object stores.
-   * @param qualifiedDirectory a pre-qualified path to a directory
+   * @param directory the file status of the destination.
    * @return true if the path has one or more child entries.
    * @throws IOException for IO problems.
    */
-  protected boolean hasChildren(Path qualifiedDirectory) throws IOException {
-    FileStatus[] list = listStatus(qualifiedDirectory);
-    return list != null && list.length != 0;
+  protected boolean hasChildren(FileStatus directory) throws IOException {
+    Path path = directory.getPath();
+    FileStatus[] list = listStatus(path);
+    return list != null && list.length != 0
+        && (!path.equals(list[0].getPath()));
+  }
+
+  /**
+   * Delete an empty directory.
+   * Subclasses can assume that the directory exists at the time of
+   * invocation, and is a directory with no children.
+   * The base class calls (@code delete(path, false)}, so
+   * as to guarantee that if another process added a file during
+   * the rename validation, the delete operation will reject
+   * the delete operation.
+   * @param destStatus the status of this entry.
+   * @return true if the directory was deleted
+   * @throws IOException failure
+   */
+  protected boolean deleteEmptyDirectory(FileStatus destStatus)
+      throws IOException {
+    return delete(destStatus.getPath(), false);
   }
 
   /**

@@ -20,8 +20,7 @@ package org.apache.hadoop.fs.impl;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.Callable;
-import java.util.function.Function;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 
@@ -45,7 +44,9 @@ import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_SOURCE_IS_ROOT;
 import static org.apache.hadoop.fs.FSExceptionMessages.RENAME_SOURCE_NOT_FOUND;
 
 /**
- * Pulls out rename logic into is
+ * Pulls out rename logic into its own operation.
+ * This is to enable different implementations of the rename() operation
+ * to do all the upfront validation.
  */
 public class RenameHelper {
 
@@ -65,10 +66,12 @@ public class RenameHelper {
    * This was pull out of FileSystem so that subclasses can implement more
    * efficient versions of the rename operation, ones where the filestatus
    * facts are
-   * @param src qualified source
+   * @param srcPath qualified source
    * @param srcStatus qualified source status.
-   * @param dst qualified dest.
-   * @param dstStatus qualified dest status (may be null)
+   * @param destPath qualified dest.
+   * @param destStatus qualified dest status.
+   * @param hasChildrenFunction function to probe for a directory having
+   * children. Generally {@code FileSystem.hasChildren(Path)}.
    * @param options options
    * @throws FileNotFoundException source path does not exist, or the parent
    * path of dest does not exist.
@@ -77,32 +80,35 @@ public class RenameHelper {
    * a directory
    * @throws IOException other failure
    */
-  void validate(final Path src, final FileStatus srcStatus,
-      final Path dst, final FileStatus dstStatus,
-      final FileStatus parentStatus,
-      final Function<Path, Boolean> hasChildren,
-      final Options.Rename... options
-  ) throws IOException {
-    final String srcStr = src.toUri().getPath();
-    final String dstStr = dst.toUri().getPath();
+  public void validateRenameOptions(
+      final Path srcPath,
+      final FileStatus srcStatus,
+      final Path destPath,
+      final Optional<FileStatus> destStatus,
+      final FunctionWithIOE<FileStatus, Boolean> hasChildrenFunction,
+      final FunctionWithIOE<FileStatus, Boolean> deleteEmptyDirectoryFunction,
+      final Options.Rename... options) throws IOException {
+    log.debug("Rename {} tp {}", srcPath, destPath);
+    if (srcStatus == null) {
+      throw new FileNotFoundException(
+          String.format(RENAME_SOURCE_NOT_FOUND, srcPath));
+    }
+    final String srcStr = srcPath.toUri().getPath();
+    final String dstStr = destPath.toUri().getPath();
     if (dstStr.startsWith(srcStr)
         && dstStr.charAt(srcStr.length() - 1) == Path.SEPARATOR_CHAR) {
-      throw new PathIOException(src.toString(),
-          String.format(RENAME_DEST_UNDER_SOURCE, src, dst));
+      throw new PathIOException(srcPath.toString(),
+          String.format(RENAME_DEST_UNDER_SOURCE, srcPath, destPath));
     }
     if ("/".equals(srcStr)) {
-      throw new PathIOException(src.toString(), RENAME_SOURCE_IS_ROOT);
+      throw new PathIOException(srcPath.toString(), RENAME_SOURCE_IS_ROOT);
     }
     if ("/".equals(dstStr)) {
-      throw new PathIOException(src.toString(), RENAME_DEST_IS_ROOT);
+      throw new PathIOException(srcPath.toString(), RENAME_DEST_IS_ROOT);
     }
     if (srcStr.equals(dstStr)) {
       throw new FileAlreadyExistsException(
-          String.format(RENAME_DEST_EQUALS_SOURCE, src, dst));
-    }
-    if (srcStatus == null) {
-      throw new FileNotFoundException(
-          String.format(RENAME_SOURCE_NOT_FOUND, src));
+          String.format(RENAME_DEST_EQUALS_SOURCE, srcPath, destPath));
     }
 
     boolean overwrite = false;
@@ -113,37 +119,56 @@ public class RenameHelper {
         }
       }
     }
-    if (dstStatus != null) {
-      if (srcStatus.isDirectory() != dstStatus.isDirectory()) {
-        throw new PathIOException(src.toString(),
-            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, src, dst));
+    if (destStatus.isPresent()) {
+      FileStatus dest = destStatus.get();
+      if (srcStatus.isDirectory() != dest.isDirectory()) {
+        throw new PathIOException(srcPath.toString(),
+            String.format(RENAME_SOURCE_DEST_DIFFERENT_TYPE, srcPath, destPath));
       }
       if (!overwrite) {
         throw new FileAlreadyExistsException(
-            String.format(RENAME_DEST_EXISTS, dst));
+            String.format(RENAME_DEST_EXISTS, destPath));
       }
       // Delete the destination that is a file or an empty directory
-      if (dstStatus.isDirectory()) {
+      if (dest.isDirectory()) {
         // list children. This may be expensive in time or memory.
-        if (hasChildren(dst)) {
-          throw new PathIOException(src.toString(),
-              String.format(RENAME_DEST_NOT_EMPTY, dst));
+        if (hasChildrenFunction.apply(dest)) {
+          throw new PathIOException(srcPath.toString(),
+              String.format(RENAME_DEST_NOT_EMPTY, destPath));
         }
       }
-      delete(dst, false);
+      // its an empty directory, delete.
+      deleteEmptyDirectoryFunction.apply(dest);
     } else {
-      final Path parent = dst.getParent();
-      final FileStatus parentStatus = getFileStatus(parent);
-      if (parentStatus == null) {
-        throw new FileNotFoundException(
-            String.format(RENAME_DEST_NO_PARENT, parent));
-      }
-      if (!parentStatus.isDirectory()) {
-        throw new ParentNotDirectoryException(
-            String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, parent));
+      // verify the parent of the dest being a directory.
+      // this is implicit if the source and dest share the same parent,
+      // otherwise a getFileStatus call is needed.
+      final Path destParent = destPath.getParent();
+      final Path srcParent = srcPath.getParent();
+      if (!destParent.equals(srcParent)) {
+        // check
+        final FileStatus parentStatus = fileSystem.getFileStatus(destParent);
+        if (parentStatus == null) {
+          throw new FileNotFoundException(
+              String.format(RENAME_DEST_NO_PARENT, destParent));
+        }
+        if (!parentStatus.isDirectory()) {
+          throw new ParentNotDirectoryException(
+              String.format(RENAME_DEST_PARENT_NOT_DIRECTORY, destParent));
+        }
       }
     }
+  }
 
+  @FunctionalInterface
+  public interface FunctionWithIOE<T, R> {
 
+    /**
+     * Applies this function to the given argument.
+     *
+     * @param t the function argument
+     * @return the function result
+     */
+    R apply(T t) throws IOException;
   }
 }
