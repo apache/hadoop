@@ -424,7 +424,7 @@ public final class Constants {
   /**
    * Default value ({@value}) for FAIL_ON_METADATA_WRITE_ERROR.
    */
-  public static final boolean FAIL_ON_METADATA_WRITE_ERROR_DEFAULT = false;
+  public static final boolean FAIL_ON_METADATA_WRITE_ERROR_DEFAULT = true;
 
   /** Minimum period of time (in milliseconds) to keep metadata (may only be
    * applied when a prune command is manually run).

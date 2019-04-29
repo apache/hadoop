@@ -188,30 +188,11 @@ removed on `S3AFileSystem` level.
 
 #### Fail on Error
 
-By default, S3AFileSystem write operations will still succeed when updates to
+By default, S3AFileSystem write operations will fail when updates to
 S3Guard metadata fail. S3AFileSystem first writes the file to S3 and then
-updates the metadata in S3Guard. If the metadata write fails, an error is
-logged, but the overall write operation returns successfully. The file in
-S3 **is not** rolled back.
-
-This is somewhat dangerous as it could result in the type of issue S3Guard is
-designed to avoid.  For example, a reader may see an inconsistent listing after
-a recent write since S3Guard may not contain metadata about the recently
-written file due to a metadata write error.
-
-This behavior can be changed by setting the following configuration:
-
-```xml
-<property>
-    <name>fs.s3a.metadatastore.fail.on.write.error</name>
-    <value>true</value>
-</property>
-```
-
-When set to true, a failure to save the metadata will fail the overall write
-operation with `MetadataPersistenceException`. As with the default setting,
-the new/updated file is still in S3 and **is not** rolled back. The S3Guard
-metadata may (is likely to) be out of sync.
+updates the metadata in S3Guard. If the metadata write fails, 
+`MetadataPersistenceException` is thrown.  The file in S3 **is not** rolled
+back.
 
 If the write operation cannot be programmatically retried, the S3Guard metadata
 for the given file can be corrected with a command like the following:
@@ -226,6 +207,24 @@ If this operation failed with `MetadataPersistenceException` a repeat of the
 same operation would result in `FileAlreadyExistsException` since the original
 operation successfully created the file in S3 and only failed in writing the
 metadata to S3Guard.
+
+Metadata update failures can be downgraded to ERROR logging instead of exception
+by setting the following configuration:
+
+```xml
+<property>
+    <name>fs.s3a.metadatastore.fail.on.write.error</name>
+    <value>false</value>
+</property>
+```
+
+Setting this false is dangerous as it could result in the type of issue S3Guard
+is designed to avoid.  For example, a reader may see an inconsistent listing
+after a recent write since S3Guard may not contain metadata about the recently
+written file due to a metadata write error.
+
+As with the default setting, the new/updated file is still in S3 and **is not**
+rolled back. The S3Guard metadata is likely to be out of sync.
 
 ### 3. Configure the Metadata Store.
 
