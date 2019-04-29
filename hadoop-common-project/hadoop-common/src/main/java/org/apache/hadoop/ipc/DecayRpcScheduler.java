@@ -55,6 +55,8 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ipc.ProcessingDetails.Timing;
+
 /**
  * The decay RPC scheduler counts incoming requests in a map, then
  * decays the counts at a fixed time interval. The scheduler is optimized
@@ -600,14 +602,18 @@ public class DecayRpcScheduler implements RpcScheduler,
   }
 
   @Override
-  public void addResponseTime(String name, int priorityLevel, int queueTime,
-      int processingTime) {
+  public void addResponseTime(String callName, Schedulable schedulable,
+      ProcessingDetails details) {
+    int priorityLevel = schedulable.getPriorityLevel();
+    long queueTime = details.get(Timing.QUEUE, TimeUnit.MILLISECONDS);
+    long processingTime = details.get(Timing.PROCESSING, TimeUnit.MILLISECONDS);
+
     responseTimeCountInCurrWindow.getAndIncrement(priorityLevel);
     responseTimeTotalInCurrWindow.getAndAdd(priorityLevel,
         queueTime+processingTime);
     if (LOG.isDebugEnabled()) {
       LOG.debug("addResponseTime for call: {}  priority: {} queueTime: {} " +
-          "processingTime: {} ", name, priorityLevel, queueTime,
+          "processingTime: {} ", callName, priorityLevel, queueTime,
           processingTime);
     }
   }
