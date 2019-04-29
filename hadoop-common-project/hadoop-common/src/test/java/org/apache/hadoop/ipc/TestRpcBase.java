@@ -21,12 +21,16 @@ package org.apache.hadoop.ipc;
 import com.google.protobuf.BlockingService;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.protobuf.TestProtos;
 import org.apache.hadoop.ipc.protobuf.TestRpcServiceProtos;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 
 import org.apache.hadoop.io.Text;
@@ -274,6 +278,7 @@ public class TestRpcBase {
   public static class PBServerImpl implements TestRpcService {
     CountDownLatch fastPingCounter = new CountDownLatch(2);
     private List<Server.Call> postponedCalls = new ArrayList<>();
+    private final Lock lock = new ReentrantLock();
 
     @Override
     public TestProtos.EmptyResponseProto ping(RpcController unused,
@@ -381,6 +386,29 @@ public class TestRpcBase {
       try {
         Thread.sleep(request.getMilliSeconds());
       } catch (InterruptedException ignore) {}
+      return  TestProtos.EmptyResponseProto.newBuilder().build();
+    }
+
+    @Override
+    public TestProtos.EmptyResponseProto lockAndSleep(
+        RpcController controller, TestProtos.SleepRequestProto request)
+        throws ServiceException {
+      ProcessingDetails details =
+          Server.getCurCall().get().getProcessingDetails();
+      lock.lock();
+      long startNanos = Time.monotonicNowNanos();
+      try {
+        Thread.sleep(request.getMilliSeconds());
+      } catch (InterruptedException ignore) {
+        // ignore
+      } finally {
+        lock.unlock();
+      }
+      // Add some arbitrary large lock wait time since in any test scenario
+      // the lock wait time will probably actually be too small to notice
+      details.add(ProcessingDetails.Timing.LOCKWAIT, 10, TimeUnit.SECONDS);
+      details.add(ProcessingDetails.Timing.LOCKEXCLUSIVE,
+          Time.monotonicNowNanos() - startNanos, TimeUnit.NANOSECONDS);
       return  TestProtos.EmptyResponseProto.newBuilder().build();
     }
 

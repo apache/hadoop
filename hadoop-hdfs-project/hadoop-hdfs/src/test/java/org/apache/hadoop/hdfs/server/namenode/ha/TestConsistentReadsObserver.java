@@ -38,6 +38,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+import org.apache.hadoop.ipc.ProcessingDetails;
 import org.apache.hadoop.ipc.RpcScheduler;
 import org.apache.hadoop.ipc.Schedulable;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -393,6 +394,11 @@ public class TestConsistentReadsObserver {
     public TestRpcScheduler() {}
 
     @Override
+    public void addResponseTime(String callName, Schedulable schedulable,
+        ProcessingDetails details) {
+    }
+
+    @Override
     public int getPriorityLevel(Schedulable obj) {
       return 0;
     }
@@ -400,11 +406,6 @@ public class TestConsistentReadsObserver {
     @Override
     public boolean shouldBackOff(Schedulable obj) {
       return --allowed < 0;
-    }
-
-    @Override
-    public void addResponseTime(String name, int priorityLevel, int queueTime,
-        int processingTime) {
     }
 
     @Override
