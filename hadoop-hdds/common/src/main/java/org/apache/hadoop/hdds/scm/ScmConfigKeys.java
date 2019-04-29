@@ -353,7 +353,8 @@ public final class ScmConfigKeys {
       "hdds.scm.http.kerberos.principal";
   public static final String
       HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
-      "hdds.scm.http.kerberos.keytab";
+      "hdds.scm.http.kerberos.keytab.file";
+
   /**
    * Never constructed.
    */
