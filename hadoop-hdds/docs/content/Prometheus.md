@@ -21,7 +21,7 @@ menu:
   limitations under the License.
 -->
 
-[Prometheus](https://prometheus.io/) is an open-source monitoring server developed under under the [Cloud Native Foundation](Cloud Native Foundation).
+[Prometheus](https://prometheus.io/) is an open-source monitoring server developed under under the [Cloud Native Computing Foundation](https://www.cncf.io/).
 
 Ozone supports Prometheus out of the box. The servers start a prometheus 
 compatible metrics endpoint where all the available hadoop metrics are published in prometheus exporter format.
@@ -75,14 +75,14 @@ prometheus
 
 http://localhost:9090/targets
 
-![Prometheus target page example](../../prometheus.png)
+![Prometheus target page example](prometheus.png)
 
 
 (6) Check any metrics on the prometheus web ui. For example:
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=om_metrics_num_key_allocate&g0.tab=1
 
-![Prometheus target page example](../../prometheus-key-allocate.png)
+![Prometheus target page example](prometheus-key-allocate.png)
 
 ## Note
 

@@ -2,7 +2,7 @@
 title: Key Commands
 menu:
    main:
-      parent: Client
+      parent: OzoneShell
       weight: 3
 ---
 <!---

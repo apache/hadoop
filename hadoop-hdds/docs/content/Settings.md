@@ -71,7 +71,7 @@ Here is an example,
 {{< highlight xml >}}
     <property>
        <name>ozone.enabled</name>
-       <value>True</value>
+       <value>true</value>
     </property>
 {{< /highlight >}}
 
@@ -107,7 +107,7 @@ Here is an example,
 
  * **ozone.scm.datanode.id** Data nodes generate a Unique ID called Datanode
  ID. This identity is written to the file specified by this path. *Data nodes
-  will create this path if it doesn't exist already.*
+    will create this path if it doesn't exist already.*
 
 Here is an  example,
 {{< highlight xml >}}
