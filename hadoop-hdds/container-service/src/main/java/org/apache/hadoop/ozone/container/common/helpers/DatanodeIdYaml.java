@@ -52,7 +52,6 @@ public class DatanodeIdYaml {
    */
   public static void createDatanodeIdFile(DatanodeDetails datanodeDetails,
                                           File path) throws IOException {
-    Preconditions.checkNotNull(path);
     DumperOptions options = new DumperOptions();
     options.setPrettyFlow(true);
     options.setDefaultFlowStyle(DumperOptions.FlowStyle.FLOW);
@@ -69,7 +68,6 @@ public class DatanodeIdYaml {
    */
   public static DatanodeDetails readDatanodeIdFile(File path)
       throws IOException {
-    Preconditions.checkNotNull(path);
     DatanodeDetails datanodeDetails;
     try (FileInputStream inputFileStream = new FileInputStream(path)) {
       Yaml yaml = new Yaml();
@@ -82,7 +80,7 @@ public class DatanodeIdYaml {
       }
 
       DatanodeDetails.Builder builder = DatanodeDetails.newBuilder();
-      builder.setUuid(datanodeDetailsYaml.getUuid().toString())
+      builder.setUuid(datanodeDetailsYaml.getUuid())
           .setIpAddress(datanodeDetailsYaml.getIpAddress())
           .setHostName(datanodeDetailsYaml.getHostName())
           .setCertSerialId(datanodeDetailsYaml.getCertSerialId());
