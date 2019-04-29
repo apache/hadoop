@@ -166,6 +166,20 @@ class ReplicaMap {
   void addAll(ReplicaMap other) {
     map.putAll(other.map);
   }
+
+
+  /**
+   * Merge all entries from the given replica map into the local replica map.
+   */
+  void mergeAll(ReplicaMap other) {
+    other.map.forEach(
+        (bp, replicaInfos) -> {
+          replicaInfos.forEach(
+              replicaInfo -> add(bp, replicaInfo)
+          );
+        }
+    );
+  }
   
   /**
    * Remove the replica's meta information from the map that matches
