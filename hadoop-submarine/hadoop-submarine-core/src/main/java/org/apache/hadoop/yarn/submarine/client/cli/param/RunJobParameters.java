@@ -293,8 +293,16 @@ public class RunJobParameters extends RunParameters {
     return psDockerImage;
   }
 
+  public void setPsDockerImage(String psDockerImage) {
+    this.psDockerImage = psDockerImage;
+  }
+
   public String getWorkerDockerImage() {
     return workerDockerImage;
+  }
+
+  public void setWorkerDockerImage(String workerDockerImage) {
+    this.workerDockerImage = workerDockerImage;
   }
 
   public boolean isDistributed() {
@@ -311,6 +319,10 @@ public class RunJobParameters extends RunParameters {
 
   public String getTensorboardDockerImage() {
     return tensorboardDockerImage;
+  }
+
+  public void setTensorboardDockerImage(String tensorboardDockerImage) {
+    this.tensorboardDockerImage = tensorboardDockerImage;
   }
 
   public List<Quicklink> getQuicklinks() {
@@ -364,6 +376,10 @@ public class RunJobParameters extends RunParameters {
   public RunJobParameters setConfPairs(List<String> confPairs) {
     this.confPairs = confPairs;
     return this;
+  }
+
+  public void setDistributed(boolean distributed) {
+    this.distributed = distributed;
   }
 
   @VisibleForTesting

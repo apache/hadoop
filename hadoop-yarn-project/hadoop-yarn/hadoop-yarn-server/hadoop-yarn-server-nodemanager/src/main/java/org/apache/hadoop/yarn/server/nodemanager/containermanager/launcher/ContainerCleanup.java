@@ -95,8 +95,10 @@ public class ContainerCleanup implements Runnable {
           + " killed in store", e);
     }
 
-    // launch flag will be set to true if process already launched
-    boolean alreadyLaunched = !launch.markLaunched();
+    // launch flag will be set to true if process already launched,
+    // in process of launching, or failed to launch.
+    boolean alreadyLaunched = !launch.markLaunched() ||
+        launch.isLaunchCompleted();
     if (!alreadyLaunched) {
       LOG.info("Container " + containerIdStr + " not launched."
           + " No cleanup needed to be done");

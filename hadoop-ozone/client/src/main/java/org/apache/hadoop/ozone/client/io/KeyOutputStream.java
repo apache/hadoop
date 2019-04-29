@@ -111,11 +111,13 @@ public class KeyOutputStream extends OutputStream {
 
   @SuppressWarnings("parameternumber")
   public KeyOutputStream(OpenKeySession handler,
-      XceiverClientManager xceiverClientManager, OzoneManagerProtocol omClient,
-      int chunkSize, String requestId, ReplicationFactor factor,
-      ReplicationType type, long bufferFlushSize, long bufferMaxSize, long size,
-      long watchTimeout, ChecksumType checksumType, int bytesPerChecksum,
-      String uploadID, int partNumber, boolean isMultipart, int maxRetryCount) {
+      XceiverClientManager xceiverClientManager,
+      OzoneManagerProtocol omClient, int chunkSize,
+      String requestId, ReplicationFactor factor, ReplicationType type,
+      long bufferFlushSize, long bufferMaxSize, long size, long watchTimeout,
+      ChecksumType checksumType, int bytesPerChecksum,
+      String uploadID, int partNumber, boolean isMultipart,
+      int maxRetryCount, long retryInterval) {
     OmKeyInfo info = handler.getKeyInfo();
     blockOutputStreamEntryPool =
         new BlockOutputStreamEntryPool(omClient, chunkSize, requestId, factor,
@@ -125,8 +127,8 @@ public class KeyOutputStream extends OutputStream {
     // Retrieve the file encryption key info, null if file is not in
     // encrypted bucket.
     this.feInfo = info.getFileEncryptionInfo();
-    Preconditions.checkState(chunkSize > 0);
-    this.retryPolicy = OzoneClientUtils.createRetryPolicy(maxRetryCount);
+    this.retryPolicy = OzoneClientUtils.createRetryPolicy(maxRetryCount,
+        retryInterval);
     this.retryCount = 0;
   }
 
@@ -489,6 +491,7 @@ public class KeyOutputStream extends OutputStream {
     private int multipartNumber;
     private boolean isMultipartKey;
     private int maxRetryCount;
+    private long retryInterval;
 
     public Builder setMultipartUploadID(String uploadID) {
       this.multipartUploadID = uploadID;
@@ -575,12 +578,17 @@ public class KeyOutputStream extends OutputStream {
       return this;
     }
 
-    public KeyOutputStream build() {
-      return new KeyOutputStream(openHandler, xceiverManager, omClient,
-          chunkSize, requestID, factor, type, streamBufferFlushSize,
+    public Builder setRetryInterval(long retryIntervalInMS) {
+      this.retryInterval = retryIntervalInMS;
+      return this;
+    }
+
+    public KeyOutputStream build() throws IOException {
+      return new KeyOutputStream(openHandler, xceiverManager,
+          omClient, chunkSize, requestID, factor, type, streamBufferFlushSize,
           streamBufferMaxSize, blockSize, watchTimeout, checksumType,
           bytesPerChecksum, multipartUploadID, multipartNumber, isMultipartKey,
-          maxRetryCount);
+          maxRetryCount, retryInterval);
     }
   }
 

@@ -1074,6 +1074,12 @@ If the `s3guard` profile *is* set,
 property should be configured, and the name of that table should be different
  than what is used for fs.s3a.s3guard.ddb.table. The test table is destroyed
  and modified multiple times during the test.
+ 1. Several of the tests create and destroy DynamoDB tables. The table names
+ are prefixed with the value defined by
+ `fs.s3a.s3guard.test.dynamo.table.prefix` (default="s3guard.test."). The user
+ executing the tests will need sufficient privilege to create and destroy such
+ tables. If the tests abort uncleanly, these tables may be left behind,
+ incurring AWS charges.
 
 
 ### Scale Testing MetadataStore Directly
