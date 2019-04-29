@@ -57,4 +57,4 @@ Install aws cli
 Kinit test user
     ${hostname} =       Execute                    hostname
     Set Suite Variable  ${TEST_USER}               testuser/${hostname}@EXAMPLE.COM
-    Execute             kinit -k ${TEST_USER} -t /etc/security/keytabs/testuser.keytab
+    Wait Until Keyword Succeeds      2min       10sec      Execute            kinit -k ${TEST_USER} -t /etc/security/keytabs/testuser.keytab

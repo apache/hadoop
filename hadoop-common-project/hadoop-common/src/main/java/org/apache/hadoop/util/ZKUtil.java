@@ -172,7 +172,7 @@ public class ZKUtil {
       return valInConf;
     }
     String path = valInConf.substring(1).trim();
-    return Files.toString(new File(path), Charsets.UTF_8).trim();
+    return Files.asCharSource(new File(path), Charsets.UTF_8).read().trim();
   }
 
   /**

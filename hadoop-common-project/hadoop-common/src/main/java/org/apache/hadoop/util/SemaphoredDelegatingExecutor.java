@@ -107,7 +107,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new CallableWithPermitRelease<>(task));
   }
@@ -118,7 +118,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new RunnableWithPermitRelease(task), result);
   }
@@ -129,7 +129,7 @@ public class SemaphoredDelegatingExecutor extends
       queueingPermits.acquire();
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      return Futures.immediateFailedCheckedFuture(e);
+      return Futures.immediateFailedFuture(e);
     }
     return super.submit(new RunnableWithPermitRelease(task));
   }

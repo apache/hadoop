@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.Path;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Objects;
 
 public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   private File jobsParentDir = null;
@@ -35,6 +36,7 @@ public class MockRemoteDirectoryManager implements RemoteDirectoryManager {
   @Override
   public Path getJobStagingArea(String jobName, boolean create)
       throws IOException {
+    Objects.requireNonNull(jobName, "Job name must not be null!");
     if (jobsParentDir == null && create) {
       jobsParentDir = new File(
           "target/_staging_area_" + System.currentTimeMillis());

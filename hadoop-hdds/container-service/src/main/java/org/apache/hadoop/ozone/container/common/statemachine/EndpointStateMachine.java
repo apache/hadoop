@@ -200,16 +200,15 @@ public class EndpointStateMachine
    *  @param ex         - Exception
    */
   public void logIfNeeded(Exception ex) {
-    LOG.trace("Incrementing the Missed count. Ex : {}", ex);
-    this.incMissed();
-    if (this.getMissedCount() % getLogWarnInterval(conf) ==
-        0) {
+    if (this.getMissedCount() % getLogWarnInterval(conf) == 0) {
       LOG.error(
           "Unable to communicate to SCM server at {} for past {} seconds.",
           this.getAddress().getHostString() + ":" + this.getAddress().getPort(),
           TimeUnit.MILLISECONDS.toSeconds(
               this.getMissedCount() * getScmHeartbeatInterval(this.conf)), ex);
     }
+    LOG.trace("Incrementing the Missed count. Ex : {}", ex);
+    this.incMissed();
   }
 
 
