@@ -29,12 +29,11 @@ import org.apache.hadoop.classification.InterfaceStability;
  * <p>
  *   Annotations to inform the caller of an annotated method whether
  *   the method performs retries and/or exception translation internally.
- *   Callers can use this information to inform their own decisions about
+ *   Callers should use this information to inform their own decisions about
  *   performing retries or exception translation when calling the method. For
- *   example, if a method is annotated {@code RetryTranslated}, it would
- *   be ill-advised for the caller to perform another layer of retries.
- *   Similarly, the caller shouldn't perform another layer of exception
- *   translation.
+ *   example, if a method is annotated {@code RetryTranslated}, the caller
+ *   MUST NOT perform another layer of retries.  Similarly, the caller shouldn't
+ *   perform another layer of exception translation.
  * </p>
  * <p>
  *   Declaration for documentation only.
