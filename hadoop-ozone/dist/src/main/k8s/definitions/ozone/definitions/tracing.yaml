@@ -13,14 +13,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
+name: ozone/tracing
+description: Enable jaeger tracing
 ---
 - type: Add
-  trigger:
-    metadata:
-      name: config
   path:
-    - data
+    - spec
+    - template
+    - spec
+    - containers
+    - .*
+    - env
   value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+     - name: JAEGER_SAMPLER_TYPE
+       value: probabilistic
+     - name: JAEGER_SAMPLER_PARAM
+       value: "0.01"
+     - name: JAEGER_AGENT_HOST
+       value: jaeger-0.jaeger

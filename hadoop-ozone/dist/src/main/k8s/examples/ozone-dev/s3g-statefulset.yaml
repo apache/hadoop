@@ -13,14 +13,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
----
-- type: Add
-  trigger:
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: s3g
+  labels:
+    app.kubernetes.io/component: ozone
+spec:
+  selector:
+    matchLabels:
+      app: ozone
+      component: s3g
+  serviceName: s3g
+  replicas: 1
+  template:
     metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+      labels:
+        app: ozone
+        component: s3g
+    spec:
+      containers:
+      - name: s3g
+        image: '@docker.image@'
+        args:
+        - ozone
+        - s3g
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers: []
+      volumes:
+      - name: data
+        emptyDir: {}
