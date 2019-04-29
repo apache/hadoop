@@ -145,9 +145,9 @@ public final class OzoneClientUtils {
     return EXCEPTION_LIST;
   }
 
-  public static Map<Class<? extends Exception>, RetryPolicy>
+  public static Map<Class<? extends Throwable>, RetryPolicy>
   getRetryPolicyByException(int maxRetryCount, long retryInterval) {
-    Map<Class<? extends Exception>, RetryPolicy> policyMap = new HashMap<>();
+    Map<Class<? extends Throwable>, RetryPolicy> policyMap = new HashMap<>();
     for (Class<? extends Exception> ex : EXCEPTION_LIST) {
       if (ex == TimeoutException.class ||
           ex == RaftRetryFailureException.class) {
@@ -158,6 +158,9 @@ public final class OzoneClientUtils {
         policyMap.put(ex, createRetryPolicy(maxRetryCount, retryInterval));
       }
     }
+    // Default retry policy
+    policyMap.put(Exception.class, createRetryPolicy(
+        maxRetryCount, retryInterval));
     return policyMap;
   }
 }

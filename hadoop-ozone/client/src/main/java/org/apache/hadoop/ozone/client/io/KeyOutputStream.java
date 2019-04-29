@@ -97,7 +97,7 @@ public class KeyOutputStream extends OutputStream {
   private OmMultipartCommitUploadPartInfo commitUploadPartInfo;
   private FileEncryptionInfo feInfo;
   private ExcludeList excludeList;
-  private final Map<Class<? extends Exception>, RetryPolicy> retryPolicyMap;
+  private final Map<Class<? extends Throwable>, RetryPolicy> retryPolicyMap;
   private int retryCount;
   private long offset;
   /**
@@ -505,10 +505,14 @@ public class KeyOutputStream extends OutputStream {
     cleanup();
     closed = true;
   }
-
+  
   private void handleRetry(IOException exception, long len) throws IOException {
+    RetryPolicy retryPolicy =
+        retryPolicyMap.get(checkForException(exception).getClass());
+    if (retryPolicy == null) {
+      retryPolicy = retryPolicyMap.get(Exception.class);
+    }
     RetryPolicy.RetryAction action;
-    RetryPolicy retryPolicy = retryPolicyMap.get(exception.getClass());
     try {
       action = retryPolicy.shouldRetry(exception, retryCount, 0, true);
     } catch (Exception e) {
