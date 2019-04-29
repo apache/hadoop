@@ -374,11 +374,6 @@ public class TestConsistentReadsObserver {
     }
 
     @Override
-    public void addResponseTime(String name, int priorityLevel, int queueTime,
-        int processingTime) {
-    }
-
-    @Override
     public void stop() {
     }
   }
