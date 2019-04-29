@@ -534,7 +534,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
      */
     List<HddsDatanodeService> createHddsDatanodes(
         StorageContainerManager scm) throws IOException {
-      configureHddsDatanodes();
+
       String scmAddress = scm.getDatanodeRpcAddress().getHostString() +
           ":" + scm.getDatanodeRpcAddress().getPort();
       String[] args = new String[] {};
@@ -543,6 +543,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       List<HddsDatanodeService> hddsDatanodes = new ArrayList<>();
       for (int i = 0; i < numOfDatanodes; i++) {
         OzoneConfiguration dnConf = new OzoneConfiguration(conf);
+        configureHddsDatanodes(dnConf);
         String datanodeBaseDir = path + "/datanode-" + Integer.toString(i);
         Path metaDir = Paths.get(datanodeBaseDir, "meta");
         Path dataDir = Paths.get(datanodeBaseDir, "data", "containers");
@@ -633,16 +634,16 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       throw new RuntimeException("No available port");
     }
 
-    private void configureHddsDatanodes() {
-      conf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY,
+    private void configureHddsDatanodes(OzoneConfiguration dnConf) {
+      dnConf.set(ScmConfigKeys.HDDS_REST_HTTP_ADDRESS_KEY,
           "0.0.0.0:" + findPort());
-      conf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY,
+      dnConf.set(HddsConfigKeys.HDDS_DATANODE_HTTP_ADDRESS_KEY,
           "0.0.0.0:" + findPort());
-      conf.set(HDDS_DATANODE_PLUGINS_KEY,
+      dnConf.set(HDDS_DATANODE_PLUGINS_KEY,
           "org.apache.hadoop.ozone.web.OzoneHddsDatanodeService");
-      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
+      dnConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
           randomContainerPort);
-      conf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
+      dnConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
           randomContainerPort);
     }
 
