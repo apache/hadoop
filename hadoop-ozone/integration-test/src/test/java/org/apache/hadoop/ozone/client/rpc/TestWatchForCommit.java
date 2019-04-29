@@ -55,7 +55,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 
 /**
- * This class verifies the watchForCommit Handling by client.
+ * This class verifies the watchForCommit Handling by xceiverClient.
  */
 public class TestWatchForCommit {
 
@@ -288,31 +288,31 @@ public class TestWatchForCommit {
     ContainerWithPipeline container1 = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, containerOwner);
-    XceiverClientSpi client = clientManager
+    XceiverClientSpi xceiverClient = clientManager
         .acquireClient(container1.getPipeline());
-    Assert.assertEquals(1, client.getRefcount());
+    Assert.assertEquals(1, xceiverClient.getRefcount());
     Assert.assertEquals(container1.getPipeline(),
-        client.getPipeline());
-    Pipeline pipeline = client.getPipeline();
+        xceiverClient.getPipeline());
+    Pipeline pipeline = xceiverClient.getPipeline();
     XceiverClientReply reply =
-        client.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
-            client.getPipeline()));
+            xceiverClient.getPipeline()));
     reply.getResponse().get();
     long index = reply.getLogIndex();
     cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
     cluster.shutdownHddsDatanode(pipeline.getNodes().get(1));
     try {
       // just watch for a lo index which in not updated in the commitInfo Map
-      client.watchForCommit(index + 1, 3000);
+      xceiverClient.watchForCommit(index + 1, 3000);
       Assert.fail("expected exception not thrown");
     } catch (Exception e) {
       Assert.assertTrue(
           HddsClientUtils.checkForException(e) instanceof TimeoutException);
     }
-    // After releasing the client, this connection should be closed
+    // After releasing the xceiverClient, this connection should be closed
     // and any container operations should fail
-    clientManager.releaseClient(client, false);
+    clientManager.releaseClient(xceiverClient, false);
     shutdown();
   }
 
@@ -327,16 +327,16 @@ public class TestWatchForCommit {
     ContainerWithPipeline container1 = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, containerOwner);
-    XceiverClientSpi client = clientManager
+    XceiverClientSpi xceiverClient = clientManager
         .acquireClient(container1.getPipeline());
-    Assert.assertEquals(1, client.getRefcount());
+    Assert.assertEquals(1, xceiverClient.getRefcount());
     Assert.assertEquals(container1.getPipeline(),
-        client.getPipeline());
-    Pipeline pipeline = client.getPipeline();
+        xceiverClient.getPipeline());
+    Pipeline pipeline = xceiverClient.getPipeline();
     XceiverClientReply reply =
-        client.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
-            client.getPipeline()));
+            xceiverClient.getPipeline()));
     reply.getResponse().get();
     long index = reply.getLogIndex();
     cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
@@ -344,13 +344,13 @@ public class TestWatchForCommit {
     // again write data with more than max buffer limit. This wi
     try {
       // just watch for a lo index which in not updated in the commitInfo Map
-      client.watchForCommit(index + 1, 20000);
+      xceiverClient.watchForCommit(index + 1, 20000);
       Assert.fail("expected exception not thrown");
     } catch (Exception e) {
       Assert.assertTrue(HddsClientUtils
           .checkForException(e) instanceof RaftRetryFailureException);
     }
-    clientManager.releaseClient(client, false);
+    clientManager.releaseClient(xceiverClient, false);
     shutdown();
   }
 
@@ -368,29 +368,29 @@ public class TestWatchForCommit {
     ContainerWithPipeline container1 = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, containerOwner);
-    XceiverClientSpi client = clientManager
+    XceiverClientSpi xceiverClient = clientManager
         .acquireClient(container1.getPipeline());
-    Assert.assertEquals(1, client.getRefcount());
+    Assert.assertEquals(1, xceiverClient.getRefcount());
     Assert.assertEquals(container1.getPipeline(),
-        client.getPipeline());
-    Pipeline pipeline = client.getPipeline();
-    XceiverClientRatis ratisClient = (XceiverClientRatis) client;
+        xceiverClient.getPipeline());
+    Pipeline pipeline = xceiverClient.getPipeline();
+    XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
     XceiverClientReply reply =
-        client.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
-            client.getPipeline()));
+            xceiverClient.getPipeline()));
     reply.getResponse().get();
     Assert.assertEquals(3, ratisClient.getCommitInfoMap().size());
     cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
-    reply = client.sendCommandAsync(ContainerTestHelper
+    reply = xceiverClient.sendCommandAsync(ContainerTestHelper
         .getCloseContainer(pipeline,
             container1.getContainerInfo().getContainerID()));
     reply.getResponse().get();
-    client.watchForCommit(reply.getLogIndex(), 20000);
+    xceiverClient.watchForCommit(reply.getLogIndex(), 20000);
 
     // commitInfo Map will be reduced to 2 here
     Assert.assertEquals(2, ratisClient.getCommitInfoMap().size());
-    clientManager.releaseClient(client, false);
+    clientManager.releaseClient(xceiverClient, false);
     Assert.assertTrue(logCapturer.getOutput().contains("3 way commit failed"));
     Assert.assertTrue(
         logCapturer.getOutput().contains("RaftRetryFailureException"));
@@ -414,29 +414,29 @@ public class TestWatchForCommit {
     ContainerWithPipeline container1 = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, containerOwner);
-    XceiverClientSpi client = clientManager
+    XceiverClientSpi xceiverClient = clientManager
         .acquireClient(container1.getPipeline());
-    Assert.assertEquals(1, client.getRefcount());
+    Assert.assertEquals(1, xceiverClient.getRefcount());
     Assert.assertEquals(container1.getPipeline(),
-        client.getPipeline());
-    Pipeline pipeline = client.getPipeline();
-    XceiverClientRatis ratisClient = (XceiverClientRatis) client;
+        xceiverClient.getPipeline());
+    Pipeline pipeline = xceiverClient.getPipeline();
+    XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
     XceiverClientReply reply =
-        client.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
-            client.getPipeline()));
+            xceiverClient.getPipeline()));
     reply.getResponse().get();
     Assert.assertEquals(3, ratisClient.getCommitInfoMap().size());
     cluster.shutdownHddsDatanode(pipeline.getNodes().get(0));
-    reply = client.sendCommandAsync(ContainerTestHelper
+    reply = xceiverClient.sendCommandAsync(ContainerTestHelper
         .getCloseContainer(pipeline,
             container1.getContainerInfo().getContainerID()));
     reply.getResponse().get();
-    client.watchForCommit(reply.getLogIndex(), 3000);
+    xceiverClient.watchForCommit(reply.getLogIndex(), 3000);
 
     // commitInfo Map will be reduced to 2 here
     Assert.assertEquals(2, ratisClient.getCommitInfoMap().size());
-    clientManager.releaseClient(client, false);
+    clientManager.releaseClient(xceiverClient, false);
     Assert.assertTrue(logCapturer.getOutput().contains("3 way commit failed"));
     Assert.assertTrue(logCapturer.getOutput().contains("TimeoutException"));
     Assert
@@ -462,16 +462,16 @@ public class TestWatchForCommit {
     ContainerWithPipeline container1 = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.THREE, containerOwner);
-    XceiverClientSpi client = clientManager
+    XceiverClientSpi xceiverClient = clientManager
         .acquireClient(container1.getPipeline());
-    Assert.assertEquals(1, client.getRefcount());
+    Assert.assertEquals(1, xceiverClient.getRefcount());
     Assert.assertEquals(container1.getPipeline(),
-        client.getPipeline());
-    Pipeline pipeline = client.getPipeline();
-    XceiverClientRatis ratisClient = (XceiverClientRatis) client;
+        xceiverClient.getPipeline());
+    Pipeline pipeline = xceiverClient.getPipeline();
+    XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
     long containerId = container1.getContainerInfo().getContainerID();
-    XceiverClientReply reply = client.sendCommandAsync(ContainerTestHelper
-        .getCreateContainerRequest(containerId, client.getPipeline()));
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(ContainerTestHelper
+        .getCreateContainerRequest(containerId, xceiverClient.getPipeline()));
     reply.getResponse().get();
     Assert.assertEquals(3, ratisClient.getCommitInfoMap().size());
     List<Pipeline> pipelineList = new ArrayList<>();
@@ -479,13 +479,13 @@ public class TestWatchForCommit {
     ContainerTestHelper.waitForPipelineClose(pipelineList, cluster);
     try {
       // just watch for a lo index which in not updated in the commitInfo Map
-      client.watchForCommit(reply.getLogIndex() + 1, 20000);
+      xceiverClient.watchForCommit(reply.getLogIndex() + 1, 20000);
       Assert.fail("Expected exception not thrown");
     } catch(Exception e) {
       Assert.assertTrue(HddsClientUtils
           .checkForException(e) instanceof GroupMismatchException);
     }
-    clientManager.releaseClient(client, false);
+    clientManager.releaseClient(xceiverClient, false);
     shutdown();
   }
 
