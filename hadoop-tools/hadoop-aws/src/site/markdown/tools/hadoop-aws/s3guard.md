@@ -202,7 +202,7 @@ hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
 ```
 
 Programmatic retries of the original operation would require overwrite=true.
-Suppose the original operation was FileSystem.create(myFile, ovewrite=false).
+Suppose the original operation was FileSystem.create(myFile, overwrite=false).
 If this operation failed with `MetadataPersistenceException` a repeat of the
 same operation would result in `FileAlreadyExistsException` since the original
 operation successfully created the file in S3 and only failed in writing the
