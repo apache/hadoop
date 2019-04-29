@@ -37,9 +37,9 @@ hdds.scm.kerberos.keytab.file   |The keytab file used by SCM daemon to login as 
 ozone.om.kerberos.principal     |The OzoneManager service principal. Ex om/_HOST@REALM.COM
 ozone.om.kerberos.keytab.file   |The keytab file used by SCM daemon to login as its service principal.
 hdds.scm.http.kerberos.principal|SCM http server service principal.
-hdds.scm.http.kerberos.keytab   |The keytab file used by SCM http server to login as its service principal.
+hdds.scm.http.kerberos.keytab.file|The keytab file used by SCM http server to login as its service principal.
 ozone.om.http.kerberos.principal|OzoneManager http server principal.
-ozone.om.http.kerberos.keytab   |The keytab file used by OM http server to login as its service principal.
+ozone.om.http.kerberos.keytab.file|The keytab file used by OM http server to login as its service principal.
 ozone.s3g.keytab.file           |The keytab file used by S3 gateway. Ex /etc/security/keytabs/HTTP.keytab
 ozone.s3g.authentication.kerberos.principal|S3 Gateway principal. Ex HTTP/_HOST@EXAMPLE.COM
 ## Tokens ##

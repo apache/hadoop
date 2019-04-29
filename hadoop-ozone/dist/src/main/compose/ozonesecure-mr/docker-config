@@ -34,9 +34,9 @@ OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
 
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_hdds.scm.http.kerberos.principal=HTTP/scm@EXAMPLE.COM
-OZONE-SITE.XML_hdds.scm.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_hdds.scm.http.kerberos.keytab.file=/etc/security/keytabs/HTTP.keytab
 OZONE-SITE.XML_ozone.om.http.kerberos.principal=HTTP/om@EXAMPLE.COM
-OZONE-SITE.XML_ozone.om.http.kerberos.keytab=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.om.http.kerberos.keytab.file=/etc/security/keytabs/HTTP.keytab
 HDFS-SITE.XML_dfs.datanode.kerberos.principal=dn/_HOST@EXAMPLE.COM
 HDFS-SITE.XML_dfs.datanode.keytab.file=/etc/security/keytabs/dn.keytab
 HDFS-SITE.XML_dfs.web.authentication.kerberos.principal=HTTP/_HOST@EXAMPLE.COM

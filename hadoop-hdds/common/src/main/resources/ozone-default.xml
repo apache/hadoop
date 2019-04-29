@@ -1764,7 +1764,7 @@
     <value>HTTP/_HOST@EXAMPLE.COM</value>
   </property>
   <property>
-    <name>hdds.scm.http.kerberos.keytab</name>
+    <name>hdds.scm.http.kerberos.keytab.file</name>
     <value>/etc/security/keytabs/HTTP.keytab</value>
   </property>
 
