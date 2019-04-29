@@ -4,6 +4,7 @@ menu:
    main:
       parent: Client
       weight: 1
+      identifier: OzoneShell
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

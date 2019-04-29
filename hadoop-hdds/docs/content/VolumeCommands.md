@@ -2,8 +2,8 @@
 title: Volume Commands
 menu:
    main:
-      parent: Client
-      weight: 2
+      parent: OzoneShell
+      weight: 1
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

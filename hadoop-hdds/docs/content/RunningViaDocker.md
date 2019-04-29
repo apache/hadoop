@@ -44,16 +44,16 @@ including the data nodes and ozone services.
 ozone instance on your machine.
 
 {{< highlight bash >}}
-cd ozone-0.2.1-SNAPSHOT/compose/ozone/
+cd compose/ozone/
 
 docker-compose up -d
 {{< /highlight >}}
 
-
 To verify that ozone is working as expected, let us log into a data node and
 run _freon_, the load generator for Ozone. The ```exec datanode bash``` command
-will open a bash shell on the datanode. The ozone freon command is executed
-within the datanode container. You can quit freon via CTRL-C any time. The
+will open a bash shell on the datanode.
+
+The `ozone freon` command is executed within the datanode container. You can quit freon via CTRL-C any time. The
 ```rk``` profile instructs freon to generate random keys.
 
 {{< highlight bash >}}

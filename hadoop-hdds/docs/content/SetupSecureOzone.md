@@ -25,8 +25,10 @@ weight: 11
 # Setup secure ozone cluster #
 To enable security in ozone cluster **ozone.security.enabled** should be set to true.
 
-ozone.security.enabled| true
+Property|Value
 ----------------------|------
+ozone.security.enabled| true
+
 ## Kerberos ##
 Configuration for service daemons:
 
@@ -45,20 +47,28 @@ ozone.s3g.authentication.kerberos.principal|S3 Gateway principal. Ex HTTP/_HOST@
 ## Tokens ##
 
 ## Delegation token ##
+
 Delegation tokens are enabled by default when security is enabled.
 
 ## Block Tokens ##
-hdds.block.token.enabled     | true
+
+Property|Value
 -----------------------------|------
+hdds.block.token.enabled     | true
 
 ## S3Token ##
+
 S3 token are enabled by default when security is enabled.
 To use S3 tokens users need to perform following steps:
+
 * S3 clients should get the secret access id and user secret from OzoneManager.
+
 ```
 ozone s3 getsecret
 ```
+
 * Setup secret in aws configs:
+
 ```
 aws configure set default.s3.signature_version s3v4
 aws configure set aws_access_key_id ${accessId}
@@ -67,18 +77,22 @@ aws configure set region us-west-1
 ```
 
 ## Certificates ##
+
 Certificates are used internally inside Ozone. Its enabled be default when security is enabled.
 
 ## Authorization ##
+
 Default access authorizer for Ozone approves every request. It is not suitable for production environments. It is recommended that clients use ranger plugin for Ozone to manage authorizations.
 
-Property|Description
+Property|Value
 --------|------------------------------------------------------------
 ozone.acl.enabled         | true
 ozone.acl.authorizer.class| org.apache.ranger.authorization.ozone.authorizer.RangerOzoneAuthorizer
 
 ## TDE ##
+
 To use TDE clients must set KMS URI.
 
-hadoop.security.key.provider.path  | KMS uri. Ex kms://http@kms-host:9600/kms
+Property|Value
 -----------------------------------|-----------------------------------------
+hadoop.security.key.provider.path  | KMS uri. Ex kms://http@kms-host:9600/kms
