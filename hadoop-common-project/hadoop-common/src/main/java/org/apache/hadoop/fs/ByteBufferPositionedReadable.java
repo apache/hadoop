@@ -24,15 +24,21 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Implementers of this interface provide a read API that writes to a
- * ByteBuffer, not a byte[].
+ * Implementers of this interface provide a positioned read API that writes to a
+ * {@link ByteBuffer} rather than a {@code byte[]}.
+ *
+ * @see PositionedReadable
+ * @see ByteBufferReadable
  */
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
-public interface ByteBufferReadable {
+public interface ByteBufferPositionedReadable {
   /**
-   * Reads up to buf.remaining() bytes into buf. Callers should use
-   * buf.limit(..) to control the size of the desired read.
+   * Reads up to {@code buf.remaining()} bytes into buf from a given position
+   * in the file and returns the number of bytes read. Callers should use
+   * {@code buf.limit(...)} to control the size of the desired read and
+   * {@code buf.position(...)} to control the offset into the buffer the data
+   * should be written to.
    * <p>
    * After a successful call, {@code buf.position()} will be advanced by the
    * number of bytes read and {@code buf.limit()} will be unchanged.
@@ -43,19 +49,18 @@ public interface ByteBufferReadable {
    * eventuality.
    * <p>
    * Callers should use {@link StreamCapabilities#hasCapability(String)} with
-   * {@link StreamCapabilities#READBYTEBUFFER} to check if the underlying
+   * {@link StreamCapabilities#PREADBYTEBUFFER} to check if the underlying
    * stream supports this interface, otherwise they might get a
    * {@link UnsupportedOperationException}.
    * <p>
    * Implementations should treat 0-length requests as legitimate, and must not
    * signal an error upon their receipt.
    *
-   * @param buf
-   *          the ByteBuffer to receive the results of the read operation.
-   * @return the number of bytes read, possibly zero, or -1 if 
-   *         reach end-of-stream
-   * @throws IOException
-   *           if there is some error performing the read
+   * @param position position within file
+   * @param buf the ByteBuffer to receive the results of the read operation.
+   * @return the number of bytes read, possibly zero, or -1 if reached
+   *         end-of-stream
+   * @throws IOException if there is some error performing the read
    */
-  public int read(ByteBuffer buf) throws IOException;
+  int read(long position, ByteBuffer buf) throws IOException;
 }
