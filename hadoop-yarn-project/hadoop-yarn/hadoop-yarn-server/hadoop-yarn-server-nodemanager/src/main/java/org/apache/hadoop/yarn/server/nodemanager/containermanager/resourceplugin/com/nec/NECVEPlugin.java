@@ -74,7 +74,7 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
     if (envScriptName != null) {
       binaryName = envScriptName;
     }
-    LOG.info("Use {} as script name.", envScriptName);
+    LOG.info("Use {} as script name.", binaryName);
 
     // Try to find the script based on an environment variable, if set
     boolean found = false;
@@ -115,11 +115,13 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
     }
   }
 
+  @Override
   public DeviceRegisterRequest getRegisterRequestInfo() {
     return DeviceRegisterRequest.Builder.newInstance()
         .setResourceName("nec.com/ve").build();
   }
 
+  @Override
   public Set<Device> getDevices() {
     Set<Device> devices = null;
 
@@ -135,6 +137,7 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
     return devices;
   }
 
+  @Override
   public DeviceRuntimeSpec onDevicesAllocated(Set<Device> set,
       YarnRuntimeType yarnRuntimeType) {
     return null;
@@ -151,6 +154,7 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
 
     LOG.info("Parsing output: {}", output);
     String[] lines = output.split("\n");
+    outer:
     for (String line : lines) {
       Device.Builder builder = Device.Builder.newInstance();
 
@@ -163,7 +167,7 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
         String[] tokens = keyValue.trim().split("=");
         if (tokens.length != 2) {
           LOG.error("Unknown format of script output! Skipping this line");
-          continue;
+          continue outer;
         }
 
         final String key = tokens[0];
