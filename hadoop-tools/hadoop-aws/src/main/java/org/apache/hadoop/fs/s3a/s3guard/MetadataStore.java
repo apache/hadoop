@@ -29,6 +29,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 
 /**
  * {@code MetadataStore} defines the set of operations that any metadata store
@@ -165,6 +166,7 @@ public interface MetadataStore extends Closeable {
    * @param meta the metadata to save
    * @throws IOException if there is an error
    */
+  @RetryTranslated
   void put(PathMetadata meta) throws IOException;
 
   /**

@@ -26,11 +26,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * Declaration of retry policy for documentation only.
- * This is purely for visibility in source and is currently package-scoped.
- * Compare with {@link org.apache.hadoop.io.retry.AtMostOnce}
- * and {@link org.apache.hadoop.io.retry.Idempotent}; these are real
- * markers used by Hadoop RPC.
+ * <p>
+ *   Annotations to inform the caller of an annotated method whether
+ *   the method performs retries and/or exception translation internally.
+ *   Callers should use this information to inform their own decisions about
+ *   performing retries or exception translation when calling the method. For
+ *   example, if a method is annotated {@code RetryTranslated}, the caller
+ *   MUST NOT perform another layer of retries.  Similarly, the caller shouldn't
+ *   perform another layer of exception translation.
+ * </p>
+ * <p>
+ *   Declaration for documentation only.
+ *   This is purely for visibility in source and is currently package-scoped.
+ *   Compare with {@link org.apache.hadoop.io.retry.AtMostOnce}
+ *   and {@link org.apache.hadoop.io.retry.Idempotent}; these are real
+ *   markers used by Hadoop RPC.
+ * </p>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
