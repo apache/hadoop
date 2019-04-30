@@ -33,7 +33,6 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.commons.math3.stat.descriptive.rank.Min;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.BlockID;
@@ -58,6 +57,7 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.io.BlockOutputStreamEntry;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -724,11 +724,11 @@ public final class ContainerTestHelper {
       MiniOzoneCluster cluster) throws Exception {
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) outputStream.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
     List<Long> containerIdList = new ArrayList<>();
-    for (OmKeyLocationInfo info : locationInfoList) {
-      long id = info.getContainerID();
+    for (BlockOutputStreamEntry entry : streamEntryList) {
+      long id = entry.getBlockID().getContainerID();
       if (!containerIdList.contains(id)) {
         containerIdList.add(id);
       }
@@ -742,11 +742,11 @@ public final class ContainerTestHelper {
       throws Exception {
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) outputStream.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
     List<Long> containerIdList = new ArrayList<>();
-    for (OmKeyLocationInfo info : locationInfoList) {
-      long id = info.getContainerID();
+    for (BlockOutputStreamEntry entry : streamEntryList) {
+      long id = entry.getBlockID().getContainerID();
       if (!containerIdList.contains(id)) {
         containerIdList.add(id);
       }

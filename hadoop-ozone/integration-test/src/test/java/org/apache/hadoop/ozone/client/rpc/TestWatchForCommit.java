@@ -249,6 +249,7 @@ public class TestWatchForCommit {
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // now close the stream, It will update the ack length after watchForCommit
+    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     key.close();
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
@@ -272,7 +273,6 @@ public class TestWatchForCommit {
     Assert
         .assertEquals(0, blockOutputStream.getBufferPool().computeBufferData());
     Assert.assertNull(blockOutputStream.getCommitIndex2flushedDataMap());
-    Assert.assertEquals(2, keyOutputStream.getStreamEntries().size());
     validateData(keyName, data1);
     shutdown();
   }
@@ -294,8 +294,8 @@ public class TestWatchForCommit {
     Assert.assertEquals(container1.getPipeline(),
         xceiverClient.getPipeline());
     Pipeline pipeline = xceiverClient.getPipeline();
-    XceiverClientReply reply =
-        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(
+        ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
             xceiverClient.getPipeline()));
     reply.getResponse().get();
@@ -333,8 +333,8 @@ public class TestWatchForCommit {
     Assert.assertEquals(container1.getPipeline(),
         xceiverClient.getPipeline());
     Pipeline pipeline = xceiverClient.getPipeline();
-    XceiverClientReply reply =
-        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(
+        ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
             xceiverClient.getPipeline()));
     reply.getResponse().get();
@@ -375,8 +375,8 @@ public class TestWatchForCommit {
         xceiverClient.getPipeline());
     Pipeline pipeline = xceiverClient.getPipeline();
     XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
-    XceiverClientReply reply =
-        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(
+        ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
             xceiverClient.getPipeline()));
     reply.getResponse().get();
@@ -421,8 +421,8 @@ public class TestWatchForCommit {
         xceiverClient.getPipeline());
     Pipeline pipeline = xceiverClient.getPipeline();
     XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
-    XceiverClientReply reply =
-        xceiverClient.sendCommandAsync(ContainerTestHelper.getCreateContainerRequest(
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(
+        ContainerTestHelper.getCreateContainerRequest(
             container1.getContainerInfo().getContainerID(),
             xceiverClient.getPipeline()));
     reply.getResponse().get();
@@ -470,8 +470,9 @@ public class TestWatchForCommit {
     Pipeline pipeline = xceiverClient.getPipeline();
     XceiverClientRatis ratisClient = (XceiverClientRatis) xceiverClient;
     long containerId = container1.getContainerInfo().getContainerID();
-    XceiverClientReply reply = xceiverClient.sendCommandAsync(ContainerTestHelper
-        .getCreateContainerRequest(containerId, xceiverClient.getPipeline()));
+    XceiverClientReply reply = xceiverClient.sendCommandAsync(
+        ContainerTestHelper.getCreateContainerRequest(containerId,
+            xceiverClient.getPipeline()));
     reply.getResponse().get();
     Assert.assertEquals(3, ratisClient.getCommitInfoMap().size());
     List<Pipeline> pipelineList = new ArrayList<>();

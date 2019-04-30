@@ -174,18 +174,21 @@ public class BlockOutputStreamEntryPool {
   public List<OmKeyLocationInfo> getLocationInfoList()  {
     List<OmKeyLocationInfo> locationInfoList = new ArrayList<>();
     for (BlockOutputStreamEntry streamEntry : streamEntries) {
-      OmKeyLocationInfo info =
-          new OmKeyLocationInfo.Builder().setBlockID(streamEntry.getBlockID())
-              .setLength(streamEntry.getCurrentPosition()).setOffset(0)
-              .setToken(streamEntry.getToken())
-              .setPipeline(streamEntry.getPipeline())
-              .build();
-      LOG.debug("block written " + streamEntry.getBlockID() + ", length "
-          + streamEntry.getCurrentPosition() + " bcsID "
-          + streamEntry.getBlockID().getBlockCommitSequenceId());
-      if (streamEntry.getCurrentPosition() != 0) {
+      long length = streamEntry.getCurrentPosition();
+
+      // Commit only those blocks to OzoneManager which are not empty
+      if (length != 0) {
+        OmKeyLocationInfo info =
+            new OmKeyLocationInfo.Builder().setBlockID(streamEntry.getBlockID())
+                .setLength(streamEntry.getCurrentPosition()).setOffset(0)
+                .setToken(streamEntry.getToken())
+                .setPipeline(streamEntry.getPipeline()).build();
         locationInfoList.add(info);
       }
+      LOG.debug(
+          "block written " + streamEntry.getBlockID() + ", length " + length
+              + " bcsID " + streamEntry.getBlockID()
+              .getBlockCommitSequenceId());
     }
     return locationInfoList;
   }
