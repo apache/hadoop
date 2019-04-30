@@ -1523,6 +1523,19 @@
 </property>
 
 <property>
+  <name>fs.s3a.metadatastore.fail.on.write.error</name>
+  <value>true</value>
+  <description>
+    When true (default), FileSystem write operations generate
+    org.apache.hadoop.fs.s3a.MetadataPersistenceException if the metadata
+    cannot be saved to the metadata store.  When false, failures to save to
+    metadata store are logged at ERROR level, but the overall FileSystem
+    write operation succeeds.
+  </description>
+</property>
+
+
+<property>
     <name>fs.s3a.s3guard.cli.prune.age</name>
     <value>86400000</value>
     <description>

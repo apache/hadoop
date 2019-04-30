@@ -172,6 +172,10 @@ public class S3ARetryPolicy implements RetryPolicy {
     policyMap.put(FileNotFoundException.class, fail);
     policyMap.put(InvalidRequestException.class, fail);
 
+    // metadata stores should do retries internally when it makes sense
+    // so there is no point doing another layer of retries after that
+    policyMap.put(MetadataPersistenceException.class, fail);
+
     // once the file has changed, trying again is not going to help
     policyMap.put(RemoteFileChangedException.class, fail);
 
