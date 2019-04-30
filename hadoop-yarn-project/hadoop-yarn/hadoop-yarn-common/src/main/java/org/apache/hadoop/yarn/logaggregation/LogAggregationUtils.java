@@ -38,6 +38,7 @@ import java.util.List;
 public class LogAggregationUtils {
 
   public static final String TMP_FILE_SUFFIX = ".tmp";
+  private static final String BUCKET_SUFFIX = "bucket_";
 
   /**
    * Constructs the full filename for an application's log file per node.
@@ -64,8 +65,22 @@ public class LogAggregationUtils {
    */
   public static Path getRemoteAppLogDir(Path remoteRootLogDir,
       ApplicationId appId, String user, String suffix) {
-    return new Path(getRemoteLogSuffixedDir(remoteRootLogDir, user, suffix),
-        appId.toString());
+    return new Path(getRemoteBucketDir(remoteRootLogDir, user, suffix,
+        appId), appId.toString());
+  }
+
+  /**
+   * Gets the older remote app log dir.
+   * @param appId the application id
+   * @param user the application owner
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param suffix the log directory suffix
+   * @return the remote application specific log dir.
+   */
+  public static Path getOlderRemoteAppLogDir(ApplicationId appId,
+      String user, Path remoteRootLogDir, String suffix) {
+    return new Path(getOlderRemoteLogSuffixedDir(remoteRootLogDir, user,
+         suffix), appId.toString());
   }
 
   /**
@@ -76,6 +91,19 @@ public class LogAggregationUtils {
    * @return the remote suffixed log dir.
    */
   public static Path getRemoteLogSuffixedDir(Path remoteRootLogDir,
+      String user, String suffix) {
+    suffix = getBucketSuffix() + suffix;
+    return new Path(getRemoteLogUserDir(remoteRootLogDir, user), suffix);
+  }
+
+  /**
+   * Gets the older remote suffixed log dir for the user.
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param user the application owner
+   * @param suffix the log dir suffix
+   * @return the older remote suffixed log dir.
+   */
+  public static Path getOlderRemoteLogSuffixedDir(Path remoteRootLogDir,
       String user, String suffix) {
     if (suffix == null || suffix.isEmpty()) {
       return getRemoteLogUserDir(remoteRootLogDir, user);
@@ -95,6 +123,33 @@ public class LogAggregationUtils {
   }
 
   /**
+   * Gets the remote log user's bucket dir.
+   * @param remoteRootLogDir the aggregated log remote root log dir
+   * @param user the application owner
+   * @param suffix the log dir suffix
+   * @param appId the application id
+   * @return the remote log per user per cluster timestamp per bucket dir.
+   */
+  public static Path getRemoteBucketDir(Path remoteRootLogDir, String user,
+      String suffix, ApplicationId appId) {
+    int bucket = appId.getId() % 10000;
+    String bucketDir = String.format("%04d", bucket);
+    return new Path(getRemoteLogSuffixedDir(remoteRootLogDir,
+       user, suffix), bucketDir);
+  }
+
+  /**
+   * Check if older Application Log Directory has to be included.
+   * @param conf the configuration
+   * @return Is Older App Log Dir enabled?
+   */
+  public static boolean isOlderPathEnabled(Configuration conf) {
+    return conf.getBoolean(YarnConfiguration.
+         NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER,
+             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER);
+  }
+
+  /**
    * Returns the suffix component of the log dir.
    * @param conf the configuration
    * @return the suffix which will be appended to the user log dir.
@@ -102,6 +157,14 @@ public class LogAggregationUtils {
   public static String getRemoteNodeLogDirSuffix(Configuration conf) {
     return conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
         YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
+  }
+
+  /**
+   * Returns the bucket suffix component of the log dir.
+   * @return the bucket suffix which appended to user log dir
+   */
+  public static String getBucketSuffix() {
+    return BUCKET_SUFFIX;
   }
 
   
@@ -177,6 +240,24 @@ public class LogAggregationUtils {
   /**
    * Get all available log files under remote app log directory.
    * @param conf the configuration
+   * @param remoteAppLogDir the application log directory
+   * @param appId the applicationId
+   * @param appOwner the application owner
+   * @return the iterator of available log files
+   * @throws IOException if there is no log file directory
+   */
+  public static RemoteIterator<FileStatus> getNodeFiles(Configuration conf,
+      Path remoteAppLogDir, ApplicationId appId, String appOwner)
+      throws IOException {
+    Path qualifiedLogDir =
+        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
+    return FileContext.getFileContext(
+        qualifiedLogDir.toUri(), conf).listStatus(remoteAppLogDir);
+  }
+
+  /**
+   * Get all available log files under remote app log directory.
+   * @param conf the configuration
    * @param appId the applicationId
    * @param appOwner the application owner
    * @param remoteRootLogDir the remote root log directory
@@ -188,14 +269,58 @@ public class LogAggregationUtils {
       Configuration conf, ApplicationId appId, String appOwner,
       org.apache.hadoop.fs.Path remoteRootLogDir, String suffix)
       throws IOException {
+    RemoteIterator<FileStatus> nodeFilesCur= null;
+    RemoteIterator<FileStatus> nodeFilesPrev = null;
+    StringBuilder diagnosticsMsg = new StringBuilder();
+
+    // Get Node Files from new app log dir
     Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner,
         remoteRootLogDir, suffix);
-    RemoteIterator<FileStatus> nodeFiles = null;
-    Path qualifiedLogDir =
-        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
-    nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
-        conf).listStatus(remoteAppLogDir);
-    return nodeFiles;
+    try {
+      nodeFilesCur = getNodeFiles(conf, remoteAppLogDir, appId, appOwner);
+    } catch (IOException ex) {
+      diagnosticsMsg.append(ex.getMessage() + "\n");
+    }
+
+    // Get Node Files from old app log dir
+    if (isOlderPathEnabled(conf)) {
+      remoteAppLogDir = getOlderRemoteAppLogDir(appId, appOwner,
+              remoteRootLogDir, suffix);
+      try {
+        nodeFilesPrev = getNodeFiles(conf,
+                remoteAppLogDir, appId, appOwner);
+      } catch (IOException ex) {
+        diagnosticsMsg.append(ex.getMessage() + "\n");
+      }
+
+      // Return older files if new app log dir does not exist
+      if (nodeFilesCur == null) {
+        return nodeFilesPrev;
+      } else if (nodeFilesPrev != null) {
+        // Return both new and old node files combined
+        RemoteIterator<FileStatus> curDir = nodeFilesCur;
+        RemoteIterator<FileStatus> prevDir = nodeFilesPrev;
+        RemoteIterator<FileStatus> nodeFilesCombined = new
+            RemoteIterator<FileStatus>() {
+            @Override
+            public boolean hasNext() throws IOException {
+              return prevDir.hasNext() || curDir.hasNext();
+            }
+
+            @Override
+            public FileStatus next() throws IOException {
+              return prevDir.hasNext() ? prevDir.next() : curDir.next();
+            }
+        };
+        return nodeFilesCombined;
+      }
+    }
+
+    // Error reading from or new app log dir does not exist
+    if (nodeFilesCur == null) {
+      throw new IOException(diagnosticsMsg.toString());
+    }
+    return nodeFilesCur;
   }
 
   /**
@@ -212,13 +337,39 @@ public class LogAggregationUtils {
       Configuration conf, ApplicationId appId, String appOwner,
       org.apache.hadoop.fs.Path remoteRootLogDir, String suffix)
       throws IOException {
+    StringBuilder diagnosticsMsg = new StringBuilder();
     Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner,
         remoteRootLogDir, suffix);
     List<FileStatus> nodeFiles = new ArrayList<>();
     Path qualifiedLogDir =
         FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
-    nodeFiles.addAll(Arrays.asList(FileContext.getFileContext(
-        qualifiedLogDir.toUri(), conf).util().listStatus(remoteAppLogDir)));
+
+    // Get Node Files from new app log dir
+    try {
+      nodeFiles.addAll(Arrays.asList(FileContext.getFileContext(
+          qualifiedLogDir.toUri(), conf).util().listStatus(remoteAppLogDir)));
+    } catch (IOException ex) {
+      diagnosticsMsg.append(ex.getMessage() + "\n");
+    }
+
+    // Get Node Files from old app log dir
+    if (isOlderPathEnabled(conf)) {
+      remoteAppLogDir = getOlderRemoteAppLogDir(appId, appOwner,
+          remoteRootLogDir, suffix);
+      qualifiedLogDir = FileContext.getFileContext(conf).
+          makeQualified(remoteAppLogDir);
+      try {
+        nodeFiles.addAll(Arrays.asList(FileContext.getFileContext(
+            qualifiedLogDir.toUri(), conf).util().listStatus(remoteAppLogDir)));
+      } catch (IOException ex) {
+        diagnosticsMsg.append(ex.getMessage() + "\n");
+      }
+    }
+
+    // Error reading from or new app log dir does not exist
+    if (nodeFiles.isEmpty()) {
+      throw new IOException(diagnosticsMsg.toString());
+    }
     return nodeFiles;
   }
 
@@ -233,12 +384,11 @@ public class LogAggregationUtils {
   public static RemoteIterator<FileStatus> getRemoteNodeFileDir(
       Configuration conf, ApplicationId appId, String appOwner)
       throws IOException {
-    Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner);
-    RemoteIterator<FileStatus> nodeFiles = null;
-    Path qualifiedLogDir =
-        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
-    nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
-        conf).listStatus(remoteAppLogDir);
-    return nodeFiles;
+    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+    Path remoteRootLogDir = new Path(conf.get(
+        YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+    return getRemoteNodeFileDir(conf, appId, appOwner,
+        remoteRootLogDir, suffix);
   }
 }

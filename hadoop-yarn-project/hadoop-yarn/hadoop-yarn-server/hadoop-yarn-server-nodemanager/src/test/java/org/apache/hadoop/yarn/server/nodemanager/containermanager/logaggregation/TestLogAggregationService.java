@@ -692,14 +692,16 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     logAggregationService.stop();
   }
 
+
   @Test
   public void testAppLogDirCreation() throws Exception {
-    final String logSuffix = "logs";
+    final String logSuffix = "bucket_logs";
+    final String inputSuffix = "logs";
     this.conf.set(YarnConfiguration.NM_LOG_DIRS,
         localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, logSuffix);
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, inputSuffix);
 
     InlineDispatcher dispatcher = new InlineDispatcher();
     dispatcher.init(this.conf);
@@ -733,7 +735,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     Path userDir = fs.makeQualified(new Path(
         remoteRootLogDir.getAbsolutePath(), this.user));
     Path suffixDir = new Path(userDir, logSuffix);
-    Path appDir = new Path(suffixDir, appId.toString());
+    Path bucketDir = fs.makeQualified(LogAggregationUtils.getRemoteBucketDir(
+        new Path(remoteRootLogDir.getAbsolutePath()),
+            this.user, inputSuffix, appId));
+    Path appDir = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
+        new Path(remoteRootLogDir.getAbsolutePath()), appId,
+            this.user, inputSuffix));
     LogAggregationContext contextWithAllContainers =
         Records.newRecord(LogAggregationContext.class);
     contextWithAllContainers.setLogAggregationPolicyClassName(
@@ -742,23 +749,44 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
         this.acls, contextWithAllContainers));
     verify(spyFs).mkdirs(eq(userDir), isA(FsPermission.class));
     verify(spyFs).mkdirs(eq(suffixDir), isA(FsPermission.class));
+    verify(spyFs).mkdirs(eq(bucketDir), isA(FsPermission.class));
     verify(spyFs).mkdirs(eq(appDir), isA(FsPermission.class));
 
     // start another application and verify only app dir created
     ApplicationId appId2 = BuilderUtils.newApplicationId(1, 2);
-    Path appDir2 = new Path(suffixDir, appId2.toString());
+    Path appDir2 = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
+        new Path(remoteRootLogDir.getAbsolutePath()),
+            appId2, this.user, inputSuffix));
     aggSvc.handle(new LogHandlerAppStartedEvent(appId2, this.user, null,
         this.acls, contextWithAllContainers));
     verify(spyFs).mkdirs(eq(appDir2), isA(FsPermission.class));
 
     // start another application with the app dir already created and verify
     // we do not try to create it again
-    ApplicationId appId3 = BuilderUtils.newApplicationId(1, 3);
-    Path appDir3 = new Path(suffixDir, appId3.toString());
+    ApplicationId appId3 = BuilderUtils.newApplicationId(2, 2);
+    Path appDir3 = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
+        new Path(remoteRootLogDir.getAbsolutePath()),
+            appId3, this.user, inputSuffix));
     new File(appDir3.toUri().getPath()).mkdir();
     aggSvc.handle(new LogHandlerAppStartedEvent(appId3, this.user, null,
         this.acls, contextWithAllContainers));
     verify(spyFs, never()).mkdirs(eq(appDir3), isA(FsPermission.class));
+
+
+    // Verify we do not create bucket dir again
+    ApplicationId appId4 = BuilderUtils.newApplicationId(2, 10003);
+    Path bucketDir4 = fs.makeQualified(LogAggregationUtils.getRemoteBucketDir(
+        new Path(remoteRootLogDir.getAbsolutePath()),
+        this.user, logSuffix, appId4));
+    new File(bucketDir4.toUri().getPath()).mkdir();
+    Path appDir4 = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
+            new Path(remoteRootLogDir.getAbsolutePath()),
+            appId4, this.user, inputSuffix));
+    aggSvc.handle(new LogHandlerAppStartedEvent(appId4, this.user, null,
+        this.acls, contextWithAllContainers));
+    verify(spyFs, never()).mkdirs(eq(bucketDir4), isA(FsPermission.class));
+    verify(spyFs).mkdirs(eq(appDir4), isA(FsPermission.class));
+
     aggSvc.stop();
     aggSvc.close();
     dispatcher.stop();

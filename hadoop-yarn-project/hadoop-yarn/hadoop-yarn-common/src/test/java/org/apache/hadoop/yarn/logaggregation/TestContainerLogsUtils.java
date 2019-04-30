@@ -87,8 +87,9 @@ public final class TestContainerLogsUtils {
     createContainerLogInLocalDir(appLogsDir, containerId, fs, fileName,
         content);
     // upload container logs to remote log dir
-    Path path = new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR),
-        user + "/logs/" + appId.toString());
+    Path path = LogAggregationUtils.getRemoteAppLogDir(
+        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR)),
+            appId, user, "logs");
     if (fs.exists(path) && deleteRemoteLogDir) {
       fs.delete(path, true);
     }

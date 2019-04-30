@@ -1434,12 +1434,19 @@ public class YarnConfiguration extends Configuration {
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR = "/tmp/logs";
 
   /**
-   * The remote log dir will be created at
-   * NM_REMOTE_APP_LOG_DIR/${user}/NM_REMOTE_APP_LOG_DIR_SUFFIX/${appId}
+   * The remote log dir will be created at below location.
+   * NM_REMOTE_APP_LOG_DIR/${user}/bucket_{NM_REMOTE_APP_LOG_DIR_SUFFIX}
+   * /${bucketDir}/${appId}
    */
   public static final String NM_REMOTE_APP_LOG_DIR_SUFFIX = 
     NM_PREFIX + "remote-app-log-dir-suffix";
   public static final String DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX="logs";
+
+  /** Specifies whether Older Application Log Directory is included. */
+  public static final String NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
+      NM_PREFIX + "remote-app-log-dir-include-older";
+  public static final boolean DEFAULT_NM_REMOTE_APP_LOG_DIR_INCLUDE_OLDER =
+      true;
 
   public static final String YARN_LOG_SERVER_URL =
     YARN_PREFIX + "log.server.url";

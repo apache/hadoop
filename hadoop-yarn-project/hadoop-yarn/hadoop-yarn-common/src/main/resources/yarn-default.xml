@@ -1345,6 +1345,14 @@
   </property>
 
   <property>
+    <description>If set to true, the older application log directory
+    will be considered while fetching application logs.
+    </description>
+    <name>yarn.nodemanager.remote-app-log-dir-include-older</name>
+    <value>true</value>
+  </property>
+
+  <property>
     <description>Generate additional logs about container launches.
     Currently, this creates a copy of the launch script and lists the
     directory contents of the container work dir. When listing directory

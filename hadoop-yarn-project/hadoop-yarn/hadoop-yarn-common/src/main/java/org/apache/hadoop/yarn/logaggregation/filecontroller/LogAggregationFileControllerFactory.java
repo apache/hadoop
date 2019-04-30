@@ -34,13 +34,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.logaggregation.LogAggregationUtils;
 
 /**
  * Use {@code LogAggregationFileControllerFactory} to get the correct
@@ -159,24 +157,39 @@ public class LogAggregationFileControllerFactory {
    */
   public LogAggregationFileController getFileControllerForRead(
       ApplicationId appId, String appOwner) throws IOException {
-    StringBuilder diagnosis = new StringBuilder();
-    for(LogAggregationFileController fileController : controllers) {
+    StringBuilder diagnosticsMsg = new StringBuilder();
+
+    if (LogAggregationUtils.isOlderPathEnabled(conf)) {
+      for (LogAggregationFileController fileController : controllers) {
+        try {
+          Path remoteAppLogDir = fileController.getOlderRemoteAppLogDir(appId,
+              appOwner);
+          if (LogAggregationUtils.getNodeFiles(conf, remoteAppLogDir, appId,
+              appOwner).hasNext()) {
+            return fileController;
+          }
+        } catch (Exception ex) {
+          diagnosticsMsg.append(ex.getMessage() + "\n");
+          continue;
+        }
+      }
+    }
+
+    for (LogAggregationFileController fileController : controllers) {
       try {
         Path remoteAppLogDir = fileController.getRemoteAppLogDir(
             appId, appOwner);
-        Path qualifiedLogDir = FileContext.getFileContext(conf).makeQualified(
-            remoteAppLogDir);
-        RemoteIterator<FileStatus> nodeFiles = FileContext.getFileContext(
-            qualifiedLogDir.toUri(), conf).listStatus(remoteAppLogDir);
-        if (nodeFiles.hasNext()) {
+        if (LogAggregationUtils.getNodeFiles(conf, remoteAppLogDir,
+            appId, appOwner).hasNext()) {
           return fileController;
         }
       } catch (Exception ex) {
-        diagnosis.append(ex.getMessage() + "\n");
+        diagnosticsMsg.append(ex.getMessage() + "\n");
         continue;
       }
     }
-    throw new IOException(diagnosis.toString());
+
+    throw new IOException(diagnosticsMsg.toString());
   }
 
   private boolean validateAggregatedFileControllerName(String name) {

@@ -67,7 +67,7 @@ public class AggregatedLogDeletionService extends AbstractService {
     public LogDeletionTask(Configuration conf, long retentionSecs, ApplicationClientProtocol rmClient) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
-      this.suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+      this.suffix = LogAggregationUtils.getBucketSuffix();
       this.remoteRootLogDir =
         new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
             YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
@@ -82,8 +82,18 @@ public class AggregatedLogDeletionService extends AbstractService {
         FileSystem fs = remoteRootLogDir.getFileSystem(conf);
         for(FileStatus userDir : fs.listStatus(remoteRootLogDir)) {
           if(userDir.isDirectory()) {
-            Path userDirPath = new Path(userDir.getPath(), suffix);
-            deleteOldLogDirsFrom(userDirPath, cutoffMillis, fs, rmClient);
+            for (FileStatus suffixDir : fs.listStatus(userDir.getPath())) {
+              Path suffixDirPath = suffixDir.getPath();
+              if (suffixDir.isDirectory() && suffixDirPath.getName().
+                  startsWith(suffix)) {
+                for (FileStatus bucketDir : fs.listStatus(suffixDirPath)) {
+                  if (bucketDir.isDirectory()) {
+                    deleteOldLogDirsFrom(bucketDir.getPath(), cutoffMillis,
+                        fs, rmClient);
+                  }
+                }
+              }
+            }
           }
         }
       } catch (Throwable t) {
