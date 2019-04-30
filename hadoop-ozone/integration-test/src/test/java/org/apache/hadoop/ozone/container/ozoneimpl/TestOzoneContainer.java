@@ -102,7 +102,7 @@ public class TestOzoneContainer {
   public void testOzoneContainerStart() throws Exception {
     OzoneConfiguration conf = newOzoneConfiguration();
     MiniOzoneCluster cluster = null;
-    OzoneContainer container1 = null;
+    OzoneContainer container = null;
 
     try {
       cluster = MiniOzoneCluster.newBuilder(conf).build();
@@ -122,26 +122,27 @@ public class TestOzoneContainer {
       DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
       Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
       Mockito.when(context.getParent()).thenReturn(dsm);
-
-      container1 = new OzoneContainer(datanodeDetails, conf,
+      container = new OzoneContainer(datanodeDetails, conf,
           context, null);
 
-      container1.getWriteChannel().start();
-      Assert.assertTrue(container1.getWriteChannel().isRunning());
-      container1.getReadChannel().start();
-      Assert.assertTrue(container1.getReadChannel().isRunning());
+      String scmId = UUID.randomUUID().toString();
+      container.start(scmId);
+      try {
+        container.start(scmId);
+      } catch (Exception e) {
+        Assert.fail();
+      }
 
-      container1.start(UUID.randomUUID().toString());
-      Assert.assertTrue(container1.getWriteChannel().isRunning());
-      Assert.assertTrue(container1.getReadChannel().isRunning());
-
-      container1.stop();
-      Assert.assertFalse(container1.getWriteChannel().isRunning());
-      Assert.assertFalse(container1.getReadChannel().isRunning());
+      container.stop();
+      try {
+        container.stop();
+      } catch (Exception e) {
+        Assert.fail();
+      }
 
     } finally {
-      if (container1 != null) {
-        container1.stop();
+      if (container != null) {
+        container.stop();
       }
       if (cluster != null) {
         cluster.shutdown();

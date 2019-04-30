@@ -36,9 +36,6 @@ public interface XceiverServerSpi {
   /** Stops a running server. */
   void stop();
 
-  /** Check if the server is running. */
-  boolean isRunning();
-
   /** Get server IPC port. */
   int getIPCPort();
 

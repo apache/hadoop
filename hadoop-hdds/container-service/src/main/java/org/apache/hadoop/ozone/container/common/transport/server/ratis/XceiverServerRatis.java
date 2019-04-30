@@ -111,6 +111,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
   private final long cacheEntryExpiryInteval;
+  private volatile boolean isStarted = false;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
@@ -413,28 +414,29 @@ public final class XceiverServerRatis extends XceiverServer {
 
   @Override
   public void start() throws IOException {
-    LOG.info("Starting {} {} at port {}", getClass().getSimpleName(),
-        server.getId(), getIPCPort());
-    chunkExecutor.prestartAllCoreThreads();
-    server.start();
-  }
-
-  @Override
-  public void stop() {
-    try {
-      // shutdown server before the executors as while shutting down,
-      // some of the tasks would be executed using the executors.
-      server.close();
-      chunkExecutor.shutdown();
-      executors.forEach(ExecutorService::shutdown);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    if (!isStarted) {
+      LOG.info("Starting {} {} at port {}", getClass().getSimpleName(),
+          server.getId(), getIPCPort());
+      chunkExecutor.prestartAllCoreThreads();
+      server.start();
+      isStarted = true;
     }
   }
 
   @Override
-  public boolean isRunning() {
-    return server.getLifeCycleState().isRunning();
+  public void stop() {
+    if (isStarted) {
+      try {
+        // shutdown server before the executors as while shutting down,
+        // some of the tasks would be executed using the executors.
+        server.close();
+        chunkExecutor.shutdown();
+        executors.forEach(ExecutorService::shutdown);
+        isStarted = false;
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @Override
