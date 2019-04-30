@@ -190,7 +190,7 @@ removed on `S3AFileSystem` level.
 
 By default, S3AFileSystem write operations will fail when updates to
 S3Guard metadata fail. S3AFileSystem first writes the file to S3 and then
-updates the metadata in S3Guard. If the metadata write fails, 
+updates the metadata in S3Guard. If the metadata write fails,
 `MetadataPersistenceException` is thrown.  The file in S3 **is not** rolled
 back.
 
