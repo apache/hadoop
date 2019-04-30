@@ -505,7 +505,7 @@ public class KeyOutputStream extends OutputStream {
     cleanup();
     closed = true;
   }
-  
+
   private void handleRetry(IOException exception, long len) throws IOException {
     RetryPolicy retryPolicy =
         retryPolicyMap.get(checkForException(exception).getClass());
