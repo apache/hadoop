@@ -32,15 +32,13 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import com.google.common.base.Preconditions;
-
 /**
  * Class for creating datanode.id file in yaml format.
  */
-public class DatanodeIdYaml {
+public final class DatanodeIdYaml {
 
   private DatanodeIdYaml() {
-
+    // static helper methods only, no state.
   }
 
   /**
