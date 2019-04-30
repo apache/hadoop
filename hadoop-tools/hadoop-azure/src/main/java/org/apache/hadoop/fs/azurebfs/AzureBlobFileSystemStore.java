@@ -655,10 +655,10 @@ public class AzureBlobFileSystemStore implements Closeable {
     SimpleDateFormat simpleDateFormat = new SimpleDateFormat(TOKEN_DATE_PATTERN, Locale.US);
     String date = simpleDateFormat.format(new Date());
     String token = String.format("%06d!%s!%06d!%s!%06d!%s!",
-            path.length(),path, startFrom.length(), startFrom, date.length(), date);
+            path.length(), path, startFrom.length(), startFrom, date.length(), date);
     String base64EncodedToken = Base64.encode(token.getBytes(StandardCharsets.UTF_8));
 
-    StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 4);
+    StringBuilder encodedTokenBuilder = new StringBuilder(base64EncodedToken.length() + 5);
     encodedTokenBuilder.append(String.format("%s!%d!", TOKEN_VERSION, base64EncodedToken.length()));
 
     for (int i = 0; i < base64EncodedToken.length(); i++) {
