@@ -40,8 +40,23 @@
 
 // Bit fields for hdfsFile_internal flags
 #define HDFS_FILE_SUPPORTS_DIRECT_READ (1<<0)
+#define HDFS_FILE_SUPPORTS_DIRECT_PREAD (1<<1)
 
+/**
+ * Reads bytes using the read(ByteBuffer) API. By using Java
+ * DirectByteBuffers we can avoid copying the bytes onto the Java heap.
+ * Instead the data will be directly copied from kernel space to the C heap.
+ */
 tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length);
+
+/**
+ * Reads bytes using the read(long, ByteBuffer) API. By using Java
+ * DirectByteBuffers we can avoid copying the bytes onto the Java heap.
+ * Instead the data will be directly copied from kernel space to the C heap.
+ */
+tSize preadDirect(hdfsFS fs, hdfsFile file, tOffset position, void* buffer,
+                  tSize length);
+
 static void hdfsFreeFileInfoEntry(hdfsFileInfo *hdfsFileInfo);
 
 /**
@@ -285,13 +300,24 @@ int hdfsFileIsOpenForWrite(hdfsFile file)
 
 int hdfsFileUsesDirectRead(hdfsFile file)
 {
-    return !!(file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ);
+    return (file->flags & HDFS_FILE_SUPPORTS_DIRECT_READ) != 0;
 }
 
 void hdfsFileDisableDirectRead(hdfsFile file)
 {
     file->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_READ;
 }
+
+int hdfsFileUsesDirectPread(hdfsFile file)
+{
+    return (file->flags & HDFS_FILE_SUPPORTS_DIRECT_PREAD) != 0;
+}
+
+void hdfsFileDisableDirectPread(hdfsFile file)
+{
+    file->flags &= ~HDFS_FILE_SUPPORTS_DIRECT_PREAD;
+}
+
 
 int hdfsDisableDomainSocketSecurity(void)
 {
@@ -985,6 +1011,62 @@ int hdfsStreamBuilderSetDefaultBlockSize(struct hdfsStreamBuilder *bld,
     return 0;
 }
 
+/**
+ * Delegates to FsDataInputStream#hasCapability(String). Used to check if a
+ * given input stream supports certain methods, such as
+ * ByteBufferReadable#read(ByteBuffer).
+ *
+ * @param jFile the FsDataInputStream to call hasCapability on
+ * @param capability the name of the capability to query; for a full list of
+ *        possible values see StreamCapabilities
+ *
+ * @return true if the given jFile has the given capability, false otherwise
+ *
+ * @see org.apache.hadoop.fs.StreamCapabilities
+ */
+static int hdfsHasStreamCapability(jobject jFile,
+        const char *capability) {
+    int ret = 0;
+    jthrowable jthr = NULL;
+    jvalue jVal;
+    jstring jCapabilityString = NULL;
+
+    /* Get the JNIEnv* corresponding to current thread */
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+        errno = EINTERNAL;
+        return 0;
+    }
+
+    jthr = newJavaStr(env, capability, &jCapabilityString);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsHasStreamCapability(%s): newJavaStr", capability);
+        goto done;
+    }
+    jthr = invokeMethod(env, &jVal, INSTANCE, jFile,
+            JC_FS_DATA_INPUT_STREAM, "hasCapability", "(Ljava/lang/String;)Z",
+            jCapabilityString);
+    if (jthr) {
+        ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+                "hdfsHasStreamCapability(%s): FSDataInputStream#hasCapability",
+                capability);
+        goto done;
+    }
+
+done:
+    destroyLocalReference(env, jthr);
+    destroyLocalReference(env, jCapabilityString);
+    if (ret) {
+        errno = ret;
+        return 0;
+    }
+    if (jVal.z == JNI_TRUE) {
+        return 1;
+    }
+    return 0;
+}
+
 static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
                   int32_t bufferSize, int16_t replication, int64_t blockSize)
 {
@@ -995,7 +1077,7 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
        return f{is|os};
     */
     int accmode = flags & O_ACCMODE;
-    jstring jStrBufferSize = NULL, jStrReplication = NULL, jCapabilityString = NULL;
+    jstring jStrBufferSize = NULL, jStrReplication = NULL;
     jobject jConfiguration = NULL, jPath = NULL, jFile = NULL;
     jobject jFS = (jobject)fs;
     jthrowable jthr;
@@ -1024,13 +1106,15 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
       errno = ENOTSUP;
       return NULL;
     } else {
-      fprintf(stderr, "ERROR: cannot open an hdfs file in mode 0x%x\n", accmode);
+      fprintf(stderr, "ERROR: cannot open an hdfs file in mode 0x%x\n",
+              accmode);
       errno = EINVAL;
       return NULL;
     }
 
     if ((flags & O_CREAT) && (flags & O_EXCL)) {
-      fprintf(stderr, "WARN: hdfs does not truly support O_CREATE && O_EXCL\n");
+      fprintf(stderr,
+              "WARN: hdfs does not truly support O_CREATE && O_EXCL\n");
     }
 
     if (accmode == O_RDONLY) {
@@ -1153,23 +1237,16 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
     file->flags = 0;
 
     if ((flags & O_WRONLY) == 0) {
-        // Check the StreamCapabilities of jFile to see if we can do direct reads
-        jthr = newJavaStr(env, "in:readbytebuffer", &jCapabilityString);
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                                        "hdfsOpenFile(%s): newJavaStr", path);
-            goto done;
-        }
-        jthr = invokeMethod(env, &jVal, INSTANCE, jFile,
-                JC_FS_DATA_INPUT_STREAM, "hasCapability",
-                "(Ljava/lang/String;)Z", jCapabilityString);
-        if (jthr) {
-            ret = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
-                    "hdfsOpenFile(%s): FSDataInputStream#hasCapability", path);
-            goto done;
-        }
-        if (jVal.z) {
+        // Check the StreamCapabilities of jFile to see if we can do direct
+        // reads
+        if (hdfsHasStreamCapability(jFile, "in:readbytebuffer")) {
             file->flags |= HDFS_FILE_SUPPORTS_DIRECT_READ;
+        }
+
+        // Check the StreamCapabilities of jFile to see if we can do direct
+        // preads
+        if (hdfsHasStreamCapability(jFile, "in:preadbytebuffer")) {
+            file->flags |= HDFS_FILE_SUPPORTS_DIRECT_PREAD;
         }
     }
     ret = 0;
@@ -1177,10 +1254,9 @@ static hdfsFile hdfsOpenFileImpl(hdfsFS fs, const char *path, int flags,
 done:
     destroyLocalReference(env, jStrBufferSize);
     destroyLocalReference(env, jStrReplication);
-    destroyLocalReference(env, jConfiguration); 
-    destroyLocalReference(env, jPath); 
+    destroyLocalReference(env, jConfiguration);
+    destroyLocalReference(env, jPath);
     destroyLocalReference(env, jFile);
-    destroyLocalReference(env, jCapabilityString);
     if (ret) {
         if (file) {
             if (file->file) {
@@ -1385,6 +1461,13 @@ static int readPrepare(JNIEnv* env, hdfsFS fs, hdfsFile f,
     return 0;
 }
 
+/**
+ * If the underlying stream supports the ByteBufferReadable interface then
+ * this method will transparently use read(ByteBuffer). This can help
+ * improve performance as it avoids unnecessarily copying data on to the Java
+ * heap. Instead the data will be directly copied from kernel space to the C
+ * heap.
+ */
 tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
     jobject jInputStream;
@@ -1459,12 +1542,11 @@ tSize hdfsRead(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
     return jVal.i;
 }
 
-// Reads using the read(ByteBuffer) API, which does fewer copies
 tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
 {
     // JAVA EQUIVALENT:
-    //  ByteBuffer bbuffer = ByteBuffer.allocateDirect(length) // wraps C buffer
-    //  fis.read(bbuffer);
+    //  ByteBuffer buf = ByteBuffer.allocateDirect(length) // wraps C buffer
+    //  fis.read(buf);
 
     jobject jInputStream;
     jvalue jVal;
@@ -1499,9 +1581,25 @@ tSize readDirect(hdfsFS fs, hdfsFile f, void* buffer, tSize length)
             "readDirect: FSDataInputStream#read");
         return -1;
     }
-    return (jVal.i < 0) ? 0 : jVal.i;
+    // Reached EOF, return 0
+    if (jVal.i < 0) {
+        return 0;
+    }
+    // 0 bytes read, return error
+    if (jVal.i == 0) {
+        errno = EINTR;
+        return -1;
+    }
+    return jVal.i;
 }
 
+/**
+ * If the underlying stream supports the ByteBufferPositionedReadable
+ * interface then this method will transparently use read(long, ByteBuffer).
+ * This can help improve performance as it avoids unnecessarily copying data
+ * on to the Java heap. Instead the data will be directly copied from kernel
+ * space to the C heap.
+ */
 tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
                 void* buffer, tSize length)
 {
@@ -1519,6 +1617,10 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
     if (!f || f->type == HDFS_STREAM_UNINITIALIZED) {
         errno = EBADF;
         return -1;
+    }
+
+    if (f->flags & HDFS_FILE_SUPPORTS_DIRECT_PREAD) {
+      return preadDirect(fs, f, position, buffer, length);
     }
 
     env = getJNIEnv();
@@ -1566,6 +1668,60 @@ tSize hdfsPread(hdfsFS fs, hdfsFile f, tOffset position,
     if ((*env)->ExceptionCheck(env)) {
         errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
             "hdfsPread: GetByteArrayRegion");
+        return -1;
+    }
+    return jVal.i;
+}
+
+tSize preadDirect(hdfsFS fs, hdfsFile f, tOffset position, void* buffer,
+                  tSize length)
+{
+    // JAVA EQUIVALENT:
+    //  ByteBuffer buf = ByteBuffer.allocateDirect(length) // wraps C buffer
+    //  fis.read(position, buf);
+
+    jvalue jVal;
+    jthrowable jthr;
+    jobject bb;
+
+    //Get the JNIEnv* corresponding to current thread
+    JNIEnv* env = getJNIEnv();
+    if (env == NULL) {
+      errno = EINTERNAL;
+      return -1;
+    }
+
+    //Error checking... make sure that this file is 'readable'
+    if (f->type != HDFS_STREAM_INPUT) {
+        fprintf(stderr, "Cannot read from a non-InputStream object!\n");
+        errno = EINVAL;
+        return -1;
+    }
+
+    //Read the requisite bytes
+    bb = (*env)->NewDirectByteBuffer(env, buffer, length);
+    if (bb == NULL) {
+        errno = printPendingExceptionAndFree(env, PRINT_EXC_ALL,
+            "readDirect: NewDirectByteBuffer");
+        return -1;
+    }
+
+    jthr = invokeMethod(env, &jVal, INSTANCE, f->file,
+            JC_FS_DATA_INPUT_STREAM, "read", "(JLjava/nio/ByteBuffer;)I",
+            position, bb);
+    destroyLocalReference(env, bb);
+    if (jthr) {
+       errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,
+           "preadDirect: FSDataInputStream#read");
+       return -1;
+    }
+    // Reached EOF, return 0
+    if (jVal.i < 0) {
+        return 0;
+    }
+    // 0 bytes read, return error
+    if (jVal.i == 0) {
+        errno = EINTR;
         return -1;
     }
     return jVal.i;
