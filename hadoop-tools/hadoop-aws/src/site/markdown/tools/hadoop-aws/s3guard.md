@@ -98,7 +98,10 @@ This offers no metadata storage, and effectively disables S3Guard.
 
 More settings will may be added in the future.
 Currently the only Metadata Store-independent setting, besides the
-implementation class above, is the *allow authoritative* flag.
+implementation class above, are the *allow authoritative* and *fail-on-error*
+flags.
+
+#### Allow Authoritative
 
 The _authoritative_ expression in S3Guard is present in two different layers, for
 two different reasons:
@@ -182,6 +185,46 @@ removed on `S3AFileSystem` level.
     <value>3600000</value>
 </property>
 ```
+
+#### Fail on Error
+
+By default, S3AFileSystem write operations will fail when updates to
+S3Guard metadata fail. S3AFileSystem first writes the file to S3 and then
+updates the metadata in S3Guard. If the metadata write fails,
+`MetadataPersistenceException` is thrown.  The file in S3 **is not** rolled
+back.
+
+If the write operation cannot be programmatically retried, the S3Guard metadata
+for the given file can be corrected with a command like the following:
+
+```bash
+hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
+```
+
+Programmatic retries of the original operation would require overwrite=true.
+Suppose the original operation was FileSystem.create(myFile, overwrite=false).
+If this operation failed with `MetadataPersistenceException` a repeat of the
+same operation would result in `FileAlreadyExistsException` since the original
+operation successfully created the file in S3 and only failed in writing the
+metadata to S3Guard.
+
+Metadata update failures can be downgraded to ERROR logging instead of exception
+by setting the following configuration:
+
+```xml
+<property>
+    <name>fs.s3a.metadatastore.fail.on.write.error</name>
+    <value>false</value>
+</property>
+```
+
+Setting this false is dangerous as it could result in the type of issue S3Guard
+is designed to avoid.  For example, a reader may see an inconsistent listing
+after a recent write since S3Guard may not contain metadata about the recently
+written file due to a metadata write error.
+
+As with the default setting, the new/updated file is still in S3 and **is not**
+rolled back. The S3Guard metadata is likely to be out of sync.
 
 ### 3. Configure the Metadata Store.
 
@@ -1152,7 +1195,7 @@ java.io.IOException: Invalid region specified "iceland-2":
 
 The region specified in `fs.s3a.s3guard.ddb.region` is invalid.
 
-# "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST"
+### "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST"
 
 ```
 ValidationException; One or more parameter values were invalid:
@@ -1163,6 +1206,14 @@ ValidationException; One or more parameter values were invalid:
 
 On-Demand DynamoDB tables do not have any fixed capacity -it is an error
 to try to change it with the `set-capacity` command.
+
+### `MetadataPersistenceException`
+
+A filesystem write operation failed to persist metadata to S3Guard. The file was
+successfully written to S3 and now the S3Guard metadata is likely to be out of
+sync.
+
+See [Fail on Error](#fail-on-error) for more detail.
 
 ## Other Topics
 

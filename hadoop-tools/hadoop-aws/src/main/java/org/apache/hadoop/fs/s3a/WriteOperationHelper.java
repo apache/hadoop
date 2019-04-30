@@ -247,22 +247,21 @@ public class WriteOperationHelper {
       throw new IOException(
           "No upload parts in multipart upload to " + destKey);
     }
-    return invoker.retry("Completing multipart commit", destKey,
+    CompleteMultipartUploadResult uploadResult = invoker.retry("Completing multipart commit", destKey,
         true,
         retrying,
         () -> {
           // a copy of the list is required, so that the AWS SDK doesn't
           // attempt to sort an unmodifiable list.
-          CompleteMultipartUploadResult result =
-              owner.getAmazonS3Client().completeMultipartUpload(
-                  new CompleteMultipartUploadRequest(bucket,
-                      destKey,
-                      uploadId,
-                      new ArrayList<>(partETags)));
-          owner.finishedWrite(destKey, length);
-          return result;
+          return owner.getAmazonS3Client().completeMultipartUpload(
+              new CompleteMultipartUploadRequest(bucket,
+                  destKey,
+                  uploadId,
+                  new ArrayList<>(partETags)));
         }
     );
+    owner.finishedWrite(destKey, length);
+    return uploadResult;
   }
 
   /**
