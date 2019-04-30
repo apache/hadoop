@@ -183,8 +183,12 @@ public class OzoneContainer {
   public void start(String scmId) throws IOException {
     LOG.info("Attempting to start container services.");
     startContainerScrub();
-    writeChannel.start();
-    readChannel.start();
+    if (!writeChannel.isRunning()) {
+      writeChannel.start();
+    }
+    if (!readChannel.isRunning()) {
+      readChannel.start();
+    }
     hddsDispatcher.init();
     hddsDispatcher.setScmId(scmId);
   }
@@ -196,8 +200,12 @@ public class OzoneContainer {
     //TODO: at end of container IO integration work.
     LOG.info("Attempting to stop container services.");
     stopContainerScrub();
-    writeChannel.stop();
-    readChannel.stop();
+    if (writeChannel.isRunning()) {
+      writeChannel.stop();
+    }
+    if (readChannel.isRunning()) {
+      readChannel.stop();
+    }
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
   }

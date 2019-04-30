@@ -98,6 +98,58 @@ public class TestOzoneContainer {
     }
   }
 
+  @Test
+  public void testOzoneContainerStart() throws Exception {
+    OzoneConfiguration conf = newOzoneConfiguration();
+    MiniOzoneCluster cluster = null;
+    OzoneContainer container1 = null;
+
+    try {
+      cluster = MiniOzoneCluster.newBuilder(conf).build();
+      cluster.waitForClusterToBeReady();
+
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      conf.set(HDDS_DATANODE_DIR_KEY, tempFolder.getRoot().getPath());
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getFirstNode()
+              .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
+      conf.setBoolean(
+          OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
+
+
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+      StateContext context = Mockito.mock(StateContext.class);
+      DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
+      Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(dsm);
+
+      container1 = new OzoneContainer(datanodeDetails, conf,
+          context, null);
+
+      container1.getWriteChannel().start();
+      Assert.assertTrue(container1.getWriteChannel().isRunning());
+      container1.getReadChannel().start();
+      Assert.assertTrue(container1.getReadChannel().isRunning());
+
+      container1.start(UUID.randomUUID().toString());
+      Assert.assertTrue(container1.getWriteChannel().isRunning());
+      Assert.assertTrue(container1.getReadChannel().isRunning());
+
+      container1.stop();
+      Assert.assertFalse(container1.getWriteChannel().isRunning());
+      Assert.assertFalse(container1.getReadChannel().isRunning());
+
+    } finally {
+      if (container1 != null) {
+        container1.stop();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+
   static OzoneConfiguration newOzoneConfiguration() {
     final OzoneConfiguration conf = new OzoneConfiguration();
     return conf;

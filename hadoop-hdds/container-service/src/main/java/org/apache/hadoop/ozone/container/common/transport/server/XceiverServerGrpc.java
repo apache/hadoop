@@ -69,6 +69,7 @@ public final class XceiverServerGrpc extends XceiverServer {
   private UUID id;
   private Server server;
   private final ContainerDispatcher storageContainer;
+  private boolean isRunning;
 
   /**
    * Constructs a Grpc server class.
@@ -162,11 +163,18 @@ public final class XceiverServerGrpc extends XceiverServer {
   @Override
   public void start() throws IOException {
     server.start();
+    isRunning = true;
   }
 
   @Override
   public void stop() {
     server.shutdown();
+    isRunning = false;
+  }
+
+  @Override
+  public boolean isRunning() {
+    return isRunning;
   }
 
   @Override

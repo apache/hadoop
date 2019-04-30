@@ -433,6 +433,11 @@ public final class XceiverServerRatis extends XceiverServer {
   }
 
   @Override
+  public boolean isRunning() {
+    return server.getLifeCycleState().isRunning();
+  }
+
+  @Override
   public int getIPCPort() {
     return port;
   }
