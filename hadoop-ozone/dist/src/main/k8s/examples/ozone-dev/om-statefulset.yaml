@@ -62,6 +62,12 @@ spec:
         env:
         - name: WAITFOR
           value: scm-0.scm:9876
+        - name: JAEGER_SAMPLER_TYPE
+          value: probabilistic
+        - name: JAEGER_SAMPLER_PARAM
+          value: "0.01"
+        - name: JAEGER_AGENT_HOST
+          value: jaeger-0.jaeger
         envFrom:
         - configMapRef:
             name: config

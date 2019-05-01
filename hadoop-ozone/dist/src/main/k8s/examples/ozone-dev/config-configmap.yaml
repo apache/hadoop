@@ -33,3 +33,5 @@ data:
   LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern: '%d{yyyy-MM-dd
     HH:mm:ss} %-5p %c{1}:%L - %m%n'
   OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+  OZONE-SITE.XML_hdds.profiler.endpoint.enabled: "true"
+  ASYNC_PROFILER_HOME: /opt/profiler

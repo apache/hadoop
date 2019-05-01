@@ -14,40 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: v1
+kind: Service
 metadata:
-  name: freon
-  labels:
-    app.kubernetes.io/component: ozone
+  name: jaeger-public
 spec:
-  replicas: 1
   selector:
-    matchLabels:
-      app: ozone
-      component: freon
-  template:
-    metadata:
-      labels:
-        app: ozone
-        component: freon
-    spec:
-      containers:
-      - name: freon
-        image: '@docker.image@'
-        args:
-        - ozone
-        - freon
-        - rk
-        - --factor=THREE
-        - --replicationType=RATIS
-        envFrom:
-        - configMapRef:
-            name: config
-        env:
-        - name: JAEGER_SAMPLER_TYPE
-          value: probabilistic
-        - name: JAEGER_SAMPLER_PARAM
-          value: "0.01"
-        - name: JAEGER_AGENT_HOST
-          value: jaeger-0.jaeger
+    app: jaeger
+    component: jaeger
+  ports:
+  - name: ui
+    port: 16686
+  type: NodePort

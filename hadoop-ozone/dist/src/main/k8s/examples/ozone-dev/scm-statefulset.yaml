@@ -56,6 +56,13 @@ spec:
         args:
         - ozone
         - scm
+        env:
+        - name: JAEGER_SAMPLER_TYPE
+          value: probabilistic
+        - name: JAEGER_SAMPLER_PARAM
+          value: "0.01"
+        - name: JAEGER_AGENT_HOST
+          value: jaeger-0.jaeger
         envFrom:
         - configMapRef:
             name: config
