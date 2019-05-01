@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathsDoNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -177,7 +178,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    *
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "bulk delete={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {false},
@@ -445,6 +446,14 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, (long) filecount);
+    // now lets look at the destination.
+    // even with S3Guard on, we expect the destination to match that of our
+    // the remote state.
+    // the test will exist
+    assertIsDirectory(destDir);
+    assertFileCount("files in the source directory", roleFS,
+        destDir, (long) filecount);
+
   }
 
   /**
@@ -550,8 +559,14 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           "Renaming " + src + " to " + dest,
           "",
           () -> {
-            roleFS.rename(src, dest);
-            return ContractTestUtils.ls(getFileSystem(), src.getParent());
+            boolean result = roleFS.rename(src, dest);
+            LOG.error("Rename should have been forbidden but returned {}",
+                result);
+            LOG.error("Source directory:\n{}",
+                ContractTestUtils.ls(getFileSystem(), src.getParent()));
+            LOG.error("Destination directory:\n{}",
+                ContractTestUtils.ls(getFileSystem(), src.getParent()));
+            return "Rename unexpectedly returned " + result;
           });
     }
   }

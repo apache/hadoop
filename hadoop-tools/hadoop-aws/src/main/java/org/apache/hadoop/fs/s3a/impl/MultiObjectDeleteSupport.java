@@ -117,17 +117,41 @@ public final class MultiObjectDeleteSupport {
         keysToDelete.size(),
         deleteException.getErrors().size(),
         deleteException.getDeletedObjects().size());
-    Function<String, Path> qualifier = context.getKeyToPathQualifier();
     // convert the collection of keys being deleted into paths
-    final List<Path> pathsBeingDeleted = keysToDelete.stream()
-        .map((keyVersion) -> qualifier.apply(keyVersion.getKey()))
-        .collect(Collectors.toList());
+    final List<Path> pathsBeingDeleted = keysToPaths(keysToDelete);
     // Take this is list of paths
     // extract all undeleted entries contained in the exception and
     // then removes them from the original list.
     List<Path> undeleted = removeUndeletedPaths(deleteException, pathsBeingDeleted,
-        qualifier);
+        context.getKeyToPathQualifier());
     return Pair.of(undeleted, pathsBeingDeleted);
+  }
+
+  /**
+   * Given a list of delete requests, convert them all to paths.
+   * @param keysToDelete list of keys for the delete operation.
+   * @return the paths.
+   */
+  public List<Path> keysToPaths(
+      final Collection<DeleteObjectsRequest.KeyVersion> keysToDelete) {
+    Function<String, Path> qualifier
+        = context.getKeyToPathQualifier();
+    return convertToPaths(keysToDelete, qualifier);
+  }
+
+  /**
+   * Given a list of delete requests, convert them all to paths.
+   * @param keysToDelete list of keys for the delete operation.
+   * @param qualifier path qualifier
+   * @return the paths.
+   */
+  public static List<Path> convertToPaths(
+      final Collection<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final Function<String, Path> qualifier) {
+    return keysToDelete.stream()
+        .map((keyVersion) ->
+          qualifier.apply(keyVersion.getKey()))
+        .collect(Collectors.toList());
   }
 
   /**
@@ -145,8 +169,8 @@ public final class MultiObjectDeleteSupport {
     final MetadataStore metadataStore =
         checkNotNull(context.getMetadataStore(), "context metadatastore");
     final List<Pair<Path, IOException>> failures = new ArrayList<>();
-    final Pair<List<Path>, List<Path>> outcome = splitUndeletedKeys(
-        deleteException, keysToDelete);
+    final Pair<List<Path>, List<Path>> outcome =
+        splitUndeletedKeys(deleteException, keysToDelete);
     List<Path> deleted = outcome.getRight();
     List<Path> undeleted = outcome.getLeft();
     // delete the paths but recover
@@ -204,4 +228,15 @@ public final class MultiObjectDeleteSupport {
     return undeleted;
   }
 
+  /**
+   * A delete operation failed.
+   * Currently just returns the list of all paths.
+   * @param ex exception.
+   * @param keysToDelete the keys which were being deleted.
+   * @return all paths which were not deleted.
+   */
+  public List<Path> processDeleteFailureGenericException(Exception ex,
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
+    return keysToPaths(keysToDelete);
+  }
 }

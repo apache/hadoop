@@ -84,7 +84,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.impl.WrappedIOException;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
@@ -1761,6 +1760,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @VisibleForTesting
   public Invoker getInvoker() {
     return invoker;
+  }
+
+  @Override
+  public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+      final Path source,
+      final Path dest) throws IOException {
+    return new DelayedUpdateRenameOperation(storeContext, this, source, dest);
   }
 
   /**

@@ -29,6 +29,8 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -530,4 +532,10 @@ public class LocalMetadataStore implements MetadataStore {
     }
   }
 
+  @Override
+  public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+      final Path source,
+      final Path dest) throws IOException {
+    return new DelayedUpdateRenameOperation(storeContext, this, source, dest);
+  }
 }

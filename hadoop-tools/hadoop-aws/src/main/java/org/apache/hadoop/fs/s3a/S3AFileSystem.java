@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -82,6 +81,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -91,6 +92,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.s3guard.RenameOperation;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -1215,113 +1217,139 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     }
 
-    // If we have a MetadataStore, track deletions/creations.
-    Collection<Path> srcPaths = null;
-    List<PathMetadata> dstMetas = null;
-    if (hasMetadataStore()) {
-      srcPaths = new HashSet<>(); // srcPaths need fast look up before put
-      dstMetas = new ArrayList<>();
-    }
-    // TODO S3Guard HADOOP-13761: retries when source paths are not visible yet
-    // TODO S3Guard: performance: mark destination dirs as authoritative
+    // Validation completed: time to begin the operation.
+    // The store-specific rename operation is used to keep the store
+    // to date with the in-progress operation.
+    // for the null store, these are all no-ops.
+    final RenameOperation renameOperation =
+        metadataStore.initiateRenameOperation(
+            createStoreContext(),
+            src, dest);
+    try {
+      if (srcStatus.isFile()) {
+        LOG.debug("rename: renaming file {} to {}", src, dst);
+        long length = srcStatus.getLen();
+        if (dstStatus != null && dstStatus.isDirectory()) {
+          String newDstKey = maybeAddTrailingSlash(dstKey);
+          String filename =
+              srcKey.substring(pathToKey(src.getParent()).length()+1);
+          newDstKey = newDstKey + filename;
+          copyFile(srcKey, newDstKey, length);
+          Path destPath = keyToQualifiedPath(newDstKey);
+          renameOperation.fileCopied(
+              srcStatus.getPath(),
+              srcStatus,
+              destPath,
+              getDefaultBlockSize(destPath),
+              false);
 
-    // Ok! Time to start
-    if (srcStatus.isFile()) {
-      LOG.debug("rename: renaming file {} to {}", src, dst);
-      long length = srcStatus.getLen();
-      if (dstStatus != null && dstStatus.isDirectory()) {
-        String newDstKey = maybeAddTrailingSlash(dstKey);
-        String filename =
-            srcKey.substring(pathToKey(src.getParent()).length()+1);
-        newDstKey = newDstKey + filename;
-        copyFile(srcKey, newDstKey, length);
-        S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src,
-            keyToQualifiedPath(newDstKey), length, getDefaultBlockSize(dst),
-            username);
+        } else {
+          copyFile(srcKey, dstKey, srcStatus.getLen());
+          renameOperation.fileCopied(srcStatus.getPath(),
+              srcStatus,
+              dst,
+              getDefaultBlockSize(dst),
+              false);
+        }
+        innerDelete(srcStatus, false);
       } else {
-        copyFile(srcKey, dstKey, srcStatus.getLen());
-        S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, src, dst,
-            length, getDefaultBlockSize(dst), username);
-      }
-      innerDelete(srcStatus, false);
-    } else {
-      LOG.debug("rename: renaming directory {} to {}", src, dst);
+        LOG.debug("rename: renaming directory {} to {}", src, dst);
 
-      // This is a directory to directory copy
-      dstKey = maybeAddTrailingSlash(dstKey);
-      srcKey = maybeAddTrailingSlash(srcKey);
+        // This is a directory to directory copy
+        dstKey = maybeAddTrailingSlash(dstKey);
+        srcKey = maybeAddTrailingSlash(srcKey);
 
-      //Verify dest is not a child of the source directory
-      if (dstKey.startsWith(srcKey)) {
-        throw new RenameFailedException(srcKey, dstKey,
-            "cannot rename a directory to a subdirectory of itself ");
-      }
+        //Verify dest is not a child of the source directory
+        if (dstKey.startsWith(srcKey)) {
+          throw new RenameFailedException(srcKey, dstKey,
+              "cannot rename a directory to a subdirectory of itself ");
+        }
 
-      List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
-      if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
-        // delete unnecessary fake directory.
-        keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
-      }
+        List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+        if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
+          // delete unnecessary fake directory.
+          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
+        }
 
-      Path parentPath = keyToQualifiedPath(srcKey);
-      RemoteIterator<LocatedFileStatus> iterator = listFilesAndEmptyDirectories(
-          parentPath, true);
-      while (iterator.hasNext()) {
-        LocatedFileStatus status = iterator.next();
-        long length = status.getLen();
-        String k = pathToKey(status.getPath());
-        String key = (status.isDirectory() && !k.endsWith("/"))
-            ? k + "/"
-            : k;
-        keysToDelete
-            .add(new DeleteObjectsRequest.KeyVersion(key));
-        String newDstKey =
-            dstKey + key.substring(srcKey.length());
-        Path childSrc = keyToQualifiedPath(key);
-        Path childDst = keyToQualifiedPath(newDstKey);
+        Path parentPath = keyToQualifiedPath(srcKey);
+        RemoteIterator<LocatedFileStatus> iterator = listFilesAndEmptyDirectories(
+            parentPath, true);
+        while (iterator.hasNext()) {
+          LocatedFileStatus status = iterator.next();
+          long length = status.getLen();
+          String k = pathToKey(status.getPath());
+          String key = (status.isDirectory() && !k.endsWith("/"))
+              ? k + "/"
+              : k;
+          keysToDelete
+              .add(new DeleteObjectsRequest.KeyVersion(key));
+          String newDstKey =
+              dstKey + key.substring(srcKey.length());
+          Path childSrc = keyToQualifiedPath(key);
+          Path childDst = keyToQualifiedPath(newDstKey);
 
-        // set up for async operation but run in sync mode initially.
-        // we will need to parallelize updates to metastore
-        // for that.
-        CompletableFuture<Path> copy = submit(boundedThreadPool,
-            () -> copySourceAndUpdateMetastore(status, key, newDstKey,
-                childDst);
-        waitForCompletion(copy);
+          // set up for async operation but run in sync mode initially.
+          // we will need to parallelize updates to metastore
+          // for that.
+          CompletableFuture<Path> copy = submit(boundedThreadPool, () ->
+              copySourceAndUpdateMetastore(status, key, newDstKey, childDst));
+          waitForCompletion(copy);
 
-        if (hasMetadataStore()) {
-          // with a metadata store, the object entries need to be updated,
-          // including, potentially, the ancestors
           if (objectRepresentsDirectory(key, length)) {
-            S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, childSrc,
-                childDst, username);
+            renameOperation.directoryMarkerCopied(status, childDst, true);
           } else {
-            S3Guard.addMoveFile(metadataStore, srcPaths, dstMetas, childSrc,
-                childDst, length, getDefaultBlockSize(childDst), username);
+            renameOperation.fileCopied(
+                childSrc,
+                status,
+                childDst,
+                getDefaultBlockSize(childDst),
+                true);
           }
-          // Ancestor directories may not be listed, so we explicitly add them
-          S3Guard.addMoveAncestors(metadataStore, srcPaths, dstMetas,
-              keyToQualifiedPath(srcKey), childSrc, childDst, username);
-        }
 
-        if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-          removeKeys(keysToDelete, true, false);
+          if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
+            List<Path> undeletedObjects = new ArrayList<>();
+            try {
+              // remove the keys
+              // this does NOT update the metastore
+              removeKeys(keysToDelete, false, undeletedObjects);
+              // and clear the list.
+            } catch (AmazonClientException | IOException e) {
+              // failed, notify the rename operation.
+              // removeKeys will have already purged the metastore of
+              // all keys it has known to delete; this is just a final
+              // bit of housekeeping.
+              renameOperation.deleteFailed(keysToDelete, undeletedObjects);
+              // rethrow
+              throw e;
+            }
+            renameOperation.sourceObjectsDeleted(keysToDelete);
+            keysToDelete.clear();
+          }
         }
+        // end of iteration -the final delete.
+        // again, this does not update the metastore.
+        removeKeys(keysToDelete, false);
+        renameOperation.sourceObjectsDeleted(keysToDelete);
+
+        // We moved all the children, now move the top-level dir
+        // Empty directory should have been added as the object summary
+        renameOperation.noteSourceDirectoryMoved();
+
       }
-      removeKeys(keysToDelete, false, false);
+    } catch (IOException | AmazonClientException ex) {
+      // rename failed.
+      // update the store state to reflect this
+      try {
+        IOException ioe = renameOperation.renameFailed(ex);
+        throw ioe;
+      } catch (IOException e) {
 
-      // We moved all the children, now move the top-level dir
-      // Empty directory should have been added as the object summary
-      if (hasMetadataStore()
-          && srcPaths != null
-          && !srcPaths.contains(src)) {
-        LOG.debug("To move the non-empty top-level dir src={} and dst={}",
-            src, dst);
-        S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas, src, dst,
-            username);
       }
     }
 
-    metadataStore.move(srcPaths, dstMetas);
+    // At this point the rename has completed.
+    // Tell the metastore this fact and let it complete its changes
+    renameOperation.complete();
 
     if (!src.getParent().equals(dst.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
@@ -1943,11 +1971,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Delete a list of keys on a s3-backend.
+   * This does <i>not</i> update the metastore.
    * Retry policy: retry untranslated; delete considered idempotent.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
-   * @param clearKeys clears the keysToDelete-list after processing the list
-   *            when set to true
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
@@ -1959,7 +1986,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryRaw
   private void removeKeysS3(List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      boolean clearKeys, boolean deleteFakeDir)
+      boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
     if (keysToDelete.isEmpty()) {
@@ -1989,9 +2016,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw ex;
     }
     noteDeleted(keysToDelete.size(), deleteFakeDir);
-    if (clearKeys) {
-      keysToDelete.clear();
-    }
   }
 
   /**
@@ -2008,14 +2032,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Invoke {@link #removeKeysS3(List, boolean, boolean)} with handling of
+   * Invoke {@link #removeKeysS3(List, boolean)} with handling of
    * {@code MultiObjectDeleteException} in which S3Guard is updated with all
    * deleted entries, before the exception is rethrown.
    *
+   * If an exception is not raised. the metastore is not updated.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
-   * @param clearKeys clears the keysToDelete-list after processing the list
-   *            when set to true
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
@@ -2028,18 +2051,57 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryMixed
   void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean clearKeys,
       final boolean deleteFakeDir)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
+    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>());
+  }
+
+  /**
+   * Invoke {@link #removeKeysS3(List, boolean)} with handling of
+   * {@code MultiObjectDeleteException} in which S3Guard is updated with all
+   * deleted entries, before the exception is rethrown.
+   *
+   * @param keysToDelete collection of keys to delete on the s3-backend.
+   *        if empty, no request is made of the object store.
+   * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @param undeletedObjectsOnFailure List which will be built up of all
+   * files that were not deleted. This happens even as an exception
+   * is raised.
+   * @throws InvalidRequestException if the request was rejected due to
+   * a mistaken attempt to delete the root directory.
+   * @throws MultiObjectDeleteException one or more of the keys could not
+   * be deleted in a multiple object delete operation.
+   * @throws AmazonClientException amazon-layer failure.
+   * @throws IOException other IO Exception.
+   */
+  @VisibleForTesting
+  @Retries.RetryMixed
+  void removeKeys(
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final boolean deleteFakeDir,
+      final List<Path> undeletedObjectsOnFailure)
+      throws MultiObjectDeleteException, AmazonClientException,
+      IOException {
+    undeletedObjectsOnFailure.clear();
     try {
-      removeKeysS3(keysToDelete, clearKeys, deleteFakeDir);
+      removeKeysS3(keysToDelete, deleteFakeDir);
     } catch (MultiObjectDeleteException ex) {
       LOG.debug("Partial delete failure");
       // what to do if an IOE was raised? Given an exception was being
       // raised anyway, and the failures are logged, do nothing.
-      new MultiObjectDeleteSupport(createStoreContext())
-          .processDeleteFailure(ex, keysToDelete);
+      Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
+          new MultiObjectDeleteSupport(
+              createStoreContext())
+              .processDeleteFailure(ex, keysToDelete);
+      undeletedObjectsOnFailure.addAll(results.getMiddle());
+      throw ex;
+    } catch (AmazonClientException | IOException ex) {
+      List<Path> paths = new MultiObjectDeleteSupport(
+          createStoreContext())
+          .processDeleteFailureGenericException(ex, keysToDelete);
+      // other failures. Assume nothing was deleted
+      undeletedObjectsOnFailure.addAll(paths);
       throw ex;
     }
   }
@@ -2137,14 +2199,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
-              removeKeys(keys, true, false);
+              removeKeys(keys, false);
+              keys.clear();
             }
           }
 
           if (objects.isTruncated()) {
             objects = continueListObjects(request, objects);
           } else {
-            removeKeys(keys, false, false);
+            removeKeys(keys, false);
             break;
           }
         }
@@ -3221,7 +3284,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       path = path.getParent();
     }
     try {
-      removeKeys(keysToRemove, false, true);
+      removeKeys(keysToRemove, true);
     } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {

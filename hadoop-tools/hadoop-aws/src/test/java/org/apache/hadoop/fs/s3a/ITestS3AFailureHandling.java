@@ -77,7 +77,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
 
   private void removeKeys(S3AFileSystem fileSystem, String... keys)
       throws IOException {
-    fileSystem.removeKeys(buildDeleteRequest(keys), false, false);
+    fileSystem.removeKeys(buildDeleteRequest(keys), false);
   }
 
   private List<DeleteObjectsRequest.KeyVersion> buildDeleteRequest(
@@ -125,7 +125,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
             });
     MultiObjectDeleteException ex = intercept(
         MultiObjectDeleteException.class,
-        () -> fs.removeKeys(keys, false, false));
+        () -> fs.removeKeys(keys, false));
 
     final List<Path> undeleted
         = extractUndeletedPaths(ex, fs::keyToQualifiedPath);
@@ -160,7 +160,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     List<DeleteObjectsRequest.KeyVersion> keys = keysToDelete(
         Lists.newArrayList(new Path(base, "1"), new Path(base, "2")));
-    fs.removeKeys(keys, false, false);
+    fs.removeKeys(keys, false);
   }
 
   private String join(final Iterable iterable) {

@@ -30,6 +30,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
  * {@code MetadataStore} defines the set of operations that any metadata store
@@ -252,4 +253,19 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Start a rename operation.
+   *
+   * @param storeContext store context.
+   * @param source source path
+   * @param dest destination path.
+   * @return the rename operation to update
+   * @throws IOException Failure.
+   */
+  RenameOperation initiateRenameOperation(
+      StoreContext storeContext,
+      Path source,
+      Path dest)
+      throws IOException;
 }

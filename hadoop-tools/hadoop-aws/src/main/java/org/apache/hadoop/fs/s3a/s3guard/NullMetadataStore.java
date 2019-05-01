@@ -19,8 +19,10 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -119,5 +121,42 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void updateParameters(Map<String, String> parameters)
       throws IOException {
+  }
+
+  @Override
+  public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+      final Path source,
+      final Path dest)
+      throws IOException {
+    return new NullRenameOperation(source, dest, storeContext.getUsername());
+  }
+
+  private static class NullRenameOperation extends RenameOperation {
+
+    public NullRenameOperation(final Path source,
+        final Path dest,
+        final String owner) {
+      super(source, dest, owner);
+    }
+
+    @Override
+    public void fileCopied(final Path childSource,
+        final FileStatus sourceStatus,
+        final Path destPath,
+        final long blockSize,
+        final boolean addAncestors) throws IOException {
+
+    }
+
+    @Override
+    public void directoryMarkerCopied(final FileStatus sourceStatus,
+        final Path destPath,
+        final boolean addAncestors) throws IOException {
+    }
+
+    @Override
+    public void complete() throws IOException {
+
+    }
   }
 }
