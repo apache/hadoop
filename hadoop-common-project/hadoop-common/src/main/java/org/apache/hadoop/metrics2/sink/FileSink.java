@@ -19,10 +19,10 @@
 package org.apache.hadoop.metrics2.sink;
 
 import java.io.Closeable;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.configuration2.SubsetConfiguration;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -47,7 +47,7 @@ public class FileSink implements MetricsSink, Closeable {
     String filename = conf.getString(FILENAME_KEY);
     try {
       writer = filename == null ? System.out
-          : new PrintStream(new FileOutputStream(new File(filename)),
+          : new PrintStream(Files.newOutputStream(Paths.get(filename)),
                             true, "UTF-8");
     } catch (Exception e) {
       throw new MetricsException("Error creating "+ filename, e);

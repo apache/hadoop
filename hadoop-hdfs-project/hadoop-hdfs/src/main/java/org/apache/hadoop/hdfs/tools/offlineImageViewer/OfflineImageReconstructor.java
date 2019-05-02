@@ -31,10 +31,10 @@ import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.*
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -1821,16 +1821,16 @@ class OfflineImageReconstructor {
   public static void run(String inputPath, String outputPath)
       throws Exception {
     MessageDigest digester = MD5Hash.getDigester();
-    FileOutputStream fout = null;
+    OutputStream fout = null;
     File foutHash = new File(outputPath + ".md5");
     Files.deleteIfExists(foutHash.toPath()); // delete any .md5 file that exists
     CountingOutputStream out = null;
-    FileInputStream fis = null;
+    InputStream fis = null;
     InputStreamReader reader = null;
     try {
       Files.deleteIfExists(Paths.get(outputPath));
-      fout = new FileOutputStream(outputPath);
-      fis = new FileInputStream(inputPath);
+      fout = Files.newOutputStream(Paths.get(outputPath));
+      fis = Files.newInputStream(Paths.get(inputPath));
       reader = new InputStreamReader(fis, Charset.forName("UTF-8"));
       out = new CountingOutputStream(
           new DigestOutputStream(

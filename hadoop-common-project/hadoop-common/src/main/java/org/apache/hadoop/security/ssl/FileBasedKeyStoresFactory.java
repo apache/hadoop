@@ -28,9 +28,10 @@ import org.slf4j.LoggerFactory;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.TrustManager;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.text.MessageFormat;
@@ -170,7 +171,7 @@ public class FileBasedKeyStoresFactory implements KeyStoresFactory {
         LOG.debug(mode.toString() + " KeyStore: " + keystoreLocation);
       }
 
-      InputStream is = new FileInputStream(keystoreLocation);
+      InputStream is = Files.newInputStream(Paths.get(keystoreLocation));
       try {
         keystore.load(is, keystorePassword.toCharArray());
       } finally {

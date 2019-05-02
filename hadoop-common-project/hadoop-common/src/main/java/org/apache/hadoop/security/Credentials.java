@@ -26,9 +26,9 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -243,7 +243,7 @@ public class Credentials implements Writable {
     Credentials credentials = new Credentials();
     try {
       in = new DataInputStream(new BufferedInputStream(
-          new FileInputStream(filename)));
+          Files.newInputStream(filename.toPath())));
       credentials.readTokenStorageStream(in);
       return credentials;
     } catch(IOException ioe) {

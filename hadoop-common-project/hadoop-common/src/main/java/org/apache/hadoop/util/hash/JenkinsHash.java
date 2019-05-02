@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.util.hash;
 
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -252,7 +254,7 @@ public class JenkinsHash extends Hash {
       System.err.println("Usage: JenkinsHash filename");
       System.exit(-1);
     }
-    try (FileInputStream in = new FileInputStream(args[0])) {
+    try (InputStream in = Files.newInputStream(Paths.get(args[0]))) {
       byte[] bytes = new byte[512];
       int value = 0;
       JenkinsHash hash = new JenkinsHash();

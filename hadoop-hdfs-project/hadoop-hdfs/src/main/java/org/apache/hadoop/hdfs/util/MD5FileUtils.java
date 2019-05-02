@@ -19,11 +19,11 @@ package org.apache.hadoop.hdfs.util;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.util.regex.Matcher;
@@ -74,8 +74,8 @@ public abstract class MD5FileUtils {
    */
   private static Matcher readStoredMd5(File md5File) throws IOException {
     BufferedReader reader =
-        new BufferedReader(new InputStreamReader(new FileInputStream(
-            md5File), Charsets.UTF_8));
+        new BufferedReader(new InputStreamReader(
+            Files.newInputStream(md5File.toPath()), Charsets.UTF_8));
     String md5Line;
     try {
       md5Line = reader.readLine();
@@ -125,7 +125,7 @@ public abstract class MD5FileUtils {
    * Read dataFile and compute its MD5 checksum.
    */
   public static MD5Hash computeMd5ForFile(File dataFile) throws IOException {
-    InputStream in = new FileInputStream(dataFile);
+    InputStream in = Files.newInputStream(dataFile.toPath());
     try {
       MessageDigest digester = MD5Hash.getDigester();
       DigestInputStream dis = new DigestInputStream(in, digester);

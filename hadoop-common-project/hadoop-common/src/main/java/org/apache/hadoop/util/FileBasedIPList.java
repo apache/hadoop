@@ -22,11 +22,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -90,7 +90,7 @@ public class FileBasedIPList implements IPList {
         if (file.exists()) {
           try (
               Reader fileReader = new InputStreamReader(
-                  new FileInputStream(file), StandardCharsets.UTF_8);
+                  Files.newInputStream(file.toPath()), StandardCharsets.UTF_8);
               BufferedReader bufferedReader = new BufferedReader(fileReader)) {
             List<String> lines = new ArrayList<String>();
             String line = null;
