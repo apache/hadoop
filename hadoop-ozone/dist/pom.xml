@@ -28,6 +28,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
+    <docker.image>apache/hadoop:${project.version}</docker.image>
   </properties>
 
   <build>
@@ -139,7 +140,7 @@
         <version>3.1.0</version>
         <executions>
           <execution>
-            <id>copy-resources</id>
+            <id>copy-compose</id>
             <phase>compile</phase>
             <goals>
               <goal>copy-resources</goal>
@@ -149,6 +150,22 @@
               <resources>
                 <resource>
                   <directory>src/main/compose</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-k8s</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${basedir}/target/k8s</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/k8s</directory>
                   <filtering>true</filtering>
                 </resource>
               </resources>
@@ -267,4 +284,62 @@
       <artifactId>hadoop-ozone-upgrade</artifactId>
     </dependency>
   </dependencies>
+  <profiles>
+    <profile>
+      <id>k8s-dev</id>
+      <properties>
+        <docker.image>${user.name}/ozone:${project.version}</docker.image>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.29.0</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>build</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <images>
+                <image>
+                  <name>${docker.image}</name>
+                  <build>
+                    <dockerFileDir>
+                      ${project.build.directory}/ozone-${project.version}
+                    </dockerFileDir>
+                  </build>
+                </image>
+              </images>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>k8s-dev-push</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>io.fabric8</groupId>
+            <artifactId>docker-maven-plugin</artifactId>
+            <version>0.29.0</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>push</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
+
 </project>

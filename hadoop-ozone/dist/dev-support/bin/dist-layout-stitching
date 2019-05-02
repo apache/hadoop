@@ -120,3 +120,5 @@ cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 run cp -p -R "${ROOT}/hadoop-ozone/dist/target/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .
+run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
+run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/Dockerfile" .
