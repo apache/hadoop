@@ -18,20 +18,31 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.util.DurationInfo;
+
+import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
- * The base class for a rename operation.
+ * A class which manages updating the metastore with the rename process
+ * as initiated in the S3AFilesystem rename.
+ * Subclasses must provide an implementation and return it in
+ * {@link MetadataStore#initiateRenameOperation(StoreContext, Path, FileStatus, Path)}.
  */
-public abstract class RenameOperation implements Closeable {
+public abstract class RenameOperation {
 
+  public static final Logger LOG = LoggerFactory.getLogger(
+      RenameOperation.class);
 
   /** source path. */
   private final Path sourceRoot;
@@ -39,22 +50,27 @@ public abstract class RenameOperation implements Closeable {
   /** destination path. */
   private final Path dest;
 
+  /** owner of the filesystem. */
   private final String owner;
+
+  private final DurationInfo durationInfo;
 
   /**
    * constructor.
    * @param sourceRoot source path.
    * @param dest destination path.
-   * @param owner
+   * @param owner owner of the filesystem.
    */
 
-  public RenameOperation(
+  protected RenameOperation(
       final Path sourceRoot,
       final Path dest,
       final String owner) {
     this.sourceRoot = sourceRoot;
     this.dest = dest;
     this.owner = owner;
+    durationInfo = new DurationInfo(LOG, false,
+        "rename(%s, %s)", sourceRoot, dest);
   }
 
   public Path getSourceRoot() {
@@ -69,15 +85,11 @@ public abstract class RenameOperation implements Closeable {
     return owner;
   }
 
-  @Override
-  public void close() throws IOException {
-
-  }
-
   /**
    * A file has been copied.
    *
-   * @param childSource
+   * @param childSource source of the file. This may actually be different
+   * from the path of the sourceStatus.
    * @param sourceStatus status of source.
    * @param destPath destination path.
    * @param blockSize block size.
@@ -85,7 +97,8 @@ public abstract class RenameOperation implements Closeable {
    * @throws IOException failure.
    */
   public abstract void fileCopied(
-      final Path childSource, FileStatus sourceStatus,
+      Path childSource,
+      FileStatus sourceStatus,
       Path destPath,
       long blockSize,
       boolean addAncestors) throws IOException;
@@ -108,11 +121,14 @@ public abstract class RenameOperation implements Closeable {
    * been updated with the results of any partial delete failure,
    * such that all files known to have been deleted will have been
    * removed.
+   * @param e
    * @param undeletedObjects list of objects which were not deleted.
    */
-  public void deleteFailed(
+  public IOException deleteFailed(
+      final Exception e,
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final List<Path> undeletedObjects) {
+    return convertToIOException(e);
 
   }
 
@@ -133,22 +149,57 @@ public abstract class RenameOperation implements Closeable {
       final List<DeleteObjectsRequest.KeyVersion> keys) throws IOException {
   }
 
-
   /**
    * Complete the operation.
    * @throws IOException failure.
    */
-  public abstract void complete() throws IOException ;
+  public void completeRename() throws IOException {
+    noteRenameFinished();
+  }
+
+  /**
+   * Note that the rename has finished by closing the duration info;
+   * this will log the duration of the operation at debug.
+   */
+  protected void noteRenameFinished() {
+    durationInfo.close();
+  }
 
   /**
    * Rename has failed.
    * The metastore now needs to be updated with its current state
    * even though the operation is incomplete.
-   * @throws IOException failure.
+   * Implementations MUST NOT throw exceptions here, as this is going to
+   * be invoked in an exception handler.
+   * catch and log or catch and return/wrap.
+   *
+   * The base implementation returns the IOE passed in and translates
+   * any AWS exception into an IOE.
+   * @param ex the exception which caused the failure.
+   * This is either an IOException or and AWS exception
+   * @return an IOException to throw in an exception.
    */
-  public IOException renameFailed(Exception ex) throws IOException {
+  public IOException renameFailed(Exception ex) {
+    noteRenameFinished();
+    return convertToIOException(ex);
+  }
 
-
-    return null;
+  /**
+   * Convert a passed in exception (expected to be an IOE or AWS exception
+   * into an IOException.
+   * @param ex exception caught
+   * @return the exception to throw in the failure handler.
+   */
+  protected IOException convertToIOException(final Exception ex) {
+    if (ex instanceof IOException) {
+      return (IOException) ex;
+    } else if (ex instanceof SdkBaseException) {
+      return translateException("rename " + sourceRoot + " to " + dest,
+          sourceRoot.toString(),
+          (SdkBaseException) ex);
+    } else {
+      // should never happen, but for strictness
+      return new IOException(ex);
+    }
   }
 }

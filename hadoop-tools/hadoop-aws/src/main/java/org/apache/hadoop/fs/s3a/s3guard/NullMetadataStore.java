@@ -126,14 +126,14 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public RenameOperation initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final Path dest)
+      final FileStatus srcStatus, final Path dest)
       throws IOException {
     return new NullRenameOperation(source, dest, storeContext.getUsername());
   }
 
   private static class NullRenameOperation extends RenameOperation {
 
-    public NullRenameOperation(final Path source,
+    private NullRenameOperation(final Path source,
         final Path dest,
         final String owner) {
       super(source, dest, owner);
@@ -154,9 +154,5 @@ public class NullMetadataStore implements MetadataStore {
         final boolean addAncestors) throws IOException {
     }
 
-    @Override
-    public void complete() throws IOException {
-
-    }
   }
 }

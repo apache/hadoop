@@ -27,6 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
@@ -259,6 +260,7 @@ public interface MetadataStore extends Closeable {
    *
    * @param storeContext store context.
    * @param source source path
+   * @param srcStatus
    * @param dest destination path.
    * @return the rename operation to update
    * @throws IOException Failure.
@@ -266,6 +268,7 @@ public interface MetadataStore extends Closeable {
   RenameOperation initiateRenameOperation(
       StoreContext storeContext,
       Path source,
+      FileStatus srcStatus,
       Path dest)
       throws IOException;
 }

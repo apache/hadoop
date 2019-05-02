@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -33,7 +34,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 /**
  * This is the rename updating strategy originally used:
  * a collection of source paths and a list of destinations are created,
- * then updated at the end (possibly slow)
+ * then updated at the end (possibly slow).
  */
 public class DelayedUpdateRenameOperation extends RenameOperation {
 
@@ -57,8 +58,8 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   }
 
   @Override
-  public void fileCopied(
-      final Path childSource,
+  public synchronized void fileCopied(
+      final Path sourcePath,
       final FileStatus sourceStatus,
       final Path destPath,
       final long blockSize,
@@ -67,7 +68,7 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
     S3Guard.addMoveFile(metadataStore,
         srcPaths,
         dstMetas,
-        childSource,
+        sourcePath,
         destPath,
         sourceStatus.getLen(),
         blockSize,
@@ -85,7 +86,7 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   }
 
   @Override
-  public void directoryMarkerCopied(final FileStatus sourceStatus,
+  public synchronized void directoryMarkerCopied(final FileStatus sourceStatus,
       final Path destPath,
       final boolean addAncestors) throws IOException {
     S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas,
@@ -104,7 +105,7 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   }
 
   @Override
-  public void noteSourceDirectoryMoved() throws IOException {
+  public synchronized void noteSourceDirectoryMoved() throws IOException {
     if (!srcPaths.contains(getSourceRoot())) {
       S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas,
           getSourceRoot(),
@@ -113,20 +114,27 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   }
 
   @Override
-  public void sourceObjectsDeleted(
+  public synchronized void sourceObjectsDeleted(
       final List<DeleteObjectsRequest.KeyVersion> keys) throws IOException {
     // convert to paths.
     deletedKeys.addAll(keys);
   }
 
   @Override
-  public void complete() throws IOException {
+  public void completeRename() throws IOException {
     metadataStore.move(srcPaths, dstMetas);
+    super.completeRename();
   }
 
   @Override
-  public IOException renameFailed(final Exception ex) throws IOException {
-    super.renameFailed(ex);
-    return null;
+  public IOException renameFailed(final Exception ex) {
+    LOG.warn("Rename has failed; updating S3Guard");
+    try {
+      metadataStore.move(srcPaths, dstMetas);
+    } catch (IOException | SdkBaseException e) {
+      LOG.warn("Ignoring error raised in AWS SDK ", e);
+    }
+
+    return super.renameFailed(ex);
   }
 }

@@ -52,7 +52,6 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertPathsDoNotExist;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -363,7 +362,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testRenameSingleFileFailsLeavingSource() throws Throwable {
+  public void testRenameSingleFileFailsInDelete() throws Throwable {
     describe("rename with source read only; multi=%s", multiDelete);
     Path readOnlyFile = readonlyChild;
 
@@ -379,11 +378,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // rename will fail in the delete phase
     expectRenameForbidden(readOnlyFile, destDir);
 
-
     // and the source file is still there
     assertIsFile(readOnlyFile);
 
-    // but so is the copied version, because there's no attempt
+    // and so is the copied version, because there's no attempt
     // at rollback, or preflight checking on the delete permissions
     Path renamedFile = new Path(destDir, readOnlyFile.getName());
 
@@ -410,7 +408,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * </ol>
    */
   @Test
-  public void testRenameFilesetFailsLeavingSourceUnchanged() throws Throwable {
+  public void testRenameDirFailsInDelete() throws Throwable {
     describe("rename with source read only; multi=%s", multiDelete);
 
     // the full FS
@@ -450,6 +448,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // even with S3Guard on, we expect the destination to match that of our
     // the remote state.
     // the test will exist
+    assertPathExists("Destination directory of rename", destDir);
     assertIsDirectory(destDir);
     assertFileCount("files in the source directory", roleFS,
         destDir, (long) filecount);
@@ -459,11 +458,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /**
    * Have a directory with full R/W permissions, but then remove
    * write access underneath, and try to delete it.
-   *
    */
   @Test
-  public void testPartialDelete() throws Throwable {
-    describe("delete with part of the child tree read only; multidelete");
+  public void testPartialDirDelete() throws Throwable {
+    describe("delete with part of the child tree read only;"
+            + " multidelete=%s", multiDelete);
 
     // the full FS
     S3AFileSystem fs = getFileSystem();
@@ -531,6 +530,29 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         .as("ReadOnly directory " + directoryList)
         .containsAll(readOnlyFiles);
   }
+
+  @Test
+  public void testCopyDirFailsInNoWrite() throws Throwable {
+    describe("Try to copy to a write-only destination");
+  }
+
+  @Test
+  public void testCopyFileFailsNoWrite() throws Throwable {
+    describe("Try to copy to a write-only destination");
+  }
+
+  @Test
+  public void testCopyFileFailsOnSourceRead() throws Throwable {
+    describe("The source file isn't readable, so the COPY fails");
+
+  }
+
+  @Test
+  public void testCopyDirFailsOnSourceRead() throws Throwable {
+    describe("The source file isn't readable, so the COPY fails");
+
+  }
+
 
   private AccessDeniedException expectDeleteForbidden(Path path) throws Exception {
     try(DurationInfo ignored =

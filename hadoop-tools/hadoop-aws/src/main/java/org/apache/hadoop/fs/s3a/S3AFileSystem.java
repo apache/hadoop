@@ -90,6 +90,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.FunctionsRaisingIOE;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.RenameOperation;
@@ -1224,34 +1225,44 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     final RenameOperation renameOperation =
         metadataStore.initiateRenameOperation(
             createStoreContext(),
-            src, dest);
+            src, srcStatus, dest);
+    int renameParallelLimit = 10;
+    final List<CompletableFuture<Path>> activeCopies =
+        new ArrayList<>(renameParallelLimit);
+    // aggregate operation to wait for the copies to complete then reset
+    // the list.
+    final FunctionsRaisingIOE.FunctionRaisingIOE<Void, String>
+        completeActiveCopies = (String reason) -> {
+          LOG.debug("Waiting for {} active copies to complete during {}",
+              activeCopies.size(), reason);
+          waitForCompletion(activeCopies);
+          activeCopies.clear();
+          return null;
+        };
+
     try {
       if (srcStatus.isFile()) {
-        LOG.debug("rename: renaming file {} to {}", src, dst);
-        long length = srcStatus.getLen();
+        Path copyDestinationPath = dst;
+        String copyDestinationKey = dstKey;
         if (dstStatus != null && dstStatus.isDirectory()) {
+          // destination is a directory: build the final destination underneath
           String newDstKey = maybeAddTrailingSlash(dstKey);
           String filename =
               srcKey.substring(pathToKey(src.getParent()).length()+1);
           newDstKey = newDstKey + filename;
-          copyFile(srcKey, newDstKey, length);
-          Path destPath = keyToQualifiedPath(newDstKey);
-          renameOperation.fileCopied(
-              srcStatus.getPath(),
-              srcStatus,
-              destPath,
-              getDefaultBlockSize(destPath),
-              false);
-
-        } else {
-          copyFile(srcKey, dstKey, srcStatus.getLen());
-          renameOperation.fileCopied(srcStatus.getPath(),
-              srcStatus,
-              dst,
-              getDefaultBlockSize(dst),
-              false);
+          copyDestinationKey = newDstKey;
+          copyDestinationPath = keyToQualifiedPath(newDstKey);
         }
-        innerDelete(srcStatus, false);
+        // destination either does not exist or is a file to overwrite.
+        LOG.debug("rename: renaming file {} to {}", src, copyDestinationPath);
+        copySourceAndUpdateRenameOperation(renameOperation,
+            src, srcKey, srcStatus,
+            copyDestinationPath, copyDestinationKey,
+            false);
+         // delete the source
+        deleteObjectAtPath(src, srcKey, true);
+        // TODO: renameOperation.sourceObjectsDeleted(keysToDelete);
+
       } else {
         LOG.debug("rename: renaming directory {} to {}", src, dst);
 
@@ -1276,7 +1287,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             parentPath, true);
         while (iterator.hasNext()) {
           LocatedFileStatus status = iterator.next();
-          long length = status.getLen();
           String k = pathToKey(status.getPath());
           String key = (status.isDirectory() && !k.endsWith("/"))
               ? k + "/"
@@ -1285,71 +1295,60 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               .add(new DeleteObjectsRequest.KeyVersion(key));
           String newDstKey =
               dstKey + key.substring(srcKey.length());
-          Path childSrc = keyToQualifiedPath(key);
-          Path childDst = keyToQualifiedPath(newDstKey);
+          Path childSourcePath = keyToQualifiedPath(key);
+          Path childDestPath = keyToQualifiedPath(newDstKey);
 
           // set up for async operation but run in sync mode initially.
           // we will need to parallelize updates to metastore
           // for that.
           CompletableFuture<Path> copy = submit(boundedThreadPool, () ->
-              copySourceAndUpdateMetastore(status, key, newDstKey, childDst));
-          waitForCompletion(copy);
-
-          if (objectRepresentsDirectory(key, length)) {
-            renameOperation.directoryMarkerCopied(status, childDst, true);
-          } else {
-            renameOperation.fileCopied(
-                childSrc,
-                status,
-                childDst,
-                getDefaultBlockSize(childDst),
-                true);
+              copySourceAndUpdateRenameOperation(renameOperation,
+                  childSourcePath, key, status,
+                  childDestPath, newDstKey,
+                  true));
+          activeCopies.add(copy);
+          if (activeCopies.size() == renameParallelLimit) {
+            LOG.debug("Waiting for active copies to complete");
+            waitForCompletion(activeCopies);
+            activeCopies.clear();
           }
-
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            List<Path> undeletedObjects = new ArrayList<>();
-            try {
-              // remove the keys
-              // this does NOT update the metastore
-              removeKeys(keysToDelete, false, undeletedObjects);
-              // and clear the list.
-            } catch (AmazonClientException | IOException e) {
-              // failed, notify the rename operation.
-              // removeKeys will have already purged the metastore of
-              // all keys it has known to delete; this is just a final
-              // bit of housekeeping.
-              renameOperation.deleteFailed(keysToDelete, undeletedObjects);
-              // rethrow
-              throw e;
-            }
-            renameOperation.sourceObjectsDeleted(keysToDelete);
+            // time to queue a delete.
+            // first wait for the copies in progress to finish
+            // (deleting a file mid-copy would not be good)
+            completeActiveCopies.apply("before a delete");
+            removeSourceObjects(renameOperation, keysToDelete);
             keysToDelete.clear();
           }
         }
+        // end of iteration await final set of copies
+        completeActiveCopies.apply("final copies");
+
         // end of iteration -the final delete.
-        // again, this does not update the metastore.
-        removeKeys(keysToDelete, false);
-        renameOperation.sourceObjectsDeleted(keysToDelete);
+        // This will notify the renameOperation that these objects
+        // have been deleted.
+        removeSourceObjects(renameOperation, keysToDelete);
 
         // We moved all the children, now move the top-level dir
         // Empty directory should have been added as the object summary
         renameOperation.noteSourceDirectoryMoved();
-
       }
-    } catch (IOException | AmazonClientException ex) {
+    } catch (AmazonClientException | IOException ex) {
       // rename failed.
-      // update the store state to reflect this
+      // block for all ongoing copies to complete
       try {
-        IOException ioe = renameOperation.renameFailed(ex);
-        throw ioe;
+        completeActiveCopies.apply("failure handling");
       } catch (IOException e) {
-
+        LOG.warn("While completing all active copies", e);
       }
+
+      // update the store state to reflect this
+      throw renameOperation.renameFailed(ex);
     }
 
-    // At this point the rename has completed.
+    // At this point the rename has completed in the S3 store.
     // Tell the metastore this fact and let it complete its changes
-    renameOperation.complete();
+    renameOperation.completeRename();
 
     if (!src.getParent().equals(dst.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
@@ -1359,12 +1358,71 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return true;
   }
 
-  private Path copySourceAndUpdateMetastore(
-      final LocatedFileStatus sourceStatus,
+  /**
+   * Remove source objects
+   * @param renameOperation operation to update.
+   * @param keysToDelete list of keys to delete
+   * @throws IOException failure
+   */
+  @Retries.RetryMixed
+  private void removeSourceObjects(final RenameOperation renameOperation,
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete)
+      throws IOException {
+    List<Path> undeletedObjects = new ArrayList<>();
+    try {
+      // remove the keys
+      // this does will update the metastore on a failure, but on
+      // a successful operation leaves the store as is.
+      removeKeys(keysToDelete, false, undeletedObjects);
+      // and clear the list.
+    } catch (AmazonClientException | IOException e) {
+      // failed, notify the rename operation.
+      // removeKeys will have already purged the metastore of
+      // all keys it has known to delete; this is just a final
+      // bit of housekeeping and a chance to tune exception
+      // reporting
+      throw renameOperation.deleteFailed(e, keysToDelete, undeletedObjects);
+    }
+    renameOperation.sourceObjectsDeleted(keysToDelete);
+  }
+
+  /**
+   * This invoked to copy a file or directory marker then update the
+   * rename operation on success.
+   * It may be called in its own thread.
+   * @param renameOperation operation to update
+   * @param sourcePath source path of the copy; may have a trailing / on it.
+   * @param srcKey source key
+   * @param sourceStatus status of the source object
+   * @param destPath destination as a qualified path.
+   * @param destKey destination key
+   * @param addAncestors should ancestors be added to the metastore?
+   * @return the destination path.
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
+  private Path copySourceAndUpdateRenameOperation(
+      final RenameOperation renameOperation,
+      final Path sourcePath,
       final String srcKey,
+      final FileStatus sourceStatus,
+      final Path destPath,
       final String destKey,
-      final Path destPath) throws IOException {
-    copyFile(srcKey, destKey, sourceStatus.getLen());
+      final boolean addAncestors) throws IOException {
+    copyFile(srcKey, destKey, sourceStatus, sourceStatus.getLen());
+    if (objectRepresentsDirectory(srcKey, sourceStatus.getLen())) {
+      renameOperation.directoryMarkerCopied(
+          sourceStatus,
+          destPath,
+          addAncestors);
+    } else {
+      renameOperation.fileCopied(
+          sourcePath,
+          sourceStatus,
+          destPath,
+          getDefaultBlockSize(destPath),
+          addAncestors);
+    }
     return destPath;
   }
 
@@ -1691,9 +1749,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param key key of entry
    * @param isFile is the path a file (used for instrumentation only)
    * @throws AmazonClientException problems working with S3
-   * @throws IOException IO failure
+   * @throws IOException IO failure in the metastore
    */
-  @Retries.RetryRaw
+  @Retries.RetryMixed
   void deleteObjectAtPath(Path f, String key, boolean isFile)
       throws AmazonClientException, IOException {
     if (isFile) {
@@ -2084,7 +2142,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
     undeletedObjectsOnFailure.clear();
-    try {
+    try(DurationInfo ignored = new DurationInfo(LOG, false, "Deleting")) {
       removeKeysS3(keysToDelete, deleteFakeDir);
     } catch (MultiObjectDeleteException ex) {
       LOG.debug("Partial delete failure");
@@ -2199,6 +2257,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             LOG.debug("Got object to delete {}", summary.getKey());
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
+              // delete a single page of keys
               removeKeys(keys, false);
               keys.clear();
             }
@@ -2207,6 +2266,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           if (objects.isTruncated()) {
             objects = continueListObjects(request, objects);
           } else {
+            // there is no more data: delete the final set of entries.
             removeKeys(keys, false);
             break;
           }
@@ -3088,13 +3148,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Callers must implement.
    * @param srcKey source object path
    * @param dstKey destination object path
+   * @param sourceStatus
    * @param size object size
-   * @throws AmazonClientException on failures inside the AWS SDK
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems
    */
-  @Retries.RetryMixed
-  private void copyFile(String srcKey, String dstKey, long size)
+  @Retries.OnceTranslated
+  private void copyFile(String srcKey,
+      String dstKey,
+      final FileStatus sourceStatus,
+      long size)
       throws IOException, InterruptedIOException  {
     LOG.debug("copyFile {} -> {} ", srcKey, dstKey);
 
@@ -3108,9 +3171,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
+    // get the object header, handling the possibility that a
+    // newly created file is not yet present.
+    final Invoker inv = s3guardInvoker != null ? s3guardInvoker : invoker;
+    final ObjectMetadata srcom = inv.retry("HEAD", srcKey, true,
+        () -> getObjectMetadata(srcKey));
+
+    // there is no retry logic here on the expectation that the transfer
+    // manager is doing the work
     once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
         () -> {
-          ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
           setOptionalObjectMetadata(dstom);
           CopyObjectRequest copyObjectRequest =
@@ -3118,6 +3188,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           setOptionalCopyObjectRequestParameters(copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
+          Optional.ofNullable(srcom.getStorageClass())
+              .ifPresent(copyObjectRequest::setStorageClass);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           try {

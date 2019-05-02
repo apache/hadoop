@@ -40,6 +40,7 @@ import org.junit.Test;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -328,7 +329,7 @@ public class TestPartialDeleteFailures {
     @Override
     public RenameOperation initiateRenameOperation(final StoreContext storeContext,
         final Path source,
-        final Path dest) throws IOException {
+        final FileStatus srcStatus, final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");
     }
   }

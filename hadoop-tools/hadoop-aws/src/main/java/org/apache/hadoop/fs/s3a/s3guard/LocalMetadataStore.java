@@ -535,7 +535,7 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public RenameOperation initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final Path dest) throws IOException {
+      final FileStatus srcStatus, final Path dest) throws IOException {
     return new DelayedUpdateRenameOperation(storeContext, this, source, dest);
   }
 }
