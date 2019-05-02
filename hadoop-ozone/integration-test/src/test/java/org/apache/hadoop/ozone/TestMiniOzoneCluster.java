@@ -42,9 +42,11 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -132,6 +134,13 @@ public class TestMiniOzoneCluster {
     File validIdsFile = new File(WRITE_TMP, "valid-values.id");
     validIdsFile.delete();
     ContainerUtils.writeDatanodeDetailsTo(id1, validIdsFile);
+    // Validate using yaml parser
+    Yaml yaml = new Yaml();
+    try {
+      yaml.load(new FileReader(validIdsFile));
+    } catch (Exception e) {
+      Assert.fail("Failed parsing datanode id yaml.");
+    }
     DatanodeDetails validId = ContainerUtils.readDatanodeDetailsFrom(
         validIdsFile);
 
