@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
+import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
 import org.apache.hadoop.ozone.om.codec.VolumeListCodec;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -41,6 +42,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.DBStore;
@@ -176,7 +178,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<byte[], byte[]> getS3Table() {
+  public Table<String, String> getS3Table() {
     return s3Table;
   }
 
@@ -232,7 +234,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
         .addCodec(VolumeList.class, new VolumeListCodec())
-        .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec());
+        .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
+        .addCodec(S3SecretValue.class, new S3SecretValueCodec());
   }
 
   /**
@@ -265,7 +268,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
 
-    s3Table = this.store.getTable(S3_TABLE);
+    s3Table = this.store.getTable(S3_TABLE, String.class, String.class);
     checkTableStatus(s3Table, S3_TABLE);
 
     multipartInfoTable = this.store.getTable(MULTIPARTINFO_TABLE,
@@ -276,7 +279,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         OzoneTokenIdentifier.class, Long.class);
     checkTableStatus(dTokenTable, DELEGATION_TOKEN_TABLE);
 
-    s3SecretTable = this.store.getTable(S3_SECRET_TABLE);
+    s3SecretTable = this.store.getTable(S3_SECRET_TABLE, String.class,
+        S3SecretValue.class);
     checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
   }
 
@@ -701,7 +705,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
-  public Table<byte[], byte[]> getS3SecretTable() {
+  public Table<String, S3SecretValue> getS3SecretTable() {
     return s3SecretTable;
   }
 
