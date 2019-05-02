@@ -106,7 +106,7 @@ Here is an example,
   {{< /highlight >}}
 
  * **ozone.scm.datanode.id** Data nodes generate a Unique ID called Datanode
- ID. This identity is written to the file specified by this path. *Data nodes
+ ID. This identity is written to the file datanode.id in a directory specified by this path. *Data nodes
     will create this path if it doesn't exist already.*
 
 Here is an  example,

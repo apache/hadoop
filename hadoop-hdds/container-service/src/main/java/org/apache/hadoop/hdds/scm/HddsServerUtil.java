@@ -380,8 +380,8 @@ public final class HddsServerUtil {
    * @return the path of datanode id as string
    */
   public static String getDatanodeIdFilePath(Configuration conf) {
-    String dataNodeIDPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-    if (dataNodeIDPath == null) {
+    String dataNodeIDDirPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    if (dataNodeIDDirPath == null) {
       File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
       if (metaDirPath == null) {
         // this means meta data is not found, in theory should not happen at
@@ -389,9 +389,10 @@ public final class HddsServerUtil {
         throw new IllegalArgumentException("Unable to locate meta data" +
             "directory when getting datanode id path");
       }
-      dataNodeIDPath = new File(metaDirPath,
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID_PATH_DEFAULT).toString();
+      dataNodeIDDirPath = metaDirPath.toString();
     }
-    return dataNodeIDPath;
+    // Use default datanode id file name for file path
+    return new File(dataNodeIDDirPath,
+        ScmConfigKeys.OZONE_SCM_DATANODE_ID_PATH_DEFAULT).toString();
   }
 }
