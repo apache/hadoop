@@ -176,7 +176,7 @@ public class OzoneContainer {
     if (scrubber == null) {
       return;
     }
-    if (scrubber.isHalted()) {
+    if (!scrubber.isHalted()) {
       scrubber.down();
     }
   }
