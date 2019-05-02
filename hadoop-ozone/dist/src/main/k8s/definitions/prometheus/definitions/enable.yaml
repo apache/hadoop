@@ -18,8 +18,8 @@ description: Enable prometheus monitoring in Ozone
 ---
 - type: Add
   trigger:
-    metadata:
-      name: config
+      metadata:
+          name: config
   path:
     - data
   value:

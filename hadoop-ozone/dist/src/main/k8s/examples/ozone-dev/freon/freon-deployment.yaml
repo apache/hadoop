@@ -13,14 +13,41 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
----
-- type: Add
-  trigger:
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: freon
+  labels:
+    app.kubernetes.io/component: ozone
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ozone
+      component: freon
+  template:
     metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+      labels:
+        app: ozone
+        component: freon
+    spec:
+      containers:
+      - name: freon
+        image: '@docker.image@'
+        args:
+        - ozone
+        - freon
+        - rk
+        - --factor=THREE
+        - --replicationType=RATIS
+        envFrom:
+        - configMapRef:
+            name: config
+        env:
+        - name: JAEGER_SAMPLER_TYPE
+          value: probabilistic
+        - name: JAEGER_SAMPLER_PARAM
+          value: "0.01"
+        - name: JAEGER_AGENT_HOST
+          value: jaeger-0.jaeger

@@ -13,8 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
+name: ozone/profiler
+description: Enable profiler endpoint.
 ---
 - type: Add
   trigger:
@@ -23,4 +23,5 @@ description: Enable prometheus monitoring in Ozone
   path:
     - data
   value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+    OZONE-SITE.XML_hdds.profiler.endpoint.enabled: "true"
+    ASYNC_PROFILER_HOME: /opt/profiler
