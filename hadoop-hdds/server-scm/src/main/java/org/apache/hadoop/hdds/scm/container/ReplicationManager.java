@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.container;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.GeneratedMessage;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import org.apache.hadoop.hdds.conf.ConfigType;
 import org.apache.hadoop.hdds.conf.ConfigGroup;
 import org.apache.hadoop.hdds.conf.Config;
@@ -40,6 +41,8 @@ import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.Time;
+
+import static org.apache.hadoop.hdds.conf.ConfigTag.*;
 import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,7 +57,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -760,14 +762,37 @@ public class ReplicationManager {
      */
     private long eventTimeout = 10 * 60 * 1000;
 
-    @Config(key = "thread.interval", type = ConfigType.TIME, timeUnit =
-        TimeUnit.MILLISECONDS)
+    @Config(key = "thread.interval",
+        type = ConfigType.TIME,
+        defaultValue = "3s",
+        tags = {SCM, OZONE},
+        description = "When a heartbeat from the data node arrives on SCM, "
+            + "It is queued for processing with the time stamp of when the "
+            + "heartbeat arrived. There is a heartbeat processing thread "
+            + "inside "
+            + "SCM that runs at a specified interval. This value controls how "
+            + "frequently this thread is run.\n\n"
+            + "There are some assumptions build into SCM such as this "
+            + "value should allow the heartbeat processing thread to run at "
+            + "least three times more frequently than heartbeats and at least "
+            + "five times more than stale node detection time. "
+            + "If you specify a wrong value, SCM will gracefully refuse to "
+            + "run. "
+            + "For more info look at the node manager tests in SCM.\n"
+            + "\n"
+            + "In short, you don't need to change this."
+    )
     public void setInterval(long interval) {
       this.interval = interval;
     }
 
-    @Config(key = "event.timeout", type = ConfigType.TIME, timeUnit =
-        TimeUnit.MILLISECONDS)
+    @Config(key = "event.timeout",
+        type = ConfigType.TIME,
+        defaultValue = "10m",
+        tags = {SCM, OZONE},
+        description = "Timeout for the container replication/deletion commands "
+            + "sent  to datanodes. After this timeout the command will be "
+            + "retried.")
     public void setEventTimeout(long eventTimeout) {
       this.eventTimeout = eventTimeout;
     }

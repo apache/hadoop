@@ -38,6 +38,7 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <module>server-scm</module>
     <module>tools</module>
     <module>docs</module>
+    <module>config</module>
 
   </modules>
 
@@ -112,6 +113,12 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-docs</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdds-config</artifactId>
         <version>${hdds.version}</version>
       </dependency>
 

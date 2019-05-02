@@ -17,31 +17,32 @@
  */
 package org.apache.hadoop.hdds.conf;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.concurrent.TimeUnit;
+import java.io.StringWriter;
+
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
- * Mark field to be configurable from ozone-site.xml.
+ * Test the utility which loads/writes the config file fragments.
  */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Config {
+public class TestConfigFileAppender {
 
-  /**
-   * Configuration fragment relative to the prefix defined with @ConfigGroup.
-   */
-  String key();
+  @Test
+  public void testInit() {
+    ConfigFileAppender appender = new ConfigFileAppender();
 
-  /**
-   * Type of configuration. Use AUTO to decide it based on the java type.
-   */
-  ConfigType type() default ConfigType.AUTO;
+    appender.init();
 
-  /**
-   * If type == TIME the unit should be defined with this attribute.
-   */
-  TimeUnit timeUnit() default TimeUnit.MILLISECONDS;
+    appender.addConfig("hadoop.scm.enabled", "true", "desc",
+        new ConfigTag[] {ConfigTag.OZONE, ConfigTag.SECURITY});
+
+    StringWriter builder = new StringWriter();
+    appender.write(builder);
+
+    Assert.assertTrue("Generated config should contain property key entry",
+        builder.toString().contains("<name>hadoop.scm.enabled</name>"));
+
+    Assert.assertTrue("Generated config should contain tags",
+        builder.toString().contains("<tag>OZONE, SECURITY</tag>"));
+  }
 }
