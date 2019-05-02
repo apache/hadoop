@@ -18,41 +18,33 @@
 
 package org.apache.hadoop.ozone.container.common.helpers;
 
-import com.google.common.base.Preconditions;
+import static org.apache.commons.io.FilenameUtils.removeExtension;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.CONTAINER_CHECKSUM_ERROR;
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.NO_SUCH_ALGORITHM;
+import static org.apache.hadoop.ozone.container.common.impl.ContainerData.CHARSET_ENCODING;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandRequestProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Paths;
 import org.yaml.snakeyaml.Yaml;
 
-import static org.apache.commons.io.FilenameUtils.removeExtension;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.CONTAINER_CHECKSUM_ERROR;
-import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .Result.NO_SUCH_ALGORITHM;
-import static org.apache.hadoop.ozone.container.common.impl.ContainerData
-    .CHARSET_ENCODING;
+import com.google.common.base.Preconditions;
 
 /**
  * A set of helper functions to create proper responses.
@@ -211,11 +203,7 @@ public final class ContainerUtils {
         throw new IOException("Unable to create datanode ID directories.");
       }
     }
-    try (FileOutputStream out = new FileOutputStream(path)) {
-      HddsProtos.DatanodeDetailsProto proto =
-          datanodeDetails.getProtoBufMessage();
-      proto.writeTo(out);
-    }
+    DatanodeIdYaml.createDatanodeIdFile(datanodeDetails, path);
   }
 
   /**
@@ -230,9 +218,8 @@ public final class ContainerUtils {
     if (!path.exists()) {
       throw new IOException("Datanode ID file not found.");
     }
-    try(FileInputStream in = new FileInputStream(path)) {
-      return DatanodeDetails.getFromProtoBuf(
-          HddsProtos.DatanodeDetailsProto.parseFrom(in));
+    try {
+      return DatanodeIdYaml.readDatanodeIdFile(path);
     } catch (IOException e) {
       throw new IOException("Failed to parse DatanodeDetails from "
           + path.getAbsolutePath(), e);
