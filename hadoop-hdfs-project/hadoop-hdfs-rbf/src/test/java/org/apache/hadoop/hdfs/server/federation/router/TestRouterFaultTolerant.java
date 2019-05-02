@@ -18,6 +18,11 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static java.util.Arrays.asList;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createMountTableEntry;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getAdminClient;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getFileSystem;
+import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.refreshRoutersCaches;
+import static org.apache.hadoop.hdfs.server.federation.MockNamenode.registerSubclusters;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -26,8 +31,8 @@ import static org.junit.Assert.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.URI;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -36,21 +41,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MockNamenode;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -59,17 +64,12 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MultipleDestinationMountTableResolver;
-import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
 import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
-import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
-import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
-import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.After;
@@ -150,42 +150,13 @@ public class TestRouterFaultTolerant {
     }
 
     LOG.info("Registering the subclusters in the Routers");
-    registerSubclusters(Collections.singleton("ns1"));
+    registerSubclusters(
+        routers, namenodes.values(), Collections.singleton("ns1"));
 
     LOG.info("Stop ns1 to simulate an unavailable subcluster");
     namenodes.get("ns1").stop();
 
     service = Executors.newFixedThreadPool(10);
-  }
-
-  /**
-   * Register the subclusters in all Routers.
-   * @param unavailableSubclusters Set of unavailable subclusters.
-   * @throws IOException If it cannot register a subcluster.
-   */
-  private void registerSubclusters(Set<String> unavailableSubclusters)
-      throws IOException {
-    for (final Router router : routers) {
-      MembershipNamenodeResolver resolver =
-          (MembershipNamenodeResolver) router.getNamenodeResolver();
-      for (final MockNamenode nn : namenodes.values()) {
-        String nsId = nn.getNameserviceId();
-        String rpcAddress = "localhost:" + nn.getRPCPort();
-        String httpAddress = "localhost:" + nn.getHTTPPort();
-        NamenodeStatusReport report = new NamenodeStatusReport(
-            nsId, null, rpcAddress, rpcAddress, rpcAddress, httpAddress);
-        if (unavailableSubclusters.contains(nsId)) {
-          LOG.info("Register {} as UNAVAILABLE", nsId);
-          report.setRegistrationValid(false);
-        } else {
-          LOG.info("Register {} as ACTIVE", nsId);
-          report.setRegistrationValid(true);
-        }
-        report.setNamespaceInfo(new NamespaceInfo(0, nsId, nsId, 0));
-        resolver.registerNamenode(report);
-      }
-      resolver.loadCache(true);
-    }
   }
 
   @After
@@ -203,45 +174,6 @@ public class TestRouterFaultTolerant {
       service.shutdown();
       service = null;
     }
-  }
-
-  /**
-   * Add a mount table entry in some name services and wait until it is
-   * available.
-   * @param mountPoint Name of the mount point.
-   * @param order Order of the mount table entry.
-   * @param nsIds Name service identifiers.
-   * @throws Exception If the entry could not be created.
-   */
-  private void createMountTableEntry(
-      final String mountPoint, final DestinationOrder order,
-      Collection<String> nsIds) throws Exception {
-    Router router = getRandomRouter();
-    RouterClient admin = getAdminClient(router);
-    MountTableManager mountTable = admin.getMountTableManager();
-    Map<String, String> destMap = new HashMap<>();
-    for (String nsId : nsIds) {
-      destMap.put(nsId, mountPoint);
-    }
-    MountTable newEntry = MountTable.newInstance(mountPoint, destMap);
-    newEntry.setDestOrder(order);
-    AddMountTableEntryRequest addRequest =
-        AddMountTableEntryRequest.newInstance(newEntry);
-    AddMountTableEntryResponse addResponse =
-        mountTable.addMountTableEntry(addRequest);
-    boolean created = addResponse.getStatus();
-    assertTrue(created);
-
-    refreshRoutersCaches();
-
-    // Check for the path
-    GetMountTableEntriesRequest getRequest =
-        GetMountTableEntriesRequest.newInstance(mountPoint);
-    GetMountTableEntriesResponse getResponse =
-        mountTable.getMountTableEntries(getRequest);
-    List<MountTable> entries = getResponse.getEntries();
-    assertEquals("Too many entries: " + entries, 1, entries.size());
-    assertEquals(mountPoint, entries.get(0).getSourcePath());
   }
 
   /**
@@ -266,17 +198,7 @@ public class TestRouterFaultTolerant {
         mountTable.updateMountTableEntry(updateRequest);
     assertTrue(updateResponse.getStatus());
 
-    refreshRoutersCaches();
-  }
-
-  /**
-   * Refresh the caches of all Routers (to get the mount table).
-   */
-  private void refreshRoutersCaches() {
-    for (final Router router : routers) {
-      StateStoreService stateStore = router.getStateStore();
-      stateStore.refreshCaches(true);
-    }
+    refreshRoutersCaches(routers);
   }
 
   /**
@@ -320,8 +242,8 @@ public class TestRouterFaultTolerant {
     final String mountPoint = "/" + order + "-failsubcluster";
     final Path mountPath = new Path(mountPoint);
     LOG.info("Setup {} with order {}", mountPoint, order);
-    createMountTableEntry(mountPoint, order, namenodes.keySet());
-
+    createMountTableEntry(
+        getRandomRouter(), mountPoint, order, namenodes.keySet());
 
     LOG.info("Write in {} should succeed writing in ns0 and fail for ns1",
         mountPath);
@@ -383,7 +305,14 @@ public class TestRouterFaultTolerant {
     tasks.add(getListFailTask(router0Fs, mountPoint));
     int filesExpected = dirs0.length + results.getSuccess();
     tasks.add(getListSuccessTask(router1Fs, mountPoint, filesExpected));
-    assertEquals(2, collectResults("List "  + mountPoint, tasks).getSuccess());
+    results = collectResults("List "  + mountPoint, tasks);
+    assertEquals("Failed listing", 2, results.getSuccess());
+
+    tasks.add(getContentSummaryFailTask(router0Fs, mountPoint));
+    tasks.add(getContentSummarySuccessTask(
+        router1Fs, mountPoint, filesExpected));
+    results = collectResults("Content summary "  + mountPoint, tasks);
+    assertEquals("Failed content summary", 2, results.getSuccess());
   }
 
   /**
@@ -422,6 +351,12 @@ public class TestRouterFaultTolerant {
     tasks.add(getListFailTask(router0Fs, dir0));
     tasks.add(getListSuccessTask(router1Fs, dir0, results.getSuccess()));
     assertEquals(2, collectResults("List "  + dir0, tasks).getSuccess());
+
+    tasks.add(getContentSummaryFailTask(router0Fs, dir0));
+    tasks.add(getContentSummarySuccessTask(
+        router1Fs, dir0, results.getSuccess()));
+    results = collectResults("Content summary "  + dir0, tasks);
+    assertEquals(2, results.getSuccess());
   }
 
   /**
@@ -534,6 +469,42 @@ public class TestRouterFaultTolerant {
     };
   }
 
+
+  /**
+   * Task that lists a directory and expects to fail.
+   * @param fs File system to check.
+   * @param path Path to try to list.
+   * @return If the listing failed as expected.
+   */
+  private static Callable<Boolean> getContentSummaryFailTask(
+      FileSystem fs, Path path) {
+    return () -> {
+      try {
+        fs.getContentSummary(path);
+        return false;
+      } catch (RemoteException re) {
+        return true;
+      }
+    };
+  }
+
+  /**
+   * Task that lists a directory and succeeds.
+   * @param fs File system to check.
+   * @param path Path to list.
+   * @param expected Number of files to expect to find.
+   * @return If the listing succeeds.
+   */
+  private static Callable<Boolean> getContentSummarySuccessTask(
+      FileSystem fs, Path path, int expected) {
+    return () -> {
+      ContentSummary summary = fs.getContentSummary(path);
+      assertEquals("Wrong summary for " + path,
+          expected, summary.getFileAndDirectoryCount());
+      return true;
+    };
+  }
+
   /**
    * Invoke a set of tasks and collect their outputs.
    * The tasks should do assertions.
@@ -556,7 +527,14 @@ public class TestRouterFaultTolerant {
           results.incrFailure();
         }
       } catch (Exception e) {
-        fail(e.getMessage());
+        StringWriter stackTrace = new StringWriter();
+        PrintWriter writer = new PrintWriter(stackTrace);
+        if (e instanceof ExecutionException) {
+          e.getCause().printStackTrace(writer);
+        } else {
+          e.printStackTrace(writer);
+        }
+        fail("Failed to run \"" + tag + "\": " + stackTrace);
       }
     });
     tasks.clear();
@@ -630,25 +608,5 @@ public class TestRouterFaultTolerant {
     Router router = getRandomRouter();
     return userUgi.doAs(
         (PrivilegedExceptionAction<FileSystem>) () -> getFileSystem(router));
-  }
-
-  private static FileSystem getFileSystem(int rpcPort) throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    URI uri = URI.create("hdfs://localhost:" + rpcPort);
-    return DistributedFileSystem.get(uri, conf);
-  }
-
-  private static FileSystem getFileSystem(final Router router)
-      throws IOException {
-    InetSocketAddress rpcAddress = router.getRpcServerAddress();
-    int rpcPort = rpcAddress.getPort();
-    return getFileSystem(rpcPort);
-  }
-
-  private static RouterClient getAdminClient(
-      final Router router) throws IOException {
-    Configuration conf = new HdfsConfiguration();
-    InetSocketAddress routerSocket = router.getAdminServerAddress();
-    return new RouterClient(routerSocket, conf);
   }
 }

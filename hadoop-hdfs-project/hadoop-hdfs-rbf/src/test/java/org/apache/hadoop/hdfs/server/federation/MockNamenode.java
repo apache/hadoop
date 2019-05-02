@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs.server.federation;
 
+import static java.util.Collections.emptySet;
+import static java.util.Collections.singletonList;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_ADMIN;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -31,14 +33,19 @@ import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
 import org.apache.hadoop.fs.FsServerDefaults;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.ha.HAServiceStatus;
@@ -67,6 +74,9 @@ import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.NamenodeProtocolServerSideTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
+import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.hdfs.server.namenode.NotReplicatedYetException;
 import org.apache.hadoop.hdfs.server.namenode.SafeModeException;
@@ -311,6 +321,9 @@ public class MockNamenode {
     when(l).thenAnswer(invocation -> {
       String src = getSrc(invocation);
       LOG.info("{} getListing({})", nsId, src);
+      if (fs.get(src) == null) {
+        throw new FileNotFoundException("File does not exist " + src);
+      }
       if (!src.endsWith("/")) {
         src += "/";
       }
@@ -338,6 +351,15 @@ public class MockNamenode {
     when(c).thenAnswer(invocation -> {
       String src = getSrc(invocation);
       LOG.info("{} create({})", nsId, src);
+      boolean createParent = (boolean)invocation.getArgument(4);
+      if (createParent) {
+        Path path = new Path(src).getParent();
+        while (!path.isRoot()) {
+          LOG.info("{} create parent {}", nsId, path);
+          fs.put(path.toString(), "DIRECTORY");
+          path = path.getParent();
+        }
+      }
       fs.put(src, "FILE");
       return getMockHdfsFileStatus(src, "FILE");
     });
@@ -375,6 +397,15 @@ public class MockNamenode {
     when(m).thenAnswer(invocation -> {
       String src = getSrc(invocation);
       LOG.info("{} mkdirs({})", nsId, src);
+      boolean createParent = (boolean)invocation.getArgument(2);
+      if (createParent) {
+        Path path = new Path(src).getParent();
+        while (!path.isRoot()) {
+          LOG.info("{} mkdir parent {}", nsId, path);
+          fs.put(path.toString(), "DIRECTORY");
+          path = path.getParent();
+        }
+      }
       fs.put(src, "DIRECTORY");
       return true;
     });
@@ -385,6 +416,39 @@ public class MockNamenode {
           Type.valueOf(DataChecksum.CHECKSUM_CRC32));
       when(defaults.getKeyProviderUri()).thenReturn(nsId);
       return defaults;
+    });
+    when(mockNn.getContentSummary(anyString())).thenAnswer(invocation -> {
+      String src = getSrc(invocation);
+      LOG.info("{} getContentSummary({})", nsId, src);
+      if (fs.get(src) == null) {
+        throw new FileNotFoundException("File does not exist " + src);
+      }
+      if (!src.endsWith("/")) {
+        src += "/";
+      }
+      Map<String, String> files =
+          fs.subMap(src, src + Character.MAX_VALUE);
+      int numFiles = 0;
+      int numDirs = 0;
+      int length = 0;
+      for (Entry<String, String> entry : files.entrySet()) {
+        String file = entry.getKey();
+        if (file.substring(src.length()).indexOf('/') < 0) {
+          String type = entry.getValue();
+          if ("DIRECTORY".equals(type)) {
+            numDirs++;
+          } else if ("FILE".equals(type)) {
+            numFiles++;
+            length += 100;
+          }
+        }
+      }
+      return new ContentSummary.Builder()
+          .fileCount(numFiles)
+          .directoryCount(numDirs)
+          .length(length)
+          .erasureCodingPolicy("")
+          .build();
     });
   }
 
@@ -444,5 +508,50 @@ public class MockNamenode {
     when(tok.getService()).thenReturn(new Text(nsId));
     when(lb.getBlockToken()).thenReturn(tok);
     return lb;
+  }
+
+  /**
+   * Register a set of NameNodes in a Router.
+   * @param router Router to register to.
+   * @param namenodes Set of NameNodes.
+   * @throws IOException If it cannot register them.
+   */
+  public static void registerSubclusters(Router router,
+      Collection<MockNamenode> namenodes) throws IOException {
+    registerSubclusters(singletonList(router), namenodes, emptySet());
+  }
+
+  /**
+   * Register a set of NameNodes in a set of Routers.
+   * @param routers Set of Routers.
+   * @param namenodes Set of NameNodes.
+   * @param unavailableSubclusters Set of unavailable subclusters.
+   * @throws IOException If it cannot register them.
+   */
+  public static void registerSubclusters(List<Router> routers,
+      Collection<MockNamenode> namenodes,
+      Set<String> unavailableSubclusters) throws IOException {
+
+    for (final Router router : routers) {
+      MembershipNamenodeResolver resolver =
+          (MembershipNamenodeResolver) router.getNamenodeResolver();
+      for (final MockNamenode nn : namenodes) {
+        String nsId = nn.getNameserviceId();
+        String rpcAddress = "localhost:" + nn.getRPCPort();
+        String httpAddress = "localhost:" + nn.getHTTPPort();
+        NamenodeStatusReport report = new NamenodeStatusReport(
+            nsId, null, rpcAddress, rpcAddress, rpcAddress, httpAddress);
+        if (unavailableSubclusters.contains(nsId)) {
+          LOG.info("Register {} as UNAVAILABLE", nsId);
+          report.setRegistrationValid(false);
+        } else {
+          LOG.info("Register {} as ACTIVE", nsId);
+          report.setRegistrationValid(true);
+        }
+        report.setNamespaceInfo(new NamespaceInfo(0, nsId, nsId, 0));
+        resolver.registerNamenode(report);
+      }
+      resolver.loadCache(true);
+    }
   }
 }
