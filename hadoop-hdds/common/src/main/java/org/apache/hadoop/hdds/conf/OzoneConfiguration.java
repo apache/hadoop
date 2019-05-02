@@ -28,6 +28,8 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -59,6 +61,108 @@ public class OzoneConfiguration extends Configuration {
 
     XMLConfiguration config = (XMLConfiguration) um.unmarshal(url);
     return config.getProperties();
+  }
+
+  /**
+   * Create a Configuration object and inject the required configuration values.
+   *
+   * @param configurationClass The class where the fields are annotated with
+   *                           the configuration.
+   * @return Initiated java object where the config fields are injected.
+   */
+  public <T> T getObject(Class<T> configurationClass) {
+
+    T configuration;
+
+    try {
+      configuration = configurationClass.newInstance();
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new ConfigurationException(
+          "Configuration class can't be created: " + configurationClass, e);
+    }
+    ConfigGroup configGroup =
+        configurationClass.getAnnotation(ConfigGroup.class);
+    String prefix = configGroup.prefix();
+
+    for (Method setterMethod : configurationClass.getMethods()) {
+      if (setterMethod.isAnnotationPresent(Config.class)) {
+
+        String methodLocation =
+            configurationClass + "." + setterMethod.getName();
+
+        Config configAnnotation = setterMethod.getAnnotation(Config.class);
+
+        String key = prefix + "." + configAnnotation.key();
+
+        Class<?>[] parameterTypes = setterMethod.getParameterTypes();
+        if (parameterTypes.length != 1) {
+          throw new ConfigurationException(
+              "@Config annotation should be used on simple setter: "
+                  + methodLocation);
+        }
+
+        ConfigType type = configAnnotation.type();
+
+        if (type == ConfigType.AUTO) {
+          type = detectConfigType(parameterTypes[0], methodLocation);
+        }
+
+        //Note: default value is handled by ozone-default.xml. Here we can
+        //use any default.
+        try {
+          switch (type) {
+          case STRING:
+            setterMethod.invoke(configuration, get(key));
+            break;
+          case INT:
+            setterMethod.invoke(configuration,
+                getInt(key, 0));
+            break;
+          case BOOLEAN:
+            setterMethod.invoke(configuration,
+                getBoolean(key, false));
+            break;
+          case LONG:
+            setterMethod.invoke(configuration,
+                getLong(key, 0));
+            break;
+          case TIME:
+            setterMethod.invoke(configuration,
+                getTimeDuration(key, 0, configAnnotation.timeUnit()));
+            break;
+          default:
+            throw new ConfigurationException(
+                "Unsupported ConfigType " + type + " on " + methodLocation);
+          }
+        } catch (InvocationTargetException | IllegalAccessException e) {
+          throw new ConfigurationException(
+              "Can't inject configuration to " + methodLocation, e);
+        }
+
+      }
+    }
+    return configuration;
+
+  }
+
+  private ConfigType detectConfigType(Class<?> parameterType,
+      String methodLocation) {
+    ConfigType type;
+    if (parameterType == String.class) {
+      type = ConfigType.STRING;
+    } else if (parameterType == Integer.class || parameterType == int.class) {
+      type = ConfigType.INT;
+    } else if (parameterType == Long.class || parameterType == long.class) {
+      type = ConfigType.LONG;
+    } else if (parameterType == Boolean.class
+        || parameterType == boolean.class) {
+      type = ConfigType.BOOLEAN;
+    } else {
+      throw new ConfigurationException(
+          "Unsupported configuration type " + parameterType + " in "
+              + methodLocation);
+    }
+    return type;
   }
 
   /**
@@ -145,7 +249,7 @@ public class OzoneConfiguration extends Configuration {
     }
 
     @Override
-    public int hashCode(){
+    public int hashCode() {
       return this.getName().hashCode();
     }
 
@@ -169,6 +273,7 @@ public class OzoneConfiguration extends Configuration {
    * does not override values of properties
    * if there is no tag present in the configs of
    * newly added resources.
+   *
    * @param tag
    * @return Properties that belong to the tag
    */
@@ -181,7 +286,7 @@ public class OzoneConfiguration extends Configuration {
     Properties props = new Properties();
     Enumeration properties = propertiesByTag.propertyNames();
     while (properties.hasMoreElements()) {
-      Object propertyName =  properties.nextElement();
+      Object propertyName = properties.nextElement();
       // get the current value of the property
       Object value = updatedProps.getProperty(propertyName.toString());
       if (value != null) {
