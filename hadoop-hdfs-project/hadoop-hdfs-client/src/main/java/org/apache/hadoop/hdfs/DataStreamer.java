@@ -1152,9 +1152,9 @@ class DataStreamer extends Daemon {
             one = ackQueue.getFirst();
           }
           if (one.getSeqno() != seqno) {
-            throw new IOException("ResponseProcessor: Expecting seqno" +
-                " for block " + block +
-                one.getSeqno() + " but received " + seqno);
+            throw new IOException("ResponseProcessor: Expecting seqno " +
+                one.getSeqno() + " for block " + block +
+                " but received " + seqno);
           }
           isLastPacketInBlock = one.isLastPacketInBlock();
 
