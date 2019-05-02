@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -31,8 +32,14 @@ import java.io.InputStreamReader;
 import java.lang.management.ManagementFactory;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 
 import javax.management.JMX;
@@ -40,6 +47,7 @@ import javax.management.MBeanServer;
 import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,12 +56,18 @@ import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ha.HAServiceProtocol.HAServiceState;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
+import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.hdfs.server.federation.resolver.order.DestinationOrder;
 import org.apache.hadoop.hdfs.server.federation.router.ConnectionManager;
+import org.apache.hadoop.hdfs.server.federation.router.Router;
+import org.apache.hadoop.hdfs.server.federation.router.RouterClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcClient;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
@@ -61,6 +75,12 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
 import org.apache.hadoop.hdfs.server.federation.store.RouterStore;
+import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.AddMountTableEntryResponse;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
+import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.security.AccessControlException;
@@ -410,6 +430,114 @@ public final class FederationTestUtils {
           cluster.getNamenodes(nameService);
       cluster.switchToActive(nameService,
           listNamenodeContext.get(index).getNamenodeId());
+    }
+  }
+
+  /**
+   * Get the file system for HDFS in an RPC port.
+   * @param rpcPort RPC port.
+   * @return HDFS file system.
+   * @throws IOException If it cannot create the file system.
+   */
+  public static FileSystem getFileSystem(int rpcPort) throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    URI uri = URI.create("hdfs://localhost:" + rpcPort);
+    return DistributedFileSystem.get(uri, conf);
+  }
+
+  /**
+   * Get the file system for HDFS for a Router.
+   * @param router Router.
+   * @return HDFS file system.
+   * @throws IOException If it cannot create the file system.
+   */
+  public static FileSystem getFileSystem(final Router router)
+      throws IOException {
+    InetSocketAddress rpcAddress = router.getRpcServerAddress();
+    int rpcPort = rpcAddress.getPort();
+    return getFileSystem(rpcPort);
+  }
+
+  /**
+   * Get the admin interface for a Router.
+   * @param router Router.
+   * @return Admin interface.
+   * @throws IOException If it cannot create the admin interface.
+   */
+  public static RouterClient getAdminClient(
+      final Router router) throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    InetSocketAddress routerSocket = router.getAdminServerAddress();
+    return new RouterClient(routerSocket, conf);
+  }
+
+  /**
+   * Add a mount table entry in some name services and wait until it is
+   * available.
+   * @param router Router to change.
+   * @param mountPoint Name of the mount point.
+   * @param order Order of the mount table entry.
+   * @param nsIds Name service identifiers.
+   * @throws Exception If the entry could not be created.
+   */
+  public static void createMountTableEntry(
+      final Router router,
+      final String mountPoint, final DestinationOrder order,
+      Collection<String> nsIds) throws Exception {
+    createMountTableEntry(
+        Collections.singletonList(router), mountPoint, order, nsIds);
+  }
+
+  /**
+   * Add a mount table entry in some name services and wait until it is
+   * available.
+   * @param routers List of routers.
+   * @param mountPoint Name of the mount point.
+   * @param order Order of the mount table entry.
+   * @param nsIds Name service identifiers.
+   * @throws Exception If the entry could not be created.
+   */
+  public static void createMountTableEntry(
+      final List<Router> routers,
+      final String mountPoint,
+      final DestinationOrder order,
+      final Collection<String> nsIds) throws Exception {
+    Router router = routers.get(0);
+    RouterClient admin = getAdminClient(router);
+    MountTableManager mountTable = admin.getMountTableManager();
+    Map<String, String> destMap = new HashMap<>();
+    for (String nsId : nsIds) {
+      destMap.put(nsId, mountPoint);
+    }
+    MountTable newEntry = MountTable.newInstance(mountPoint, destMap);
+    newEntry.setDestOrder(order);
+    AddMountTableEntryRequest addRequest =
+        AddMountTableEntryRequest.newInstance(newEntry);
+    AddMountTableEntryResponse addResponse =
+        mountTable.addMountTableEntry(addRequest);
+    boolean created = addResponse.getStatus();
+    assertTrue(created);
+
+    refreshRoutersCaches(routers);
+
+    // Check for the path
+    GetMountTableEntriesRequest getRequest =
+        GetMountTableEntriesRequest.newInstance(mountPoint);
+    GetMountTableEntriesResponse getResponse =
+        mountTable.getMountTableEntries(getRequest);
+    List<MountTable> entries = getResponse.getEntries();
+    assertEquals("Too many entries: " + entries, 1, entries.size());
+    assertEquals(mountPoint, entries.get(0).getSourcePath());
+  }
+
+  /**
+   * Refresh the caches of a set of Routers.
+   * @param routers List of Routers.
+   */
+  public static void refreshRoutersCaches(final List<Router> routers) {
+    for (final Router router : routers) {
+      StateStoreService stateStore = router.getStateStore();
+      stateStore.refreshCaches(true);
     }
   }
 }
