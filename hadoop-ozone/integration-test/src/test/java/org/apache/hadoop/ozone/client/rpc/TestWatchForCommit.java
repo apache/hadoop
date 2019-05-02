@@ -133,9 +133,9 @@ public class TestWatchForCommit {
     // and will be captured in keyOutputStream and the failover will happen
     // to a different block
     OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setTimeDuration(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, 10,
+    conf.setTimeDuration(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, 20,
         TimeUnit.SECONDS);
-    conf.setInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY, 2);
+    conf.setInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY, 5);
     startCluster(conf);
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
@@ -359,7 +359,7 @@ public class TestWatchForCommit {
     OzoneConfiguration conf = new OzoneConfiguration();
     conf.setTimeDuration(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, 20,
         TimeUnit.SECONDS);
-    conf.setInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY, 3);
+    conf.setInt(OzoneConfigKeys.DFS_RATIS_CLIENT_REQUEST_MAX_RETRIES_KEY, 8);
     startCluster(conf);
     GenericTestUtils.LogCapturer logCapturer =
         GenericTestUtils.LogCapturer.captureLogs(XceiverClientRatis.LOG);
@@ -392,8 +392,6 @@ public class TestWatchForCommit {
     Assert.assertEquals(2, ratisClient.getCommitInfoMap().size());
     clientManager.releaseClient(xceiverClient, false);
     Assert.assertTrue(logCapturer.getOutput().contains("3 way commit failed"));
-    Assert.assertTrue(
-        logCapturer.getOutput().contains("RaftRetryFailureException"));
     Assert
         .assertTrue(logCapturer.getOutput().contains("Committed by majority"));
     logCapturer.stopCapturing();
