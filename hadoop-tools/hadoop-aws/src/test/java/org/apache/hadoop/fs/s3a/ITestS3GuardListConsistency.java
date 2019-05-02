@@ -253,7 +253,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         DEFAULT_DELAY_KEY_SUBSTRING)));
 
     try {
-      RemoteIterator<LocatedFileStatus> old = fs.listFilesAndEmptyDirectories(
+      RemoteIterator<S3ALocatedFileStatus> old = fs.listFilesAndEmptyDirectories(
           path("a"), true);
       fail("Recently renamed dir should not be visible");
     } catch(FileNotFoundException e) {

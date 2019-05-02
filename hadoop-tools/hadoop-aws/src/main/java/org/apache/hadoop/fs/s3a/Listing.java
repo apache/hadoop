@@ -68,7 +68,7 @@ public class Listing {
    * @return the file status iterator
    */
   ProvidedFileStatusIterator createProvidedFileStatusIterator(
-      FileStatus[] fileStatuses,
+      S3AFileStatus[] fileStatuses,
       PathFilter filter,
       FileStatusAcceptor acceptor) {
     return new ProvidedFileStatusIterator(fileStatuses, filter, acceptor);
@@ -114,7 +114,7 @@ public class Listing {
       S3ListRequest request,
       PathFilter filter,
       Listing.FileStatusAcceptor acceptor,
-      RemoteIterator<FileStatus> providedStatus) throws IOException {
+      RemoteIterator<S3AFileStatus> providedStatus) throws IOException {
     return new FileStatusListingIterator(
         new ObjectListingIterator(listPath, request),
         filter,
@@ -129,7 +129,7 @@ public class Listing {
    */
   @VisibleForTesting
   LocatedFileStatusIterator createLocatedFileStatusIterator(
-      RemoteIterator<FileStatus> statusIterator) {
+      RemoteIterator<S3AFileStatus> statusIterator) {
     return new LocatedFileStatusIterator(statusIterator);
   }
 
@@ -143,7 +143,7 @@ public class Listing {
    */
   @VisibleForTesting
   TombstoneReconcilingIterator createTombstoneReconcilingIterator(
-      RemoteIterator<LocatedFileStatus> iterator, Set<Path> tombstones) {
+      RemoteIterator<S3ALocatedFileStatus> iterator, Set<Path> tombstones) {
     return new TombstoneReconcilingIterator(iterator, tombstones);
   }
 
@@ -189,19 +189,19 @@ public class Listing {
    * iterator returned.
    */
   static final class SingleStatusRemoteIterator
-      implements RemoteIterator<LocatedFileStatus> {
+      implements RemoteIterator<S3ALocatedFileStatus> {
 
     /**
      * The status to return; set to null after the first iteration.
      */
-    private LocatedFileStatus status;
+    private S3ALocatedFileStatus status;
 
     /**
      * Constructor.
      * @param status status value: may be null, in which case
      * the iterator is empty.
      */
-    public SingleStatusRemoteIterator(LocatedFileStatus status) {
+    public SingleStatusRemoteIterator(S3ALocatedFileStatus status) {
       this.status = status;
     }
 
@@ -226,9 +226,9 @@ public class Listing {
      * to the constructor.
      */
     @Override
-    public LocatedFileStatus next() throws IOException {
+    public S3ALocatedFileStatus next() throws IOException {
       if (hasNext()) {
-        LocatedFileStatus s = this.status;
+        S3ALocatedFileStatus s = this.status;
         status = null;
         return s;
       } else {
@@ -247,16 +247,16 @@ public class Listing {
    * There is no remote data to fetch.
    */
   static class ProvidedFileStatusIterator
-      implements RemoteIterator<FileStatus> {
-    private final ArrayList<FileStatus> filteredStatusList;
+      implements RemoteIterator<S3AFileStatus> {
+    private final ArrayList<S3AFileStatus> filteredStatusList;
     private int index = 0;
 
-    ProvidedFileStatusIterator(FileStatus[] fileStatuses, PathFilter filter,
+    ProvidedFileStatusIterator(S3AFileStatus[] fileStatuses, PathFilter filter,
         FileStatusAcceptor acceptor) {
       Preconditions.checkArgument(fileStatuses != null, "Null status list!");
 
       filteredStatusList = new ArrayList<>(fileStatuses.length);
-      for (FileStatus status : fileStatuses) {
+      for (S3AFileStatus status : fileStatuses) {
         if (filter.accept(status.getPath()) && acceptor.accept(status)) {
           filteredStatusList.add(status);
         }
@@ -270,7 +270,7 @@ public class Listing {
     }
 
     @Override
-    public FileStatus next() throws IOException {
+    public S3AFileStatus next() throws IOException {
       if (!hasNext()) {
         throw new NoSuchElementException();
       }
@@ -305,7 +305,7 @@ public class Listing {
    * Thread safety: None.
    */
   class FileStatusListingIterator
-      implements RemoteIterator<FileStatus> {
+      implements RemoteIterator<S3AFileStatus> {
 
     /** Source of objects. */
     private final ObjectListingIterator source;
@@ -316,10 +316,10 @@ public class Listing {
     /** request batch size. */
     private int batchSize;
     /** Iterator over the current set of results. */
-    private ListIterator<FileStatus> statusBatchIterator;
+    private ListIterator<S3AFileStatus> statusBatchIterator;
 
-    private final Set<FileStatus> providedStatus;
-    private Iterator<FileStatus> providedStatusIterator;
+    private final Set<S3AFileStatus> providedStatus;
+    private Iterator<S3AFileStatus> providedStatusIterator;
 
     /**
      * Create an iterator over file status entries.
@@ -335,13 +335,13 @@ public class Listing {
     FileStatusListingIterator(ObjectListingIterator source,
         PathFilter filter,
         FileStatusAcceptor acceptor,
-        RemoteIterator<FileStatus> providedStatus) throws IOException {
+        RemoteIterator<S3AFileStatus> providedStatus) throws IOException {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;
       this.providedStatus = new HashSet<>();
       for (; providedStatus != null && providedStatus.hasNext();) {
-        final FileStatus status = providedStatus.next();
+        final S3AFileStatus status = providedStatus.next();
         if (filter.accept(status.getPath()) && acceptor.accept(status)) {
           this.providedStatus.add(status);
         }
@@ -384,8 +384,8 @@ public class Listing {
 
     @Override
     @Retries.RetryTranslated
-    public FileStatus next() throws IOException {
-      final FileStatus status;
+    public S3AFileStatus next() throws IOException {
+      final S3AFileStatus status;
       if (sourceHasNext()) {
         status = statusBatchIterator.next();
         // We remove from provided list the file status listed by S3 so that
@@ -441,7 +441,7 @@ public class Listing {
       // counters for debug logs
       int added = 0, ignored = 0;
       // list to fill in with results. Initial size will be list maximum.
-      List<FileStatus> stats = new ArrayList<>(
+      List<S3AFileStatus> stats = new ArrayList<>(
           objects.getObjectSummaries().size() +
               objects.getCommonPrefixes().size());
       // objects
@@ -453,8 +453,9 @@ public class Listing {
         }
         // Skip over keys that are ourselves and old S3N _$folder$ files
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
-          FileStatus status = createFileStatus(keyPath, summary,
-              owner.getDefaultBlockSize(keyPath), owner.getUsername());
+          S3AFileStatus status = createFileStatus(keyPath, summary,
+              owner.getDefaultBlockSize(keyPath), owner.getUsername(),
+              null, null);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
@@ -468,7 +469,7 @@ public class Listing {
       for (String prefix : objects.getCommonPrefixes()) {
         Path keyPath = owner.keyToQualifiedPath(prefix);
         if (acceptor.accept(keyPath, prefix) && filter.accept(keyPath)) {
-          FileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
+          S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, keyPath,
               owner.getUsername());
           LOG.debug("Adding directory: {}", status);
           added++;
@@ -679,14 +680,14 @@ public class Listing {
    * return a remote iterator of {@link LocatedFileStatus} instances.
    */
   class LocatedFileStatusIterator
-      implements RemoteIterator<LocatedFileStatus> {
-    private final RemoteIterator<FileStatus> statusIterator;
+      implements RemoteIterator<S3ALocatedFileStatus> {
+    private final RemoteIterator<S3AFileStatus> statusIterator;
 
     /**
      * Constructor.
      * @param statusIterator an iterator over the remote status entries
      */
-    LocatedFileStatusIterator(RemoteIterator<FileStatus> statusIterator) {
+    LocatedFileStatusIterator(RemoteIterator<S3AFileStatus> statusIterator) {
       this.statusIterator = statusIterator;
     }
 
@@ -696,7 +697,7 @@ public class Listing {
     }
 
     @Override
-    public LocatedFileStatus next() throws IOException {
+    public S3ALocatedFileStatus next() throws IOException {
       return owner.toLocatedFileStatus(statusIterator.next());
     }
   }
@@ -708,16 +709,16 @@ public class Listing {
    * remain in the source iterator.
    */
   static class TombstoneReconcilingIterator implements
-      RemoteIterator<LocatedFileStatus> {
-    private LocatedFileStatus next = null;
-    private final RemoteIterator<LocatedFileStatus> iterator;
+      RemoteIterator<S3ALocatedFileStatus> {
+    private S3ALocatedFileStatus next = null;
+    private final RemoteIterator<S3ALocatedFileStatus> iterator;
     private final Set<Path> tombstones;
 
     /**
      * @param iterator Source iterator to filter
      * @param tombstones set of tombstone markers to filter out of results
      */
-    TombstoneReconcilingIterator(RemoteIterator<LocatedFileStatus>
+    TombstoneReconcilingIterator(RemoteIterator<S3ALocatedFileStatus>
         iterator, Set<Path> tombstones) {
       this.iterator = iterator;
       if (tombstones != null) {
@@ -729,7 +730,7 @@ public class Listing {
 
     private boolean fetch() throws IOException {
       while (next == null && iterator.hasNext()) {
-        LocatedFileStatus candidate = iterator.next();
+        S3ALocatedFileStatus candidate = iterator.next();
         if (!tombstones.contains(candidate.getPath())) {
           next = candidate;
           return true;
@@ -745,9 +746,9 @@ public class Listing {
       return fetch();
     }
 
-    public LocatedFileStatus next() throws IOException {
+    public S3ALocatedFileStatus next() throws IOException {
       if (hasNext()) {
-        LocatedFileStatus result = next;
+        S3ALocatedFileStatus result = next;
         next = null;
         fetch();
         return result;

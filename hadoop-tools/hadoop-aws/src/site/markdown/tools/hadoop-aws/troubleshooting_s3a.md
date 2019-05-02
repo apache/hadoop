@@ -970,8 +970,8 @@ and the like. The standard strategy here is to save to HDFS and then copy to S3.
 
 ```
 org.apache.hadoop.fs.s3a.RemoteFileChangedException: re-open `s3a://my-bucket/test/file.txt':
-  ETag change reported by S3 while reading at position 1949.
-  Version f9c186d787d4de9657e99f280ba26555 was unavailable
+  Change reported by S3 while reading at position 1949.
+  ETag f9c186d787d4de9657e99f280ba26555 was unavailable
   at org.apache.hadoop.fs.s3a.impl.ChangeTracker.processResponse(ChangeTracker.java:137)
   at org.apache.hadoop.fs.s3a.S3AInputStream.reopen(S3AInputStream.java:200)
   at org.apache.hadoop.fs.s3a.S3AInputStream.lambda$lazySeek$1(S3AInputStream.java:346)

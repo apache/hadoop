@@ -34,16 +34,22 @@ public class S3ObjectAttributes {
   private final String key;
   private final S3AEncryptionMethods serverSideEncryptionAlgorithm;
   private final String serverSideEncryptionKey;
+  private final String eTag;
+  private final String versionId;
 
   public S3ObjectAttributes(
       String bucket,
       String key,
       S3AEncryptionMethods serverSideEncryptionAlgorithm,
-      String serverSideEncryptionKey) {
+      String serverSideEncryptionKey,
+      String eTag,
+      String versionId) {
     this.bucket = bucket;
     this.key = key;
     this.serverSideEncryptionAlgorithm = serverSideEncryptionAlgorithm;
     this.serverSideEncryptionKey = serverSideEncryptionKey;
+    this.eTag = eTag;
+    this.versionId = versionId;
   }
 
   public String getBucket() {
@@ -60,5 +66,13 @@ public class S3ObjectAttributes {
 
   public String getServerSideEncryptionKey() {
     return serverSideEncryptionKey;
+  }
+
+  public String getETag() {
+    return eTag;
+  }
+
+  public String getVersionId() {
+    return versionId;
   }
 }
