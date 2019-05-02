@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.ContainerReplicaProto.State;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMCommandProto;
+import org.apache.hadoop.hdds.scm.container.ReplicationManager.ReplicationManagerConfiguration;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms
     .ContainerPlacementPolicy;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
@@ -33,6 +34,7 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.server.events.EventHandler;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.ozone.lock.LockManager;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.junit.After;
 import org.junit.Assert;
@@ -104,7 +106,11 @@ public class TestReplicationManager {
         });
 
     replicationManager = new ReplicationManager(
-        conf, containerManager, containerPlacementPolicy, eventQueue);
+        new ReplicationManagerConfiguration(),
+        containerManager,
+        containerPlacementPolicy,
+        eventQueue,
+        new LockManager<>(conf));
     replicationManager.start();
     Thread.sleep(100L);
   }
@@ -567,6 +573,20 @@ public class TestReplicationManager {
     // Wait for EventQueue to call the event handler
     Thread.sleep(100L);
     Assert.assertEquals(0, datanodeCommandHandler.getInvocation());
+  }
+
+  @Test
+  public void testGeneratedConfig() {
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+
+    ReplicationManagerConfiguration rmc =
+        ozoneConfiguration.getObject(ReplicationManagerConfiguration.class);
+
+    //default is not included in ozone-site.xml but generated from annotation
+    //to the ozone-site-generated.xml which should be loaded by the
+    // OzoneConfiguration.
+    Assert.assertEquals(600000, rmc.getEventTimeout());
+
   }
 
   @After

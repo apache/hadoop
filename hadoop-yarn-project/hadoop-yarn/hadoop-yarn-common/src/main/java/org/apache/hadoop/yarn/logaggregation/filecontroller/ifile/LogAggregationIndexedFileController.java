@@ -819,6 +819,13 @@ public class LogAggregationIndexedFileController
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 
+  @Override
+  public Path getOlderRemoteAppLogDir(ApplicationId appId, String user)
+      throws IOException {
+    return LogAggregationUtils.getOlderRemoteAppLogDir(appId, user,
+        this.remoteRootLogDir, this.remoteRootLogDirSuffix);
+  }
+
   @Private
   public IndexedLogsMeta loadIndexedLogsMeta(Path remoteLogPath, long end,
       ApplicationId appId) throws IOException {
