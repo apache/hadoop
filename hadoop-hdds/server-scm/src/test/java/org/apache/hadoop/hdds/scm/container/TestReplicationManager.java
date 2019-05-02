@@ -575,6 +575,20 @@ public class TestReplicationManager {
     Assert.assertEquals(0, datanodeCommandHandler.getInvocation());
   }
 
+  @Test
+  public void testGeneratedConfig() {
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+
+    ReplicationManagerConfiguration rmc =
+        ozoneConfiguration.getObject(ReplicationManagerConfiguration.class);
+
+    //default is not included in ozone-site.xml but generated from annotation
+    //to the ozone-site-generated.xml which should be loaded by the
+    // OzoneConfiguration.
+    Assert.assertEquals(600000, rmc.getEventTimeout());
+
+  }
+
   @After
   public void teardown() throws IOException {
     containerStateManager.close();

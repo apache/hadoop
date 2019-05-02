@@ -124,8 +124,8 @@ public class TestOzoneConfiguration {
     SimpleConfiguration configuration =
         ozoneConfiguration.getObject(SimpleConfiguration.class);
 
-    Assert.assertEquals(false, configuration.isEnabled());
-    Assert.assertEquals(9860, configuration.getPort());
+    Assert.assertEquals(true, configuration.isEnabled());
+    Assert.assertEquals(9878, configuration.getPort());
   }
 
 
