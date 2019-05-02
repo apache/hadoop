@@ -13,14 +13,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
+apiVersion: v1
+kind: Service
+metadata:
+  name: jaeger
+spec:
+  clusterIP: None
+  selector:
+    app: jaeger
+    component: jaeger
+  ports:
+    - name: ui
+      port: 16686
 ---
-- type: Add
-  trigger:
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jaeger
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+      component: jaeger
+  replicas: 1
+  serviceName: jaeger
+  template:
     metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+      labels:
+        app: jaeger
+        component: jaeger
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:latest
+          ports:
+            - containerPort: 16686
+              name: web
+          env:
+            - name: COLLECTOR_ZIPKIN_HTTP_PORT
+              value: "9411"

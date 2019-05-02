@@ -13,14 +13,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
----
-- type: Add
-  trigger:
-    metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: prometheus-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prometheus
+subjects:
+- kind: ServiceAccount
+  name: prometheus-operator
+  namespace: default

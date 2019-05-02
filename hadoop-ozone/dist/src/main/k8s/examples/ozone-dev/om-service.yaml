@@ -13,14 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
----
-- type: Add
-  trigger:
-    metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: om
+spec:
+  ports:
+  - port: 9874
+    name: ui
+  clusterIP: None
+  selector:
+    app: ozone
+    component: om

@@ -13,14 +13,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: ozone/prometheus
-description: Enable prometheus monitoring in Ozone
----
-- type: Add
-  trigger:
-    metadata:
-      name: config
-  path:
-    - data
-  value:
-    OZONE-SITE.XML_hdds.prometheus.endpoint.enabled: "true"
+source:
+  - path: ../../../definitions
+import:
+  - path: ozone
+    transformations:
+    - type: Image
+      image: "@docker.image@"
+    - type: ozone/prometheus
+    - type: PublishStatefulSet
+    - type: ozone/tracing
+    - type: ozone/profiler
+  - path: prometheus
+  - path: jaeger
+    transformations:
+    - type: PublishService
+  - path: ozone/freon
+    destination: freon
+    transformations:
+    - type: Image
+      image: "@docker.image@"
+    - type: ozone/tracing
