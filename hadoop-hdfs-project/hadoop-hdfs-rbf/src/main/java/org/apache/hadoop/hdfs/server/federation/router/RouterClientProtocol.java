@@ -728,9 +728,9 @@ public class RouterClientProtocol implements ClientProtocol {
     RemoteMethod method = new RemoteMethod("getListing",
         new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
         new RemoteParam(), startAfter, needLocation);
-    Map<RemoteLocation, DirectoryListing> listings =
-        rpcClient.invokeConcurrent(locations, method,
-            !this.allowPartialList, false, DirectoryListing.class);
+    final List<RemoteResult<RemoteLocation, DirectoryListing>> listings =
+        rpcClient.invokeConcurrent(
+            locations, method, false, -1, DirectoryListing.class);
 
     Map<String, HdfsFileStatus> nnListing = new TreeMap<>();
     int totalRemainingEntries = 0;
@@ -739,13 +739,17 @@ public class RouterClientProtocol implements ClientProtocol {
     if (listings != null) {
       // Check the subcluster listing with the smallest name
       String lastName = null;
-      for (Map.Entry<RemoteLocation, DirectoryListing> entry :
-          listings.entrySet()) {
-        RemoteLocation location = entry.getKey();
-        DirectoryListing listing = entry.getValue();
-        if (listing == null) {
-          LOG.debug("Cannot get listing from {}", location);
-        } else {
+      for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
+        if (result.hasException()) {
+          IOException ioe = result.getException();
+          if (ioe instanceof FileNotFoundException) {
+            RemoteLocation location = result.getLocation();
+            LOG.debug("Cannot get listing from {}", location);
+          } else if (!allowPartialList) {
+            throw ioe;
+          }
+        } else if (result.getResult() != null) {
+          DirectoryListing listing = result.getResult();
           totalRemainingEntries += listing.getRemainingEntries();
           HdfsFileStatus[] partialListing = listing.getPartialListing();
           int length = partialListing.length;
@@ -760,13 +764,14 @@ public class RouterClientProtocol implements ClientProtocol {
       }
 
       // Add existing entries
-      for (Object value : listings.values()) {
-        DirectoryListing listing = (DirectoryListing) value;
+      for (RemoteResult<RemoteLocation, DirectoryListing> result : listings) {
+        DirectoryListing listing = result.getResult();
         if (listing != null) {
           namenodeListingExists = true;
           for (HdfsFileStatus file : listing.getPartialListing()) {
             String filename = file.getLocalName();
-            if (totalRemainingEntries > 0 && filename.compareTo(lastName) > 0) {
+            if (totalRemainingEntries > 0 &&
+                filename.compareTo(lastName) > 0) {
               // Discarding entries further than the lastName
               remainingEntries++;
             } else {
@@ -1110,19 +1115,26 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     // Get the summaries from regular files
-    Collection<ContentSummary> summaries = new LinkedList<>();
+    final Collection<ContentSummary> summaries = new ArrayList<>();
+    final List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(path, false);
+    final RemoteMethod method = new RemoteMethod("getContentSummary",
+        new Class<?>[] {String.class}, new RemoteParam());
+    final List<RemoteResult<RemoteLocation, ContentSummary>> results =
+        rpcClient.invokeConcurrent(locations, method,
+            false, -1, ContentSummary.class);
     FileNotFoundException notFoundException = null;
-    try {
-      final List<RemoteLocation> locations =
-          rpcServer.getLocationsForPath(path, false);
-      RemoteMethod method = new RemoteMethod("getContentSummary",
-          new Class<?>[] {String.class}, new RemoteParam());
-      Map<RemoteLocation, ContentSummary> results =
-          rpcClient.invokeConcurrent(locations, method,
-              !this.allowPartialList, false, ContentSummary.class);
-      summaries.addAll(results.values());
-    } catch (FileNotFoundException e) {
-      notFoundException = e;
+    for (RemoteResult<RemoteLocation, ContentSummary> result : results) {
+      if (result.hasException()) {
+        IOException ioe = result.getException();
+        if (ioe instanceof FileNotFoundException) {
+          notFoundException = (FileNotFoundException)ioe;
+        } else if (!allowPartialList) {
+          throw ioe;
+        }
+      } else if (result.getResult() != null) {
+        summaries.add(result.getResult());
+      }
     }
 
     // Add mount points at this level in the tree
@@ -1131,7 +1143,8 @@ public class RouterClientProtocol implements ClientProtocol {
       for (String child : children) {
         Path childPath = new Path(path, child);
         try {
-          ContentSummary mountSummary = getContentSummary(childPath.toString());
+          ContentSummary mountSummary = getContentSummary(
+              childPath.toString());
           if (mountSummary != null) {
             summaries.add(mountSummary);
           }
