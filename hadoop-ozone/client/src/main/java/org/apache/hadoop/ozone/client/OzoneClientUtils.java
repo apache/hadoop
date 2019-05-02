@@ -146,7 +146,7 @@ public final class OzoneClientUtils {
   }
 
   public static Map<Class<? extends Throwable>, RetryPolicy>
-  getRetryPolicyByException(int maxRetryCount, long retryInterval) {
+      getRetryPolicyByException(int maxRetryCount, long retryInterval) {
     Map<Class<? extends Throwable>, RetryPolicy> policyMap = new HashMap<>();
     for (Class<? extends Exception> ex : EXCEPTION_LIST) {
       if (ex == TimeoutException.class ||
