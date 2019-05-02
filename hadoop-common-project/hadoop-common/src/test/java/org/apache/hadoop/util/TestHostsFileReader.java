@@ -18,8 +18,8 @@
 package org.apache.hadoop.util;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileWriter;
+import java.nio.file.NoSuchFileException;
 import java.util.Map;
 
 import org.apache.hadoop.test.GenericTestUtils;
@@ -135,8 +135,8 @@ public class TestHostsFileReader {
       new HostsFileReader(
           HOSTS_TEST_DIR + "/doesnt-exist",
           HOSTS_TEST_DIR + "/doesnt-exist");
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (FileNotFoundException ex) {
+      Assert.fail("Should throw NoSuchFileException");
+    } catch (NoSuchFileException ex) {
       // Exception as expected
     }
   }
@@ -157,8 +157,8 @@ public class TestHostsFileReader {
     assertTrue(INCLUDES_FILE.delete());
     try {
       hfp.refresh();
-      Assert.fail("Should throw FileNotFoundException");
-    } catch (FileNotFoundException ex) {
+      Assert.fail("Should throw NoSuchFileException");
+    } catch (NoSuchFileException ex) {
       // Exception as expected
     }
   }

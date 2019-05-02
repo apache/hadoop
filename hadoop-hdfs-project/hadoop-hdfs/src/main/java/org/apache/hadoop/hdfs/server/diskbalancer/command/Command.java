@@ -54,12 +54,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
@@ -274,7 +274,7 @@ public abstract class Command extends Configured implements Closeable {
       try {
         HostsFileReader.readFileToSet("include",
             Paths.get(listURL.getPath()).toString(), resultSet);
-      } catch (FileNotFoundException e) {
+      } catch (NoSuchFileException e) {
         String warnMsg = String
             .format("The input host file path '%s' is not a valid path. "
                 + "Please make sure the host file exists.", listArg);

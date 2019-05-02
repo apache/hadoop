@@ -53,9 +53,9 @@ import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Optional;
@@ -324,7 +324,8 @@ public class InMemoryAliasMap implements InMemoryAliasMapProtocol,
     GzipCompressorOutputStream gzOut = null;
     TarArchiveOutputStream tOut = null;
     try {
-      bOut = new BufferedOutputStream(new FileOutputStream(outCompressedFile));
+      bOut = new BufferedOutputStream(
+          Files.newOutputStream(outCompressedFile.toPath()));
       gzOut = new GzipCompressorOutputStream(bOut);
       tOut = new TarArchiveOutputStream(gzOut);
       addFileToTarGzRecursively(tOut, aliasMapDir, "", new Configuration());

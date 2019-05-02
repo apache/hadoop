@@ -30,9 +30,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -470,7 +470,7 @@ public class Server {
         }
         try {
           log.debug("Loading site configuration from [{}]", siteFile);
-          inputStream = new FileInputStream(siteFile);
+          inputStream = Files.newInputStream(siteFile.toPath());
           siteConf = new Configuration(false);
           ConfigurationUtils.load(siteConf, inputStream);
         } catch (IOException ex) {

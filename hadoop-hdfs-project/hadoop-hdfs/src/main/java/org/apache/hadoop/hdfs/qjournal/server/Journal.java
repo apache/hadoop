@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.qjournal.server;
 import com.google.protobuf.ByteString;
 import java.io.Closeable;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -1058,7 +1057,7 @@ public class Journal implements Closeable {
       return null;
     }
     
-    InputStream in = new FileInputStream(f);
+    InputStream in = Files.newInputStream(f.toPath());
     try {
       PersistedRecoveryPaxosData ret = PersistedRecoveryPaxosData.parseDelimitedFrom(in);
       Preconditions.checkState(ret != null &&

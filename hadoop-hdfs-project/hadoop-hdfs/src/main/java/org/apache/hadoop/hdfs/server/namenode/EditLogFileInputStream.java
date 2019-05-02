@@ -23,11 +23,11 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Files;
 import java.security.PrivilegedExceptionAction;
 
 import org.slf4j.Logger;
@@ -430,7 +430,7 @@ public class EditLogFileInputStream extends EditLogInputStream {
 
     @Override
     public InputStream getInputStream() throws IOException {
-      return new FileInputStream(file);
+      return Files.newInputStream(file.toPath());
     }
 
     @Override

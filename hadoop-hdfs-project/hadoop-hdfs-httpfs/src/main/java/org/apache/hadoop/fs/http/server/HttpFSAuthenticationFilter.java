@@ -27,11 +27,12 @@ import org.apache.hadoop.security.token.delegation.web.KerberosDelegationTokenAu
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.Properties;
 
@@ -82,8 +83,8 @@ public class HttpFSAuthenticationFilter
 
     try {
       StringBuilder secret = new StringBuilder();
-      Reader reader = new InputStreamReader(new FileInputStream(
-          signatureSecretFile), StandardCharsets.UTF_8);
+      Reader reader = new InputStreamReader(Files.newInputStream(Paths.get(
+          signatureSecretFile)), StandardCharsets.UTF_8);
       int c = reader.read();
       while (c > -1) {
         secret.append((char)c);

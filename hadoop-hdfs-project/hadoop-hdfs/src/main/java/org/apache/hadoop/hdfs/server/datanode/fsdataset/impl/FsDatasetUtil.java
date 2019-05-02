@@ -21,7 +21,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileInputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -193,7 +192,7 @@ public class FsDatasetUtil {
       @Override
       public InputStream getDataInputStream(long seekOffset)
           throws IOException {
-        return new FileInputStream(blockFile);
+        return Files.newInputStream(blockFile.toPath());
       }
     };
 
