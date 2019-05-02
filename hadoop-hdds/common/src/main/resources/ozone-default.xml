@@ -2386,26 +2386,6 @@
     </description>
   </property>
   <property>
-    <name>hdds.scm.replication.thread.interval</name>
-    <value>5m</value>
-    <tag>OZONE, SCM</tag>
-    <description>
-      There is a replication monitor thread running inside SCM which
-      takes care of replicating the containers in the cluster. This
-      property is used to configure the interval in which that thread
-      runs.
-    </description>
-  </property>
-  <property>
-    <name>hdds.scm.replication.event.timeout</name>
-    <value>10m</value>
-    <tag>OZONE, SCM</tag>
-    <description>
-      Timeout for the container replication/deletion commands sent
-      to datanodes. After this timeout the command will be retried.
-    </description>
-  </property>
-  <property>
     <name>hdds.tracing.enabled</name>
     <value>true</value>
     <tag>OZONE, HDDS</tag>
