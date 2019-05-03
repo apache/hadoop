@@ -47,21 +47,22 @@ public class WebPageUtils {
 
   private static String getAppsTableColumnDefs(
       boolean isFairSchedulerPage, boolean isResourceManager) {
+    String progressIndex = "[11]";
     StringBuilder sb = new StringBuilder();
     sb.append("[\n")
-      .append("{'sType':'natural', 'aTargets': [0]")
-      .append(", 'mRender': parseHadoopID }")
-      .append("\n, {'sType':'num-ignore-str', 'aTargets': [6, 7, 8]")
-      .append(", 'mRender': renderHadoopDate }")
-      .append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }")
-      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
-    if (isFairSchedulerPage) {
-      sb.append("[15]");
-    } else if (isResourceManager) {
-      sb.append("[17]");
-    } else {
-      sb.append("[9]");
+        .append("{'sType':'natural', 'aTargets': [0]")
+        .append(", 'mRender': parseHadoopID }")
+        .append("\n, {'sType':'num-ignore-str', 'aTargets': [6, 7, 8]")
+        .append(", 'mRender': renderHadoopDate }");
+    if (isResourceManager) {
+      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
+      progressIndex = "[18]";
+    } else if (isFairSchedulerPage) {
+      sb.append("\n, {'sType':'num-ignore-str', 'aTargets': [11, 12, 13, 14, 15] }");
+      progressIndex = "[16]";
     }
+    sb.append("\n, {'sType':'numeric', bSearchable:false, 'aTargets':");
+    sb.append(progressIndex);
     sb.append(", 'mRender': parseHadoopProgress }]");
     return sb.toString();
   }
