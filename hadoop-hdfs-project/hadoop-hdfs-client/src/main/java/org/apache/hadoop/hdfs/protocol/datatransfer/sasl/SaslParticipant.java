@@ -23,11 +23,15 @@ import java.util.Map;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslClientFactory;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
+import javax.security.sasl.SaslServerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
+import org.apache.hadoop.security.FastSaslClientFactory;
+import org.apache.hadoop.security.FastSaslServerFactory;
 import org.apache.hadoop.security.SaslInputStream;
 import org.apache.hadoop.security.SaslOutputStream;
 
@@ -51,7 +55,20 @@ class SaslParticipant {
   // One of these will always be null.
   private final SaslServer saslServer;
   private final SaslClient saslClient;
+  private static SaslServerFactory saslServerFactory;
+  private static SaslClientFactory saslClientFactory;
 
+  private static void initializeSaslServerFactory() {
+    if (saslServerFactory == null) {
+      saslServerFactory = new FastSaslServerFactory(null);
+    }
+  }
+
+  private static void initializeSaslClientFactory() {
+    if (saslClientFactory == null) {
+      saslClientFactory = new FastSaslClientFactory(null);
+    }
+  }
   /**
    * Creates a SaslParticipant wrapping a SaslServer.
    *
@@ -63,7 +80,8 @@ class SaslParticipant {
   public static SaslParticipant createServerSaslParticipant(
       Map<String, String> saslProps, CallbackHandler callbackHandler)
       throws SaslException {
-    return new SaslParticipant(Sasl.createSaslServer(MECHANISM,
+    initializeSaslServerFactory();
+    return new SaslParticipant(saslServerFactory.createSaslServer(MECHANISM,
       PROTOCOL, SERVER_NAME, saslProps, callbackHandler));
   }
 
@@ -79,8 +97,10 @@ class SaslParticipant {
   public static SaslParticipant createClientSaslParticipant(String userName,
       Map<String, String> saslProps, CallbackHandler callbackHandler)
       throws SaslException {
-    return new SaslParticipant(Sasl.createSaslClient(new String[] { MECHANISM },
-      userName, PROTOCOL, SERVER_NAME, saslProps, callbackHandler));
+    initializeSaslClientFactory();
+    return new SaslParticipant(
+        saslClientFactory.createSaslClient(new String[] {MECHANISM}, userName,
+            PROTOCOL, SERVER_NAME, saslProps, callbackHandler));
   }
 
   /**
