@@ -44,6 +44,7 @@ import javax.security.sasl.RealmChoiceCallback;
 import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslClient;
+import javax.security.sasl.SaslClientFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -93,6 +94,7 @@ public class SaslRpcClient {
   private SaslClient saslClient;
   private SaslPropertiesResolver saslPropsResolver;
   private AuthMethod authMethod;
+  private static SaslClientFactory saslFactory;
   
   private static final RpcRequestHeaderProto saslHeader = ProtoUtil
       .makeRpcRequestHeader(RpcKind.RPC_PROTOCOL_BUFFER,
@@ -100,6 +102,10 @@ public class SaslRpcClient {
           RpcConstants.INVALID_RETRY_COUNT, RpcConstants.DUMMY_CLIENT_ID);
   private static final RpcSaslProto negotiateRequest =
       RpcSaslProto.newBuilder().setState(SaslState.NEGOTIATE).build();
+
+  static {
+    saslFactory = new FastSaslClientFactory(null);
+  }
 
   /**
    * Create a SaslRpcClient that can be used by a RPC client to negotiate
@@ -251,8 +257,8 @@ public class SaslRpcClient {
       LOG.debug("Creating SASL " + mechanism + "(" + method + ") "
           + " client to authenticate to service at " + saslServerName);
     }
-    return Sasl.createSaslClient(
-        new String[] { mechanism }, saslUser, saslProtocol, saslServerName,
+    return saslFactory.createSaslClient(
+        new String[] {mechanism}, saslUser, saslProtocol, saslServerName,
         saslProperties, saslCallback);
   }
 
