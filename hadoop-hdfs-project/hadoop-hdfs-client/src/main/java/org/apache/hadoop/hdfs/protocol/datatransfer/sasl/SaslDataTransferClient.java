@@ -169,7 +169,7 @@ public class SaslDataTransferClient {
       throws IOException {
     IOStreamPair ios = checkTrustAndSend(getPeerAddress(peer),
         peer.getOutputStream(), peer.getInputStream(), encryptionKeyFactory,
-        accessToken, datanodeId);
+        accessToken, datanodeId, null);
     // TODO: Consider renaming EncryptedPeer to SaslPeer.
     return ios != null ? new EncryptedPeer(peer, ios) : peer;
   }
@@ -219,15 +219,6 @@ public class SaslDataTransferClient {
    * @return new pair of streams, wrapped after SASL negotiation
    * @throws IOException for any error
    */
-  private IOStreamPair checkTrustAndSend(InetAddress addr,
-      OutputStream underlyingOut, InputStream underlyingIn,
-      DataEncryptionKeyFactory encryptionKeyFactory,
-      Token<BlockTokenIdentifier> accessToken, DatanodeID datanodeId)
-      throws IOException {
-    return checkTrustAndSend(addr, underlyingOut, underlyingIn,
-        encryptionKeyFactory, accessToken, datanodeId, null);
-  }
-
   private IOStreamPair checkTrustAndSend(
       InetAddress addr, OutputStream underlyingOut, InputStream underlyingIn,
       DataEncryptionKeyFactory encryptionKeyFactory,
