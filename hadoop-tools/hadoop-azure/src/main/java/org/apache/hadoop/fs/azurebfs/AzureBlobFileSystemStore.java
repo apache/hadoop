@@ -101,7 +101,6 @@ import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_HYP
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_PLUS;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_STAR;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_UNDERSCORE;
-import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.CHAR_EXCLAMATION_POINT;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.ROOT_PATH;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.SINGLE_WHITE_SPACE;
 import static org.apache.hadoop.fs.azurebfs.constants.AbfsHttpConstants.TOKEN_VERSION;
@@ -548,10 +547,15 @@ public class AzureBlobFileSystemStore implements Closeable {
   /**
    * @param path Path the list path.
    * @param startFrom the entry name that list results should start with.
-   *                  Notice that startFrom can be a non-existent entry, then the list request response contains
-   *                  all entries after this non-existent entry in lexical order.
-   * @return the entries in the path in lexical order from "startFrom".
+   *                  For example, if folder "/folder" contains four files: "afile", "bfile", "hfile", "ifile".
+   *                  Then listStatus(Path("/folder"), "hfile") will return "/folder/hfile" and "folder/ifile"
+   *                  Notice that if startFrom is a non-existent entry name, then the list response contains
+   *                  all entries after this non-existent entry in lexical order:
+   *                  listStatus(Path("/folder"), "cfile") will return "/folder/hfile" and "/folder/ifile".
+   *
+   * @return the entries in the path start from  "startFrom" in lexical order.
    * */
+  @InterfaceStability.Unstable
   public FileStatus[] listStatus(final Path path, final String startFrom) throws IOException {
     LOG.debug("listStatus filesystem: {} path: {}, startFrom: {}",
             client.getFileSystem(),
