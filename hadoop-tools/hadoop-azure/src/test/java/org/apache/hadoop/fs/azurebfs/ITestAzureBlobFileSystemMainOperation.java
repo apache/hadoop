@@ -36,7 +36,10 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
 
   public ITestAzureBlobFileSystemMainOperation () throws Exception {
     super(TEST_ROOT_DIR);
-    binding = new ABFSContractTestBinding();
+    // Note: There are shared resources in this test suite (eg: "test/new/newfile")
+    // To make sure this test suite can be ran in parallel, different containers
+    // will be used for each test.
+    binding = new ABFSContractTestBinding(false);
   }
 
   @Override
@@ -47,6 +50,10 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
 
   @Override
   public void tearDown() throws Exception {
+    // Note: Because "tearDown()" is called during the testing,
+    // here we should not call binding.tearDown() to destroy the container.
+    // Instead we should remove the test containers manually with
+    // AbfsTestUtils.
     super.tearDown();
   }
 
@@ -56,14 +63,14 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
   }
 
   @Override
-  @Ignore("There shouldn't be permission check for getFileInfo")
+  @Ignore("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
   public void testListStatusThrowsExceptionForUnreadableDir() {
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
   }
 
   @Override
-  @Ignore("There shouldn't be permission check for getFileInfo")
+  @Ignore("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
   public void testGlobStatusThrowsExceptionForUnreadableDir() {
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
