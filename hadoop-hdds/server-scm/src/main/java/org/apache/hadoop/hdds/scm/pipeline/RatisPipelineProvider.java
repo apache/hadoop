@@ -91,7 +91,9 @@ public class RatisPipelineProvider implements PipelineProvider {
   public Pipeline create(ReplicationFactor factor) throws IOException {
     // Get set of datanodes already used for ratis pipeline
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
-    stateManager.getPipelines(ReplicationType.RATIS, factor)
+    stateManager.getPipelines(ReplicationType.RATIS, factor).stream().filter(
+        p -> p.getPipelineState().equals(PipelineState.OPEN) ||
+            p.getPipelineState().equals(PipelineState.ALLOCATED))
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 
     // Get list of healthy nodes

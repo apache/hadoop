@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.assertj.core.util.Preconditions;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -184,7 +185,7 @@ public class MockNodeManager implements NodeManager {
    */
   @Override
   public List<DatanodeDetails> getAllNodes() {
-    return null;
+    return new ArrayList<>(nodeMetricMap.keySet());
   }
 
   /**
