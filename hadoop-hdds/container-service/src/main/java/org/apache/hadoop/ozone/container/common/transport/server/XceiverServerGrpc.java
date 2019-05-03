@@ -69,7 +69,7 @@ public final class XceiverServerGrpc extends XceiverServer {
   private UUID id;
   private Server server;
   private final ContainerDispatcher storageContainer;
-  private volatile boolean isStarted;
+  private boolean isStarted;
 
   /**
    * Constructs a Grpc server class.

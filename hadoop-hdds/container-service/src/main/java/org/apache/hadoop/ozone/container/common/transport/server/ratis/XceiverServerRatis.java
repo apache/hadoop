@@ -111,7 +111,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private final ReplicationLevel replicationLevel;
   private long nodeFailureTimeoutMs;
   private final long cacheEntryExpiryInteval;
-  private volatile boolean isStarted = false;
+  private boolean isStarted = false;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
