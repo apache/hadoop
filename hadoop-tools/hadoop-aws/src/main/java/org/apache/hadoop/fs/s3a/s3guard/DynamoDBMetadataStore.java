@@ -554,8 +554,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return;
     }
 
-    // bulk execute. This needs to be paged better.
-    List<CompletableFuture<Void>> futures = new ArrayList<>();
+    // Execute via the bounded threadpool.
+    final List<CompletableFuture<Void>> futures = new ArrayList<>();
     for (DescendantsIterator desc = new DescendantsIterator(this, meta);
          desc.hasNext();) {
       final Path pathToDelete = desc.next().getPath();
@@ -566,6 +566,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
         // first batch done; block for completion.
         waitForCompletion(futures);
+        futures.clear();
       }
     }
     waitForCompletion(futures);
@@ -574,7 +575,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * Get a consistent view of an item.
    * @param path path to look up in the database
-   * @param path entry
    * @return the result
    * @throws IOException failure
    */
@@ -1763,10 +1763,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   @Override
-  public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+  public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
       final FileStatus srcStatus, final Path dest) throws IOException {
-    return new DelayedUpdateRenameOperation(storeContext, this, source, dest);
+    return new DelayedUpdateRenameTracker(storeContext, this, source, dest);
   }
 
   /**

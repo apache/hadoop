@@ -18,35 +18,25 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
-import java.io.IOException;
-
 /**
- * Function of arity 1 which may raise an IOException.
- * @param <T>
- * @param <P>
+ * Base class of operation in the store.
+ * An operation is something which executes against the context to
+ * perform a single function.
+ * It is expected to have a limited lifespan.
  */
+public abstract class StoreOperation {
 
-
-public final class FunctionsRaisingIOE {
-
-  private FunctionsRaisingIOE() {
-  }
+  private final StoreContext storeContext;
 
   /**
-   * Function of arity 1 which may raise an IOException.
-   * @param <T> type of arg1
-   * @param <R> type of return value.
+   * constructor.
+   * @param storeContext store context.
    */
-  @FunctionalInterface
-  public interface FunctionRaisingIOE<T, R> {
-
-    R apply(T p) throws IOException;
+  public StoreOperation(final StoreContext storeContext) {
+    this.storeContext = storeContext;
   }
 
-  @FunctionalInterface
-  public interface CallableRaisingIOE<R> {
-
-    R apply() throws IOException;
-
+  public StoreContext getStoreContext() {
+    return storeContext;
   }
 }

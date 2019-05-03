@@ -21,14 +21,17 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Function;
 
 import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
@@ -36,25 +39,29 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
  * a collection of source paths and a list of destinations are created,
  * then updated at the end (possibly slow).
  */
-public class DelayedUpdateRenameOperation extends RenameOperation {
+public class DelayedUpdateRenameTracker extends RenameTracker {
 
   private final StoreContext storeContext;
 
   private final MetadataStore metadataStore;
   private final Collection<Path> srcPaths = new HashSet<>();
 
-  private final List<PathMetadata> dstMetas = new ArrayList<>();
+  private final List<PathMetadata> destMetas = new ArrayList<>();
 
-  private final List<DeleteObjectsRequest.KeyVersion> deletedKeys = new ArrayList<>();
+  private final List<Path> deletedPaths = new ArrayList<>();
 
-  public DelayedUpdateRenameOperation(
+  public DelayedUpdateRenameTracker(
       final StoreContext storeContext,
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest) {
-    super(sourceRoot, dest, storeContext.getUsername());
+    super(storeContext, sourceRoot, dest);
     this.storeContext = storeContext;
     this.metadataStore = metadataStore;
+  }
+
+  public StoreContext getStoreContext() {
+    return storeContext;
   }
 
   @Override
@@ -63,11 +70,10 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
       final FileStatus sourceStatus,
       final Path destPath,
       final long blockSize,
-      final boolean addAncestors
-  ) throws IOException {
+      final boolean addAncestors) throws IOException {
     S3Guard.addMoveFile(metadataStore,
         srcPaths,
-        dstMetas,
+        destMetas,
         sourcePath,
         destPath,
         sourceStatus.getLen(),
@@ -77,7 +83,7 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
     if (addAncestors) {
       S3Guard.addMoveAncestors(metadataStore,
           srcPaths,
-          dstMetas,
+          destMetas,
           getSourceRoot(),
           sourceStatus.getPath(),
           destPath,
@@ -89,14 +95,14 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   public synchronized void directoryMarkerCopied(final FileStatus sourceStatus,
       final Path destPath,
       final boolean addAncestors) throws IOException {
-    S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas,
+    S3Guard.addMoveDir(metadataStore, srcPaths, destMetas,
         sourceStatus.getPath(),
         destPath, getOwner());
     // Ancestor directories may not be listed, so we explicitly add them
     if (addAncestors) {
       S3Guard.addMoveAncestors(metadataStore,
           srcPaths,
-          dstMetas,
+          destMetas,
           getSourceRoot(),
           sourceStatus.getPath(),
           destPath,
@@ -107,7 +113,7 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
   @Override
   public synchronized void noteSourceDirectoryMoved() throws IOException {
     if (!srcPaths.contains(getSourceRoot())) {
-      S3Guard.addMoveDir(metadataStore, srcPaths, dstMetas,
+      S3Guard.addMoveDir(metadataStore, srcPaths, destMetas,
           getSourceRoot(),
           getDest(), getOwner());
     }
@@ -115,26 +121,66 @@ public class DelayedUpdateRenameOperation extends RenameOperation {
 
   @Override
   public synchronized void sourceObjectsDeleted(
-      final List<DeleteObjectsRequest.KeyVersion> keys) throws IOException {
+      final List<Path> paths) throws IOException {
     // convert to paths.
-    deletedKeys.addAll(keys);
+    deletedPaths.addAll(paths);
   }
 
   @Override
   public void completeRename() throws IOException {
-    metadataStore.move(srcPaths, dstMetas);
+    metadataStore.move(srcPaths, destMetas);
     super.completeRename();
   }
 
   @Override
   public IOException renameFailed(final Exception ex) {
-    LOG.warn("Rename has failed; updating S3Guard");
+    LOG.warn("Rename has failed; updating s3guard with destination state");
     try {
-      metadataStore.move(srcPaths, dstMetas);
+      // the destination paths are updated; the source is left alone.
+      // either the delete operation didn't begin, or the
+      metadataStore.move(new ArrayList<>(0), destMetas);
+      Function<String, Path> qualifier
+          = getStoreContext().getKeyToPathQualifier();
+      for (Path deletedPath : deletedPaths) {
+        // this is not ideal in that it may leave parent stuff around.
+        metadataStore.delete(deletedPath);
+      }
+      deleteParentPaths();
     } catch (IOException | SdkBaseException e) {
       LOG.warn("Ignoring error raised in AWS SDK ", e);
     }
 
     return super.renameFailed(ex);
+  }
+
+  /**
+   * Delete all the parent paths we know to be empty (by walking up the tree
+   * deleting as appropriate).
+   * @throws IOException failure
+   */
+  private void deleteParentPaths() throws IOException {
+    Set<Path> parentPaths = new HashSet<>();
+    for (Path deletedPath : deletedPaths) {
+      Path parent = deletedPath.getParent();
+      if (!parent.equals(getSourceRoot())) {
+        parentPaths.add(parent);
+      }
+    }
+    // now there's a set of parent paths. We now want to
+    // get them ordered by depth, so that deeper entries come first
+    // that way: when we check for a parent path existing we can
+    // see if it really is empty.
+    List<Path> parents = new ArrayList<>(parentPaths);
+    parents.sort(
+        Comparator.comparing(
+            (Path p) -> p.depth())
+            .thenComparing((Path p) -> p.toUri().getPath()));
+    for (Path parent : parents) {
+      PathMetadata md = metadataStore.get(parent, true);
+      if (md != null && md.isEmptyDirectory().equals(Tristate.TRUE)) {
+        // if were confident that this is empty: delete it.
+        metadataStore.delete(parent);
+      }
+    }
   }
 }

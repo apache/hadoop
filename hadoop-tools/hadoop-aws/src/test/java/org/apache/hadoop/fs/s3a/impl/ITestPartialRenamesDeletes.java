@@ -54,6 +54,7 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
 import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
@@ -73,11 +74,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.Effects;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.Statement;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.directory;
 import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_ALL_BUCKETS;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_BUCKET_READ_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.S3_PATH_RW_OPERATIONS;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_ALLOW_SSE_KMS_RW;
-import static org.apache.hadoop.fs.s3a.auth.RolePolicies.STATEMENT_S3GUARD_CLIENT;
+import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.forbidden;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
@@ -133,7 +130,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           30, TimeUnit.SECONDS,
           "test-operations");
 
-  public static final int FILE_COUNT_NON_SCALED = 10;
+  public static final int FILE_COUNT_NON_SCALED = 2;
 
   /**
    * The number of files for a scaled test. This is still
@@ -144,27 +141,39 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * knowing that all R/W files should have been deleted and all
    * R/O files rejected.
    */
-  public static final int FILE_COUNT_SCALED = 400;
+  public static final int FILE_COUNT_SCALED = 10;
 
+  public static final int DIR_COUNT = 2;
+  public static final int DIR_COUNT_SCALED = 4;
+  public static final int DEPTH = 2;
+  public static final int DEPTH_SCALED = 2;
+  
   /**
    * A role FS; if non-null it is closed in teardown.
    */
   private S3AFileSystem roleFS;
 
+  /**
+   * Base path for this test run; it's all
+   */
   private Path basePath;
 
-  private Path destDir;
+  private Path writableDir;
 
-  private Path readonlyChild;
+  private Path readOnlyChild;
 
   private Path readOnlyDir;
+
+  private Path noReadDir;
 
   /** delete policy: single or multi? */
   private final boolean multiDelete;
 
   private Configuration assumedRoleConfig;
 
-  private int filecount;
+  private int fileCount;
+  private int dirCount;
+  private int dirDepth;
 
   private boolean scaleTest;
 
@@ -189,28 +198,41 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     this.multiDelete = multiDelete;
   }
 
+  /**
+   * This sets up a unique path for every test run, so as to guarantee isolation
+   * from previous runs.
+   * It creates a role policy which has read access to everything except
+   * the contents of {@link #noReadDir}, and with write access to
+   * {@link #writableDir}.
+   * @throws Exception failure
+   */
   @Override
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
     basePath = uniquePath();
     readOnlyDir = new Path(basePath, "readonlyDir");
-    destDir = new Path(basePath, "renameDest");
-    readonlyChild = new Path(readOnlyDir, "child");
+    writableDir = new Path(basePath, "writableDir");
+    readOnlyChild = new Path(readOnlyDir, "child");
+    noReadDir = new Path(basePath, "noReadDir");
     // the full FS
     S3AFileSystem fs = getFileSystem();
     fs.delete(basePath, true);
-    fs.mkdirs(destDir);
+    fs.mkdirs(writableDir);
 
     // create the baseline assumed role
     assumedRoleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(assumedRoleConfig,
         STATEMENT_S3GUARD_CLIENT,
-        STATEMENT_ALL_BUCKET_READ_ACCESS,
-        new Statement(Effects.Allow)
+        STATEMENT_ALL_BUCKET_READ_ACCESS,  // root:     r-x
+        new Statement(Effects.Allow)       // dest:     rwx
             .addActions(S3_PATH_RW_OPERATIONS)
-            .addResources(directory(destDir))
-    );
+            .addResources(directory(writableDir)),
+        new Statement(Effects.Deny)       // noReadDir: --x
+            .addActions(S3_ALL_GET)
+            .addActions(S3_ALL_PUT)
+            .addActions(S3_ALL_DELETE)
+            .addResources(directory(noReadDir)));
     // the role configured to that set of restrictions
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(assumedRoleConfig);
 
@@ -221,9 +243,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         getConfiguration(),
         KEY_SCALE_TESTS_ENABLED,
         DEFAULT_SCALE_TESTS_ENABLED);
-    filecount = scaleTest
-        ? FILE_COUNT_SCALED
-        : FILE_COUNT_NON_SCALED;
+    fileCount = scaleTest ? FILE_COUNT_SCALED : FILE_COUNT_NON_SCALED;
+    dirCount = scaleTest ? DIR_COUNT_SCALED : DIR_COUNT;
+    dirDepth = scaleTest ? DEPTH_SCALED : DEPTH;
   }
 
   @Override
@@ -232,6 +254,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     super.teardown();
   }
 
+  /**
+   * Directory cleanup includes pruning everything under the path.
+   * This ensures that any in the tree from failed tests don't fill up
+   * the store with many, many, deleted entries.
+   * @throws IOException failure.
+   */
   @Override
   protected void deleteTestDirInTeardown() throws IOException {
     super.deleteTestDirInTeardown();
@@ -294,7 +322,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   /**
    * Create a unique path, which includes method name,
-   * multdelete flag and a random UUID.
+   * multidelete flag and a random UUID.
    * @return a string to use for paths.
    * @throws IOException path creation failure.
    */
@@ -311,9 +339,17 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   @Test
   public void testCannotTouchUnderRODir() throws Throwable {
-    forbidden("touching the empty child " + readonlyChild,
+    forbidden("touching the empty child " + readOnlyChild,
         "",
-        () -> ContractTestUtils.touch(roleFS, readonlyChild));
+        () -> touch(roleFS, readOnlyChild));
+  }
+  @Test
+  public void testCannotReadUnderNoReadDir() throws Throwable {
+    Path path = new Path(noReadDir, "unreadable.txt");
+    createFile(getFileSystem(), path, true, "readonly".getBytes());
+    forbidden("trying to read " + path,
+        "",
+        () -> readUTF8(roleFS, path, -1));
   }
 
   @Test
@@ -339,32 +375,32 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         new Statement(Effects.Allow)
             .addActions(S3_PATH_RW_OPERATIONS)
             .addResources(directory(readOnlyDir))
-            .addResources(directory(destDir)));
+            .addResources(directory(writableDir)));
     roleFS = (S3AFileSystem) readOnlyDir.getFileSystem(conf);
 
     S3AFileSystem fs = getFileSystem();
     roleFS.getFileStatus(ROOT);
     fs.mkdirs(readOnlyDir);
     // you can create an adjacent child
-    touch(fs, readonlyChild);
+    touch(fs, readOnlyChild);
 
-    fs.delete(destDir, true);
+    fs.delete(writableDir, true);
     // as dest doesn't exist, this will map child -> dest
-    assertRenameOutcome(roleFS, readonlyChild, destDir, true);
+    assertRenameOutcome(roleFS, readOnlyChild, writableDir, true);
 
-    assertIsFile(destDir);
+    assertIsFile(writableDir);
     assertIsDirectory(readOnlyDir);
-    Path renamedDestPath = new Path(readOnlyDir, destDir.getName());
-    assertRenameOutcome(roleFS, destDir, readOnlyDir, true);
+    Path renamedDestPath = new Path(readOnlyDir, writableDir.getName());
+    assertRenameOutcome(roleFS, writableDir, readOnlyDir, true);
     assertIsFile(renamedDestPath);
     roleFS.delete(readOnlyDir, true);
-    roleFS.delete(destDir, true);
+    roleFS.delete(writableDir, true);
   }
 
   @Test
   public void testRenameSingleFileFailsInDelete() throws Throwable {
     describe("rename with source read only; multi=%s", multiDelete);
-    Path readOnlyFile = readonlyChild;
+    Path readOnlyFile = readOnlyChild;
 
     // the full FS
     S3AFileSystem fs = getFileSystem();
@@ -373,23 +409,23 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // this file is readable by the roleFS, but cannot be deleted
     touch(fs, readOnlyFile);
 
-    roleFS.delete(destDir, true);
-    roleFS.mkdirs(destDir);
+    roleFS.delete(writableDir, true);
+    roleFS.mkdirs(writableDir);
     // rename will fail in the delete phase
-    expectRenameForbidden(readOnlyFile, destDir);
+    expectRenameForbidden(readOnlyFile, writableDir);
 
     // and the source file is still there
     assertIsFile(readOnlyFile);
 
     // and so is the copied version, because there's no attempt
     // at rollback, or preflight checking on the delete permissions
-    Path renamedFile = new Path(destDir, readOnlyFile.getName());
+    Path renamedFile = new Path(writableDir, readOnlyFile.getName());
 
     assertIsFile(renamedFile);
 
     ContractTestUtils.assertDeleted(roleFS, renamedFile, true);
     assertFileCount("Empty Dest Dir", roleFS,
-        destDir, 0);
+        writableDir, 0);
   }
 
   /**
@@ -413,21 +449,22 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // the full FS
     S3AFileSystem fs = getFileSystem();
-    fs.delete(basePath, true);
 
-    roleFS.mkdirs(destDir);
+    roleFS.mkdirs(writableDir);
 
     // create a set of files
     // this is done in parallel as it is 10x faster on a long-haul test run.
-    List<Path> createdFiles = createFiles(fs, readOnlyDir, filecount);
+    List<Path> createdFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount, dirCount);
     // are they all there?
+    int expectedFileCount = createdFiles.size();
     assertFileCount("files ready to rename", roleFS,
-        readOnlyDir, (long) filecount);
+        readOnlyDir, expectedFileCount);
 
     // try to rename the directory
-    LOG.info("Renaming readonly files {} to {}", readOnlyDir, destDir);
+    LOG.info("Renaming readonly files {} to {}", readOnlyDir, writableDir);
 
-    AccessDeniedException deniedException = expectRenameForbidden(readOnlyDir, destDir);
+    AccessDeniedException deniedException = expectRenameForbidden(readOnlyDir,
+        writableDir);
     if (multiDelete) {
       // look in that exception for a multidelete
       MultiObjectDeleteException mde = extractCause(
@@ -436,23 +473,85 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           = extractUndeletedPaths(mde, fs::keyToQualifiedPath);
       Assertions.assertThat(undeleted)
           .as("files which could not be deleted")
-          .hasSize(filecount)
+          .hasSize(expectedFileCount)
           .containsAll(createdFiles)
           .containsExactlyInAnyOrderElementsOf(createdFiles);
     }
     LOG.info("Result of renaming read-only files is AccessDeniedException",
         deniedException);
     assertFileCount("files in the source directory", roleFS,
-        readOnlyDir, (long) filecount);
+        readOnlyDir, expectedFileCount);
     // now lets look at the destination.
     // even with S3Guard on, we expect the destination to match that of our
     // the remote state.
     // the test will exist
-    assertPathExists("Destination directory of rename", destDir);
-    assertIsDirectory(destDir);
-    assertFileCount("files in the source directory", roleFS,
-        destDir, (long) filecount);
+    assertPathExists("Destination directory of rename", writableDir);
+    assertIsDirectory(writableDir);
+    assertFileCount("files in the dest directory", roleFS,
+        writableDir, expectedFileCount);
 
+  }
+
+  @Test
+  public void testRenameFileFailsNoWrite() throws Throwable {
+    describe("Try to rename to a write-only destination fails with src"
+        + " & dest unchanged.");
+    roleFS.mkdirs(writableDir);
+    S3AFileSystem fs = getFileSystem();
+//    List<Path> deletableFiles = createFiles(fs, writableDir, filecount);
+
+    Path source = new Path(writableDir, "source");
+    touch(fs, source);
+    fs.mkdirs(readOnlyDir);
+    Path dest = new Path(readOnlyDir, "dest");
+    LOG.info("Renaming files {} to {}", writableDir, dest);
+    // rename fails but doesn't raise an exception. Good or bad?
+    expectRenameForbidden(source, dest);
+    assertIsFile(source);
+    assertPathDoesNotExist("rename destination", dest);
+  }
+
+  @Test
+  public void testCopyDirFailsInNoWrite() throws Throwable {
+    describe("Try to copy to a write-only destination");
+    roleFS.mkdirs(writableDir);
+    S3AFileSystem fs = getFileSystem();
+    List<Path> files = createFiles(fs, writableDir, dirDepth, fileCount,
+        dirCount);
+
+    fs.mkdirs(readOnlyDir);
+    Path dest = new Path(readOnlyDir, "dest");
+    expectRenameForbidden(writableDir, dest);
+    assertPathDoesNotExist("rename destination", dest);
+    assertFileCount("files in the source directory", roleFS,
+        writableDir, files.size());
+  }
+
+  @Test
+  public void testCopyFileFailsOnSourceRead() throws Throwable {
+    describe("The source file isn't readable, so the COPY fails");
+    Path source = new Path(noReadDir, "source");
+    S3AFileSystem fs = getFileSystem();
+    touch(fs, source);
+    fs.mkdirs(writableDir);
+    Path dest = new Path(writableDir, "dest");
+    expectRenameForbidden(source, dest);
+    assertIsFile(source);
+    assertPathDoesNotExist("rename destination", dest);
+  }
+
+  @Test
+  public void testCopyDirFailsOnSourceRead() throws Throwable {
+    describe("The source file isn't readable, so the COPY fails");
+    Path source = new Path(noReadDir, "source");
+    S3AFileSystem fs = getFileSystem();
+    List<Path> files = createFiles(fs, noReadDir, dirDepth, fileCount,
+        dirCount);
+    fs.mkdirs(writableDir);
+    Path dest = new Path(writableDir, "dest");
+    expectRenameForbidden(noReadDir, dest);
+    assertFileCount("files in the source directory", fs,
+        noReadDir, files.size());
   }
 
   /**
@@ -467,8 +566,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // the full FS
     S3AFileSystem fs = getFileSystem();
 
-    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, filecount);
-    List<Path> deletableFiles = createFiles(fs, destDir, filecount);
+    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount, dirCount);
+    List<Path> deletableFiles = createFiles(fs, writableDir, dirDepth, fileCount, dirCount);
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);
@@ -488,7 +587,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     if (multiDelete) {
       // multi-delete status checks
       extractCause(MultiObjectDeleteException.class, ex);
-      rejectionCount.assertDiffEquals("Wrong rejection count", filecount);
+      rejectionCount.assertDiffEquals("Wrong rejection count",
+          readOnlyFiles.size());
       deleteVerbCount.assertDiffEquals("Wrong delete count", 1);
       reset(rejectionCount, deleteVerbCount);
     }
@@ -513,7 +613,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       Assertions.assertThat(allFiles)
           .as("files which were deleted")
           .containsExactlyInAnyOrderElementsOf(deletableFiles);
-      rejectionCount.assertDiffEquals("Wrong rejection count", filecount);
+      rejectionCount.assertDiffEquals("Wrong rejection count",
+          readOnlyFiles.size());
     }
     reset(rejectionCount, deleteVerbCount);
 
@@ -531,29 +632,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         .containsAll(readOnlyFiles);
   }
 
-  @Test
-  public void testCopyDirFailsInNoWrite() throws Throwable {
-    describe("Try to copy to a write-only destination");
-  }
-
-  @Test
-  public void testCopyFileFailsNoWrite() throws Throwable {
-    describe("Try to copy to a write-only destination");
-  }
-
-  @Test
-  public void testCopyFileFailsOnSourceRead() throws Throwable {
-    describe("The source file isn't readable, so the COPY fails");
-
-  }
-
-  @Test
-  public void testCopyDirFailsOnSourceRead() throws Throwable {
-    describe("The source file isn't readable, so the COPY fails");
-
-  }
-
-
   private AccessDeniedException expectDeleteForbidden(Path path) throws Exception {
     try(DurationInfo ignored =
             new DurationInfo(LOG, true, "delete %s", path)) {
@@ -567,7 +645,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   /**
-   * Expect that a rename will fail with an exception.
+   * Expect that a rename will fail with an exception using the roleFS.
    * @param src source
    * @param dest dest
    * @return the exception raised.
@@ -576,7 +654,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private AccessDeniedException expectRenameForbidden(Path src, Path dest)
       throws Exception {
     try(DurationInfo ignored =
-            new DurationInfo(LOG, true, "rename")) {
+            new DurationInfo(LOG, true,
+                "rename(%s, %s)", src, dest)) {
       return forbidden(
           "Renaming " + src + " to " + dest,
           "",
@@ -665,25 +744,52 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * Parallel-touch a set of files in the destination directory.
    * @param fs filesystem
    * @param destDir destination
-   * @param range range 1..range inclusive of files to create.
-   * @return the list of paths created.
+   * @param depth file depth
+   * @param fileCount number of files to create.
+   * @param dirCount number of dirs to create at each level
+   * @return the list of files created.
    */
   public static List<Path> createFiles(final FileSystem fs,
       final Path destDir,
-      final int range) throws IOException {
-    List<CompletableFuture<Path>> futures = new ArrayList<>(range);
-    List<Path> paths = new ArrayList<>(range);
+      final int depth,
+      final int fileCount,
+      final int dirCount) throws IOException {
+    List<CompletableFuture<Path>> futures = new ArrayList<>(fileCount);
+    List<Path> paths = new ArrayList<>(fileCount);
+    List<Path> dirs = new ArrayList<>(fileCount);
+    buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
     try(DurationInfo ignore =
-            new DurationInfo(LOG, "Creating %d files", range)) {
-      for (int i = 0; i < range; i++) {
-        String name = "file-" + i;
-        Path p = new Path(destDir, name);
-        paths.add(p);
-        futures.add(put(fs, p, name));
+            new DurationInfo(LOG, "Creating %d files", fileCount)) {
+      for (Path path : paths) {
+        futures.add(put(fs, path, path.getName()));
       }
       waitForCompletion(futures);
       return paths;
     }
   }
 
+  private static void buildPaths(
+      final List<Path> filePaths,
+      final List<Path> dirPaths,
+      final Path destDir,
+      final int depth,
+      final int fileCount,
+      final int dirCount) {
+    if (depth<=0) {
+      return;
+    }
+    // create the file paths
+    for (int i = 0; i < fileCount; i++) {
+      String name = "file-" + i;
+      Path p = new Path(destDir, name);
+      filePaths.add(p);
+    }
+    for (int i = 0; i < dirCount; i++) {
+      String name = "dir-" + i;
+      Path p = new Path(destDir, name);
+      dirPaths.add(p);
+      buildPaths(filePaths, dirPaths, p, depth - 1, fileCount, dirCount);
+    }
+
+  }
 }

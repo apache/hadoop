@@ -22,13 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import com.amazonaws.SdkBaseException;
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.impl.StoreOperation;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
@@ -39,10 +39,10 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
  * Subclasses must provide an implementation and return it in
  * {@link MetadataStore#initiateRenameOperation(StoreContext, Path, FileStatus, Path)}.
  */
-public abstract class RenameOperation {
+public abstract class RenameTracker extends StoreOperation {
 
   public static final Logger LOG = LoggerFactory.getLogger(
-      RenameOperation.class);
+      RenameTracker.class);
 
   /** source path. */
   private final Path sourceRoot;
@@ -50,25 +50,25 @@ public abstract class RenameOperation {
   /** destination path. */
   private final Path dest;
 
-  /** owner of the filesystem. */
-  private final String owner;
 
+  /**
+   * Track the duration of this operation.
+   */
   private final DurationInfo durationInfo;
 
   /**
    * constructor.
+   * @param storeContext store context.
    * @param sourceRoot source path.
    * @param dest destination path.
-   * @param owner owner of the filesystem.
    */
-
-  protected RenameOperation(
+  protected RenameTracker(
+      final StoreContext storeContext,
       final Path sourceRoot,
-      final Path dest,
-      final String owner) {
+      final Path dest) {
+    super(storeContext);
     this.sourceRoot = sourceRoot;
     this.dest = dest;
-    this.owner = owner;
     durationInfo = new DurationInfo(LOG, false,
         "rename(%s, %s)", sourceRoot, dest);
   }
@@ -82,7 +82,7 @@ public abstract class RenameOperation {
   }
 
   public String getOwner() {
-    return owner;
+    return getStoreContext().getUsername();
   }
 
   /**
@@ -110,10 +110,12 @@ public abstract class RenameOperation {
    * @param addAncestors should ancestors be added?
    * @throws IOException failure.
    */
-  public abstract void directoryMarkerCopied(
+  public void directoryMarkerCopied(
       FileStatus sourceStatus,
       Path destPath,
-      boolean addAncestors) throws IOException;
+      boolean addAncestors) throws IOException {
+
+  }
 
   /**
    * The delete failed.
@@ -121,15 +123,16 @@ public abstract class RenameOperation {
    * been updated with the results of any partial delete failure,
    * such that all files known to have been deleted will have been
    * removed.
-   * @param e
+   * @param e exception
+   * @param pathsToDelete paths which were to be deleted.
    * @param undeletedObjects list of objects which were not deleted.
    */
   public IOException deleteFailed(
       final Exception e,
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final List<Path> pathsToDelete,
       final List<Path> undeletedObjects) {
-    return convertToIOException(e);
 
+    return convertToIOException(e);
   }
 
   /**
@@ -143,10 +146,10 @@ public abstract class RenameOperation {
   /**
    * Note that source objects have been deleted.
    * The metastore will already have been updated.
-   * @param keys keys of objects deleted.
+   * @param paths keys of objects deleted.
    */
   public void sourceObjectsDeleted(
-      final List<DeleteObjectsRequest.KeyVersion> keys) throws IOException {
+      final List<Path> paths) throws IOException {
   }
 
   /**

@@ -265,7 +265,7 @@ public interface MetadataStore extends Closeable {
    * @return the rename operation to update
    * @throws IOException Failure.
    */
-  RenameOperation initiateRenameOperation(
+  RenameTracker initiateRenameOperation(
       StoreContext storeContext,
       Path source,
       FileStatus srcStatus,

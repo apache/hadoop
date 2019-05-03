@@ -51,7 +51,7 @@ import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
-import org.apache.hadoop.fs.s3a.s3guard.RenameOperation;
+import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
@@ -327,7 +327,7 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+    public RenameTracker initiateRenameOperation(final StoreContext storeContext,
         final Path source,
         final FileStatus srcStatus, final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");

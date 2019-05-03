@@ -47,14 +47,16 @@ public class ExtraAssertions {
 
   /**
    * Assert that the number of files in a destination matches that expected.
-   * @param text text to use in the message
+   * @param message text to use in the message
    * @param fs filesystem
    * @param path path to list (recursively)
    * @param expected expected count
    * @throws IOException IO problem
    */
-  public static void assertFileCount(String text, FileSystem fs,
-      Path path, long expected)
+  public static void assertFileCount(final String message,
+      final FileSystem fs,
+      final Path path,
+      final long expected)
       throws IOException {
     List<String> files = new ArrayList<>();
     try (DurationInfo ignored = new DurationInfo(LOG, false,
@@ -65,7 +67,7 @@ public class ExtraAssertions {
     long actual = files.size();
     if (actual != expected) {
       String ls = files.stream().collect(Collectors.joining("\n"));
-      Assert.fail(text + ": expected " + expected + " files in " + path
+      Assert.fail(message + ": expected " + expected + " files in " + path
           + " but got " + actual + "\n" + ls);
     }
   }

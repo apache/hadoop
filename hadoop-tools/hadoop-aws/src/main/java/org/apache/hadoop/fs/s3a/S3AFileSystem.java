@@ -44,6 +44,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
@@ -77,6 +78,7 @@ import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -93,7 +95,7 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.FunctionsRaisingIOE;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
-import org.apache.hadoop.fs.s3a.s3guard.RenameOperation;
+import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
@@ -1222,7 +1224,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // The store-specific rename operation is used to keep the store
     // to date with the in-progress operation.
     // for the null store, these are all no-ops.
-    final RenameOperation renameOperation =
+    final RenameTracker renameTracker =
         metadataStore.initiateRenameOperation(
             createStoreContext(),
             src, srcStatus, dest);
@@ -1231,7 +1233,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new ArrayList<>(renameParallelLimit);
     // aggregate operation to wait for the copies to complete then reset
     // the list.
-    final FunctionsRaisingIOE.FunctionRaisingIOE<Void, String>
+    final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
         completeActiveCopies = (String reason) -> {
           LOG.debug("Waiting for {} active copies to complete during {}",
               activeCopies.size(), reason);
@@ -1255,14 +1257,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         }
         // destination either does not exist or is a file to overwrite.
         LOG.debug("rename: renaming file {} to {}", src, copyDestinationPath);
-        copySourceAndUpdateRenameOperation(renameOperation,
+        copySourceAndUpdateTracker(renameTracker,
             src, srcKey, srcStatus,
             copyDestinationPath, copyDestinationKey,
             false);
          // delete the source
         deleteObjectAtPath(src, srcKey, true);
-        // TODO: renameOperation.sourceObjectsDeleted(keysToDelete);
-
+        // and update the tracker
+        renameTracker.sourceObjectsDeleted(Lists.newArrayList(src));
       } else {
         LOG.debug("rename: renaming directory {} to {}", src, dst);
 
@@ -1276,10 +1278,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               "cannot rename a directory to a subdirectory of itself ");
         }
 
-        List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+        // These are the lists of keys to delete and of their paths, the
+        // latter being used to update the rename tracker.
+        final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+        final List<Path> pathsToDelete = new ArrayList<>();
+        // the operation to update the lists of keys and paths.
+        final BiFunction<Path, String, Void>
+            toDelete = (Path path, String key) -> {
+          pathsToDelete.add(path);
+          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
+          return null;
+        };
+
         if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
           // delete unnecessary fake directory.
-          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(dstKey));
+          toDelete.apply(dstStatus.getPath(), dstKey);
         }
 
         Path parentPath = keyToQualifiedPath(srcKey);
@@ -1291,47 +1304,49 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           String key = (status.isDirectory() && !k.endsWith("/"))
               ? k + "/"
               : k;
-          keysToDelete
-              .add(new DeleteObjectsRequest.KeyVersion(key));
           String newDstKey =
               dstKey + key.substring(srcKey.length());
           Path childSourcePath = keyToQualifiedPath(key);
+
+          toDelete.apply(childSourcePath, key);
+
           Path childDestPath = keyToQualifiedPath(newDstKey);
 
           // set up for async operation but run in sync mode initially.
           // we will need to parallelize updates to metastore
           // for that.
           CompletableFuture<Path> copy = submit(boundedThreadPool, () ->
-              copySourceAndUpdateRenameOperation(renameOperation,
+              copySourceAndUpdateTracker(renameTracker,
                   childSourcePath, key, status,
                   childDestPath, newDstKey,
                   true));
           activeCopies.add(copy);
           if (activeCopies.size() == renameParallelLimit) {
             LOG.debug("Waiting for active copies to complete");
-            waitForCompletion(activeCopies);
-            activeCopies.clear();
+            completeActiveCopies.apply("Size threshold reached");
           }
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
             // time to queue a delete.
             // first wait for the copies in progress to finish
             // (deleting a file mid-copy would not be good)
             completeActiveCopies.apply("before a delete");
-            removeSourceObjects(renameOperation, keysToDelete);
+            removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
+            // now reset the lists.
             keysToDelete.clear();
+            pathsToDelete.clear();
           }
         }
         // end of iteration await final set of copies
         completeActiveCopies.apply("final copies");
 
         // end of iteration -the final delete.
-        // This will notify the renameOperation that these objects
+        // This will notify the renameTracker that these objects
         // have been deleted.
-        removeSourceObjects(renameOperation, keysToDelete);
+        removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
 
         // We moved all the children, now move the top-level dir
         // Empty directory should have been added as the object summary
-        renameOperation.noteSourceDirectoryMoved();
+        renameTracker.noteSourceDirectoryMoved();
       }
     } catch (AmazonClientException | IOException ex) {
       // rename failed.
@@ -1343,12 +1358,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
 
       // update the store state to reflect this
-      throw renameOperation.renameFailed(ex);
+      throw renameTracker.renameFailed(ex);
     }
 
     // At this point the rename has completed in the S3 store.
     // Tell the metastore this fact and let it complete its changes
-    renameOperation.completeRename();
+    renameTracker.completeRename();
 
     if (!src.getParent().equals(dst.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
@@ -1359,14 +1374,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Remove source objects
-   * @param renameOperation operation to update.
+   * Remove source objects, and update the metastore
+   * @param renameTracker rename state to update.
    * @param keysToDelete list of keys to delete
+   * @param pathsToDelete list of paths matching the keys to delete 1:1.
    * @throws IOException failure
    */
   @Retries.RetryMixed
-  private void removeSourceObjects(final RenameOperation renameOperation,
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete)
+  private void removeSourceObjects(final RenameTracker renameTracker,
+      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+      final List<Path> pathsToDelete)
       throws IOException {
     List<Path> undeletedObjects = new ArrayList<>();
     try {
@@ -1381,16 +1398,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // all keys it has known to delete; this is just a final
       // bit of housekeeping and a chance to tune exception
       // reporting
-      throw renameOperation.deleteFailed(e, keysToDelete, undeletedObjects);
+      throw renameTracker.deleteFailed(e, pathsToDelete, undeletedObjects);
     }
-    renameOperation.sourceObjectsDeleted(keysToDelete);
+    renameTracker.sourceObjectsDeleted(pathsToDelete);
   }
 
   /**
    * This invoked to copy a file or directory marker then update the
    * rename operation on success.
    * It may be called in its own thread.
-   * @param renameOperation operation to update
+   * @param renameTracker operation to update
    * @param sourcePath source path of the copy; may have a trailing / on it.
    * @param srcKey source key
    * @param sourceStatus status of the source object
@@ -1401,8 +1418,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  private Path copySourceAndUpdateRenameOperation(
-      final RenameOperation renameOperation,
+  private Path copySourceAndUpdateTracker(
+      final RenameTracker renameTracker,
       final Path sourcePath,
       final String srcKey,
       final FileStatus sourceStatus,
@@ -1411,12 +1428,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       final boolean addAncestors) throws IOException {
     copyFile(srcKey, destKey, sourceStatus, sourceStatus.getLen());
     if (objectRepresentsDirectory(srcKey, sourceStatus.getLen())) {
-      renameOperation.directoryMarkerCopied(
+      renameTracker.directoryMarkerCopied(
           sourceStatus,
           destPath,
           addAncestors);
     } else {
-      renameOperation.fileCopied(
+      renameTracker.fileCopied(
           sourcePath,
           sourceStatus,
           destPath,

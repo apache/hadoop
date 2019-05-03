@@ -124,19 +124,20 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public RenameOperation initiateRenameOperation(final StoreContext storeContext,
+  public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
       final FileStatus srcStatus, final Path dest)
       throws IOException {
-    return new NullRenameOperation(source, dest, storeContext.getUsername());
+    return new NullRenameTracker(storeContext, source, dest);
   }
 
-  private static class NullRenameOperation extends RenameOperation {
+  private static class NullRenameTracker extends RenameTracker {
 
-    private NullRenameOperation(final Path source,
-        final Path dest,
-        final String owner) {
-      super(source, dest, owner);
+    private NullRenameTracker(
+        final StoreContext storeContext,
+        final Path source,
+        final Path dest) {
+      super(storeContext, source, dest);
     }
 
     @Override
@@ -146,12 +147,6 @@ public class NullMetadataStore implements MetadataStore {
         final long blockSize,
         final boolean addAncestors) throws IOException {
 
-    }
-
-    @Override
-    public void directoryMarkerCopied(final FileStatus sourceStatus,
-        final Path destPath,
-        final boolean addAncestors) throws IOException {
     }
 
   }
