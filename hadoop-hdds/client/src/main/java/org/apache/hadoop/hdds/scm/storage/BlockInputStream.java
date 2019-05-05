@@ -65,6 +65,8 @@ public class BlockInputStream extends InputStream implements Seekable {
   private long[] chunkOffset;
   private List<ByteBuffer> buffers;
   private int bufferIndex;
+  private int chunkIndexOfCurrentBuffer;
+  private long bufferPosition;
   private final boolean verifyChecksum;
 
   /**
@@ -192,6 +194,7 @@ public class BlockInputStream extends InputStream implements Seekable {
     //ashes to ashes, dust to dust
     buffers = null;
     bufferIndex = 0;
+    chunkIndexOfCurrentBuffer = -1;
   }
 
   @Override
@@ -342,6 +345,12 @@ public class BlockInputStream extends InputStream implements Seekable {
 
     buffers = byteString.asReadOnlyByteBufferList();
     bufferIndex = 0;
+    chunkIndexOfCurrentBuffer = chunkIndex;
+
+    // The bufferIndex and position might need to be adjusted if seek() was
+    // called on the stream before. This needs to be done so that the buffer
+    // position can be advanced to the 'seeked' position.
+    adjustBufferIndex();
   }
 
   @Override
@@ -368,23 +377,39 @@ public class BlockInputStream extends InputStream implements Seekable {
       // accordingly so that chunkIndex = insertionPoint - 1
       chunkIndex = -chunkIndex -2;
     }
-    // adjust chunkIndex so that readChunkFromContainer reads the correct chunk
-    chunkIndex -= 1;
-    readChunkFromContainer();
-    adjustBufferIndex(pos);
+    // Check if current buffers correspond to the chunk index being seeked.
+    // If yes, then position the buffer to the seeked position.
+    // Otherwise release the current buffers, adjust the chunkIndex and save
+    // the bufferPosition so that the next readChunkFromContainer reads the
+    // correct chunk and positions the buffer to the seeked position.
+    bufferPosition = pos;
+    if (chunkIndex == chunkIndexOfCurrentBuffer) {
+      adjustBufferIndex();
+    } else {
+      releaseBuffers();
+      chunkIndex -= 1;
+    }
   }
 
-  private void adjustBufferIndex(long pos) {
+  private void adjustBufferIndex() {
+    if (bufferPosition == -1) {
+      // The stream has not been seeked to a position. No need to adjust the
+      // buffer Index and position.
+      return;
+    }
+    // Adjust the bufferIndex and position to the seeked position.
     long tempOffest = chunkOffset[chunkIndex];
     for (int i = 0; i < buffers.size(); i++) {
-      if (pos - tempOffest >= buffers.get(i).capacity()) {
+      if (bufferPosition - tempOffest >= buffers.get(i).capacity()) {
         tempOffest += buffers.get(i).capacity();
       } else {
         bufferIndex = i;
         break;
       }
     }
-    buffers.get(bufferIndex).position((int) (pos - tempOffest));
+    buffers.get(bufferIndex).position((int) (bufferPosition - tempOffest));
+    // Reset the bufferPosition as the seek() operation has been completed.
+    bufferPosition = -1;
   }
 
   @Override
