@@ -66,7 +66,7 @@ public class OfflineEditsVisitorFactory {
       } else if(StringUtils.equalsIgnoreCase("stats", processor)) {
         vis = new StatisticsEditsVisitor(out);
       } else {
-        throw new IOException("Unknown proccesor " + processor +
+        throw new IOException("Unknown processor " + processor +
           " (valid processors: xml, binary, stats)");
       }
       out = fout = null;
