@@ -803,8 +803,12 @@ class BPServiceActor implements Runnable {
         sleepAndLogInterrupts(1000, "connecting to server");
       }
     }
-    
-    LOG.info("Block pool " + this + " successfully registered with NN");
+
+    if (bpRegistration == null) {
+      throw new IOException("DN shut down before block pool registered");
+    }
+
+    LOG.info(this + " successfully registered with NN");
     bpos.registrationSucceeded(this, bpRegistration);
 
     // reset lease id whenever registered to NN.

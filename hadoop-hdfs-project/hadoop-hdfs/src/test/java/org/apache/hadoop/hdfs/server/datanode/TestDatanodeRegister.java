@@ -26,9 +26,20 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.Lists;
+
+import org.junit.Assert;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocolPB.DatanodeProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.common.IncorrectVersionException;
@@ -116,6 +127,39 @@ public class TestDatanodeRegister {
       actor.retrieveNamespaceInfo();
     } catch (IOException e) {
       fail("Should not fail to retrieve NS info from DN with different layout version");
+    }
+  }
+
+  @Test
+  public void testDNShutdwonBeforeRegister() throws Exception {
+    final InetSocketAddress nnADDR = new InetSocketAddress(
+        "localhost", 5020);
+    Configuration conf = new HdfsConfiguration();
+    conf.set(DFSConfigKeys.DFS_DATANODE_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_HTTP_ADDRESS_KEY, "0.0.0.0:0");
+    conf.set(DFSConfigKeys.DFS_DATANODE_IPC_ADDRESS_KEY, "0.0.0.0:0");
+    FileSystem.setDefaultUri(conf,
+        "hdfs://" + nnADDR.getHostName() + ":" + nnADDR.getPort());
+    ArrayList<StorageLocation> locations = new ArrayList<>();
+    DataNode dn = new DataNode(conf, locations, null, null);
+    BPOfferService bpos = new BPOfferService("test_ns",
+        Lists.newArrayList("nn0"), Lists.newArrayList(nnADDR),
+        Collections.<InetSocketAddress>nCopies(1, null), dn);
+    DatanodeProtocolClientSideTranslatorPB fakeDnProt =
+        mock(DatanodeProtocolClientSideTranslatorPB.class);
+    when(fakeDnProt.versionRequest()).thenReturn(fakeNsInfo);
+
+    BPServiceActor localActor = new BPServiceActor("test", "test",
+        INVALID_ADDR, null, bpos);
+    localActor.setNameNode(fakeDnProt);
+    try {
+      NamespaceInfo nsInfo = localActor.retrieveNamespaceInfo();
+      bpos.setNamespaceInfo(nsInfo);
+      localActor.stop();
+      localActor.register(nsInfo);
+    } catch (IOException e) {
+      Assert.assertEquals("DN shut down before block pool registered",
+          e.getMessage());
     }
   }
 }
