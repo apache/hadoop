@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -114,7 +115,7 @@ public class ExtraAssertions {
 
   /**
    * Extract the inner cause of an exception.
-   * @param expected  expected class of the cuse
+   * @param expected  expected class of the cause
    * @param thrown thrown exception.
    * @param <T> type of the cause
    * @return the extracted exception.

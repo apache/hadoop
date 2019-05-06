@@ -25,7 +25,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
 
 import com.amazonaws.SdkBaseException;
 
@@ -33,6 +32,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveAncestors;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
+import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveFile;
 
 /**
  * This is the rename updating strategy originally used:
@@ -44,7 +47,8 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
   private final StoreContext storeContext;
 
   private final MetadataStore metadataStore;
-  private final Collection<Path> srcPaths = new HashSet<>();
+
+  private final Collection<Path> sourcePaths = new HashSet<>();
 
   private final List<PathMetadata> destMetas = new ArrayList<>();
 
@@ -71,8 +75,8 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       final Path destPath,
       final long blockSize,
       final boolean addAncestors) throws IOException {
-    S3Guard.addMoveFile(metadataStore,
-        srcPaths,
+    addMoveFile(metadataStore,
+        sourcePaths,
         destMetas,
         sourcePath,
         destPath,
@@ -81,8 +85,8 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
         getOwner());
     // Ancestor directories may not be listed, so we explicitly add them
     if (addAncestors) {
-      S3Guard.addMoveAncestors(metadataStore,
-          srcPaths,
+      addMoveAncestors(metadataStore,
+          sourcePaths,
           destMetas,
           getSourceRoot(),
           sourceStatus.getPath(),
@@ -95,13 +99,13 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
   public synchronized void directoryMarkerCopied(final FileStatus sourceStatus,
       final Path destPath,
       final boolean addAncestors) throws IOException {
-    S3Guard.addMoveDir(metadataStore, srcPaths, destMetas,
+    addMoveDir(metadataStore, sourcePaths, destMetas,
         sourceStatus.getPath(),
         destPath, getOwner());
     // Ancestor directories may not be listed, so we explicitly add them
     if (addAncestors) {
-      S3Guard.addMoveAncestors(metadataStore,
-          srcPaths,
+      addMoveAncestors(metadataStore,
+          sourcePaths,
           destMetas,
           getSourceRoot(),
           sourceStatus.getPath(),
@@ -112,8 +116,8 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
 
   @Override
   public synchronized void noteSourceDirectoryMoved() throws IOException {
-    if (!srcPaths.contains(getSourceRoot())) {
-      S3Guard.addMoveDir(metadataStore, srcPaths, destMetas,
+    if (!sourcePaths.contains(getSourceRoot())) {
+      addMoveDir(metadataStore, sourcePaths, destMetas,
           getSourceRoot(),
           getDest(), getOwner());
     }
@@ -128,7 +132,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
 
   @Override
   public void completeRename() throws IOException {
-    metadataStore.move(srcPaths, destMetas);
+    metadataStore.move(sourcePaths, destMetas);
     super.completeRename();
   }
 
@@ -139,8 +143,6 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       // the destination paths are updated; the source is left alone.
       // either the delete operation didn't begin, or the
       metadataStore.move(new ArrayList<>(0), destMetas);
-      Function<String, Path> qualifier
-          = getStoreContext().getKeyToPathQualifier();
       for (Path deletedPath : deletedPaths) {
         // this is not ideal in that it may leave parent stuff around.
         metadataStore.delete(deletedPath);

@@ -759,6 +759,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return ancestry.values();
   }
 
+  /**
+   * {@inheritDoc}.
+   *
+   * The DDB implementation sorts all the paths such that new items
+   * are ordered highest level entry first; deleted items are ordered
+   * lowest entry first.
+   *
+   * This is to ensure that if a client failed partway through the update,
+   * there will no entries in the table which lack parent entries.
+   * @param pathsToDelete Collection of all paths that were removed from the
+   *                      source directory tree of the move.
+   * @param pathsToCreate Collection of all PathMetadata for the new paths
+   *                      that were created at the destination of the rename
+   *                      ().
+   * @throws IOException
+   */
   @Override
   @Retries.RetryTranslated
   public void move(Collection<Path> pathsToDelete,
@@ -779,14 +795,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // Following code is to maintain this invariant by putting all ancestor
     // directories of the paths to create.
     // ancestor paths that are not explicitly added to paths to create
-    Collection<DDBPathMetadata> newItems = new ArrayList<>();
+    List<DDBPathMetadata> newItems = new ArrayList<>();
     if (pathsToCreate != null) {
       newItems.addAll(completeAncestry(pathMetaToDDBPathMeta(pathsToCreate)));
     }
+    // sort all the new items topmost first.
+    newItems.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     if (pathsToDelete != null) {
+
+      List<DDBPathMetadata> tombstones = new ArrayList<>(pathsToDelete.size());
       for (Path meta : pathsToDelete) {
-        newItems.add(new DDBPathMetadata(PathMetadata.tombstone(meta)));
+        tombstones.add(new DDBPathMetadata(PathMetadata.tombstone(meta)));
       }
+      // sort all the tombstones lowest first.
+      tombstones.sort(PathOrderComparators.TOPMOST_PM_LAST);
+      newItems.addAll(tombstones);
     }
 
     processBatchWriteRequest(null, pathMetadataToItem(newItems));
