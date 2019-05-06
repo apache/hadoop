@@ -150,7 +150,19 @@ class ReplicaMap {
   void addAll(ReplicaMap other) {
     map.putAll(other.map);
   }
-  
+
+
+  /**
+   * Merge all entries from the given replica map into the local replica map.
+   */
+  void mergeAll(ReplicaMap other) {
+    for(String bp : other.getBlockPoolList()) {
+      for(ReplicaInfo r : other.map.get(bp)) {
+        add(bp, r);
+      }
+    }
+  }
+
   /**
    * Remove the replica's meta information from the map that matches
    * the input block's id and generation stamp
