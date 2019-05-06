@@ -340,6 +340,39 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>blockade</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>blockade-tests</id>
+                <phase>integration-test</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>python</executable>
+                  <workingDirectory>
+                    ${project.build.directory}/ozone-${project.version}
+                  </workingDirectory>
+                  <arguments>
+                    <argument>-m</argument>
+                    <argument>pytest</argument>
+                    <argument>-s</argument>
+                    <argument>${project.build.directory}/ozone-${project.version}/blockade</argument>
+                  </arguments>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
   </profiles>
 
 </project>
