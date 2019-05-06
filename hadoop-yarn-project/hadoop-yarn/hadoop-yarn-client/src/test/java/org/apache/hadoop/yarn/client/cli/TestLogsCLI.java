@@ -407,7 +407,7 @@ public class TestLogsCLI {
 
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs/application_0_0001");
+        + "/bucket_logs/0001/application_0_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -925,7 +925,6 @@ public class TestLogsCLI {
   public void testFetchApplictionLogsAsAnotherUser() throws Exception {
     String remoteLogRootDir = "target/logs/";
     String rootLogDir = "target/LocalLogs";
-
     String testUser = "test";
     UserGroupInformation testUgi = UserGroupInformation
         .createRemoteUser(testUser);
@@ -966,9 +965,9 @@ public class TestLogsCLI {
       // create container logs in localLogDir for app
       createContainerLogInLocalDir(appLogsDir, containerId, fs, logTypes);
 
-      // create the remote app dir for app
-      // but for a different user testUser"
-      Path path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
+      // create the remote app dir for app but for a different user testUser
+      Path path = new Path(remoteLogRootDir + testUser + "/bucket_logs/0001/"
+          + appId);
       if (fs.exists(path)) {
         fs.delete(path, true);
       }
@@ -1016,6 +1015,22 @@ public class TestLogsCLI {
           logMessage(containerId, "syslog")));
       sysOutStream.reset();
 
+      // Verify appOwner guessed correctly with older log dir dtructure
+      path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
+      if (fs.exists(path)) {
+        fs.delete(path, true);
+      }
+      assertTrue(fs.mkdirs(path));
+      uploadContainerLogIntoRemoteDir(testUgi, configuration, rootLogDirs,
+          nodeId, containerId, path, fs);
+
+      exitCode = cli.run(new String[] {
+          "-applicationId", appId.toString()});
+      assertTrue(exitCode == 0);
+      assertTrue(sysOutStream.toString().contains(
+          logMessage(containerId, "syslog")));
+      sysOutStream.reset();
+
       // Verify that we could get the err message "Can not find the appOwner"
       // if we do not specify the appOwner, can not get appReport, and
       // the app does not exist in remote dir.
@@ -1034,7 +1049,7 @@ public class TestLogsCLI {
           System.currentTimeMillis(), 1000);
       String priorityUser = "priority";
       Path pathWithoutPerm = new Path(remoteLogRootDir + priorityUser
-          + "/logs/" + appTest);
+          + "/bucket_logs/1000/" + appTest);
       if (fs.exists(pathWithoutPerm)) {
         fs.delete(pathWithoutPerm, true);
       }

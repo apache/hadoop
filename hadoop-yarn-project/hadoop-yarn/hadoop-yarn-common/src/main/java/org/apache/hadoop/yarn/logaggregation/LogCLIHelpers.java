@@ -88,6 +88,7 @@ public class LogCLIHelpers implements Configurable {
     String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
     Path fullPath = LogAggregationUtils.getRemoteAppLogDir(remoteRootLogDir,
         appId, bestGuess, suffix);
+
     FileContext fc =
         FileContext.getFileContext(remoteRootLogDir.toUri(), conf);
     String pathAccess = fullPath.toString();
@@ -95,19 +96,50 @@ public class LogCLIHelpers implements Configurable {
       if (fc.util().exists(fullPath)) {
         return bestGuess;
       }
+
+      boolean scanOldPath = LogAggregationUtils.isOlderPathEnabled(conf);
+      if (scanOldPath) {
+        Path olderAppPath = LogAggregationUtils.getOlderRemoteAppLogDir(appId,
+            bestGuess, remoteRootLogDir, suffix);
+        if (fc.util().exists(olderAppPath)) {
+          return bestGuess;
+        }
+      }
+
       Path toMatch = LogAggregationUtils.
           getRemoteAppLogDir(remoteRootLogDir, appId, "*", suffix);
+
       pathAccess = toMatch.toString();
       FileStatus[] matching  = fc.util().globStatus(toMatch);
       if (matching == null || matching.length != 1) {
+        if (scanOldPath) {
+          toMatch = LogAggregationUtils.getOlderRemoteAppLogDir(appId, "*",
+              remoteRootLogDir, suffix);
+          try {
+            matching = fc.util().globStatus(toMatch);
+            if (matching != null && matching.length == 1) {
+              //fetch the user from the old path /app-logs/user[/suffix]/app_id
+              Path parent = matching[0].getPath().getParent();
+              //skip the suffix too
+              if (suffix != null && !StringUtils.isEmpty(suffix)) {
+                parent = parent.getParent();
+              }
+              return parent.getName();
+            }
+          } catch (IOException e) {
+            // Ignore IOException from accessing older app log dir
+          }
+        }
         return null;
       }
-      //fetch the user from the full path /app-logs/user[/suffix]/app_id
+      //fetch the user from the full path /app-logs/user[/suffix]/bucket/app_id
       Path parent = matching[0].getPath().getParent();
       //skip the suffix too
       if (suffix != null && !StringUtils.isEmpty(suffix)) {
         parent = parent.getParent();
       }
+      //skip the bucket
+      parent = parent.getParent();
       return parent.getName();
     } catch (AccessControlException | AccessDeniedException ex) {
       logDirNoAccessPermission(pathAccess, bestGuess, ex.getMessage());
