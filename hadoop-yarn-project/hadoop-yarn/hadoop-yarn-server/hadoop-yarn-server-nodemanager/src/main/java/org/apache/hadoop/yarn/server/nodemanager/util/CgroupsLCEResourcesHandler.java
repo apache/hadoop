@@ -139,11 +139,9 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
                 .NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE,
             YarnConfiguration
                 .DEFAULT_NM_LINUX_CONTAINER_CGROUPS_STRICT_RESOURCE_USAGE);
-    this.cappedMultiplier =
-      conf
-        .getFloat(
-          YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER,
-          YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER);
+    this.cappedMultiplier = conf.getFloat(
+        YarnConfiguration.NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER,
+        YarnConfiguration.DEFAULT_NM_LINUX_CONTAINER_CGROUPS_CAPPED_MULTIPLIER);
 
     int len = cgroupPrefix.length();
     if (cgroupPrefix.charAt(len - 1) == '/') {
