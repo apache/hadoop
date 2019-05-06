@@ -196,7 +196,7 @@ public final class OzoneConsts {
 
 
   /**
-   * Default SCM Datanode ID file name
+   * Default SCM Datanode ID file name.
    */
   public static final String OZONE_SCM_DATANODE_ID_FILE_DEFAULT = "datanode.id";
 

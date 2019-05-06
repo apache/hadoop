@@ -298,7 +298,8 @@ public final class ScmConfigKeys {
       OZONE_SCM_DATANODE_PORT_DEFAULT;
   // The path where datanode ID is to be written to.
   // if this value is not set then container startup will fail.
-  public static final String OZONE_SCM_DATANODE_ID_DIR = "ozone.scm.datanode.id";
+  public static final String OZONE_SCM_DATANODE_ID_DIR =
+      "ozone.scm.datanode.id";
 
   public static final String OZONE_SCM_DB_CACHE_SIZE_MB =
       "ozone.scm.db.cache.size.mb";

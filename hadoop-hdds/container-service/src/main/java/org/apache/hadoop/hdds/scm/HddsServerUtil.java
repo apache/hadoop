@@ -381,7 +381,8 @@ public final class HddsServerUtil {
    * @return the path of datanode id as string
    */
   public static String getDatanodeIdFilePath(Configuration conf) {
-    String dataNodeIDDirPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+    String dataNodeIDDirPath =
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
     if (dataNodeIDDirPath == null) {
       File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
       if (metaDirPath == null) {

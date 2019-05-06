@@ -119,7 +119,7 @@ public class InitDatanodeState implements DatanodeState,
   private void persistContainerDatanodeDetails() {
     String dataNodeIDPath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (Strings.isNullOrEmpty(dataNodeIDPath)) {
-      LOG.error("A valid file path is needed for config setting {}",
+      LOG.error("A valid path is needed for config setting {}",
           ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
       this.context.setState(DatanodeStateMachine.DatanodeStates.SHUTDOWN);
       return;
