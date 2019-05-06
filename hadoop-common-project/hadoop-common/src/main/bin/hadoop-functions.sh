@@ -1918,6 +1918,7 @@ function hadoop_start_secure_daemon
   hadoop_debug "Final HADOOP_OPTS: ${HADOOP_OPTS}"
   hadoop_debug "Final JSVC_HOME: ${JSVC_HOME}"
   hadoop_debug "jsvc: ${jsvc}"
+  hadoop_debug "Final HADOOP_DAEMON_JSVC_EXTRA_OPTS: ${HADOOP_DAEMON_JSVC_EXTRA_OPTS}"
   hadoop_debug "Class name: ${class}"
   hadoop_debug "Command line options: $*"
 
@@ -1930,6 +1931,7 @@ function hadoop_start_secure_daemon
   # shellcheck disable=SC2086
   exec "${jsvc}" \
     "-Dproc_${daemonname}" \
+    ${HADOOP_DAEMON_JSVC_EXTRA_OPTS} \
     -outfile "${daemonoutfile}" \
     -errfile "${daemonerrfile}" \
     -pidfile "${daemonpidfile}" \
