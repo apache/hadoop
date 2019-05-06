@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -380,7 +381,7 @@ public final class HddsServerUtil {
    * @return the path of datanode id as string
    */
   public static String getDatanodeIdFilePath(Configuration conf) {
-    String dataNodeIDDirPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID);
+    String dataNodeIDDirPath = conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
     if (dataNodeIDDirPath == null) {
       File metaDirPath = ServerUtils.getOzoneMetaDirPath(conf);
       if (metaDirPath == null) {
@@ -393,6 +394,6 @@ public final class HddsServerUtil {
     }
     // Use default datanode id file name for file path
     return new File(dataNodeIDDirPath,
-        ScmConfigKeys.OZONE_SCM_DATANODE_ID_PATH_DEFAULT).toString();
+        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT).toString();
   }
 }
