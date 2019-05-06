@@ -417,6 +417,15 @@ public class DistCp extends Configured implements Tool {
   }
 
   /**
+   * Returns the input options
+   *
+   * @return input options
+   */
+  protected DistCpOptions getInputOptions() {
+    return inputOptions;
+  }
+
+  /**
    * Main function of the DistCp program. Parses the input arguments (via OptionsParser),
    * and invokes the DistCp::run() method, via the ToolRunner.
    * @param argv Command-line arguments sent to DistCp.
