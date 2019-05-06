@@ -476,7 +476,7 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
         controllerPaths.put(CONTROLLER_CPU, controllerPath);
       } else {
         throw new IOException("Not able to enforce cpu weights; cannot write "
-            + "to cgroup at: " + controllerPath);
+            + "to cgroup at: " + f.getPath());
       }
     } else {
       throw new IOException("Not able to enforce cpu weights; cannot find "
