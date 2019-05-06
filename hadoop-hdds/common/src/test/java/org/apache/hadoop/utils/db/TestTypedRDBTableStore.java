@@ -27,9 +27,13 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
+import org.apache.hadoop.utils.db.cache.TableCache;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -51,7 +55,7 @@ public class TestTypedRDBTableStore {
       Arrays.asList(DFSUtil.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
           "First", "Second", "Third",
           "Fourth", "Fifth",
-          "Sixth");
+          "Sixth", "Seven");
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
@@ -113,6 +117,15 @@ public class TestTypedRDBTableStore {
         rdbStore.getTable(name),
         codecRegistry,
         String.class, String.class);
+  }
+
+  private TypedTable<String, String> createTypedTableWithCache(String name,
+      TableCache.CACHETYPE cachetype)
+      throws IOException {
+    return new TypedTable<String, String>(
+        rdbStore.getTable(name),
+        codecRegistry,
+        String.class, String.class, cachetype);
   }
 
   @Test
@@ -234,6 +247,68 @@ public class TestTypedRDBTableStore {
         Assert.assertEquals(iterCount, count);
 
       }
+    }
+  }
+
+  @Test
+  public void testTypedTableWithCache() throws Exception {
+    int iterCount = 10;
+    try (Table<String, String> testTable = createTypedTableWithCache(
+        "Seven", TableCache.CACHETYPE.FULLCACHE)) {
+
+      for (int x = 0; x < iterCount; x++) {
+        String key = Integer.toString(x);
+        String value = Integer.toString(x);
+        testTable.addCacheEntry(new CacheKey<>(key), new CacheValue<>(value,
+            CacheValue.OperationType.CREATED, x));
+      }
+
+      // As we have added to cache, so get should return value even if it
+      // does not exist in DB.
+      for (int x = 0; x < iterCount; x++) {
+        Assert.assertEquals(Integer.toString(1),
+            testTable.get(Integer.toString(1)));
+      }
+
+    }
+  }
+
+  @Test
+  public void testTypedTableWithCacheWithFewDeletedOperationType()
+      throws Exception {
+    int iterCount = 10;
+    try (Table<String, String> testTable = createTypedTableWithCache(
+        "Seven", TableCache.CACHETYPE.PARTIALCACHE)) {
+
+      for (int x = 0; x < iterCount; x++) {
+        String key = Integer.toString(x);
+        String value = Integer.toString(x);
+        if (x % 2 == 0) {
+          testTable.addCacheEntry(new CacheKey<>(key),
+              new CacheValue<>(value,
+              CacheValue.OperationType.CREATED, x));
+        } else {
+          testTable.addCacheEntry(new CacheKey<>(key), new CacheValue<>(value,
+              CacheValue.OperationType.DELETED, x));
+        }
+      }
+
+      // As we have added to cache, so get should return value even if it
+      // does not exist in DB.
+      for (int x = 0; x < iterCount; x++) {
+        if (x % 2 == 0) {
+          Assert.assertEquals(Integer.toString(x),
+              testTable.get(Integer.toString(x)));
+        } else {
+          Assert.assertNull(testTable.get(Integer.toString(x)));
+        }
+      }
+
+      testTable.cleanupCache(5);
+
+      GenericTestUtils.waitFor(() ->
+          ((TypedTable<String, String>) testTable).getCache().size() == 4,
+          100, 5000);
     }
   }
 }

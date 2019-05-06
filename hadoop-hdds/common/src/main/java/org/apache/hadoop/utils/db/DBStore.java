@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.utils.db.cache.TableCache;
 
 /**
  * The DBStore interface provides the ability to create Tables, which store
@@ -44,17 +45,20 @@ public interface DBStore extends AutoCloseable {
    */
   Table<byte[], byte[]> getTable(String name) throws IOException;
 
+
   /**
    * Gets an existing TableStore with implicit key/value conversion.
    *
    * @param name - Name of the TableStore to get
    * @param keyType
    * @param valueType
+   * @param cachetype - Type of cache need to be used for this table.
    * @return - TableStore.
    * @throws IOException on Failure
    */
   <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
-      Class<KEY> keyType, Class<VALUE> valueType) throws IOException;
+      Class<KEY> keyType, Class<VALUE> valueType,
+      TableCache.CACHETYPE cachetype) throws IOException;
 
   /**
    * Lists the Known list of Tables in a DB.

@@ -33,6 +33,7 @@ import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.DeletedBlocksTransaction;
 import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.utils.db.cache.TableCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -104,15 +105,18 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
           .build();
 
       deletedBlocksTable = this.store.getTable(DELETED_BLOCKS_TABLE,
-          Long.class, DeletedBlocksTransaction.class);
+          Long.class, DeletedBlocksTransaction.class,
+          TableCache.CACHETYPE.NOCACHE);
       checkTableStatus(deletedBlocksTable, DELETED_BLOCKS_TABLE);
 
       validCertsTable = this.store.getTable(VALID_CERTS_TABLE,
-          BigInteger.class, X509Certificate.class);
+          BigInteger.class, X509Certificate.class,
+          TableCache.CACHETYPE.NOCACHE);
       checkTableStatus(validCertsTable, VALID_CERTS_TABLE);
 
       revokedCertsTable = this.store.getTable(REVOKED_CERTS_TABLE,
-          BigInteger.class, X509Certificate.class);
+          BigInteger.class, X509Certificate.class,
+          TableCache.CACHETYPE.NOCACHE);
       checkTableStatus(revokedCertsTable, REVOKED_CERTS_TABLE);
     }
   }
