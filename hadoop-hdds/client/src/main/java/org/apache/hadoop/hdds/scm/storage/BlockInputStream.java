@@ -95,6 +95,7 @@ public class BlockInputStream extends InputStream implements Seekable {
     initializeChunkOffset();
     this.buffers = null;
     this.bufferIndex = 0;
+    this.bufferPosition = -1;
     this.verifyChecksum = verifyChecksum;
   }
 
@@ -383,7 +384,7 @@ public class BlockInputStream extends InputStream implements Seekable {
     // the bufferPosition so that the next readChunkFromContainer reads the
     // correct chunk and positions the buffer to the seeked position.
     bufferPosition = pos;
-    if (chunkIndex == chunkIndexOfCurrentBuffer) {
+    if (chunkIndex == chunkIndexOfCurrentBuffer && buffersHaveData()) {
       adjustBufferIndex();
     } else {
       releaseBuffers();
@@ -416,6 +417,13 @@ public class BlockInputStream extends InputStream implements Seekable {
   public synchronized long getPos() throws IOException {
     if (chunkIndex == -1) {
       // no data consumed yet, a new stream OR after seek
+      if (bufferPosition > 0) {
+        // seek has been called but the buffers were empty. Hence, the buffer
+        // position will be advanced after the buffers are filled.
+        // We return the bufferPosition here as that will be the position of
+        // the buffer pointer after reading the chunk file.
+        return bufferPosition;
+      }
       return 0;
     }
 
