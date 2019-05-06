@@ -56,9 +56,10 @@ public class AppAllocation {
   }
 
   public void addAppAllocationActivity(String containerId, String priority,
-      ActivityState state, String diagnostic, String type) {
+      ActivityState state, String diagnose, String type, NodeId nId,
+      String allocationRequestId) {
     ActivityNode container = new ActivityNode(containerId, null, priority,
-        state, diagnostic, type);
+        state, diagnose, type, nId, allocationRequestId);
     this.allocationAttempts.add(container);
     if (state == ActivityState.REJECTED) {
       this.appState = ActivityState.SKIPPED;

@@ -38,9 +38,6 @@ public class ActivityDiagnosticConstant {
   public final static String PRIORITY_SKIPPED = "Priority skipped";
   public final static String PRIORITY_SKIPPED_BECAUSE_NULL_ANY_REQUEST =
       "Priority skipped because off-switch request is null";
-  public final static String
-      PRIORITY_SKIPPED_BECAUSE_NODE_PARTITION_DOES_NOT_MATCH_REQUEST =
-      "Priority skipped because partition of node doesn't match request";
   public final static String SKIP_PRIORITY_BECAUSE_OF_RELAX_LOCALITY =
       "Priority skipped because of relax locality is not allowed";
   public final static String SKIP_IN_IGNORE_EXCLUSIVITY_MODE =
@@ -74,4 +71,10 @@ public class ActivityDiagnosticConstant {
       "All priorities are skipped of the app";
   public final static String RESPECT_FIFO = "To respect FIFO of applications, "
       + "skipped following applications in the queue";
+  public final static String
+      NODE_DO_NOT_MATCH_PARTITION_OR_PLACEMENT_CONSTRAINTS =
+      "Node does not match partition or placement constraints";
+  public final static String
+      NODE_CAN_NOT_FIND_CONTAINER_TO_BE_UNRESERVED_WHEN_NEEDED =
+      "Node can't find a container to be unreserved when needed";
 }

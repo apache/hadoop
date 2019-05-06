@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.hadoop.yarn.api.records.NodeId;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,18 +35,32 @@ public class ActivityNode {
   private String requestPriority;
   private ActivityState state;
   private String diagnostic;
+  private NodeId nodeId;
+  private String allocationRequestId;
 
   private List<ActivityNode> childNode;
 
   public ActivityNode(String activityNodeName, String parentName,
       String priority, ActivityState state, String diagnostic, String type) {
+    this(activityNodeName, parentName, priority, state, diagnostic, type, null,
+        null);
+  }
+
+  public ActivityNode(String activityNodeName, String parentName,
+      String priority, ActivityState state, String diagnostic, String type,
+      NodeId nodeId, String allocationRequestId) {
     this.activityNodeName = activityNodeName;
     this.parentName = parentName;
     if (type != null) {
       if (type.equals("app")) {
         this.appPriority = priority;
+      } else if (type.equals("request")) {
+        this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
       } else if (type.equals("container")) {
         this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
+        this.nodeId = nodeId;
       }
     }
     this.state = state;
@@ -84,6 +100,14 @@ public class ActivityNode {
     return requestPriority;
   }
 
+  public NodeId getNodeId() {
+    return nodeId;
+  }
+
+  public String getAllocationRequestId() {
+    return allocationRequestId;
+  }
+
   public boolean getType() {
     if (appPriority != null) {
       return true;
@@ -97,6 +121,9 @@ public class ActivityNode {
     sb.append(this.activityNodeName + " ")
         .append(this.appPriority + " ")
         .append(this.state + " ");
+    if (this.nodeId != null) {
+      sb.append(this.nodeId + " ");
+    }
     if (!this.diagnostic.equals("")) {
       sb.append(this.diagnostic + "\n");
     }

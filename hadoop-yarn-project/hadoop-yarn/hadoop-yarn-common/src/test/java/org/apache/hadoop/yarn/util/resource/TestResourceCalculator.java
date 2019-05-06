@@ -21,8 +21,10 @@ package org.apache.hadoop.yarn.util.resource;
 import java.util.Arrays;
 import java.util.Collection;
 
+import com.google.common.collect.ImmutableSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
@@ -405,5 +407,122 @@ public class TestResourceCalculator {
     float ratio = resourceCalculator.ratio(newResource(0, 0), newResource(0,
         0));
     assertEquals(0.0, ratio, 0.00001);
+  }
+
+  @Test
+  public void testFitsInDiagnosticsCollector() {
+    if (resourceCalculator instanceof DefaultResourceCalculator) {
+      // required-resource = (0, 0)
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(1, 1)));
+
+      // required-resource = (0, 1)
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(1, 1)));
+
+      // required-resource = (1, 0)
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(1, 1)));
+
+      // required-resource = (1, 1)
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(1, 1)));
+    } else if (resourceCalculator instanceof DominantResourceCalculator) {
+      // required-resource = (0, 0)
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 0),
+              newResource(1, 1)));
+
+      // required-resource = (0, 1)
+      assertEquals(ImmutableSet.of(ResourceInformation.VCORES_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(ResourceInformation.VCORES_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(0, 1),
+              newResource(1, 1)));
+
+      // required-resource = (1, 0)
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(0, 0)));
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 0),
+              newResource(1, 1)));
+
+      // required-resource = (1, 1)
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI,
+          ResourceInformation.VCORES_URI), resourceCalculator
+          .getInsufficientResourceNames(newResource(1, 1), newResource(0, 0)));
+      assertEquals(ImmutableSet.of(ResourceInformation.MEMORY_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(0, 1)));
+      assertEquals(ImmutableSet.of(ResourceInformation.VCORES_URI),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(1, 0)));
+      assertEquals(ImmutableSet.of(),
+          resourceCalculator.getInsufficientResourceNames(newResource(1, 1),
+              newResource(1, 1)));
+    }
   }
 }

@@ -28,6 +28,9 @@ import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * A {@link ResourceCalculator} which uses the concept of
@@ -587,5 +590,16 @@ public class DominantResourceCalculator extends ResourceCalculator {
       }
     }
     return false;
+  }
+
+  @Override
+  public Set<String> getInsufficientResourceNames(Resource required,
+      Resource available) {
+    int maxLength = ResourceUtils.getNumberOfCountableResourceTypes();
+    return IntStream.range(0, maxLength).filter(
+        i -> required.getResourceInformation(i).getValue() > available
+            .getResourceInformation(i).getValue())
+        .mapToObj(i -> ResourceUtils.getResourceTypesArray()[i].getName())
+        .collect(Collectors.toSet());
   }
 }

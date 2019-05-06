@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,19 +34,25 @@ public class AllocationActivity {
   private String requestPriority = null;
   private ActivityState state;
   private String diagnostic = null;
+  private NodeId nodeId;
+  private String allocationRequestId;
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AllocationActivity.class);
 
   public AllocationActivity(String parentName, String queueName,
-      String priority, ActivityState state, String diagnostic, String type) {
+      String priority, ActivityState state, String diagnostic, String type,
+      NodeId nodeId, String allocationRequestId) {
     this.childName = queueName;
     this.parentName = parentName;
     if (type != null) {
       if (type.equals("app")) {
         this.appPriority = priority;
-      } else if (type.equals("container")) {
+      } else if (type.equals("request")) {
         this.requestPriority = priority;
+        this.allocationRequestId = allocationRequestId;
+      } else if (type.equals("container")) {
+        this.nodeId = nodeId;
       }
     }
     this.state = state;
@@ -58,7 +65,12 @@ public class AllocationActivity {
           this.state, this.diagnostic, "app");
     } else if (requestPriority != null) {
       return new ActivityNode(this.childName, this.parentName,
-          this.requestPriority, this.state, this.diagnostic, "container");
+          this.requestPriority, this.state, this.diagnostic, "request", null,
+          allocationRequestId);
+    } else if (nodeId != null) {
+      return new ActivityNode(this.childName, this.parentName,
+          this.requestPriority, this.state, this.diagnostic, "container",
+          this.nodeId, null);
     } else {
       return new ActivityNode(this.childName, this.parentName, null, this.state,
           this.diagnostic, null);

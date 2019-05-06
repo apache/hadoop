@@ -17,17 +17,24 @@
 */
 package org.apache.hadoop.yarn.util.resource;
 
+import com.google.common.collect.ImmutableSet;
+import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.Set;
+
 @Private
 @Unstable
 public class DefaultResourceCalculator extends ResourceCalculator {
   private static final Logger LOG =
       LoggerFactory.getLogger(DefaultResourceCalculator.class);
+
+  private static final Set<String> INSUFFICIENT_RESOURCE_NAME =
+      ImmutableSet.of(ResourceInformation.MEMORY_URI);
 
   @Override
   public int compare(Resource unused, Resource lhs, Resource rhs,
@@ -149,5 +156,14 @@ public class DefaultResourceCalculator extends ResourceCalculator {
   @Override
   public boolean isAnyMajorResourceAboveZero(Resource resource) {
     return resource.getMemorySize() > 0;
+  }
+
+  public Set<String> getInsufficientResourceNames(Resource required,
+      Resource available) {
+    if (required.getMemorySize() > available.getMemorySize()) {
+      return INSUFFICIENT_RESOURCE_NAME;
+    } else {
+      return ImmutableSet.of();
+    }
   }
 }
