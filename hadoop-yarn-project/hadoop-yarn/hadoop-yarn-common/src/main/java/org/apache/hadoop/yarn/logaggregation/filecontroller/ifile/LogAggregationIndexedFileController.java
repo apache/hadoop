@@ -822,7 +822,7 @@ public class LogAggregationIndexedFileController
   @Override
   public Path getOlderRemoteAppLogDir(ApplicationId appId, String user)
       throws IOException {
-    return LogAggregationUtils.getOlderRemoteAppLogDir(appId, user,
+    return LogAggregationUtils.getOlderRemoteAppLogDir(conf, appId, user,
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 
