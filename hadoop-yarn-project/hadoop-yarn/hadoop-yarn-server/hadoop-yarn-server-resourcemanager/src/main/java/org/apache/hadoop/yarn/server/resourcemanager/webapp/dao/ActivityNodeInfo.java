@@ -18,7 +18,10 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityState;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -38,17 +41,30 @@ public class ActivityNodeInfo {
   protected String requestPriority;
   protected String allocationState;
   protected String diagnostic;
+  private String nodeId;
+  private String allocationRequestId;
 
   protected List<ActivityNodeInfo> children;
 
   ActivityNodeInfo() {
   }
 
+  public ActivityNodeInfo(String name, ActivityState allocationState,
+      String diagnostic, NodeId nId) {
+    this.name = name;
+    this.allocationState = allocationState.name();
+    this.diagnostic = diagnostic;
+    setNodeId(nId);
+  }
+
   ActivityNodeInfo(ActivityNode node) {
     this.name = node.getName();
-    getPriority(node);
+    setPriority(node);
+    setNodeId(node.getNodeId());
     this.allocationState = node.getState().name();
     this.diagnostic = node.getDiagnostic();
+    this.requestPriority = node.getRequestPriority();
+    this.allocationRequestId = node.getAllocationRequestId();
     this.children = new ArrayList<>();
 
     for (ActivityNode child : node.getChildren()) {
@@ -57,11 +73,25 @@ public class ActivityNodeInfo {
     }
   }
 
-  private void getPriority(ActivityNode node) {
+  public void setNodeId(NodeId nId) {
+    if (nId != null && !Strings.isNullOrEmpty(nId.getHost())) {
+      this.nodeId = nId.toString();
+    }
+  }
+
+  private void setPriority(ActivityNode node) {
     if (node.getType()) {
       this.appPriority = node.getAppPriority();
     } else {
       this.requestPriority = node.getRequestPriority();
     }
+  }
+
+  public String getNodeId() {
+    return nodeId;
+  }
+
+  public String getAllocationRequestId() {
+    return allocationRequestId;
   }
 }

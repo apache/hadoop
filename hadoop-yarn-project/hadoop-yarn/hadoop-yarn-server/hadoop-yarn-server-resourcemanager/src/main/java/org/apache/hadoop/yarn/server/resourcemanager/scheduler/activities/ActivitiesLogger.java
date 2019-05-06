@@ -28,6 +28,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerApplicationAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 
 /**
  * Utility for logging scheduler activities
@@ -49,10 +50,11 @@ public class ActivitiesLogger {
      */
     public static void recordSkippedAppActivityWithoutAllocation(
         ActivitiesManager activitiesManager, SchedulerNode node,
-        SchedulerApplicationAttempt application, Priority priority,
+        SchedulerApplicationAttempt application,
+        SchedulerRequestKey requestKey,
         String diagnostic) {
       recordAppActivityWithoutAllocation(activitiesManager, node, application,
-          priority, diagnostic, ActivityState.SKIPPED);
+          requestKey, diagnostic, ActivityState.SKIPPED);
     }
 
     /*
@@ -83,25 +85,39 @@ public class ActivitiesLogger {
      */
     public static void recordAppActivityWithoutAllocation(
         ActivitiesManager activitiesManager, SchedulerNode node,
-        SchedulerApplicationAttempt application, Priority priority,
+        SchedulerApplicationAttempt application,
+        SchedulerRequestKey schedulerKey,
         String diagnostic, ActivityState appState) {
       if (activitiesManager == null) {
         return;
       }
       NodeId nodeId = getRecordingNodeId(activitiesManager, node);
       if (activitiesManager.shouldRecordThisNode(nodeId)) {
-        String type = "container";
-        // Add application-container activity into specific node allocation.
-        activitiesManager.addSchedulingActivityForNode(nodeId,
-            application.getApplicationId().toString(), null,
-            priority.toString(), ActivityState.SKIPPED, diagnostic, type);
-        type = "app";
+        if (schedulerKey != null) {
+          String allocationRequestId =
+              String.valueOf(schedulerKey.getAllocationRequestId());
+          String priorityStr = getPriorityStr(schedulerKey);
+          String requestName = getRequestName(priorityStr, allocationRequestId);
+          String type = "container";
+          // Add application-container activity into specific node allocation.
+          activitiesManager.addSchedulingActivityForNode(nodeId,
+              requestName, null,
+              priorityStr, ActivityState.SKIPPED, diagnostic, type,
+              null);
+          type = "request";
+          // Add application-container activity into specific node allocation.
+          activitiesManager.addSchedulingActivityForNode(nodeId,
+              application.getApplicationId().toString(), requestName,
+              priorityStr, ActivityState.SKIPPED,
+              ActivityDiagnosticConstant.EMPTY, type, allocationRequestId);
+        }
         // Add queue-application activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(nodeId,
             application.getQueueName(),
             application.getApplicationId().toString(),
             application.getPriority().toString(), ActivityState.SKIPPED,
-            ActivityDiagnosticConstant.EMPTY, type);
+            schedulerKey != null ? ActivityDiagnosticConstant.EMPTY :
+                diagnostic, "app", null);
       }
       // Add application-container activity into specific application allocation
       // Under this condition, it fails to allocate a container to this
@@ -110,8 +126,11 @@ public class ActivitiesLogger {
           application.getApplicationId())) {
         String type = "container";
         activitiesManager.addSchedulingActivityForApp(
-            application.getApplicationId(), null, priority.toString(), appState,
-            diagnostic, type);
+            application.getApplicationId(), null,
+            getPriorityStr(schedulerKey), appState,
+            diagnostic, type, nodeId,
+            schedulerKey == null ?
+                null : String.valueOf(schedulerKey.getAllocationRequestId()));
       }
     }
 
@@ -127,21 +146,38 @@ public class ActivitiesLogger {
         return;
       }
       NodeId nodeId = getRecordingNodeId(activitiesManager, node);
+      if (nodeId == null || nodeId == ActivitiesManager.EMPTY_NODE_ID) {
+        nodeId = updatedContainer.getNodeId();
+      }
       if (activitiesManager.shouldRecordThisNode(nodeId)) {
+        String containerPriorityStr =
+            updatedContainer.getContainer().getPriority().toString();
+        String allocationRequestId = String
+            .valueOf(updatedContainer.getContainer().getAllocationRequestId());
+        String requestName =
+            getRequestName(containerPriorityStr, allocationRequestId);
         String type = "container";
+
+        // Add application-container activity into specific node allocation.
+        activitiesManager.addSchedulingActivityForNode(nodeId,
+            requestName,
+            updatedContainer.getContainer().toString(),
+            containerPriorityStr,
+            activityState, ActivityDiagnosticConstant.EMPTY, type, null);
+        type = "request";
         // Add application-container activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(nodeId,
             application.getApplicationId().toString(),
-            updatedContainer.getContainer().toString(),
-            updatedContainer.getContainer().getPriority().toString(),
-            activityState, ActivityDiagnosticConstant.EMPTY, type);
+            requestName, containerPriorityStr,
+            activityState, ActivityDiagnosticConstant.EMPTY, type,
+            allocationRequestId);
         type = "app";
         // Add queue-application activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(nodeId,
             application.getQueueName(),
             application.getApplicationId().toString(),
             application.getPriority().toString(), ActivityState.ACCEPTED,
-            ActivityDiagnosticConstant.EMPTY, type);
+            ActivityDiagnosticConstant.EMPTY, type, null);
       }
       // Add application-container activity into specific application allocation
       if (activitiesManager.shouldRecordThisApp(
@@ -151,7 +187,9 @@ public class ActivitiesLogger {
             application.getApplicationId(),
             updatedContainer.getContainerId(),
             updatedContainer.getContainer().getPriority().toString(),
-            activityState, ActivityDiagnosticConstant.EMPTY, type);
+            activityState, ActivityDiagnosticConstant.EMPTY, type, nodeId,
+            String.valueOf(
+                updatedContainer.getContainer().getAllocationRequestId()));
       }
     }
 
@@ -286,12 +324,25 @@ public class ActivitiesLogger {
       Priority priority, ActivityState state, String diagnostic, String type) {
     activitiesManager.addSchedulingActivityForNode(nodeId, parentName,
         childName, priority != null ? priority.toString() : null, state,
-        diagnostic, type);
+        diagnostic, type, null);
   }
 
   private static NodeId getRecordingNodeId(ActivitiesManager activitiesManager,
       SchedulerNode node) {
     return activitiesManager == null ? null :
         activitiesManager.getRecordingNodeId(node);
+  }
+
+  private static String getRequestName(String priority,
+      String allocationRequestId) {
+    return "request_"
+        + (priority == null ? "" : priority)
+        + "_" + (allocationRequestId == null ? "" : allocationRequestId);
+  }
+
+  private static String getPriorityStr(SchedulerRequestKey schedulerKey) {
+    Priority priority = schedulerKey == null ?
+        null : schedulerKey.getPriority();
+    return priority == null ? null : priority.toString();
   }
 }

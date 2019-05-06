@@ -1074,8 +1074,8 @@ public class LeafQueue extends AbstractCSQueue {
         && !accessibleToPartition(candidates.getPartition())) {
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
           getParent().getQueueName(), getQueueName(), ActivityState.REJECTED,
-          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + candidates
-              .getPartition());
+          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + " "
+              + candidates.getPartition());
       return CSAssignment.NULL_ASSIGNMENT;
     }
 

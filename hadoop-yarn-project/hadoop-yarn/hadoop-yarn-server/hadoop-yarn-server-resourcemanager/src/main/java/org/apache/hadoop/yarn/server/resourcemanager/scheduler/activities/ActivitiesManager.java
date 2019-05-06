@@ -19,6 +19,8 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.service.AbstractService;
@@ -52,6 +54,8 @@ public class ActivitiesManager extends AbstractService {
   // An empty node ID, we use this variable as a placeholder
   // in the activity records when recording multiple nodes assignments.
   public static final NodeId EMPTY_NODE_ID = NodeId.newInstance("", 0);
+  public static final String DIAGNOSTICS_DETAILS_SEPARATOR = "\n";
+  public static final String EMPTY_DIAGNOSTICS = "";
   private ThreadLocal<Map<NodeId, List<NodeAllocation>>>
       recordingNodesAllocation;
   @VisibleForTesting
@@ -69,6 +73,7 @@ public class ActivitiesManager extends AbstractService {
   private int timeThreshold = 600 * 1000;
   private final RMContext rmContext;
   private volatile boolean stopped;
+  private ThreadLocal<DiagnosticsCollectorManager> diagnosticCollectorManager;
 
   public ActivitiesManager(RMContext rmContext) {
     super(ActivitiesManager.class.getName());
@@ -78,6 +83,9 @@ public class ActivitiesManager extends AbstractService {
     completedAppAllocations = new ConcurrentHashMap<>();
     activeRecordedNodes = Collections.newSetFromMap(new ConcurrentHashMap<>());
     recordingAppActivitiesUntilSpecifiedTime = new ConcurrentHashMap<>();
+    diagnosticCollectorManager = ThreadLocal.withInitial(
+        () -> new DiagnosticsCollectorManager(
+            new GenericDiagnosticsCollector()));
     this.rmContext = rmContext;
   }
 
@@ -191,6 +199,8 @@ public class ActivitiesManager extends AbstractService {
     if (activeRecordedNodes.remove(nodeID)) {
       List<NodeAllocation> nodeAllocation = new ArrayList<>();
       recordingNodesAllocation.get().put(nodeID, nodeAllocation);
+      // enable diagnostic collector
+      diagnosticCollectorManager.get().enable();
     }
   }
 
@@ -205,6 +215,8 @@ public class ActivitiesManager extends AbstractService {
         appsAllocation.get().put(applicationId,
             new AppAllocation(application.getPriority(), nodeID,
                 application.getQueueName()));
+        // enable diagnostic collector
+        diagnosticCollectorManager.get().enable();
       } else {
         turnOffActivityMonitoringForApp(applicationId);
       }
@@ -214,11 +226,11 @@ public class ActivitiesManager extends AbstractService {
   // Add queue, application or container activity into specific node allocation.
   void addSchedulingActivityForNode(NodeId nodeId, String parentName,
       String childName, String priority, ActivityState state, String diagnostic,
-      String type) {
+      String type, String allocationRequestId) {
     if (shouldRecordThisNode(nodeId)) {
       NodeAllocation nodeAllocation = getCurrentNodeAllocation(nodeId);
       nodeAllocation.addAllocationActivity(parentName, childName, priority,
-          state, diagnostic, type);
+          state, diagnostic, type, nodeId, allocationRequestId);
     }
   }
 
@@ -226,12 +238,14 @@ public class ActivitiesManager extends AbstractService {
   // allocation.
   void addSchedulingActivityForApp(ApplicationId applicationId,
       ContainerId containerId, String priority, ActivityState state,
-      String diagnostic, String type) {
+      String diagnostic, String type, NodeId nodeId,
+      String allocationRequestId) {
     if (shouldRecordThisApp(applicationId)) {
       AppAllocation appAllocation = appsAllocation.get().get(applicationId);
       appAllocation.addAppAllocationActivity(containerId == null ?
           "Container-Id-Not-Assigned" :
-          containerId.toString(), priority, state, diagnostic, type);
+          containerId.toString(), priority, state, diagnostic, type, nodeId,
+          allocationRequestId);
     }
   }
 
@@ -297,6 +311,8 @@ public class ActivitiesManager extends AbstractService {
         completedNodeAllocations.put(nodeID, value);
       }
     }
+    // disable diagnostic collector
+    diagnosticCollectorManager.get().disable();
   }
 
   boolean shouldRecordThisApp(ApplicationId applicationId) {
@@ -368,5 +384,70 @@ public class ActivitiesManager extends AbstractService {
       return ActivitiesManager.EMPTY_NODE_ID;
     }
     return null;
+  }
+
+  /**
+   * Class to manage the diagnostics collector.
+   */
+  public static class DiagnosticsCollectorManager {
+    private boolean enabled = false;
+    private DiagnosticsCollector gdc;
+
+    public boolean isEnabled() {
+      return enabled;
+    }
+
+    public void enable() {
+      this.enabled = true;
+    }
+
+    public void disable() {
+      this.enabled = false;
+    }
+
+    public DiagnosticsCollectorManager(DiagnosticsCollector gdc) {
+      this.gdc = gdc;
+    }
+
+    public Optional<DiagnosticsCollector> getOptionalDiagnosticsCollector() {
+      if (enabled) {
+        return Optional.of(gdc);
+      } else {
+        return Optional.empty();
+      }
+    }
+  }
+
+  public Optional<DiagnosticsCollector> getOptionalDiagnosticsCollector() {
+    return diagnosticCollectorManager.get().getOptionalDiagnosticsCollector();
+  }
+
+  public String getResourceDiagnostics(ResourceCalculator rc, Resource required,
+      Resource available) {
+    Optional<DiagnosticsCollector> dcOpt = getOptionalDiagnosticsCollector();
+    if (dcOpt.isPresent()) {
+      dcOpt.get().collectResourceDiagnostics(rc, required, available);
+      return getDiagnostics(dcOpt.get());
+    }
+    return EMPTY_DIAGNOSTICS;
+  }
+
+  public static String getDiagnostics(Optional<DiagnosticsCollector> dcOpt) {
+    if (dcOpt != null && dcOpt.isPresent()) {
+      DiagnosticsCollector dc = dcOpt.get();
+      if (dc != null && dc.getDiagnostics() != null) {
+        return getDiagnostics(dc);
+      }
+    }
+    return EMPTY_DIAGNOSTICS;
+  }
+
+  private static String getDiagnostics(DiagnosticsCollector dc) {
+    StringBuilder sb = new StringBuilder();
+    sb.append(", ").append(dc.getDiagnostics());
+    if (dc.getDetails() != null) {
+      sb.append(DIAGNOSTICS_DETAILS_SEPARATOR).append(dc.getDetails());
+    }
+    return sb.toString();
   }
 }

@@ -35,6 +35,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -49,9 +50,18 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.MediaType;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.function.Predicate;
 
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.findInAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocationAttempts;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
+import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Tests for scheduler/app activities when multi-nodes enabled.
@@ -97,6 +107,8 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       conf.set(policyConfPrefix + ".class",
           ResourceUsageMultiNodeLookupPolicy.class.getName());
       conf.set(policyConfPrefix + ".sorting-interval.ms", "0");
+      conf.set(YarnConfiguration.RM_PLACEMENT_CONSTRAINTS_HANDLER,
+          YarnConfiguration.SCHEDULER_RM_PLACEMENT_CONSTRAINTS_HANDLER);
       rm = new MockRM(conf);
       bind(ResourceManager.class).toInstance(rm);
       serve("/*").with(GuiceContainer.class);
@@ -115,6 +127,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
 
     final String queueB = CapacitySchedulerConfiguration.ROOT + ".b";
     config.setCapacity(queueB, 89.5f);
+    config.setMaximumApplicationMasterResourcePerQueuePercent(queueB, 100);
   }
 
   @Before
@@ -217,7 +230,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
     }
   }
 
-  @Test
+  @Test (timeout=30000)
   public void testAppAssignContainer() throws Exception {
     rm.start();
 
@@ -260,34 +273,175 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
 
       verifyNumberOfAllocations(json, 1);
 
-      JSONObject allocations = json.getJSONObject("allocations");
-      verifyStateOfAllocations(allocations, "allocationState", "ACCEPTED");
-      JSONArray allocationAttempts =
-          allocations.getJSONArray("allocationAttempt");
-      assertEquals(2, allocationAttempts.length());
+      JSONObject allocationObj = json.getJSONObject("allocations");
+      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      JSONObject requestAllocationObj =
+          allocationObj.getJSONObject("requestAllocation");
+      verifyNumberOfAllocationAttempts(requestAllocationObj, 2);
+      verifyStateOfAllocations(requestAllocationObj, "allocationState",
+          "ALLOCATED");
+      JSONArray allocationAttemptArray =
+          requestAllocationObj.getJSONArray("allocationAttempt");
+      JSONObject allocationAttempt1 = allocationAttemptArray.getJSONObject(0);
+      verifyStateOfAllocations(allocationAttempt1, "allocationState",
+          "SKIPPED");
+      assertTrue(allocationAttempt1.optString("diagnostic")
+          .contains(INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX));
+      JSONObject allocationAttempt2 = allocationAttemptArray.getJSONObject(1);
+      verifyStateOfAllocations(allocationAttempt2, "allocationState",
+          "ALLOCATED");
     } finally {
       rm.stop();
     }
   }
 
-  private void verifyNumberOfAllocations(JSONObject json, int realValue)
-      throws Exception {
-    if (json.isNull("allocations")) {
-      assertEquals("Number of allocations is wrong", 0, realValue);
-    } else {
-      Object object = json.get("allocations");
-      if (object.getClass() == JSONObject.class) {
-        assertEquals("Number of allocations is wrong", 1, realValue);
-      } else if (object.getClass() == JSONArray.class) {
-        assertEquals("Number of allocations is wrong in: " + object,
-            ((JSONArray) object).length(), realValue);
+  @Test (timeout=30000)
+  public void testInsufficientResourceDiagnostic() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      RMApp app2 = rm.submitApp(1024, "app2", "user1", null, "b");
+      MockAM am2 = MockRM.launchAndRegisterAM(app2, rm, nm1);
+
+      WebResource r = resource();
+      ClientResponse response =
+          r.path("ws").path("v1").path("cluster").path("scheduler/activities")
+              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("waiting for next allocation", json.getString("diagnostic"));
+
+      //Request a container for am2, will reserve a container on nm1
+      am2.allocate("*", 4096, 1, new ArrayList<>());
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      response =
+          r.path("ws").path("v1").path("cluster").path("scheduler/activities")
+              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      json = response.getEntity(JSONObject.class);
+
+      //Check app activities
+      verifyNumberOfAllocations(json, 1);
+      JSONObject allocationObj = json.getJSONObject("allocations");
+      //Check diagnostic for request of app1
+      Predicate<JSONObject> findApp1Pred = (obj) -> obj.optString("name")
+          .equals(app1.getApplicationId().toString());
+      JSONObject app1Obj =
+          findInAllocations(allocationObj, findApp1Pred).get(0);
+      assertEquals("SKIPPED", app1Obj.optString("allocationState"));
+      assertEquals(ActivityDiagnosticConstant.APPLICATION_DO_NOT_NEED_RESOURCE,
+          app1Obj.optString("diagnostic"));
+      //Check diagnostic for request of app2
+      Predicate<JSONObject> findApp2ReqPred =
+          (obj) -> obj.optString("name").equals("request_1_-1");
+      List<JSONObject> app2ReqObjs =
+          findInAllocations(allocationObj, findApp2ReqPred);
+      assertEquals(1, app2ReqObjs.size());
+      JSONArray app2ReqChildren = app2ReqObjs.get(0).getJSONArray("children");
+      assertEquals(4, app2ReqChildren.length());
+      for (int i = 0; i < app2ReqChildren.length(); i++) {
+        JSONObject reqChild = app2ReqChildren.getJSONObject(i);
+        if (reqChild.getString("allocationState").equals("SKIPPED")) {
+          String diagnostic = reqChild.getString("diagnostic");
+          assertTrue(
+              diagnostic.contains(INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX));
+        }
       }
+    } finally {
+      rm.stop();
     }
   }
 
-  private void verifyStateOfAllocations(JSONObject allocation,
-      String nameToCheck, String realState) throws Exception {
-    assertEquals("State of allocation is wrong", allocation.get(nameToCheck),
-        realState);
+  @Test (timeout=30000)
+  public void testAppInsufficientResourceDiagnostic() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      WebResource r = resource();
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add(RMWSConsts.APP_ID, app1.getApplicationId().toString());
+
+      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/app-activities").queryParams(params).accept(
+          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      JSONObject json = response.getEntity(JSONObject.class);
+      assertEquals("waiting for display", json.getString("diagnostic"));
+
+      //Request two containers with different priority for am1
+      am1.allocate(Arrays.asList(ResourceRequest
+          .newInstance(Priority.newInstance(0), "*",
+              Resources.createResource(1024), 1), ResourceRequest
+          .newInstance(Priority.newInstance(1), "*",
+              Resources.createResource(4096), 1)), null);
+
+      //Trigger scheduling, will allocate a container with priority 0
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      //Trigger scheduling, will reserve a container with priority 1 on nm1
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      response = r.path("ws").path("v1").path("cluster").path(
+          "scheduler/app-activities").queryParams(params).accept(
+          MediaType.APPLICATION_JSON).get(ClientResponse.class);
+      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
+          response.getType().toString());
+      json = response.getEntity(JSONObject.class);
+
+      //Check app activities
+      verifyNumberOfAllocations(json, 2);
+      JSONArray allocationArray = json.getJSONArray("allocations");
+      //Check first activity is for second allocation with RESERVED state
+      JSONObject allocationObj = allocationArray.getJSONObject(0);
+      verifyStateOfAllocations(allocationObj, "allocationState", "RESERVED");
+      JSONObject requestAllocationObj =
+          allocationObj.getJSONObject("requestAllocation");
+      verifyNumberOfAllocationAttempts(requestAllocationObj, 4);
+      JSONArray allocationAttemptArray =
+          requestAllocationObj.getJSONArray("allocationAttempt");
+      for (int i=0; i<allocationAttemptArray.length(); i++) {
+        JSONObject allocationAttemptObj =
+            allocationAttemptArray.getJSONObject(i);
+        if (i != allocationAttemptArray.length()-1) {
+          assertTrue(allocationAttemptObj.optString("diagnostic")
+              .contains(INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX));
+        }
+      }
+      // check second activity is for first allocation with ALLOCATED state
+      allocationObj = allocationArray.getJSONObject(1);
+      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      requestAllocationObj = allocationObj.getJSONObject("requestAllocation");
+      verifyNumberOfAllocationAttempts(requestAllocationObj, 1);
+      verifyStateOfAllocations(requestAllocationObj, "allocationState",
+          "ALLOCATED");
+    }
+    finally {
+      rm.stop();
+    }
   }
 }
