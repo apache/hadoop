@@ -326,26 +326,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       readAhead = longBytesOption(conf, READAHEAD_RANGE,
           DEFAULT_READAHEAD_RANGE, 0);
 
-      int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
-      if (maxThreads < 2) {
-        LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
-        maxThreads = 2;
-      }
-      int totalTasks = intOption(conf,
-          MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
-      long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
-          DEFAULT_KEEPALIVE_TIME, 0);
-      boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
-          maxThreads,
-          maxThreads + totalTasks,
-          keepAliveTime, TimeUnit.SECONDS,
-          "s3a-transfer-shared");
-      unboundedThreadPool = new ThreadPoolExecutor(
-          maxThreads, Integer.MAX_VALUE,
-          keepAliveTime, TimeUnit.SECONDS,
-          new LinkedBlockingQueue<Runnable>(),
-          BlockingThreadPoolExecutorService.newDaemonThreadFactory(
-              "s3a-transfer-unbounded"));
+      initThreadPools(conf);
 
       int listVersion = conf.getInt(LIST_VERSION, DEFAULT_LIST_VERSION);
       if (listVersion < 1 || listVersion > 2) {
@@ -412,6 +393,29 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw translateException("initializing ", new Path(name), e);
     }
 
+  }
+
+  private void initThreadPools(Configuration conf) {
+    int maxThreads = conf.getInt(MAX_THREADS, DEFAULT_MAX_THREADS);
+    if (maxThreads < 2) {
+      LOG.warn(MAX_THREADS + " must be at least 2: forcing to 2.");
+      maxThreads = 2;
+    }
+    int totalTasks = intOption(conf,
+        MAX_TOTAL_TASKS, DEFAULT_MAX_TOTAL_TASKS, 1);
+    long keepAliveTime = longOption(conf, KEEPALIVE_TIME,
+        DEFAULT_KEEPALIVE_TIME, 0);
+    boundedThreadPool = BlockingThreadPoolExecutorService.newInstance(
+        maxThreads,
+        maxThreads + totalTasks,
+        keepAliveTime, TimeUnit.SECONDS,
+        "s3a-transfer-shared");
+    unboundedThreadPool = new ThreadPoolExecutor(
+        maxThreads, Integer.MAX_VALUE,
+        keepAliveTime, TimeUnit.SECONDS,
+        new LinkedBlockingQueue<Runnable>(),
+        BlockingThreadPoolExecutorService.newDaemonThreadFactory(
+            "s3a-transfer-unbounded"));
   }
 
   /**
@@ -654,6 +658,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Preconditions.checkNotNull(client, "client");
     LOG.debug("Setting S3 client to {}", client);
     s3 = client;
+
+    // Need to use a new TransferManager that uses the new client.
+    // Also, using a new TransferManager requires a new threadpool as the old
+    // TransferManager will shut the thread pool down when it is garbage
+    // collected.
+    initThreadPools(getConf());
+    initTransferManager();
   }
 
   /**
@@ -2957,7 +2968,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
-    return once("copyFile(" + srcKey + ", " + dstKey + ")", srcKey,
+    Invoker readInvoker = readContext.getReadInvoker();
+    return readInvoker.retry(
+        "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey", null,
+        false,
         () -> {
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
@@ -3874,19 +3888,24 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
         changeDetectionPolicy, ra);
 
-    if (!fileStatus.isDirectory()) {
-      // check that the object metadata lines up with what is expected
-      // based on the object attributes (which may contain an eTag or versionId)
-      // from S3Guard
-      ChangeTracker changeTracker =
-          new ChangeTracker(uri.toString(),
-              changeDetectionPolicy,
-              readContext.instrumentation.newInputStreamStatistics()
-                  .getVersionMismatchCounter(),
-              objectAttributes);
-      ObjectMetadata objectMetadata = getObjectMetadata(path);
-      changeTracker.processMetadata(objectMetadata, "select", 0);
-    }
+    Invoker readInvoker = readContext.getReadInvoker();
+    readInvoker.retry("select",
+        path.toString(), true,
+        () -> {
+          if (!fileStatus.isDirectory()) {
+            // check that the object metadata lines up with what is expected
+            // based on the object attributes (which may contain an eTag or
+            // versionId) from S3Guard
+            ChangeTracker changeTracker =
+                new ChangeTracker(uri.toString(),
+                    changeDetectionPolicy,
+                    readContext.instrumentation.newInputStreamStatistics()
+                        .getVersionMismatchCounter(),
+                    objectAttributes);
+            ObjectMetadata objectMetadata = getObjectMetadata(path);
+            changeTracker.processMetadata(objectMetadata, "select", 0);
+          }
+        });
 
     // build and execute the request
     return selectBinding.select(

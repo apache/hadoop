@@ -26,15 +26,27 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Collection;
 
-import org.apache.commons.io.IOUtils;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
+import com.amazonaws.services.s3.model.GetObjectRequest;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.S3Object;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
@@ -46,13 +58,25 @@ import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_CLIENT;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_NONE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_SERVER;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_WARN;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_ETAG;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_VERSION_ID;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
+import static org.apache.http.HttpStatus.SC_PRECONDITION_FAILED;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.when;
 
 /**
  * Test S3A remote file change detection.
@@ -64,11 +88,17 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       LoggerFactory.getLogger(ITestS3ARemoteFileChanged.class);
 
   private static final String TEST_DATA = "Some test data";
+  private static final int TEST_MAX_RETRIES = 5;
   private static final String QUOTED_TEST_DATA =
       "\"" + TEST_DATA + "\"";
 
   private enum InteractionType {
-    READ, READ_AFTER_DELETE, COPY, SELECT
+    READ,
+    READ_AFTER_DELETE,
+    EVENTUALLY_CONSISTENT_READ,
+    COPY,
+    EVENTUALLY_CONSISTENT_COPY,
+    SELECT
   }
 
   private final String changeDetectionSource;
@@ -84,7 +114,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             Arrays.asList(
                 InteractionType.READ,
                 InteractionType.READ_AFTER_DELETE,
+                InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_COPY,
                 InteractionType.SELECT)},
 
         // test with etag
@@ -92,11 +124,14 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             Arrays.asList(
                 InteractionType.READ,
                 InteractionType.READ_AFTER_DELETE,
+                InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_COPY,
                 InteractionType.SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_CLIENT,
             Arrays.asList(
                 InteractionType.READ,
+                InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.READ_AFTER_DELETE,
                 InteractionType.COPY,
                 InteractionType.SELECT)},
@@ -108,13 +143,15 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.READ_AFTER_DELETE)},
 
         // test with versionId
-        // when using server-side versionId, the read exceptions shouldn't
-        // happen since the previous version will still be available, but
-        // they will still happen on rename and select since we always do a
+        // when using server-side versionId, the normal read exceptions
+        // shouldn't happen since the previous version will still be available,
+        // but they will still happen on rename and select since we always do a
         // client-side check against the current version
         {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_SERVER,
             Arrays.asList(
+                InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_COPY,
                 InteractionType.SELECT)},
 
         // with client-side versionId it will behave similar to client-side eTag
@@ -122,6 +159,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             Arrays.asList(
                 InteractionType.READ,
                 InteractionType.READ_AFTER_DELETE,
+                InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
                 InteractionType.SELECT)},
 
@@ -159,7 +197,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
     // reduce retry limit so FileNotFoundException cases timeout faster,
     // speeding up the tests
-    conf.set(RETRY_LIMIT, "5");
+    conf.setInt(RETRY_LIMIT, TEST_MAX_RETRIES);
 
     if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
         NullMetadataStore.class) {
@@ -316,6 +354,45 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Tests using S3 Select on a file where the version visible in S3 does not
+   * initially match the version tracked in the metadata store, but eventually
+   * (after retries) does.
+   */
+  @Test
+  public void testSelectEventuallyConsistentFile() throws Throwable {
+    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
+    fs.setAmazonS3Client(s3ClientSpy);
+
+    final Path testpath1 = writeEventuallyConsistentFileVersion(
+        "select1.dat", s3ClientSpy, 0, TEST_MAX_RETRIES, 0);
+
+    skipIfVersionPolicyAndNoVersionId(testpath1);
+
+    // should succeed since the inconsistency doesn't last longer than the
+    // configured retry limit
+    fs.openFile(testpath1)
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+
+    // TEST_MAX_RETRIES + 2 is required to before failure since there is
+    // one getObjectMetadata() call due to getFileStatus() before the
+    // change detection and retries in select()
+    final Path testpath2 = writeEventuallyConsistentFileVersion(
+        "select2.dat", s3ClientSpy, 0, TEST_MAX_RETRIES + 2, 0);
+
+    if (expectedExceptionInteractions.contains(InteractionType.SELECT)) {
+      // should fail since the inconsistency lasts longer than the configured
+      // retry limit
+      interceptFuture(RemoteFileChangedException.class, "select",
+          fs.openFile(testpath2)
+              .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build());
+    } else {
+      fs.openFile(testpath2)
+          .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+    }
+  }
+
+  /**
    * Ensures a file can be read via S3 Select when there is no version metadata
    * (ETag, versionId).
    */
@@ -355,6 +432,59 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Tests doing a rename() on a file where the version visible in S3 does not
+   * match the version in the metadata store until a certain number of retries
+   * has been met.
+   */
+  @Test
+  public void testRenameEventuallyConsistentFile() throws Throwable {
+    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
+    fs.setAmazonS3Client(s3ClientSpy);
+
+    // Total inconsistent response count across getObjectMetadata() and
+    // copyObject() must be TEST_MAX_RETRIES + 2 to generate a failure
+    // since there is one getObjectMetadata() call from innerRename() before
+    // copyObject().
+    // The split of inconsistent responses between getObjectMetadata() and
+    // copyObject() is arbitrary.
+    int maxInconsistenciesBeforeFailure = TEST_MAX_RETRIES + 1;
+    int metadataInconsistencyCount = 3;
+    final Path testpath1 =
+        writeEventuallyConsistentFileVersion("rename-eventually1.dat",
+            s3ClientSpy,
+            0,
+            metadataInconsistencyCount,
+            maxInconsistenciesBeforeFailure - metadataInconsistencyCount);
+
+    skipIfVersionPolicyAndNoVersionId(testpath1);
+
+    final Path dest1 = path("dest1.dat");
+    // shouldn't fail since the inconsistency doesn't last through the
+    // configured retry limit
+    fs.rename(testpath1, dest1);
+
+    final Path testpath2 =
+        writeEventuallyConsistentFileVersion("rename-eventually2.dat",
+            s3ClientSpy,
+            0,
+            metadataInconsistencyCount,
+            maxInconsistenciesBeforeFailure - metadataInconsistencyCount + 1);
+    final Path dest2 = path("dest2.dat");
+    if (expectedExceptionInteractions.contains(
+        InteractionType.EVENTUALLY_CONSISTENT_COPY)) {
+      // should fail since the inconsistency is set up to persist longer than
+      // the configured retry limit
+      intercept(RemoteFileChangedException.class, "", "copy()",
+          () -> {
+            fs.rename(testpath2, dest2);
+          });
+    } else {
+      fs.rename(testpath2, dest2);
+    }
+  }
+
+  /**
    * Ensures a file can be renamed when there is no version metadata
    * (ETag, versionId).
    */
@@ -370,6 +500,74 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     FSDataInputStream inputStream = fs.open(dest);
     assertEquals(TEST_DATA,
         IOUtils.toString(inputStream, Charset.forName("UTF-8")).trim());
+  }
+
+  /**
+   * Ensures S3Guard and retries allow an eventually consistent read.
+   */
+  @Test
+  public void testReadAfterEventuallyConsistentWrite() throws Throwable {
+    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
+    fs.setAmazonS3Client(s3ClientSpy);
+    final Path testpath1 =
+        writeEventuallyConsistentFileVersion("eventually1.dat",
+            s3ClientSpy, TEST_MAX_RETRIES, 0 , 0);
+    try (FSDataInputStream instream1 = fs.open(testpath1)) {
+      // succeeds on the last retry
+      instream1.read();
+    }
+
+    final Path testpath2 =
+        writeEventuallyConsistentFileVersion("eventually2.dat",
+            s3ClientSpy, TEST_MAX_RETRIES + 1, 0, 0);
+    try (FSDataInputStream instream2 = fs.open(testpath2)) {
+      if (expectedExceptionInteractions.contains(
+          InteractionType.EVENTUALLY_CONSISTENT_READ)) {
+        // keeps retrying and eventually gives up with RemoteFileChangedException
+        intercept(RemoteFileChangedException.class, "", "read()",
+            () -> {
+              instream2.read();
+            });
+      } else {
+        instream2.read();
+      }
+    }
+  }
+
+  /**
+   * Ensures read on re-open (after seek backwards) when S3 does not return the
+   * version of the file tracked in the metadata store fails immediately.  No
+   * retries should happen since a retry is not expected to recover.
+   */
+  @Test
+  public void testEventuallyConsistentReadOnReopen() throws Throwable {
+    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
+    fs.setAmazonS3Client(s3ClientSpy);
+    String filename = "eventually-reopen.dat";
+    final Path testpath =
+        writeEventuallyConsistentFileVersion(filename,
+            s3ClientSpy, 0, 0, 0);
+    try (FSDataInputStream instream = fs.open(testpath)) {
+      instream.read();
+      // overwrite the file, returning inconsistent version for
+      // (effectively) infinite retries
+      writeEventuallyConsistentFileVersion(filename, s3ClientSpy,
+          Integer.MAX_VALUE, 0, 0);
+      instream.seek(0);
+      if (expectedExceptionInteractions.contains(InteractionType.READ)) {
+        // if it retries at all, it will retry forever, which should fail
+        // the test.  The expected behavior is immediate
+        // RemoteFileChangedException.
+        intercept(RemoteFileChangedException.class, "", "read()",
+            () -> {
+              instream.read();
+            });
+      } else {
+        instream.read();
+      }
+    }
   }
 
   /**
@@ -405,6 +603,221 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Writes a file where the file will be inconsistent in S3 for some duration.
+   * The duration of the inconsistency is controlled by the
+   * getObjectInconsistencyCount, getMetdataInconsistencyCount, and
+   * copyInconistentCallCount parameters.  The inconsistency manifests in
+   * AmazonS3#getObject, AmazonS3#getObjectMetadata, and AmazonS3#copyObject.
+   * This method sets up the provided s3ClientSpy to return a response to each
+   * of these methods indicating an inconsistency where the requested object
+   * version (eTag or versionId) is not available until a certain retry
+   * threshold is met.  Providing inconsistent call count values above or
+   * below the overall retry limit allows a test to simulate a condition that
+   * either should or should not result in an overall failure from retry
+   * exhaustion.
+   */
+  private Path writeEventuallyConsistentFileVersion(String filename,
+      AmazonS3 s3ClientSpy,
+      int getObjectInconsistencyCount,
+      int getMetdataInconsistencyCount,
+      int copyInconsistencyCount)
+      throws IOException {
+    final Path testpath = path(filename);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintWriter printWriter = new PrintWriter(out);
+    printWriter.println(TEST_DATA);
+    printWriter.close();
+    final byte[] dataset = out.toByteArray();
+    writeDataset(fs, testpath, dataset, dataset.length,
+        1024, true);
+    S3AFileStatus originalStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    // overwrite with half the content
+    writeDataset(fs, testpath, dataset, dataset.length / 2,
+        1024, true);
+
+    S3AFileStatus newStatus = (S3AFileStatus) fs.getFileStatus(testpath);
+
+    stubTemporaryUnavailable(s3ClientSpy, getObjectInconsistencyCount,
+        testpath, newStatus);
+
+    stubTemporaryWrongVersion(s3ClientSpy, getObjectInconsistencyCount,
+        testpath, originalStatus);
+
+    stubTemporaryCopyInconsistency(s3ClientSpy, testpath, newStatus,
+        copyInconsistencyCount);
+
+    stubTemporaryMetadataInconsistency(s3ClientSpy, testpath, originalStatus,
+        newStatus, getMetdataInconsistencyCount);
+
+    return testpath;
+  }
+
+  /**
+   * Stubs {@link AmazonS3#getObject(GetObjectRequest)}
+   * within s3ClientSpy to return null until inconsistentCallCount calls have
+   * been made.  The null response simulates what occurs when an object
+   * matching the specified ETag or versionId is not available.
+   * @param s3ClientSpy the spy to stub
+   * @param inconsistentCallCount the number of calls that should return the
+   * null response
+   * @param testpath the path of the object the stub should apply to
+   */
+  private void stubTemporaryUnavailable(AmazonS3 s3ClientSpy,
+      int inconsistentCallCount, Path testpath,
+      S3AFileStatus newStatus) {
+    Answer<S3Object> temporarilyUnavailableAnswer = new Answer<S3Object>() {
+      private int callCount = 0;
+
+      @Override
+      public S3Object answer(InvocationOnMock invocation) throws Throwable {
+        // simulates ETag or versionId constraint not met until
+        // inconsistentCallCount surpassed
+        callCount++;
+        if (callCount <= inconsistentCallCount) {
+          return null;
+        }
+        return (S3Object) invocation.callRealMethod();
+      }
+    };
+
+    // match the requests that would be made in either server-side change
+    // detection mode
+    doAnswer(temporarilyUnavailableAnswer).when(s3ClientSpy)
+        .getObject(
+            matchingGetObjectRequest(
+                testpath, newStatus.getETag(), null));
+    doAnswer(temporarilyUnavailableAnswer).when(s3ClientSpy)
+        .getObject(
+            matchingGetObjectRequest(
+                testpath, null, newStatus.getVersionId()));
+  }
+
+  /**
+   * Stubs {@link AmazonS3#getObject(GetObjectRequest)}
+   * within s3ClientSpy to return an object modified to contain metadata
+   * from originalStatus until inconsistentCallCount calls have been made.
+   * @param s3ClientSpy the spy to stub
+   * @param testpath the path of the object the stub should apply to
+   * @param inconsistentCallCount the number of calls that should return the
+   * null response
+   * @param originalStatus the status metadata to inject into the
+   * inconsistentCallCount responses
+   */
+  private void stubTemporaryWrongVersion(AmazonS3 s3ClientSpy,
+      int inconsistentCallCount, Path testpath,
+      S3AFileStatus originalStatus) {
+    Answer<S3Object> temporarilyWrongVersionAnswer = new Answer<S3Object>() {
+      private int callCount = 0;
+
+      @Override
+      public S3Object answer(InvocationOnMock invocation) throws Throwable {
+        // simulates old ETag or versionId until inconsistentCallCount surpassed
+        callCount++;
+        S3Object s3Object = (S3Object) invocation.callRealMethod();
+        if (callCount <= inconsistentCallCount) {
+          S3Object objectSpy = Mockito.spy(s3Object);
+          ObjectMetadata metadataSpy =
+              Mockito.spy(s3Object.getObjectMetadata());
+          when(objectSpy.getObjectMetadata()).thenReturn(metadataSpy);
+          when(metadataSpy.getETag()).thenReturn(originalStatus.getETag());
+          when(metadataSpy.getVersionId())
+              .thenReturn(originalStatus.getVersionId());
+          return objectSpy;
+        }
+        return s3Object;
+      }
+    };
+
+    // match requests that would be made in client-side change detection
+    doAnswer(temporarilyWrongVersionAnswer).when(s3ClientSpy).getObject(
+        matchingGetObjectRequest(testpath, null, null));
+  }
+
+  /**
+   * Stubs {@link AmazonS3#copyObject(CopyObjectRequest)}
+   * within s3ClientSpy to throw precondition failed error until
+   * copyInconistentCallCount calls have been made.
+   * @param s3ClientSpy the spy to stub
+   * @param testpath the path of the object the stub should apply to
+   * @param newStatus the status metadata containing the ETag and versionId
+   * that should be matched in order for the stub to apply
+   * @param copyInconistentCallCount how many times to return the
+   * precondition failed error
+   */
+  private void stubTemporaryCopyInconsistency(AmazonS3 s3ClientSpy,
+      Path testpath, S3AFileStatus newStatus,
+      int copyInconistentCallCount) {
+    Answer<CopyObjectResult> temporarilyPreconditionsNotMetAnswer =
+        new Answer<CopyObjectResult>() {
+      private int callCount = 0;
+
+      @Override
+      public CopyObjectResult answer(InvocationOnMock invocation)
+          throws Throwable {
+        callCount++;
+        if (callCount <= copyInconistentCallCount) {
+          AmazonServiceException exception =
+              new AmazonServiceException("preconditions not met");
+          exception.setStatusCode(SC_PRECONDITION_FAILED);
+          throw exception;
+        }
+        return (CopyObjectResult) invocation.callRealMethod();
+      }
+    };
+
+    // match requests made during copy
+    doAnswer(temporarilyPreconditionsNotMetAnswer).when(s3ClientSpy).copyObject(
+        matchingCopyObjectRequest(testpath, newStatus.getETag(), null));
+    doAnswer(temporarilyPreconditionsNotMetAnswer).when(s3ClientSpy).copyObject(
+        matchingCopyObjectRequest(testpath, null, newStatus.getVersionId()));
+  }
+
+  /**
+   * Stubs {@link AmazonS3#getObjectMetadata(GetObjectMetadataRequest)}
+   * within s3ClientSpy to return metadata from originalStatus until
+   * metadataInconsistentCallCount calls have been made.
+   * @param s3ClientSpy the spy to stub
+   * @param testpath the path of the object the stub should apply to
+   * @param originalStatus the inconsistent status metadata to return
+   * @param newStatus the status metadata to return after
+   * metadataInconsistentCallCount is met
+   * @param metadataInconsistentCallCount how many times to return the
+   * inconsistent metadata
+   */
+  private void stubTemporaryMetadataInconsistency(AmazonS3 s3ClientSpy,
+      Path testpath, S3AFileStatus originalStatus,
+      S3AFileStatus newStatus, int metadataInconsistentCallCount) {
+    Answer<ObjectMetadata> temporarilyOldMetadataAnswer =
+        new Answer<ObjectMetadata>() {
+      private int callCount = 0;
+
+      @Override
+      public ObjectMetadata answer(InvocationOnMock invocation)
+          throws Throwable {
+        ObjectMetadata objectMetadata =
+            (ObjectMetadata) invocation.callRealMethod();
+        callCount++;
+        if (callCount <= metadataInconsistentCallCount) {
+          ObjectMetadata metadataSpy =
+              Mockito.spy(objectMetadata);
+          when(metadataSpy.getETag()).thenReturn(originalStatus.getETag());
+          when(metadataSpy.getVersionId())
+              .thenReturn(originalStatus.getVersionId());
+          return metadataSpy;
+        }
+        return objectMetadata;
+      }
+    };
+
+    // match requests made during select
+    doAnswer(temporarilyOldMetadataAnswer).when(s3ClientSpy).getObjectMetadata(
+        matchingMetadataRequest(testpath, null));
+    doAnswer(temporarilyOldMetadataAnswer).when(s3ClientSpy).getObjectMetadata(
+        matchingMetadataRequest(testpath, newStatus.getVersionId()));
+  }
+
+  /**
    * Writes a file with null ETag and versionId in the metadata store.
    */
   private Path writeFileWithNoVersionMetadata(String filename)
@@ -432,7 +845,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * The test is invalid if the policy uses versionId but the bucket doesn't
    * have versioning enabled.
    */
-  private void skipIfVersionPolicyAndNoVersionId(Path testpath) throws IOException {
+  private void skipIfVersionPolicyAndNoVersionId(Path testpath)
+      throws IOException {
     if (fs.getChangeDetectionPolicy().getSource() == Source.VersionId) {
       // skip versionId tests if the bucket doesn't have object versioning
       // enabled
@@ -440,5 +854,72 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
           "Target filesystem does not support versioning",
           fs.getObjectMetadata(fs.pathToKey(testpath)).getVersionId() != null);
     }
+  }
+
+  private GetObjectRequest matchingGetObjectRequest(Path path, String eTag,
+      String versionId) {
+    return ArgumentMatchers.argThat(request -> {
+      if (request.getBucketName().equals(fs.getBucket())
+          && request.getKey().equals(fs.pathToKey(path))) {
+        if (eTag == null && !request.getMatchingETagConstraints().isEmpty()) {
+          return false;
+        }
+        if (eTag != null &&
+            !request.getMatchingETagConstraints().contains(eTag)) {
+          return false;
+        }
+        if (versionId == null && request.getVersionId() != null) {
+          return false;
+        }
+        if (versionId != null && !versionId.equals(request.getVersionId())) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
+  }
+
+  private CopyObjectRequest matchingCopyObjectRequest(Path path, String eTag,
+      String versionId) {
+    return ArgumentMatchers.argThat(request -> {
+      if (request.getSourceBucketName().equals(fs.getBucket())
+          && request.getSourceKey().equals(fs.pathToKey(path))) {
+        if (eTag == null && !request.getMatchingETagConstraints().isEmpty()) {
+          return false;
+        }
+        if (eTag != null &&
+            !request.getMatchingETagConstraints().contains(eTag)) {
+          return false;
+        }
+        if (versionId == null && request.getSourceVersionId() != null) {
+          return false;
+        }
+        if (versionId != null &&
+            !versionId.equals(request.getSourceVersionId())) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
+  }
+
+  private GetObjectMetadataRequest matchingMetadataRequest(Path path,
+      String versionId) {
+    return ArgumentMatchers.argThat(request -> {
+      if (request.getBucketName().equals(fs.getBucket())
+          && request.getKey().equals(fs.pathToKey(path))) {
+        if (versionId == null && request.getVersionId() != null) {
+          return false;
+        }
+        if (versionId != null &&
+            !versionId.equals(request.getVersionId())) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
   }
 }
