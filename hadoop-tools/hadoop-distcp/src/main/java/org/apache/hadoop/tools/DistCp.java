@@ -417,7 +417,7 @@ public class DistCp extends Configured implements Tool {
   }
 
   /**
-   * Returns the input options
+   * Returns the input options.
    *
    * @return input options
    */
