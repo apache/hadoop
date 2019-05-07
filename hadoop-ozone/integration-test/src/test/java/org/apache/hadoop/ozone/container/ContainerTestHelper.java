@@ -57,6 +57,7 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.io.BlockOutputStreamEntry;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
@@ -68,7 +69,6 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.transport.server.XceiverServerSpi;
 import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.base.Preconditions;
@@ -723,11 +723,11 @@ public final class ContainerTestHelper {
       MiniOzoneCluster cluster) throws Exception {
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) outputStream.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
     List<Long> containerIdList = new ArrayList<>();
-    for (OmKeyLocationInfo info : locationInfoList) {
-      long id = info.getContainerID();
+    for (BlockOutputStreamEntry entry : streamEntryList) {
+      long id = entry.getBlockID().getContainerID();
       if (!containerIdList.contains(id)) {
         containerIdList.add(id);
       }
@@ -741,11 +741,14 @@ public final class ContainerTestHelper {
       throws Exception {
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) outputStream.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
     List<Long> containerIdList = new ArrayList<>();
-    for (OmKeyLocationInfo info : locationInfoList) {
-      containerIdList.add(info.getContainerID());
+    for (BlockOutputStreamEntry entry : streamEntryList) {
+      long id = entry.getBlockID().getContainerID();
+      if (!containerIdList.contains(id)) {
+        containerIdList.add(id);
+      }
     }
     Assert.assertTrue(!containerIdList.isEmpty());
     waitForPipelineClose(cluster, waitForContainerCreation,
@@ -784,6 +787,12 @@ public final class ContainerTestHelper {
         }
       }
     }
+    waitForPipelineClose(pipelineList, cluster);
+  }
+
+  public static void waitForPipelineClose(List<Pipeline> pipelineList,
+      MiniOzoneCluster cluster)
+      throws TimeoutException, InterruptedException, IOException {
     for (Pipeline pipeline1 : pipelineList) {
       // issue pipeline destroy command
       cluster.getStorageContainerManager().getPipelineManager()
