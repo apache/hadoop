@@ -21,7 +21,6 @@ import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
@@ -51,6 +50,7 @@ import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 
 /**
  * Tests failure detection and handling in BlockOutputStream Class.
@@ -85,7 +85,7 @@ public class TestOzoneClientRetriesOnException {
     blockSize = 2 * maxFlushSize;
     conf.set(OzoneConfigKeys.OZONE_CLIENT_WATCH_REQUEST_TIMEOUT, "5000ms");
     conf.setTimeDuration(HDDS_SCM_WATCHER_TIMEOUT, 1000, TimeUnit.MILLISECONDS);
-   // conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 30, TimeUnit.SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL, 3, TimeUnit.SECONDS);
     conf.set(OzoneConfigKeys.OZONE_CLIENT_CHECKSUM_TYPE, "NONE");
     conf.setInt(OzoneConfigKeys.OZONE_CLIENT_MAX_RETRIES, 3);
     conf.setQuietMode(false);
@@ -150,7 +150,7 @@ public class TestOzoneClientRetriesOnException {
             .getPipeline(container.getPipelineID());
     ContainerTestHelper.waitForPipelineClose(key, cluster, true);
     key.flush();
-    Assert.assertTrue(HddsClientUtils.checkForException(blockOutputStream
+    Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
         .getIoException()) instanceof GroupMismatchException);
     Assert.assertTrue(keyOutputStream.getExcludeList().getPipelineIds()
         .contains(pipeline.getId()));
@@ -201,7 +201,7 @@ public class TestOzoneClientRetriesOnException {
       key.write(data1);
       Assert.fail("Expected exception not thrown");
     } catch (IOException ioe) {
-      Assert.assertTrue(HddsClientUtils.checkForException(blockOutputStream
+      Assert.assertTrue(keyOutputStream.checkForException(blockOutputStream
           .getIoException()) instanceof ContainerNotOpenException);
       Assert.assertTrue(ioe.getMessage().contains(
           "Retry request failed. retries get failed due to exceeded maximum "
