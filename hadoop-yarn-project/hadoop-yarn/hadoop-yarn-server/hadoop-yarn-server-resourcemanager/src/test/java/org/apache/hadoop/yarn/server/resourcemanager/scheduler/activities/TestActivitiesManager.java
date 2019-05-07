@@ -43,6 +43,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -132,7 +133,8 @@ public class TestActivitiesManager {
             .startNodeUpdateRecording(activitiesManager, node.getNodeID());
         ActivitiesLogger.APP
             .recordAppActivityWithoutAllocation(activitiesManager, node,
-                randomApp, Priority.newInstance(0),
+                randomApp,
+                new SchedulerRequestKey(Priority.newInstance(0), 0, null),
                 ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
                 ActivityState.REJECTED);
         ActivitiesLogger.NODE
@@ -176,7 +178,8 @@ public class TestActivitiesManager {
             ActivitiesManager.EMPTY_NODE_ID);
         ActivitiesLogger.APP
             .recordAppActivityWithoutAllocation(activitiesManager, node,
-                randomApp, Priority.newInstance(0),
+                randomApp,
+                new SchedulerRequestKey(Priority.newInstance(0), 0, null),
                 ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
                 ActivityState.REJECTED);
         ActivitiesLogger.NODE.finishNodeUpdateRecording(activitiesManager,
@@ -216,7 +219,8 @@ public class TestActivitiesManager {
         for (SchedulerNode node : nodes) {
           ActivitiesLogger.APP
               .recordAppActivityWithoutAllocation(activitiesManager, node,
-                  randomApp, Priority.newInstance(0),
+                  randomApp,
+                  new SchedulerRequestKey(Priority.newInstance(0), 0, null),
                   ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
                   ActivityState.REJECTED);
         }

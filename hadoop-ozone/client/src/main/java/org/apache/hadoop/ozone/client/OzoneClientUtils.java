@@ -17,21 +17,28 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import org.apache.hadoop.hdds.client.OzoneQuota;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.client.rest.response.*;
+import org.apache.hadoop.ozone.client.rest.response.BucketInfo;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfo;
+import org.apache.hadoop.ozone.client.rest.response.KeyInfoDetails;
+import org.apache.hadoop.ozone.client.rest.response.KeyLocation;
+import org.apache.hadoop.ozone.client.rest.response.VolumeInfo;
+import org.apache.hadoop.ozone.client.rest.response.VolumeOwner;
 import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 /** A utility class for OzoneClient. */
 public final class OzoneClientUtils {
@@ -129,14 +136,31 @@ public final class OzoneClientUtils {
 
   public static RetryPolicy createRetryPolicy(int maxRetryCount,
       long retryInterval) {
-    // just retry without sleep
-    RetryPolicy retryPolicy = RetryPolicies
-        .retryUpToMaximumCountWithFixedSleep(maxRetryCount, retryInterval,
-            TimeUnit.MILLISECONDS);
-    return retryPolicy;
+    // retry with fixed sleep between retries
+    return RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+        maxRetryCount, retryInterval, TimeUnit.MILLISECONDS);
   }
 
   public static List<Class<? extends Exception>> getExceptionList() {
     return EXCEPTION_LIST;
+  }
+
+  public static Map<Class<? extends Throwable>, RetryPolicy>
+      getRetryPolicyByException(int maxRetryCount, long retryInterval) {
+    Map<Class<? extends Throwable>, RetryPolicy> policyMap = new HashMap<>();
+    for (Class<? extends Exception> ex : EXCEPTION_LIST) {
+      if (ex == TimeoutException.class ||
+          ex == RaftRetryFailureException.class) {
+        // retry without sleep
+        policyMap.put(ex, createRetryPolicy(maxRetryCount, 0));
+      } else {
+        // retry with fixed sleep between retries
+        policyMap.put(ex, createRetryPolicy(maxRetryCount, retryInterval));
+      }
+    }
+    // Default retry policy
+    policyMap.put(Exception.class, createRetryPolicy(
+        maxRetryCount, retryInterval));
+    return policyMap;
   }
 }

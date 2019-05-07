@@ -20,9 +20,9 @@ package org.apache.hadoop.hdfs.tools.offlineImageViewer;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -126,7 +126,7 @@ public class OfflineImageViewer {
     boolean done = false;
     try {
       tracker = new PositionTrackingInputStream(new BufferedInputStream(
-               new FileInputStream(new File(inputFile))));
+          Files.newInputStream(Paths.get(inputFile))));
       in = new DataInputStream(tracker);
 
       int imageVersionFile = findImageVersion(in);

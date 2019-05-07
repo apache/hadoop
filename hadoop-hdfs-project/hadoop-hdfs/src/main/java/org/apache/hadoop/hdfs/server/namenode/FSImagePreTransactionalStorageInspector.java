@@ -20,8 +20,8 @@ package org.apache.hadoop.hdfs.server.namenode;
 
 import java.io.DataInputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -130,7 +130,8 @@ class FSImagePreTransactionalStorageInspector extends FSImageStorageInspector {
     File timeFile = NNStorage.getStorageFile(sd, NameNodeFile.TIME);
     long timeStamp = 0L;
     if (timeFile.exists() && FileUtil.canRead(timeFile)) {
-      DataInputStream in = new DataInputStream(new FileInputStream(timeFile));
+      DataInputStream in = new DataInputStream(
+          Files.newInputStream(timeFile.toPath()));
       try {
         timeStamp = in.readLong();
         in.close();

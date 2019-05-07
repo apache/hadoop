@@ -55,9 +55,10 @@ public class NodeAllocation {
   }
 
   public void addAllocationActivity(String parentName, String childName,
-      String priority, ActivityState state, String diagnostic, String type) {
+      String priority, ActivityState state, String diagnostic, String type,
+      NodeId nId, String allocationRequestId) {
     AllocationActivity allocate = new AllocationActivity(parentName, childName,
-        priority, state, diagnostic, type);
+        priority, state, diagnostic, type, nId, allocationRequestId);
     this.allocationOperations.add(allocate);
   }
 
@@ -134,7 +135,7 @@ public class NodeAllocation {
     return root;
   }
 
-  public String getNodeId() {
-    return nodeId.toString();
+  public NodeId getNodeId() {
+    return nodeId;
   }
 }

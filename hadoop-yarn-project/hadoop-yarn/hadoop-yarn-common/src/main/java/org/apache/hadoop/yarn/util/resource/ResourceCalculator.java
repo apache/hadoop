@@ -21,6 +21,8 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.yarn.api.records.Resource;
 
+import java.util.Set;
+
 /**
  * A set of {@link Resource} comparison and manipulation interfaces.
  */
@@ -284,4 +286,15 @@ public abstract class ResourceCalculator {
    * @return returns true if any resource is {@literal >} 0
    */
   public abstract boolean isAnyMajorResourceAboveZero(Resource resource);
+
+  /**
+   * Get insufficient resource names via comparing required resource and
+   * capacity resource.
+   *
+   * @param required - required resource
+   * @param available - available resource
+   * @return insufficient resource names
+   */
+  public abstract Set<String> getInsufficientResourceNames(Resource required,
+      Resource available);
 }

@@ -25,8 +25,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Shell;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -69,7 +67,7 @@ public final class LocalJavaKeyStoreProvider extends
     if (LOG.isDebugEnabled()) {
       LOG.debug("using '" + file + "' for output stream.");
     }
-    FileOutputStream out = new FileOutputStream(file);
+    OutputStream out = Files.newOutputStream(file.toPath());
     return out;
   }
 
@@ -81,7 +79,7 @@ public final class LocalJavaKeyStoreProvider extends
 
   @Override
   protected InputStream getInputStreamForFile() throws IOException {
-    FileInputStream is = new FileInputStream(file);
+    InputStream is = Files.newInputStream(file.toPath());
     return is;
   }
 

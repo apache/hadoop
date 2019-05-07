@@ -23,9 +23,10 @@ import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.security.DigestInputStream;
 import java.security.DigestOutputStream;
 import java.security.MessageDigest;
@@ -215,9 +216,9 @@ public class FSImageFormat {
         throws IOException {
       Preconditions.checkState(impl == null, "Image already loaded!");
 
-      FileInputStream is = null;
+      InputStream is = null;
       try {
-        is = new FileInputStream(file);
+        is = Files.newInputStream(file.toPath());
         byte[] magic = new byte[FSImageUtil.MAGIC_HEADER.length];
         IOUtils.readFully(is, magic, 0, magic.length);
         if (Arrays.equals(magic, FSImageUtil.MAGIC_HEADER)) {
@@ -318,7 +319,7 @@ public class FSImageFormat {
       //
       MessageDigest digester = MD5Hash.getDigester();
       DigestInputStream fin = new DigestInputStream(
-           new FileInputStream(curFile), digester);
+          Files.newInputStream(curFile.toPath()), digester);
 
       DataInputStream in = new DataInputStream(fin);
       try {

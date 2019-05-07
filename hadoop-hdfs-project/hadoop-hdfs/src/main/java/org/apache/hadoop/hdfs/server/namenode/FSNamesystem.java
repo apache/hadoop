@@ -117,7 +117,6 @@ import java.io.DataInput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
@@ -126,6 +125,7 @@ import java.lang.management.ManagementFactory;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1774,7 +1774,8 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
       checkOperation(OperationCategory.READ);
       File file = new File(System.getProperty("hadoop.log.dir"), filename);
       PrintWriter out = new PrintWriter(new BufferedWriter(
-          new OutputStreamWriter(new FileOutputStream(file), Charsets.UTF_8)));
+          new OutputStreamWriter(Files.newOutputStream(file.toPath()),
+              Charsets.UTF_8)));
       metaSave(out);
       out.flush();
       out.close();

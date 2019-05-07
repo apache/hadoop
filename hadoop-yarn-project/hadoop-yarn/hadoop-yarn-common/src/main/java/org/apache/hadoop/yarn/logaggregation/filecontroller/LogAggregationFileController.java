@@ -470,7 +470,7 @@ public abstract class LogAggregationFileController {
    */
   public Path getOlderRemoteAppLogDir(ApplicationId appId, String appOwner)
       throws IOException {
-    return LogAggregationUtils.getOlderRemoteAppLogDir(appId, appOwner,
+    return LogAggregationUtils.getOlderRemoteAppLogDir(conf, appId, appOwner,
         this.remoteRootLogDir, this.remoteRootLogDirSuffix);
   }
 

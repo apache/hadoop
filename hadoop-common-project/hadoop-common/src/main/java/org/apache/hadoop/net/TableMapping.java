@@ -20,9 +20,10 @@ package org.apache.hadoop.net;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -100,7 +101,8 @@ public class TableMapping extends CachedDNSToSwitchMapping {
 
       try (BufferedReader reader =
                new BufferedReader(new InputStreamReader(
-                   new FileInputStream(filename), StandardCharsets.UTF_8))) {
+              Files.newInputStream(Paths.get(filename)),
+              StandardCharsets.UTF_8))) {
         String line = reader.readLine();
         while (line != null) {
           line = line.trim();

@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.placement;
 
 import org.apache.commons.collections.IteratorUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.DiagnosticsCollector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
@@ -41,6 +42,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -391,9 +393,11 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
 
   }
 
+
   @Override
   public boolean precheckNode(SchedulerNode schedulerNode,
-      SchedulingMode schedulingMode) {
+      SchedulingMode schedulingMode,
+      Optional<DiagnosticsCollector> dcOpt) {
     // We will only look at node label = nodeLabelToLookAt according to
     // schedulingMode and partition of node.
     LOG.debug("precheckNode is invoked for {},{}", schedulerNode.getNodeID(),
@@ -405,7 +409,18 @@ public class LocalityAppPlacementAllocator <N extends SchedulerNode>
       nodePartitionToLookAt = RMNodeLabelsManager.NO_LABEL;
     }
 
-    return primaryRequestedPartition.equals(nodePartitionToLookAt);
+    boolean rst = primaryRequestedPartition.equals(nodePartitionToLookAt);
+    if (!rst && dcOpt.isPresent()) {
+      dcOpt.get().collectPartitionDiagnostics(primaryRequestedPartition,
+          nodePartitionToLookAt);
+    }
+    return rst;
+  }
+
+  @Override
+  public boolean precheckNode(SchedulerNode schedulerNode,
+      SchedulingMode schedulingMode) {
+    return precheckNode(schedulerNode, schedulingMode, Optional.empty());
   }
 
   @Override

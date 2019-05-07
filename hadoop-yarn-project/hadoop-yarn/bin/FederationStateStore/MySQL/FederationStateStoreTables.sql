@@ -37,6 +37,7 @@ CREATE TABLE membership(
    lastStartTime bigint NULL,
    capability varchar(6000),
    CONSTRAINT pk_subClusterId PRIMARY KEY (subClusterId)
+   UNIQUE(lastStartTime)
 );
 
 CREATE TABLE policies(

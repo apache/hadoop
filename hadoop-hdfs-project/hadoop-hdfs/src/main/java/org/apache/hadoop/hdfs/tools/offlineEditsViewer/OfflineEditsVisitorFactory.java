@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hdfs.tools.offlineEditsViewer;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -48,7 +49,7 @@ public class OfflineEditsVisitorFactory {
       return new BinaryEditsVisitor(filename);
     }
     OfflineEditsVisitor vis;
-    OutputStream fout = new FileOutputStream(filename);
+    OutputStream fout = Files.newOutputStream(Paths.get(filename));
     OutputStream out = null;
     try {
       if (!printToScreen) {
@@ -65,7 +66,7 @@ public class OfflineEditsVisitorFactory {
       } else if(StringUtils.equalsIgnoreCase("stats", processor)) {
         vis = new StatisticsEditsVisitor(out);
       } else {
-        throw new IOException("Unknown proccesor " + processor +
+        throw new IOException("Unknown processor " + processor +
           " (valid processors: xml, binary, stats)");
       }
       out = fout = null;
