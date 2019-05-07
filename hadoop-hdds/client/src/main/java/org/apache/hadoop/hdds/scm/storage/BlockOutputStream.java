@@ -80,7 +80,7 @@ public class BlockOutputStream extends OutputStream {
   public static final Logger LOG =
       LoggerFactory.getLogger(BlockOutputStream.class);
 
-  private BlockID blockID;
+  private volatile BlockID blockID;
   private final String key;
   private final String traceID;
   private final BlockData.Builder containerBlockData;
@@ -574,12 +574,16 @@ public class BlockOutputStream extends OutputStream {
    * @throws IOException if stream is closed
    */
   private void checkOpen() throws IOException {
-    if (xceiverClient == null) {
+    if (isClosed()) {
       throw new IOException("BlockOutputStream has been closed.");
     } else if (getIoException() != null) {
       adjustBuffersOnException();
       throw getIoException();
     }
+  }
+
+  public boolean isClosed() {
+    return xceiverClient == null;
   }
 
   /**
@@ -634,5 +638,10 @@ public class BlockOutputStream extends OutputStream {
         "writing chunk " + chunkInfo.getChunkName() + " blockID " + blockID
             + " length " + effectiveChunkSize);
     containerBlockData.addChunks(chunkInfo);
+  }
+
+  @VisibleForTesting
+  public void setXceiverClient(XceiverClientSpi xceiverClient) {
+    this.xceiverClient = xceiverClient;
   }
 }
