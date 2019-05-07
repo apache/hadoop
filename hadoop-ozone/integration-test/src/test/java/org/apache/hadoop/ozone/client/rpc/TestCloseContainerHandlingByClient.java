@@ -291,7 +291,7 @@ public class TestCloseContainerHandlingByClient {
         (KeyOutputStream) key.getOutputStream();
     // With the initial size provided, it should have preallocated 4 blocks
     Assert.assertEquals(4, keyOutputStream.getStreamEntries().size());
-    // write data 3 blocks and one more chunk
+    // write data 4 blocks and one more chunk
     byte[] writtenData =
         ContainerTestHelper.getFixedLengthString(keyString, keyLen)
             .getBytes(UTF_8);
