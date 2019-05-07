@@ -14,14 +14,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-RESULT_DIR=result
-#delete previous results
-rm -rf "${DIR:?}/$RESULT_DIR"
 
-REPLACEMENT="$DIR/../compose/test-all.sh"
-echo "THIS SCRIPT IS DEPRECATED. Please use $REPLACEMENT instead."
+COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export COMPOSE_DIR
 
-${REPLACEMENT}
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../testlib.sh"
 
-cp -r "$DIR/../compose/result" "$DIR"
+export SECURITY_ENABLED=true
+
+start_docker_env
+
+execute_robot_test scm kinit.robot
+
+execute_robot_test scm basic
+
+execute_robot_test scm security
+
+execute_robot_test scm ozonefs/ozonefs.robot
+
+execute_robot_test scm s3
+
+stop_docker_env
+
+generate_report
