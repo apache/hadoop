@@ -335,12 +335,13 @@ public final class HddsClientUtils {
         maxRetryCount, retryInterval, TimeUnit.MILLISECONDS);
   }
 
-  public static Map<Class<? extends Throwable>, RetryPolicy>
-  getRetryPolicyByException(int maxRetryCount, long retryInterval) {
+  public static Map<Class<? extends Throwable>,
+      RetryPolicy> getRetryPolicyByException(int maxRetryCount,
+      long retryInterval) {
     Map<Class<? extends Throwable>, RetryPolicy> policyMap = new HashMap<>();
     for (Class<? extends Exception> ex : EXCEPTION_LIST) {
-      if (ex == TimeoutException.class ||
-          ex == RaftRetryFailureException.class) {
+      if (ex == TimeoutException.class
+          || ex == RaftRetryFailureException.class) {
         // retry without sleep
         policyMap.put(ex, createRetryPolicy(maxRetryCount, 0));
       } else {
@@ -349,8 +350,8 @@ public final class HddsClientUtils {
       }
     }
     // Default retry policy
-    policyMap.put(Exception.class, createRetryPolicy(
-        maxRetryCount, retryInterval));
+    policyMap
+        .put(Exception.class, createRetryPolicy(maxRetryCount, retryInterval));
     return policyMap;
   }
 
