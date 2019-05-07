@@ -98,6 +98,59 @@ public class TestOzoneContainer {
     }
   }
 
+  @Test
+  public void testOzoneContainerStart() throws Exception {
+    OzoneConfiguration conf = newOzoneConfiguration();
+    MiniOzoneCluster cluster = null;
+    OzoneContainer container = null;
+
+    try {
+      cluster = MiniOzoneCluster.newBuilder(conf).build();
+      cluster.waitForClusterToBeReady();
+
+      Pipeline pipeline = ContainerTestHelper.createSingleNodePipeline();
+      conf.set(HDDS_DATANODE_DIR_KEY, tempFolder.getRoot().getPath());
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
+          pipeline.getFirstNode()
+              .getPort(DatanodeDetails.Port.Name.STANDALONE).getValue());
+      conf.setBoolean(
+          OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, false);
+
+
+      DatanodeDetails datanodeDetails = TestUtils.randomDatanodeDetails();
+      StateContext context = Mockito.mock(StateContext.class);
+      DatanodeStateMachine dsm = Mockito.mock(DatanodeStateMachine.class);
+      Mockito.when(dsm.getDatanodeDetails()).thenReturn(datanodeDetails);
+      Mockito.when(context.getParent()).thenReturn(dsm);
+      container = new OzoneContainer(datanodeDetails, conf,
+          context, null);
+
+      String scmId = UUID.randomUUID().toString();
+      container.start(scmId);
+      try {
+        container.start(scmId);
+      } catch (Exception e) {
+        Assert.fail();
+      }
+
+      container.stop();
+      try {
+        container.stop();
+      } catch (Exception e) {
+        Assert.fail();
+      }
+
+    } finally {
+      if (container != null) {
+        container.stop();
+      }
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+
   static OzoneConfiguration newOzoneConfiguration() {
     final OzoneConfiguration conf = new OzoneConfiguration();
     return conf;
