@@ -14,14 +14,40 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-RESULT_DIR=result
-#delete previous results
-rm -rf "${DIR:?}/$RESULT_DIR"
 
-REPLACEMENT="$DIR/../compose/test-all.sh"
-echo "THIS SCRIPT IS DEPRECATED. Please use $REPLACEMENT instead."
+#
+# Single test executor, can start a single robot test in any running container.
+#
 
-${REPLACEMENT}
 
-cp -r "$DIR/../compose/result" "$DIR"
+COMPOSE_DIR="$PWD"
+export COMPOSE_DIR
+
+if [[ ! -f "$COMPOSE_DIR/docker-compose.yaml" ]]; then
+    echo "docker-compose.yaml is missing from the current dir. Please run this command from a docker-compose environment."
+    exit 1
+fi
+if (( $# != 2 )); then
+cat << EOF
+   Single test executor
+
+   Usage:
+
+     ../test-single.sh <container> <robot_test>
+
+        container: Name of the running docker-compose container (docker-compose.yaml is required in the current directory)
+
+        robot_test: name of the robot test or directory relative to the smoketest dir.
+
+
+
+EOF
+
+fi
+
+# shellcheck source=testlib.sh
+source "$COMPOSE_DIR/../testlib.sh"
+
+execute_robot_test "$1" "$2"
+
+generate_report

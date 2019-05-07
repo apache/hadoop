@@ -122,3 +122,6 @@ run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/Dockerfile" .
+
+#workaround for https://issues.apache.org/jira/browse/MRESOURCES-236
+find ./compose -name "*.sh" -exec chmod 755 {} \;

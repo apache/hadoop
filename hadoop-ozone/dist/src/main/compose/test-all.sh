@@ -14,14 +14,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
-RESULT_DIR=result
-#delete previous results
-rm -rf "${DIR:?}/$RESULT_DIR"
 
-REPLACEMENT="$DIR/../compose/test-all.sh"
-echo "THIS SCRIPT IS DEPRECATED. Please use $REPLACEMENT instead."
 
-${REPLACEMENT}
+#
+# Test executor to test all the compose/*/test.sh test scripts.
+#
 
-cp -r "$DIR/../compose/result" "$DIR"
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )
+ALL_RESULT_DIR="$SCRIPT_DIR/result"
+
+mkdir -p "$ALL_RESULT_DIR"
+rm "$ALL_RESULT_DIR/*"
+
+RESULT=0
+IFS=$'\n'
+# shellcheck disable=SC2044
+for test in $(find $SCRIPT_DIR -name test.sh); do
+  echo "Executing test in $(dirname "$test")"
+
+  #required to read the .env file from the right location
+  cd "$(dirname "$test")" || continue
+  $test
+  ret=$?
+  if [[ $ret -ne 0 ]]; then
+      RESULT=-1
+  fi
+  RESULT_DIR="$(dirname "$test")/result"
+  cp "$RESULT_DIR"/robot-*.xml "$ALL_RESULT_DIR"
+done
+
+docker run --rm -v "$SCRIPT_DIR/result:/opt/result" apache/hadoop-runner rebot -N "smoketests" -d "/opt/result" "/opt/result/robot-*.xml"
+exit $RESULT
