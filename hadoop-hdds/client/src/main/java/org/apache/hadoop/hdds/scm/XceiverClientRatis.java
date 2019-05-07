@@ -29,7 +29,6 @@ import io.opentracing.util.GlobalTracer;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
-import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
@@ -70,8 +69,7 @@ import java.util.stream.Collectors;
  * The underlying RPC mechanism can be chosen via the constructor.
  */
 public final class XceiverClientRatis extends XceiverClientSpi {
-  public static final Logger LOG =
-      LoggerFactory.getLogger(XceiverClientRatis.class);
+  static final Logger LOG = LoggerFactory.getLogger(XceiverClientRatis.class);
 
   public static XceiverClientRatis newXceiverClientRatis(
       org.apache.hadoop.hdds.scm.pipeline.Pipeline pipeline,
@@ -250,17 +248,13 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       return clientReply;
     }
     LOG.debug("commit index : {} watch timeout : {}", index, timeout);
+    CompletableFuture<RaftClientReply> replyFuture = getClient()
+        .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
     RaftClientReply reply;
     try {
-      CompletableFuture<RaftClientReply> replyFuture = getClient()
-          .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
       replyFuture.get(timeout, TimeUnit.MILLISECONDS);
-    } catch (Exception e) {
-      Throwable t = HddsClientUtils.checkForException(e);
-      LOG.warn("3 way commit failed ", e);
-      if (t instanceof GroupMismatchException) {
-        throw e;
-      }
+    } catch (TimeoutException toe) {
+      LOG.warn("3 way commit failed ", toe);
       reply = getClient()
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.MAJORITY_COMMITTED)
           .get(timeout, TimeUnit.MILLISECONDS);

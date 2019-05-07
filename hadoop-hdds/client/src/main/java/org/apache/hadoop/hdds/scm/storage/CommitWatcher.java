@@ -188,6 +188,7 @@ public class CommitWatcher {
    */
   public XceiverClientReply watchForCommit(long commitIndex)
       throws IOException {
+    Preconditions.checkState(!commitIndex2flushedDataMap.isEmpty());
     long index;
     try {
       XceiverClientReply reply =
