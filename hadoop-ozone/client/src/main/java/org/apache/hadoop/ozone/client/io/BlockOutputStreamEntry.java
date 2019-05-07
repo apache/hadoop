@@ -149,6 +149,13 @@ public final class BlockOutputStreamEntry extends OutputStream {
     }
   }
 
+  boolean isClosed() {
+    if (outputStream != null) {
+      return  ((BlockOutputStream) outputStream).isClosed();
+    }
+    return false;
+  }
+
   long getTotalAckDataLength() {
     if (outputStream != null) {
       BlockOutputStream out = (BlockOutputStream) this.outputStream;
