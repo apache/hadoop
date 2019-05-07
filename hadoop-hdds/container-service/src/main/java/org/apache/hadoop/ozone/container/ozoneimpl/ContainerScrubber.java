@@ -155,12 +155,4 @@ public class ContainerScrubber implements Runnable {
 
     LOG.debug("iterator ran integrity checks on {} containers", count);
   }
-
-  /**
-   * Returns if the scrubber thread is halted.
-   * @return halt = true/false
-   */
-  public boolean isHalted() {
-    return this.halt;
-  }
 }

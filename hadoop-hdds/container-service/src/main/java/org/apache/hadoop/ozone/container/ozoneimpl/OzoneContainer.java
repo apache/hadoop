@@ -163,9 +163,7 @@ public class OzoneContainer {
       if (this.scrubber == null) {
         this.scrubber = new ContainerScrubber(containerSet, config);
       }
-      if (this.scrubber.isHalted()) {
-        scrubber.up();
-      }
+      scrubber.up();
     }
   }
 
@@ -176,9 +174,7 @@ public class OzoneContainer {
     if (scrubber == null) {
       return;
     }
-    if (!scrubber.isHalted()) {
-      scrubber.down();
-    }
+    scrubber.down();
   }
 
   /**
