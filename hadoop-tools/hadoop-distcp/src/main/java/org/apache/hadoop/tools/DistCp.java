@@ -417,12 +417,12 @@ public class DistCp extends Configured implements Tool {
   }
 
   /**
-   * Returns the input options.
+   * Returns the context.
    *
-   * @return input options
+   * @return the context
    */
-  protected DistCpOptions getInputOptions() {
-    return inputOptions;
+  protected DistCpContext getContext() {
+    return context;
   }
 
   /**
