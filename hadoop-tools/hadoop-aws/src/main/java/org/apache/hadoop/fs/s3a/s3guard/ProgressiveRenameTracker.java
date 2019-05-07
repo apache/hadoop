@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveAncestors;
 import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
 
@@ -42,7 +41,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
  * <ol>
  *   <li>
  *     As {@link #fileCopied(Path, FileStatus, Path, long, boolean)} callbacks
- *     are raised, the metastore is updated.
+ *     are raised, the metastore is updated with the new file entry.
  *   </li>
  *   <li>
  *     Including parent entries, as appropriate.
@@ -55,7 +54,10 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
  *    The actual update is performed out of any synchronized block.
  *   </li>
  *   <li>
- *     The delete list is also (currently) built up.
+ *     When deletes are executed, the store is also updated.
+ *   </li>
+ *   <li>
+ *     And at the completion of a successful rename, the source directory is also removed.
  *   </li>
  * </ol>
  * <pre>
@@ -64,13 +66,15 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
  */
 public class ProgressiveRenameTracker extends RenameTracker {
 
-  private final Object lock = new Object();
-
-  private final StoreContext storeContext;
-
   private final MetadataStore metadataStore;
 
-  private final Collection<Path> sourcePaths = new HashSet<>();
+  /**
+   * The collection of paths to delete; this is added as individual files
+   * are renamed.
+   * The metastore is only updated with these entries after the DELETE
+   * call succeeds.
+   */
+  private final Collection<Path> pathsToDelete = new HashSet<>();
 
   private final List<PathMetadata> destMetas = new ArrayList<>();
 
@@ -79,15 +83,24 @@ public class ProgressiveRenameTracker extends RenameTracker {
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest) {
-    super(storeContext, sourceRoot, dest);
-    this.storeContext = storeContext;
+    super("ProgressiveRenameTracker",
+        storeContext, sourceRoot, dest);
     this.metadataStore = metadataStore;
   }
 
-  public StoreContext getStoreContext() {
-    return storeContext;
-  }
-
+  /**
+   * When a file is copied, any ancestors
+   * are calculated and then the store is updated with
+   * the destination entries.
+   *
+   * The source entries are added to the {@link #pathsToDelete} list.
+   * @param sourcePath path of source
+   * @param sourceStatus status of source.
+   * @param destPath destination path.
+   * @param blockSize block size.
+   * @param addAncestors should ancestors be added?
+   * @throws IOException failure
+   */
   @Override
   public void fileCopied(
       final Path sourcePath,
@@ -97,72 +110,70 @@ public class ProgressiveRenameTracker extends RenameTracker {
       final boolean addAncestors) throws IOException {
 
     // build the list of entries to add in a synchronized block.
-    List<PathMetadata> entriesToAdd;
-
-    synchronized (lock) {
-      checkArgument(!sourcePaths.contains(sourcePath),
+    final List<PathMetadata> entriesToAdd = new ArrayList<>(1);
+    LOG.debug("Updating store with copied file {}", sourcePath);
+    synchronized (this) {
+      checkArgument(!pathsToDelete.contains(sourcePath),
           "File being renamed is already processed %s", destPath);
       // create the file metadata and update the local structures.
-      PathMetadata newEntry = checkNotNull(
-          S3Guard.addMoveFile(metadataStore,
-              sourcePaths,
-              destMetas,
-              sourcePath,
-              destPath,
-              sourceStatus.getLen(),
-              blockSize,
-              getOwner()));
+      S3Guard.addMoveFile(metadataStore,
+          pathsToDelete,
+          entriesToAdd,
+          sourcePath,
+          destPath,
+          sourceStatus.getLen(),
+          blockSize,
+          getOwner());
+      LOG.debug("New metastore entry : {}", entriesToAdd.get(0));
       if (addAncestors) {
-        // add all new ancestors. The null check is to keep code checks
-        // happy.
-        entriesToAdd = checkNotNull(
-            addMoveAncestors(
-                metadataStore,
-                sourcePaths,
-                destMetas,
-                getSourceRoot(),
-                sourcePath,
-                destPath,
-                getOwner()));
-      } else {
-        // no ancestors, so create an empty list instead.
-        entriesToAdd = new ArrayList<>(1);
+        // add all new ancestors.
+        addMoveAncestors(
+            metadataStore,
+            pathsToDelete,
+            entriesToAdd,
+            getSourceRoot(),
+            sourcePath,
+            destPath,
+            getOwner());
       }
-      // add the final entry
-      entriesToAdd.add(newEntry);
     }
 
     // outside the lock, the entriesToAdd list has all new files to create.
     // ...so update the store.
-    metadataStore.put(entriesToAdd);
+    metadataStore.move(null, entriesToAdd);
   }
 
+  /**
+   * A directory marker has been added.
+   * Add the new entry and record the source path as another entry to delete.
+   * @param sourceStatus status of source.
+   * @param destPath destination path.
+   * @param addAncestors should ancestors be added?
+   * @throws IOException failure.
+   */
   @Override
   public void directoryMarkerCopied(final FileStatus sourceStatus,
       final Path destPath,
       final boolean addAncestors) throws IOException {
-    List<PathMetadata> entriesToAdd;
-    synchronized (lock) {
-      PathMetadata newEntry = checkNotNull(
-          addMoveDir(metadataStore, sourcePaths, destMetas,
-              sourceStatus.getPath(),
-              destPath, getOwner()));
+    // this list is created on demand.
+    final List<PathMetadata> entriesToAdd = new ArrayList<>(1);
+    synchronized (this) {
+      addMoveDir(metadataStore,
+          pathsToDelete,
+          entriesToAdd,
+          sourceStatus.getPath(),
+          destPath,
+          getOwner());
       // Ancestor directories may not be listed, so we explicitly add them
       if (addAncestors) {
-        entriesToAdd = checkNotNull(
-            addMoveAncestors(metadataStore,
-                sourcePaths,
-                destMetas,
-                getSourceRoot(),
-                sourceStatus.getPath(),
-                destPath,
-                getOwner()));
-      } else {
-        // no ancestors, so create an empty list instead.
-        entriesToAdd = new ArrayList<>(1);
+        addMoveAncestors(metadataStore,
+            pathsToDelete,
+            entriesToAdd,
+            getSourceRoot(),
+            sourceStatus.getPath(),
+            destPath,
+            getOwner());
       }
-      // add the final entry
-      entriesToAdd.add(newEntry);
     }
     // outside the lock, the entriesToAdd list has all new files to create.
     // ...so update the store.
@@ -173,11 +184,12 @@ public class ProgressiveRenameTracker extends RenameTracker {
   }
 
   @Override
-  public synchronized void noteSourceDirectoryMoved() throws IOException {
-    if (!sourcePaths.contains(getSourceRoot())) {
-      addMoveDir(metadataStore, sourcePaths, destMetas,
+  public synchronized void moveSourceDirectory() throws IOException {
+    if (!pathsToDelete.contains(getSourceRoot())) {
+      addMoveDir(metadataStore, pathsToDelete, destMetas,
           getSourceRoot(),
-          getDest(), getOwner());
+          getDest(),
+          getOwner());
     }
   }
 
@@ -192,7 +204,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
     // delete the paths from the metastore
     try (DurationInfo ignored = new DurationInfo(LOG, false,
-        "Deleting %s metastore entries", paths.size())) {
+        "delete %s metastore entries", paths.size())) {
       metadataStore.move(paths, null);
     }
   }
@@ -200,13 +212,9 @@ public class ProgressiveRenameTracker extends RenameTracker {
   @Override
   public void completeRename() throws IOException {
     // this should all have happened.
-    metadataStore.move(sourcePaths, destMetas);
+    LOG.debug("Rename completed for {}", this);
+    metadataStore.move(pathsToDelete, destMetas);
     super.completeRename();
   }
 
-  @Override
-  public IOException renameFailed(final Exception ex) {
-    LOG.debug("Rename has failed", ex);
-    return super.renameFailed(ex);
-  }
 }

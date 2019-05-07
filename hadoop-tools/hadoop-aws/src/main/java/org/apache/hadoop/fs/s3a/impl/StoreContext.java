@@ -123,6 +123,8 @@ public class StoreContext {
 
   /**
    * Instantiate.
+   * No attempt to use a builder here as outside tests
+   * this should only be created in the S3AFileSystem.
    */
   public StoreContext(final URI fsURI,
       final String bucket,

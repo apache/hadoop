@@ -59,7 +59,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest) {
-    super(storeContext, sourceRoot, dest);
+    super("DelayedUpdateRenameTracker", storeContext, sourceRoot, dest);
     this.storeContext = storeContext;
     this.metadataStore = metadataStore;
   }
@@ -115,7 +115,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
   }
 
   @Override
-  public synchronized void noteSourceDirectoryMoved() throws IOException {
+  public synchronized void moveSourceDirectory() throws IOException {
     if (!sourcePaths.contains(getSourceRoot())) {
       addMoveDir(metadataStore, sourcePaths, destMetas,
           getSourceRoot(),

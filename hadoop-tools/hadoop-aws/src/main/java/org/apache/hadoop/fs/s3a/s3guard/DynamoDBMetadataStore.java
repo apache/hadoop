@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -777,8 +778,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   @Override
   @Retries.RetryTranslated
-  public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+  public void move(
+      @Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate) throws IOException {
     if (pathsToDelete == null && pathsToCreate == null) {
       return;
     }
@@ -802,7 +804,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // sort all the new items topmost first.
     newItems.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     if (pathsToDelete != null) {
-
       List<DDBPathMetadata> tombstones = new ArrayList<>(pathsToDelete.size());
       for (Path meta : pathsToDelete) {
         tombstones.add(new DDBPathMetadata(PathMetadata.tombstone(meta)));
@@ -1789,7 +1790,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
       final FileStatus srcStatus, final Path dest) throws IOException {
-    return new DelayedUpdateRenameTracker(storeContext, this, source, dest);
+    return new ProgressiveRenameTracker(storeContext, this, source, dest);
   }
 
   /**

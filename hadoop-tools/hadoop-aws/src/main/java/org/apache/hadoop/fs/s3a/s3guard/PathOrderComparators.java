@@ -34,18 +34,35 @@ import org.apache.hadoop.fs.Path;
  *   <li>repeated sorts do not change the order</li>
  * </ol>
  */
+@SuppressWarnings("ComparatorNotSerializable")
 class PathOrderComparators {
 
 
+  /**
+   * The shallowest paths come first.
+   * This is to be used when adding entries.
+   */
   static final Comparator<Path> TOPMOST_PATH_FIRST
       = new TopmostFirst();
 
+  /**
+   * The leaves come first.
+   * This is to be used when deleting entries.
+   */
   static final Comparator<Path> TOPMOST_PATH_LAST
       = new TopmostLast();
 
+  /**
+   * The shallowest paths come first.
+   * This is to be used when adding entries.
+   */
   static final Comparator<PathMetadata> TOPMOST_PM_FIRST
       = new PathMetadataComparator(TOPMOST_PATH_FIRST);
 
+  /**
+   * The leaves come first.
+   * This is to be used when deleting entries.
+   */
   static final Comparator<PathMetadata> TOPMOST_PM_LAST
       = new PathMetadataComparator(TOPMOST_PATH_LAST);
 
@@ -73,6 +90,11 @@ class PathOrderComparators {
     }
   }
 
+  /**
+   * Compare the topmost last.
+   * For some reason the .reverse() option wasn't giving the
+   * correct outcome.
+   */
   private static final class TopmostLast extends TopmostFirst {
 
     @Override
@@ -89,12 +111,15 @@ class PathOrderComparators {
 
   }
 
+  /**
+   * Compare on path status.
+   */
   private static final class PathMetadataComparator implements
       Comparator<PathMetadata> {
 
     private final Comparator<Path> inner;
 
-    public PathMetadataComparator(final Comparator<Path> inner) {
+    private PathMetadataComparator(final Comparator<Path> inner) {
       this.inner = inner;
     }
 

@@ -27,6 +27,9 @@ import java.net.URI;
 import java.nio.file.AccessDeniedException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -44,6 +47,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.BiFunction;
 import javax.annotation.Nullable;
 
@@ -1109,9 +1113,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException on IO failure
    * @return true if rename is successful
    */
+  @Retries.RetryTranslated
   public boolean rename(Path src, Path dst) throws IOException {
-    try {
-      return innerRename(src, dst);
+    try(DurationInfo ignored = new DurationInfo(LOG, false,
+        "rename(%s, %s", src, dst)) {
+      long bytesCopied = innerRename(src, dst);
+      LOG.debug("Copied {} bytes", bytesCopied);
+      return true;
     } catch (AmazonClientException e) {
       throw translateException("rename(" + src +", " + dst + ")", src, e);
     } catch (RenameFailedException e) {
@@ -1137,12 +1145,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * rename was not met. This means work didn't happen; it's not something
    * which is reported upstream to the FileSystem APIs, for which the semantics
    * of "false" are pretty vague.
+   * @return the number of bytes copied.
    * @throws FileNotFoundException there's no source file.
    * @throws IOException on IO failure.
    * @throws AmazonClientException on failures inside the AWS SDK
    */
   @Retries.RetryMixed
-  private boolean innerRename(Path source, Path dest)
+  private long innerRename(Path source, Path dest)
       throws RenameFailedException, FileNotFoundException, IOException,
         AmazonClientException {
     Path src = qualify(source);
@@ -1228,6 +1237,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         metadataStore.initiateRenameOperation(
             createStoreContext(),
             src, srcStatus, dest);
+    final AtomicLong bytesCopied = new AtomicLong();
     int renameParallelLimit = 10;
     final List<CompletableFuture<Path>> activeCopies =
         new ArrayList<>(renameParallelLimit);
@@ -1235,7 +1245,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // the list.
     final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
         completeActiveCopies = (String reason) -> {
-          LOG.debug("Waiting for {} active copies to complete during {}",
+          LOG.debug("Waiting for {} active copies to complete: {}",
               activeCopies.size(), reason);
           waitForCompletion(activeCopies);
           activeCopies.clear();
@@ -1244,6 +1254,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     try {
       if (srcStatus.isFile()) {
+        // the source is a file.
         Path copyDestinationPath = dst;
         String copyDestinationKey = dstKey;
         if (dstStatus != null && dstStatus.isDirectory()) {
@@ -1258,9 +1269,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // destination either does not exist or is a file to overwrite.
         LOG.debug("rename: renaming file {} to {}", src, copyDestinationPath);
         copySourceAndUpdateTracker(renameTracker,
-            src, srcKey, srcStatus,
-            copyDestinationPath, copyDestinationKey,
+            src,
+            srcKey,
+            srcStatus,
+            copyDestinationPath,
+            copyDestinationKey,
             false);
+        bytesCopied.addAndGet(srcStatus.getLen());
          // delete the source
         deleteObjectAtPath(src, srcKey, true);
         // and update the tracker
@@ -1283,16 +1298,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
         final List<Path> pathsToDelete = new ArrayList<>();
         // the operation to update the lists of keys and paths.
-        final BiFunction<Path, String, Void>
-            toDelete = (Path path, String key) -> {
-          pathsToDelete.add(path);
-          keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
-          return null;
-        };
+        final BiFunction<Path, String, Void> queueToDelete =
+            (Path path, String key) -> {
+              pathsToDelete.add(path);
+              keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
+              return null;
+            };
+        // the operation to block waiting for ay active copies to finish
+        // then delete all queued keys + paths to delete.
+        final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
+            completeActiveCopiesAndDeleteSources =
+            (String reason) -> {
+              completeActiveCopies.apply(reason);
+              removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
+              // now reset the lists.
+              keysToDelete.clear();
+              pathsToDelete.clear();
+              return null;
+            };
 
         if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
-          // delete unnecessary fake directory.
-          toDelete.apply(dstStatus.getPath(), dstKey);
+          // delete unnecessary fake directory at the destination.
+          // this MUST be done before anything else so that
+          // rollback code doesn't get confused.
+          deleteObjectAtPath(dstStatus.getPath(), dstKey, false);
         }
 
         Path parentPath = keyToQualifiedPath(srcKey);
@@ -1308,45 +1337,40 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               dstKey + key.substring(srcKey.length());
           Path childSourcePath = keyToQualifiedPath(key);
 
-          toDelete.apply(childSourcePath, key);
+          queueToDelete.apply(childSourcePath, key);
 
           Path childDestPath = keyToQualifiedPath(newDstKey);
 
-          // set up for async operation but run in sync mode initially.
-          // we will need to parallelize updates to metastore
-          // for that.
+          // queue the copy for execution.
           CompletableFuture<Path> copy = submit(boundedThreadPool, () ->
               copySourceAndUpdateTracker(renameTracker,
-                  childSourcePath, key, status,
-                  childDestPath, newDstKey,
+                  childSourcePath,
+                  key,
+                  status,
+                  childDestPath,
+                  newDstKey,
                   true));
+          bytesCopied.addAndGet(srcStatus.getLen());
           activeCopies.add(copy);
           if (activeCopies.size() == renameParallelLimit) {
             LOG.debug("Waiting for active copies to complete");
-            completeActiveCopies.apply("Size threshold reached");
+            completeActiveCopies.apply("batch threshold reached");
           }
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
-            // time to queue a delete.
-            // first wait for the copies in progress to finish
-            // (deleting a file mid-copy would not be good)
-            completeActiveCopies.apply("before a delete");
-            removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
-            // now reset the lists.
-            keysToDelete.clear();
-            pathsToDelete.clear();
+            // finish ongoing copies then delete all queued keys.
+            completeActiveCopiesAndDeleteSources.apply("paged delete");
           }
         }
-        // end of iteration await final set of copies
-        completeActiveCopies.apply("final copies");
+        // end of iteration
 
-        // end of iteration -the final delete.
+        // await final set of copies and then delete
         // This will notify the renameTracker that these objects
         // have been deleted.
-        removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
+        completeActiveCopiesAndDeleteSources.apply("final copy and delete");
 
         // We moved all the children, now move the top-level dir
         // Empty directory should have been added as the object summary
-        renameTracker.noteSourceDirectoryMoved();
+        renameTracker.moveSourceDirectory();
       }
     } catch (AmazonClientException | IOException ex) {
       // rename failed.
@@ -1354,6 +1378,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       try {
         completeActiveCopies.apply("failure handling");
       } catch (IOException e) {
+        // a failure to update the metastore after a rename failure is what
+        // we'd see on a network problem, expired credentials and other
+        // unrecoverable errors.
+        // Downgrading to warn because an exception is already
+        // about to be thrown.
         LOG.warn("While completing all active copies", e);
       }
 
@@ -1370,7 +1399,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       deleteUnnecessaryFakeDirectories(dst.getParent());
       maybeCreateFakeParentDirectory(src);
     }
-    return true;
+    return bytesCopied.get();
   }
 
   /**
@@ -1381,7 +1410,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException failure
    */
   @Retries.RetryMixed
-  private void removeSourceObjects(final RenameTracker renameTracker,
+  private void removeSourceObjects(
+      final RenameTracker renameTracker,
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final List<Path> pathsToDelete)
       throws IOException {
@@ -2166,8 +2196,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // what to do if an IOE was raised? Given an exception was being
       // raised anyway, and the failures are logged, do nothing.
       Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
-          new MultiObjectDeleteSupport(
-              createStoreContext())
+          new MultiObjectDeleteSupport(createStoreContext())
               .processDeleteFailure(ex, keysToDelete);
       undeletedObjectsOnFailure.addAll(results.getMiddle());
       throw ex;
@@ -2650,8 +2679,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
       if (pm.isDeleted()) {
+        OffsetDateTime deletedAt = OffsetDateTime.ofInstant(
+            Instant.ofEpochMilli(pm.getFileStatus().getModificationTime()),
+            ZoneOffset.UTC);
         throw new FileNotFoundException("Path " + f + " is recorded as " +
-            "deleted by S3Guard");
+            "deleted by S3Guard at " + deletedAt.toString());
       }
 
       // if ms is not authoritative, check S3 if there's any recent

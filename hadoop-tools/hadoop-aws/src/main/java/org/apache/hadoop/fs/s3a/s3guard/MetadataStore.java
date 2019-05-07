@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
@@ -155,8 +156,9 @@ public interface MetadataStore extends Closeable {
    *                      ().
    * @throws IOException if there is an error
    */
-  void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException;
+  void move(
+      @Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate) throws IOException;
 
   /**
    * Saves metadata for exactly one path.

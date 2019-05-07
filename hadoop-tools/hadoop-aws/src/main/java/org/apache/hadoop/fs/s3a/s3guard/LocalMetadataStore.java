@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -191,14 +194,17 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+  public void move(
+      @Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
-    Preconditions.checkNotNull(pathsToDelete, "pathsToDelete is null");
-    Preconditions.checkNotNull(pathsToCreate, "pathsToCreate is null");
-    Preconditions.checkArgument(pathsToDelete.size() == pathsToCreate.size(),
-        "Must supply same number of paths to delete/create.");
+    if (pathsToCreate == null) {
+      pathsToCreate = Collections.emptyList();
+    }
+    if (pathsToDelete == null) {
+      pathsToDelete = Collections.emptyList();
+    }
 
     // I feel dirty for using reentrant lock. :-|
     synchronized (this) {
@@ -536,6 +542,6 @@ public class LocalMetadataStore implements MetadataStore {
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
       final FileStatus srcStatus, final Path dest) throws IOException {
-    return new DelayedUpdateRenameTracker(storeContext, this, source, dest);
+    return new ProgressiveRenameTracker(storeContext, this, source, dest);
   }
 }

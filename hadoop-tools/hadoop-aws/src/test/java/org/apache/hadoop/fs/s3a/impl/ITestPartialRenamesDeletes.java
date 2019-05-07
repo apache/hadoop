@@ -42,6 +42,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -485,8 +486,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // even with S3Guard on, we expect the destination to match that of our
     // the remote state.
     // the test will exist
-    assertPathExists("Destination directory of rename", writableDir);
-    assertIsDirectory(writableDir);
+    describe("Verify destination directory exists");
+    FileStatus st = roleFS.getFileStatus(writableDir);
+    assertTrue("Not a directory: " + st,
+        st.isDirectory());
     assertFileCount("files in the dest directory", roleFS,
         writableDir, expectedFileCount);
 
@@ -498,13 +501,11 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         + " & dest unchanged.");
     roleFS.mkdirs(writableDir);
     S3AFileSystem fs = getFileSystem();
-//    List<Path> deletableFiles = createFiles(fs, writableDir, filecount);
-
     Path source = new Path(writableDir, "source");
     touch(fs, source);
     fs.mkdirs(readOnlyDir);
     Path dest = new Path(readOnlyDir, "dest");
-    LOG.info("Renaming files {} to {}", writableDir, dest);
+    describe("Renaming files {} to {}", writableDir, dest);
     // rename fails but doesn't raise an exception. Good or bad?
     expectRenameForbidden(source, dest);
     assertIsFile(source);
@@ -543,7 +544,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   @Test
   public void testCopyDirFailsOnSourceRead() throws Throwable {
     describe("The source file isn't readable, so the COPY fails");
-    Path source = new Path(noReadDir, "source");
     S3AFileSystem fs = getFileSystem();
     List<Path> files = createFiles(fs, noReadDir, dirDepth, fileCount,
         dirCount);
@@ -632,6 +632,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         .containsAll(readOnlyFiles);
   }
 
+  /**
+   * Expect the delete() call to fail.
+   * @param path path to delete.
+   * @return the expected exception.
+   * @throws Exception any other failure.
+   */
   private AccessDeniedException expectDeleteForbidden(Path path) throws Exception {
     try(DurationInfo ignored =
             new DurationInfo(LOG, true, "delete %s", path)) {
@@ -733,7 +739,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       Path path, String text) {
     return submit(executor, () -> {
       try (DurationInfo ignore =
-               new DurationInfo(LOG, "Creating %s", path)) {
+               new DurationInfo(LOG, false, "Creating %s", path)) {
         createFile(fs, path, true, text.getBytes(Charsets.UTF_8));
         return path;
       }
@@ -768,6 +774,15 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     }
   }
 
+  /**
+   * Recursive method to build up lists of files and directories.
+   * @param filePaths list of file paths to add entries to.
+   * @param dirPaths list of directory paths to add entries to.
+   * @param destDir destination directory.
+   * @param depth depth of directories
+   * @param fileCount number of files.
+   * @param dirCount number of directories.
+   */
   private static void buildPaths(
       final List<Path> filePaths,
       final List<Path> dirPaths,

@@ -57,20 +57,33 @@ public abstract class RenameTracker extends StoreOperation {
   private final DurationInfo durationInfo;
 
   /**
+   * Generated name for strings.
+   */
+  private final String name;
+
+  /**
    * constructor.
+   * @param name tracker name for logs.
    * @param storeContext store context.
    * @param sourceRoot source path.
    * @param dest destination path.
    */
   protected RenameTracker(
+      final String name,
       final StoreContext storeContext,
       final Path sourceRoot,
       final Path dest) {
     super(storeContext);
     this.sourceRoot = sourceRoot;
     this.dest = dest;
+    this.name = String.format("%s (%s, %s)", name, sourceRoot, dest);
     durationInfo = new DurationInfo(LOG, false,
-        "rename(%s, %s)", sourceRoot, dest);
+        name +" (%s, %s)", sourceRoot, dest);
+  }
+
+  @Override
+  public String toString() {
+    return name;
   }
 
   public Path getSourceRoot() {
@@ -139,7 +152,7 @@ public abstract class RenameTracker extends StoreOperation {
    * Top level directory move.
    * @throws IOException on failure
    */
-  public void noteSourceDirectoryMoved() throws IOException {
+  public void moveSourceDirectory() throws IOException {
 
   }
 
@@ -183,6 +196,7 @@ public abstract class RenameTracker extends StoreOperation {
    * @return an IOException to throw in an exception.
    */
   public IOException renameFailed(Exception ex) {
+    LOG.debug("Rename has failed", ex);
     noteRenameFinished();
     return convertToIOException(ex);
   }

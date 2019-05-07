@@ -23,20 +23,16 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.amazonaws.services.s3.model.DeleteObjectsRequest;
-import com.amazonaws.services.s3.model.MultiObjectDeleteException;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -378,18 +374,17 @@ public final class S3Guard {
    * @param srcPath  source path to store
    * @param dstPath  destination path to store
    * @param owner file owner to use in created records
-   * @return the new entry created; null if there is no metastore.
    */
-  public static PathMetadata addMoveDir(MetadataStore ms, Collection<Path> srcPaths,
+  public static void addMoveDir(MetadataStore ms, Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas, Path srcPath, Path dstPath,
       String owner) {
     if (isNullMetadataStore(ms)) {
-      return null;
+      return;
     }
     assertQualified(srcPath, dstPath);
 
     FileStatus dstStatus = createUploadFileStatus(dstPath, true, 0, 0, owner);
-    return addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
+    addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
   /**
@@ -404,18 +399,17 @@ public final class S3Guard {
    * @param size length of file moved
    * @param blockSize  blocksize to associate with destination file
    * @param owner file owner to use in created records
-   * @return the new entry created; null if there is no metastore.
    */
-  public static PathMetadata addMoveFile(MetadataStore ms, Collection<Path> srcPaths,
+  public static void addMoveFile(MetadataStore ms, Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas, Path srcPath, Path dstPath,
       long size, long blockSize, String owner) {
     if (isNullMetadataStore(ms)) {
-      return null;
+      return;
     }
     assertQualified(srcPath, dstPath);
     FileStatus dstStatus = createUploadFileStatus(dstPath, false,
         size, blockSize, owner);
-    return addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
+    addMoveStatus(srcPaths, dstMetas, srcPath, dstStatus);
   }
 
   /**
@@ -428,29 +422,27 @@ public final class S3Guard {
    *
    * As {@link #addMoveFile} and {@link #addMoveDir}, this method adds resulting
    * metadata to the supplied lists. It does not store in MetadataStore.
-   *  @param ms MetadataStore, no-op if it is NullMetadataStore
+   *
+   * @param ms MetadataStore, no-op if it is NullMetadataStore
    * @param srcPaths stores the source path here
    * @param dstMetas stores destination metadata here
    * @param srcRoot source root up to which (exclusive) should we add ancestors
    * @param srcPath source path of the child to add ancestors
    * @param dstPath destination path of the child to add ancestors
    * @param owner Hadoop user name
-   * @return the list of ancestors added; null if there is no metastore.
-   * This list is ordered such that the highest entries come in the list first.
    */
-  public static List<PathMetadata> addMoveAncestors(MetadataStore ms,
+  public static void addMoveAncestors(MetadataStore ms,
       Collection<Path> srcPaths, Collection<PathMetadata> dstMetas,
       Path srcRoot, Path srcPath, Path dstPath, String owner) {
     if (isNullMetadataStore(ms)) {
-      return null;
+      return;
     }
 
     assertQualified(srcRoot, srcPath, dstPath);
-    LinkedList<PathMetadata> ancestors = new LinkedList<>();
 
     if (srcPath.equals(srcRoot)) {
       LOG.debug("Skip moving ancestors of source root directory {}", srcRoot);
-      return ancestors;
+      return;
     }
 
     Path parentSrc = srcPath.getParent();
@@ -460,13 +452,10 @@ public final class S3Guard {
         && !parentSrc.equals(srcRoot)
         && !srcPaths.contains(parentSrc)) {
       LOG.debug("Renaming non-listed parent {} to {}", parentSrc, parentDst);
-      PathMetadata d = S3Guard.addMoveDir(ms, srcPaths, dstMetas,
-          parentSrc, parentDst, owner);
-      ancestors.addFirst(d);
+      S3Guard.addMoveDir(ms, srcPaths, dstMetas, parentSrc, parentDst, owner);
       parentSrc = parentSrc.getParent();
       parentDst = parentDst.getParent();
     }
-    return ancestors;
   }
 
   public static void addAncestors(MetadataStore metadataStore,
@@ -485,17 +474,17 @@ public final class S3Guard {
       }
       parent = parent.getParent();
     }
-    metadataStore.put(newDirs);
+    if (!newDirs.isEmpty()) {
+      metadataStore.put(newDirs);
+    }
   }
 
-  private static PathMetadata addMoveStatus(Collection<Path> srcPaths,
+  private static void addMoveStatus(Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas,
       Path srcPath,
       FileStatus dstStatus) {
     srcPaths.add(srcPath);
-    PathMetadata d = new PathMetadata(dstStatus);
-    dstMetas.add(d);
-    return d;
+    dstMetas.add(new PathMetadata(dstStatus));
   }
 
   /**
