@@ -27,10 +27,6 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHO
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_BLOCKREPORT_SPLIT_THRESHOLD_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_DEFAULT;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_CACHEREPORT_INTERVAL_MSEC_KEY;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_LOADER_CLASS;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_LOADER_CLASS_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_CAPACITY_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_CAPACITY_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_DIRS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_LIFELINE_INTERVAL_SECONDS_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_NON_LOCAL_LAZY_PERSIST;
@@ -71,7 +67,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.datatransfer.TrustedChannelResolver;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataTransferSaslUtil;
 import org.apache.hadoop.hdfs.server.common.Util;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlockLoader;
 import org.apache.hadoop.security.SaslPropertiesResolver;
 
 import java.util.concurrent.TimeUnit;
@@ -121,9 +116,7 @@ public class DNConf {
   final long xceiverStopTimeout;
   final long restartReplicaExpiry;
 
-  private final Class<? extends MappableBlockLoader> cacheLoaderClass;
   final long maxLockedMemory;
-  private final long maxLockedPmem;
   private final String[] pmemDirs;
 
   private final long bpReadyTimeout;
@@ -266,16 +259,9 @@ public class DNConf {
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_KEY,
         DFS_DATANODE_XCEIVER_STOP_TIMEOUT_MILLIS_DEFAULT);
 
-    this.cacheLoaderClass = getConf().getClass(DFS_DATANODE_CACHE_LOADER_CLASS,
-        DFS_DATANODE_CACHE_LOADER_CLASS_DEFAULT, MappableBlockLoader.class);
-
     this.maxLockedMemory = getConf().getLongBytes(
         DFS_DATANODE_MAX_LOCKED_MEMORY_KEY,
         DFS_DATANODE_MAX_LOCKED_MEMORY_DEFAULT);
-
-    this.maxLockedPmem = getConf().getLongBytes(
-        DFS_DATANODE_CACHE_PMEM_CAPACITY_KEY,
-        DFS_DATANODE_CACHE_PMEM_CAPACITY_DEFAULT);
 
     this.pmemDirs = getConf().getTrimmedStrings(
         DFS_DATANODE_CACHE_PMEM_DIRS_KEY);
@@ -340,10 +326,6 @@ public class DNConf {
 
   public long getMaxLockedMemory() {
     return maxLockedMemory;
-  }
-
-  public long getMaxLockedPmem() {
-    return maxLockedPmem;
   }
 
   /**
@@ -447,10 +429,6 @@ public class DNConf {
 
   int getMaxDataLength() {
     return maxDataLength;
-  }
-
-  public Class<? extends MappableBlockLoader> getCacheLoaderClass() {
-    return cacheLoaderClass;
   }
 
   public String[] getPmemVolumes() {
