@@ -21,8 +21,6 @@ package org.apache.hadoop.fs.s3a.select;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
-import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -35,6 +33,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;

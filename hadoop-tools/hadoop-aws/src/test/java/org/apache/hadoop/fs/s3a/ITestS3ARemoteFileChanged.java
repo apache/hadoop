@@ -50,6 +50,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -58,18 +59,10 @@ import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_CLIENT;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_NONE;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_SERVER;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE_WARN;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_ETAG;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE_VERSION_ID;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
@@ -89,6 +82,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
   private static final String TEST_DATA = "Some test data";
   private static final int TEST_MAX_RETRIES = 5;
+  private static final String TEST_RETRY_INTERVAL = "100ms";
   private static final String QUOTED_TEST_DATA =
       "\"" + TEST_DATA + "\"";
 
@@ -106,7 +100,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private final Collection<InteractionType> expectedExceptionInteractions;
   private S3AFileSystem fs;
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: source={0}; mode={1}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         // make sure it works with invalid config
@@ -191,13 +185,16 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     String bucketName = getTestBucketName(conf);
     removeBucketOverrides(bucketName, conf,
         CHANGE_DETECT_SOURCE,
-        CHANGE_DETECT_MODE);
+        CHANGE_DETECT_MODE,
+        RETRY_LIMIT,
+        RETRY_INTERVAL);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
 
     // reduce retry limit so FileNotFoundException cases timeout faster,
     // speeding up the tests
     conf.setInt(RETRY_LIMIT, TEST_MAX_RETRIES);
+    conf.set(RETRY_INTERVAL, TEST_RETRY_INTERVAL);
 
     if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
         NullMetadataStore.class) {
@@ -215,6 +212,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testReadFileChangedStreamOpen() throws Throwable {
+    describe("Tests reading a file that is changed while the reader's"
+        + "InputStream is open.");
     final int originalLength = 8192;
     final byte[] originalDataset = dataset(originalLength, 'a', 32);
     final int newLength = originalLength + 1;
@@ -303,18 +302,19 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testReadFileChangedOutOfSyncMetadata() throws Throwable {
-    final Path testpath = writeOutOfSyncFileVersion("read.dat");
+    final Path testpath = writeOutOfSyncFileVersion("fileChangedOutOfSync.dat");
 
     skipIfVersionPolicyAndNoVersionId(testpath);
 
-    final FSDataInputStream instream = fs.open(testpath);
-    if (expectedExceptionInteractions.contains(InteractionType.READ)) {
-      intercept(RemoteFileChangedException.class, "", "read()",
-          () -> {
-            instream.read();
-          });
-    } else {
-      instream.read();
+    try (final FSDataInputStream instream = fs.open(testpath)) {
+      if (expectedExceptionInteractions.contains(InteractionType.READ)) {
+        intercept(RemoteFileChangedException.class, "", "read()",
+            () -> {
+              instream.read();
+            });
+      } else {
+        instream.read();
+      }
     }
   }
 
@@ -328,9 +328,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
     skipIfVersionPolicyAndNoVersionId(testpath);
 
-    final FSDataInputStream instream = fs.open(testpath);
-    assertEquals(TEST_DATA,
-        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+    assertEquals("Contents of " + testpath,
+        TEST_DATA,
+        ContractTestUtils.readUTF8(fs, testpath, TEST_DATA.length()));
   }
 
   /**
@@ -339,6 +339,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testSelectChangedFile() throws Throwable {
+    requireS3Select();
     final Path testpath = writeOutOfSyncFileVersion("select.dat");
 
     skipIfVersionPolicyAndNoVersionId(testpath);
@@ -349,7 +350,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
               .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build());
     } else {
       fs.openFile(testpath)
-          .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+          .must(SELECT_SQL, "SELECT * FROM S3OBJECT")
+          .build()
+          .get()
+          .close();
     }
   }
 
@@ -360,7 +364,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testSelectEventuallyConsistentFile() throws Throwable {
-    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    describe("Eventually Consistent S3 Select");
+    requireS3Guard();
+    requireS3Select();
     AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
     fs.setAmazonS3Client(s3ClientSpy);
 
@@ -372,7 +378,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     // should succeed since the inconsistency doesn't last longer than the
     // configured retry limit
     fs.openFile(testpath1)
-        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT")
+        .build()
+        .get()
+        .close();
 
     // TEST_MAX_RETRIES + 2 is required to before failure since there is
     // one getObjectMetadata() call due to getFileStatus() before the
@@ -388,7 +397,10 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
               .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build());
     } else {
       fs.openFile(testpath2)
-          .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
+          .must(SELECT_SQL, "SELECT * FROM S3OBJECT")
+          .build()
+          .get()
+          .close();
     }
   }
 
@@ -398,15 +410,17 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testSelectWithNoVersionMetadata() throws Throwable {
+    requireS3Select();
     final Path testpath =
         writeFileWithNoVersionMetadata("selectnoversion.dat");
 
     skipIfVersionPolicyAndNoVersionId(testpath);
 
-    FSDataInputStream instream = fs.openFile(testpath)
-        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get();
-    assertEquals(QUOTED_TEST_DATA,
-        IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+    try (FSDataInputStream instream = fs.openFile(testpath)
+        .must(SELECT_SQL, "SELECT * FROM S3OBJECT").build().get()) {
+      assertEquals(QUOTED_TEST_DATA,
+          IOUtils.toString(instream, Charset.forName("UTF-8")).trim());
+    }
   }
 
   /**
@@ -438,7 +452,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testRenameEventuallyConsistentFile() throws Throwable {
-    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    requireS3Guard();
     AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
     fs.setAmazonS3Client(s3ClientSpy);
 
@@ -507,7 +521,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testReadAfterEventuallyConsistentWrite() throws Throwable {
-    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    requireS3Guard();
     AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
     fs.setAmazonS3Client(s3ClientSpy);
     final Path testpath1 =
@@ -542,7 +556,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    */
   @Test
   public void testEventuallyConsistentReadOnReopen() throws Throwable {
-    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+    requireS3Guard();
     AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3Client());
     fs.setAmazonS3Client(s3ClientSpy);
     String filename = "eventually-reopen.dat";
@@ -737,17 +751,17 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   /**
    * Stubs {@link AmazonS3#copyObject(CopyObjectRequest)}
    * within s3ClientSpy to throw precondition failed error until
-   * copyInconistentCallCount calls have been made.
+   * copyInconsistentCallCount calls have been made.
    * @param s3ClientSpy the spy to stub
    * @param testpath the path of the object the stub should apply to
    * @param newStatus the status metadata containing the ETag and versionId
    * that should be matched in order for the stub to apply
-   * @param copyInconistentCallCount how many times to return the
+   * @param copyInconsistentCallCount how many times to return the
    * precondition failed error
    */
   private void stubTemporaryCopyInconsistency(AmazonS3 s3ClientSpy,
       Path testpath, S3AFileStatus newStatus,
-      int copyInconistentCallCount) {
+      int copyInconsistentCallCount) {
     Answer<CopyObjectResult> temporarilyPreconditionsNotMetAnswer =
         new Answer<CopyObjectResult>() {
       private int callCount = 0;
@@ -756,7 +770,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       public CopyObjectResult answer(InvocationOnMock invocation)
           throws Throwable {
         callCount++;
-        if (callCount <= copyInconistentCallCount) {
+        if (callCount <= copyInconsistentCallCount) {
           AmazonServiceException exception =
               new AmazonServiceException("preconditions not met");
           exception.setStatusCode(SC_PRECONDITION_FAILED);
@@ -921,5 +935,21 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       }
       return false;
     });
+  }
+
+  /**
+   * Skip a test case if it needs S3Guard and the filesystem does
+   * not have it.
+   */
+  private void requireS3Guard() {
+    Assume.assumeTrue("S3Guard must be enabled", fs.hasMetadataStore());
+  }
+
+  /**
+   * Skip a test case if S3 Select is not supported on this store.
+   */
+  private void requireS3Select() {
+    Assume.assumeTrue("S3 Select is not enabled",
+        getFileSystem().hasCapability(S3_SELECT_CAPABILITY));
   }
 }

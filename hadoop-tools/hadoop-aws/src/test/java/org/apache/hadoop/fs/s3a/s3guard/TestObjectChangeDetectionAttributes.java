@@ -68,7 +68,8 @@ import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 /**
  * Unit tests to ensure object eTag and versionId are captured on S3 PUT and
- * used on GET.  Further (integration) testing is performed in
+ * used on GET.
+ * Further (integration) testing is performed in
  * {@link org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged}.
  */
 @RunWith(Parameterized.class)
@@ -79,17 +80,12 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
     this.changeDetectionSource = changeDetectionSource;
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "change={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {CHANGE_DETECT_SOURCE_ETAG},
         {CHANGE_DETECT_SOURCE_VERSION_ID}
     });
-  }
-
-  @Override
-  public void setup() throws Exception {
-    super.setup();
   }
 
   @Override
@@ -159,14 +155,14 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
     assertContent(file, path, content, eTag, versionId);
 
     // test overwrite
-    byte[] newConent = new byte[Constants.MULTIPART_MIN_SIZE + 1];
-    Arrays.fill(newConent, (byte) 1);
+    byte[] newContent = new byte[Constants.MULTIPART_MIN_SIZE + 1];
+    Arrays.fill(newContent, (byte) 1);
     String newETag = "newETag";
     String newVersionId = "newVersionId";
 
-    multipartUpload(file, path, newConent, newETag, newVersionId);
+    multipartUpload(file, path, newContent, newETag, newVersionId);
     assertVersionAttributes(path, newETag, newVersionId);
-    assertContent(file, path, newConent, newETag, newVersionId);
+    assertContent(file, path, newContent, newETag, newVersionId);
   }
 
   private void putObject(String file, Path path, byte[] content,

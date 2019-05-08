@@ -2968,6 +2968,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     };
 
+    ChangeTracker changeTracker = new ChangeTracker(
+        keyToQualifiedPath(srcKey).toString(),
+        changeDetectionPolicy,
+        readContext.instrumentation.newInputStreamStatistics()
+            .getVersionMismatchCounter(),
+        srcAttributes);
+
     Invoker readInvoker = readContext.getReadInvoker();
     return readInvoker.retry(
         "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey", null,
@@ -2976,13 +2983,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
           setOptionalObjectMetadata(dstom);
-
-          ChangeTracker changeTracker = new ChangeTracker(
-              keyToQualifiedPath(srcKey).toString(),
-              changeDetectionPolicy,
-              readContext.instrumentation.newInputStreamStatistics()
-                  .getVersionMismatchCounter(),
-              srcAttributes);
 
           changeTracker.processMetadata(srcom, "copy", 0);
 

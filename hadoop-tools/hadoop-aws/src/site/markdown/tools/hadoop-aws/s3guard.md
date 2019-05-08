@@ -1120,16 +1120,16 @@ server or client mode is used is determed by the
 
 ### No Versioning Metadata Available
 
-When the first S3AFileSystem clients are upgraded to the version of
-S3AFileSystem that contains these change tracking features, any existing
-S3Guard metadata will not contain ETags or object version IDs.  Reads of files
+When the first S3AFileSystem clients are upgraded to a version of
+`S3AFileSystem` that contains these change tracking features, any existing
+S3Guard metadata will not contain ETags or object version IDs. Reads of files
 tracked in such S3Guard metadata will access whatever version of the file is
-available in S3 at the time of read.  Only if the file is subsequently updated
+available in S3 at the time of read. Only if the file is subsequently updated
 will S3Guard start tracking ETag and object version ID and as such generating
 `RemoteFileChangedException` if an inconsistency is detected.
 
 Similarly, when S3Guard metadata is pruned, S3Guard will no longer be able to
-detect an inconsistent read.  S3Guard metadata should be retained for at least
+detect an inconsistent read. S3Guard metadata should be retained for at least
 as long as the perceived possible read-after-overwrite temporary inconsistency
 window. That window is expected to be short, but there are no guarantees so it
 is at the administrator's discretion to weigh the risk.
@@ -1139,43 +1139,43 @@ is at the administrator's discretion to weigh the risk.
 #### S3 Select
 
 S3 Select does not provide a capability for server-side ETag or object
-version ID qualification. Whether fs.s3a.change.detection.mode is client or
-server, S3Guard will cause a client-side check of the file version before
-opening the file with S3 Select.  If the current version does not match the
+version ID qualification. Whether `fs.s3a.change.detection.mode` is "client" or
+"server", S3Guard will cause a client-side check of the file version before
+opening the file with S3 Select. If the current version does not match the
 version tracked in S3Guard, `RemoteFileChangedException` is thrown.
 
 It is still possible that the S3 Select read will access a different version of
 the file, if the visible file version changes between the version check and
-the opening of the file.  This can happen due to eventual consistency or
+the opening of the file. This can happen due to eventual consistency or
 an overwrite of the file between the version check and the open of the file.
 
 #### Rename
 
-Rename is implemented via copy in S3.  With fs.s3a.change.detection.mode=client,
-a fully reliable mechansim for ensuring the copied content is the expected
+Rename is implemented via copy in S3. With `fs.s3a.change.detection.mode` set
+to "client", a fully reliable mechansim for ensuring the copied content is the expected
 content is not possible. This is the case since there isn't necessarily a way
 to know the expected ETag or version ID to appear on the object resulting from
 the copy.
 
-Furthermore, if fs.s3a.change.detection.mode=server and a third-party S3
-implemntation is used that doesn't honor the provided ETag or version ID,
+Furthermore, if `fs.s3a.change.detection.mode` is "server" and a third-party S3
+implementation is used that doesn't honor the provided ETag or version ID,
 S3AFileSystem and S3Guard cannot detect it.
 
-In either fs.s3.change.detection.mode=server or client, a client-side check
+When `fs.s3.change.detection.mode` is "client", a client-side check
 will be performed before the copy to ensure the current version of the file
-matches S3Guard metadata.  If not, `RemoteFileChangedException` is thrown.
+matches S3Guard metadata. If not, `RemoteFileChangedException` is thrown.
 Similar to as discussed with regard to S3 Select, this is not sufficient to
 guarantee that same version is the version copied.
 
-When fs.s3.change.detection.mode=server, the expected version is also specified
-in the underlying S3 CopyObjectRequest.  As long as the server honors it, the
+When `fs.s3.change.detection.mode` server, the expected version is also specified
+in the underlying S3 `CopyObjectRequest`. As long as the server honors it, the
 copied object will be correct.
 
-All this said, with the defaults of fs.s3.change.detection.mode=server and
-fs.s3.change.detection.source=etag against Amazon's S3, copy should in fact
+All this said, with the defaults of `fs.s3.change.detection.mode` of "server" and
+`fs.s3.change.detection.source` of "etag", when working with Amazon's S3, copy should in fact
 either copy the expected file version or, in the case of an eventual consistency
-anomaly, generate `RemoteFileChangedException`.  The same should be true with
-fs.s3.change.detection.source=versionid.
+anomaly, generate `RemoteFileChangedException`. The same should be true when
+`fs.s3.change.detection.source` = "versionid".
 
 #### Out of Sync Metadata
 
@@ -1195,8 +1195,8 @@ If this happens, reads of the affected file(s) will result in
 * the S3Guard metadata is pruned
 
 The S3Guard metadata for a file can be corrected with the `s3guard import`
-command as discussed above.  The command can take a file URI instead of a
-bucket URI to correct the metadata for a single file.  For example:
+command as discussed above. The command can take a file URI instead of a
+bucket URI to correct the metadata for a single file. For example:
 
 ```bash
 hadoop s3guard import [-meta URI] s3a://my-bucket/file-with-bad-metadata
