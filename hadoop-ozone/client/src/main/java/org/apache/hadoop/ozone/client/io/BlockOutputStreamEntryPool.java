@@ -298,7 +298,6 @@ public class BlockOutputStreamEntryPool {
       } catch (IOException ioe) {
         LOG.error("Try to allocate more blocks for write failed, already "
             + "allocated {} blocks for this write.", succeededAllocates, ioe);
-            ioe);
         throw ioe;
       }
     }
