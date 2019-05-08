@@ -39,6 +39,7 @@ public final class AbfsHttpConstants {
   public static final String GET_ACCESS_CONTROL = "getAccessControl";
   public static final String GET_STATUS = "getStatus";
   public static final String DEFAULT_TIMEOUT = "90";
+  public static final String TOKEN_VERSION = "2";
 
   public static final String JAVA_VERSION = "java.version";
   public static final String OS_NAME = "os.name";
@@ -90,6 +91,14 @@ public final class AbfsHttpConstants {
   public static final String DEFAULT_SCOPE = "default:";
   public static final String PERMISSION_FORMAT = "%04d";
   public static final String SUPER_USER = "$superuser";
+
+  public static final char CHAR_FORWARD_SLASH = '/';
+  public static final char CHAR_EXCLAMATION_POINT = '!';
+  public static final char CHAR_UNDERSCORE = '_';
+  public static final char CHAR_HYPHEN = '-';
+  public static final char CHAR_EQUALS = '=';
+  public static final char CHAR_STAR = '*';
+  public static final char CHAR_PLUS = '+';
 
   private AbfsHttpConstants() {}
 }
