@@ -397,7 +397,7 @@ public class TestDatanodeStateMachine {
     /** Port out of range **/
     confList.add(Maps.immutableEntry(
         ScmConfigKeys.OZONE_SCM_NAMES, "scm:123456"));
-    // Invalid ozone.scm.datanode.id
+    // Invalid ozone.scm.datanode.id.dir
     /** Empty **/
     confList.add(Maps.immutableEntry(
         ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR, ""));
