@@ -82,7 +82,7 @@ public class BlockInputStream extends InputStream implements Seekable {
   public BlockInputStream(
       BlockID blockID, XceiverClientManager xceiverClientManager,
       XceiverClientSpi xceiverClient, List<ChunkInfo> chunks, String traceID,
-      boolean verifyChecksum) {
+      boolean verifyChecksum, long initialPosition) throws IOException {
     this.blockID = blockID;
     this.traceID = traceID;
     this.xceiverClientManager = xceiverClientManager;
@@ -97,6 +97,11 @@ public class BlockInputStream extends InputStream implements Seekable {
     this.bufferIndex = 0;
     this.bufferPosition = -1;
     this.verifyChecksum = verifyChecksum;
+    if (initialPosition > 0) {
+      // The stream was seeked to a position before the stream was
+      // initialized. So seeking to the position now.
+      seek(initialPosition);
+    }
   }
 
   private void initializeChunkOffset() {
@@ -383,7 +388,9 @@ public class BlockInputStream extends InputStream implements Seekable {
     // Otherwise release the current buffers, adjust the chunkIndex and save
     // the bufferPosition so that the next readChunkFromContainer reads the
     // correct chunk and positions the buffer to the seeked position.
-    bufferPosition = pos;
+    // The bufferPosition should be adjusted to account for the chunk offset
+    // of the chunk the the pos actually points to.
+    bufferPosition = pos - chunkOffset[chunkIndex];
     if (chunkIndex == chunkIndexOfCurrentBuffer && buffersHaveData()) {
       adjustBufferIndex();
     } else {
