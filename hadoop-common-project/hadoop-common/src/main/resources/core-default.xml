@@ -2208,6 +2208,14 @@
   </description>
 </property>
 
+<property>
+  <name>ipc.server.reuseaddr</name>
+  <value>true</value>
+  <description>Enables the SO_REUSEADDR TCP option on the server.
+    Useful if BindException often prevents a certain service to be restarted
+    because the server side is stuck in TIME_WAIT state.
+  </description>
+</property>
 <!-- Proxy Configuration -->
 
 <property>
