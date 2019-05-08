@@ -51,6 +51,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Mode;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
@@ -128,6 +129,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.READ_AFTER_DELETE,
                 InteractionType.COPY,
+                // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
+                // detection can't really occur client-side.  The eTag of
+                // the new object can't be expected to match.
                 InteractionType.SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_WARN,
             Arrays.asList(
@@ -155,6 +159,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.READ_AFTER_DELETE,
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
+                // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
+                // detection can't really occur client-side.  The versionId of
+                // the new object can't be expected to match.
                 InteractionType.SELECT)},
 
         {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_WARN,
@@ -527,6 +534,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     final Path testpath1 =
         writeEventuallyConsistentFileVersion("eventually1.dat",
             s3ClientSpy, TEST_MAX_RETRIES, 0 , 0);
+
+    skipIfVersionPolicyAndNoVersionId(testpath1);
+
     try (FSDataInputStream instream1 = fs.open(testpath1)) {
       // succeeds on the last retry
       instream1.read();
@@ -563,6 +573,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     final Path testpath =
         writeEventuallyConsistentFileVersion(filename,
             s3ClientSpy, 0, 0, 0);
+
+    skipIfVersionPolicyAndNoVersionId(testpath);
+
     try (FSDataInputStream instream = fs.open(testpath)) {
       instream.read();
       // overwrite the file, returning inconsistent version for
@@ -658,8 +671,12 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     stubTemporaryWrongVersion(s3ClientSpy, getObjectInconsistencyCount,
         testpath, originalStatus);
 
-    stubTemporaryCopyInconsistency(s3ClientSpy, testpath, newStatus,
-        copyInconsistencyCount);
+    if (fs.getChangeDetectionPolicy().getMode() == Mode.Server) {
+      // only stub inconsistency when mode is server since no constraints that
+      // should trigger inconsistency are passed in any other mode
+      stubTemporaryCopyInconsistency(s3ClientSpy, testpath, newStatus,
+          copyInconsistencyCount);
+    }
 
     stubTemporaryMetadataInconsistency(s3ClientSpy, testpath, originalStatus,
         newStatus, getMetdataInconsistencyCount);
