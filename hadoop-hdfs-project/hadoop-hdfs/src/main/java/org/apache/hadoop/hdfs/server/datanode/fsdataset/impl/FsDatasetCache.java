@@ -53,7 +53,6 @@ import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.hdfs.server.datanode.DatanodeUtil;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -183,9 +182,8 @@ public class FsDatasetCache {
     this.memCacheStats = new MemoryCacheStats(
         dataset.datanode.getDnConf().getMaxLockedMemory());
 
-    Class<? extends MappableBlockLoader> cacheLoaderClass =
-        dataset.datanode.getDnConf().getCacheLoaderClass();
-    this.cacheLoader = ReflectionUtils.newInstance(cacheLoaderClass, null);
+    this.cacheLoader = MappableBlockLoaderFactory.createCacheLoader(
+        this.getDnConf());
     cacheLoader.initialize(this);
   }
 
@@ -213,7 +211,7 @@ public class FsDatasetCache {
       return null;
     }
     ExtendedBlockId key = new ExtendedBlockId(blockId, bpid);
-    return cacheLoader.getCachedPath(key);
+    return PmemVolumeManager.getInstance().getCachePath(key);
   }
 
   /**
@@ -380,14 +378,13 @@ public class FsDatasetCache {
       MappableBlock mappableBlock = null;
       ExtendedBlock extBlk = new ExtendedBlock(key.getBlockPoolId(),
           key.getBlockId(), length, genstamp);
-      long newUsedBytes = cacheLoader.reserve(length);
+      long newUsedBytes = cacheLoader.reserve(key, length);
       boolean reservedBytes = false;
       try {
         if (newUsedBytes < 0) {
-          LOG.warn("Failed to cache " + key + ": could not reserve " + length +
-              " more bytes in the cache: " +
-              cacheLoader.getCacheCapacityConfigKey() +
-              " of " + cacheLoader.getCacheCapacity() + " exceeded.");
+          LOG.warn("Failed to cache " + key + ": could not reserve " +
+              "more bytes in the cache: " + cacheLoader.getCacheCapacity() +
+              " exceeded when try to reserve " + length + "bytes.");
           return;
         }
         reservedBytes = true;
@@ -442,10 +439,10 @@ public class FsDatasetCache {
         IOUtils.closeQuietly(metaIn);
         if (!success) {
           if (reservedBytes) {
-            cacheLoader.release(length);
+            cacheLoader.release(key, length);
           }
           LOG.debug("Caching of {} was aborted.  We are now caching only {} "
-                  + "bytes in total.", key, memCacheStats.getCacheUsed());
+                  + "bytes in total.", key, cacheLoader.getCacheUsed());
           IOUtils.closeQuietly(mappableBlock);
           numBlocksFailedToCache.incrementAndGet();
 
@@ -519,7 +516,8 @@ public class FsDatasetCache {
       synchronized (FsDatasetCache.this) {
         mappableBlockMap.remove(key);
       }
-      long newUsedBytes = cacheLoader.release(value.mappableBlock.getLength());
+      long newUsedBytes = cacheLoader.
+          release(key, value.mappableBlock.getLength());
       numBlocksCached.addAndGet(-1);
       dataset.datanode.getMetrics().incrBlocksUncached(1);
       if (revocationTimeMs != 0) {
@@ -591,5 +589,12 @@ public class FsDatasetCache {
   @VisibleForTesting
   MappableBlockLoader getCacheLoader() {
     return cacheLoader;
+  }
+
+  /**
+   * This method can be executed during DataNode shutdown.
+   */
+  void shutdown() {
+    cacheLoader.shutdown();
   }
 }
