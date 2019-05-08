@@ -35,18 +35,13 @@ import java.io.IOException;
 public class PmemMappedBlock implements MappableBlock {
   private static final Logger LOG =
       LoggerFactory.getLogger(PmemMappedBlock.class);
-  private final PmemVolumeManager pmemVolumeManager;
   private long length;
-  private Byte volumeIndex = null;
   private ExtendedBlockId key;
 
-  PmemMappedBlock(long length, Byte volumeIndex, ExtendedBlockId key,
-                  PmemVolumeManager pmemVolumeManager) {
+  PmemMappedBlock(long length, ExtendedBlockId key) {
     assert length > 0;
     this.length = length;
-    this.volumeIndex = volumeIndex;
     this.key = key;
-    this.pmemVolumeManager = pmemVolumeManager;
   }
 
   @Override
@@ -57,10 +52,9 @@ public class PmemMappedBlock implements MappableBlock {
   @Override
   public void close() {
     String cacheFilePath =
-        pmemVolumeManager.inferCacheFilePath(volumeIndex, key);
+        PmemVolumeManager.getInstance().getCachePath(key);
     try {
       FsDatasetUtil.deleteMappedFile(cacheFilePath);
-      pmemVolumeManager.afterUncache(key);
       LOG.info("Successfully uncached one replica:{} from persistent memory"
           + ", [cached path={}, length={}]", key, cacheFilePath, length);
     } catch (IOException e) {

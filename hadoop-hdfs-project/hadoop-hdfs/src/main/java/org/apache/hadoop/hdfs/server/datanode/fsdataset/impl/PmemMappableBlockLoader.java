@@ -18,12 +18,10 @@
 
 package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
@@ -53,14 +51,10 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
 
   @Override
   void initialize(FsDatasetCache cacheManager) throws IOException {
+    LOG.info("Initializing cache loader: PmemMappableBlockLoader.");
     DNConf dnConf = cacheManager.getDnConf();
-    this.pmemVolumeManager = new PmemVolumeManager(dnConf.getMaxLockedPmem(),
-        dnConf.getPmemVolumes());
-  }
-
-  @VisibleForTesting
-  PmemVolumeManager getPmemVolumeManager() {
-    return pmemVolumeManager;
+    PmemVolumeManager.init(dnConf.getPmemVolumes());
+    pmemVolumeManager = PmemVolumeManager.getInstance();
   }
 
   /**
@@ -69,7 +63,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
    * Map the block and verify its checksum.
    *
    * The block will be mapped to PmemDir/BlockPoolId-BlockId, in which PmemDir
-   * is a persistent memory volume selected by getOneLocation() method.
+   * is a persistent memory volume chosen by PmemVolumeManager.
    *
    * @param length         The current length of the block.
    * @param blockIn        The block input stream. Should be positioned at the
@@ -100,8 +94,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
         throw new IOException("Block InputStream has no FileChannel.");
       }
 
-      Byte volumeIndex = pmemVolumeManager.getOneVolumeIndex();
-      filePath = pmemVolumeManager.inferCacheFilePath(volumeIndex, key);
+      filePath = pmemVolumeManager.getCachePath(key);
       file = new RandomAccessFile(filePath, "rw");
       out = file.getChannel().
           map(FileChannel.MapMode.READ_WRITE, 0, length);
@@ -111,9 +104,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
       }
       verifyChecksumAndMapBlock(out, length, metaIn, blockChannel,
           blockFileName);
-      mappableBlock = new PmemMappedBlock(
-          length, volumeIndex, key, pmemVolumeManager);
-      pmemVolumeManager.afterCache(key, volumeIndex);
+      mappableBlock = new PmemMappedBlock(length, key);
       LOG.info("Successfully cached one replica:{} into persistent memory"
           + ", [cached path={}, length={}]", key, filePath, length);
     } finally {
@@ -123,6 +114,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
       }
       IOUtils.closeQuietly(file);
       if (mappableBlock == null) {
+        LOG.debug("Delete {} due to unsuccessful mapping.", filePath);
         FsDatasetUtil.deleteMappedFile(filePath);
       }
     }
@@ -194,11 +186,6 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
   }
 
   @Override
-  public String getCacheCapacityConfigKey() {
-    return DFSConfigKeys.DFS_DATANODE_CACHE_PMEM_CAPACITY_KEY;
-  }
-
-  @Override
   public long getCacheUsed() {
     return pmemVolumeManager.getCacheUsed();
   }
@@ -209,13 +196,13 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
   }
 
   @Override
-  long reserve(long bytesCount) {
-    return pmemVolumeManager.reserve(bytesCount);
+  long reserve(ExtendedBlockId key, long bytesCount) {
+    return pmemVolumeManager.reserve(key, bytesCount);
   }
 
   @Override
-  long release(long bytesCount) {
-    return pmemVolumeManager.release(bytesCount);
+  long release(ExtendedBlockId key, long bytesCount) {
+    return pmemVolumeManager.release(key, bytesCount);
   }
 
   @Override
@@ -224,7 +211,8 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
   }
 
   @Override
-  public String getCachedPath(ExtendedBlockId key) {
-    return pmemVolumeManager.getCacheFilePath(key);
+  void shutdown() {
+    LOG.info("Clean up cache on persistent memory during shutdown.");
+    PmemVolumeManager.getInstance().cleanup();
   }
 }

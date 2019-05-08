@@ -65,26 +65,25 @@ public abstract class MappableBlockLoader {
   /**
    * Try to reserve some given bytes.
    *
+   * @param key           The ExtendedBlockId for a block.
+   *
    * @param bytesCount    The number of bytes to add.
    *
    * @return              The new number of usedBytes if we succeeded;
    *                      -1 if we failed.
    */
-  abstract long reserve(long bytesCount);
+  abstract long reserve(ExtendedBlockId key, long bytesCount);
 
   /**
    * Release some bytes that we're using.
+   *
+   * @param key           The ExtendedBlockId for a block.
    *
    * @param bytesCount    The number of bytes to release.
    *
    * @return              The new number of usedBytes.
    */
-  abstract long release(long bytesCount);
-
-  /**
-   * Get the config key of cache capacity.
-   */
-  abstract String getCacheCapacityConfigKey();
+  abstract long release(ExtendedBlockId key, long bytesCount);
 
   /**
    * Get the approximate amount of cache space used.
@@ -102,9 +101,11 @@ public abstract class MappableBlockLoader {
   abstract boolean isTransientCache();
 
   /**
-   * Get a cache file path if applicable. Otherwise return null.
+   * Clean up cache, can be used during DataNode shutdown.
    */
-  abstract String getCachedPath(ExtendedBlockId key);
+  void shutdown() {
+    // Do nothing.
+  }
 
   /**
    * Reads bytes into a buffer until EOF or the buffer's limit is reached.

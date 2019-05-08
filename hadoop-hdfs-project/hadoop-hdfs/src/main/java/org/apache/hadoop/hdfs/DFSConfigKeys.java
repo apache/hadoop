@@ -26,8 +26,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.StoragePolicySatisfierMode;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyDefault;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyRackFaultTolerant;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MappableBlockLoader;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.MemoryMappableBlockLoader;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.RamDiskReplicaLruTracker;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReservedSpaceCalculator;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
@@ -392,22 +390,10 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
   public static final String DFS_DATANODE_CACHE_REVOCATION_POLLING_MS = "dfs.datanode.cache.revocation.polling.ms";
   public static final long DFS_DATANODE_CACHE_REVOCATION_POLLING_MS_DEFAULT = 500L;
 
-  // Currently, the available cache loaders are MemoryMappableBlockLoader,
-  // PmemMappableBlockLoader. MemoryMappableBlockLoader is the default cache
-  // loader to cache block replica to memory.
-  public static final String DFS_DATANODE_CACHE_LOADER_CLASS =
-      "dfs.datanode.cache.loader.class";
-  public static final Class<? extends MappableBlockLoader>
-      DFS_DATANODE_CACHE_LOADER_CLASS_DEFAULT =
-      MemoryMappableBlockLoader.class;
   // Multiple dirs separated by "," are acceptable.
   public static final String DFS_DATANODE_CACHE_PMEM_DIRS_KEY =
       "dfs.datanode.cache.pmem.dirs";
   public static final String DFS_DATANODE_CACHE_PMEM_DIRS_DEFAULT = "";
-  // The cache capacity of persistent memory
-  public static final String DFS_DATANODE_CACHE_PMEM_CAPACITY_KEY =
-      "dfs.datanode.cache.pmem.capacity";
-  public static final long DFS_DATANODE_CACHE_PMEM_CAPACITY_DEFAULT = 0L;
 
   public static final String DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_KEY = "dfs.namenode.datanode.registration.ip-hostname-check";
   public static final boolean DFS_NAMENODE_DATANODE_REGISTRATION_IP_HOSTNAME_CHECK_DEFAULT = true;
