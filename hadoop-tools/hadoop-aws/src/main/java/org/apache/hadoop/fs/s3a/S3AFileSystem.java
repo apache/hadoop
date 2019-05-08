@@ -243,8 +243,33 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /** Principal who created the FS; recorded during initialization. */
   private UserGroupInformation owner;
 
-  // The maximum number of entries that can be deleted in any call to s3
+  /**
+   * The maximum number of entries that can be deleted in any bulk delete
+   * call to S3 {@value}.
+   */
   private static final int MAX_ENTRIES_TO_DELETE = 1000;
+
+  /**
+   * This is an arbitrary value: {@value}.
+   * It declares how many parallel copy operations
+   * in a single rename can be queued before the operation pauses
+   * and awaits completion.
+   * A very large value wouldn't just starve other threads from
+   * performing work, there's a risk that the S3 store itself would
+   * throttle operations (which all go to the same shard).
+   * It is not currently configurable just to avoid people choosing values
+   * which work on a microbenchmark (single rename, no other work, ...)
+   * but don't scale well to execution in a large process against a common
+   * store, all while separate processes are working with the same shard
+   * of storage.
+   *
+   * It should be a factor of {@link #MAX_ENTRIES_TO_DELETE} so that
+   * all copies will have finished before deletion is contemplated.
+   * (There's always a block for that, it just makes more sense to
+   * perform the bulk delete after another block of copies have completed).
+   */
+  public static final int RENAME_PARALLEL_LIMIT = 10;
+
   private String blockOutputBuffer;
   private S3ADataBlocks.BlockFactory blockFactory;
   private int blockOutputActiveBlocks;
@@ -257,6 +282,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private S3Guard.ITtlTimeProvider ttlTimeProvider;
 
+  /** Where is the bucket? Null if the caller could not determine this. */
   private String bucketLocation;
 
   /** Add any deprecated keys. */
@@ -1238,7 +1264,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             createStoreContext(),
             src, srcStatus, dest);
     final AtomicLong bytesCopied = new AtomicLong();
-    int renameParallelLimit = 10;
+    int renameParallelLimit = RENAME_PARALLEL_LIMIT;
     final List<CompletableFuture<Path>> activeCopies =
         new ArrayList<>(renameParallelLimit);
     // aggregate operation to wait for the copies to complete then reset
@@ -1283,7 +1309,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       } else {
         LOG.debug("rename: renaming directory {} to {}", src, dst);
 
-        // This is a directory to directory copy
+        // This is a directory-to-directory copy
         dstKey = maybeAddTrailingSlash(dstKey);
         srcKey = maybeAddTrailingSlash(srcKey);
 
@@ -1297,14 +1323,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // latter being used to update the rename tracker.
         final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
         final List<Path> pathsToDelete = new ArrayList<>();
-        // the operation to update the lists of keys and paths.
+        // to update the lists of keys and paths.
         final BiFunction<Path, String, Void> queueToDelete =
             (Path path, String key) -> {
               pathsToDelete.add(path);
               keysToDelete.add(new DeleteObjectsRequest.KeyVersion(key));
               return null;
             };
-        // the operation to block waiting for ay active copies to finish
+        // a lambda-expression to block waiting for ay active copies to finish
         // then delete all queued keys + paths to delete.
         final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
             completeActiveCopiesAndDeleteSources =
@@ -1320,7 +1346,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
           // delete unnecessary fake directory at the destination.
           // this MUST be done before anything else so that
-          // rollback code doesn't get confused.
+          // rollback code doesn't get confused and insert a tombstone
+          // marker.
           deleteObjectAtPath(dstStatus.getPath(), dstKey, false);
         }
 
@@ -1341,7 +1368,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
           Path childDestPath = keyToQualifiedPath(newDstKey);
 
-          // queue the copy for execution.
+          // queue this copy for execution.
           CompletableFuture<Path> copy = submit(boundedThreadPool, () ->
               copySourceAndUpdateTracker(renameTracker,
                   childSourcePath,
@@ -1353,17 +1380,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           bytesCopied.addAndGet(srcStatus.getLen());
           activeCopies.add(copy);
           if (activeCopies.size() == renameParallelLimit) {
+            // the limit of active copies has been reached;
+            // wait for completion or errors to surface.
             LOG.debug("Waiting for active copies to complete");
             completeActiveCopies.apply("batch threshold reached");
           }
           if (keysToDelete.size() == MAX_ENTRIES_TO_DELETE) {
             // finish ongoing copies then delete all queued keys.
+            // provided the parallel limit is a factor of the max entry
+            // constant, this will not need to block for the copy, and
+            // simply jump straight to the delete.
             completeActiveCopiesAndDeleteSources.apply("paged delete");
           }
         }
         // end of iteration
 
-        // await final set of copies and then delete
+        // await the final set of copies and then delete
         // This will notify the renameTracker that these objects
         // have been deleted.
         completeActiveCopiesAndDeleteSources.apply("final copy and delete");
@@ -1374,7 +1406,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     } catch (AmazonClientException | IOException ex) {
       // rename failed.
-      // block for all ongoing copies to complete
+      // block for all ongoing copies to complete, successfully or not
       try {
         completeActiveCopies.apply("failure handling");
       } catch (IOException e) {
@@ -1403,8 +1435,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Remove source objects, and update the metastore
-   * @param renameTracker rename state to update.
+   * Remove source objects and update the metastore by way of
+   * the rename tracker.
+   * @param renameTracker rename tracker to update.
    * @param keysToDelete list of keys to delete
    * @param pathsToDelete list of paths matching the keys to delete 1:1.
    * @throws IOException failure

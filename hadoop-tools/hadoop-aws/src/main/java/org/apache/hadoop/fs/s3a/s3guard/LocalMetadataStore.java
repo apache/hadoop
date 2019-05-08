@@ -36,6 +36,7 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -196,7 +197,8 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public void move(
       @Nullable Collection<Path> pathsToDelete,
-      @Nullable Collection<PathMetadata> pathsToCreate) throws IOException {
+      @Nullable Collection<PathMetadata> pathsToCreate,
+      @Nullable final Closeable moveState) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
     if (pathsToCreate == null) {
@@ -541,7 +543,8 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final FileStatus srcStatus, final Path dest) throws IOException {
-    return new ProgressiveRenameTracker(storeContext, this, source, dest);
+      final FileStatus sourceStatus, final Path dest) throws IOException {
+    return new ProgressiveRenameTracker(storeContext, this, source, dest,
+        null);
   }
 }

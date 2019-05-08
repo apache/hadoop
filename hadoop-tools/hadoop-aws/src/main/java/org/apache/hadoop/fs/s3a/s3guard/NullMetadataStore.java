@@ -24,6 +24,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -78,7 +79,8 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+      Collection<PathMetadata> pathsToCreate,
+      final Closeable moveState) throws IOException {
   }
 
   @Override
@@ -126,18 +128,19 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final FileStatus srcStatus, final Path dest)
+      final FileStatus sourceStatus,
+      final Path dest)
       throws IOException {
-    return new NullRenameTracker(storeContext, source, dest);
+    return new NullRenameTracker(storeContext, source, dest, this);
   }
 
-  private static class NullRenameTracker extends RenameTracker {
+  private static final class NullRenameTracker extends RenameTracker {
 
     private NullRenameTracker(
         final StoreContext storeContext,
         final Path source,
-        final Path dest) {
-      super("rename tracker", storeContext, source, dest);
+        final Path dest, MetadataStore metadataStore) {
+      super("null tracker", storeContext, metadataStore, source, dest, null);
     }
 
     @Override

@@ -492,7 +492,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         st.isDirectory());
     assertFileCount("files in the dest directory", roleFS,
         writableDir, expectedFileCount);
-
   }
 
   @Test
@@ -684,14 +683,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private void pathMustExist(Path p) {
     eval(() -> assertPathExists("Missing path", p));
-  }
-
-  /**
-   * Assert that a path must exist, map IOEs to RTEs for loops.
-   * @param p path.
-   */
-  private void pathMustNotExist(Path p) {
-    eval(() -> assertPathDoesNotExist("Path should not exist", p));
   }
 
   /**

@@ -150,10 +150,14 @@ public final class S3Guard {
       S3AFileStatus status,
       S3AInstrumentation instrumentation) throws IOException {
     long startTimeNano = System.nanoTime();
-    ms.put(new PathMetadata(status));
-    instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        (System.nanoTime() - startTimeNano));
-    instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
+    try {
+      ms.put(new PathMetadata(status));
+    } finally {
+      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+          (System.nanoTime() - startTimeNano));
+      instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
+    }
+
     return status;
   }
 

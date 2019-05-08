@@ -129,7 +129,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate);
+          ms.move(toDelete, toCreate, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);

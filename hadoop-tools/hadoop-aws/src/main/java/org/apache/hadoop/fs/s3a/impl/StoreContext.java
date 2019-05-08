@@ -90,7 +90,7 @@ public class StoreContext {
   /** Invoker of operations. */
   private final Invoker invoker;
 
-  /* Instrumentation and statistics. */
+  /** Instrumentation and statistics. */
   private final S3AInstrumentation instrumentation;
   private final S3AStorageStatistics storageStatistics;
 

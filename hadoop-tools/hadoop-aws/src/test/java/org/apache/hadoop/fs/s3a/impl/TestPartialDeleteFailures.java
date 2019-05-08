@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import javax.annotation.Nullable;
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -269,8 +271,10 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void move(final Collection<Path> pathsToDelete,
-        final Collection<PathMetadata> pathsToCreate) {
+    public void move(
+        @Nullable final Collection<Path> pathsToDelete,
+        @Nullable final Collection<PathMetadata> pathsToCreate,
+        @Nullable final Closeable moveState) {
 
     }
 
@@ -329,7 +333,7 @@ public class TestPartialDeleteFailures {
     @Override
     public RenameTracker initiateRenameOperation(final StoreContext storeContext,
         final Path source,
-        final FileStatus srcStatus, final Path dest) throws IOException {
+        final FileStatus sourceStatus, final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");
     }
   }

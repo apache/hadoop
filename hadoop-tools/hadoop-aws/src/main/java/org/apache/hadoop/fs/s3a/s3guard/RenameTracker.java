@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
@@ -29,8 +30,10 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.impl.StoreOperation;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 
 /**
@@ -38,6 +41,13 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
  * as initiated in the S3AFilesystem rename.
  * Subclasses must provide an implementation and return it in
  * {@link MetadataStore#initiateRenameOperation(StoreContext, Path, FileStatus, Path)}.
+ * The {@code moveState} field/constructor argument is an opaque state to
+ * be passed down to the metastore in its move operations; this allows the
+ * stores to manage ongoing state -while still being able to share
+ * rename tracker implementations.
+ * This is to avoid performance problems wherein the progressive rename
+ * tracker causes the store to repeatedly create and write duplicate
+ * ancestor entries for every file added.
  */
 public abstract class RenameTracker extends StoreOperation {
 
@@ -50,7 +60,6 @@ public abstract class RenameTracker extends StoreOperation {
   /** destination path. */
   private final Path dest;
 
-
   /**
    * Track the duration of this operation.
    */
@@ -62,20 +71,43 @@ public abstract class RenameTracker extends StoreOperation {
   private final String name;
 
   /**
-   * constructor.
+   * Any ongoing state supplied to the rename tracker
+   * which is to be passed in with each move operation.
+   * This must be closed at the end of the tracker's life.
+   */
+  private final Closeable moveState;
+
+  /**
+   * The metadata store for this tracker.
+   * Always non-null.
+   * This is passed in separate from the store context to guarantee
+   * that whichever store creates a tracker is explicitly bound to that
+   * instance.
+   */
+  private final MetadataStore metadataStore;
+
+  /**
+   * Constructor.
    * @param name tracker name for logs.
    * @param storeContext store context.
+   * @param metadataStore the stopre
    * @param sourceRoot source path.
    * @param dest destination path.
+   * @param moveState ongoing move state.
    */
   protected RenameTracker(
       final String name,
       final StoreContext storeContext,
+      final MetadataStore metadataStore,
       final Path sourceRoot,
-      final Path dest) {
-    super(storeContext);
-    this.sourceRoot = sourceRoot;
-    this.dest = dest;
+      final Path dest,
+      Closeable moveState) {
+    super(checkNotNull(storeContext));
+    checkNotNull(storeContext.getUsername(), "No username");
+    this.metadataStore = checkNotNull(metadataStore);
+    this.sourceRoot = checkNotNull(sourceRoot);
+    this.dest = checkNotNull(dest);
+    this.moveState = moveState;
     this.name = String.format("%s (%s, %s)", name, sourceRoot, dest);
     durationInfo = new DurationInfo(LOG, false,
         name +" (%s, %s)", sourceRoot, dest);
@@ -96,6 +128,18 @@ public abstract class RenameTracker extends StoreOperation {
 
   public String getOwner() {
     return getStoreContext().getUsername();
+  }
+
+  public Closeable getMoveState() {
+    return moveState;
+  }
+
+  /**
+   * Get the metadata store.
+   * @return a non-null store.
+   */
+  protected MetadataStore getMetadataStore() {
+    return metadataStore;
   }
 
   /**
@@ -170,6 +214,7 @@ public abstract class RenameTracker extends StoreOperation {
    * @throws IOException failure.
    */
   public void completeRename() throws IOException {
+    IOUtils.cleanupWithLogger(LOG, moveState);
     noteRenameFinished();
   }
 
@@ -197,6 +242,7 @@ public abstract class RenameTracker extends StoreOperation {
    */
   public IOException renameFailed(Exception ex) {
     LOG.debug("Rename has failed", ex);
+    IOUtils.cleanupWithLogger(LOG, moveState);
     noteRenameFinished();
     return convertToIOException(ex);
   }

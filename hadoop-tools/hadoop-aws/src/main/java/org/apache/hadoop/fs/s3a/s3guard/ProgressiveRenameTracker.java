@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -66,8 +67,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
  */
 public class ProgressiveRenameTracker extends RenameTracker {
 
-  private final MetadataStore metadataStore;
-
   /**
    * The collection of paths to delete; this is added as individual files
    * are renamed.
@@ -82,10 +81,10 @@ public class ProgressiveRenameTracker extends RenameTracker {
       final StoreContext storeContext,
       final MetadataStore metadataStore,
       final Path sourceRoot,
-      final Path dest) {
+      final Path dest,
+      final Closeable moveState) {
     super("ProgressiveRenameTracker",
-        storeContext, sourceRoot, dest);
-    this.metadataStore = metadataStore;
+        storeContext, metadataStore, sourceRoot, dest, moveState);
   }
 
   /**
@@ -112,11 +111,13 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // build the list of entries to add in a synchronized block.
     final List<PathMetadata> entriesToAdd = new ArrayList<>(1);
     LOG.debug("Updating store with copied file {}", sourcePath);
+    MetadataStore store = getMetadataStore();
     synchronized (this) {
       checkArgument(!pathsToDelete.contains(sourcePath),
           "File being renamed is already processed %s", destPath);
       // create the file metadata and update the local structures.
-      S3Guard.addMoveFile(metadataStore,
+      S3Guard.addMoveFile(
+          store,
           pathsToDelete,
           entriesToAdd,
           sourcePath,
@@ -128,7 +129,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
       if (addAncestors) {
         // add all new ancestors.
         addMoveAncestors(
-            metadataStore,
+            store,
             pathsToDelete,
             entriesToAdd,
             getSourceRoot(),
@@ -140,7 +141,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
     // outside the lock, the entriesToAdd list has all new files to create.
     // ...so update the store.
-    metadataStore.move(null, entriesToAdd);
+    store.move(null, entriesToAdd, getMoveState());
   }
 
   /**
@@ -157,8 +158,9 @@ public class ProgressiveRenameTracker extends RenameTracker {
       final boolean addAncestors) throws IOException {
     // this list is created on demand.
     final List<PathMetadata> entriesToAdd = new ArrayList<>(1);
+    MetadataStore store = getMetadataStore();
     synchronized (this) {
-      addMoveDir(metadataStore,
+      addMoveDir(store,
           pathsToDelete,
           entriesToAdd,
           sourceStatus.getPath(),
@@ -166,7 +168,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
           getOwner());
       // Ancestor directories may not be listed, so we explicitly add them
       if (addAncestors) {
-        addMoveAncestors(metadataStore,
+        addMoveAncestors(store,
             pathsToDelete,
             entriesToAdd,
             getSourceRoot(),
@@ -179,14 +181,14 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // ...so update the store.
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "adding %s metastore entries", entriesToAdd.size())) {
-      metadataStore.move(null, entriesToAdd);
+      store.move(null, entriesToAdd, getMoveState());
     }
   }
 
   @Override
   public synchronized void moveSourceDirectory() throws IOException {
     if (!pathsToDelete.contains(getSourceRoot())) {
-      addMoveDir(metadataStore, pathsToDelete, destMetas,
+      addMoveDir(getMetadataStore(), pathsToDelete, destMetas,
           getSourceRoot(),
           getDest(),
           getOwner());
@@ -205,7 +207,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // delete the paths from the metastore
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "delete %s metastore entries", paths.size())) {
-      metadataStore.move(paths, null);
+      getMetadataStore().move(paths, null, getMoveState());
     }
   }
 
@@ -213,7 +215,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
   public void completeRename() throws IOException {
     // this should all have happened.
     LOG.debug("Rename completed for {}", this);
-    metadataStore.move(pathsToDelete, destMetas);
+    getMetadataStore().move(pathsToDelete, destMetas, getMoveState());
     super.completeRename();
   }
 

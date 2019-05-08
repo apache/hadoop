@@ -18,10 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -44,8 +44,6 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveFile;
  */
 public class DelayedUpdateRenameTracker extends RenameTracker {
 
-  private final StoreContext storeContext;
-
   private final MetadataStore metadataStore;
 
   private final Collection<Path> sourcePaths = new HashSet<>();
@@ -58,14 +56,11 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       final StoreContext storeContext,
       final MetadataStore metadataStore,
       final Path sourceRoot,
-      final Path dest) {
-    super("DelayedUpdateRenameTracker", storeContext, sourceRoot, dest);
-    this.storeContext = storeContext;
-    this.metadataStore = metadataStore;
-  }
-
-  public StoreContext getStoreContext() {
-    return storeContext;
+      final Path dest,
+      final Closeable moveState) {
+    super("DelayedUpdateRenameTracker", storeContext, metadataStore, sourceRoot, dest,
+        moveState);
+    this.metadataStore = storeContext.getMetadataStore();
   }
 
   @Override
@@ -132,7 +127,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
 
   @Override
   public void completeRename() throws IOException {
-    metadataStore.move(sourcePaths, destMetas);
+    metadataStore.move(sourcePaths, destMetas, getMoveState());
     super.completeRename();
   }
 
@@ -142,7 +137,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
     try {
       // the destination paths are updated; the source is left alone.
       // either the delete operation didn't begin, or the
-      metadataStore.move(new ArrayList<>(0), destMetas);
+      metadataStore.move(new ArrayList<>(0), destMetas, getMoveState());
       for (Path deletedPath : deletedPaths) {
         // this is not ideal in that it may leave parent stuff around.
         metadataStore.delete(deletedPath);
@@ -173,10 +168,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
     // that way: when we check for a parent path existing we can
     // see if it really is empty.
     List<Path> parents = new ArrayList<>(parentPaths);
-    parents.sort(
-        Comparator.comparing(
-            (Path p) -> p.depth())
-            .thenComparing((Path p) -> p.toUri().getPath()));
+    parents.sort(PathOrderComparators.TOPMOST_PATH_LAST);
     for (Path parent : parents) {
       PathMetadata md = metadataStore.get(parent, true);
       if (md != null && md.isEmptyDirectory().equals(Tristate.TRUE)) {

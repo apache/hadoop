@@ -152,13 +152,15 @@ public interface MetadataStore extends Closeable {
    * @param pathsToDelete Collection of all paths that were removed from the
    *                      source directory tree of the move.
    * @param pathsToCreate Collection of all PathMetadata for the new paths
-   *                      that were created at the destination of the rename
-   *                      ().
+   *                      that were created at the destination of the rename().
+   * @param moveState     Any ongoing state supplied to the rename tracker
+   *                      which is to be passed in with each move operation.
    * @throws IOException if there is an error
    */
   void move(
       @Nullable Collection<Path> pathsToDelete,
-      @Nullable Collection<PathMetadata> pathsToCreate) throws IOException;
+      @Nullable Collection<PathMetadata> pathsToCreate,
+      @Nullable Closeable moveState) throws IOException;
 
   /**
    * Saves metadata for exactly one path.
@@ -262,15 +264,15 @@ public interface MetadataStore extends Closeable {
    *
    * @param storeContext store context.
    * @param source source path
-   * @param srcStatus
+   * @param sourceStatus status of the source file/dir
    * @param dest destination path.
-   * @return the rename operation to update
+   * @return the rename tracker
    * @throws IOException Failure.
    */
   RenameTracker initiateRenameOperation(
       StoreContext storeContext,
       Path source,
-      FileStatus srcStatus,
+      FileStatus sourceStatus,
       Path dest)
       throws IOException;
 }
