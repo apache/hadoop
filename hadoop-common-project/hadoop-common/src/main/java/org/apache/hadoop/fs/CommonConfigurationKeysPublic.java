@@ -430,6 +430,15 @@ public class CommonConfigurationKeysPublic {
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
    * core-default.xml</a>
    */
+  public static final String  IPC_SERVER_REUSEADDR_KEY =
+      "ipc.server.reuseaddr";
+  /** Default value for IPC_SERVER_REUSEADDR_KEY. */
+  public static final boolean IPC_SERVER_REUSEADDR_DEFAULT = true;
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
   public static final String  IPC_SERVER_MAX_CONNECTIONS_KEY =
     "ipc.server.max.connections";
   /** Default value for IPC_SERVER_MAX_CONNECTIONS_KEY */
