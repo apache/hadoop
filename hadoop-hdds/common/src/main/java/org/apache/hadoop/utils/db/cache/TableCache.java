@@ -30,7 +30,8 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 @Private
 @Evolving
-public interface TableCache<CACHEKEY, CACHEVALUE> {
+public interface TableCache<CACHEKEY extends CacheKey,
+    CACHEVALUE extends CacheValue> {
 
   /**
    * Return the value for the key if it is present, otherwise return null.

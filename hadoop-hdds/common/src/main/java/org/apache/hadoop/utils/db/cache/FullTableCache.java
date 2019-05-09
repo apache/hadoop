@@ -34,7 +34,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Private
 @Evolving
-public class FullTableCache<CACHEKEY, CACHEVALUE>
+public class FullTableCache<CACHEKEY extends CacheKey,
+    CACHEVALUE extends CacheValue>
     implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;

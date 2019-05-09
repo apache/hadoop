@@ -36,8 +36,9 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  */
 @Private
 @Evolving
-public class PartialTableCache<CACHEKEY, CACHEVALUE>
-    implements TableCache<CACHEKEY, CACHEVALUE>{
+public class PartialTableCache<CACHEKEY extends CacheKey,
+    CACHEVALUE extends CacheValue>
+    implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
   private final TreeSet<EpochEntry<CACHEKEY>> epochEntries;
@@ -47,7 +48,7 @@ public class PartialTableCache<CACHEKEY, CACHEVALUE>
 
   public PartialTableCache() {
     cache = new ConcurrentHashMap<>();
-    epochEntries = new TreeSet<EpochEntry<CACHEKEY>>();
+    epochEntries = new TreeSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
     // time.
     executorService = Executors.newSingleThreadExecutor();
@@ -61,7 +62,7 @@ public class PartialTableCache<CACHEKEY, CACHEVALUE>
   @Override
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
     cache.put(cacheKey, value);
-    CacheValue cacheValue = (CacheValue) cache.get(cacheKey);
+    CacheValue cacheValue = cache.get(cacheKey);
     epochEntries.add(new EpochEntry<>(cacheValue.getEpoch(), cacheKey));
   }
 
@@ -77,10 +78,11 @@ public class PartialTableCache<CACHEKEY, CACHEVALUE>
 
   private void evictCache(long epoch) {
     EpochEntry<CACHEKEY> currentEntry = null;
-    for (Iterator iterator = epochEntries.iterator(); iterator.hasNext();) {
-      currentEntry = (EpochEntry<CACHEKEY>) iterator.next();
+    for (Iterator<EpochEntry<CACHEKEY>> iterator = epochEntries.iterator();
+         iterator.hasNext();) {
+      currentEntry = iterator.next();
       CACHEKEY cachekey = currentEntry.getCachekey();
-      CacheValue cacheValue = (CacheValue) cache.get(cachekey);
+      CacheValue cacheValue = cache.get(cachekey);
       if (cacheValue.getEpoch() <= epoch) {
         cache.remove(cachekey);
         iterator.remove();
