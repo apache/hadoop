@@ -1475,6 +1475,8 @@ public class ApplicationMaster {
         try {
           fs = FileSystem.get(conf);
         } catch (IOException e) {
+          numCompletedContainers.incrementAndGet();
+          numFailedContainers.incrementAndGet();
           throw new UncheckedIOException("Cannot get FileSystem", e);
         }
 
@@ -1492,6 +1494,8 @@ public class ApplicationMaster {
             LOG.info("Setting up file for localization: " + dst);
             localResources.put(fileName, localRes);
           } catch (IOException e) {
+            numCompletedContainers.incrementAndGet();
+            numFailedContainers.incrementAndGet();
             throw new UncheckedIOException(
                 "Error during localization setup", e);
           }
