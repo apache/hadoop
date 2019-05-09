@@ -883,7 +883,7 @@
     </description>
   </property>
   <property>
-    <name>ozone.scm.datanode.id.dir</name>
+    <name>ozone.scm.datanode.id</name>
     <value/>
     <tag>OZONE, MANAGEMENT</tag>
     <description>The path that datanodes will use to store the datanode ID.

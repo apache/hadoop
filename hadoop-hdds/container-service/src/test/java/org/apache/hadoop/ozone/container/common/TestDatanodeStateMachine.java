@@ -25,7 +25,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
-import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.common.statemachine
     .DatanodeStateMachine;
@@ -50,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -117,8 +117,9 @@ public class TestDatanodeStateMachine {
     }
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         new File(testRoot, "scm").getAbsolutePath());
-    path = new File(testRoot, "datanodeID").getAbsolutePath();
-    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR, path);
+    path = Paths.get(path.toString(),
+        TestDatanodeStateMachine.class.getSimpleName() + ".id").toString();
+    conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ID, path);
     executorService = HadoopExecutors.newCachedThreadPool(
         new ThreadFactoryBuilder().setDaemon(true)
             .setNameFormat("Test Data Node State Machine Thread - %d").build());
@@ -211,8 +212,7 @@ public class TestDatanodeStateMachine {
     // There is no mini cluster started in this test,
     // create a ID file so that state machine could load a fake datanode ID.
     File idPath = new File(
-        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR),
-        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT);
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
     idPath.delete();
     DatanodeDetails datanodeDetails = getNewDatanodeDetails();
     DatanodeDetails.Port port = DatanodeDetails.newPort(
@@ -334,8 +334,7 @@ public class TestDatanodeStateMachine {
   public void testDatanodeStateMachineWithIdWriteFail() throws Exception {
 
     File idPath = new File(
-        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR),
-        OzoneConsts.OZONE_SCM_DATANODE_ID_FILE_DEFAULT);
+        conf.get(ScmConfigKeys.OZONE_SCM_DATANODE_ID));
     idPath.delete();
     DatanodeDetails datanodeDetails = getNewDatanodeDetails();
     DatanodeDetails.Port port = DatanodeDetails.newPort(
@@ -397,10 +396,10 @@ public class TestDatanodeStateMachine {
     /** Port out of range **/
     confList.add(Maps.immutableEntry(
         ScmConfigKeys.OZONE_SCM_NAMES, "scm:123456"));
-    // Invalid ozone.scm.datanode.id.dir
+    // Invalid ozone.scm.datanode.id
     /** Empty **/
     confList.add(Maps.immutableEntry(
-        ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR, ""));
+        ScmConfigKeys.OZONE_SCM_DATANODE_ID, ""));
 
     confList.forEach((entry) -> {
       Configuration perTestConf = new Configuration(conf);
