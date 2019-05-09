@@ -195,6 +195,11 @@ public final class OzoneConsts {
   public static final int INVALID_PORT = -1;
 
 
+  /**
+   * Default SCM Datanode ID file name.
+   */
+  public static final String OZONE_SCM_DATANODE_ID_FILE_DEFAULT = "datanode.id";
+
   // The ServiceListJSONServlet context attribute where OzoneManager
   // instance gets stored.
   public static final String OM_CONTEXT_ATTRIBUTE = "ozone.om";

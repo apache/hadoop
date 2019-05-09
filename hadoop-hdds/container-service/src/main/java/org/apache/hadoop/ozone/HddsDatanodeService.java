@@ -320,9 +320,10 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       throws IOException {
     String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_DATANODE_ID +
+      LOG.error("A valid path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration" +
           " for details on configuring Ozone.");
@@ -350,9 +351,10 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       throws IOException {
     String idFilePath = HddsServerUtil.getDatanodeIdFilePath(conf);
     if (idFilePath == null || idFilePath.isEmpty()) {
-      LOG.error("A valid file path is needed for config setting {}",
-          ScmConfigKeys.OZONE_SCM_DATANODE_ID);
-      throw new IllegalArgumentException(ScmConfigKeys.OZONE_SCM_DATANODE_ID +
+      LOG.error("A valid path is needed for config setting {}",
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR);
+      throw new IllegalArgumentException(
+          ScmConfigKeys.OZONE_SCM_DATANODE_ID_DIR +
           " must be defined. See" +
           " https://wiki.apache.org/hadoop/Ozone#Configuration" +
           " for details on configuring Ozone.");
