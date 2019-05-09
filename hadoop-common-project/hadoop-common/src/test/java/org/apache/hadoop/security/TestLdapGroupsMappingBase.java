@@ -22,7 +22,6 @@ import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_CTX_FACTORY_CLAS
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_CTX_FACTORY_CLASS_KEY;
 import static org.apache.hadoop.security.LdapGroupsMapping.LDAP_URL_KEY;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +35,7 @@ import javax.naming.directory.BasicAttributes;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.SearchControls;
 import javax.naming.directory.SearchResult;
+import javax.naming.ldap.InitialLdapContext;
 import javax.naming.spi.InitialContextFactory;
 
 import org.apache.hadoop.conf.Configuration;
@@ -235,13 +235,10 @@ public class TestLdapGroupsMappingBase {
         assertEquals(expectedBindPassword, actualBindPassword);
       }
       if (contextToReturn == null) {
-        InitialContextFactory defaultFactory = null;
-        try {
-          defaultFactory = LDAP_CTX_FACTORY_CLASS_DEFAULT.newInstance();
-        } catch (ReflectiveOperationException e) {
-          fail("Could not initialize the default factory");
-        }
-        return defaultFactory.getInitialContext(env);
+        Hashtable<Object, Object> newEnv = new Hashtable<>(env);
+        newEnv.put(Context.INITIAL_CONTEXT_FACTORY,
+            LDAP_CTX_FACTORY_CLASS_DEFAULT);
+        contextToReturn = new InitialLdapContext(newEnv, null);
       }
       return contextToReturn;
     }
