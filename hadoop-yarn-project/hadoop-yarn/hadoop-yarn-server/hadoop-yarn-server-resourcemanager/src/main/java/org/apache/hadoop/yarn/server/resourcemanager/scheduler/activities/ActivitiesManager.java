@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.service.AbstractService;
@@ -43,6 +44,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.*;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  * A class to store node or application allocations.
@@ -89,7 +91,8 @@ public class ActivitiesManager extends AbstractService {
     this.rmContext = rmContext;
   }
 
-  public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId) {
+  public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId,
+      Set<String> requestPriorities, Set<String> allocationRequestIds) {
     RMApp app = rmContext.getRMApps().get(applicationId);
     if (app != null && app.getFinalApplicationStatus()
         == FinalApplicationStatus.UNDEFINED) {
@@ -97,7 +100,16 @@ public class ActivitiesManager extends AbstractService {
           completedAppAllocations.get(applicationId);
       List<AppAllocation> allocations = null;
       if (curAllocations != null) {
-        allocations = new ArrayList(curAllocations);
+        if (CollectionUtils.isNotEmpty(requestPriorities) || CollectionUtils
+            .isNotEmpty(allocationRequestIds)) {
+          allocations = curAllocations.stream().map(e -> e
+              .filterAllocationAttempts(requestPriorities,
+                  allocationRequestIds))
+              .filter(e -> !e.getAllocationAttempts().isEmpty())
+              .collect(Collectors.toList());
+        } else {
+          allocations = new ArrayList(curAllocations);
+        }
       }
       return new AppActivitiesInfo(allocations, applicationId);
     } else {

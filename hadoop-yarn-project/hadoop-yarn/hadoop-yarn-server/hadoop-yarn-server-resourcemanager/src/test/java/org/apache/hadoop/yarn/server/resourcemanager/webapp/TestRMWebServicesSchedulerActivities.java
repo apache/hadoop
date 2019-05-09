@@ -953,4 +953,115 @@ public class TestRMWebServicesSchedulerActivities
       rm.stop();
     }
   }
+
+  @Test (timeout=30000)
+  public void testAppFilterByRequestPrioritiesAndAllocationRequestIds()
+      throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(RMWSConsts.SCHEDULER_APP_ACTIVITIES);
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add("appId", app1.getApplicationId().toString());
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display",
+          json.getString("diagnostic"));
+
+      // am1 asks for 1 * 1GB container with requestPriority=-1
+      // and allocationRequestId=1
+      am1.allocate(Arrays.asList(
+          ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
+              .allocationRequestId(1).resourceName("*")
+              .capability(Resources.createResource(1 * 1024)).numContainers(1)
+              .build()), null);
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // am1 asks for 1 * 1GB container with requestPriority=-1
+      // and allocationRequestId=2
+      am1.allocate(Arrays.asList(
+          ResourceRequest.newBuilder().priority(Priority.UNDEFINED)
+              .allocationRequestId(2).resourceName("*")
+              .capability(Resources.createResource(1 * 1024)).numContainers(1)
+              .build()), null);
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // am1 asks for 1 * 1GB container with requestPriority=0
+      // and allocationRequestId=1
+      am1.allocate(Arrays.asList(
+          ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+              .allocationRequestId(1).resourceName("*")
+              .capability(Resources.createResource(1 * 1024)).numContainers(1)
+              .build()), null);
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // am1 asks for 1 * 1GB container with requestPriority=0
+      // and allocationRequestId=3
+      am1.allocate(Arrays.asList(
+          ResourceRequest.newBuilder().priority(Priority.newInstance(0))
+              .allocationRequestId(3).resourceName("*")
+              .capability(Resources.createResource(1 * 1024)).numContainers(1)
+              .build()), null);
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // query app activities with requestPriorities={0,1}
+      MultivaluedMapImpl filterParams1 = new MultivaluedMapImpl(params);
+      filterParams1.add(RMWSConsts.REQUEST_PRIORITIES, "-1");
+      filterParams1.add(RMWSConsts.REQUEST_PRIORITIES, "0");
+      json = ActivitiesTestUtils.requestWebResource(r, filterParams1);
+      verifyNumberOfAllocations(json, 4);
+
+      // query app activities with requestPriorities=0
+      MultivaluedMapImpl filterParams2 = new MultivaluedMapImpl(params);
+      filterParams2.add(RMWSConsts.REQUEST_PRIORITIES, "-1");
+      json = ActivitiesTestUtils.requestWebResource(r, filterParams2);
+      verifyNumberOfAllocations(json, 2);
+      JSONArray allocations = json.getJSONArray("allocations");
+      for (int i=0; i<allocations.length(); i++) {
+        assertEquals("-1",
+            allocations.getJSONObject(i).getJSONObject("requestAllocation")
+                .optString("requestPriority"));
+      }
+
+      // query app activities with allocationRequestId=1
+      MultivaluedMapImpl filterParams3 = new MultivaluedMapImpl(params);
+      filterParams3.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "1");
+      json = ActivitiesTestUtils.requestWebResource(r, filterParams3);
+      verifyNumberOfAllocations(json, 2);
+      allocations = json.getJSONArray("allocations");
+      for (int i = 0; i < allocations.length(); i++) {
+        assertEquals("1",
+            allocations.getJSONObject(i).getJSONObject("requestAllocation")
+                .optString("allocationRequestId"));
+      }
+
+      // query app activities with requestPriorities=0 and allocationRequestId=1
+      MultivaluedMapImpl filterParams4 = new MultivaluedMapImpl(params);
+      filterParams4.add(RMWSConsts.REQUEST_PRIORITIES, "0");
+      filterParams4.add(RMWSConsts.ALLOCATION_REQUEST_IDS, "1");
+      json = ActivitiesTestUtils.requestWebResource(r, filterParams4);
+      verifyNumberOfAllocations(json, 1);
+      JSONObject allocation = json.getJSONObject("allocations");
+      assertEquals("0", allocation.getJSONObject("requestAllocation")
+          .optString("requestPriority"));
+      assertEquals("1", allocation.getJSONObject("requestAllocation")
+          .optString("allocationRequestId"));
+    } finally {
+      rm.stop();
+    }
+  }
 }

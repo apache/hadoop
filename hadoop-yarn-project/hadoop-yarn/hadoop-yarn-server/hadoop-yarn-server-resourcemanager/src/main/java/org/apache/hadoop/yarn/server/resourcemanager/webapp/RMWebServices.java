@@ -706,7 +706,10 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   @Override
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
       @QueryParam(RMWSConsts.APP_ID) String appId,
-      @QueryParam(RMWSConsts.MAX_TIME) String time) {
+      @QueryParam(RMWSConsts.MAX_TIME) String time,
+      @QueryParam(RMWSConsts.REQUEST_PRIORITIES) Set<String> requestPriorities,
+      @QueryParam(RMWSConsts.ALLOCATION_REQUEST_IDS)
+          Set<String> allocationRequestIds) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -741,7 +744,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         applicationId = ApplicationId.fromString(appId);
         activitiesManager.turnOnAppActivitiesRecording(applicationId, maxTime);
         AppActivitiesInfo appActivitiesInfo =
-            activitiesManager.getAppActivitiesInfo(applicationId);
+            activitiesManager.getAppActivitiesInfo(applicationId,
+                requestPriorities, allocationRequestIds);
 
         return appActivitiesInfo;
       } catch (Exception e) {
