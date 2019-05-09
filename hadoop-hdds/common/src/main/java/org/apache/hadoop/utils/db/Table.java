@@ -62,8 +62,6 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
    * Returns the value mapped to the given key in byte array or returns null
    * if the key is not found.
    *
-   * First it will check from cache, if it has entry return the value
-   * otherwise, get from the RocksDB table.
    *
    * @param key metadata key
    * @return value in byte array or null if the key is not found.

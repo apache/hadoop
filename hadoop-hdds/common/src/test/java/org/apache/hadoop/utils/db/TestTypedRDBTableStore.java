@@ -309,6 +309,19 @@ public class TestTypedRDBTableStore {
       GenericTestUtils.waitFor(() ->
           ((TypedTable<String, String>) testTable).getCache().size() == 4,
           100, 5000);
+
+
+      //Check remaining values
+      for (int x = 6; x < iterCount; x++) {
+        if (x % 2 == 0) {
+          Assert.assertEquals(Integer.toString(x),
+              testTable.get(Integer.toString(x)));
+        } else {
+          Assert.assertNull(testTable.get(Integer.toString(x)));
+        }
+      }
+
+
     }
   }
 }

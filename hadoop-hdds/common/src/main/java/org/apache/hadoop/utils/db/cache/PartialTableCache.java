@@ -84,11 +84,9 @@ public class PartialTableCache<CACHEKEY, CACHEVALUE>
       if (cacheValue.getEpoch() <= epoch) {
         cache.remove(cachekey);
         iterator.remove();
-      }
-
-      // If currentEntry epoch is greater than epoch, we have deleted all
-      // entries less than specified epoch. So, we can break.
-      if (currentEntry.getEpoch() > epoch) {
+      } else {
+        // If currentEntry epoch is greater than epoch, we have deleted all
+        // entries less than specified epoch. So, we can break.
         break;
       }
     }

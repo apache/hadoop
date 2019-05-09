@@ -94,6 +94,17 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     return rawTable.isEmpty();
   }
 
+  /**
+   * Returns the value mapped to the given key in byte array or returns null
+   * if the key is not found.
+   *
+   * First it will check from cache, if it has entry return the value
+   * otherwise, get from the RocksDB table.
+   *
+   * @param key metadata key
+   * @return VALUE
+   * @throws IOException
+   */
   @Override
   public VALUE get(KEY key) throws IOException {
     // Here the metadata lock will guarantee that cache is not updated for same
