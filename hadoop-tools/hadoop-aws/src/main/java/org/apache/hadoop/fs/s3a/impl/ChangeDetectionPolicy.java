@@ -269,6 +269,7 @@ public abstract class ChangeDetectionPolicy {
       long position,
       String operation,
       long timesAlreadyDetected) {
+    String positionText = position >= 0 ? (" at " + position) : "";
     switch (mode) {
     case None:
       // something changed; we don't care.
@@ -278,8 +279,8 @@ public abstract class ChangeDetectionPolicy {
         // only warn on the first detection to avoid a noisy log
         LOG.warn(
             String.format(
-                "%s change detected on %s %s at %d. Expected %s got %s",
-                getSource(), operation, uri, position, revisionId,
+                "%s change detected on %s %s%s. Expected %s got %s",
+                getSource(), operation, uri, positionText, revisionId,
                 newRevisionId));
         return new ImmutablePair<>(true, null);
       }
@@ -293,9 +294,9 @@ public abstract class ChangeDetectionPolicy {
               operation,
               String.format("%s "
                       + CHANGE_DETECTED
-                      + " while reading at position %s."
+                      + " on %s%s."
                     + " Expected %s got %s",
-              getSource(), position, revisionId, newRevisionId)));
+              getSource(), operation, positionText, revisionId, newRevisionId)));
     }
   }
 

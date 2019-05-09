@@ -166,9 +166,10 @@ public class ChangeTracker {
         versionMismatches.incrementAndGet();
         throw new RemoteFileChangedException(uri, operation,
             String.format(CHANGE_REPORTED_BY_S3
-                    + " while reading"
+                    + " during %s"
                     + " at position %s."
                     + " %s %s was unavailable",
+                operation,
                 pos,
                 getSource(),
                 getRevisionId()));
@@ -177,7 +178,7 @@ public class ChangeTracker {
       }
     }
 
-    processMetadata(object.getObjectMetadata(), operation, pos);
+    processMetadata(object.getObjectMetadata(), operation);
   }
 
   /**
@@ -235,17 +236,23 @@ public class ChangeTracker {
    * policy.
    * @param metadata metadata returned from server
    * @param operation operation in progress
-   * @param pos offset of read
    * @throws PathIOException raised on failure
    * @throws RemoteFileChangedException if the remote file has changed.
    */
   public void processMetadata(final ObjectMetadata metadata,
-      final String operation,
-      final long pos) throws PathIOException {
+      final String operation) throws PathIOException {
     final String newRevisionId = policy.getRevisionId(metadata, uri);
-    processNewRevision(newRevisionId, operation, pos);
+    processNewRevision(newRevisionId, operation, -1);
   }
 
+  /**
+   * Validate a revision from the server against our expectations.
+   * @param newRevisionId new revision.
+   * @param operation operation in progress
+   * @param pos offset in the file; -1 for "none"
+   * @throws PathIOException raised on failure
+   * @throws RemoteFileChangedException if the remote file has changed.
+   */
   private void processNewRevision(final String newRevisionId,
       final String operation, final long pos) throws PathIOException {
     if (newRevisionId == null && policy.isRequireVersion()) {

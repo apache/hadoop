@@ -49,6 +49,7 @@ import javax.annotation.Nullable;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.AbortMultipartUploadRequest;
 import com.amazonaws.services.s3.model.CannedAccessControlList;
@@ -90,6 +91,7 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -709,8 +711,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Get the change detection policy for this FS instance.  Only public to allow
-   * access in tests in other packages.
+   * Get the change detection policy for this FS instance.
+   * Only public to allow access in tests in other packages.
    * @return the change detection policy
    */
   @VisibleForTesting
@@ -2948,11 +2950,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param srcAttributes S3 attributes of the source object
    * @param readContext the read context
    * @return the result of the copy
-   * @throws AmazonClientException on failures inside the AWS SDK
    * @throws InterruptedIOException the operation was interrupted
    * @throws IOException Other IO problems
    */
-  @Retries.RetryMixed
+  @Retries.RetryTranslated
   private CopyResult copyFile(String srcKey, String dstKey, long size,
       S3ObjectAttributes srcAttributes, S3AReadOpContext readContext)
       throws IOException, InterruptedIOException  {
@@ -2978,13 +2979,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Invoker readInvoker = readContext.getReadInvoker();
     return readInvoker.retry(
         "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey", null,
-        false,
+        true,
         () -> {
           ObjectMetadata srcom = getObjectMetadata(srcKey);
           ObjectMetadata dstom = cloneObjectMetadata(srcom);
           setOptionalObjectMetadata(dstom);
 
-          changeTracker.processMetadata(srcom, "copy", 0);
+          changeTracker.processMetadata(srcom, "copy");
 
           CopyObjectRequest copyObjectRequest =
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
@@ -2995,66 +2996,27 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           copyObjectRequest.setNewObjectMetadata(dstom);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
-          try {
-            CopyOutcome copyOutcome = copyOutcome(copy);
-            InterruptedException interruptedException =
-                copyOutcome.getInterruptedException();
-            if (interruptedException != null) {
-              throw interruptedException;
-            }
-            RuntimeException runtimeException =
-                copyOutcome.getRuntimeException();
-            if (runtimeException != null) {
-              changeTracker.processException(runtimeException, "copy");
-              throw runtimeException;
-            }
-            CopyResult result = copyOutcome.getCopyResult();
-            changeTracker.processResponse(result);
-            incrementWriteOperations();
-            instrumentation.filesCopied(1, size);
-            return result;
-          } catch (InterruptedException e) {
-            throw new InterruptedIOException("Interrupted copying " + srcKey
-                + " to " + dstKey + ", cancelling");
+          CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);
+          InterruptedException interruptedException =
+              copyOutcome.getInterruptedException();
+          if (interruptedException != null) {
+            // copy interrupted: convert to an IOException.
+            throw (IOException)new InterruptedIOException(
+                "Interrupted copying " + srcKey
+                    + " to " + dstKey + ", cancelling")
+                .initCause(interruptedException);
           }
+          SdkBaseException awsException = copyOutcome.getAwsException();
+          if (awsException != null) {
+            changeTracker.processException(awsException, "copy");
+            throw awsException;
+          }
+          CopyResult result = copyOutcome.getCopyResult();
+          changeTracker.processResponse(result);
+          incrementWriteOperations();
+          instrumentation.filesCopied(1, size);
+          return result;
         });
-  }
-
-  private static CopyOutcome copyOutcome(Copy copy) {
-    try {
-      CopyResult result = copy.waitForCopyResult();
-      return new CopyOutcome(result, null, null);
-    } catch (RuntimeException e) {
-      return new CopyOutcome(null, null, e);
-    } catch (InterruptedException e) {
-      return new CopyOutcome(null, e, null);
-    }
-  }
-
-  private static final class CopyOutcome {
-    private final CopyResult copyResult;
-    private final InterruptedException interruptedException;
-    private final RuntimeException runtimeException;
-
-    private CopyOutcome(CopyResult copyResult,
-        InterruptedException interruptedException,
-        RuntimeException runtimeException) {
-      this.copyResult = copyResult;
-      this.interruptedException = interruptedException;
-      this.runtimeException = runtimeException;
-    }
-
-    public CopyResult getCopyResult() {
-      return copyResult;
-    }
-
-    public InterruptedException getInterruptedException() {
-      return interruptedException;
-    }
-
-    public RuntimeException getRuntimeException() {
-      return runtimeException;
-    }
   }
 
   /**
@@ -3903,7 +3865,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
                         .getVersionMismatchCounter(),
                     objectAttributes);
             ObjectMetadata objectMetadata = getObjectMetadata(path);
-            changeTracker.processMetadata(objectMetadata, "select", 0);
+            changeTracker.processMetadata(objectMetadata, "select");
           }
         });
 
