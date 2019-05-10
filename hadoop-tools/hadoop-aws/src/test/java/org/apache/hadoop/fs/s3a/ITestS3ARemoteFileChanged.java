@@ -475,10 +475,14 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * copyObject() for a rename.
    * The split of inconsistent responses between getObjectMetadata() and
    * copyObject() is somewhat arbitrary.
+   * @param metadataCallsExpectedBeforeRetryLoop number of getObjectMetadata
+   * calls expected before the retry loop
    * @return the inconsistencies for (metadata, copy)
    */
-  private Pair<Integer, Integer> renameInconsistencyCounts() {
-    int maxInconsistenciesBeforeFailure = TEST_MAX_RETRIES + 2;
+  private Pair<Integer, Integer> renameInconsistencyCounts(
+      int metadataCallsExpectedBeforeRetryLoop) {
+    int maxInconsistenciesBeforeFailure = TEST_MAX_RETRIES
+        + metadataCallsExpectedBeforeRetryLoop;
     int copyInconsistencyCount = versionCheckingIsOnServer() ? 2 : 0;
 
     int metadataInconsistencyCount =
@@ -500,7 +504,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     // copyObject().
     // The split of inconsistent responses between getObjectMetadata() and
     // copyObject() is arbitrary.
-    Pair<Integer, Integer> counts = renameInconsistencyCounts();
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(1);
     int metadataInconsistencyCount = counts.getLeft();
     int copyInconsistencyCount = counts.getRight();
     final Path testpath1 =
@@ -529,7 +533,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3ClientForTesting("mocking"));
     fs.setAmazonS3Client(s3ClientSpy);
 
-    Pair<Integer, Integer> counts = renameInconsistencyCounts();
+    skipIfVersionPolicyAndNoVersionId();
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(1);
     int metadataInconsistencyCount = counts.getLeft();
     int copyInconsistencyCount = counts.getRight();
     final Path testpath2 =
@@ -538,7 +544,6 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             0,
             metadataInconsistencyCount,
             copyInconsistencyCount + 1);
-    skipIfVersionPolicyAndNoVersionId(testpath2);
     final Path dest2 = path("dest2.dat");
     if (expectedExceptionInteractions.contains(
         InteractionType.EVENTUALLY_CONSISTENT_COPY)) {
@@ -573,7 +578,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
         1024, true, true);
 
-    Pair<Integer, Integer> counts = renameInconsistencyCounts();
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(0);
     int metadataInconsistencyCount = counts.getLeft();
     int copyInconsistencyCount = counts.getRight();
 
@@ -639,6 +644,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     final Path testpath2 =
         writeEventuallyConsistentFileVersion("eventually2.dat",
             s3ClientSpy, TEST_MAX_RETRIES + 1, 0, 0);
+
+    skipIfVersionPolicyAndNoVersionId(testpath2);
+
     try (FSDataInputStream instream2 = fs.open(testpath2)) {
       if (expectedExceptionInteractions.contains(
           InteractionType.EVENTUALLY_CONSISTENT_READ)) {
@@ -1012,6 +1020,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   /**
    * The test is invalid if the policy uses versionId but the bucket doesn't
    * have versioning enabled.
+   *
+   * Tests the given file for a versionId to detect whether bucket versioning
+   * is enabled.
    */
   private void skipIfVersionPolicyAndNoVersionId(Path testpath)
       throws IOException {
@@ -1021,6 +1032,19 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       Assume.assumeTrue(
           "Target filesystem does not support versioning",
           fs.getObjectMetadata(fs.pathToKey(testpath)).getVersionId() != null);
+    }
+  }
+
+  /**
+   * Like {@link #skipIfVersionPolicyAndNoVersionId(Path)} but generates a new
+   * file to test versionId against.
+   */
+  private void skipIfVersionPolicyAndNoVersionId() throws IOException {
+    if (fs.getChangeDetectionPolicy().getSource() == Source.VersionId) {
+      Path versionIdFeatureTestFile = path("versionIdTest");
+      writeDataset(fs, versionIdFeatureTestFile, TEST_DATA_BYTES,
+          TEST_DATA_BYTES.length, 1024, true, true);
+      skipIfVersionPolicyAndNoVersionId(versionIdFeatureTestFile);
     }
   }
 

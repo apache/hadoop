@@ -38,7 +38,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.StreamSupport;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
@@ -390,8 +392,18 @@ public class Listing {
         status = statusBatchIterator.next();
         // We remove from provided list the file status listed by S3 so that
         // this does not return duplicate items.
-        if (providedStatus.remove(status)) {
-          LOG.debug("Removed the status from provided file status {}", status);
+
+        // The provided status is returned as it is assumed to have the better
+        // metadata (i.e. the eTag and versionId from S3Guard)
+        Optional<S3AFileStatus> provided =
+            StreamSupport.stream(providedStatus.spliterator(), false)
+                .filter(element -> status.equals(element)).findFirst();
+        if (provided.isPresent()) {
+          providedStatus.remove(status);
+          LOG.debug(
+              "Removed and returned the status from provided file status {}",
+              status);
+          return provided.get();
         }
       } else {
         if (providedStatusIterator.hasNext()) {

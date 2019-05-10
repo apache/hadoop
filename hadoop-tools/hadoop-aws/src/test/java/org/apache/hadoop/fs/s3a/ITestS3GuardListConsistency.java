@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
 import org.junit.Assume;
 import org.junit.Test;
 
@@ -555,6 +557,44 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
         preDeleteUndelimited.getCommonPrefixes(),
         postDeleteUndelimited.getCommonPrefixes()
     );
+  }
+
+  /**
+   * Tests that the file's eTag and versionId are preserved in recursive
+   * listings.
+   */
+  @Test
+  public void testListingReturnsVersionMetadata() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasMetadataStore());
+
+    // write simple file
+    Path file = path("file1");
+    try (FSDataOutputStream outputStream = fs.create(file)) {
+      outputStream.writeChars("hello");
+    }
+
+    // get individual file status
+    FileStatus[] fileStatuses = fs.listStatus(file);
+    assertEquals(1, fileStatuses.length);
+    S3AFileStatus status = (S3AFileStatus) fileStatuses[0];
+    String eTag = status.getETag();
+    String versionId = status.getVersionId();
+
+    // get status through recursive directory listing
+    RemoteIterator<LocatedFileStatus> filesIterator = fs.listFiles(
+        file.getParent(), true);
+    List<LocatedFileStatus> files = Lists.newArrayList();
+    while (filesIterator.hasNext()) {
+      files.add(filesIterator.next());
+    }
+    assertEquals(1, files.size());
+
+    // ensure eTag and versionId are preserved in directory listing
+    S3ALocatedFileStatus locatedFileStatus =
+        (S3ALocatedFileStatus) files.get(0);
+    assertEquals(eTag, locatedFileStatus.getETag());
+    assertEquals(versionId, locatedFileStatus.getVersionId());
   }
 
   /**
