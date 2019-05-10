@@ -119,7 +119,7 @@ public class TestKeyInputStream {
   }
 
   @Test
-  public void testMultiChunkWrite() throws Exception {
+  public void testSeek() throws Exception {
     XceiverClientMetrics metrics = XceiverClientManager
         .getXceiverClientMetrics();
     long writeChunkCount = metrics.getContainerOpCountMetrics(
@@ -147,6 +147,8 @@ public class TestKeyInputStream {
 
     // Seek to position 150
     keyInputStream.seek(150);
+
+    Assert.assertEquals(150, keyInputStream.getPos());
 
     // Seek operation should not result in any readChunk operation.
     Assert.assertEquals(readChunkCount, metrics
