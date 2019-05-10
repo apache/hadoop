@@ -56,9 +56,9 @@ public final class RatisPipelineUtils {
       LoggerFactory.getLogger(RatisPipelineUtils.class);
 
   // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
-  private static final int PARALLELISIM_FOR_POOL = 3;
+  private final int parallelisimForPool = 3;
 
-  private static final ForkJoinPool.ForkJoinWorkerThreadFactory FACTORY =
+  private final ForkJoinPool.ForkJoinWorkerThreadFactory factory =
       (forkJoinPool -> {
         final ForkJoinWorkerThread worker = ForkJoinPool.
             defaultForkJoinWorkerThreadFactory.newThread(forkJoinPool);
@@ -66,12 +66,8 @@ public final class RatisPipelineUtils {
         return worker;
       });
 
-  public static final ForkJoinPool POOL = new ForkJoinPool(
-      PARALLELISIM_FOR_POOL, FACTORY, null, false);
-
-
-  private RatisPipelineUtils() {
-  }
+  public final ForkJoinPool forkJoinPool = new ForkJoinPool(
+      parallelisimForPool, factory, null, false);
 
   /**
    * Sends ratis command to create pipeline on all the datanodes.
@@ -80,7 +76,7 @@ public final class RatisPipelineUtils {
    * @param ozoneConf - Ozone Confinuration
    * @throws IOException if creation fails
    */
-  public static void createPipeline(Pipeline pipeline, Configuration ozoneConf)
+  public void createPipeline(Pipeline pipeline, Configuration ozoneConf)
       throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
@@ -145,7 +141,7 @@ public final class RatisPipelineUtils {
         .groupRemove(RaftGroupId.valueOf(pipelineID.getId()), true, p.getId());
   }
 
-  private static void callRatisRpc(List<DatanodeDetails> datanodes,
+  private void callRatisRpc(List<DatanodeDetails> datanodes,
       Configuration ozoneConf,
       CheckedBiConsumer<RaftClient, RaftPeer, IOException> rpc)
       throws IOException {
@@ -166,7 +162,7 @@ public final class RatisPipelineUtils {
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
     try {
-      POOL.submit(() -> {
+      forkJoinPool.submit(() -> {
         datanodes.parallelStream().forEach(d -> {
           final RaftPeer p = RatisHelper.toRaftPeer(d);
           try (RaftClient client = RatisHelper
@@ -195,5 +191,9 @@ public final class RatisPipelineUtils {
     if (!exceptions.isEmpty()) {
       throw MultipleIOException.createIOException(exceptions);
     }
+  }
+
+  public void shutdown() {
+    forkJoinPool.shutdownNow();
   }
 }

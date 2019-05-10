@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -45,12 +46,21 @@ public class RatisPipelineProvider implements PipelineProvider {
   private final NodeManager nodeManager;
   private final PipelineStateManager stateManager;
   private final Configuration conf;
+  private final RatisPipelineUtils ratisPipelineUtils;
 
   RatisPipelineProvider(NodeManager nodeManager,
-      PipelineStateManager stateManager, Configuration conf) {
+      PipelineStateManager stateManager, Configuration conf,
+      RatisPipelineUtils ratisPipelineUtils) {
     this.nodeManager = nodeManager;
     this.stateManager = stateManager;
     this.conf = conf;
+    this.ratisPipelineUtils = ratisPipelineUtils;
+  }
+
+  @VisibleForTesting
+  RatisPipelineProvider(NodeManager nodeManager,
+      PipelineStateManager stateManager, Configuration conf) {
+    this(nodeManager, stateManager, conf, null);
   }
 
   /**
@@ -134,6 +144,6 @@ public class RatisPipelineProvider implements PipelineProvider {
   }
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {
-    RatisPipelineUtils.createPipeline(pipeline, conf);
+    ratisPipelineUtils.createPipeline(pipeline, conf);
   }
 }

@@ -207,6 +207,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final SafeModeHandler safeModeHandler;
   private SCMContainerMetrics scmContainerMetrics;
 
+  private RatisPipelineUtils ratisPipelineUtils;
+
   /**
    * Creates a new StorageContainerManager. Configuration will be
    * updated with information on the actual listening addresses used
@@ -399,8 +401,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     if (configurator.getPipelineManager() != null) {
       pipelineManager = configurator.getPipelineManager();
     } else {
+      ratisPipelineUtils = new RatisPipelineUtils();
       pipelineManager =
-          new SCMPipelineManager(conf, scmNodeManager, eventQueue);
+          new SCMPipelineManager(conf, scmNodeManager, eventQueue,
+              ratisPipelineUtils);
     }
 
     if (configurator.getContainerManager() != null) {
@@ -1020,7 +1024,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
 
     // shutdown RatisPipelineUtils pool.
-    RatisPipelineUtils.POOL.shutdownNow();
+    ratisPipelineUtils.shutdown();
   }
 
   /**

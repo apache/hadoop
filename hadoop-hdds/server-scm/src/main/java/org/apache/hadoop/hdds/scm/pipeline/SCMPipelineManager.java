@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.pipeline;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -83,11 +84,12 @@ public class SCMPipelineManager implements PipelineManager {
   private ObjectName pmInfoBean;
 
   public SCMPipelineManager(Configuration conf, NodeManager nodeManager,
-      EventPublisher eventPublisher) throws IOException {
+      EventPublisher eventPublisher, RatisPipelineUtils ratisPipelineUtils) throws IOException {
     this.lock = new ReentrantReadWriteLock();
     this.conf = conf;
     this.stateManager = new PipelineStateManager(conf);
-    this.pipelineFactory = new PipelineFactory(nodeManager, stateManager, conf);
+    this.pipelineFactory = new PipelineFactory(nodeManager, stateManager,
+        conf, ratisPipelineUtils);
     // TODO: See if thread priority needs to be set for these threads
     scheduler = new Scheduler("RatisPipelineUtilsThread", false, 1);
     this.backgroundPipelineCreator =
@@ -109,6 +111,12 @@ public class SCMPipelineManager implements PipelineManager {
     this.pmInfoBean = MBeans.register("SCMPipelineManager",
         "SCMPipelineManagerInfo", this);
     initializePipelineState();
+  }
+
+  @VisibleForTesting
+  public SCMPipelineManager(Configuration conf, NodeManager nodeManager,
+      EventPublisher eventPublisher) throws IOException {
+    this(conf, nodeManager, eventPublisher, null);
   }
 
   public PipelineStateManager getStateManager() {

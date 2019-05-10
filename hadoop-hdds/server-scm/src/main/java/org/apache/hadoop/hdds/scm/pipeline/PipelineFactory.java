@@ -38,12 +38,12 @@ public final class PipelineFactory {
   private Map<ReplicationType, PipelineProvider> providers;
 
   PipelineFactory(NodeManager nodeManager, PipelineStateManager stateManager,
-      Configuration conf) {
+      Configuration conf, RatisPipelineUtils ratisPipelineUtils) {
     providers = new HashMap<>();
     providers.put(ReplicationType.STAND_ALONE,
         new SimplePipelineProvider(nodeManager));
     providers.put(ReplicationType.RATIS,
-        new RatisPipelineProvider(nodeManager, stateManager, conf));
+        new RatisPipelineProvider(nodeManager, stateManager, conf, ratisPipelineUtils));
   }
 
   @VisibleForTesting

@@ -97,12 +97,15 @@ public class TestRatisPipelineUtils {
     }
 
     // try creating another pipeline now
+    RatisPipelineUtils ratisPipelineUtils = new RatisPipelineUtils();
     try {
-      RatisPipelineUtils.createPipeline(pipelines.get(0), conf);
+      ratisPipelineUtils.createPipeline(pipelines.get(0), conf);
       Assert.fail("pipeline creation should fail after shutting down pipeline");
     } catch (IOException ioe) {
       // in case the pipeline creation fails, MultipleIOException is thrown
       Assert.assertTrue(ioe instanceof MultipleIOException);
+    } finally {
+      ratisPipelineUtils.shutdown();
     }
 
     // make sure pipelines is destroyed
