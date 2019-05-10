@@ -68,11 +68,4 @@ public class ITestAzureBlobFileSystemMainOperation extends FSMainOperationsBaseT
     // Permission Checks:
     // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
   }
-
-  @Override
-  @Ignore("Permission check for getFileInfo doesn't match the HdfsPermissionsGuide")
-  public void testGlobStatusThrowsExceptionForUnreadableDir() {
-    // Permission Checks:
-    // https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsPermissionsGuide.html
-  }
 }
