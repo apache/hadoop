@@ -100,7 +100,17 @@ public class OpensslAesCtrCryptoCodec extends AesCtrCryptoCodec {
   public void generateSecureRandom(byte[] bytes) {
     random.nextBytes(bytes);
   }
-  
+
+  @Override
+  public void close() throws IOException {
+    try {
+      Closeable r = (Closeable) this.random;
+      r.close();
+    } catch (ClassCastException e) {
+    }
+    super.close();
+  }
+
   private static class OpensslAesCtrCipher implements Encryptor, Decryptor {
     private final OpensslCipher cipher;
     private final int mode;

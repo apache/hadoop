@@ -254,26 +254,30 @@ public class KeyProviderCryptoExtension extends
       // Generate random bytes for new key and IV
 
       CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
-      final byte[] newKey = new byte[encryptionKey.getMaterial().length];
-      cc.generateSecureRandom(newKey);
-      final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
-      cc.generateSecureRandom(iv);
-      // Encryption key IV is derived from new key's IV
-      final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
-      Encryptor encryptor = cc.createEncryptor();
-      encryptor.init(encryptionKey.getMaterial(), encryptionIV);
-      int keyLen = newKey.length;
-      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
-      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
-      bbIn.put(newKey);
-      bbIn.flip();
-      encryptor.encrypt(bbIn, bbOut);
-      bbOut.flip();
-      byte[] encryptedKey = new byte[keyLen];
-      bbOut.get(encryptedKey);    
-      return new EncryptedKeyVersion(encryptionKeyName,
-          encryptionKey.getVersionName(), iv,
-          new KeyVersion(encryptionKey.getName(), EEK, encryptedKey));
+      try {
+        final byte[] newKey = new byte[encryptionKey.getMaterial().length];
+        cc.generateSecureRandom(newKey);
+        final byte[] iv = new byte[cc.getCipherSuite().getAlgorithmBlockSize()];
+        cc.generateSecureRandom(iv);
+        // Encryption key IV is derived from new key's IV
+        final byte[] encryptionIV = EncryptedKeyVersion.deriveIV(iv);
+        Encryptor encryptor = cc.createEncryptor();
+        encryptor.init(encryptionKey.getMaterial(), encryptionIV);
+        int keyLen = newKey.length;
+        ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+        ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+        bbIn.put(newKey);
+        bbIn.flip();
+        encryptor.encrypt(bbIn, bbOut);
+        bbOut.flip();
+        byte[] encryptedKey = new byte[keyLen];
+        bbOut.get(encryptedKey);
+        return new EncryptedKeyVersion(encryptionKeyName,
+            encryptionKey.getVersionName(), iv,
+            new KeyVersion(encryptionKey.getName(), EEK, encryptedKey));
+      } finally {
+        cc.close();
+      }
     }
 
     @Override
@@ -300,20 +304,24 @@ public class KeyProviderCryptoExtension extends
           EncryptedKeyVersion.deriveIV(encryptedKeyVersion.getEncryptedKeyIv());
 
       CryptoCodec cc = CryptoCodec.getInstance(keyProvider.getConf());
-      Decryptor decryptor = cc.createDecryptor();
-      decryptor.init(encryptionKey.getMaterial(), encryptionIV);
-      final KeyVersion encryptedKV =
-          encryptedKeyVersion.getEncryptedKeyVersion();
-      int keyLen = encryptedKV.getMaterial().length;
-      ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
-      ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
-      bbIn.put(encryptedKV.getMaterial());
-      bbIn.flip();
-      decryptor.decrypt(bbIn, bbOut);
-      bbOut.flip();
-      byte[] decryptedKey = new byte[keyLen];
-      bbOut.get(decryptedKey);
-      return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
+      try {
+        Decryptor decryptor = cc.createDecryptor();
+        decryptor.init(encryptionKey.getMaterial(), encryptionIV);
+        final KeyVersion encryptedKV =
+            encryptedKeyVersion.getEncryptedKeyVersion();
+        int keyLen = encryptedKV.getMaterial().length;
+        ByteBuffer bbIn = ByteBuffer.allocateDirect(keyLen);
+        ByteBuffer bbOut = ByteBuffer.allocateDirect(keyLen);
+        bbIn.put(encryptedKV.getMaterial());
+        bbIn.flip();
+        decryptor.decrypt(bbIn, bbOut);
+        bbOut.flip();
+        byte[] decryptedKey = new byte[keyLen];
+        bbOut.get(decryptedKey);
+        return new KeyVersion(encryptionKey.getName(), EK, decryptedKey);
+      } finally {
+        cc.close();
+      }
     }
 
     @Override

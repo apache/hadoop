@@ -222,6 +222,7 @@ public class CryptoOutputStream extends FilterOutputStream implements
     }
     try {
       super.close();
+      codec.close();
       freeBuffers();
     } finally {
       closed = true;

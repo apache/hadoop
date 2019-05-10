@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.crypto;
 
+import java.io.Closeable;
 import java.security.GeneralSecurityException;
 import java.util.List;
 
@@ -42,7 +43,7 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public abstract class CryptoCodec implements Configurable {
+public abstract class CryptoCodec implements Configurable, Closeable {
   public static Logger LOG = LoggerFactory.getLogger(CryptoCodec.class);
   
   /**

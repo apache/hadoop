@@ -66,16 +66,24 @@ public class CryptoUtils {
     if (isEncryptedSpillEnabled(conf)) {
       byte[] iv = new byte[cryptoCodec.getCipherSuite().getAlgorithmBlockSize()];
       cryptoCodec.generateSecureRandom(iv);
+      cryptoCodec.close();
       return iv;
     } else {
       return null;
     }
   }
 
-  public static int cryptoPadding(Configuration conf) {
+  public static int cryptoPadding(Configuration conf) throws IOException {
     // Sizeof(IV) + long(start-offset)
-    return isEncryptedSpillEnabled(conf) ? CryptoCodec.getInstance(conf)
-        .getCipherSuite().getAlgorithmBlockSize() + 8 : 0;
+    if (!isEncryptedSpillEnabled(conf)) {
+      return 0;
+    }
+    final CryptoCodec cryptoCodec = CryptoCodec.getInstance(conf);
+    try {
+      return cryptoCodec.getCipherSuite().getAlgorithmBlockSize() + 8;
+    } finally {
+      cryptoCodec.close();
+    }
   }
 
   private static byte[] getEncryptionKey() throws IOException {
