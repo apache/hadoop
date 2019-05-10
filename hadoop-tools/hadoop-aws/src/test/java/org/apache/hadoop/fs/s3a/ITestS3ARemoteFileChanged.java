@@ -471,22 +471,19 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
-   * Total inconsistent response count across getObjectMetadata() and
+   * Inconsistent response counts for getObjectMetadata() and
    * copyObject() for a rename.
-   * The split of inconsistent responses between getObjectMetadata() and
-   * copyObject() is somewhat arbitrary.
    * @param metadataCallsExpectedBeforeRetryLoop number of getObjectMetadata
-   * calls expected before the retry loop
+   * calls expected before the consistency checking retry loop
    * @return the inconsistencies for (metadata, copy)
    */
   private Pair<Integer, Integer> renameInconsistencyCounts(
       int metadataCallsExpectedBeforeRetryLoop) {
-    int maxInconsistenciesBeforeFailure = TEST_MAX_RETRIES
+    int metadataInconsistencyCount = TEST_MAX_RETRIES
         + metadataCallsExpectedBeforeRetryLoop;
-    int copyInconsistencyCount = versionCheckingIsOnServer() ? 2 : 0;
+    int copyInconsistencyCount =
+        versionCheckingIsOnServer() ? TEST_MAX_RETRIES : 0;
 
-    int metadataInconsistencyCount =
-        maxInconsistenciesBeforeFailure - copyInconsistencyCount;
     return Pair.of(metadataInconsistencyCount, copyInconsistencyCount);
   }
 

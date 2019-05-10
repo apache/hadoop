@@ -1360,10 +1360,28 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   public ObjectMetadata getObjectMetadata(Path path) throws IOException {
+    return getObjectMetadata(path, null, invoker, null);
+  }
+
+  /**
+   * Low-level call to get at the object metadata.
+   * @param path path to the object
+   * @param changeTracker the change tracker to detect version inconsistencies
+   * @param invoker the invoker providing the retry policy
+   * @param operation the operation being performed (e.g. "read" or "copy")
+   * @return metadata
+   * @throws IOException IO and object access problems.
+   */
+  @VisibleForTesting
+  @Retries.RetryTranslated
+  public ObjectMetadata getObjectMetadata(Path path,
+      ChangeTracker changeTracker, Invoker invoker, String operation)
+      throws IOException {
     return once("getObjectMetadata", path.toString(),
         () ->
-          // this always does a full HEAD to the object
-          getObjectMetadata(pathToKey(path)));
+            // this always does a full HEAD to the object
+            getObjectMetadata(
+                pathToKey(path), changeTracker, invoker, operation));
   }
 
   /**
@@ -1534,6 +1552,26 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryRaw
   protected ObjectMetadata getObjectMetadata(String key) throws IOException {
+    return getObjectMetadata(key, null, invoker,null);
+  }
+
+  /**
+   * Request object metadata; increments counters in the process.
+   * Retry policy: retry untranslated.
+   * Uses changeTracker to detect an unexpected file version (eTag or versionId)
+   * @param key key
+   * @param changeTracker the change tracker to detect unexpected object version
+   * @param invoker the invoker providing the retry policy
+   * @param operation the operation (e.g. "read" or "copy") triggering this call
+   * @return the metadata
+   * @throws IOException if the retry invocation raises one (it shouldn't).
+   * @throws RemoteFileChangedException if an unexpected version is detected
+   */
+  @Retries.RetryRaw
+  protected ObjectMetadata getObjectMetadata(String key,
+      ChangeTracker changeTracker,
+      Invoker invoker,
+      String operation) throws IOException {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
@@ -1541,7 +1579,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ObjectMetadata meta = invoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
-          return s3.getObjectMetadata(request);
+          ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
+          if (changeTracker != null) {
+            changeTracker.processMetadata(objectMetadata, operation);
+          }
+          return objectMetadata;
         });
     incrementReadOperations();
     return meta;
@@ -2976,17 +3018,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .getVersionMismatchCounter(),
         srcAttributes);
 
+    String action = "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey";
     Invoker readInvoker = readContext.getReadInvoker();
+
+    ObjectMetadata srcom =
+        once(action, null,
+            () ->
+                getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
+    ObjectMetadata dstom = cloneObjectMetadata(srcom);
+    setOptionalObjectMetadata(dstom);
+
     return readInvoker.retry(
-        "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey", null,
+        action, null,
         true,
         () -> {
-          ObjectMetadata srcom = getObjectMetadata(srcKey);
-          ObjectMetadata dstom = cloneObjectMetadata(srcom);
-          setOptionalObjectMetadata(dstom);
-
-          changeTracker.processMetadata(srcom, "copy");
-
           CopyObjectRequest copyObjectRequest =
               new CopyObjectRequest(bucket, srcKey, bucket, dstKey);
           changeTracker.maybeApplyConstraint(copyObjectRequest);
@@ -3850,24 +3895,21 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     S3AReadOpContext readContext = createReadContext(fileStatus, inputPolicy,
         changeDetectionPolicy, ra);
 
-    Invoker readInvoker = readContext.getReadInvoker();
-    readInvoker.retry("select",
-        path.toString(), true,
-        () -> {
-          if (!fileStatus.isDirectory()) {
-            // check that the object metadata lines up with what is expected
-            // based on the object attributes (which may contain an eTag or
-            // versionId) from S3Guard
-            ChangeTracker changeTracker =
-                new ChangeTracker(uri.toString(),
-                    changeDetectionPolicy,
-                    readContext.instrumentation.newInputStreamStatistics()
-                        .getVersionMismatchCounter(),
-                    objectAttributes);
-            ObjectMetadata objectMetadata = getObjectMetadata(path);
-            changeTracker.processMetadata(objectMetadata, "select");
-          }
-        });
+    if (!fileStatus.isDirectory()) {
+      // check that the object metadata lines up with what is expected
+      // based on the object attributes (which may contain an eTag or
+      // versionId) from S3Guard
+      ChangeTracker changeTracker =
+          new ChangeTracker(uri.toString(),
+              changeDetectionPolicy,
+              readContext.instrumentation.newInputStreamStatistics()
+                  .getVersionMismatchCounter(),
+              objectAttributes);
+
+      // will retry internally if wrong version detected
+      Invoker readInvoker = readContext.getReadInvoker();
+      getObjectMetadata(path, changeTracker, readInvoker, "select");
+    }
 
     // build and execute the request
     return selectBinding.select(
