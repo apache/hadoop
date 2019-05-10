@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.submarine.client.cli.param.Localization;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
 import org.slf4j.Logger;

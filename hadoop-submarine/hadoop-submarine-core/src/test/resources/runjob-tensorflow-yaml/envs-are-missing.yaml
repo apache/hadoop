@@ -17,25 +17,23 @@
 spec:
   name: testJobName
   job_type: testJobType
+  framework: tensorflow
 
 configs:
   input_path: testInputPath
   checkpoint_path: testCheckpointPath
   saved_model_path: testSavedModelPath
   docker_image: testDockerImage
-  quicklinks:
-  - Notebook_UI=https://master-0:7070
-  - Notebook_UI2=https://master-0:7071
-  wait_job_finish: false
-  envs:
-    env1: 'env1Value'
-    env2: 'env2Value'
+  wait_job_finish: true
   localizations:
   - hdfs://remote-file1:/local-filename1:rw
   - nfs://remote-file2:/local-filename2:rw
   mounts:
   - /etc/passwd:/etc/passwd:rw
   - /etc/hosts:/etc/hosts:rw
+  quicklinks:
+  - Notebook_UI=https://master-0:7070
+  - Notebook_UI2=https://master-0:7071
 
 scheduling:
   queue: queue1
@@ -45,12 +43,18 @@ roles:
     resources: memory=20480M,vcores=32,gpu=2
     replicas: 3
     launch_cmd: testLaunchCmdWorker
+    docker_image: testDockerImageWorker
   ps:
     resources: memory=20500M,vcores=34,gpu=4
     replicas: 4
     launch_cmd: testLaunchCmdPs
+    docker_image: testDockerImagePs
 
 security:
   keytab: keytabPath
   principal: testPrincipal
-  distribute_keytab: false
+  distribute_keytab: true
+
+tensorBoard:
+  resources: memory=21000M,vcores=37,gpu=3
+  docker_image: tensorboardDockerImage

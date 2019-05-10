@@ -16,21 +16,21 @@ package org.apache.hadoop.yarn.submarine.runtimes.common;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
 
 import java.io.IOException;
 
 /**
- * Submit job to cluster master
+ * Submit job to cluster master.
  */
 public interface JobSubmitter {
   /**
-   * Submit job to cluster
+   * Submit a job to cluster.
    * @param parameters run job parameters
-   * @return applicatioId when successfully submitted
+   * @return applicationId when successfully submitted
    * @throws YarnException for issues while contacting YARN daemons
    * @throws IOException for other issues.
    */
-  ApplicationId submitJob(RunJobParameters parameters)
+  ApplicationId submitJob(ParametersHolder parameters)
       throws IOException, YarnException;
 }

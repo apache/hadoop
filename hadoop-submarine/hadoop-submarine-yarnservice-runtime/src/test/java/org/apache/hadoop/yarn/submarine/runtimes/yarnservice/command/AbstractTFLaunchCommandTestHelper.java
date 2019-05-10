@@ -18,9 +18,9 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command.TensorBoardLaunchCommand;
@@ -47,8 +47,8 @@ import static org.junit.Assert.fail;
  * This class is an abstract base class for testing Tensorboard and TensorFlow
  * launch commands.
  */
-public abstract class AbstractLaunchCommandTestHelper {
-  private TaskType taskType;
+public abstract class AbstractTFLaunchCommandTestHelper {
+  private TensorFlowRole taskType;
   private boolean useTaskTypeOverride;
 
   @Rule
@@ -60,13 +60,13 @@ public abstract class AbstractLaunchCommandTestHelper {
     assertScriptContainsLine(fileContents, expected);
   }
 
-  public static void assertScriptContainsExportedEnvVarWithValue(
+  protected static void assertScriptContainsExportedEnvVarWithValue(
       List<String> fileContents, String varName, String value) {
     String expected = String.format("export %s=%s", varName, value);
     assertScriptContainsLine(fileContents, expected);
   }
 
-  public static void assertScriptContainsLine(List<String> fileContents,
+  protected static void assertScriptContainsLine(List<String> fileContents,
       String expected) {
     String message = String.format(
         "File does not contain expected line '%s'!" + " File contents: %s",
@@ -74,7 +74,7 @@ public abstract class AbstractLaunchCommandTestHelper {
     assertTrue(message, fileContents.contains(expected));
   }
 
-  public static void assertScriptContainsLineWithRegex(
+  protected static void assertScriptContainsLineWithRegex(
       List<String> fileContents,
       String regex) {
     String message = String.format(
@@ -89,8 +89,8 @@ public abstract class AbstractLaunchCommandTestHelper {
     fail(message);
   }
 
-  public static void assertScriptDoesNotContainLine(List<String> fileContents,
-      String expected) {
+  protected static void assertScriptDoesNotContainLine(
+      List<String> fileContents, String expected) {
     String message = String.format(
         "File contains unexpected line '%s'!" + " File contents: %s",
         expected, Arrays.toString(fileContents.toArray()));
@@ -98,8 +98,9 @@ public abstract class AbstractLaunchCommandTestHelper {
   }
 
 
-  private AbstractLaunchCommand createLaunchCommandByTaskType(TaskType taskType,
-      RunJobParameters params) throws IOException {
+  private AbstractLaunchCommand createLaunchCommandByTaskType(
+      TensorFlowRole taskType, TensorFlowRunJobParameters params)
+      throws IOException {
     MockClientContext mockClientContext = new MockClientContext();
     FileSystemOperations fsOperations =
         new FileSystemOperations(mockClientContext);
@@ -113,38 +114,38 @@ public abstract class AbstractLaunchCommandTestHelper {
   }
 
   private AbstractLaunchCommand createLaunchCommandByTaskTypeInternal(
-      TaskType taskType, RunJobParameters params,
+      TensorFlowRole taskType, TensorFlowRunJobParameters params,
       HadoopEnvironmentSetup hadoopEnvSetup, Component component,
       Configuration yarnConfig)
       throws IOException {
-    if (taskType == TaskType.TENSORBOARD) {
+    if (taskType == TensorFlowRole.TENSORBOARD) {
       return new TensorBoardLaunchCommand(
           hadoopEnvSetup, getTaskType(taskType), component, params);
-    } else if (taskType == TaskType.WORKER
-        || taskType == TaskType.PRIMARY_WORKER) {
+    } else if (taskType == TensorFlowRole.WORKER
+        || taskType == TensorFlowRole.PRIMARY_WORKER) {
       return new TensorFlowWorkerLaunchCommand(
           hadoopEnvSetup, getTaskType(taskType), component, params, yarnConfig);
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       return new TensorFlowPsLaunchCommand(
           hadoopEnvSetup, getTaskType(taskType), component, params, yarnConfig);
     }
-    throw new IllegalStateException("Unknown taskType!");
+    throw new IllegalStateException("Unknown role!");
   }
 
-  public void overrideTaskType(TaskType taskType) {
+  protected void overrideTaskType(TensorFlowRole taskType) {
     this.taskType = taskType;
     this.useTaskTypeOverride = true;
   }
 
-  private TaskType getTaskType(TaskType taskType) {
+  private TensorFlowRole getTaskType(TensorFlowRole taskType) {
     if (useTaskTypeOverride) {
       return this.taskType;
     }
     return taskType;
   }
 
-  public void testHdfsRelatedEnvironmentIsUndefined(TaskType taskType,
-      RunJobParameters params) throws IOException {
+  protected void testHdfsRelatedEnvironmentIsUndefined(TensorFlowRole taskType,
+      TensorFlowRunJobParameters params) throws IOException {
     AbstractLaunchCommand launchCommand =
         createLaunchCommandByTaskType(taskType, params);
 
@@ -154,8 +155,9 @@ public abstract class AbstractLaunchCommandTestHelper {
     launchCommand.generateLaunchScript();
   }
 
-  public List<String> testHdfsRelatedEnvironmentIsDefined(TaskType taskType,
-      RunJobParameters params) throws IOException {
+  protected List<String> testHdfsRelatedEnvironmentIsDefined(
+      TensorFlowRole taskType, TensorFlowRunJobParameters params)
+      throws IOException {
     AbstractLaunchCommand launchCommand =
         createLaunchCommandByTaskType(taskType, params);
 

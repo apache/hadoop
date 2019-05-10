@@ -17,6 +17,7 @@
 spec:
   name: testJobName
   job_type: testJobType
+  framework:
 
 configs:
   input_path: testInputPath
@@ -24,6 +25,9 @@ configs:
   saved_model_path: testSavedModelPath
   docker_image: testDockerImage
   wait_job_finish: true
+  envs:
+    env1: 'env1Value'
+    env2: 'env2Value'
   localizations:
   - hdfs://remote-file1:/local-filename1:rw
   - nfs://remote-file2:/local-filename2:rw

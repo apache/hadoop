@@ -19,13 +19,14 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.compone
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.AbstractComponent;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.YarnServiceUtils;
-import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,35 +55,38 @@ public class TensorBoardComponent extends AbstractComponent {
   public TensorBoardComponent(FileSystemOperations fsOperations,
       RemoteDirectoryManager remoteDirectoryManager,
       RunJobParameters parameters,
-      LaunchCommandFactory launchCommandFactory,
+      TensorFlowLaunchCommandFactory launchCommandFactory,
       Configuration yarnConfig) {
     super(fsOperations, remoteDirectoryManager, parameters,
-        TaskType.TENSORBOARD, yarnConfig, launchCommandFactory);
+        TensorFlowRole.TENSORBOARD, yarnConfig, launchCommandFactory);
   }
 
   @Override
   public Component createComponent() throws IOException {
-    Objects.requireNonNull(parameters.getTensorboardResource(),
+    TensorFlowRunJobParameters tensorFlowParams =
+        (TensorFlowRunJobParameters) this.parameters;
+
+    Objects.requireNonNull(tensorFlowParams.getTensorboardResource(),
         "TensorBoard resource must not be null!");
 
     Component component = new Component();
-    component.setName(taskType.getComponentName());
+    component.setName(role.getComponentName());
     component.setNumberOfContainers(1L);
     component.setRestartPolicy(RestartPolicyEnum.NEVER);
     component.setResource(convertYarnResourceToServiceResource(
-        parameters.getTensorboardResource()));
+        tensorFlowParams.getTensorboardResource()));
 
-    if (parameters.getTensorboardDockerImage() != null) {
+    if (tensorFlowParams.getTensorboardDockerImage() != null) {
       component.setArtifact(
-          getDockerArtifact(parameters.getTensorboardDockerImage()));
+          getDockerArtifact(tensorFlowParams.getTensorboardDockerImage()));
     }
 
-    addCommonEnvironments(component, taskType);
+    addCommonEnvironments(component, role);
     generateLaunchCommand(component);
 
     tensorboardLink = "http://" + YarnServiceUtils.getDNSName(
         parameters.getName(),
-        taskType.getComponentName() + "-" + 0, getUserName(),
+        role.getComponentName() + "-" + 0, getUserName(),
         getDNSDomain(yarnConfig), DEFAULT_PORT);
     LOG.info("Link to tensorboard:" + tensorboardLink);
 

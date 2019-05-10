@@ -20,12 +20,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.service.api.ServiceApiConstants;
 import org.apache.hadoop.yarn.service.api.records.Component;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.Framework;
 import org.apache.hadoop.yarn.submarine.common.Envs;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.common.api.Role;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.AbstractLaunchCommand;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.PyTorchLaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
 
 import java.io.IOException;
 
@@ -42,31 +45,47 @@ import static org.mockito.Mockito.when;
  */
 public class ComponentTestCommons {
   String userName;
-  TaskType taskType;
+  Role role;
   LaunchCommandFactory mockLaunchCommandFactory;
   FileSystemOperations fsOperations;
-  MockClientContext mockClientContext;
+  public MockClientContext mockClientContext;
   Configuration yarnConfig;
-  Resource resource;
+  public Resource resource;
 
-  ComponentTestCommons(TaskType taskType) {
-    this.taskType = taskType;
+  public ComponentTestCommons(Role role) {
+    this.role = role;
   }
 
-  public void setup() throws IOException {
+  public void setupTensorFlow() throws IOException {
+    setupInternal(Framework.TENSORFLOW);
+  }
+
+  public void setupPyTorch() throws IOException {
+    setupInternal(Framework.PYTORCH);
+  }
+
+  private void setupInternal(Framework framework) throws IOException {
     this.userName = System.getProperty("user.name");
     this.resource = Resource.newInstance(4000, 10);
-    setupDependencies();
+    setupDependencies(framework);
   }
 
-  private void setupDependencies() throws IOException {
+  private void setupDependencies(Framework framework) throws IOException {
     fsOperations = mock(FileSystemOperations.class);
     mockClientContext = new MockClientContext();
-    mockLaunchCommandFactory = mock(LaunchCommandFactory.class);
+
+    if (framework == Framework.TENSORFLOW) {
+      mockLaunchCommandFactory = mock(TensorFlowLaunchCommandFactory.class);
+    } else if (framework == Framework.PYTORCH) {
+      mockLaunchCommandFactory = mock(PyTorchLaunchCommandFactory.class);
+    } else {
+      throw new UnsupportedOperationException(
+          "Unsupported framework type specified!");
+    }
 
     AbstractLaunchCommand mockLaunchCommand = mock(AbstractLaunchCommand.class);
     when(mockLaunchCommand.generateLaunchScript()).thenReturn("mockScript");
-    when(mockLaunchCommandFactory.createLaunchCommand(eq(taskType),
+    when(mockLaunchCommandFactory.createLaunchCommand(eq(role),
         any(Component.class))).thenReturn(mockLaunchCommand);
 
     yarnConfig = new Configuration();
@@ -77,7 +96,7 @@ public class ComponentTestCommons {
     assertEquals(2, component.getConfiguration().getEnv().size());
     assertEquals(ServiceApiConstants.COMPONENT_ID,
         component.getConfiguration().getEnv().get(Envs.TASK_INDEX_ENV));
-    assertEquals(taskType.name(),
+    assertEquals(role.getName(),
         component.getConfiguration().getEnv().get(Envs.TASK_TYPE_ENV));
   }
 
