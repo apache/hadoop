@@ -86,6 +86,10 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.BackgroundService;
 import org.apache.hadoop.utils.db.BatchOperation;
 import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.utils.db.CodecRegistry;
+import org.apache.hadoop.utils.db.RDBStore;
+import org.apache.hadoop.utils.db.TableIterator;
+import org.apache.hadoop.utils.db.Table;
 
 import com.google.common.base.Preconditions;
 
@@ -105,8 +109,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
-import org.apache.hadoop.utils.db.Table;
-import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1639,11 +1641,15 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   private String getNextGreaterString(String volumeName, String bucketName,
-      String keyPrefix) {
-    // TODO: Use string codec
+      String keyPrefix) throws IOException {
     // Increment the last character of the string and return the new ozone key.
-    String nextPrefix = keyPrefix.substring(0, keyPrefix.length() - 1) +
-        String.valueOf((char) (keyPrefix.charAt(keyPrefix.length() - 1) + 1));
+    Preconditions.checkArgument(!Strings.isNullOrEmpty(keyPrefix),
+        "Key prefix is null or empty");
+    CodecRegistry codecRegistry =
+        ((RDBStore) metadataManager.getStore()).getCodecRegistry();
+    byte[] keyPrefixInBytes = codecRegistry.asRawData(keyPrefix);
+    keyPrefixInBytes[keyPrefixInBytes.length - 1]++;
+    String nextPrefix = codecRegistry.asObject(keyPrefixInBytes, String.class);
     return metadataManager.getOzoneKey(volumeName, bucketName, nextPrefix);
   }
 

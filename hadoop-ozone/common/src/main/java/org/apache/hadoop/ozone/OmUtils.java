@@ -189,6 +189,7 @@ public final class OmUtils {
     case ListMultiPartUploadParts:
     case GetFileStatus:
     case LookupFile:
+    case ListStatus:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
