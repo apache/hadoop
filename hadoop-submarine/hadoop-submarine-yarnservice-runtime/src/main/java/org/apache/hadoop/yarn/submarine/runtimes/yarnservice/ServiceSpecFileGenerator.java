@@ -38,7 +38,7 @@ public final class ServiceSpecFileGenerator {
         "instantiated!");
   }
 
-  static String generateJson(Service service) throws IOException {
+  public static String generateJson(Service service) throws IOException {
     File serviceSpecFile = File.createTempFile(service.getName(), ".json");
     String buffer = jsonSerDeser.toJson(service);
     Writer w = new OutputStreamWriter(new FileOutputStream(serviceSpecFile),

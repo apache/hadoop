@@ -20,10 +20,16 @@ import org.apache.hadoop.yarn.client.api.AppAdminClient;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.utils.ServiceApiUtil;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.PyTorchRunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.Framework;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.runtimes.common.JobSubmitter;
-import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.PyTorchLaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.pytorch.PyTorchServiceSpec;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.TensorFlowServiceSpec;
 import org.apache.hadoop.yarn.submarine.utils.Localizer;
 import org.slf4j.Logger;
@@ -32,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 import static org.apache.hadoop.yarn.service.exceptions.LauncherExitCodes.EXIT_SUCCESS;
+import static org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder.SUPPORTED_FRAMEWORKS_MESSAGE;
 
 /**
  * Submit a job to cluster.
@@ -51,14 +58,45 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
    * {@inheritDoc}
    */
   @Override
-  public ApplicationId submitJob(RunJobParameters parameters)
+  public ApplicationId submitJob(ParametersHolder paramsHolder)
       throws IOException, YarnException {
+    Framework framework = paramsHolder.getFramework();
+    RunJobParameters parameters =
+        (RunJobParameters) paramsHolder.getParameters();
+
+    if (framework == Framework.TENSORFLOW) {
+      return submitTensorFlowJob((TensorFlowRunJobParameters) parameters);
+    } else if (framework == Framework.PYTORCH) {
+      return submitPyTorchJob((PyTorchRunJobParameters) parameters);
+    } else {
+      throw new UnsupportedOperationException(SUPPORTED_FRAMEWORKS_MESSAGE);
+    }
+  }
+
+  private ApplicationId submitTensorFlowJob(
+      TensorFlowRunJobParameters parameters) throws IOException, YarnException {
     FileSystemOperations fsOperations = new FileSystemOperations(clientContext);
     HadoopEnvironmentSetup hadoopEnvSetup =
         new HadoopEnvironmentSetup(clientContext, fsOperations);
 
     Service serviceSpec = createTensorFlowServiceSpec(parameters,
         fsOperations, hadoopEnvSetup);
+    return submitJobInternal(serviceSpec);
+  }
+
+  private ApplicationId submitPyTorchJob(PyTorchRunJobParameters parameters)
+      throws IOException, YarnException {
+    FileSystemOperations fsOperations = new FileSystemOperations(clientContext);
+    HadoopEnvironmentSetup hadoopEnvSetup =
+        new HadoopEnvironmentSetup(clientContext, fsOperations);
+
+    Service serviceSpec = createPyTorchServiceSpec(parameters,
+        fsOperations, hadoopEnvSetup);
+    return submitJobInternal(serviceSpec);
+  }
+
+  private ApplicationId submitJobInternal(Service serviceSpec)
+      throws IOException, YarnException {
     String serviceSpecFile = ServiceSpecFileGenerator.generateJson(serviceSpec);
 
     AppAdminClient appAdminClient =
@@ -70,7 +108,7 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
           "Fail to launch application with exit code:" + code);
     }
 
-    String appStatus=appAdminClient.getStatusString(serviceSpec.getName());
+    String appStatus = appAdminClient.getStatusString(serviceSpec.getName());
     Service app = ServiceApiUtil.jsonSerDeser.fromJson(appStatus);
 
     // Retry multiple times if applicationId is null
@@ -97,11 +135,12 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
     return appid;
   }
 
-  private Service createTensorFlowServiceSpec(RunJobParameters parameters,
+  private Service createTensorFlowServiceSpec(
+      TensorFlowRunJobParameters parameters,
       FileSystemOperations fsOperations, HadoopEnvironmentSetup hadoopEnvSetup)
       throws IOException {
-    LaunchCommandFactory launchCommandFactory =
-        new LaunchCommandFactory(hadoopEnvSetup, parameters,
+    TensorFlowLaunchCommandFactory launchCommandFactory =
+        new TensorFlowLaunchCommandFactory(hadoopEnvSetup, parameters,
             clientContext.getYarnConfig());
     Localizer localizer = new Localizer(fsOperations,
         clientContext.getRemoteDirectoryManager(), parameters);
@@ -110,6 +149,22 @@ public class YarnServiceJobSubmitter implements JobSubmitter {
         localizer);
 
     serviceWrapper = tensorFlowServiceSpec.create();
+    return serviceWrapper.getService();
+  }
+
+  private Service createPyTorchServiceSpec(PyTorchRunJobParameters parameters,
+      FileSystemOperations fsOperations, HadoopEnvironmentSetup hadoopEnvSetup)
+      throws IOException {
+    PyTorchLaunchCommandFactory launchCommandFactory =
+        new PyTorchLaunchCommandFactory(hadoopEnvSetup, parameters,
+            clientContext.getYarnConfig());
+    Localizer localizer = new Localizer(fsOperations,
+        clientContext.getRemoteDirectoryManager(), parameters);
+    PyTorchServiceSpec pyTorchServiceSpec = new PyTorchServiceSpec(
+        parameters, this.clientContext, fsOperations, launchCommandFactory,
+        localizer);
+
+    serviceWrapper = pyTorchServiceSpec.create();
     return serviceWrapper.getService();
   }
 

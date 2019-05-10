@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.submarine.client.cli.param.yaml;
 public class Spec {
   private String name;
   private String jobType;
+  private String framework;
 
   public String getJobType() {
     return jobType;
@@ -37,5 +38,13 @@ public class Spec {
 
   public void setName(String name) {
     this.name = name;
+  }
+
+  public String getFramework() {
+    return framework;
+  }
+
+  public void setFramework(String framework) {
+    this.framework = framework;
   }
 }

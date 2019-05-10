@@ -59,4 +59,6 @@ public class CliConstants {
   public static final String DISTRIBUTE_KEYTAB = "distribute_keytab";
   public static final String YAML_CONFIG = "f";
   public static final String INSECURE_CLUSTER = "insecure";
+
+  public static final String FRAMEWORK = "framework";
 }

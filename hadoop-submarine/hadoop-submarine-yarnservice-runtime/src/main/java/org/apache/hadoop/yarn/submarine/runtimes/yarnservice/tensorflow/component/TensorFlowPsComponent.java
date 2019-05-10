@@ -18,12 +18,13 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.compone
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.AbstractComponent;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
-import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchCommandFactory;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
 
 import java.io.IOException;
 import java.util.Objects;
@@ -38,34 +39,37 @@ import static org.apache.hadoop.yarn.submarine.utils.SubmarineResourceUtils.conv
 public class TensorFlowPsComponent extends AbstractComponent {
   public TensorFlowPsComponent(FileSystemOperations fsOperations,
       RemoteDirectoryManager remoteDirectoryManager,
-      LaunchCommandFactory launchCommandFactory,
+      TensorFlowLaunchCommandFactory launchCommandFactory,
       RunJobParameters parameters,
       Configuration yarnConfig) {
-    super(fsOperations, remoteDirectoryManager, parameters, TaskType.PS,
-        yarnConfig, launchCommandFactory);
+    super(fsOperations, remoteDirectoryManager, parameters,
+        TensorFlowRole.PS, yarnConfig, launchCommandFactory);
   }
 
   @Override
   public Component createComponent() throws IOException {
-    Objects.requireNonNull(parameters.getPsResource(),
+    TensorFlowRunJobParameters tensorFlowParams =
+        (TensorFlowRunJobParameters) this.parameters;
+
+    Objects.requireNonNull(tensorFlowParams.getPsResource(),
         "PS resource must not be null!");
-    if (parameters.getNumPS() < 1) {
+    if (tensorFlowParams.getNumPS() < 1) {
       throw new IllegalArgumentException("Number of PS should be at least 1!");
     }
 
     Component component = new Component();
-    component.setName(taskType.getComponentName());
-    component.setNumberOfContainers((long) parameters.getNumPS());
+    component.setName(role.getComponentName());
+    component.setNumberOfContainers((long) tensorFlowParams.getNumPS());
     component.setRestartPolicy(Component.RestartPolicyEnum.NEVER);
     component.setResource(
-        convertYarnResourceToServiceResource(parameters.getPsResource()));
+        convertYarnResourceToServiceResource(tensorFlowParams.getPsResource()));
 
     // Override global docker image if needed.
-    if (parameters.getPsDockerImage() != null) {
+    if (tensorFlowParams.getPsDockerImage() != null) {
       component.setArtifact(
-          getDockerArtifact(parameters.getPsDockerImage()));
+          getDockerArtifact(tensorFlowParams.getPsDockerImage()));
     }
-    addCommonEnvironments(component, taskType);
+    addCommonEnvironments(component, role);
     generateLaunchCommand(component);
 
     return component;

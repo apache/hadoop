@@ -15,7 +15,7 @@
  */
 
 
-package org.apache.hadoop.yarn.submarine.client.cli;
+package org.apache.hadoop.yarn.submarine.client.cli.runjob.tensorflow;
 
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.Configs;
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.Role;
@@ -42,14 +42,9 @@ import static org.junit.Assert.assertTrue;
  * Please note that this class just tests YAML parsing,
  * but only in an isolated fashion.
  */
-public class TestRunJobCliParsingYamlStandalone {
+public class TestRunJobCliParsingTensorFlowYamlStandalone {
   private static final String OVERRIDDEN_PREFIX = "overridden_";
-  private static final String DIR_NAME = "runjobcliparsing";
-
-  @Before
-  public void before() {
-    SubmarineLogs.verboseOff();
-  }
+  private static final String DIR_NAME = "runjob-tensorflow-yaml";
 
   private void verifyBasicConfigValues(YamlConfigFile yamlConfigFile) {
     assertNotNull("Spec file should not be null!", yamlConfigFile);
@@ -169,6 +164,11 @@ public class TestRunJobCliParsingYamlStandalone {
     assertEquals("memory=21000M,vcores=37,gpu=3", tensorBoard.getResources());
   }
 
+  @Before
+  public void before() {
+    SubmarineLogs.verboseOff();
+  }
+
   @Test
   public void testLaunchCommandYaml() {
     YamlConfigFile yamlConfigFile = readYamlConfigFile(DIR_NAME +
@@ -201,5 +201,4 @@ public class TestRunJobCliParsingYamlStandalone {
     assertRoleConfigOverrides(roles.getWorker(), OVERRIDDEN_PREFIX, "Worker");
     assertRoleConfigOverrides(roles.getPs(), OVERRIDDEN_PREFIX, "Ps");
   }
-
 }

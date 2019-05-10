@@ -24,13 +24,16 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.submarine.client.cli.RunJobCli;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.apache.hadoop.yarn.submarine.runtimes.common.JobSubmitter;
 import org.apache.hadoop.yarn.submarine.runtimes.common.StorageKeyConstants;
 import org.apache.hadoop.yarn.submarine.runtimes.common.SubmarineStorage;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.ServiceSpecFileGenerator;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.ServiceWrapper;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.YarnServiceJobSubmitter;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.component.TensorBoardComponent;
@@ -38,7 +41,11 @@ import org.apache.hadoop.yarn.submarine.utils.ZipUtilities;
 import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,7 +57,6 @@ import java.util.Map;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_CHECKPOINT_PATH;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_DOCKER_IMAGE;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_INPUT_PATH;
-import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_JOB_NAME;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_PS_DOCKER_IMAGE;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_PS_LAUNCH_CMD;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_PS_RESOURCES;
@@ -69,8 +75,14 @@ import static org.junit.Assert.assertTrue;
  * Class to test YarnService with the Run job CLI action.
  */
 public class TestYarnServiceRunJobCli {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestYarnServiceRunJobCli.class);
+
   private TestYarnServiceRunJobCliCommons testCommons =
       new TestYarnServiceRunJobCliCommons();
+
+  @Rule
+  public TestName testName = new TestName();
 
   @Before
   public void before() throws IOException, YarnException {
@@ -96,22 +108,26 @@ public class TestYarnServiceRunJobCli {
   }
 
   private void commonVerifyDistributedTrainingSpec(Service serviceSpec) {
-    assertNotNull(serviceSpec.getComponent(TaskType.WORKER.getComponentName()));
+    assertNotNull(serviceSpec.getComponent(TensorFlowRole.WORKER
+        .getComponentName()));
     assertNotNull(
-        serviceSpec.getComponent(TaskType.PRIMARY_WORKER.getComponentName()));
-    assertNotNull(serviceSpec.getComponent(TaskType.PS.getComponentName()));
+        serviceSpec.getComponent(TensorFlowRole.PRIMARY_WORKER
+            .getComponentName()));
+    assertNotNull(serviceSpec.getComponent(TensorFlowRole.PS
+        .getComponentName()));
     Component primaryWorkerComp = serviceSpec.getComponent(
-        TaskType.PRIMARY_WORKER.getComponentName());
+        TensorFlowRole.PRIMARY_WORKER.getComponentName());
     assertEquals(2048, primaryWorkerComp.getResource().calcMemoryMB());
     assertEquals(2,
         primaryWorkerComp.getResource().getCpus().intValue());
 
     Component workerComp = serviceSpec.getComponent(
-        TaskType.WORKER.getComponentName());
+        TensorFlowRole.WORKER.getComponentName());
     assertEquals(2048, workerComp.getResource().calcMemoryMB());
     assertEquals(2, workerComp.getResource().getCpus().intValue());
 
-    Component psComp = serviceSpec.getComponent(TaskType.PS.getComponentName());
+    Component psComp = serviceSpec.getComponent(TensorFlowRole.PS
+        .getComponentName());
     assertEquals(4096, psComp.getResource().calcMemoryMB());
     assertEquals(4, psComp.getResource().getCpus().intValue());
 
@@ -147,6 +163,13 @@ public class TestYarnServiceRunJobCli {
     }
   }
 
+  private void saveServiceSpecJsonToTempFile(Service service)
+      throws IOException {
+    String jsonFileName = ServiceSpecFileGenerator.generateJson(service);
+//    testCommons.getFileUtils().addTrackedFile(new File(jsonFileName));
+    LOG.info("Saved json file: " + jsonFileName);
+  }
+
   @Test
   public void testBasicRunJobForDistributedTraining() throws Exception {
     MockClientContext mockClientContext =
@@ -155,7 +178,8 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -172,6 +196,7 @@ public class TestYarnServiceRunJobCli {
     runJobCli.run(params);
     Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(3, serviceSpec.getComponents().size());
 
     commonVerifyDistributedTrainingSpec(serviceSpec);
@@ -187,8 +212,10 @@ public class TestYarnServiceRunJobCli {
     RunJobCli runJobCli = new RunJobCli(mockClientContext);
     assertFalse(SubmarineLogs.isVerbose());
 
+    String jobName = testName.getMethodName();
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(jobName)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -207,6 +234,7 @@ public class TestYarnServiceRunJobCli {
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
     Service serviceSpec = serviceWrapper.getService();
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(4, serviceSpec.getComponents().size());
 
     commonVerifyDistributedTrainingSpec(serviceSpec);
@@ -216,7 +244,8 @@ public class TestYarnServiceRunJobCli {
 
     verifyQuicklink(serviceSpec, ImmutableMap
         .of(TensorBoardComponent.TENSORBOARD_QUICKLINK_LABEL,
-            "http://tensorboard-0.my-job.username.null:6006"));
+            String.format("http://tensorboard-0.%s.username.null:6006",
+                jobName)));
   }
 
   @Test
@@ -227,19 +256,21 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
         .withNumberOfWorkers(1)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
-        .withWorkerResources(DEFAULT_TENSORBOARD_RESOURCES)
+        .withWorkerResources(DEFAULT_WORKER_RESOURCES)
         .withVerbose()
         .build();
     runJobCli.run(params);
 
     Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(1, serviceSpec.getComponents().size());
 
     commonTestSingleNodeTraining(serviceSpec);
@@ -253,7 +284,8 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -265,6 +297,10 @@ public class TestYarnServiceRunJobCli {
 
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
+
     assertEquals(1, serviceWrapper.getService().getComponents().size());
 
     verifyTensorboardComponent(runJobCli, serviceWrapper,
@@ -280,7 +316,8 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -294,6 +331,9 @@ public class TestYarnServiceRunJobCli {
 
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(1, serviceWrapper.getService().getComponents().size());
 
     verifyTensorboardComponent(runJobCli, serviceWrapper,
@@ -308,8 +348,10 @@ public class TestYarnServiceRunJobCli {
     RunJobCli runJobCli = new RunJobCli(mockClientContext);
     assertFalse(SubmarineLogs.isVerbose());
 
+    String jobName = testName.getMethodName();
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(jobName)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withNumberOfWorkers(0)
         .withTensorboard()
@@ -321,20 +363,25 @@ public class TestYarnServiceRunJobCli {
 
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(1, serviceWrapper.getService().getComponents().size());
 
     verifyTensorboardComponent(runJobCli, serviceWrapper,
         Resources.createResource(2048, 2));
     verifyQuicklink(serviceWrapper.getService(), ImmutableMap
         .of(TensorBoardComponent.TENSORBOARD_QUICKLINK_LABEL,
-            "http://tensorboard-0.my-job.username.null:6006"));
+            String.format("http://tensorboard-0.%s.username.null:6006",
+                jobName)));
   }
 
   private void commonTestSingleNodeTraining(Service serviceSpec) {
     assertNotNull(
-        serviceSpec.getComponent(TaskType.PRIMARY_WORKER.getComponentName()));
+        serviceSpec.getComponent(TensorFlowRole.PRIMARY_WORKER
+            .getComponentName()));
     Component primaryWorkerComp = serviceSpec.getComponent(
-        TaskType.PRIMARY_WORKER.getComponentName());
+        TensorFlowRole.PRIMARY_WORKER.getComponentName());
     assertEquals(2048, primaryWorkerComp.getResource().calcMemoryMB());
     assertEquals(2,
         primaryWorkerComp.getResource().getCpus().intValue());
@@ -346,9 +393,10 @@ public class TestYarnServiceRunJobCli {
       ServiceWrapper serviceWrapper, Resource resource) throws Exception {
     Service serviceSpec = serviceWrapper.getService();
     assertNotNull(
-        serviceSpec.getComponent(TaskType.TENSORBOARD.getComponentName()));
+        serviceSpec.getComponent(TensorFlowRole.TENSORBOARD
+            .getComponentName()));
     Component tensorboardComp = serviceSpec.getComponent(
-        TaskType.TENSORBOARD.getComponentName());
+        TensorFlowRole.TENSORBOARD.getComponentName());
     assertEquals(1, tensorboardComp.getNumberOfContainers().intValue());
     assertEquals(resource.getMemorySize(),
         tensorboardComp.getResource().calcMemoryMB());
@@ -358,10 +406,17 @@ public class TestYarnServiceRunJobCli {
     assertEquals("./run-TENSORBOARD.sh",
         tensorboardComp.getLaunchCommand());
 
+    RunJobParameters runJobParameters = runJobCli.getRunJobParameters();
+    assertTrue(RunJobParameters.class + " must be an instance of " +
+            TensorFlowRunJobParameters.class,
+        runJobParameters instanceof TensorFlowRunJobParameters);
+    TensorFlowRunJobParameters tensorFlowParams =
+        (TensorFlowRunJobParameters) runJobParameters;
+
     // Check docker image
-    if (runJobCli.getRunJobParameters().getTensorboardDockerImage() != null) {
+    if (tensorFlowParams.getTensorboardDockerImage() != null) {
       assertEquals(
-          runJobCli.getRunJobParameters().getTensorboardDockerImage(),
+          tensorFlowParams.getTensorboardDockerImage(),
           tensorboardComp.getArtifact().getId());
     } else {
       assertNull(tensorboardComp.getArtifact());
@@ -375,15 +430,16 @@ public class TestYarnServiceRunJobCli {
             + "echo \"JAVA_HOME:$JAVA_HOME\"\n"
             + "echo \"LD_LIBRARY_PATH:$LD_LIBRARY_PATH\"\n"
             + "echo \"HADOOP_HDFS_HOME:$HADOOP_HDFS_HOME\"\n"
-            + "export LC_ALL=C && tensorboard --logdir=" + runJobCli
-            .getRunJobParameters().getCheckpointPath() + "\n";
+            + "export LC_ALL=C && tensorboard --logdir=" +
+            runJobParameters.getCheckpointPath() + "\n";
 
     verifyLaunchScriptForComponent(serviceWrapper,
-        TaskType.TENSORBOARD, expectedLaunchScript);
+        TensorFlowRole.TENSORBOARD, expectedLaunchScript);
   }
 
   private void verifyLaunchScriptForComponent(ServiceWrapper serviceWrapper,
-      TaskType taskType, String expectedLaunchScriptContent) throws Exception {
+      TensorFlowRole taskType, String expectedLaunchScriptContent)
+      throws Exception {
 
     String path = serviceWrapper
         .getLocalLaunchCommandPathForComponent(taskType.getComponentName());
@@ -403,13 +459,14 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
         .withNumberOfWorkers(1)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
-        .withWorkerResources(DEFAULT_TENSORBOARD_RESOURCES)
+        .withWorkerResources(DEFAULT_WORKER_RESOURCES)
         .withTensorboard()
         .withVerbose()
         .build();
@@ -417,6 +474,7 @@ public class TestYarnServiceRunJobCli {
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
     Service serviceSpec = serviceWrapper.getService();
+    saveServiceSpecJsonToTempFile(serviceSpec);
 
     assertEquals(2, serviceSpec.getComponents().size());
 
@@ -434,12 +492,13 @@ public class TestYarnServiceRunJobCli {
     assertFalse(SubmarineLogs.isVerbose());
 
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(testName.getMethodName())
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withNumberOfWorkers(1)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
-        .withWorkerResources(DEFAULT_TENSORBOARD_RESOURCES)
+        .withWorkerResources(DEFAULT_WORKER_RESOURCES)
         .withTensorboard()
         .withVerbose()
         .build();
@@ -447,6 +506,7 @@ public class TestYarnServiceRunJobCli {
     ServiceWrapper serviceWrapper = getServiceWrapperFromJobSubmitter(
         runJobCli.getJobSubmitter());
     Service serviceSpec = serviceWrapper.getService();
+    saveServiceSpecJsonToTempFile(serviceSpec);
 
     assertEquals(2, serviceSpec.getComponents().size());
 
@@ -462,21 +522,27 @@ public class TestYarnServiceRunJobCli {
     RunJobCli runJobCli = new RunJobCli(mockClientContext);
     assertFalse(SubmarineLogs.isVerbose());
 
+    String jobName = testName.getMethodName();
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(jobName)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
         .withNumberOfWorkers(1)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
-        .withWorkerResources(DEFAULT_TENSORBOARD_RESOURCES)
+        .withWorkerResources(DEFAULT_WORKER_RESOURCES)
         .withTensorboard()
         .withVerbose()
         .build();
     runJobCli.run(params);
+    Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
+        runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
+
     SubmarineStorage storage =
         mockClientContext.getRuntimeFactory().getSubmarineStorage();
-    Map<String, String> jobInfo = storage.getJobInfoByName(DEFAULT_JOB_NAME);
+    Map<String, String> jobInfo = storage.getJobInfoByName(jobName);
     assertTrue(jobInfo.size() > 0);
     assertEquals(jobInfo.get(StorageKeyConstants.INPUT_PATH),
         DEFAULT_INPUT_PATH);
@@ -489,8 +555,10 @@ public class TestYarnServiceRunJobCli {
     RunJobCli runJobCli = new RunJobCli(mockClientContext);
     assertFalse(SubmarineLogs.isVerbose());
 
+    String jobName = testName.getMethodName();
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(jobName)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -509,13 +577,15 @@ public class TestYarnServiceRunJobCli {
     runJobCli.run(params);
     Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(3, serviceSpec.getComponents().size());
 
     commonVerifyDistributedTrainingSpec(serviceSpec);
 
     verifyQuicklink(serviceSpec, ImmutableMap
-        .of("AAA", "http://master-0.my-job.username.null:8321", "BBB",
-            "http://worker-0.my-job.username.null:1234"));
+        .of("AAA", String.format("http://master-0.%s.username.null:8321",
+            jobName), "BBB",
+            String.format("http://worker-0.%s.username.null:1234", jobName)));
   }
 
   @Test
@@ -525,8 +595,10 @@ public class TestYarnServiceRunJobCli {
     RunJobCli runJobCli = new RunJobCli(mockClientContext);
     assertFalse(SubmarineLogs.isVerbose());
 
+    String jobName = testName.getMethodName();
     String[] params = ParamBuilderForTest.create()
-        .withJobName(DEFAULT_JOB_NAME)
+        .withFramework("tensorflow")
+        .withJobName(jobName)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
@@ -547,15 +619,18 @@ public class TestYarnServiceRunJobCli {
     runJobCli.run(params);
     Service serviceSpec = testCommons.getServiceSpecFromJobSubmitter(
         runJobCli.getJobSubmitter());
+    saveServiceSpecJsonToTempFile(serviceSpec);
     assertEquals(4, serviceSpec.getComponents().size());
 
     commonVerifyDistributedTrainingSpec(serviceSpec);
 
     verifyQuicklink(serviceSpec, ImmutableMap
-        .of("AAA", "http://master-0.my-job.username.null:8321", "BBB",
-            "http://worker-0.my-job.username.null:1234",
+        .of("AAA", String.format("http://master-0.%s.username.null:8321",
+            jobName), "BBB",
+            String.format("http://worker-0.%s.username.null:1234", jobName),
             TensorBoardComponent.TENSORBOARD_QUICKLINK_LABEL,
-            "http://tensorboard-0.my-job.username.null:6006"));
+            String.format("http://tensorboard-0.%s.username.null:6006",
+                jobName)));
   }
 
   /**

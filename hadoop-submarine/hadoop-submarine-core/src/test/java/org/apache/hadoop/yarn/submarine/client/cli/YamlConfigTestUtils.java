@@ -17,7 +17,7 @@
 package org.apache.hadoop.yarn.submarine.client.cli;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters.UnderscoreConverterPropertyUtils;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters.UnderscoreConverterPropertyUtils;
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.YamlConfigFile;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.Constructor;
@@ -33,13 +33,13 @@ public final class YamlConfigTestUtils {
 
   private YamlConfigTestUtils() {}
 
-  static void deleteFile(File file) {
+  public static void deleteFile(File file) {
     if (file != null) {
       file.delete();
     }
   }
 
-  static YamlConfigFile readYamlConfigFile(String filename) {
+  public static YamlConfigFile readYamlConfigFile(String filename) {
     Constructor constructor = new Constructor(YamlConfigFile.class);
     constructor.setPropertyUtils(new UnderscoreConverterPropertyUtils());
     Yaml yaml = new Yaml(constructor);
@@ -49,7 +49,8 @@ public final class YamlConfigTestUtils {
     return yaml.loadAs(inputStream, YamlConfigFile.class);
   }
 
-  static File createTempFileWithContents(String filename) throws IOException {
+  public static File createTempFileWithContents(String filename)
+      throws IOException {
     InputStream inputStream = YamlConfigTestUtils.class
         .getClassLoader()
         .getResourceAsStream(filename);
@@ -58,7 +59,7 @@ public final class YamlConfigTestUtils {
     return targetFile;
   }
 
-  static File createEmptyTempFile() throws IOException {
+  public static File createEmptyTempFile() throws IOException {
     return File.createTempFile("test", ".yaml");
   }
 

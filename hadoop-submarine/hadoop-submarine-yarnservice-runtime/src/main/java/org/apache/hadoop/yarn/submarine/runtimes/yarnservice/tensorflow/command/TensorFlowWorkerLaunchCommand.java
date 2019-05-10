@@ -19,8 +19,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.Role;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.slf4j.Logger;
@@ -37,10 +37,10 @@ public class TensorFlowWorkerLaunchCommand extends TensorFlowLaunchCommand {
   private final String launchCommand;
 
   public TensorFlowWorkerLaunchCommand(
-      HadoopEnvironmentSetup hadoopEnvSetup, TaskType taskType,
-      Component component, RunJobParameters parameters,
+      HadoopEnvironmentSetup hadoopEnvSetup, Role role,
+      Component component, TensorFlowRunJobParameters parameters,
       Configuration yarnConfig) throws IOException {
-    super(hadoopEnvSetup, taskType, component, parameters, yarnConfig);
+    super(hadoopEnvSetup, role, component, parameters, yarnConfig);
     this.launchCommand = parameters.getWorkerLaunchCmd();
 
     if (StringUtils.isEmpty(this.launchCommand)) {

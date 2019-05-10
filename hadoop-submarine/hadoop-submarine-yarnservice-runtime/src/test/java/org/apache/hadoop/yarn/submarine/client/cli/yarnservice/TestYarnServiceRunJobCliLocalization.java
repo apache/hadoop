@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.submarine.client.cli.RunJobCli;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineConfiguration;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
@@ -68,6 +68,7 @@ public class TestYarnServiceRunJobCliLocalization {
 
   private ParamBuilderForTest createCommonParamsBuilder() {
     return ParamBuilderForTest.create()
+        .withFramework("tensorflow")
         .withJobName(DEFAULT_JOB_NAME)
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)

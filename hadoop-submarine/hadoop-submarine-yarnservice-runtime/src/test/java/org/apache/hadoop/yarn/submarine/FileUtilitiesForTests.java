@@ -143,4 +143,8 @@ public class FileUtilitiesForTests {
     return new File(
         parent.toUri().getPath() + "/" + new Path(filename).getName());
   }
+
+  public void addTrackedFile(File file) {
+    this.cleanupFiles.add(file);
+  }
 }

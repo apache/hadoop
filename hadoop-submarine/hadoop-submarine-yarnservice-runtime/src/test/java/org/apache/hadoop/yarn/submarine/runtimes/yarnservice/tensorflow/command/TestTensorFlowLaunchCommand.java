@@ -19,12 +19,12 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command
 import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
-import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.AbstractLaunchCommandTestHelper;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.AbstractTFLaunchCommandTestHelper;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -42,54 +42,55 @@ import static org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnviro
  */
 @RunWith(Parameterized.class)
 public class TestTensorFlowLaunchCommand
-    extends AbstractLaunchCommandTestHelper {
-  private TaskType taskType;
+    extends AbstractTFLaunchCommandTestHelper {
+  private TensorFlowRole taskType;
 
   @Parameterized.Parameters
   public static Collection<Object[]> data() {
     Collection<Object[]> params = new ArrayList<>();
-    params.add(new Object[]{TaskType.WORKER });
-    params.add(new Object[]{TaskType.PS });
+    params.add(new Object[]{TensorFlowRole.WORKER });
+    params.add(new Object[]{TensorFlowRole.PS });
     return params;
   }
 
-  public TestTensorFlowLaunchCommand(TaskType taskType) {
+  public TestTensorFlowLaunchCommand(TensorFlowRole taskType) {
     this.taskType = taskType;
   }
 
 
   private void assertScriptContainsLaunchCommand(List<String> fileContents,
-      RunJobParameters params) {
+      TensorFlowRunJobParameters params) {
     String launchCommand = null;
-    if (taskType == TaskType.WORKER) {
+    if (taskType == TensorFlowRole.WORKER) {
       launchCommand = params.getWorkerLaunchCmd();
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       launchCommand = params.getPSLaunchCmd();
     }
     assertScriptContainsLine(fileContents, launchCommand);
   }
 
-  private void setLaunchCommandToParams(RunJobParameters params) {
-    if (taskType == TaskType.WORKER) {
+  private void setLaunchCommandToParams(TensorFlowRunJobParameters params) {
+    if (taskType == TensorFlowRole.WORKER) {
       params.setWorkerLaunchCmd("testWorkerLaunchCommand");
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       params.setPSLaunchCmd("testPsLaunchCommand");
     }
   }
 
-  private void setLaunchCommandToParams(RunJobParameters params, String value) {
-    if (taskType == TaskType.WORKER) {
+  private void setLaunchCommandToParams(TensorFlowRunJobParameters params,
+      String value) {
+    if (taskType == TensorFlowRole.WORKER) {
       params.setWorkerLaunchCmd(value);
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       params.setPSLaunchCmd(value);
     }
   }
 
   private void assertTypeInJson(List<String> fileContents) {
     String expectedType = null;
-    if (taskType == TaskType.WORKER) {
+    if (taskType == TensorFlowRole.WORKER) {
       expectedType = "worker";
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       expectedType = "ps";
     }
     assertScriptContainsLineWithRegex(fileContents, String.format(".*type.*:" +
@@ -98,12 +99,13 @@ public class TestTensorFlowLaunchCommand
 
   private TensorFlowLaunchCommand createTensorFlowLaunchCommandObject(
       HadoopEnvironmentSetup hadoopEnvSetup, Configuration yarnConfig,
-      Component component, RunJobParameters params) throws IOException {
-    if (taskType == TaskType.WORKER) {
+      Component component, TensorFlowRunJobParameters params)
+      throws IOException {
+    if (taskType == TensorFlowRole.WORKER) {
       return new TensorFlowWorkerLaunchCommand(hadoopEnvSetup, taskType,
           component,
           params, yarnConfig);
-    } else if (taskType == TaskType.PS) {
+    } else if (taskType == TensorFlowRole.PS) {
       return new TensorFlowPsLaunchCommand(hadoopEnvSetup, taskType, component,
           params, yarnConfig);
     }
@@ -112,7 +114,7 @@ public class TestTensorFlowLaunchCommand
 
   @Test
   public void testHdfsRelatedEnvironmentIsUndefined() throws IOException {
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setInputPath("hdfs://bla");
     params.setName("testJobname");
     setLaunchCommandToParams(params);
@@ -122,7 +124,7 @@ public class TestTensorFlowLaunchCommand
 
   @Test
   public void testHdfsRelatedEnvironmentIsDefined() throws IOException {
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setName("testName");
     params.setInputPath("hdfs://bla");
     params.setEnvars(ImmutableList.of(
@@ -147,7 +149,7 @@ public class TestTensorFlowLaunchCommand
     Configuration yarnConfig = new Configuration();
 
     Component component = new Component();
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setName("testName");
     setLaunchCommandToParams(params, null);
 
@@ -170,7 +172,7 @@ public class TestTensorFlowLaunchCommand
     Configuration yarnConfig = new Configuration();
 
     Component component = new Component();
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setName("testName");
     setLaunchCommandToParams(params, "");
 
@@ -186,7 +188,7 @@ public class TestTensorFlowLaunchCommand
   public void testDistributedTrainingMissingTaskType() throws IOException {
     overrideTaskType(null);
 
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setDistributed(true);
     params.setName("testName");
     params.setInputPath("hdfs://bla");
@@ -196,14 +198,14 @@ public class TestTensorFlowLaunchCommand
     setLaunchCommandToParams(params);
 
     expectedException.expect(NullPointerException.class);
-    expectedException.expectMessage("TaskType must not be null");
+    expectedException.expectMessage("TensorFlowRole must not be null");
     testHdfsRelatedEnvironmentIsDefined(taskType, params);
   }
 
   @Test
   public void testDistributedTrainingNumberOfWorkersAndPsIsZero()
       throws IOException {
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setDistributed(true);
     params.setNumWorkers(0);
     params.setNumPS(0);
@@ -226,7 +228,7 @@ public class TestTensorFlowLaunchCommand
   @Test
   public void testDistributedTrainingNumberOfWorkersAndPsIsNonZero()
       throws IOException {
-    RunJobParameters params = new RunJobParameters();
+    TensorFlowRunJobParameters params = new TensorFlowRunJobParameters();
     params.setDistributed(true);
     params.setNumWorkers(3);
     params.setNumPS(2);

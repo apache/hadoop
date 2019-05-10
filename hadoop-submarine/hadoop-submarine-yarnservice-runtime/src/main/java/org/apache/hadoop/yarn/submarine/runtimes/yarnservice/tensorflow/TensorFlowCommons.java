@@ -20,7 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.ServiceApiConstants;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.submarine.common.Envs;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.common.api.Role;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.YarnServiceUtils;
 
 import java.util.Map;
@@ -35,10 +35,10 @@ public final class TensorFlowCommons {
   }
 
   public static void addCommonEnvironments(Component component,
-      TaskType taskType) {
+      Role role) {
     Map<String, String> envs = component.getConfiguration().getEnv();
     envs.put(Envs.TASK_INDEX_ENV, ServiceApiConstants.COMPONENT_ID);
-    envs.put(Envs.TASK_TYPE_ENV, taskType.name());
+    envs.put(Envs.TASK_TYPE_ENV, role.getName());
   }
 
   public static String getUserName() {
@@ -49,8 +49,8 @@ public final class TensorFlowCommons {
     return yarnConfig.get("hadoop.registry.dns.domain-name");
   }
 
-  public static String getScriptFileName(TaskType taskType) {
-    return "run-" + taskType.name() + ".sh";
+  public static String getScriptFileName(Role role) {
+    return "run-" + role.getName() + ".sh";
   }
 
   public static String getTFConfigEnv(String componentName, int nWorkers,

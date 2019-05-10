@@ -17,6 +17,7 @@
 spec:
   name: testJobName
   job_type: testJobType
+  framework: pytorch
 
 configs:
   input_path: testInputPath
@@ -44,18 +45,19 @@ roles:
   worker:
     resources: memory=20480M,vcores=32,gpu=2
     replicas: 3
-    launch_cmd: testLaunchCmdWorker
-    docker_image: testDockerImageWorker
-  ps:
-    resources: memory=20500M,vcores=34,gpu=4
-    replicas: 4
-    launch_cmd: testLaunchCmdPs
-    docker_image: testDockerImagePs
+    launch_cmd: overridden_testLaunchCmdWorker
+    docker_image: overridden_testDockerImageWorker
+    envs:
+      env1: 'overridden_env1Worker'
+      env2: 'overridden_env2Worker'
+    localizations:
+    - hdfs://remote-file1:/overridden_local-filename1Worker:rw
+    - nfs://remote-file2:/overridden_local-filename2Worker:rw
+    mounts:
+    - /etc/passwd:/overridden_Worker
+    - /etc/hosts:/overridden_Worker
 
 security:
   keytab: keytabPath
   principal: testPrincipal
   distribute_keytab: true
-
-tensorBoard:
-  resources: memory=21000M,vcores=37,gpu=3

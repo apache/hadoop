@@ -147,6 +147,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
+ --framework tensorflow \
  --num_workers 2 \
  --worker_resources memory=3G,vcores=2 \
  --num_ps 2 \
@@ -183,6 +184,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
+ --framework tensorflow \
  --docker_image hadoopsubmarine/tf-1.8.0-cpu:0.0.3 \
  --input_path hdfs://pi-aw:9000/dataset/cifar-10-data \
  --worker_resources memory=3G,vcores=2 \
@@ -245,6 +247,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
+ --framework tensorflow \
  --num_workers 2 \
  --worker_resources memory=3G,vcores=2 \
  --num_ps 2 \
@@ -281,6 +284,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
+ --framework tensorflow \
  --docker_image hadoopsubmarine/tf-1.8.0-cpu:0.0.3 \
  --input_path hdfs://pi-aw:9000/dataset/cifar-10-data \
  --worker_resources memory=3G,vcores=2 \

@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
+package org.apache.hadoop.yarn.submarine.client.cli.runjob;
 
-package org.apache.hadoop.yarn.submarine.client.cli;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.YamlConfigTestUtils;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.YamlParseException;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -39,19 +37,17 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.apache.hadoop.yarn.submarine.client.cli.TestRunJobCliParsing.getMockClientContext;
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.yarn.submarine.client.cli.runjob.TestRunJobCliParsingCommon.getMockClientContext;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test class that verifies the correctness of YAML configuration parsing.
+ * This class contains some test methods to test common YAML parsing
+ * functionality (including TF / PyTorch) of the run job Submarine command.
  */
-public class TestRunJobCliParsingYaml {
-  private static final String OVERRIDDEN_PREFIX = "overridden_";
-  private static final String DIR_NAME = "runjobcliparsing";
+public class TestRunJobCliParsingCommonYaml {
+  private static final String DIR_NAME = "runjob-common-yaml";
+  private static final String TF_DIR = "runjob-pytorch-yaml";
   private File yamlConfig;
 
   @Before
@@ -75,99 +71,13 @@ public class TestRunJobCliParsingYaml {
   @Rule
   public ExpectedException exception = ExpectedException.none();
 
-  private void verifyBasicConfigValues(RunJobParameters jobRunParameters) {
-    verifyBasicConfigValues(jobRunParameters,
-        ImmutableList.of("env1=env1Value", "env2=env2Value"));
-  }
-
-  private void verifyBasicConfigValues(RunJobParameters jobRunParameters,
-      List<String> expectedEnvs) {
-    assertEquals("testInputPath", jobRunParameters.getInputPath());
-    assertEquals("testCheckpointPath", jobRunParameters.getCheckpointPath());
-    assertEquals("testDockerImage", jobRunParameters.getDockerImageName());
-
-    assertNotNull(jobRunParameters.getLocalizations());
-    assertEquals(2, jobRunParameters.getLocalizations().size());
-
-    assertNotNull(jobRunParameters.getQuicklinks());
-    assertEquals(2, jobRunParameters.getQuicklinks().size());
-
-    assertTrue(SubmarineLogs.isVerbose());
-    assertTrue(jobRunParameters.isWaitJobFinish());
-
-    for (String env : expectedEnvs) {
-      assertTrue(String.format(
-          "%s should be in env list of jobRunParameters!", env),
-          jobRunParameters.getEnvars().contains(env));
-    }
-  }
-
-  private void verifyPsValues(RunJobParameters jobRunParameters,
-      String prefix) {
-    assertEquals(4, jobRunParameters.getNumPS());
-    assertEquals(prefix + "testLaunchCmdPs", jobRunParameters.getPSLaunchCmd());
-    assertEquals(prefix + "testDockerImagePs",
-        jobRunParameters.getPsDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(20500L, 34,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "4").build()),
-        jobRunParameters.getPsResource());
-  }
-
-  private void verifyWorkerValues(RunJobParameters jobRunParameters,
-      String prefix) {
-    assertEquals(3, jobRunParameters.getNumWorkers());
-    assertEquals(prefix + "testLaunchCmdWorker",
-        jobRunParameters.getWorkerLaunchCmd());
-    assertEquals(prefix + "testDockerImageWorker",
-        jobRunParameters.getWorkerDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(20480L, 32,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "2").build()),
-        jobRunParameters.getWorkerResource());
-  }
-
-  private void verifySecurityValues(RunJobParameters jobRunParameters) {
-    assertEquals("keytabPath", jobRunParameters.getKeytab());
-    assertEquals("testPrincipal", jobRunParameters.getPrincipal());
-    assertTrue(jobRunParameters.isDistributeKeytab());
-  }
-
-  private void verifyTensorboardValues(RunJobParameters jobRunParameters) {
-    assertTrue(jobRunParameters.isTensorboardEnabled());
-    assertEquals("tensorboardDockerImage",
-        jobRunParameters.getTensorboardDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(21000L, 37,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "3").build()),
-        jobRunParameters.getTensorboardResource());
-  }
-
-  @Test
-  public void testValidYamlParsing() throws Exception {
-    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
-    Assert.assertFalse(SubmarineLogs.isVerbose());
-
-    yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/valid-config.yaml");
-    runJobCli.run(
-        new String[] {"-f", yamlConfig.getAbsolutePath(), "--verbose"});
-
-    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
-    verifyBasicConfigValues(jobRunParameters);
-    verifyPsValues(jobRunParameters, "");
-    verifyWorkerValues(jobRunParameters, "");
-    verifySecurityValues(jobRunParameters);
-    verifyTensorboardValues(jobRunParameters);
-  }
-
   @Test
   public void testYamlAndCliOptionIsDefinedIsInvalid() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
     Assert.assertFalse(SubmarineLogs.isVerbose());
 
     yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/valid-config.yaml");
+        TF_DIR + "/valid-config.yaml");
     String[] args = new String[] {"--name", "my-job",
         "--docker_image", "tf-docker:1.1.0",
         "-f", yamlConfig.getAbsolutePath() };
@@ -186,7 +96,7 @@ public class TestRunJobCliParsingYaml {
     Assert.assertFalse(SubmarineLogs.isVerbose());
 
     yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/valid-config.yaml");
+        TF_DIR + "/valid-config.yaml");
     String[] args = new String[] {"--name", "my-job",
         "--quicklink", "AAA=http://master-0:8321",
         "--quicklink", "BBB=http://worker-0:1234",
@@ -200,24 +110,6 @@ public class TestRunJobCliParsingYaml {
   }
 
   @Test
-  public void testRoleOverrides() throws Exception {
-    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
-    Assert.assertFalse(SubmarineLogs.isVerbose());
-
-    yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/valid-config-with-overrides.yaml");
-    runJobCli.run(
-        new String[]{"-f", yamlConfig.getAbsolutePath(), "--verbose"});
-
-    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
-    verifyBasicConfigValues(jobRunParameters);
-    verifyPsValues(jobRunParameters, OVERRIDDEN_PREFIX);
-    verifyWorkerValues(jobRunParameters, OVERRIDDEN_PREFIX);
-    verifySecurityValues(jobRunParameters);
-    verifyTensorboardValues(jobRunParameters);
-  }
-
-  @Test
   public void testFalseValuesForBooleanFields() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
     Assert.assertFalse(SubmarineLogs.isVerbose());
@@ -228,9 +120,15 @@ public class TestRunJobCliParsingYaml {
         new String[] {"-f", yamlConfig.getAbsolutePath(), "--verbose"});
     RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
 
+    assertTrue(RunJobParameters.class + " must be an instance of " +
+            TensorFlowRunJobParameters.class,
+        jobRunParameters instanceof TensorFlowRunJobParameters);
+    TensorFlowRunJobParameters tensorFlowParams =
+        (TensorFlowRunJobParameters) jobRunParameters;
+
     assertFalse(jobRunParameters.isDistributeKeytab());
     assertFalse(jobRunParameters.isWaitJobFinish());
-    assertFalse(jobRunParameters.isTensorboardEnabled());
+    assertFalse(tensorFlowParams.isTensorboardEnabled());
   }
 
   @Test
@@ -315,66 +213,40 @@ public class TestRunJobCliParsingYaml {
         new String[]{"-f", yamlConfig.getAbsolutePath(), "--verbose"});
   }
 
+
   @Test
-  public void testMissingPrincipalUnderSecuritySection() throws Exception {
+  public void testAbsentFramework() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
 
     yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/security-principal-is-missing.yaml");
+        DIR_NAME + "/missing-framework.yaml");
+
     runJobCli.run(
         new String[]{"-f", yamlConfig.getAbsolutePath(), "--verbose"});
-
-    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
-    verifyBasicConfigValues(jobRunParameters);
-    verifyPsValues(jobRunParameters, "");
-    verifyWorkerValues(jobRunParameters, "");
-    verifyTensorboardValues(jobRunParameters);
-
-    //Verify security values
-    assertEquals("keytabPath", jobRunParameters.getKeytab());
-    assertNull("Principal should be null!", jobRunParameters.getPrincipal());
-    assertTrue(jobRunParameters.isDistributeKeytab());
   }
 
   @Test
-  public void testMissingTensorBoardDockerImage() throws Exception {
+  public void testEmptyFramework() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
 
     yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/tensorboard-dockerimage-is-missing.yaml");
+        DIR_NAME + "/empty-framework.yaml");
+
     runJobCli.run(
         new String[]{"-f", yamlConfig.getAbsolutePath(), "--verbose"});
-
-    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
-    verifyBasicConfigValues(jobRunParameters);
-    verifyPsValues(jobRunParameters, "");
-    verifyWorkerValues(jobRunParameters, "");
-    verifySecurityValues(jobRunParameters);
-
-    assertTrue(jobRunParameters.isTensorboardEnabled());
-    assertNull("tensorboardDockerImage should be null!",
-        jobRunParameters.getTensorboardDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(21000L, 37,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "3").build()),
-        jobRunParameters.getTensorboardResource());
   }
 
   @Test
-  public void testMissingEnvs() throws Exception {
+  public void testInvalidFramework() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
 
     yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
-        DIR_NAME + "/envs-are-missing.yaml");
+        DIR_NAME + "/invalid-framework.yaml");
+
+    exception.expect(YamlParseException.class);
+    exception.expectMessage("framework should is defined, " +
+        "but it has an invalid value");
     runJobCli.run(
         new String[]{"-f", yamlConfig.getAbsolutePath(), "--verbose"});
-
-    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
-    verifyBasicConfigValues(jobRunParameters, ImmutableList.of());
-    verifyPsValues(jobRunParameters, "");
-    verifyWorkerValues(jobRunParameters, "");
-    verifySecurityValues(jobRunParameters);
-    verifyTensorboardValues(jobRunParameters);
   }
-
 }

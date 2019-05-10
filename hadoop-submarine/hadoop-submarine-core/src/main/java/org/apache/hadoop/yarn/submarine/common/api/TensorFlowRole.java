@@ -14,7 +14,10 @@
 
 package org.apache.hadoop.yarn.submarine.common.api;
 
-public enum TaskType {
+/**
+ * Enum to represent a TensorFlow Role.
+ */
+public enum TensorFlowRole implements Role {
   PRIMARY_WORKER("master"),
   WORKER("worker"),
   PS("ps"),
@@ -22,11 +25,17 @@ public enum TaskType {
 
   private String compName;
 
-  TaskType(String compName) {
+  TensorFlowRole(String compName) {
     this.compName = compName;
   }
 
+  @Override
   public String getComponentName() {
     return compName;
+  }
+
+  @Override
+  public String getName() {
+    return name();
   }
 }

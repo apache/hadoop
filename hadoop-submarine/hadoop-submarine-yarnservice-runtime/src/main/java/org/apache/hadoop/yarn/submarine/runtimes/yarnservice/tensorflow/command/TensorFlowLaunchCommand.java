@@ -18,8 +18,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.Role;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.AbstractLaunchCommand;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchScriptBuilder;
@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Objects;
 
 /**
  * Launch command implementation for
@@ -41,13 +42,16 @@ public abstract class TensorFlowLaunchCommand extends AbstractLaunchCommand {
   private final int numberOfWorkers;
   private final int numberOfPS;
   private final String name;
-  private final TaskType taskType;
+  private final Role role;
 
   TensorFlowLaunchCommand(HadoopEnvironmentSetup hadoopEnvSetup,
-      TaskType taskType, Component component, RunJobParameters parameters,
+      Role role, Component component,
+      TensorFlowRunJobParameters parameters,
       Configuration yarnConfig) throws IOException {
-    super(hadoopEnvSetup, taskType, component, parameters);
-    this.taskType = taskType;
+    super(hadoopEnvSetup, component, parameters,
+        role != null ? role.getName(): "");
+    Objects.requireNonNull(role, "TensorFlowRole must not be null!");
+    this.role = role;
     this.name = parameters.getName();
     this.distributed = parameters.isDistributed();
     this.numberOfWorkers = parameters.getNumWorkers();
@@ -72,7 +76,7 @@ public abstract class TensorFlowLaunchCommand extends AbstractLaunchCommand {
     // When distributed training is required
     if (distributed) {
       String tfConfigEnvValue = TensorFlowCommons.getTFConfigEnv(
-          taskType.getComponentName(), numberOfWorkers,
+          role.getComponentName(), numberOfWorkers,
           numberOfPS, name,
           TensorFlowCommons.getUserName(),
           TensorFlowCommons.getDNSDomain(yarnConfig));

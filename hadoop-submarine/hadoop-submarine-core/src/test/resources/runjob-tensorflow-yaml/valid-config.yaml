@@ -17,6 +17,7 @@
 spec:
   name: testJobName
   job_type: testJobType
+  framework: tensorflow
 
 configs:
   input_path: testInputPath
@@ -54,6 +55,7 @@ roles:
 
 security:
   keytab: keytabPath
+  principal: testPrincipal
   distribute_keytab: true
 
 tensorBoard:
