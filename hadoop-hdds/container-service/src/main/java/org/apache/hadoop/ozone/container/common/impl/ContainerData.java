@@ -71,6 +71,8 @@ public abstract class ContainerData {
 
   private final long maxSize;
 
+  private boolean committedSpace;
+
   //ID of the pipeline where this container is created
   private String originPipelineId;
   //ID of the datanode where this container is created
@@ -184,7 +186,23 @@ public abstract class ContainerData {
    * @param state
    */
   public synchronized void setState(ContainerDataProto.State state) {
+    ContainerDataProto.State oldState = this.state;
     this.state = state;
+
+    if ((oldState == ContainerDataProto.State.OPEN) &&
+        (state != oldState)) {
+      releaseCommitSpace();
+    }
+
+    /**
+     * commit space when container transitions (back) to Open.
+     * when? perhaps closing a container threw an exception
+     */
+    if ((state == ContainerDataProto.State.OPEN) &&
+        (state != oldState)) {
+      Preconditions.checkState(getMaxSize() > 0);
+      commitSpace();
+    }
   }
 
   /**
@@ -280,6 +298,31 @@ public abstract class ContainerData {
     setState(ContainerDataProto.State.CLOSED);
   }
 
+  private void releaseCommitSpace() {
+    long unused = getMaxSize() - getBytesUsed();
+
+    if (unused > 0 && committedSpace) {
+      // decrease committed space in Volume
+      getVolume().incCommittedBytes(0 - unused);
+    }
+    committedSpace = false;
+  }
+
+  public void commitSpace() {
+    long unused = getMaxSize() - getBytesUsed();
+    ContainerDataProto.State state = getState();
+
+    Preconditions.checkState (committedSpace == false);
+
+    // if not Open, do nothing. Only Open Containers have Committed Space
+    if (state != ContainerDataProto.State.OPEN) {
+      return;
+    }
+
+    getVolume().incCommittedBytes(unused);
+    committedSpace = true;
+  }
+
   /**
    * Get the number of bytes read from the container.
    * @return the number of bytes read from the container.
@@ -325,6 +368,11 @@ public abstract class ContainerData {
    */
   public void incrWriteBytes(long bytes) {
     this.writeBytes.addAndGet(bytes);
+
+    // reduce space committed for this container equal to bytes written
+    if (committedSpace) {
+      this.getVolume().incCommittedBytes(0 - bytes);
+    }
   }
 
   /**
