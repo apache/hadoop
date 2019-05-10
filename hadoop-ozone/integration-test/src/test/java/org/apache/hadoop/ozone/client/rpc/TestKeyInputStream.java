@@ -45,7 +45,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 
 /**
- * Tests {@link KeyInputStream}
+ * Tests {@link KeyInputStream}.
  */
 public class TestKeyInputStream {
   private static MiniOzoneCluster cluster;
@@ -153,7 +153,7 @@ public class TestKeyInputStream {
     // Seek operation should not result in any readChunk operation.
     Assert.assertEquals(readChunkCount, metrics
         .getContainerOpsMetrics(ContainerProtos.Type.ReadChunk));
-    Assert.assertEquals(readChunkCount , metrics
+    Assert.assertEquals(readChunkCount, metrics
         .getContainerOpCountMetrics(ContainerProtos.Type.ReadChunk));
 
     byte[] readData = new byte[chunkSize];
