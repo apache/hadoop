@@ -78,6 +78,9 @@ public class BlockInputStream extends InputStream implements Seekable {
    * @param chunks list of chunks to read
    * @param traceID container protocol call traceID
    * @param verifyChecksum verify checksum
+   * @param initialPosition the initial position of the stream pointer. This
+   *                        position is seeked now if the up-stream was seeked
+   *                        before this was created.
    */
   public BlockInputStream(
       BlockID blockID, XceiverClientManager xceiverClientManager,
@@ -185,7 +188,7 @@ public class BlockInputStream extends InputStream implements Seekable {
    * @return true if EOF, false if more data is available
    */
   private boolean blockStreamEOF() {
-    if (buffersHaveData() || chunksRemaining()) {
+    if ((buffersAllocated() && buffersHaveData()) || chunksRemaining()) {
       return false;
     } else {
       // if there are any chunks, we better be at the last chunk for EOF
@@ -232,12 +235,19 @@ public class BlockInputStream extends InputStream implements Seekable {
    */
   private synchronized int prepareRead(int len) throws IOException {
     for (;;) {
+      if (!buffersAllocated()) {
+        // The current chunk at chunkIndex has not been read from the
+        // container. Read the chunk and put the data into buffers.
+        readChunkFromContainer();
+      }
       if (buffersHaveData()) {
         // Data is available from buffers
         ByteBuffer bb = buffers.get(bufferIndex);
         return len > bb.remaining() ? bb.remaining() : len;
       } else if (chunksRemaining()) {
         // There are additional chunks available.
+        // Read the next chunk in the block.
+        chunkIndex += 1;
         readChunkFromContainer();
       } else {
         // All available input has been consumed.
@@ -246,12 +256,15 @@ public class BlockInputStream extends InputStream implements Seekable {
     }
   }
 
-  private boolean buffersHaveData() {
-    boolean hasData = false;
-
+  private boolean buffersAllocated() {
     if (buffers == null || buffers.isEmpty()) {
       return false;
     }
+    return true;
+  }
+
+  private boolean buffersHaveData() {
+    boolean hasData = false;
 
     while (bufferIndex < (buffers.size())) {
       if (buffers.get(bufferIndex).hasRemaining()) {
@@ -292,9 +305,7 @@ public class BlockInputStream extends InputStream implements Seekable {
    * @throws IOException if there is an I/O error while performing the call
    */
   private synchronized void readChunkFromContainer() throws IOException {
-    // On every chunk read chunkIndex should be increased so as to read the
-    // next chunk
-    chunkIndex += 1;
+    // Read the chunk at chunkIndex
     XceiverClientReply reply;
     ReadChunkResponseProto readChunkResponse = null;
     final ChunkInfo chunkInfo = chunks.get(chunkIndex);
@@ -383,19 +394,21 @@ public class BlockInputStream extends InputStream implements Seekable {
       // accordingly so that chunkIndex = insertionPoint - 1
       chunkIndex = -chunkIndex -2;
     }
-    // Check if current buffers correspond to the chunk index being seeked.
-    // If yes, then position the buffer to the seeked position.
-    // Otherwise release the current buffers, adjust the chunkIndex and save
-    // the bufferPosition so that the next readChunkFromContainer reads the
-    // correct chunk and positions the buffer to the seeked position.
+
     // The bufferPosition should be adjusted to account for the chunk offset
     // of the chunk the the pos actually points to.
     bufferPosition = pos - chunkOffset[chunkIndex];
-    if (chunkIndex == chunkIndexOfCurrentBuffer && buffersHaveData()) {
+
+    // Check if current buffers correspond to the chunk index being seeked
+    // and if the buffers have any data.
+    if (chunkIndex == chunkIndexOfCurrentBuffer && buffersAllocated()) {
+      // Position the buffer to the seeked position.
       adjustBufferIndex();
     } else {
+      // Release the current buffers. The next readChunkFromContainer will
+      // read the required chunk and position the buffer to the seeked
+      // position.
       releaseBuffers();
-      chunkIndex -= 1;
     }
   }
 
@@ -405,8 +418,9 @@ public class BlockInputStream extends InputStream implements Seekable {
       // buffer Index and position.
       return;
     }
+    // The bufferPosition is w.r.t the buffers for current chunk.
     // Adjust the bufferIndex and position to the seeked position.
-    long tempOffest = chunkOffset[chunkIndex];
+    long tempOffest = 0;
     for (int i = 0; i < buffers.size(); i++) {
       if (bufferPosition - tempOffest >= buffers.get(i).capacity()) {
         tempOffest += buffers.get(i).capacity();
@@ -422,15 +436,16 @@ public class BlockInputStream extends InputStream implements Seekable {
 
   @Override
   public synchronized long getPos() throws IOException {
+    if (bufferPosition >= 0) {
+      // seek has been called but the buffers were empty. Hence, the buffer
+      // position will be advanced after the buffers are filled.
+      // We return the chunkOffset + bufferPosition here as that will be the
+      // position of the buffer pointer after reading the chunk file.
+      return chunkOffset[chunkIndex] + bufferPosition;
+    }
+
     if (chunkIndex == -1) {
-      // no data consumed yet, a new stream OR after seek
-      if (bufferPosition > 0) {
-        // seek has been called but the buffers were empty. Hence, the buffer
-        // position will be advanced after the buffers are filled.
-        // We return the bufferPosition here as that will be the position of
-        // the buffer pointer after reading the chunk file.
-        return bufferPosition;
-      }
+      // no data consumed yet, a new stream
       return 0;
     }
 
