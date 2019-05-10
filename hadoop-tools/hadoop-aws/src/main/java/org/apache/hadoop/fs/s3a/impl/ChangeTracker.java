@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.model.S3Object;
@@ -145,6 +146,16 @@ public class ChangeTracker {
     return false;
   }
 
+  public boolean maybeApplyConstraint(
+      final GetObjectMetadataRequest request) {
+
+    if (policy.getMode() == ChangeDetectionPolicy.Mode.Server
+        && revisionId != null) {
+      policy.applyRevisionConstraint(request, revisionId);
+      return true;
+    }
+    return false;
+  }
 
   /**
    * Process the response from the server for validation against the

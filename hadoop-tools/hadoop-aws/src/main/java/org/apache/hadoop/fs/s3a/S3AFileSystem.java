@@ -1579,6 +1579,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ObjectMetadata meta = invoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
+          if (changeTracker != null) {
+            changeTracker.maybeApplyConstraint(request);
+          }
           ObjectMetadata objectMetadata = s3.getObjectMetadata(request);
           if (changeTracker != null) {
             changeTracker.processMetadata(objectMetadata, operation);

@@ -98,7 +98,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     EVENTUALLY_CONSISTENT_READ,
     COPY,
     EVENTUALLY_CONSISTENT_COPY,
-    SELECT
+    SELECT,
+    EVENTUALLY_CONSISTENT_SELECT
   }
 
   private final String changeDetectionSource;
@@ -117,7 +118,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
-                InteractionType.SELECT)},
+                InteractionType.SELECT,
+                InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
         // test with etag
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_SERVER,
@@ -127,7 +129,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
-                InteractionType.SELECT)},
+                InteractionType.SELECT,
+                InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_CLIENT,
             Arrays.asList(
                 InteractionType.READ,
@@ -137,7 +140,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
                 // detection can't really occur client-side.  The eTag of
                 // the new object can't be expected to match.
-                InteractionType.SELECT)},
+                InteractionType.SELECT,
+                InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_WARN,
             Arrays.asList(
                 InteractionType.READ_AFTER_DELETE)},
@@ -146,16 +150,13 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.READ_AFTER_DELETE)},
 
         // test with versionId
-        // when using server-side versionId, the normal read exceptions
-        // shouldn't happen since the previous version will still be available,
-        // but they will still happen on rename and select since we always do a
-        // client-side check against the current version
+        // when using server-side versionId, the exceptions
+        // shouldn't happen since the previous version will still be available
         {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_SERVER,
             Arrays.asList(
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
-                InteractionType.COPY,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
-                InteractionType.SELECT)},
+                InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
         // with client-side versionId it will behave similar to client-side eTag
         {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_CLIENT,
@@ -167,7 +168,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
                 // detection can't really occur client-side.  The versionId of
                 // the new object can't be expected to match.
-                InteractionType.SELECT)},
+                InteractionType.SELECT,
+                InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
         {CHANGE_DETECT_SOURCE_VERSION_ID, CHANGE_DETECT_MODE_WARN,
             Arrays.asList(
@@ -409,13 +411,15 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         .get()
         .close();
 
-    // TEST_MAX_RETRIES + 2 is required to before failure since there is
-    // one getObjectMetadata() call due to getFileStatus() before the
-    // change detection and retries in select()
+    // select() makes a getFileStaus() call before the consistency checking
+    // that will match the stub.  As such, we need an extra inconsistency here
+    // to cross the threshold
+    int getMetadataInconsistencyCount = TEST_MAX_RETRIES + 2;
     final Path testpath2 = writeEventuallyConsistentFileVersion(
-        "select2.dat", s3ClientSpy, 0, TEST_MAX_RETRIES + 2, 0);
+        "select2.dat", s3ClientSpy, 0, getMetadataInconsistencyCount, 0);
 
-    if (expectedExceptionInteractions.contains(InteractionType.SELECT)) {
+    if (expectedExceptionInteractions.contains(
+        InteractionType.EVENTUALLY_CONSISTENT_SELECT)) {
       // should fail since the inconsistency lasts longer than the configured
       // retry limit
       interceptFuture(RemoteFileChangedException.class, "select",

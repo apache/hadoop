@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.Locale;
 
 import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
 import com.amazonaws.services.s3.transfer.model.CopyResult;
@@ -246,6 +247,16 @@ public abstract class ChangeDetectionPolicy {
       String revisionId);
 
   /**
+   * Applies the given {@link #getRevisionId(ObjectMetadata, String) revisionId}
+   * as a server-side qualification on the {@code GetObjectMetadataRequest}.
+   *
+   * @param request the request
+   * @param revisionId the revision id
+   */
+  public abstract void applyRevisionConstraint(GetObjectMetadataRequest request,
+      String revisionId);
+
+  /**
    * Takes appropriate action based on {@link #getMode() mode} when a change has
    * been detected.
    *
@@ -343,6 +354,11 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
+    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
+      // GetObjectMetadataRequest doesn't support eTag qualification
+    }
+
+    @Override
     public Source getSource() {
       return Source.ETag;
     }
@@ -410,6 +426,14 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
+    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
+      if (revisionId != null) {
+        LOG.debug("Restricting metadata request to version {}", revisionId);
+        request.withVersionId(revisionId);
+      }
+    }
+
+    @Override
     public Source getSource() {
       return Source.VersionId;
     }
@@ -459,6 +483,11 @@ public abstract class ChangeDetectionPolicy {
     @Override
     public void applyRevisionConstraint(CopyObjectRequest request,
         String revisionId) {
+
+    }
+
+    @Override
+    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
 
     }
 
