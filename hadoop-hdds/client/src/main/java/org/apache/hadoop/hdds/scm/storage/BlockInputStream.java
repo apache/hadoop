@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdds.scm.storage;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -194,7 +195,7 @@ public class BlockInputStream extends InputStream implements Seekable {
    *
    * @return true if EOF, false if more data is available
    */
-  private boolean blockStreamEOF() {
+  protected boolean blockStreamEOF() {
     if (buffersHaveData() || chunksRemaining()) {
       return false;
     } else {
@@ -307,14 +308,9 @@ public class BlockInputStream extends InputStream implements Seekable {
       return true;
     }
     // ChunkIndex is the last chunk in the stream. Check if this chunk has
-    // been read from container or not.
-    if (chunkIndexOfCurrentBuffer == chunkIndex) {
-      // The last chunk has been read into the buffer
-      return false;
-    } else {
-      // The last chunk has not yet been read into the buffer
-      return true;
-    }
+    // been read from container or not. Return true if chunkIndex has not
+    // been read yet and false otherwise.
+    return chunkIndexOfCurrentBuffer != chunkIndex;
   }
 
   /**
@@ -326,31 +322,13 @@ public class BlockInputStream extends InputStream implements Seekable {
    */
   private synchronized void readChunkFromContainer() throws IOException {
     // Read the chunk at chunkIndex
-    XceiverClientReply reply;
-    ReadChunkResponseProto readChunkResponse = null;
     final ChunkInfo chunkInfo = chunks.get(chunkIndex);
     List<DatanodeDetails> excludeDns = null;
     ByteString byteString;
-    List<DatanodeDetails> dnList = xceiverClient.getPipeline().getNodes();
+    List<DatanodeDetails> dnList = getDatanodeList();
     while (true) {
-      try {
-        reply = ContainerProtocolCalls
-            .readChunk(xceiverClient, chunkInfo, blockID, traceID, excludeDns);
-        ContainerProtos.ContainerCommandResponseProto response;
-        response = reply.getResponse().get();
-        ContainerProtocolCalls.validateContainerResponse(response);
-        readChunkResponse = response.getReadChunk();
-      } catch (IOException e) {
-        if (e instanceof StorageContainerException) {
-          throw e;
-        }
-        throw new IOException("Unexpected OzoneException: " + e.toString(), e);
-      } catch (ExecutionException | InterruptedException e) {
-        throw new IOException(
-            "Failed to execute ReadChunk command for chunk  " + chunkInfo
-                .getChunkName(), e);
-      }
-      byteString = readChunkResponse.getData();
+      List<DatanodeDetails> dnListFromReadChunkCall = new ArrayList<>();
+      byteString = readChunk(chunkInfo, excludeDns, dnListFromReadChunkCall);
       try {
         if (byteString.size() != chunkInfo.getLen()) {
           // Bytes read from chunk should be equal to chunk size.
@@ -373,7 +351,7 @@ public class BlockInputStream extends InputStream implements Seekable {
         if (excludeDns == null) {
           excludeDns = new ArrayList<>();
         }
-        excludeDns.addAll(reply.getDatanodes());
+        excludeDns.addAll(dnListFromReadChunkCall);
         if (excludeDns.size() == dnList.size()) {
           throw ioe;
         }
@@ -388,6 +366,41 @@ public class BlockInputStream extends InputStream implements Seekable {
     // called on the stream before. This needs to be done so that the buffer
     // position can be advanced to the 'seeked' position.
     adjustBufferIndex();
+  }
+
+  /**
+   * Send RPC call to get the chunk from the container.
+   */
+  @VisibleForTesting
+  protected ByteString readChunk(final ChunkInfo chunkInfo,
+      List<DatanodeDetails> excludeDns, List<DatanodeDetails> dnListFromReply)
+      throws IOException {
+    XceiverClientReply reply;
+    ReadChunkResponseProto readChunkResponse = null;
+    try {
+      reply = ContainerProtocolCalls
+          .readChunk(xceiverClient, chunkInfo, blockID, traceID, excludeDns);
+      ContainerProtos.ContainerCommandResponseProto response;
+      response = reply.getResponse().get();
+      ContainerProtocolCalls.validateContainerResponse(response);
+      readChunkResponse = response.getReadChunk();
+      dnListFromReply.addAll(reply.getDatanodes());
+    } catch (IOException e) {
+      if (e instanceof StorageContainerException) {
+        throw e;
+      }
+      throw new IOException("Unexpected OzoneException: " + e.toString(), e);
+    } catch (ExecutionException | InterruptedException e) {
+      throw new IOException(
+          "Failed to execute ReadChunk command for chunk  " + chunkInfo
+              .getChunkName(), e);
+    }
+    return readChunkResponse.getData();
+  }
+
+  @VisibleForTesting
+  protected List<DatanodeDetails> getDatanodeList() {
+    return xceiverClient.getPipeline().getNodes();
   }
 
   @Override
@@ -487,5 +500,10 @@ public class BlockInputStream extends InputStream implements Seekable {
 
   public BlockID getBlockID() {
     return blockID;
+  }
+
+  @VisibleForTesting
+  protected int getChunkIndex() {
+    return chunkIndex;
   }
 }
