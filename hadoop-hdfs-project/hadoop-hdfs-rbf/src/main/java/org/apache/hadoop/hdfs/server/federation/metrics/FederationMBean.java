@@ -244,4 +244,10 @@ public interface FederationMBean {
    * @return String label for the current router state.
    */
   String getRouterStatus();
+
+  /**
+   * Get the current number of delegation tokens in memory.
+   * @return number of DTs
+   */
+  long getCurrentTokensCount();
 }
