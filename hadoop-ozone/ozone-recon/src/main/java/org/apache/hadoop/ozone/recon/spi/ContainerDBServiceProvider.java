@@ -24,6 +24,7 @@ import java.util.Map;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
+import org.apache.hadoop.utils.db.TableIterator;
 
 /**
  * The Recon Container DB Service interface.
@@ -75,4 +76,19 @@ public interface ContainerDBServiceProvider {
    * @throws IOException
    */
   Map<Long, ContainerMetadata> getContainers() throws IOException;
+
+  /**
+   * Delete an entry in the container DB.
+   * @param containerKeyPrefix container key prefix to be deleted.
+   * @throws IOException exception.
+   */
+  void deleteContainerMapping(ContainerKeyPrefix containerKeyPrefix)
+      throws IOException;
+
+  /**
+   * Get iterator to the entire container DB.
+   * @return TableIterator
+   * @throws IOException exception
+   */
+  TableIterator getContainerTableIterator() throws IOException;
 }

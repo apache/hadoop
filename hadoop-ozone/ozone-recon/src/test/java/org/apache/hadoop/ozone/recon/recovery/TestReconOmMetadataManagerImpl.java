@@ -127,22 +127,6 @@ public class TestReconOmMetadataManagerImpl {
         .get("/sampleVol/bucketOne/key_one"));
     Assert.assertNotNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_two"));
-
-    //Verify that we cannot write data to Recon OM DB (Read Only)
-    try {
-      reconOMMetadataManager.getKeyTable().put(
-          "/sampleVol/bucketOne/fail_key", new OmKeyInfo.Builder()
-              .setBucketName("bucketOne")
-              .setVolumeName("sampleVol")
-              .setKeyName("fail_key")
-              .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
-              .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
-              .build());
-      Assert.fail();
-    } catch (IOException e) {
-      Assert.assertTrue(e.getMessage()
-          .contains("Not supported operation in read only mode"));
-    }
   }
 
 }

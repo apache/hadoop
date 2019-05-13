@@ -22,6 +22,7 @@ package org.apache.hadoop.utils.db;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceStability;
 
@@ -157,4 +158,8 @@ public interface DBStore extends AutoCloseable {
    * @return DB file location.
    */
   File getDbLocation();
+
+  Map<Integer, String> getTableNames();
+
+  CodecRegistry getCodecRegistry();
 }

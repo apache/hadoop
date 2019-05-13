@@ -80,7 +80,7 @@ public abstract class AbstractSqlDatabaseTest {
     return dslContext;
   }
 
-  static class DataSourceConfigurationProvider implements
+  public static class DataSourceConfigurationProvider implements
       Provider<DataSourceConfiguration> {
 
     @Override
