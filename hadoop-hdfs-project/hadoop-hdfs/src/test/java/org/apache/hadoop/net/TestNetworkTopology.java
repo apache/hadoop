@@ -137,7 +137,62 @@ public class TestNetworkTopology {
     assertFalse(cluster.isOnSameRack(dataNodes[4], dataNodes[5]));
     assertTrue(cluster.isOnSameRack(dataNodes[5], dataNodes[6]));
   }
-  
+
+  @Test
+  public void testGetWeight() throws Exception {
+    DatanodeDescriptor nodeInMap = dataNodes[0];
+    assertEquals(0, cluster.getWeight(nodeInMap, dataNodes[0]));
+    assertEquals(2, cluster.getWeight(nodeInMap, dataNodes[1]));
+    assertEquals(4, cluster.getWeight(nodeInMap, dataNodes[2]));
+
+    DatanodeDescriptor nodeNotInMap =
+        DFSTestUtil.getDatanodeDescriptor("21.21.21.21", "/d1/r2");
+    assertEquals(4, cluster.getWeightUsingNetworkLocation(nodeNotInMap,
+        dataNodes[0]));
+    assertEquals(4, cluster.getWeightUsingNetworkLocation(nodeNotInMap,
+        dataNodes[1]));
+    assertEquals(2, cluster.getWeightUsingNetworkLocation(nodeNotInMap,
+        dataNodes[2]));
+  }
+
+  /**
+   * Test getWeight/getWeightUsingNetworkLocation for complex topology.
+   */
+  @Test
+  public void testGetWeightForDepth() throws Exception {
+    NetworkTopology topology = NetworkTopology.getInstance(new Configuration());
+    DatanodeDescriptor[] dns = new DatanodeDescriptor[] {
+        DFSTestUtil.getDatanodeDescriptor("1.1.1.1", "/z1/d1/p1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("2.2.2.2", "/z1/d1/p1/r1"),
+        DFSTestUtil.getDatanodeDescriptor("3.3.3.3", "/z1/d1/p2/r2"),
+        DFSTestUtil.getDatanodeDescriptor("4.4.4.4", "/z1/d2/p1/r2"),
+        DFSTestUtil.getDatanodeDescriptor("5.5.5.5", "/z2/d3/p1/r1"),
+    };
+    for (int i = 0; i < dns.length; i++) {
+      topology.add(dns[i]);
+    }
+
+    DatanodeDescriptor nodeInMap = dns[0];
+    assertEquals(0, topology.getWeight(nodeInMap, dns[0]));
+    assertEquals(2, topology.getWeight(nodeInMap, dns[1]));
+    assertEquals(6, topology.getWeight(nodeInMap, dns[2]));
+    assertEquals(8, topology.getWeight(nodeInMap, dns[3]));
+    assertEquals(10, topology.getWeight(nodeInMap, dns[4]));
+
+    DatanodeDescriptor nodeNotInMap =
+        DFSTestUtil.getDatanodeDescriptor("6.6.6.6", "/z1/d1/p1/r2");
+    assertEquals(4, topology.getWeightUsingNetworkLocation(
+        nodeNotInMap, dns[0]));
+    assertEquals(4, topology.getWeightUsingNetworkLocation(
+        nodeNotInMap, dns[1]));
+    assertEquals(6, topology.getWeightUsingNetworkLocation(
+        nodeNotInMap, dns[2]));
+    assertEquals(8, topology.getWeightUsingNetworkLocation(
+        nodeNotInMap, dns[3]));
+    assertEquals(10, topology.getWeightUsingNetworkLocation(
+        nodeNotInMap, dns[4]));
+  }
+
   @Test
   public void testGetDistance() throws Exception {
     assertEquals(cluster.getDistance(dataNodes[0], dataNodes[0]), 0);
