@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
@@ -76,5 +77,10 @@ public class AppActivitiesInfo {
         this.allocations.add(appAllocationInfo);
       }
     }
+  }
+
+  @VisibleForTesting
+  public List<AppAllocationInfo> getAllocations() {
+    return allocations;
   }
 }
