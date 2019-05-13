@@ -245,6 +245,8 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         objectAttributes("etag", "versionId"));
 
     // 412 is translated to RemoteFileChangedException
+    // note: this scenario is never currently hit due to
+    // https://github.com/aws/aws-sdk-java/issues/1644
     AmazonServiceException awsException =
         new AmazonServiceException("aws exception");
     awsException.setStatusCode(HttpStatus.SC_PRECONDITION_FAILED);

@@ -25,6 +25,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Optional;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
@@ -98,6 +99,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     EVENTUALLY_CONSISTENT_READ,
     COPY,
     EVENTUALLY_CONSISTENT_COPY,
+    EVENTUALLY_CONSISTENT_METADATA,
     SELECT,
     EVENTUALLY_CONSISTENT_SELECT
   }
@@ -118,6 +120,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_METADATA,
                 InteractionType.SELECT,
                 InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
@@ -129,6 +132,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.COPY,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_METADATA,
                 InteractionType.SELECT,
                 InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_CLIENT,
@@ -140,6 +144,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
                 // detection can't really occur client-side.  The eTag of
                 // the new object can't be expected to match.
+                InteractionType.EVENTUALLY_CONSISTENT_METADATA,
                 InteractionType.SELECT,
                 InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
         {CHANGE_DETECT_SOURCE_ETAG, CHANGE_DETECT_MODE_WARN,
@@ -156,6 +161,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
             Arrays.asList(
                 InteractionType.EVENTUALLY_CONSISTENT_READ,
                 InteractionType.EVENTUALLY_CONSISTENT_COPY,
+                InteractionType.EVENTUALLY_CONSISTENT_METADATA,
                 InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
         // with client-side versionId it will behave similar to client-side eTag
@@ -168,6 +174,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
                 // not InteractionType.EVENTUALLY_CONSISTENT_COPY as copy change
                 // detection can't really occur client-side.  The versionId of
                 // the new object can't be expected to match.
+                InteractionType.EVENTUALLY_CONSISTENT_METADATA,
                 InteractionType.SELECT,
                 InteractionType.EVENTUALLY_CONSISTENT_SELECT)},
 
@@ -527,11 +534,14 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * Tests doing a rename() on a file where the version visible in S3 does not
    * match the version in the metadata store until a certain number of retries
    * has been met.
+   * The test expects failure by AWSClientIOException caused by NPE due to
+   * https://github.com/aws/aws-sdk-java/issues/1644
    */
   @Test
-  public void testRenameEventuallyConsistentFile2() throws Throwable {
+  public void testRenameEventuallyConsistentFileNPE() throws Throwable {
     requireS3Guard();
-    AmazonS3 s3ClientSpy = Mockito.spy(fs.getAmazonS3ClientForTesting("mocking"));
+    AmazonS3 s3ClientSpy = Mockito.spy(
+        fs.getAmazonS3ClientForTesting("mocking"));
     fs.setAmazonS3Client(s3ClientSpy);
 
     skipIfVersionPolicyAndNoVersionId();
@@ -539,18 +549,68 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     Pair<Integer, Integer> counts = renameInconsistencyCounts(1);
     int metadataInconsistencyCount = counts.getLeft();
     int copyInconsistencyCount = counts.getRight();
+    // giving copyInconsistencyCount + 1 here should trigger the failure,
+    // exceeding the retry limit
     final Path testpath2 =
-        writeEventuallyConsistentFileVersion("rename-eventually2.dat",
+        writeEventuallyConsistentFileVersion("rename-eventuallyNPE.dat",
             s3ClientSpy,
             0,
             metadataInconsistencyCount,
             copyInconsistencyCount + 1);
-    final Path dest2 = path("dest2.dat");
+    final Path dest2 = path("destNPE.dat");
     if (expectedExceptionInteractions.contains(
         InteractionType.EVENTUALLY_CONSISTENT_COPY)) {
       // should fail since the inconsistency is set up to persist longer than
       // the configured retry limit
-      intercept(RemoteFileChangedException.class, "",
+      // the expected exception is not RemoteFileChangedException due to
+      // https://github.com/aws/aws-sdk-java/issues/1644
+      AWSClientIOException exception =
+          intercept(AWSClientIOException.class,
+              "Unable to complete transfer: null",
+              "expected copy() failure",
+              () -> fs.rename(testpath2, dest2));
+      AmazonClientException cause = exception.getCause();
+      assertNotNull(cause);
+      Throwable causeCause = cause.getCause();
+      assertTrue(causeCause instanceof NullPointerException);
+    } else {
+      fs.rename(testpath2, dest2);
+    }
+  }
+
+  /**
+   * Tests doing a rename() on a file where the version visible in S3 does not
+   * match the version in the metadata store until a certain number of retries
+   * has been met.
+   * The test expects failure by RemoteFileChangedException.
+   */
+  @Test
+  public void testRenameEventuallyConsistentFileRFCE() throws Throwable {
+    requireS3Guard();
+    AmazonS3 s3ClientSpy = Mockito.spy(
+        fs.getAmazonS3ClientForTesting("mocking"));
+    fs.setAmazonS3Client(s3ClientSpy);
+
+    skipIfVersionPolicyAndNoVersionId();
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(1);
+    int metadataInconsistencyCount = counts.getLeft();
+    int copyInconsistencyCount = counts.getRight();
+    // giving metadataInconsistencyCount + 1 here should trigger the failure,
+    // exceeding the retry limit
+    final Path testpath2 =
+        writeEventuallyConsistentFileVersion("rename-eventuallyRFCE.dat",
+            s3ClientSpy,
+            0,
+            metadataInconsistencyCount + 1,
+            copyInconsistencyCount);
+    final Path dest2 = path("destRFCE.dat");
+    if (expectedExceptionInteractions.contains(
+        InteractionType.EVENTUALLY_CONSISTENT_METADATA)) {
+      // should fail since the inconsistency is set up to persist longer than
+      // the configured retry limit
+      intercept(RemoteFileChangedException.class,
+          "change detected on copy",
           "expected copy() failure",
           () -> fs.rename(testpath2, dest2));
     } else {
@@ -911,7 +971,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
   /**
    * Stubs {@link AmazonS3#copyObject(CopyObjectRequest)}
-   * within s3ClientSpy to throw precondition failed error until
+   * within s3ClientSpy to return null (indicating preconditions not met) until
    * copyInconsistentCallCount calls have been made.
    * @param s3ClientSpy the spy to stub
    * @param testpath the path of the object the stub should apply to
@@ -936,10 +996,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
               + " of " + copyInconsistentCallCount;
           LOG.info("Copying {}: {}", testpath, message);
           logLocationAtDebug();
-          AmazonServiceException exception =
-              new AmazonServiceException(message);
-          exception.setStatusCode(SC_PRECONDITION_FAILED);
-          throw exception;
+          return null;
         }
         return (CopyObjectResult) invocation.callRealMethod();
       }

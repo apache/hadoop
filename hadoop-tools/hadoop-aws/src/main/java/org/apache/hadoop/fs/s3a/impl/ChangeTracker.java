@@ -229,6 +229,8 @@ public class ChangeTracker {
       RemoteFileChangedException {
     if (e instanceof AmazonServiceException) {
       AmazonServiceException serviceException = (AmazonServiceException) e;
+      // This isn't really going to be hit due to
+      // https://github.com/aws/aws-sdk-java/issues/1644
       if (serviceException.getStatusCode() == SC_PRECONDITION_FAILED) {
         versionMismatches.incrementAndGet();
         throw new RemoteFileChangedException(uri, operation, String.format(

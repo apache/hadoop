@@ -3021,18 +3021,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             .getVersionMismatchCounter(),
         srcAttributes);
 
-    String action = "\"copyFile(\" + srcKey + \", \" + dstKey + \")\", srcKey";
+    String action = "copyFile(" + srcKey + ", " + dstKey + ")";
     Invoker readInvoker = readContext.getReadInvoker();
 
     ObjectMetadata srcom =
-        once(action, null,
+        once(action, srcKey,
             () ->
                 getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
     ObjectMetadata dstom = cloneObjectMetadata(srcom);
     setOptionalObjectMetadata(dstom);
 
     return readInvoker.retry(
-        action, null,
+        action, srcKey,
         true,
         () -> {
           CopyObjectRequest copyObjectRequest =

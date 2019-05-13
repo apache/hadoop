@@ -1355,6 +1355,62 @@ org.apache.hadoop.fs.s3a.RemoteFileChangedException: open 's3a://my-bucket/test/
   at java.io.FilterInputStream.read(FilterInputStream.java:83)
 ```
 
+### Error `AWSClientIOException: copyFile` caused by `NullPointerException`
+
+The AWS SDK has an [issue](https://github.com/aws/aws-sdk-java/issues/1644)
+where it will throw a relatively generic `AmazonClientException` caused by
+`NullPointerException` when copying a file and specifying a precondition
+that cannot be met.  This can bubble up from `S3AFileSystem.rename()`. It
+suggests that the file in S3 is inconsistent with the metadata in S3Guard.
+
+```
+org.apache.hadoop.fs.s3a.AWSClientIOException: copyFile(test/rename-eventually2.dat, test/dest2.dat) on test/rename-eventually2.dat: com.amazonaws.AmazonClientException: Unable to complete transfer: null: Unable to complete transfer: null
+  at org.apache.hadoop.fs.s3a.S3AUtils.translateException(S3AUtils.java:201)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:111)
+  at org.apache.hadoop.fs.s3a.Invoker.lambda$retry$4(Invoker.java:314)
+  at org.apache.hadoop.fs.s3a.Invoker.retryUntranslated(Invoker.java:406)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:310)
+  at org.apache.hadoop.fs.s3a.Invoker.retry(Invoker.java:285)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.copyFile(S3AFileSystem.java:3034)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.innerRename(S3AFileSystem.java:1258)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.rename(S3AFileSystem.java:1119)
+  at org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged.lambda$testRenameEventuallyConsistentFile2$6(ITestS3ARemoteFileChanged.java:556)
+  at org.apache.hadoop.test.LambdaTestUtils.intercept(LambdaTestUtils.java:498)
+  at org.apache.hadoop.fs.s3a.ITestS3ARemoteFileChanged.testRenameEventuallyConsistentFile2(ITestS3ARemoteFileChanged.java:554)
+  at sun.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+  at sun.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62)
+  at sun.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+  at java.lang.reflect.Method.invoke(Method.java:498)
+  at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:50)
+  at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+  at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:47)
+  at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+  at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+  at org.junit.internal.runners.statements.RunAfters.evaluate(RunAfters.java:27)
+  at org.junit.rules.TestWatcher$1.evaluate(TestWatcher.java:55)
+  at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:298)
+  at org.junit.internal.runners.statements.FailOnTimeout$CallableStatement.call(FailOnTimeout.java:292)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.lang.Thread.run(Thread.java:748)
+Caused by: com.amazonaws.AmazonClientException: Unable to complete transfer: null
+  at com.amazonaws.services.s3.transfer.internal.AbstractTransfer.unwrapExecutionException(AbstractTransfer.java:286)
+  at com.amazonaws.services.s3.transfer.internal.AbstractTransfer.rethrowExecutionException(AbstractTransfer.java:265)
+  at com.amazonaws.services.s3.transfer.internal.CopyImpl.waitForCopyResult(CopyImpl.java:67)
+  at org.apache.hadoop.fs.s3a.impl.CopyOutcome.waitForCopy(CopyOutcome.java:72)
+  at org.apache.hadoop.fs.s3a.S3AFileSystem.lambda$copyFile$14(S3AFileSystem.java:3047)
+  at org.apache.hadoop.fs.s3a.Invoker.once(Invoker.java:109)
+  ... 25 more
+Caused by: java.lang.NullPointerException
+  at com.amazonaws.services.s3.transfer.internal.CopyCallable.copyInOneChunk(CopyCallable.java:154)
+  at com.amazonaws.services.s3.transfer.internal.CopyCallable.call(CopyCallable.java:134)
+  at com.amazonaws.services.s3.transfer.internal.CopyMonitor.call(CopyMonitor.java:132)
+  at com.amazonaws.services.s3.transfer.internal.CopyMonitor.call(CopyMonitor.java:43)
+  at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+  at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)
+  at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+  ... 1 more
+```
+
 ## Other Topics
 
 For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)
