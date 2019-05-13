@@ -2027,9 +2027,8 @@ public class TestYarnCLI {
   @Test
   public void testFailApplicationAttempt() throws Exception {
     ApplicationCLI cli = createAndGetAppCLI();
-    int exitCode =
-        cli.run(new String[] { "applicationattempt", "-fail",
-            "appattempt_1444199730803_0003_000001" });
+    int exitCode = cli.run(new String[] {"applicationattempt", "-fail",
+        "appattempt_1444199730803_0003_000001"});
     Assert.assertEquals(0, exitCode);
 
     verify(client).failApplicationAttempt(any(ApplicationAttemptId.class));
