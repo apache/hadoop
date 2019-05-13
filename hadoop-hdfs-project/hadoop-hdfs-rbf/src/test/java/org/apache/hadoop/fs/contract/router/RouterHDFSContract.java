@@ -47,8 +47,13 @@ public class RouterHDFSContract extends HDFSContract {
   }
 
   public static void createCluster(Configuration conf) throws IOException {
+    createCluster(true, 2, conf);
+  }
+
+  public static void createCluster(
+      boolean ha, int numNameServices, Configuration conf) throws IOException {
     try {
-      cluster = new MiniRouterDFSCluster(true, 2, conf);
+      cluster = new MiniRouterDFSCluster(ha, numNameServices, conf);
 
       // Start NNs and DNs and wait until ready
       cluster.startCluster(conf);
