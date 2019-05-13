@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.Headers;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -254,7 +255,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
         RemoteFileChangedException.PRECONDITIONS_FAILED);
 
     // processing another type of exception does nothing
-    tracker.processException(new RuntimeException(), "copy");
+    tracker.processException(new SdkBaseException("foo"), "copy");
   }
 
   protected void assertConstraintApplied(final ChangeTracker tracker,
@@ -279,7 +280,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected RemoteFileChangedException expectChangeException(
       final ChangeTracker tracker,
-      final Exception exception,
+      final SdkBaseException exception,
       final String operation,
       final String message) throws Exception {
     return expectException(tracker, exception, operation, message,
@@ -332,7 +333,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
 
   protected <T extends Exception> T expectException(
       final ChangeTracker tracker,
-      final Exception exception,
+      final SdkBaseException exception,
       final String operation,
       final String message,
       final Class<T> clazz) throws Exception {

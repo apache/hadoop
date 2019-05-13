@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.SdkBaseException;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.GetObjectMetadataRequest;
 import com.amazonaws.services.s3.model.GetObjectRequest;
@@ -225,7 +226,7 @@ public class ChangeTracker {
    * generated (e.g. "copy", "read", "select").
    * @throws RemoteFileChangedException if the remote file has changed.
    */
-  public void processException(Exception e, String operation) throws
+  public void processException(SdkBaseException e, String operation) throws
       RemoteFileChangedException {
     if (e instanceof AmazonServiceException) {
       AmazonServiceException serviceException = (AmazonServiceException) e;
