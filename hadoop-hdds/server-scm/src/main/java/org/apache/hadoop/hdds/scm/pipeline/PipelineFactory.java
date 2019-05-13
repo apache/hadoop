@@ -38,12 +38,12 @@ public final class PipelineFactory {
   private Map<ReplicationType, PipelineProvider> providers;
 
   PipelineFactory(NodeManager nodeManager, PipelineStateManager stateManager,
-      Configuration conf, RatisPipelineUtils ratisPipelineUtils) {
+      Configuration conf) {
     providers = new HashMap<>();
     providers.put(ReplicationType.STAND_ALONE,
         new SimplePipelineProvider(nodeManager));
     providers.put(ReplicationType.RATIS,
-        new RatisPipelineProvider(nodeManager, stateManager, conf, ratisPipelineUtils));
+        new RatisPipelineProvider(nodeManager, stateManager, conf));
   }
 
   @VisibleForTesting
@@ -60,5 +60,14 @@ public final class PipelineFactory {
   public Pipeline create(ReplicationType type, ReplicationFactor factor,
       List<DatanodeDetails> nodes) {
     return providers.get(type).create(factor, nodes);
+  }
+
+  @VisibleForTesting
+  public PipelineProvider getProvider(ReplicationType type) {
+    return providers.get(type);
+  }
+
+  public void shutdown() {
+    providers.values().forEach(provider -> provider.shutdown());
   }
 }

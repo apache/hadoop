@@ -40,7 +40,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 /**
  * Tests for RatisPipelineUtils.
  */
-public class TestRatisPipelineUtils {
+public class TestRatisPipelineCreateAndDestory {
 
   private static MiniOzoneCluster cluster;
   private OzoneConfiguration conf = new OzoneConfiguration();
@@ -97,15 +97,15 @@ public class TestRatisPipelineUtils {
     }
 
     // try creating another pipeline now
-    RatisPipelineUtils ratisPipelineUtils = new RatisPipelineUtils();
+    RatisPipelineProvider ratisPipelineProvider = (RatisPipelineProvider)
+        pipelineManager.getPipelineFactory().getProvider(
+            HddsProtos.ReplicationType.RATIS);
     try {
-      ratisPipelineUtils.createPipeline(pipelines.get(0), conf);
+      ratisPipelineProvider.createPipeline(pipelines.get(0));
       Assert.fail("pipeline creation should fail after shutting down pipeline");
     } catch (IOException ioe) {
       // in case the pipeline creation fails, MultipleIOException is thrown
       Assert.assertTrue(ioe instanceof MultipleIOException);
-    } finally {
-      ratisPipelineUtils.shutdown();
     }
 
     // make sure pipelines is destroyed

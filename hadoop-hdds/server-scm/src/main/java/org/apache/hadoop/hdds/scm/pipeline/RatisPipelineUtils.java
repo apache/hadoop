@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -54,44 +55,6 @@ public final class RatisPipelineUtils {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RatisPipelineUtils.class);
-
-  // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
-  private final int parallelisimForPool = 3;
-
-  private final ForkJoinPool.ForkJoinWorkerThreadFactory factory =
-      (forkJoinPool -> {
-        final ForkJoinWorkerThread worker = ForkJoinPool.
-            defaultForkJoinWorkerThreadFactory.newThread(forkJoinPool);
-        worker.setName("ratisCreatePipeline" + worker.getPoolIndex());
-        return worker;
-      });
-
-  public final ForkJoinPool forkJoinPool = new ForkJoinPool(
-      parallelisimForPool, factory, null, false);
-
-  /**
-   * Sends ratis command to create pipeline on all the datanodes.
-   *
-   * @param pipeline  - Pipeline to be created
-   * @param ozoneConf - Ozone Confinuration
-   * @throws IOException if creation fails
-   */
-  public void createPipeline(Pipeline pipeline, Configuration ozoneConf)
-      throws IOException {
-    final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
-    LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
-    callRatisRpc(pipeline.getNodes(), ozoneConf,
-        (raftClient, peer) -> {
-          RaftClientReply reply = raftClient.groupAdd(group, peer.getId());
-          if (reply == null || !reply.isSuccess()) {
-            String msg = "Pipeline initialization failed for pipeline:"
-                + pipeline.getId() + " node:" + peer.getId();
-            LOG.error(msg);
-            throw new IOException(msg);
-          }
-        });
-  }
-
   /**
    * Removes pipeline from SCM. Sends ratis command to destroy pipeline on all
    * the datanodes.
@@ -139,61 +102,5 @@ public final class RatisPipelineUtils {
             retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout);
     client
         .groupRemove(RaftGroupId.valueOf(pipelineID.getId()), true, p.getId());
-  }
-
-  private void callRatisRpc(List<DatanodeDetails> datanodes,
-      Configuration ozoneConf,
-      CheckedBiConsumer<RaftClient, RaftPeer, IOException> rpc)
-      throws IOException {
-    if (datanodes.isEmpty()) {
-      return;
-    }
-
-    final String rpcType = ozoneConf
-        .get(ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
-            ScmConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);
-    final RetryPolicy retryPolicy = RatisHelper.createRetryPolicy(ozoneConf);
-    final List<IOException> exceptions =
-        Collections.synchronizedList(new ArrayList<>());
-    final int maxOutstandingRequests =
-        HddsClientUtils.getMaxOutstandingRequests(ozoneConf);
-    final GrpcTlsConfig tlsConfig = RatisHelper.createTlsClientConfig(new
-        SecurityConfig(ozoneConf));
-    final TimeDuration requestTimeout =
-        RatisHelper.getClientRequestTimeout(ozoneConf);
-    try {
-      forkJoinPool.submit(() -> {
-        datanodes.parallelStream().forEach(d -> {
-          final RaftPeer p = RatisHelper.toRaftPeer(d);
-          try (RaftClient client = RatisHelper
-              .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-                  retryPolicy, maxOutstandingRequests, tlsConfig,
-                  requestTimeout)) {
-            rpc.accept(client, p);
-          } catch (IOException ioe) {
-            String errMsg =
-                "Failed invoke Ratis rpc " + rpc + " for " + d.getUuid();
-            LOG.error(errMsg, ioe);
-            exceptions.add(new IOException(errMsg, ioe));
-          }
-        });
-      }).get();
-    } catch (ExecutionException | RejectedExecutionException ex) {
-      LOG.error(ex.getClass().getName() + " exception occurred during " +
-          "createPipeline", ex);
-      throw new IOException(ex.getClass().getName() + " exception occurred " +
-          "during createPipeline", ex);
-    } catch(InterruptedException ex) {
-      Thread.currentThread().interrupt();
-      throw new IOException("Interrupt exception occurred during " +
-          "createPipeline", ex);
-    }
-    if (!exceptions.isEmpty()) {
-      throw MultipleIOException.createIOException(exceptions);
-    }
-  }
-
-  public void shutdown() {
-    forkJoinPool.shutdownNow();
   }
 }
