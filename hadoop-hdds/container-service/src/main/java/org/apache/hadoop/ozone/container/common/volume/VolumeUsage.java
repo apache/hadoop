@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Class that wraps the space df of the Datanode Volumes used by SCM
@@ -46,7 +47,8 @@ public class VolumeUsage {
   private final File rootDir;
   private final DF df;
   private final File scmUsedFile;
-  private GetSpaceUsed scmUsage;
+  private AtomicReference<GetSpaceUsed> scmUsage;
+  private boolean shutdownComplete;
 
   private static final String DU_CACHE_FILE = "scmUsed";
   private volatile boolean scmUsedSaved = false;
@@ -65,10 +67,11 @@ public class VolumeUsage {
 
   void startScmUsageThread(Configuration conf) throws IOException {
     // get SCM specific df
-    this.scmUsage = new CachingGetSpaceUsed.Builder().setPath(rootDir)
-        .setConf(conf)
-        .setInitialUsed(loadScmUsed())
-        .build();
+    scmUsage = new AtomicReference<>(
+        new CachingGetSpaceUsed.Builder().setPath(rootDir)
+            .setConf(conf)
+            .setInitialUsed(loadScmUsed())
+            .build());
   }
 
   long getCapacity() {
@@ -89,14 +92,18 @@ public class VolumeUsage {
   }
 
   long getScmUsed() throws IOException{
-    return scmUsage.getUsed();
+    return scmUsage.get().getUsed();
   }
 
-  public void shutdown() {
-    saveScmUsed();
+  public synchronized void shutdown() {
+    if (!shutdownComplete) {
+      saveScmUsed();
 
-    if (scmUsage instanceof CachingGetSpaceUsed) {
-      IOUtils.cleanupWithLogger(null, ((CachingGetSpaceUsed) scmUsage));
+      if (scmUsage.get() instanceof CachingGetSpaceUsed) {
+        IOUtils.cleanupWithLogger(
+            null, ((CachingGetSpaceUsed) scmUsage.get()));
+      }
+      shutdownComplete = true;
     }
   }
 
@@ -176,6 +183,6 @@ public class VolumeUsage {
    */
   @VisibleForTesting
   public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
-    this.scmUsage = scmUsageForTest;
+    scmUsage.set(scmUsageForTest);
   }
 }
