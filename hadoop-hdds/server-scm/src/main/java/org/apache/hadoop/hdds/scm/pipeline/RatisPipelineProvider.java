@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.scm.pipeline;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
@@ -75,14 +74,14 @@ public class RatisPipelineProvider implements PipelineProvider {
   private final int parallelisimForPool = 3;
 
   private final ForkJoinPool.ForkJoinWorkerThreadFactory factory =
-      (forkJoinPool -> {
+      (pool -> {
         final ForkJoinWorkerThread worker = ForkJoinPool.
-            defaultForkJoinWorkerThreadFactory.newThread(forkJoinPool);
+            defaultForkJoinWorkerThreadFactory.newThread(pool);
         worker.setName("ratisCreatePipeline" + worker.getPoolIndex());
         return worker;
       });
 
-  public final ForkJoinPool forkJoinPool = new ForkJoinPool(
+  private final ForkJoinPool forkJoinPool = new ForkJoinPool(
       parallelisimForPool, factory, null, false);
 
 
@@ -192,8 +191,6 @@ public class RatisPipelineProvider implements PipelineProvider {
    */
   public void createPipeline(Pipeline pipeline)
       throws IOException {
-    if (pipeline.getFactor() == HddsProtos.ReplicationFactor.ONE)
-      return;
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
     callRatisRpc(pipeline.getNodes(),
