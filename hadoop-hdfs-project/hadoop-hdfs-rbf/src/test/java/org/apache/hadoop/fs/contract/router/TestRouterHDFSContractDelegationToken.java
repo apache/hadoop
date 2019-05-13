@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.fs.contract.router;
 
+import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
+import static org.apache.hadoop.hdfs.server.federation.metrics.TestFederationMetrics.FEDERATION_BEAN;
+
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
+import org.apache.hadoop.hdfs.server.federation.metrics.FederationMBean;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.junit.AfterClass;
@@ -30,9 +37,6 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
-import java.io.IOException;
-import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
 
 /**
  * Test to verify router contracts for delegation token operations.
@@ -42,7 +46,7 @@ public class TestRouterHDFSContractDelegationToken
 
   @BeforeClass
   public static void createCluster() throws Exception {
-    RouterHDFSContract.createCluster(initSecurity());
+    RouterHDFSContract.createCluster(false, 1, initSecurity());
   }
 
   @AfterClass
@@ -60,6 +64,10 @@ public class TestRouterHDFSContractDelegationToken
 
   @Test
   public void testRouterDelegationToken() throws Exception {
+    FederationMBean bean = FederationTestUtils.getBean(
+        FEDERATION_BEAN, FederationMBean.class);
+    // Initially there is no token in memory
+    assertEquals(0, bean.getCurrentTokensCount());
     // Generate delegation token
     Token<DelegationTokenIdentifier> token =
         (Token<DelegationTokenIdentifier>) getFileSystem()
@@ -81,6 +89,8 @@ public class TestRouterHDFSContractDelegationToken
     assertTrue(sequenceNumber > 0);
     long existingMaxTime = token.decodeIdentifier().getMaxDate();
     assertTrue(identifier.getMaxDate() >= identifier.getIssueDate());
+    // one token is expected after the generation
+    assertEquals(1, bean.getCurrentTokensCount());
 
     // Renew delegation token
     long expiryTime = token.renew(initSecurity());
@@ -92,9 +102,11 @@ public class TestRouterHDFSContractDelegationToken
     identifier = token.decodeIdentifier();
     assertEquals(identifier.getMasterKeyId(), masterKeyId);
     assertEquals(identifier.getSequenceNumber(), sequenceNumber);
+    assertEquals(1, bean.getCurrentTokensCount());
 
     // Cancel delegation token
     token.cancel(initSecurity());
+    assertEquals(0, bean.getCurrentTokensCount());
 
     // Renew a cancelled token
     exceptionRule.expect(SecretManager.InvalidToken.class);
