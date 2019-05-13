@@ -30,10 +30,13 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
+import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -43,6 +46,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.SystemClock;
 import org.junit.Assert;
@@ -81,6 +85,8 @@ public class TestActivitiesManager {
   @Before
   public void setup() {
     rmContext = Mockito.mock(RMContext.class);
+    Configuration conf = new Configuration();
+    Mockito.when(rmContext.getYarnConfiguration()).thenReturn(conf);
     ResourceScheduler scheduler = Mockito.mock(ResourceScheduler.class);
     Mockito.when(scheduler.getMinimumResourceCapability())
         .thenReturn(Resources.none());
@@ -95,6 +101,8 @@ public class TestActivitiesManager {
       RMApp mockApp = Mockito.mock(RMApp.class);
       Mockito.doReturn(appAttemptId.getApplicationId()).when(mockApp)
           .getApplicationId();
+      Mockito.doReturn(FinalApplicationStatus.UNDEFINED).when(mockApp)
+          .getFinalApplicationStatus();
       rmApps.put(appAttemptId.getApplicationId(), mockApp);
       FiCaSchedulerApp app =
           new FiCaSchedulerApp(appAttemptId, "user", mockQueue,
@@ -243,6 +251,51 @@ public class TestActivitiesManager {
     for(AppAllocation aa : appAllocations) {
       Assert.assertEquals(NUM_NODES, aa.getAllocationAttempts().size());
     }
+  }
+
+  @Test (timeout = 30000)
+  public void testAppActivitiesTTL() throws Exception {
+    long cleanupIntervalMs = 100;
+    long appActivitiesTTL = 1000;
+    rmContext.getYarnConfiguration()
+        .setLong(YarnConfiguration.RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS,
+            cleanupIntervalMs);
+    rmContext.getYarnConfiguration()
+        .setLong(YarnConfiguration.RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS,
+            appActivitiesTTL);
+    ActivitiesManager newActivitiesManager = new ActivitiesManager(rmContext);
+    newActivitiesManager.serviceStart();
+    // start recording activities for first app and first node
+    SchedulerApplicationAttempt app = apps.get(0);
+    FiCaSchedulerNode node = (FiCaSchedulerNode) nodes.get(0);
+    newActivitiesManager
+        .turnOnAppActivitiesRecording(app.getApplicationId(), 3);
+    int numActivities = 10;
+    for (int i = 0; i < numActivities; i++) {
+      ActivitiesLogger.APP
+          .startAppAllocationRecording(newActivitiesManager, node,
+              SystemClock.getInstance().getTime(), app);
+      ActivitiesLogger.APP
+          .recordAppActivityWithoutAllocation(newActivitiesManager, node, app,
+              new SchedulerRequestKey(Priority.newInstance(0), 0, null),
+              ActivityDiagnosticConstant.FAIL_TO_ALLOCATE,
+              ActivityState.REJECTED);
+      ActivitiesLogger.APP
+          .finishAllocatedAppAllocationRecording(newActivitiesManager,
+              app.getApplicationId(), null, ActivityState.SKIPPED,
+              ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
+    }
+    AppActivitiesInfo appActivitiesInfo = newActivitiesManager
+        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+    Assert.assertEquals(numActivities,
+        appActivitiesInfo.getAllocations().size());
+    // sleep until all app activities expired
+    Thread.sleep(cleanupIntervalMs + appActivitiesTTL);
+    // there should be no remaining app activities
+    appActivitiesInfo = newActivitiesManager
+        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+    Assert.assertEquals(0,
+        appActivitiesInfo.getAllocations().size());
   }
 
   /**
