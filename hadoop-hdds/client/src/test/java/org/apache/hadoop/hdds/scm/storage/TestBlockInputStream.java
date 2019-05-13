@@ -19,7 +19,11 @@ package org.apache.hadoop.hdds.scm.storage;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumData;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
+    .ChecksumType;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
@@ -40,21 +44,21 @@ import java.util.UUID;
 public class TestBlockInputStream {
 
   private static BlockInputStream blockInputStream;
-  private static List<ContainerProtos.ChunkInfo> chunks;
+  private static List<ChunkInfo> chunks;
   private static int blockSize;
 
   private static final int CHUNK_SIZE = 20;
 
   @Before
   public void setup() throws Exception {
-    BlockID blockID = new BlockID(new ContainerBlockID(1,1));
-    chunks = createMockChunkList(10);
+    BlockID blockID = new BlockID(new ContainerBlockID(1, 1));
+    chunks = createChunkList(10);
     String traceID = UUID.randomUUID().toString();
     blockInputStream = new DummyBlockInputStream(blockID, null, null, chunks,
         traceID, false, 0);
 
     blockSize = 0;
-    for (ContainerProtos.ChunkInfo chunk : chunks) {
+    for (ChunkInfo chunk : chunks) {
       blockSize += chunk.getLen();
     }
   }
@@ -65,33 +69,32 @@ public class TestBlockInputStream {
    * @param numChunks
    * @return
    */
-  private static List<ContainerProtos.ChunkInfo> createMockChunkList(int numChunks) {
-    ContainerProtos.ChecksumData
-        dummyChecksumData = ContainerProtos.ChecksumData.newBuilder()
-        .setType(ContainerProtos.ChecksumType.NONE)
+  private static List<ChunkInfo> createChunkList(int numChunks) {
+    ChecksumData dummyChecksumData = ChecksumData.newBuilder()
+        .setType(ChecksumType.NONE)
         .setBytesPerChecksum(100)
         .build();
-    List<ContainerProtos.ChunkInfo> chunks = new ArrayList<>(numChunks);
+    List<ChunkInfo> chunkList = new ArrayList<>(numChunks);
     int i;
-    for (i = 0; i < numChunks - 1; i ++) {
+    for (i = 0; i < numChunks - 1; i++) {
       String chunkName = "chunk-" + i;
-      ContainerProtos.ChunkInfo chunkInfo = ContainerProtos.ChunkInfo.newBuilder()
+      ChunkInfo chunkInfo = ChunkInfo.newBuilder()
           .setChunkName(chunkName)
           .setOffset(0)
           .setLen(CHUNK_SIZE)
           .setChecksumData(dummyChecksumData)
           .build();
-      chunks.add(chunkInfo);
+      chunkList.add(chunkInfo);
     }
-    ContainerProtos.ChunkInfo chunkInfo = ContainerProtos.ChunkInfo.newBuilder()
+    ChunkInfo chunkInfo = ChunkInfo.newBuilder()
         .setChunkName("chunk-" + i)
         .setOffset(0)
         .setLen(CHUNK_SIZE/2)
         .setChecksumData(dummyChecksumData)
         .build();
-    chunks.add(chunkInfo);
+    chunkList.add(chunkInfo);
 
-    return chunks;
+    return chunkList;
   }
 
   /**
@@ -102,7 +105,7 @@ public class TestBlockInputStream {
     DummyBlockInputStream(BlockID blockID,
         XceiverClientManager xceiverClientManager,
         XceiverClientSpi xceiverClient,
-        List<ContainerProtos.ChunkInfo> chunks,
+        List<ChunkInfo> chunks,
         String traceID,
         boolean verifyChecksum,
         long initialPosition) throws IOException {
@@ -111,12 +114,10 @@ public class TestBlockInputStream {
     }
 
     @Override
-    protected ByteString readChunk(final ContainerProtos.ChunkInfo chunkInfo,
+    protected ByteString readChunk(final ChunkInfo chunkInfo,
         List<DatanodeDetails> excludeDns, List<DatanodeDetails> dnListFromReply)
         throws IOException {
-      ByteString byteString = getByteString(chunkInfo.getChunkName(),
-          (int) chunkInfo.getLen());
-      return byteString;
+      return getByteString(chunkInfo.getChunkName(), (int) chunkInfo.getLen());
     }
 
     @Override
@@ -130,7 +131,7 @@ public class TestBlockInputStream {
      * placed.
      */
     private static ByteString getByteString(String data, int length) {
-      while (data.length() < (int) length) {
+      while (data.length() < length) {
         data = data + "0";
       }
       return ByteString.copyFrom(data.getBytes(), 0, length);
@@ -142,17 +143,17 @@ public class TestBlockInputStream {
     // Seek to position 0
     int pos = 0;
     seekAndVerify(pos);
-    Assert.assertEquals("ChunkIndex is incorrect",0,
+    Assert.assertEquals("ChunkIndex is incorrect", 0,
         blockInputStream.getChunkIndex());
 
     pos = CHUNK_SIZE;
     seekAndVerify(pos);
-    Assert.assertEquals("ChunkIndex is incorrect",1,
+    Assert.assertEquals("ChunkIndex is incorrect", 1,
         blockInputStream.getChunkIndex());
 
     pos = (CHUNK_SIZE * 5) + 5;
     seekAndVerify(pos);
-    Assert.assertEquals("ChunkIndex is incorrect",5,
+    Assert.assertEquals("ChunkIndex is incorrect", 5,
         blockInputStream.getChunkIndex());
 
     try {
@@ -187,6 +188,6 @@ public class TestBlockInputStream {
   private void seekAndVerify(int pos) throws Exception {
     blockInputStream.seek(pos);
     Assert.assertEquals("Current position of buffer does not match with the " +
-            "seeked position",pos, blockInputStream.getPos());
+            "seeked position", pos, blockInputStream.getPos());
   }
 }
