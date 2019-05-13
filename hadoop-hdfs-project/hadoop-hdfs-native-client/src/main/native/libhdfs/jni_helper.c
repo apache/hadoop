@@ -551,15 +551,15 @@ JNIEnv* getJNIEnv(void)
     state->env = getGlobalJNIEnv();
     mutexUnlock(&jvmMutex);
 
+    if (!state->env) {
+        goto fail;
+    }
+
     jthrowable jthr = NULL;
     jthr = initCachedClasses(state->env);
     if (jthr) {
       printExceptionAndFree(state->env, jthr, PRINT_EXC_ALL,
                             "initCachedClasses failed");
-      goto fail;
-    }
-
-    if (!state->env) {
       goto fail;
     }
     return state->env;
