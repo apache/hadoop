@@ -286,14 +286,14 @@ char ** extract_values_delim(char *value, const char *delim) {
   //first allocate any array of 10
   if(value != NULL) {
     toPass = (char **) malloc(sizeof(char *) * toPassSize);
-    tempTok = strtok_r((char *)value, ",", &tempstr);
+    tempTok = strtok_r((char *)value, "%", &tempstr);
     while (tempTok != NULL) {
       toPass[size++] = tempTok;
       if(size == toPassSize) {
         toPassSize += MAX_SIZE;
         toPass = (char **) realloc(toPass,(sizeof(char *) * toPassSize));
       }
-      tempTok = strtok_r(NULL, ",", &tempstr);
+      tempTok = strtok_r(NULL, "%", &tempstr);
     }
   }
   if (toPass != NULL) {
@@ -303,7 +303,7 @@ char ** extract_values_delim(char *value, const char *delim) {
 }
 
 /**
- * Extracts array of values from the comma separated list of values.
+ * Extracts array of values from the '%' separated list of values.
  */
 char ** extract_values(char *value) {
   return extract_values_delim(value, ",");
@@ -311,7 +311,7 @@ char ** extract_values(char *value) {
 
 /**
  * Function to return an array of values for a key.
- * Value delimiter is assumed to be a comma.
+ * Value delimiter is assumed to be a '%'.
  */
 char ** get_values(const char * key, struct configuration *cfg) {
   char *value = get_value(key, cfg);

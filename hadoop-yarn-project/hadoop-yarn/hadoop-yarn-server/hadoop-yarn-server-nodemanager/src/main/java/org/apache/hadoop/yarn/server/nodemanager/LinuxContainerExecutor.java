@@ -53,6 +53,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
   private static final Log LOG = LogFactory
       .getLog(LinuxContainerExecutor.class);
 
+  public final static char LINUX_FILE_PATH_SEPARATOR = '%';
+
   private String nonsecureLocalUser;
   private Pattern nonsecureLocalUserPattern;
   private String containerExecutorExe;
@@ -214,8 +216,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
                    Integer.toString(Commands.INITIALIZE_CONTAINER.getValue()),
                    appId,
                    nmPrivateContainerTokensPath.toUri().getPath().toString(),
-                   StringUtils.join(",", localDirs),
-                   StringUtils.join(",", logDirs)));
+                   StringUtils.join(LINUX_FILE_PATH_SEPARATOR,
+                       localDirs),
+                   StringUtils.join(LINUX_FILE_PATH_SEPARATOR,
+                       logDirs)));
 
     File jvm =                                  // use same jvm as parent
       new File(new File(System.getProperty("java.home"), "bin"), "java");
@@ -286,8 +290,10 @@ public class LinuxContainerExecutor extends ContainerExecutor {
             nmPrivateCotainerScriptPath.toUri().getPath().toString(),
             nmPrivateTokensPath.toUri().getPath().toString(),
             pidFilePath.toString(),
-            StringUtils.join(",", localDirs),
-            StringUtils.join(",", logDirs),
+            StringUtils.join(LINUX_FILE_PATH_SEPARATOR,
+                localDirs),
+            StringUtils.join(LINUX_FILE_PATH_SEPARATOR,
+                logDirs),
             resourcesOptions));
         String[] commandArray = command.toArray(new String[command.size()]);
         shExec = new ShellCommandExecutor(commandArray, null, // NM's cwd

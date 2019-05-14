@@ -409,10 +409,11 @@ public class CgroupsLCEResourcesHandler implements LCEResourcesHandler {
 
     if (isCpuWeightEnabled()) {
       sb.append(pathForCgroup(CONTROLLER_CPU, containerName) + "/tasks");
-      sb.append(",");
+      sb.append(LinuxContainerExecutor.LINUX_FILE_PATH_SEPARATOR);
     }
 
-    if (sb.charAt(sb.length() - 1) == ',') {
+    if (sb.charAt(sb.length() - 1) ==
+        LinuxContainerExecutor.LINUX_FILE_PATH_SEPARATOR) {
       sb.deleteCharAt(sb.length() - 1);
     }
 
