@@ -25,6 +25,7 @@ import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.csi.CsiServer.CsiConfig;
 
 import csi.v1.Csi.NodeGetCapabilitiesRequest;
 import csi.v1.Csi.NodeGetCapabilitiesResponse;
@@ -49,9 +50,8 @@ public class NodeService extends NodeImplBase {
 
   private String s3Endpoint;
 
-  public NodeService(OzoneConfiguration configuration) {
-    this.s3Endpoint =
-        configuration.get(CsiConfigurationValues.OZONE_S3_ADDRESS);
+  public NodeService(CsiConfig configuration) {
+    this.s3Endpoint = configuration.getS3gAddress();
 
   }
 

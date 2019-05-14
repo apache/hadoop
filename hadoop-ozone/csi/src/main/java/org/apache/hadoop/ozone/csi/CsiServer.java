@@ -21,15 +21,21 @@ import java.util.concurrent.Callable;
 
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.conf.Config;
+import org.apache.hadoop.hdds.conf.ConfigGroup;
+import org.apache.hadoop.hdds.conf.ConfigTag;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.util.StringUtils;
 
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import io.netty.channel.epoll.EpollEventLoopGroup;
 import io.netty.channel.epoll.EpollServerDomainSocketChannel;
 import io.netty.channel.unix.DomainSocketAddress;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 
 /**
@@ -41,27 +47,27 @@ import picocli.CommandLine.Command;
     mixinStandardHelpOptions = true)
 public class CsiServer extends GenericCli implements Callable<Void> {
 
+  private final static Logger LOG = LoggerFactory.getLogger(CsiServer.class);
+
   @Override
   public Void call() throws Exception {
     OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
-    String unixSocket = ozoneConfiguration
-        .get(CsiConfigurationValues.OZONE_CSI_SOCKET,
-            CsiConfigurationValues.OZONE_CSI_SOCKET_DEFAULT);
+    CsiConfig csiConfig = ozoneConfiguration.getObject(CsiConfig.class);
+
     OzoneClient rpcClient = OzoneClientFactory.getRpcClient(ozoneConfiguration);
 
     EpollEventLoopGroup group = new EpollEventLoopGroup();
 
-    long defaultVolumeSize = ozoneConfiguration
-        .getLongBytes(CsiConfigurationValues.OZONE_CSI_DEFAULT_VOLUME_SIZE,
-            CsiConfigurationValues.OZONE_CSI_DEFAULT_VOLUME_SIZE_DEFAULT);
     Server server =
-        NettyServerBuilder.forAddress(new DomainSocketAddress(unixSocket))
+        NettyServerBuilder
+            .forAddress(new DomainSocketAddress(csiConfig.getSocketPath()))
             .channelType(EpollServerDomainSocketChannel.class)
             .workerEventLoopGroup(group)
             .bossEventLoopGroup(group)
             .addService(new IdentitiyService())
-            .addService(new ControllerService(rpcClient, defaultVolumeSize))
-            .addService(new NodeService(ozoneConfiguration))
+            .addService(new ControllerService(rpcClient,
+                csiConfig.getDefaultVolumeSize()))
+            .addService(new NodeService(csiConfig))
             .build();
 
     server.start();
@@ -71,6 +77,55 @@ public class CsiServer extends GenericCli implements Callable<Void> {
   }
 
   public static void main(String[] args) {
+
+    StringUtils.startupShutdownMessage(CsiServer.class, args, LOG);
     new CsiServer().run(args);
+  }
+
+  @ConfigGroup(prefix = "ozone.csi")
+  public static class CsiConfig {
+    private String socketPath;
+    private long defaultVolumeSize;
+    private String s3gAddress;
+
+    public String getSocketPath() {
+      return socketPath;
+    }
+
+    @Config(key = "socket",
+        defaultValue = "/tmp/csi.sock",
+        description =
+            "The socket where all the CSI services will listen (file name).",
+        tags = ConfigTag.STORAGE)
+    public void setSocketPath(String socketPath) {
+      this.socketPath = socketPath;
+    }
+
+    public long getDefaultVolumeSize() {
+      return defaultVolumeSize;
+    }
+
+    @Config(key = "default-volume-size",
+        defaultValue = "1000000000",
+        description =
+            "The default size of the create volumes (if not specified).",
+        tags = ConfigTag.STORAGE)
+    public void setDefaultVolumeSize(long defaultVolumeSize) {
+      this.defaultVolumeSize = defaultVolumeSize;
+    }
+
+    public String getS3gAddress() {
+      return s3gAddress;
+    }
+
+    @Config(key = "s3g.address",
+        defaultValue = "http://localhost:9878",
+        description =
+            "The default size of the created volumes (if not specified in the"
+                + " requests).",
+        tags = ConfigTag.STORAGE)
+    public void setS3gAddress(String s3gAddress) {
+      this.s3gAddress = s3gAddress;
+    }
   }
 }
