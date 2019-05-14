@@ -90,7 +90,11 @@ function ozonecmd_case
     ;;
     datanode)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
-      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties"
+      # Add JVM parameter (org.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false)
+      # for disabling netty PooledByteBufAllocator thread caches for non-netty threads.
+      # This parameter significantly reduces GC pressure for Datanode.
+      # Corresponding Ratis issue https://issues.apache.org/jira/browse/RATIS-534.
+      HDDS_DN_OPTS="${HDDS_DN_OPTS} -Dlog4j.configurationFile=${HADOOP_CONF_DIR}/dn-audit-log4j2.properties -Dorg.apache.ratis.thirdparty.io.netty.allocator.useCacheForAllThreads=false"
       HADOOP_OPTS="${HADOOP_OPTS} ${HDDS_DN_OPTS}"
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.HddsDatanodeService
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-datanode"
