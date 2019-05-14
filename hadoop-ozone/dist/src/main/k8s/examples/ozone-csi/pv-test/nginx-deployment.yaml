@@ -1,0 +1,35 @@
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  labels:
+    app: nginx
+  annotations: {}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+      annotations: {}
+    spec:
+      containers:
+      - name: nginx
+        image: nginx
+        volumeMounts:
+        - mountPath: /var/lib/www/html
+          name: webroot
+        env: []
+        envFrom: []
+      volumes:
+      - name: webroot
+        persistentVolumeClaim:
+          claimName: nginx-storage
+          readOnly: false
+      - name: config
+        configMap:
+          name: nginx-conf

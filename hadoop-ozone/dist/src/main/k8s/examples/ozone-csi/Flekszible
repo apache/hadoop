@@ -1,0 +1,10 @@
+source:
+  - path: ../../definitions
+import:
+  - path: ozone-csi
+
+  - path: ozone
+    transformations:
+      - type: ozone/csi
+  - path: pv-test
+    destination: pv-test
