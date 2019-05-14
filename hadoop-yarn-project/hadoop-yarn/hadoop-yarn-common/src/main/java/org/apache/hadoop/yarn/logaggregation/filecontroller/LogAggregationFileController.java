@@ -134,6 +134,10 @@ public abstract class LogAggregationFileController {
       this.retentionSize = configuredRetentionSize;
     }
     this.fileControllerName = controllerName;
+
+    extractRemoteRootLogDir();
+    extractRemoteRootLogDirSuffix();
+
     initInternal(conf);
   }
 
@@ -249,6 +253,45 @@ public abstract class LogAggregationFileController {
    */
   public abstract Map<ApplicationAccessType, String> getApplicationAcls(
       Path aggregatedLogPath, ApplicationId appId) throws IOException;
+
+  /**
+   * Sets the remoteRootLogDirSuffix class variable extracting
+   * {@link YarnConfiguration#LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT}
+   * from the configuration, or
+   * {@link YarnConfiguration#NM_REMOTE_APP_LOG_DIR_SUFFIX} appended by the
+   * FileController's name, if the former is not set.
+   */
+  private void extractRemoteRootLogDirSuffix() {
+    String suffix = String.format(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_SUFFIX_FMT,
+        fileControllerName);
+    remoteRootLogDirSuffix = conf.get(suffix);
+    if (remoteRootLogDirSuffix == null
+            || remoteRootLogDirSuffix.isEmpty()) {
+      remoteRootLogDirSuffix = conf.get(
+          YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX)
+          + "-" + fileControllerName.toLowerCase();
+    }
+  }
+
+  /**
+   * Sets the remoteRootLogDir class variable extracting
+   * {@link YarnConfiguration#LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT}
+   * from the configuration or {@link YarnConfiguration#NM_REMOTE_APP_LOG_DIR},
+   * if the former is not set.
+   */
+  private void extractRemoteRootLogDir() {
+    String remoteDirStr = String.format(
+        YarnConfiguration.LOG_AGGREGATION_REMOTE_APP_LOG_DIR_FMT,
+        fileControllerName);
+    String remoteDir = conf.get(remoteDirStr);
+    if (remoteDir == null || remoteDir.isEmpty()) {
+      remoteDir = conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+          YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR);
+    }
+    remoteRootLogDir = new Path(remoteDir);
+  }
 
   /**
    * Verify and create the remote log directory.
