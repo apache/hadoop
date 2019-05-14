@@ -28,6 +28,10 @@ import org.jooq.impl.SQLDataType;
 
 import com.google.inject.Inject;
 
+/**
+ * Class used to create tables that are required for Recon's internal
+ * management.
+ */
 public class ReconInternalSchemaDefinition implements ReconSchemaDefinition {
 
   public static final String RECON_TASK_STATUS_TABLE_NAME =
@@ -45,10 +49,14 @@ public class ReconInternalSchemaDefinition implements ReconSchemaDefinition {
     createReconTaskStatus(conn);
   }
 
+  /**
+   * Create the Recon Task Status table.
+   * @param conn connection
+   */
   private void createReconTaskStatus(Connection conn) {
     DSL.using(conn).createTableIfNotExists(RECON_TASK_STATUS_TABLE_NAME)
         .column("task_name", SQLDataType.VARCHAR(1024))
-        .column("last_updated_timestamp", SQLDataType.TIMESTAMP)
+        .column("last_updated_timestamp", SQLDataType.BIGINT)
         .column("last_updated_seq_number", SQLDataType.BIGINT)
         .constraint(DSL.constraint("pk_task_name")
             .primaryKey("task_name"))

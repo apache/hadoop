@@ -18,7 +18,13 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
-public class OMDBUpdateEvent<KEY,VALUE> {
+/**
+ * A class used to encapsulate a single OM DB update event.
+ * Currently only PUT and DELETE are supported.
+ * @param <KEY> Type of Key.
+ * @param <VALUE> Type of Value.
+ */
+public final class OMDBUpdateEvent<KEY, VALUE> {
 
   private final OMDBUpdateAction action;
   private final String table;
@@ -30,7 +36,7 @@ public class OMDBUpdateEvent<KEY,VALUE> {
                           String table,
                           KEY updatedKey,
                           VALUE updatedValue,
-                          EventInfo eventInfo ) {
+                          EventInfo eventInfo) {
     this.action = action;
     this.table = table;
     this.updatedKey = updatedKey;
@@ -58,6 +64,11 @@ public class OMDBUpdateEvent<KEY,VALUE> {
     return eventInfo;
   }
 
+  /**
+   * Builder used to construct an OM DB Update event.
+   * @param <KEY> Key type.
+   * @param <VALUE> Value type.
+   */
   public static class OMUpdateEventBuilder<KEY, VALUE> {
 
     private OMDBUpdateAction action;
@@ -71,8 +82,8 @@ public class OMDBUpdateEvent<KEY,VALUE> {
       return this;
     }
 
-    OMUpdateEventBuilder setTable(String table) {
-      this.table = table;
+    OMUpdateEventBuilder setTable(String tableName) {
+      this.table = tableName;
       return this;
     }
 
@@ -93,6 +104,10 @@ public class OMDBUpdateEvent<KEY,VALUE> {
       return this;
     }
 
+    /**
+     * Build an OM update event.
+     * @return OMDBUpdateEvent
+     */
     public OMDBUpdateEvent build() {
       return new OMDBUpdateEvent<KEY, VALUE>(
           action,
@@ -103,6 +118,10 @@ public class OMDBUpdateEvent<KEY,VALUE> {
     }
   }
 
+  /**
+   * Class used to hold timing information for an event. (Seq number and
+   * timestamp)
+   */
   public static class EventInfo {
     private long sequenceNumber;
     private long eventTimestampMillis;
@@ -122,7 +141,10 @@ public class OMDBUpdateEvent<KEY,VALUE> {
     }
   }
 
-    public enum OMDBUpdateAction {
+  /**
+   * Supported Actions - PUT, DELETE.
+   */
+  public enum OMDBUpdateAction {
     PUT, DELETE
   }
 }

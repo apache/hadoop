@@ -93,9 +93,9 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
     } catch (IOException ioEx) {
       LOG.error("Unable to populate Container Key Prefix data in Recon DB. ",
           ioEx);
-      return new ImmutablePair<>(taskName, false);
+      return new ImmutablePair<>(getTaskName(), false);
     }
-    return new ImmutablePair<>(taskName, true);
+    return new ImmutablePair<>(getTaskName(), true);
   }
 
 
@@ -113,22 +113,30 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
       OmKeyInfo updatedKeyValue = omdbUpdateEvent.getValue();
       try {
         switch (omdbUpdateEvent.getAction()) {
-          case PUT:
-            writeOMKeyToContainerDB(updatedKey, updatedKeyValue);
-            break;
+        case PUT:
+          writeOMKeyToContainerDB(updatedKey, updatedKeyValue);
+          break;
 
-          case DELETE:
-            deleteOMKeyFromContainerDB(updatedKey);
-            break;
+        case DELETE:
+          deleteOMKeyFromContainerDB(updatedKey);
+          break;
+
+        default: LOG.debug("Skipping DB update event : " + omdbUpdateEvent
+            .getAction());
         }
       } catch (IOException e) {
         LOG.error("Unexpected exception while updating key data : {} ", e);
-        return new ImmutablePair<>(taskName, false);
+        return new ImmutablePair<>(getTaskName(), false);
       }
     }
-    return new ImmutablePair<>(taskName, true);
+    return new ImmutablePair<>(getTaskName(), true);
   }
 
+  /**
+   * Delete an OM Key from Container DB.
+   * @param key key String.
+   * @throws IOException If Unable to write to container DB.
+   */
   private void  deleteOMKeyFromContainerDB(String key)
       throws IOException {
 
@@ -152,6 +160,12 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
     }
   }
 
+  /**
+   * Write an OM key to container DB.
+   * @param key key String
+   * @param omKeyInfo omKeyInfo value
+   * @throws IOException if unable to write to recon DB.
+   */
   private void  writeOMKeyToContainerDB(String key, OmKeyInfo omKeyInfo)
       throws IOException {
     for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : omKeyInfo

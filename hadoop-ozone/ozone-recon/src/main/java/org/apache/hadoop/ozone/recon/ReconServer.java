@@ -33,7 +33,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
-import org.apache.hadoop.ozone.recon.tasks.ReconTaskController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,14 +63,18 @@ public class ReconServer extends GenericCli {
     OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
     OzoneConfigurationProvider.setConfiguration(ozoneConfiguration);
 
-    injector =  Guice.createInjector(new
-        ReconControllerModule(), new ReconRestServletModule() {
-          @Override
-          protected void configureServlets() {
-            rest("/api/*")
-                .packages("org.apache.hadoop.ozone.recon.api");
-          }
-        });
+    try {
+      injector =  Guice.createInjector(new
+          ReconControllerModule(), new ReconRestServletModule() {
+            @Override
+            protected void configureServlets() {
+                rest("/api/*")
+                  .packages("org.apache.hadoop.ozone.recon.api");
+            }
+          });
+    } catch (Exception e) {
+      LOG.error("Error " + e);
+    }
 
     //Pass on injector to listener that does the Guice - Jersey HK2 bridging.
     ReconGuiceServletContextListener.setInjector(injector);
@@ -111,15 +114,15 @@ public class ReconServer extends GenericCli {
         RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
 
-    // Schedule the task to read OM DB and write the reverse mapping to Recon
-    // container DB.
-    ContainerKeyMapperTask containerKeyMapperTask =
-        new ContainerKeyMapperTask(containerDBServiceProvider,
-            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
 
     scheduler.scheduleWithFixedDelay(() -> {
       try {
         ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot();
+        // Schedule the task to read OM DB and write the reverse mapping to
+        // Recon container DB.
+        ContainerKeyMapperTask containerKeyMapperTask =
+            new ContainerKeyMapperTask(containerDBServiceProvider,
+                ozoneManagerServiceProvider.getOMMetadataManagerInstance());
         containerKeyMapperTask.reprocess(
             ozoneManagerServiceProvider.getOMMetadataManagerInstance());
       } catch (IOException e) {

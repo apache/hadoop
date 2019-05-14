@@ -222,8 +222,8 @@ public class TestContainerDBServiceProviderImpl {
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
     assertTrue(keyPrefixMap.size() == 2);
 
-    containerDbServiceProvider.deleteContainerMapping(new ContainerKeyPrefix
-        (containerId, "V3/B1/K2", 0));
+    containerDbServiceProvider.deleteContainerMapping(new ContainerKeyPrefix(
+        containerId, "V3/B1/K2", 0));
     keyPrefixMap =
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
     assertTrue(keyPrefixMap.size() == 1);

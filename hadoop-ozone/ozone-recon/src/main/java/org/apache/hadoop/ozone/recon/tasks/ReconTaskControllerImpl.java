@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.recon.tasks;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_TASK_THREAD_COUNT_DEFAULT;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_TASK_THREAD_COUNT_KEY;
 
-import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.hadoop.ozone.recon.schema.tables.daos.ReconTaskStatusDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.ReconTaskStatus;
 import org.jooq.Configuration;
@@ -46,6 +45,9 @@ import org.slf4j.LoggerFactory;
 
 import com.google.inject.Inject;
 
+/**
+ * Implementation of ReconTaskController.
+ */
 public class ReconTaskControllerImpl implements ReconTaskController {
 
   private static final Logger LOG =
@@ -55,14 +57,14 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   private ExecutorService executorService;
   private int threadCount = 1;
   private final Semaphore taskSemaphore = new Semaphore(1);
-  private final OMMetadataManager omMetadataManager;
+  private final ReconOMMetadataManager omMetadataManager;
   private Map<String, AtomicInteger> taskFailureCounter = new HashMap<>();
   private static final int TASK_FAILURE_THRESHOLD = 2;
   private ReconTaskStatusDao reconTaskStatusDao;
 
   @Inject
   public ReconTaskControllerImpl(OzoneConfiguration configuration,
-                                 OMMetadataManager omMetadataManager,
+                                 ReconOMMetadataManager omMetadataManager,
                                  Configuration sqlConfiguration) {
     this.omMetadataManager = omMetadataManager;
     reconDBUpdateTasks = new HashMap<>();
@@ -76,13 +78,25 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   public void registerTask(ReconDBUpdateTask task) {
     String taskName = task.getTaskName();
     LOG.info("Registered task " + taskName + " with controller.");
+
+    // Store task in Task Map.
     reconDBUpdateTasks.put(taskName, task);
+    // Store Task in Task failure tracker.
     taskFailureCounter.put(taskName, new AtomicInteger(0));
+    // Create DB record for the task.
     ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(taskName,
-        new Timestamp(0l), 0l);
+        0L, 0L);
     reconTaskStatusDao.insert(reconTaskStatusRecord);
   }
 
+  /**
+   * For every registered task, we try process step twice and then reprocess
+   * once (if process failed twice) to absorb the events. If a task has failed
+   * reprocess call more than 2 times across events, it is unregistered
+   * (blacklisted).
+   * @param events set of events
+   * @throws InterruptedException
+   */
   @Override
   public void consumeOMEvents(OMUpdateEventBatch events)
       throws InterruptedException {
@@ -92,8 +106,9 @@ public class ReconTaskControllerImpl implements ReconTaskController {
 
     try {
       Collection<Callable<Pair>> tasks = new ArrayList<>();
-      for (String taskName : reconDBUpdateTasks.keySet()) {
-        ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
+      for (Map.Entry<String, ReconDBUpdateTask> taskEntry :
+          reconDBUpdateTasks.entrySet()) {
+        ReconDBUpdateTask task = taskEntry.getValue();
         tasks.add(() -> task.process(events));
       }
 
@@ -164,11 +179,16 @@ public class ReconTaskControllerImpl implements ReconTaskController {
     }
   }
 
+  /**
+   * Store the last completed event sequence number and timestamp to the DB
+   * for that task.
+   * @param taskName taskname to be updated.
+   * @param eventInfo contains the new sequence number and timestamp.
+   */
   private void storeLastCompletedTransaction(
       String taskName, OMDBUpdateEvent.EventInfo eventInfo) {
     ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(taskName,
-        new Timestamp(eventInfo.getEventTimestampMillis()),
-        eventInfo.getSequenceNumber());
+        eventInfo.getEventTimestampMillis(), eventInfo.getSequenceNumber());
     reconTaskStatusDao.update(reconTaskStatusRecord);
   }
 

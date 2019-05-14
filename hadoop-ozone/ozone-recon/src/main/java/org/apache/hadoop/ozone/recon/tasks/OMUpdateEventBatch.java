@@ -24,17 +24,22 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.utils.db.Table;
-
+/**
+ * Wrapper class to hold multiple OM DB update events.
+ */
 public class OMUpdateEventBatch {
 
   private List<OMDBUpdateEvent> events;
 
-  public OMUpdateEventBatch(Collection<OMDBUpdateEvent> e) {
+  OMUpdateEventBatch(Collection<OMDBUpdateEvent> e) {
     events = new ArrayList<>(e);
   }
 
-  public OMDBUpdateEvent.EventInfo getLastEventInfo() {
+  /**
+   * Get Sequence Number and timestamp of last event in this batch.
+   * @return Event Info instance.
+   */
+  OMDBUpdateEvent.EventInfo getLastEventInfo() {
     if (events.isEmpty()) {
       return new OMDBUpdateEvent.EventInfo(-1, -1);
     } else {
@@ -42,10 +47,19 @@ public class OMUpdateEventBatch {
     }
   }
 
+  /**
+   * Return iterator to Event batch.
+   * @return iterator
+   */
   public Iterator<OMDBUpdateEvent> getIterator() {
-   return events.iterator();
+    return events.iterator();
   }
 
+  /**
+   * Filter events based on Tables.
+   * @param tables set of tables to filter on.
+   * @return trimmed event batch.
+   */
   public OMUpdateEventBatch filter(Collection<String> tables) {
     return new OMUpdateEventBatch(events
         .stream()

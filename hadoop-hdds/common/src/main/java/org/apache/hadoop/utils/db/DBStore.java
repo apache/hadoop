@@ -159,7 +159,16 @@ public interface DBStore extends AutoCloseable {
    */
   File getDbLocation();
 
+  /**
+   * Get List of Index to Table Names.
+   * (For decoding table from column family index)
+   * @return Map of Index -> TableName
+   */
   Map<Integer, String> getTableNames();
 
+  /**
+   * Get Codec registry.
+   * @return codec registry.
+   */
   CodecRegistry getCodecRegistry();
 }

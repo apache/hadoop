@@ -23,6 +23,9 @@ import org.rocksdb.RocksDB;
 import org.rocksdb.TransactionLogIterator;
 import org.rocksdb.WriteBatch;
 
+/**
+ * Class used to test OMDBUpdatesHandler.
+ */
 public class TestOMDBUpdatesHandler {
 
   @Rule
@@ -93,7 +96,8 @@ public class TestOMDBUpdatesHandler {
     OMDBUpdateEvent volEvent = events.get(0);
     assertEquals(OMDBUpdateEvent.OMDBUpdateAction.PUT, volEvent.getAction());
     assertEquals(volumeKey, volEvent.getKey());
-    assertEquals(args.getVolume(), ((OmVolumeArgs)volEvent.getValue()).getVolume());
+    assertEquals(args.getVolume(), ((OmVolumeArgs)volEvent.getValue())
+        .getVolume());
 
     OMDBUpdateEvent keyEvent = events.get(1);
     assertEquals(OMDBUpdateEvent.OMDBUpdateAction.PUT, keyEvent.getAction());

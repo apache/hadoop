@@ -23,7 +23,6 @@ import static org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition.RECON_
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
-import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +38,9 @@ import org.jooq.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
+/**
+ * Class used to test ReconInternalSchemaDefinition.
+ */
 public class TestReconInternalSchemaDefinition extends AbstractSqlDatabaseTest {
 
   @Test
@@ -58,13 +60,16 @@ public class TestReconInternalSchemaDefinition extends AbstractSqlDatabaseTest {
     List<Pair<String, Integer>> expectedPairs = new ArrayList<>();
 
     expectedPairs.add(new ImmutablePair<>("task_name", Types.VARCHAR));
-    expectedPairs.add(new ImmutablePair<>("last_updated_timestamp", Types.VARCHAR));
-    expectedPairs.add(new ImmutablePair<>("last_updated_seq_number", Types.INTEGER));
+    expectedPairs.add(new ImmutablePair<>("last_updated_timestamp",
+        Types.VARCHAR));
+    expectedPairs.add(new ImmutablePair<>("last_updated_seq_number",
+        Types.INTEGER));
 
     List<Pair<String, Integer>> actualPairs = new ArrayList<>();
 
     while (resultSet.next()) {
-      actualPairs.add(new ImmutablePair<>(resultSet.getString("COLUMN_NAME"),
+      actualPairs.add(new ImmutablePair<>(
+          resultSet.getString("COLUMN_NAME"),
           resultSet.getInt("DATA_TYPE")));
     }
 
@@ -98,16 +103,16 @@ public class TestReconInternalSchemaDefinition extends AbstractSqlDatabaseTest {
     long now = System.currentTimeMillis();
     ReconTaskStatus newRecord = new ReconTaskStatus();
     newRecord.setTaskName("HelloWorldTask");
-    newRecord.setLastUpdatedTimestamp(new Timestamp(now));
-    newRecord.setLastUpdatedSeqNumber(100l);
+    newRecord.setLastUpdatedTimestamp(now);
+    newRecord.setLastUpdatedSeqNumber(100L);
 
     // Create
     dao.insert(newRecord);
 
     ReconTaskStatus newRecord2 = new ReconTaskStatus();
     newRecord2.setTaskName("GoodbyeWorldTask");
-    newRecord2.setLastUpdatedTimestamp(new Timestamp(now));
-    newRecord2.setLastUpdatedSeqNumber(200l);
+    newRecord2.setLastUpdatedTimestamp(now);
+    newRecord2.setLastUpdatedSeqNumber(200L);
     // Create
     dao.insert(newRecord2);
 
@@ -115,7 +120,7 @@ public class TestReconInternalSchemaDefinition extends AbstractSqlDatabaseTest {
     ReconTaskStatus dbRecord = dao.findById("HelloWorldTask");
 
     Assert.assertEquals("HelloWorldTask", dbRecord.getTaskName());
-    Assert.assertEquals(new Timestamp(now), dbRecord.getLastUpdatedTimestamp());
+    Assert.assertEquals(Long.valueOf(now), dbRecord.getLastUpdatedTimestamp());
     Assert.assertEquals(Long.valueOf(100), dbRecord.getLastUpdatedSeqNumber());
 
     // Update

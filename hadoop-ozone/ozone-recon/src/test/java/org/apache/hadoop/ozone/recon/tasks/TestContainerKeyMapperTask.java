@@ -21,13 +21,9 @@ package org.apache.hadoop.ozone.recon.tasks;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +33,6 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -46,20 +41,16 @@ import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
-import org.apache.hadoop.ozone.recon.recovery.ReconOmMetadataManagerImpl;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.ReconContainerDBProvider;
-import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -203,7 +194,8 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
     String volume = "sampleVol";
     String key = "key_one";
     String omKey = omMetadataManager.getOzoneKey(volume, bucket, key);
-    OmKeyInfo omKeyInfo = buildOmKeyInfo(volume, bucket, key, omKeyLocationInfoGroup);
+    OmKeyInfo omKeyInfo = buildOmKeyInfo(volume, bucket, key,
+        omKeyLocationInfoGroup);
 
     OMDBUpdateEvent keyEvent1 = new OMDBUpdateEvent.
         OMUpdateEventBuilder<String, OmKeyInfo>()
@@ -224,7 +216,8 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
     omKeyLocationInfoList = new ArrayList<>();
     omKeyLocationInfoList.add(omKeyLocationInfo3);
     omKeyLocationInfoList.add(omKeyLocationInfo4);
-    omKeyLocationInfoGroup = new OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
+    omKeyLocationInfoGroup = new OmKeyLocationInfoGroup(0,
+        omKeyLocationInfoList);
 
     String key2 = "key_two";
     writeDataToOm(reconOMMetadataManager, key2, bucket, volume, Collections
@@ -279,16 +272,19 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
 
   }
 
-  private OmKeyInfo buildOmKeyInfo(String volume, String bucket,
-                                           String key,
-                                           OmKeyLocationInfoGroup omKeyLocationInfoGroup) {
+  private OmKeyInfo buildOmKeyInfo(String volume,
+                                   String bucket,
+                                   String key,
+                                   OmKeyLocationInfoGroup
+                                       omKeyLocationInfoGroup) {
     return new OmKeyInfo.Builder()
         .setBucketName(bucket)
         .setVolumeName(volume)
         .setKeyName(key)
         .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
         .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setOmKeyLocationInfos(Collections.singletonList(omKeyLocationInfoGroup))
+        .setOmKeyLocationInfos(Collections.singletonList(
+            omKeyLocationInfoGroup))
         .build();
   }
   /**

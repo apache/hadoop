@@ -80,6 +80,9 @@ public abstract class AbstractSqlDatabaseTest {
     return dslContext;
   }
 
+  /**
+   * Local Sqlite datasource provider.
+   */
   public static class DataSourceConfigurationProvider implements
       Provider<DataSourceConfiguration> {
 

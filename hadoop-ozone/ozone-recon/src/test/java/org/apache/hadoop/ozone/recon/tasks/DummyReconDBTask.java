@@ -25,6 +25,10 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 
+/**
+ * Dummy Recon task that has 3 modes of operations.
+ * ALWAYS_FAIL / FAIL_ONCE / ALWAYS_PASS
+ */
 public class DummyReconDBTask extends ReconDBUpdateTask {
 
   private int numFailuresAllowed = Integer.MIN_VALUE;
@@ -47,21 +51,24 @@ public class DummyReconDBTask extends ReconDBUpdateTask {
   @Override
   Pair<String, Boolean> process(OMUpdateEventBatch events) {
     if (++callCtr <= numFailuresAllowed) {
-      return new ImmutablePair<>(taskName,false);
+      return new ImmutablePair<>(getTaskName(), false);
     } else {
-      return new ImmutablePair<>(taskName, true);
+      return new ImmutablePair<>(getTaskName(), true);
     }
   }
 
   @Override
   Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
     if (++callCtr <= numFailuresAllowed) {
-      return new ImmutablePair<>(taskName,false);
+      return new ImmutablePair<>(getTaskName(), false);
     } else {
-      return new ImmutablePair<>(taskName, true);
+      return new ImmutablePair<>(getTaskName(), true);
     }
   }
 
+  /**
+   * Type of the task.
+   */
   public enum TaskType {
     ALWAYS_PASS,
     FAIL_ONCE,

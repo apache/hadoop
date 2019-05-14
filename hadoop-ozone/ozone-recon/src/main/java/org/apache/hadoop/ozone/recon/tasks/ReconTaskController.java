@@ -20,11 +20,27 @@ package org.apache.hadoop.ozone.recon.tasks;
 
 import java.util.Map;
 
+/**
+ * Controller used by Recon to manage Tasks that are waiting on Recon events.
+ */
 public interface ReconTaskController {
 
+  /**
+   * Register API used by tasks to register themselves.
+   * @param task task instance
+   */
   void registerTask(ReconDBUpdateTask task);
 
+  /**
+   * Pass on a set of OM DB update events to the registered tasks.
+   * @param events set of events
+   * @throws InterruptedException InterruptedException
+   */
   void consumeOMEvents(OMUpdateEventBatch events) throws InterruptedException;
 
+  /**
+   * Get set of registered tasks.
+   * @return Map of Task name -> Task.
+   */
   Map<String, ReconDBUpdateTask> getRegisteredTasks();
 }

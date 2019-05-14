@@ -37,6 +37,9 @@ import org.rocksdb.WriteBatch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Class used to listen on OM RocksDB updates.
+ */
 public class OMDBUpdatesHandler extends WriteBatch.Handler{
 
   private static final Logger LOG =
@@ -60,6 +63,9 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler{
       String tableName = tablesNames.get(cfIndex);
       Class keyType = getKeyType(tableName);
       Class valueType = getValueType(tableName);
+      if (valueType == null) {
+        return;
+      }
       Object key = codecRegistry.asObject(keyBytes, keyType);
       Object value = codecRegistry.asObject(valueBytes, valueType);
       OMDBUpdateEvent.OMUpdateEventBuilder builder =
@@ -176,19 +182,33 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler{
 
   }
 
+  /**
+   * Return Key type class for a given table name.
+   * @param name table name.
+   * @return String.class by default.
+   */
   private Class getKeyType(String name) {
     return String.class;
   }
 
-  private Class getValueType(String name) throws IOException {
+  /**
+   * Return Value type class for a given table.
+   * @param name table name
+   * @return Value type based on table name.
+   */
+  private Class getValueType(String name) {
     switch (name) {
-      case KEY_TABLE : return OmKeyInfo.class;
-      case VOLUME_TABLE : return OmVolumeArgs.class;
-      case BUCKET_TABLE : return OmBucketInfo.class;
+    case KEY_TABLE : return OmKeyInfo.class;
+    case VOLUME_TABLE : return OmVolumeArgs.class;
+    case BUCKET_TABLE : return OmBucketInfo.class;
+    default: return null;
     }
-    return null;
   }
 
+  /**
+   * Get List of events. (Temporary API to unit test the class).
+   * @return List of events.
+   */
   public List<OMDBUpdateEvent> getEvents() {
     return omdbUpdateEvents;
   }
