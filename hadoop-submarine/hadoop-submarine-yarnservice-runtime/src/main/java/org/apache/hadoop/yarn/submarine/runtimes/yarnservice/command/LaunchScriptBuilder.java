@@ -17,7 +17,7 @@
 package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command;
 
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,10 +47,11 @@ public class LaunchScriptBuilder {
   private final StringBuilder scriptBuffer;
   private String launchCommand;
 
-  LaunchScriptBuilder(String namePrefix,
+  LaunchScriptBuilder(String launchScriptPrefix,
       HadoopEnvironmentSetup hadoopEnvSetup, RunJobParameters parameters,
       Component component) throws IOException {
-    this.file = File.createTempFile(namePrefix + "-launch-script", ".sh");
+    this.file = File.createTempFile(launchScriptPrefix +
+        "-launch-script", ".sh");
     this.hadoopEnvSetup = hadoopEnvSetup;
     this.parameters = parameters;
     this.component = component;

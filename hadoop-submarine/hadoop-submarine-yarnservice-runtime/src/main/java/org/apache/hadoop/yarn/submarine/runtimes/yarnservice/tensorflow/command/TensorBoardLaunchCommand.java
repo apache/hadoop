@@ -18,8 +18,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.Role;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.AbstractLaunchCommand;
 import org.slf4j.Logger;
@@ -37,9 +37,9 @@ public class TensorBoardLaunchCommand extends AbstractLaunchCommand {
   private final String checkpointPath;
 
   public TensorBoardLaunchCommand(HadoopEnvironmentSetup hadoopEnvSetup,
-      TaskType taskType, Component component, RunJobParameters parameters)
+      Role role, Component component, RunJobParameters parameters)
       throws IOException {
-    super(hadoopEnvSetup, taskType, component, parameters);
+    super(hadoopEnvSetup, component, parameters, role.getName());
     Objects.requireNonNull(parameters.getCheckpointPath(),
         "CheckpointPath must not be null as it is part "
             + "of the tensorboard command!");

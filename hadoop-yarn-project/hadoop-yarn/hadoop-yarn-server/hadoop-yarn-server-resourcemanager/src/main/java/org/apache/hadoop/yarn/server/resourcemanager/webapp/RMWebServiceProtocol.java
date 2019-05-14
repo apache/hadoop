@@ -218,10 +218,15 @@ public interface RMWebServiceProtocol {
    *          QueryParam.
    * @param time for how long we want to retrieve the activities. It is a
    *          QueryParam.
+   * @param requestPriorities the request priorities we want to retrieve the
+   *          activities. It is a QueryParam.
+   * @param allocationRequestIds the allocation request ids we want to retrieve
+   *          the activities. It is a QueryParam.
    * @return all the activities about a specific app for a specific time
    */
   AppActivitiesInfo getAppActivities(HttpServletRequest hsr, String appId,
-      String time);
+      String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds);
 
   /**
    * This method retrieves all the statistics for a specific app, and it is

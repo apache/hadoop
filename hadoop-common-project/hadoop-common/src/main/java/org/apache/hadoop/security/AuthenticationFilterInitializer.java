@@ -32,7 +32,7 @@ import java.util.Map;
  * Initializes hadoop-auth AuthenticationFilter which provides support for
  * Kerberos HTTP SPNEGO authentication.
  * <p>
- * It enables anonymous access, simple/speudo and Kerberos HTTP SPNEGO
+ * It enables anonymous access, simple/pseudo and Kerberos HTTP SPNEGO
  * authentication  for Hadoop JobTracker, NameNode, DataNodes and
  * TaskTrackers.
  * <p>

@@ -32,6 +32,7 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.ApplicationBaseProtocol;
@@ -84,7 +85,8 @@ public class AppBlock extends HtmlBlock {
     this.conf = conf;
     // check if UI is unsecured.
     String httpAuth = conf.get(CommonConfigurationKeys.HADOOP_HTTP_AUTHENTICATION_TYPE);
-    this.unsecuredUI = (httpAuth != null) && httpAuth.equals("simple");
+    this.unsecuredUI = (httpAuth != null) && (httpAuth.equals("simple") ||
+         httpAuth.equals(PseudoAuthenticationHandler.class.getName()));
   }
 
   @Override

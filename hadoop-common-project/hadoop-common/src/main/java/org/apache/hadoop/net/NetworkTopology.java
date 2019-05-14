@@ -758,6 +758,7 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
+  @VisibleForTesting
   protected int getWeight(Node reader, Node node) {
     // 0 is local, 2 is same rack, and each level on each node increases the
     //weight by 1
@@ -800,7 +801,8 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  private static int getWeightUsingNetworkLocation(Node reader, Node node) {
+  @VisibleForTesting
+  protected static int getWeightUsingNetworkLocation(Node reader, Node node) {
     //Start off by initializing to Integer.MAX_VALUE
     int weight = Integer.MAX_VALUE;
     if(reader != null && node != null) {
@@ -830,8 +832,10 @@ public class NetworkTopology {
           }
           currentLevel++;
         }
+        // +2 to correct the weight between reader and node rather than
+        // between parent of reader and parent of node.
         weight = (readerPathToken.length - currentLevel) +
-            (nodePathToken.length - currentLevel);
+            (nodePathToken.length - currentLevel) + 2;
       }
     }
     return weight;

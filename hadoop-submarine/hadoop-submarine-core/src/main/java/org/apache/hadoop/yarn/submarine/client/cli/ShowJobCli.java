@@ -37,7 +37,7 @@ public class ShowJobCli extends AbstractCli {
   private static final Logger LOG = LoggerFactory.getLogger(ShowJobCli.class);
 
   private Options options;
-  private ShowJobParameters parameters = new ShowJobParameters();
+  private ParametersHolder parametersHolder;
 
   public ShowJobCli(ClientContext cliContext) {
     super(cliContext);
@@ -62,9 +62,9 @@ public class ShowJobCli extends AbstractCli {
     CommandLine cli;
     try {
       cli = parser.parse(options, args);
-      ParametersHolder parametersHolder = ParametersHolder
-          .createWithCmdLine(cli);
-      parameters.updateParameters(parametersHolder, clientContext);
+      parametersHolder = ParametersHolder
+          .createWithCmdLine(cli, Command.SHOW_JOB);
+      parametersHolder.updateParameters(clientContext);
     } catch (ParseException e) {
       printUsages();
     }
@@ -97,7 +97,7 @@ public class ShowJobCli extends AbstractCli {
 
     Map<String, String> jobInfo = null;
     try {
-      jobInfo = storage.getJobInfoByName(parameters.getName());
+      jobInfo = storage.getJobInfoByName(getParameters().getName());
     } catch (IOException e) {
       LOG.error("Failed to retrieve job info", e);
       throw e;
@@ -108,7 +108,7 @@ public class ShowJobCli extends AbstractCli {
 
   @VisibleForTesting
   public ShowJobParameters getParameters() {
-    return parameters;
+    return (ShowJobParameters) parametersHolder.getParameters();
   }
 
   @Override

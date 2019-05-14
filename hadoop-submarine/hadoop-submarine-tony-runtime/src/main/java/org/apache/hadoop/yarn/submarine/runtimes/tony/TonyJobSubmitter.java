@@ -22,7 +22,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.Framework;
 import org.apache.hadoop.yarn.submarine.runtimes.common.JobSubmitter;
 
 import java.io.File;
@@ -45,14 +47,24 @@ public class TonyJobSubmitter implements JobSubmitter, CallbackHandler {
   }
 
   @Override
-  public ApplicationId submitJob(RunJobParameters parameters)
-      throws IOException, YarnException {
+  public ApplicationId submitJob(ParametersHolder parameters)
+      throws IOException {
+    if (parameters.getFramework() == Framework.PYTORCH) {
+      // we need to throw an exception, as ParametersHolder's parameters field
+      // could not be casted to TensorFlowRunJobParameters.
+      throw new UnsupportedOperationException(
+          "Support \"–-framework\" option for PyTorch in Tony is coming. " +
+              "Please check the documentation about how to submit a " +
+              "PyTorch job with TonY runtime.");
+    }
+
     LOG.info("Starting Tony runtime..");
 
     File tonyFinalConfPath = File.createTempFile("temp",
         Constants.TONY_FINAL_XML);
     // Write user's overridden conf to an xml to be localized.
-    Configuration tonyConf = TonyUtils.tonyConfFromClientContext(parameters);
+    Configuration tonyConf = TonyUtils.tonyConfFromClientContext(
+        (TensorFlowRunJobParameters) parameters.getParameters());
     try (OutputStream os = new FileOutputStream(tonyFinalConfPath)) {
       tonyConf.writeXml(os);
     } catch (IOException e) {
@@ -68,7 +80,7 @@ public class TonyJobSubmitter implements JobSubmitter, CallbackHandler {
       LOG.error("Failed to init TonyClient: ", e);
     }
     Thread clientThread = new Thread(tonyClient::start);
-    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    java.lang.Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {
         tonyClient.forceKillApplication();
       } catch (YarnException | IOException e) {

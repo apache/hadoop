@@ -40,6 +40,10 @@ More details, please refer to
 
 ```$xslt
 usage: job run
+
+ -framework <arg>             Framework to use.
+                              Valid values are: tensorflow, pytorch.
+                              The default framework is Tensorflow.
  -checkpoint_path <arg>       Training output directory of the job, could
                               be local or other FS directory. This
                               typically includes checkpoint files and
@@ -130,6 +134,7 @@ For submarine internal configuration, please create a `submarine.xml` which shou
 #### Commandline
 ```
 yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
+  --framework tensorflow \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name tf-job-001 \
   --docker_image <your-docker-image> \
@@ -163,6 +168,7 @@ See below screenshot:
 ```
 yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
  --name tf-job-001 --docker_image <your-docker-image> \
+ --framework tensorflow \
  --input_path hdfs://default/dataset/cifar-10-data \
  --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
@@ -208,6 +214,7 @@ After that, you can run ```tensorboard --logdir=<checkpoint-path>``` to view Ten
 yarn app -destroy tensorboard-service; \
 yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
   job run --name tensorboard-service --verbose --docker_image <your-docker-image> \
+  --framework tensorflow \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
   --num_workers 0 --tensorboard

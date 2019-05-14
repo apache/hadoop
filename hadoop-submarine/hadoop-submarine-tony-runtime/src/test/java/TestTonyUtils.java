@@ -16,8 +16,10 @@ import com.linkedin.tony.TonyConfigurationKeys;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.submarine.client.cli.RunJobCli;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.MockClientContext;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.apache.hadoop.yarn.submarine.runtimes.RuntimeFactory;
@@ -31,6 +33,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -59,7 +62,8 @@ public class TestTonyUtils {
       throws IOException, YarnException {
     MockClientContext mockClientContext = new MockClientContext();
     JobSubmitter mockJobSubmitter = mock(JobSubmitter.class);
-    when(mockJobSubmitter.submitJob(any(RunJobParameters.class))).thenReturn(
+    when(mockJobSubmitter.submitJob(
+        any(ParametersHolder.class))).thenReturn(
         ApplicationId.newInstance(1234L, 1));
     JobMonitor mockJobMonitor = mock(JobMonitor.class);
     SubmarineStorage storage = mock(SubmarineStorage.class);
@@ -82,20 +86,28 @@ public class TestTonyUtils {
   public void testTonyConfFromClientContext() throws Exception {
     RunJobCli runJobCli = new RunJobCli(getMockClientContext());
     runJobCli.run(
-        new String[] {"--name", "my-job", "--docker_image", "tf-docker:1.1.0",
+        new String[] {"--framework", "tensorflow", "--name", "my-job",
+            "--docker_image", "tf-docker:1.1.0",
             "--input_path", "hdfs://input",
             "--num_workers", "3", "--num_ps", "2", "--worker_launch_cmd",
             "python run-job.py", "--worker_resources", "memory=2048M,vcores=2",
             "--ps_resources", "memory=4G,vcores=4", "--ps_launch_cmd",
             "python run-ps.py"});
     RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
+
+    assertTrue(RunJobParameters.class + " must be an instance of " +
+            TensorFlowRunJobParameters.class,
+        jobRunParameters instanceof TensorFlowRunJobParameters);
+    TensorFlowRunJobParameters tensorFlowParams =
+        (TensorFlowRunJobParameters) jobRunParameters;
+
     Configuration tonyConf = TonyUtils
-        .tonyConfFromClientContext(jobRunParameters);
+        .tonyConfFromClientContext(tensorFlowParams);
     Assert.assertEquals(jobRunParameters.getDockerImageName(),
         tonyConf.get(TonyConfigurationKeys.getContainerDockerKey()));
     Assert.assertEquals("3", tonyConf.get(TonyConfigurationKeys
         .getInstancesKey("worker")));
-    Assert.assertEquals(jobRunParameters.getWorkerLaunchCmd(),
+    Assert.assertEquals(tensorFlowParams.getWorkerLaunchCmd(),
         tonyConf.get(TonyConfigurationKeys
             .getExecuteCommandKey("worker")));
     Assert.assertEquals("2048", tonyConf.get(TonyConfigurationKeys
@@ -107,7 +119,7 @@ public class TestTonyUtils {
     Assert.assertEquals("4", tonyConf.get(TonyConfigurationKeys
         .getResourceKey(Constants.PS_JOB_NAME,
         Constants.VCORES)));
-    Assert.assertEquals(jobRunParameters.getPSLaunchCmd(),
+    Assert.assertEquals(tensorFlowParams.getPSLaunchCmd(),
         tonyConf.get(TonyConfigurationKeys.getExecuteCommandKey("ps")));
   }
 }

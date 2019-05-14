@@ -226,6 +226,8 @@ public final class RMWSConsts {
   public static final String DESELECTS = "deSelects";
   public static final String CONTAINERS = "containers";
   public static final String QUEUE_ACL_TYPE = "queue-acl-type";
+  public static final String REQUEST_PRIORITIES = "requestPriorities";
+  public static final String ALLOCATION_REQUEST_IDS = "allocationRequestIds";
 
   private RMWSConsts() {
     // not called
