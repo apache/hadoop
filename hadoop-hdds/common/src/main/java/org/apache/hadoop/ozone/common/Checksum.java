@@ -225,15 +225,17 @@ public class Checksum {
 
   /**
    * Computes the ChecksumData for the input data and verifies that it
-   * matches with that of the input checksumData.
+   * matches with that of the input checksumData, starting from index
+   * startIndex.
    * @param byteString input data
    * @param checksumData checksumData to match with
+   * @param startIndex index of first checksum in checksumData to match with
+   *                   data's computed checksum.
    * @throws OzoneChecksumException is thrown if checksums do not match
    */
-  public static boolean verifyChecksum(
-      ByteString byteString, ChecksumData checksumData)
-      throws OzoneChecksumException {
-    return verifyChecksum(byteString.toByteArray(), checksumData);
+  public static boolean verifyChecksum(ByteString byteString,
+      ChecksumData checksumData, int startIndex) throws OzoneChecksumException {
+    return verifyChecksum(byteString.toByteArray(), checksumData, startIndex);
   }
 
   /**
@@ -245,6 +247,20 @@ public class Checksum {
    */
   public static boolean verifyChecksum(byte[] data, ChecksumData checksumData)
       throws OzoneChecksumException {
+    return verifyChecksum(data, checksumData, 0);
+  }
+
+  /**
+   * Computes the ChecksumData for the input data and verifies that it
+   * matches with that of the input checksumData.
+   * @param data input data
+   * @param checksumData checksumData to match with
+   * @param startIndex index of first checksum in checksumData to match with
+   *                   data's computed checksum.
+   * @throws OzoneChecksumException is thrown if checksums do not match
+   */
+  public static boolean verifyChecksum(byte[] data, ChecksumData checksumData,
+      int startIndex) throws OzoneChecksumException {
     ChecksumType checksumType = checksumData.getChecksumType();
     if (checksumType == ChecksumType.NONE) {
       // Checksum is set to NONE. No further verification is required.
@@ -256,7 +272,8 @@ public class Checksum {
     ChecksumData computedChecksumData =
         checksum.computeChecksum(data, 0, data.length);
 
-    return checksumData.verifyChecksumDataMatches(computedChecksumData);
+    return checksumData.verifyChecksumDataMatches(computedChecksumData,
+        startIndex);
   }
 
   /**

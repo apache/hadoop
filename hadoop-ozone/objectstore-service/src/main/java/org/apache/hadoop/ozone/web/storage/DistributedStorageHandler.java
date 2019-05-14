@@ -496,8 +496,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return KeyInputStream.getFromOmKeyInfo(
-        keyInfo, xceiverClientManager, storageContainerLocationClient,
-        args.getRequestID(), verifyChecksum);
+        keyInfo, xceiverClientManager, args.getRequestID(), verifyChecksum);
   }
 
   @Override
