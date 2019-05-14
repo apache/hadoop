@@ -63,18 +63,14 @@ public class ReconServer extends GenericCli {
     OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
     OzoneConfigurationProvider.setConfiguration(ozoneConfiguration);
 
-    try {
-      injector =  Guice.createInjector(new
-          ReconControllerModule(), new ReconRestServletModule() {
-            @Override
-            protected void configureServlets() {
-                rest("/api/*")
-                  .packages("org.apache.hadoop.ozone.recon.api");
-            }
-          });
-    } catch (Exception e) {
-      LOG.error("Error " + e);
-    }
+    injector =  Guice.createInjector(new
+        ReconControllerModule(), new ReconRestServletModule() {
+          @Override
+          protected void configureServlets() {
+            rest("/api/*")
+              .packages("org.apache.hadoop.ozone.recon.api");
+          }
+        });
 
     //Pass on injector to listener that does the Guice - Jersey HK2 bridging.
     ReconGuiceServletContextListener.setInjector(injector);
