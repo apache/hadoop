@@ -84,11 +84,28 @@ public class KeyInputStream extends InputStream implements Seekable {
    * @param streamLength the max number of bytes that should be written to this
    *                     stream.
    */
+  @VisibleForTesting
   public synchronized void addStream(BlockInputStream stream,
       long streamLength) {
     streamEntries.add(new ChunkInputStreamEntry(stream, streamLength));
   }
 
+  /**
+   * Append another ChunkInputStreamEntry to the end of the list.
+   * The stream will be constructed from the input information when it needs
+   * to be accessed.
+   */
+  private synchronized void addStream(OmKeyLocationInfo omKeyLocationInfo,
+      XceiverClientManager xceiverClientMngr, String clientRequestId,
+      boolean verifyChecksum) {
+    streamEntries.add(new ChunkInputStreamEntry(omKeyLocationInfo,
+        xceiverClientMngr, clientRequestId, verifyChecksum));
+  }
+
+  private synchronized ChunkInputStreamEntry getStreamEntry(int index)
+      throws IOException {
+    return streamEntries.get(index).getStream();
+  }
 
   @Override
   public synchronized int read() throws IOException {
@@ -120,7 +137,7 @@ public class KeyInputStream extends InputStream implements Seekable {
                               .getRemaining() == 0)) {
         return totalReadLen == 0 ? EOF : totalReadLen;
       }
-      ChunkInputStreamEntry current = streamEntries.get(currentStreamIndex);
+      ChunkInputStreamEntry current = getStreamEntry(currentStreamIndex);
       int numBytesToRead = Math.min(len, (int)current.getRemaining());
       int numBytesRead = current.read(b, off, numBytesToRead);
       if (numBytesRead != numBytesToRead) {
@@ -212,13 +229,81 @@ public class KeyInputStream extends InputStream implements Seekable {
   public static class ChunkInputStreamEntry extends InputStream
       implements Seekable {
 
-    private final BlockInputStream blockInputStream;
+    private BlockInputStream blockInputStream;
+    private final OmKeyLocationInfo blockLocationInfo;
     private final long length;
+    private final XceiverClientManager xceiverClientManager;
+    private final String requestId;
+    private boolean verifyChecksum;
 
+    // the position of the blockInputStream is maintained by this variable
+    // till the stream is initialized
+    private long position;
+
+    public ChunkInputStreamEntry(OmKeyLocationInfo omKeyLocationInfo,
+        XceiverClientManager xceiverClientMngr, String clientRequestId,
+        boolean verifyChecksum) {
+      this.blockLocationInfo = omKeyLocationInfo;
+      this.length = omKeyLocationInfo.getLength();
+      this.xceiverClientManager = xceiverClientMngr;
+      this.requestId = clientRequestId;
+      this.verifyChecksum = verifyChecksum;
+    }
+
+    @VisibleForTesting
     public ChunkInputStreamEntry(BlockInputStream blockInputStream,
         long length) {
       this.blockInputStream = blockInputStream;
       this.length = length;
+      this.blockLocationInfo = null;
+      this.xceiverClientManager = null;
+      this.requestId = null;
+    }
+
+    private ChunkInputStreamEntry getStream() throws IOException {
+      if (this.blockInputStream == null) {
+        initializeBlockInputStream();
+      }
+      return this;
+    }
+
+    private void initializeBlockInputStream() throws IOException {
+      BlockID blockID = blockLocationInfo.getBlockID();
+      long containerID = blockID.getContainerID();
+      Pipeline pipeline = blockLocationInfo.getPipeline();
+
+      // irrespective of the container state, we will always read via Standalone
+      // protocol.
+      if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
+        pipeline = Pipeline.newBuilder(pipeline)
+            .setType(HddsProtos.ReplicationType.STAND_ALONE).build();
+      }
+      XceiverClientSpi xceiverClient = xceiverClientManager
+          .acquireClient(pipeline);
+      boolean success = false;
+      long containerKey = blockLocationInfo.getLocalID();
+      try {
+        LOG.debug("Initializing stream for get key to access {} {}",
+            containerID, containerKey);
+        ContainerProtos.DatanodeBlockID datanodeBlockID = blockID
+            .getDatanodeBlockIDProtobuf();
+        if (blockLocationInfo.getToken() != null) {
+          UserGroupInformation.getCurrentUser().
+              addToken(blockLocationInfo.getToken());
+        }
+        ContainerProtos.GetBlockResponseProto response = ContainerProtocolCalls
+            .getBlock(xceiverClient, datanodeBlockID, requestId);
+        List<ContainerProtos.ChunkInfo> chunks =
+            response.getBlockData().getChunksList();
+        success = true;
+        this.blockInputStream = new BlockInputStream(
+            blockLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
+            chunks, requestId, verifyChecksum, position);
+      } finally {
+        if (!success) {
+          xceiverClientManager.releaseClient(xceiverClient, false);
+        }
+      }
     }
 
     synchronized long getRemaining() throws IOException {
@@ -240,17 +325,27 @@ public class KeyInputStream extends InputStream implements Seekable {
 
     @Override
     public synchronized void close() throws IOException {
-      blockInputStream.close();
+      if (blockInputStream != null) {
+        blockInputStream.close();
+      }
     }
 
     @Override
     public void seek(long pos) throws IOException {
-      blockInputStream.seek(pos);
+      if (blockInputStream != null) {
+        blockInputStream.seek(pos);
+      } else {
+        position = pos;
+      }
     }
 
     @Override
     public long getPos() throws IOException {
-      return blockInputStream.getPos();
+      if (blockInputStream != null) {
+        return blockInputStream.getPos();
+      } else {
+        return position;
+      }
     }
 
     @Override
@@ -266,7 +361,6 @@ public class KeyInputStream extends InputStream implements Seekable {
           storageContainerLocationClient,
       String requestId, boolean verifyChecksum) throws IOException {
     long length = 0;
-    long containerKey;
     KeyInputStream groupInputStream = new KeyInputStream();
     groupInputStream.key = keyInfo.getKeyName();
     List<OmKeyLocationInfo> keyLocationInfos =
@@ -274,48 +368,13 @@ public class KeyInputStream extends InputStream implements Seekable {
     groupInputStream.streamOffset = new long[keyLocationInfos.size()];
     for (int i = 0; i < keyLocationInfos.size(); i++) {
       OmKeyLocationInfo omKeyLocationInfo = keyLocationInfos.get(i);
-      BlockID blockID = omKeyLocationInfo.getBlockID();
-      long containerID = blockID.getContainerID();
-      Pipeline pipeline = omKeyLocationInfo.getPipeline();
+      LOG.debug("Adding stream for accessing {}. The stream will be " +
+          "initialized later.", omKeyLocationInfo);
+      groupInputStream.addStream(omKeyLocationInfo, xceiverClientManager,
+          requestId, verifyChecksum);
 
-      // irrespective of the container state, we will always read via Standalone
-      // protocol.
-      if (pipeline.getType() != HddsProtos.ReplicationType.STAND_ALONE) {
-        pipeline = Pipeline.newBuilder(pipeline)
-            .setType(HddsProtos.ReplicationType.STAND_ALONE).build();
-      }
-      XceiverClientSpi xceiverClient = xceiverClientManager
-          .acquireClient(pipeline);
-      boolean success = false;
-      containerKey = omKeyLocationInfo.getLocalID();
-      try {
-        LOG.debug("get key accessing {} {}",
-            containerID, containerKey);
-        groupInputStream.streamOffset[i] = length;
-        ContainerProtos.DatanodeBlockID datanodeBlockID = blockID
-            .getDatanodeBlockIDProtobuf();
-        if (omKeyLocationInfo.getToken() != null) {
-          UserGroupInformation.getCurrentUser().
-              addToken(omKeyLocationInfo.getToken());
-        }
-        ContainerProtos.GetBlockResponseProto response = ContainerProtocolCalls
-            .getBlock(xceiverClient, datanodeBlockID, requestId);
-        List<ContainerProtos.ChunkInfo> chunks =
-            response.getBlockData().getChunksList();
-        for (ContainerProtos.ChunkInfo chunk : chunks) {
-          length += chunk.getLen();
-        }
-        success = true;
-        BlockInputStream inputStream = new BlockInputStream(
-            omKeyLocationInfo.getBlockID(), xceiverClientManager, xceiverClient,
-            chunks, requestId, verifyChecksum);
-        groupInputStream.addStream(inputStream,
-            omKeyLocationInfo.getLength());
-      } finally {
-        if (!success) {
-          xceiverClientManager.releaseClient(xceiverClient, false);
-        }
-      }
+      groupInputStream.streamOffset[i] = length;
+      length += omKeyLocationInfo.getLength();
     }
     groupInputStream.length = length;
     return new LengthInputStream(groupInputStream, length);
