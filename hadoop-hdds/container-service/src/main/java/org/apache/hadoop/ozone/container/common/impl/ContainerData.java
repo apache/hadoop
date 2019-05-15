@@ -308,6 +308,10 @@ public abstract class ContainerData {
     committedSpace = false;
   }
 
+  /**
+   * add available space in the container to the committed space in the volume.
+   * available space is the number of bytes remaining till max capacity.
+   */
   public void commitSpace() {
     long unused = getMaxSize() - getBytesUsed();
     ContainerDataProto.State myState = getState();

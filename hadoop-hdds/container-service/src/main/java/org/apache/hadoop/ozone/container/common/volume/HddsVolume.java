@@ -425,10 +425,19 @@ public class HddsVolume
     NOT_INITIALIZED
   }
 
+  /**
+   * add "delta" bytes to committed space in the volume.
+   * @param delta bytes to add to committed space counter
+   * @return bytes of committed space
+   */
   public long incCommittedBytes(long delta) {
     return committedBytes.addAndGet(delta);
   }
 
+  /**
+   * return the committed space in the volume.
+   * @return bytes of committed space
+   */
   public long getCommittedBytes() {
     return committedBytes.get();
   }
