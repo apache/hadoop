@@ -98,8 +98,9 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
    * Returns the value mapped to the given key in byte array or returns null
    * if the key is not found.
    *
-   * First it will check from cache, if it has entry return the value
-   * otherwise, get from the RocksDB table.
+   * Caller's of this method should use synchronization mechanism, when
+   * accessing, as underlying we first check cache, if it does not exist in
+   * the cache use RocksDB table.
    *
    * @param key metadata key
    * @return VALUE
@@ -110,21 +111,15 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     // Here the metadata lock will guarantee that cache is not updated for same
     // key during get key.
     if (cache != null) {
-      CacheValue<VALUE> cacheValue = cache.get(new CacheKey<>(key));
-      if (cacheValue == null) {
-        return getFromTable(key);
-      } else {
-        // Doing this because, if the Cache Value Last operation is deleted
-        // means it will eventually removed from DB. So, we should return null.
-        if (cacheValue.getLastOperation() != CacheValue.OperationType.DELETED) {
-          return cacheValue.getValue();
-        } else {
-          return null;
-        }
+      CacheValue< VALUE > cacheValue = cache.get(new CacheKey<>(key));
+      if (cacheValue != null) {
+        // We have a value in cache, return the value.
+        return cacheValue.getValue();
       }
-    } else {
-      return getFromTable(key);
     }
+    // If no cache for the table or if it does not exist in cache get from
+    // RocksDB table.
+    return getFromTable(key);
   }
 
   private VALUE getFromTable(KEY key) throws IOException {

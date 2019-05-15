@@ -21,6 +21,7 @@ package org.apache.hadoop.utils.db.cache;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -44,8 +45,7 @@ public class TestPartialTableCache {
 
     for (int i = 0; i< 10; i++) {
       tableCache.put(new CacheKey<>(Integer.toString(i)),
-          new CacheValue<>(Integer.toString(i),
-              CacheValue.OperationType.CREATED, i));
+          new CacheValue<>(Optional.of(Integer.toString(i)), i));
     }
 
 
@@ -132,8 +132,7 @@ public class TestPartialTableCache {
     int counter = 1;
     while (counter <= count){
       tableCache.put(new CacheKey<>(Integer.toString(startVal)),
-          new CacheValue<>(Integer.toString(startVal),
-              CacheValue.OperationType.CREATED, startVal));
+          new CacheValue<>(Optional.of(Integer.toString(startVal)), startVal));
       startVal++;
       counter++;
       Thread.sleep(sleep);

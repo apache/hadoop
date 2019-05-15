@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.utils.db.cache;
 
-import java.util.Objects;
+import com.google.common.base.Optional;
 
 /**
  * CacheValue for the RocksDB Table.
@@ -26,38 +26,22 @@ import java.util.Objects;
  */
 public class CacheValue<VALUE> {
 
-  private VALUE value;
-  private OperationType lastOperation;
+  private Optional<VALUE> value;
   // This value is used for evict entries from cache.
   // This value is set with ratis transaction context log entry index.
   private long epoch;
 
-  public CacheValue(VALUE value, OperationType lastOperation, long epoch) {
-    Objects.requireNonNull(value, "Value Should not be null in CacheValue");
+  public CacheValue(Optional<VALUE> value, long epoch) {
     this.value = value;
-    this.lastOperation = lastOperation;
     this.epoch = epoch;
   }
 
   public VALUE getValue() {
-    return value;
-  }
-
-  public OperationType getLastOperation() {
-    return lastOperation;
+    return value.orNull();
   }
 
   public long getEpoch() {
     return epoch;
-  }
-
-  /**
-   * Last happened Operation.
-   */
-  public enum OperationType {
-   CREATED,
-   UPDATED,
-   DELETED
   }
 
 }

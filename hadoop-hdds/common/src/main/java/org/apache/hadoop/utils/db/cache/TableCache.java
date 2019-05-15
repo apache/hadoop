@@ -49,7 +49,8 @@ public interface TableCache<CACHEKEY extends CacheKey,
 
   /**
    * Removes all the entries from the cache which are having epoch value less
-   * than or equal to specified epoch value.
+   * than or equal to specified epoch value. For FullTable Cache this is a
+   * do-nothing operation.
    * @param epoch
    */
   void cleanup(long epoch);

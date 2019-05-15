@@ -26,6 +26,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.db.Table.KeyValue;
@@ -259,8 +260,9 @@ public class TestTypedRDBTableStore {
       for (int x = 0; x < iterCount; x++) {
         String key = Integer.toString(x);
         String value = Integer.toString(x);
-        testTable.addCacheEntry(new CacheKey<>(key), new CacheValue<>(value,
-            CacheValue.OperationType.CREATED, x));
+        testTable.addCacheEntry(new CacheKey<>(key),
+            new CacheValue<>(Optional.of(value),
+            x));
       }
 
       // As we have added to cache, so get should return value even if it
@@ -285,11 +287,11 @@ public class TestTypedRDBTableStore {
         String value = Integer.toString(x);
         if (x % 2 == 0) {
           testTable.addCacheEntry(new CacheKey<>(key),
-              new CacheValue<>(value,
-              CacheValue.OperationType.CREATED, x));
+              new CacheValue<>(Optional.of(value), x));
         } else {
-          testTable.addCacheEntry(new CacheKey<>(key), new CacheValue<>(value,
-              CacheValue.OperationType.DELETED, x));
+          testTable.addCacheEntry(new CacheKey<>(key),
+              new CacheValue<>(Optional.absent(),
+              x));
         }
       }
 
