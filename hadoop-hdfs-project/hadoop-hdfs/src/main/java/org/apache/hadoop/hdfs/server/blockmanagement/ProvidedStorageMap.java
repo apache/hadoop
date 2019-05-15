@@ -220,6 +220,11 @@ public class ProvidedStorageMap {
     return providedDescriptor.chooseRandom();
   }
 
+  @VisibleForTesting
+  public BlockAliasMap getAliasMap() {
+    return aliasMap;
+  }
+
   /**
    * Builder used for creating {@link LocatedBlocks} when a block is provided.
    */
