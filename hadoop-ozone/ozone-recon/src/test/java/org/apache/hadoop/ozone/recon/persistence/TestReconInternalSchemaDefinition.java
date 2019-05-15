@@ -61,7 +61,7 @@ public class TestReconInternalSchemaDefinition extends AbstractSqlDatabaseTest {
 
     expectedPairs.add(new ImmutablePair<>("task_name", Types.VARCHAR));
     expectedPairs.add(new ImmutablePair<>("last_updated_timestamp",
-        Types.VARCHAR));
+        Types.INTEGER));
     expectedPairs.add(new ImmutablePair<>("last_updated_seq_number",
         Types.INTEGER));
 
