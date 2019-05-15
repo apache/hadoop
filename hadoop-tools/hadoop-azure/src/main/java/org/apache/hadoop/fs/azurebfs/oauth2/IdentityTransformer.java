@@ -178,11 +178,10 @@ public class IdentityTransformer {
    * $superuser, fully qualified name and principal id should not be transformed.
    *
    * @param aclEntries list of AclEntry
-   * @return list of AclEntry after the identity transformation.
    * */
-  public List<AclEntry> transformAclEntriesForSetRequest(final List<AclEntry> aclEntries) {
+  public void transformAclEntriesForSetRequest(final List<AclEntry> aclEntries) {
     if (skipUserIdentityReplacement) {
-      return aclEntries;
+      return;
     }
 
     for (int i = 0; i < aclEntries.size(); i++) {
@@ -218,7 +217,62 @@ public class IdentityTransformer {
       // Replace the original AclEntry
       aclEntries.set(i, aclEntryBuilder.build());
     }
-    return aclEntries;
+  }
+
+  /**
+   * Perform Identity transformation when calling GetAclStatus()
+   * If the AclEntry type is a user or group, and its name is one of the following:
+   * 1. $superuser:
+   *     by default it will be transformed to local user/group, this can be disabled by setting
+   *     "fs.azure.identity.transformer.skip.superuser.replacement" to true.
+   *
+   * 2. User principal id:
+   *     can be transformed to localUser/localGroup, if this principal id matches the principal id set in
+   *     "fs.azure.identity.transformer.service.principal.id" and localIdentity is stated in
+   *     "fs.azure.identity.transformer.service.principal.substitution.list"
+   *
+   * 3. User principal name (UPN):
+   *     can be transformed to a short name(local identity) if originalIdentity is owner name, and
+   *     "fs.azure.identity.transformer.enable.short.name" is enabled.
+   *
+   * @param aclEntries list of AclEntry
+   * @param localUser local user name
+   * @param localGroup local primary group
+   * */
+  public void transformAclEntriesForGetRequest(final List<AclEntry> aclEntries, String localUser, String localGroup) {
+    if (skipUserIdentityReplacement) {
+      return;
+    }
+
+    for (int i = 0; i < aclEntries.size(); i++) {
+      AclEntry aclEntry = aclEntries.get(i);
+      String name = aclEntry.getName();
+      String transformedName = name;
+      if (name == null || name.isEmpty() || aclEntry.getType().equals(AclEntryType.OTHER) || aclEntry.getType().equals(AclEntryType.MASK)) {
+        continue;
+      }
+
+      // when type of aclEntry is user or group
+      if (aclEntry.getType().equals(AclEntryType.USER)) {
+        transformedName = transformIdentityForGetRequest(name, true, localUser);
+      } else if (aclEntry.getType().equals(AclEntryType.GROUP)) {
+        transformedName = transformIdentityForGetRequest(name, false, localGroup);
+      }
+
+      // Avoid unnecessary new AclEntry allocation
+      if (transformedName.equals(name)) {
+        continue;
+      }
+
+      AclEntry.Builder aclEntryBuilder = new AclEntry.Builder();
+      aclEntryBuilder.setType(aclEntry.getType());
+      aclEntryBuilder.setName(transformedName);
+      aclEntryBuilder.setScope(aclEntry.getScope());
+      aclEntryBuilder.setPermission(aclEntry.getPermission());
+
+      // Replace the original AclEntry
+      aclEntries.set(i, aclEntryBuilder.build());
+    }
   }
 
   /**
