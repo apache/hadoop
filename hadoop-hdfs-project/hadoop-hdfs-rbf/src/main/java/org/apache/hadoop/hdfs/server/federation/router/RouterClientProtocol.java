@@ -207,7 +207,8 @@ public class RouterClientProtocol implements ClientProtocol {
       final long length) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, false);
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod remoteMethod = new RemoteMethod("getBlockLocations",
         new Class<?>[] {String.class, long.class, long.class},
         new RemoteParam(), offset, length);
@@ -351,7 +352,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("recoverLease",
         new Class<?>[] {String.class, String.class}, new RemoteParam(),
         clientName);
@@ -395,7 +396,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("setPermission",
         new Class<?>[] {String.class, FsPermission.class},
         new RemoteParam(), permissions);
@@ -412,7 +413,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("setOwner",
         new Class<?>[] {String.class, String.class, String.class},
         new RemoteParam(), username, groupname);
@@ -531,7 +532,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("getPreferredBlockSize",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, Long.class, null);
@@ -724,7 +725,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // Locate the dir and fetch the listing
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("getListing",
         new Class<?>[] {String.class, startAfter.getClass(), boolean.class},
         new RemoteParam(), startAfter, needLocation);
@@ -821,7 +822,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getFileInfo",
         new Class<?>[] {String.class}, new RemoteParam());
 
@@ -859,7 +860,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("isFileClosed",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, Boolean.class,
@@ -871,7 +872,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getFileLinkInfo",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, HdfsFileStatus.class,
@@ -883,7 +884,7 @@ public class RouterClientProtocol implements ClientProtocol {
       boolean needBlockToken) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getLocatedFileInfo",
         new Class<?>[] {String.class, boolean.class}, new RemoteParam(),
         needBlockToken);
@@ -1092,7 +1093,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(path, false);
+        rpcServer.getLocationsForPath(path, false, false);
     RemoteMethod method = new RemoteMethod("listCorruptFileBlocks",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), cookie);
@@ -1117,7 +1118,7 @@ public class RouterClientProtocol implements ClientProtocol {
     // Get the summaries from regular files
     final Collection<ContentSummary> summaries = new ArrayList<>();
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(path, false);
+        rpcServer.getLocationsForPath(path, false, false);
     final RemoteMethod method = new RemoteMethod("getContentSummary",
         new Class<?>[] {String.class}, new RemoteParam());
     final List<RemoteResult<RemoteLocation, ContentSummary>> results =
@@ -1169,7 +1170,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("fsync",
         new Class<?>[] {String.class, long.class, String.class, long.class },
         new RemoteParam(), fileId, clientName, lastBlockLength);
@@ -1181,7 +1182,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("setTimes",
         new Class<?>[] {String.class, long.class, long.class},
         new RemoteParam(), mtime, atime);
@@ -1211,7 +1212,7 @@ public class RouterClientProtocol implements ClientProtocol {
     rpcServer.checkOperation(NameNode.OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(path, true);
+        rpcServer.getLocationsForPath(path, true, false);
     RemoteMethod method = new RemoteMethod("getLinkTarget",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, String.class, null);
@@ -1309,7 +1310,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("modifyAclEntries",
         new Class<?>[] {String.class, List.class},
         new RemoteParam(), aclSpec);
@@ -1327,7 +1328,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("removeAclEntries",
         new Class<?>[] {String.class, List.class},
         new RemoteParam(), aclSpec);
@@ -1344,7 +1345,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("removeDefaultAcl",
         new Class<?>[] {String.class}, new RemoteParam());
     if (rpcServer.isInvokeConcurrent(src)) {
@@ -1360,7 +1361,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("removeAcl",
         new Class<?>[] {String.class}, new RemoteParam());
     if (rpcServer.isInvokeConcurrent(src)) {
@@ -1376,7 +1377,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod(
         "setAcl", new Class<?>[] {String.class, List.class},
         new RemoteParam(), aclSpec);
@@ -1393,7 +1394,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getAclStatus",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(locations, method, AclStatus.class, null);
@@ -1406,7 +1407,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("createEncryptionZone",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), keyName);
@@ -1419,7 +1420,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getEZForPath",
         new Class<?>[] {String.class}, new RemoteParam());
     return rpcClient.invokeSequential(
@@ -1453,7 +1454,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("setXAttr",
         new Class<?>[] {String.class, XAttr.class, EnumSet.class},
         new RemoteParam(), xAttr, flag);
@@ -1472,7 +1473,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("getXAttrs",
         new Class<?>[] {String.class, List.class}, new RemoteParam(), xAttrs);
     return (List<XAttr>) rpcClient.invokeSequential(
@@ -1486,7 +1487,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("listXAttrs",
         new Class<?>[] {String.class}, new RemoteParam());
     return (List<XAttr>) rpcClient.invokeSequential(
@@ -1499,7 +1500,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("removeXAttr",
         new Class<?>[] {String.class, XAttr.class}, new RemoteParam(), xAttr);
     if (rpcServer.isInvokeConcurrent(src)) {
@@ -1515,7 +1516,7 @@ public class RouterClientProtocol implements ClientProtocol {
 
     // TODO handle virtual directories
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(path, true);
+        rpcServer.getLocationsForPath(path, true, false);
     RemoteMethod method = new RemoteMethod("checkAccess",
         new Class<?>[] {String.class, FsAction.class},
         new RemoteParam(), mode);
@@ -1735,7 +1736,7 @@ public class RouterClientProtocol implements ClientProtocol {
       throws IOException {
 
     final List<RemoteLocation> dstLocations =
-        rpcServer.getLocationsForPath(dst, true);
+        rpcServer.getLocationsForPath(dst, true, false);
     final Map<RemoteLocation, String> dstMap = new HashMap<>();
 
     Iterator<RemoteLocation> iterator = srcLocations.iterator();
@@ -2026,7 +2027,7 @@ public class RouterClientProtocol implements ClientProtocol {
     try {
       if (rpcServer.isPathAll(src)) {
         List<RemoteLocation> locations;
-        locations = rpcServer.getLocationsForPath(src, false);
+        locations = rpcServer.getLocationsForPath(src, false, false);
         RemoteMethod method = new RemoteMethod("getFileInfo",
             new Class<?>[] {String.class}, new RemoteParam());
         HdfsFileStatus fileStatus = rpcClient.invokeSequential(locations,

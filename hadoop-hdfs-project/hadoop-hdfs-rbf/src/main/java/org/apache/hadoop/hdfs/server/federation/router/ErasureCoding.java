@@ -140,7 +140,7 @@ public class ErasureCoding {
     rpcServer.checkOperation(OperationCategory.READ);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod remoteMethod = new RemoteMethod("getErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
     ErasureCodingPolicy ret = rpcClient.invokeSequential(
@@ -153,7 +153,7 @@ public class ErasureCoding {
     rpcServer.checkOperation(OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod remoteMethod = new RemoteMethod("setErasureCodingPolicy",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(), ecPolicyName);
@@ -168,7 +168,7 @@ public class ErasureCoding {
     rpcServer.checkOperation(OperationCategory.WRITE);
 
     final List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true);
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod remoteMethod = new RemoteMethod("unsetErasureCodingPolicy",
         new Class<?>[] {String.class}, new RemoteParam());
     if (rpcServer.isInvokeConcurrent(src)) {
