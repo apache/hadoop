@@ -99,8 +99,8 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
    * if the key is not found.
    *
    * Caller's of this method should use synchronization mechanism, when
-   * accessing, as underlying we first check cache, if it does not exist in
-   * the cache use RocksDB table.
+   * accessing. First it will check from cache, if it has entry return the
+   * value, otherwise get from the RocksDB table.
    *
    * @param key metadata key
    * @return VALUE
