@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -47,9 +46,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
@@ -274,18 +275,25 @@ public class TestPartialDeleteFailures {
     public void move(
         @Nullable final Collection<Path> pathsToDelete,
         @Nullable final Collection<PathMetadata> pathsToCreate,
-        @Nullable final Closeable moveState) {
+        @Nullable final BulkOperationState moveState) {
 
     }
 
     @Override
-    public void put(final PathMetadata meta) {
+    public void put(final PathMetadata meta) throws IOException {
+      put(meta, null);
+    }
+
+    @Override
+    public void put(final PathMetadata meta,
+        final BulkOperationState operationState) {
       created.add(meta.getFileStatus().getPath());
     }
 
     @Override
-    public void put(final Collection<PathMetadata> metas) {
-      metas.stream().forEach(this::put);
+    public void put(final Collection<PathMetadata> metas,
+        final BulkOperationState operationState) {
+      metas.stream().forEach(meta -> put(meta, null));
     }
 
     @Override

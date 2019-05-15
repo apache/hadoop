@@ -624,10 +624,9 @@ public class ContractTestUtils extends Assert {
    * @param path       path to write
    * @param overwrite overwrite flag
    * @param data source dataset. Can be null
-   * @return the path written to.
    * @throws IOException on any problem
    */
-  public static Path createFile(FileSystem fs,
+  public static void createFile(FileSystem fs,
                                  Path path,
                                  boolean overwrite,
                                  byte[] data) throws IOException {
@@ -637,7 +636,6 @@ public class ContractTestUtils extends Assert {
         stream.write(data);
       }
       stream.close();
-      return path;
     } finally {
       IOUtils.closeStream(stream);
     }
@@ -664,13 +662,11 @@ public class ContractTestUtils extends Assert {
    * Touch a file.
    * @param fs filesystem
    * @param path path
-   * @return the patch created.
    * @throws IOException IO problems
    */
-  public static Path touch(FileSystem fs,
+  public static void touch(FileSystem fs,
                            Path path) throws IOException {
     createFile(fs, path, true, null);
-    return path;
   }
 
   /**

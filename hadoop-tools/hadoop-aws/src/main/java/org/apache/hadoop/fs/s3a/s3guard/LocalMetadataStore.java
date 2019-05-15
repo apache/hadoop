@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Collection;
@@ -198,7 +197,7 @@ public class LocalMetadataStore implements MetadataStore {
   public void move(
       @Nullable Collection<Path> pathsToDelete,
       @Nullable Collection<PathMetadata> pathsToCreate,
-      @Nullable final Closeable moveState) throws IOException {
+      @Nullable final BulkOperationState operationState) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
     if (pathsToCreate == null) {
@@ -220,7 +219,7 @@ public class LocalMetadataStore implements MetadataStore {
       // 2. Create new destination path metadata
       for (PathMetadata meta : pathsToCreate) {
         LOG.debug("move: adding metadata {}", meta);
-        put(meta);
+        put(meta, null);
       }
 
       // 3. We now know full contents of all dirs in destination subtree
@@ -238,7 +237,13 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void put(PathMetadata meta) throws IOException {
+  public void put(final PathMetadata meta) throws IOException {
+    put(meta, null);
+  }
+
+  @Override
+  public void put(PathMetadata meta,
+      final BulkOperationState operationState) throws IOException {
 
     Preconditions.checkNotNull(meta);
     FileStatus status = meta.getFileStatus();
@@ -318,13 +323,14 @@ public class LocalMetadataStore implements MetadataStore {
     } else {
       entry.setDirListingMetadata(meta);
     }
-    put(meta.getListing());
+    put(meta.getListing(), null);
   }
 
-  public synchronized void put(Collection<PathMetadata> metas) throws
+  public synchronized void put(Collection<PathMetadata> metas,
+      final BulkOperationState operationState) throws
       IOException {
     for (PathMetadata meta : metas) {
-      put(meta);
+      put(meta, operationState);
     }
   }
 

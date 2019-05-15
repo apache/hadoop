@@ -150,7 +150,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       final FileStatus status = pathStr.contains("file")
           ? basicFileStatus(strToPath(pathStr), 100, false)
           : basicFileStatus(strToPath(pathStr), 0, true);
-      ms.put(new PathMetadata(status));
+      ms.put(new PathMetadata(status), null);
     }
 
     final PathMetadata rootMeta = new PathMetadata(makeDirStatus("/"));
@@ -237,7 +237,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
      * containing directory.  We only track direct children of the directory.
      * Thus this will not affect entry for /da1.
      */
-    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc1", 100)));
+    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc1", 100)), null);
 
     assertEmptyDirs("/da2", "/da3");
     assertDirectorySize("/da1/db1", 1);
@@ -249,7 +249,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
 
     /* This already exists, and should silently replace it. */
-    ms.put(new PathMetadata(makeDirStatus("/da1/db1")));
+    ms.put(new PathMetadata(makeDirStatus("/da1/db1")), null);
 
     /* If we had putNew(), and used it above, this would be empty again. */
     assertDirectorySize("/da1", 1);
@@ -257,8 +257,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertEmptyDirs("/da2", "/da3");
 
     /* Ensure new files update correct parent dirs. */
-    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc1", 100)));
-    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc2", 200)));
+    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc1", 100)), null);
+    ms.put(new PathMetadata(makeFileStatus("/da1/db1/fc2", 200)), null);
     assertDirectorySize("/da1", 1);
     assertDirectorySize("/da1/db1", 2);
     assertEmptyDirs("/da2", "/da3");
@@ -273,14 +273,15 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testPutOverwrite() throws Exception {
     final String filePath = "/a1/b1/c1/some_file";
     final String dirPath = "/a1/b1/c1/d1";
-    ms.put(new PathMetadata(makeFileStatus(filePath, 100)));
-    ms.put(new PathMetadata(makeDirStatus(dirPath)));
+    ms.put(new PathMetadata(makeFileStatus(filePath, 100)), null);
+    ms.put(new PathMetadata(makeDirStatus(dirPath)), null);
     PathMetadata meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
       verifyFileStatus(meta.getFileStatus(), 100);
     }
 
-    ms.put(new PathMetadata(basicFileStatus(strToPath(filePath), 9999, false)));
+    ms.put(new PathMetadata(basicFileStatus(strToPath(filePath), 9999, false)),
+        null);
     meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
       verifyFileStatus(meta.getFileStatus(), 9999);
@@ -291,7 +292,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testRootDirPutNew() throws Exception {
     Path rootPath = strToPath("/");
 
-    ms.put(new PathMetadata(makeFileStatus("/file1", 100)));
+    ms.put(new PathMetadata(makeFileStatus("/file1", 100)), null);
     DirListingMetadata dir = ms.listChildren(rootPath);
     if (!allowMissing() || dir != null) {
       assertNotNull("Root dir cached", dir);
@@ -331,7 +332,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     setUpDeleteTest(p);
     createNewDirs(p + "/ADirectory1/db1/dc1", p + "/ADirectory1/db1/dc1/dd1");
     ms.put(new PathMetadata(
-        makeFileStatus(p + "/ADirectory1/db1/dc1/dd1/deepFile", 100)));
+        makeFileStatus(p + "/ADirectory1/db1/dc1/dd1/deepFile", 100)), null);
     if (!allowMissing()) {
       assertCached(p + "/ADirectory1/db1");
     }
@@ -381,9 +382,9 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     createNewDirs(prefix + "/ADirectory1", prefix + "/ADirectory2",
         prefix + "/ADirectory1/db1");
     ms.put(new PathMetadata(makeFileStatus(prefix + "/ADirectory1/db1/file1",
-        100)));
+        100)), null);
     ms.put(new PathMetadata(makeFileStatus(prefix + "/ADirectory1/db1/file2",
-        100)));
+        100)), null);
 
     PathMetadata meta = ms.get(strToPath(prefix + "/ADirectory1/db1/file2"));
     if (!allowMissing() || meta != null) {
@@ -396,8 +397,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testGet() throws Exception {
     final String filePath = "/a1/b1/c1/some_file";
     final String dirPath = "/a1/b1/c1/d1";
-    ms.put(new PathMetadata(makeFileStatus(filePath, 100)));
-    ms.put(new PathMetadata(makeDirStatus(dirPath)));
+    ms.put(new PathMetadata(makeFileStatus(filePath, 100)), null);
+    ms.put(new PathMetadata(makeDirStatus(dirPath)), null);
     PathMetadata meta = ms.get(strToPath(filePath));
     if (!allowMissing() || meta != null) {
       assertNotNull("Get found file", meta);
@@ -627,7 +628,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertNull("Path2 should not be present yet.", meta);
 
     // Put p1, assert p2 doesn't match
-    ms.put(new PathMetadata(makeFileStatus(p1, 100)));
+    ms.put(new PathMetadata(makeFileStatus(p1, 100)), null);
     meta = ms.get(new Path(p2));
     assertNull("Path 2 should not match path 1.", meta);
 
@@ -647,7 +648,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     long oldTime = getTime();
     ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime,
-        oldTime)));
+        oldTime)), null);
     DirListingMetadata ls2 = ms.listChildren(strToPath("/pruneFiles"));
     if (!allowMissing()) {
       assertListingsEqual(ls2.getListing(), "/pruneFiles/old");
@@ -659,7 +660,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     long cutoff = System.currentTimeMillis();
     long newTime = getTime();
     ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime,
-        newTime)));
+        newTime)), null);
 
     DirListingMetadata ls;
     ls = ms.listChildren(strToPath("/pruneFiles"));
@@ -690,7 +691,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     long oldTime = getTime();
     ms.put(new PathMetadata(makeFileStatus("/pruneDirs/dir/file",
-        1, oldTime, oldTime)));
+        1, oldTime, oldTime)), null);
 
     // It's possible for the Local implementation to get from the old
     // modification time to here in under 1ms, causing it to not get pruned
@@ -715,10 +716,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     long time = System.currentTimeMillis();
     ms.put(new PathMetadata(
         new FileStatus(0, false, 0, 0, time - 1, strToPath(staleFile)),
-        Tristate.FALSE, false));
+        Tristate.FALSE, false), null);
     ms.put(new PathMetadata(
         new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
-        Tristate.FALSE, false));
+        Tristate.FALSE, false), null);
 
     // set parent dir as authoritative
     if (!allowMissing()) {
@@ -752,10 +753,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     long time = System.currentTimeMillis();
     ms.put(new PathMetadata(
         new FileStatus(0, false, 0, 0, time + 1, strToPath(staleFile)),
-        Tristate.FALSE, false));
+        Tristate.FALSE, false), null);
     ms.put(new PathMetadata(
         new FileStatus(0, false, 0, 0, time + 1, strToPath(freshFile)),
-        Tristate.FALSE, false));
+        Tristate.FALSE, false), null);
 
     if (!allowMissing()) {
       // set parent dir as authoritative
@@ -813,7 +814,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     final FileStatus fileStatus = basicFileStatus(path, 0, false);
     PathMetadata pm = new PathMetadata(fileStatus);
     pm.setIsDeleted(true);
-    ms.put(pm);
+    ms.put(pm, null);
     if(!allowMissing()) {
       final PathMetadata pathMetadata =
           ms.listChildren(path.getParent()).get(path);
@@ -853,8 +854,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   private void setupListStatus() throws IOException {
     createNewDirs("/a1", "/a2", "/a1/b1", "/a1/b2", "/a1/b1/c1",
         "/a1/b1/c1/d1");
-    ms.put(new PathMetadata(makeFileStatus("/a1/b1/file1", 100)));
-    ms.put(new PathMetadata(makeFileStatus("/a1/b1/file2", 100)));
+    ms.put(new PathMetadata(makeFileStatus("/a1/b1/file1", 100)), null);
+    ms.put(new PathMetadata(makeFileStatus("/a1/b1/file2", 100)), null);
   }
 
   private void assertListingsEqual(Collection<PathMetadata> listing,
@@ -885,7 +886,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   private void createNewDirs(String... dirs)
       throws IOException {
     for (String pathStr : dirs) {
-      ms.put(new PathMetadata(makeDirStatus(pathStr)));
+      ms.put(new PathMetadata(makeDirStatus(pathStr)), null);
     }
   }
 

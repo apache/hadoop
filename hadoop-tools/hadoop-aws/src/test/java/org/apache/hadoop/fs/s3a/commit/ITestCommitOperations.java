@@ -45,6 +45,7 @@ import org.apache.hadoop.mapreduce.TaskID;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitter;
 import org.apache.hadoop.mapreduce.lib.output.PathOutputCommitterFactory;
 import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
@@ -332,11 +333,19 @@ public class ITestCommitOperations extends AbstractCommitITest {
     validateIntermediateAndFinalPaths(magicFile, destFile);
     SinglePendingCommit commit = SinglePendingCommit.load(getFileSystem(),
         validatePendingCommitData(filename, magicFile));
-    CommitOperations actions = newCommitOperations();
     setThrottling(throttle, failures);
-    actions.commitOrFail(commit);
+    commitOrFail(destFile, commit, newCommitOperations());
     resetFailures();
     verifyCommitExists(commit);
+  }
+
+  private void commitOrFail(final Path destFile,
+      final SinglePendingCommit commit, final CommitOperations actions)
+      throws IOException {
+    try (CommitOperations.CommitContext commitContext
+             = actions.initiateCommitOperation(destFile)) {
+      commitContext.commitOrFail(commit);
+    }
   }
 
   /**
@@ -439,7 +448,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     resetFailures();
     assertPathDoesNotExist("pending commit", dest);
     fullThrottle();
-    actions.commitOrFail(pendingCommit);
+    commitOrFail(dest, pendingCommit, actions);
     resetFailures();
     FileStatus status = verifyPathExists(fs,
         "uploaded file commit", dest);
@@ -462,7 +471,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
     resetFailures();
     assertPathDoesNotExist("pending commit", dest);
     fullThrottle();
-    actions.commitOrFail(pendingCommit);
+    commitOrFail(dest, pendingCommit, actions);
     resetFailures();
     String s = readUTF8(fs, dest, -1);
     assertEquals(text, s);

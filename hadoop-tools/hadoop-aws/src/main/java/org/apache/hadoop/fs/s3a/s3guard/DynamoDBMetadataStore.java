@@ -19,7 +19,6 @@
 package org.apache.hadoop.fs.s3a.s3guard;
 
 import javax.annotation.Nullable;
-import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -783,15 +782,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param pathsToCreate Collection of all PathMetadata for the new paths
    *                      that were created at the destination of the rename
    *                      ().
-   * @param closeable
-   * @throws IOException
+   * @param operationState Any ongoing state supplied to the rename tracker
+   *                      which is to be passed in with each move operation.
+   * @throws IOException if there is an error
    */
   @Override
   @Retries.RetryTranslated
   public void move(
       @Nullable Collection<Path> pathsToDelete,
       @Nullable Collection<PathMetadata> pathsToCreate,
-      @Nullable final Closeable closeable) throws IOException {
+      @Nullable final BulkOperationState operationState) throws IOException {
     if (pathsToDelete == null && pathsToCreate == null) {
       return;
     }
@@ -808,15 +808,17 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // Following code is to maintain this invariant by putting all ancestor
     // directories of the paths to create.
     // ancestor paths that are not explicitly added to paths to create
-    AncestorState ancestorState = extractOrCreate(closeable);
+    AncestorState ancestorState = extractOrCreate(operationState);
     List<DDBPathMetadata> newItems = new ArrayList<>();
     if (pathsToCreate != null) {
       // create all parent entries.
       // this is synchronized on the move state so that across both serialized
       // and parallelized renames, duplicate ancestor entries are not created.
       synchronized (ancestorState) {
-        newItems.addAll(completeAncestry(pathMetaToDDBPathMeta(pathsToCreate),
-            ancestorState));
+        newItems.addAll(
+            completeAncestry(
+                pathMetaToDDBPathMeta(pathsToCreate),
+                ancestorState));
       }
     }
     // sort all the new items topmost first.
@@ -959,7 +961,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void put(PathMetadata meta) throws IOException {
+  public void put(final PathMetadata meta) throws IOException {
+    put(meta, null);
+  }
+
+  @Override
+  @Retries.RetryTranslated
+  public void put(
+      final PathMetadata meta,
+      @Nullable final BulkOperationState operationState) throws IOException {
     // For a deeply nested path, this method will automatically create the full
     // ancestry and save respective item in DynamoDB table.
     // So after put operation, we maintain the invariant that if a path exists,
@@ -970,25 +980,35 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     Collection<PathMetadata> wrapper = new ArrayList<>(1);
     wrapper.add(meta);
-    put(wrapper);
+    put(wrapper, operationState);
   }
 
   @Override
   @Retries.RetryTranslated
-  public void put(Collection<PathMetadata> metas) throws IOException {
-    innerPut(pathMetaToDDBPathMeta(metas));
+  public void put(
+      final Collection<PathMetadata> metas,
+      @Nullable final BulkOperationState operationState) throws IOException {
+    innerPut(pathMetaToDDBPathMeta(metas), operationState);
   }
 
-  @Retries.OnceRaw
-  private void innerPut(Collection<DDBPathMetadata> metas) throws IOException {
+  @Retries.RetryTranslated
+  private void innerPut(
+      final Collection<DDBPathMetadata> metas,
+      @Nullable final BulkOperationState operationState) throws IOException {
     if (metas.isEmpty()) {
-      // this seems to appear in the logs, so log the full stack to
+      // this sometimes to appear in the logs, so log the full stack to
       // identify it.
       LOG.debug("Ignoring empty list of entries to put",
           new Exception("source"));
       return;
     }
-    Item[] items = pathMetadataToItem(completeAncestry(metas, new AncestorState()));
+    final AncestorState ancestorState = extractOrCreate(operationState);
+
+    Item[] items;
+    synchronized (ancestorState) {
+      items = pathMetadataToItem(
+          completeAncestry(metas, ancestorState));
+    }
     LOG.debug("Saving batch of {} items to table {}, region {}", items.length,
         tableName, region);
     processBatchWriteRequest(null, items);
@@ -1232,7 +1252,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     try {
       LOG.debug("innerPut on metas: {}", metas);
       if (!metas.isEmpty()) {
-        innerPut(metas);
+        innerPut(metas, null);
       }
     } catch (IOException e) {
       String msg = String.format("IOException while setting false "
@@ -1880,13 +1900,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /**
    * Get the move state passed in; create a new one if needed.
-   * @param closeable state.
+   * @param state state.
    * @return the cast or created state.
    */
   @VisibleForTesting
-  static AncestorState extractOrCreate(@Nullable Closeable closeable) {
-    if (closeable != null) {
-      return (AncestorState) closeable;
+  static AncestorState extractOrCreate(@Nullable BulkOperationState state) {
+    if (state != null) {
+      return (AncestorState) state;
     } else {
       return new AncestorState();
     }
@@ -1899,7 +1919,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * rename operations managed by a rename tracker.
    */
   @VisibleForTesting
-  static final class AncestorState implements Closeable {
+  static final class AncestorState extends BulkOperationState {
 
     private final Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
 
@@ -1907,9 +1927,5 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return ancestry;
     }
 
-    @Override
-    public void close() {
-
-    }
   }
 }

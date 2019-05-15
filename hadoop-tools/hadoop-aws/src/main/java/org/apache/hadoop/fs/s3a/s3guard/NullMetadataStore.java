@@ -24,7 +24,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -80,15 +79,21 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate,
-      final Closeable moveState) throws IOException {
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override
-  public void put(PathMetadata meta) throws IOException {
+  public void put(final PathMetadata meta) throws IOException {
   }
 
   @Override
-  public void put(Collection<PathMetadata> meta) throws IOException {
+  public void put(PathMetadata meta,
+      final BulkOperationState operationState) throws IOException {
+  }
+
+  @Override
+  public void put(Collection<PathMetadata> meta,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override

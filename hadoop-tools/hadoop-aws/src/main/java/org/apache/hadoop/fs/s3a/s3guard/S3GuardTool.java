@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -694,9 +695,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * Put parents into MS and cache if the parents are not presented.
      *
      * @param f the file or an empty directory.
+     * @param operationState store's bulk update state.
      * @throws IOException on I/O errors.
      */
-    private void putParentsIfNotPresent(FileStatus f) throws IOException {
+    private void putParentsIfNotPresent(FileStatus f,
+        @Nullable BulkOperationState operationState) throws IOException {
       Preconditions.checkNotNull(f);
       Path parent = f.getPath().getParent();
       while (parent != null) {
@@ -705,7 +708,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         }
         FileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());
-        getStore().put(new PathMetadata(dir));
+        getStore().put(new PathMetadata(dir), operationState);
         dirCache.add(parent);
         parent = parent.getParent();
       }
@@ -718,10 +721,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
+      BulkOperationState operationState = getStore().initiateBulkWrite(
+          status.getPath());
       RemoteIterator<LocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
-
       while (it.hasNext()) {
         LocatedFileStatus located = it.next();
         FileStatus child;
@@ -736,8 +740,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getBlockSize(),
               located.getOwner());
         }
-        putParentsIfNotPresent(child);
-        getStore().put(new PathMetadata(child));
+        putParentsIfNotPresent(child, operationState);
+        getStore().put(new PathMetadata(child), operationState);
         items++;
       }
       return items;
@@ -772,7 +776,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long items = 1;
       if (status.isFile()) {
         PathMetadata meta = new PathMetadata(status);
-        getStore().put(meta);
+        getStore().put(meta, null);
       } else {
         items = importDir(status);
       }

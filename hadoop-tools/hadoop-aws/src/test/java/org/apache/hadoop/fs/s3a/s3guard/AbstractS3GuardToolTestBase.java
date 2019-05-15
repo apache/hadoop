@@ -59,7 +59,6 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
@@ -198,18 +197,18 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       fs.mkdirs(path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
-      ms.put(new PathMetadata(status));
+      ms.put(new PathMetadata(status), null);
     }
   }
 
   protected static void putFile(MetadataStore ms, S3AFileStatus f)
       throws IOException {
     assertNotNull(f);
-    ms.put(new PathMetadata(f));
+    ms.put(new PathMetadata(f), null);
     Path parent = f.getPath().getParent();
     while (parent != null) {
       S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
-      ms.put(new PathMetadata(dir));
+      ms.put(new PathMetadata(dir), null);
       parent = parent.getParent();
     }
   }

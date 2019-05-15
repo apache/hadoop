@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.List;
 
@@ -41,7 +40,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
  * as initiated in the S3AFilesystem rename.
  * Subclasses must provide an implementation and return it in
  * {@link MetadataStore#initiateRenameOperation(StoreContext, Path, FileStatus, Path)}.
- * The {@code moveState} field/constructor argument is an opaque state to
+ * The {@link #operationState} field/constructor argument is an opaque state to
  * be passed down to the metastore in its move operations; this allows the
  * stores to manage ongoing state -while still being able to share
  * rename tracker implementations.
@@ -75,7 +74,7 @@ public abstract class RenameTracker extends StoreOperation {
    * which is to be passed in with each move operation.
    * This must be closed at the end of the tracker's life.
    */
-  private final Closeable moveState;
+  private final BulkOperationState operationState;
 
   /**
    * The metadata store for this tracker.
@@ -93,7 +92,7 @@ public abstract class RenameTracker extends StoreOperation {
    * @param metadataStore the stopre
    * @param sourceRoot source path.
    * @param dest destination path.
-   * @param moveState ongoing move state.
+   * @param operationState ongoing move state.
    */
   protected RenameTracker(
       final String name,
@@ -101,13 +100,13 @@ public abstract class RenameTracker extends StoreOperation {
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest,
-      Closeable moveState) {
+      final BulkOperationState operationState) {
     super(checkNotNull(storeContext));
     checkNotNull(storeContext.getUsername(), "No username");
     this.metadataStore = checkNotNull(metadataStore);
     this.sourceRoot = checkNotNull(sourceRoot);
     this.dest = checkNotNull(dest);
-    this.moveState = moveState;
+    this.operationState = operationState;
     this.name = String.format("%s (%s, %s)", name, sourceRoot, dest);
     durationInfo = new DurationInfo(LOG, false,
         name +" (%s, %s)", sourceRoot, dest);
@@ -130,8 +129,8 @@ public abstract class RenameTracker extends StoreOperation {
     return getStoreContext().getUsername();
   }
 
-  public Closeable getMoveState() {
-    return moveState;
+  public BulkOperationState getOperationState() {
+    return operationState;
   }
 
   /**
@@ -214,7 +213,7 @@ public abstract class RenameTracker extends StoreOperation {
    * @throws IOException failure.
    */
   public void completeRename() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, moveState);
+    IOUtils.cleanupWithLogger(LOG, operationState);
     noteRenameFinished();
   }
 
@@ -242,7 +241,7 @@ public abstract class RenameTracker extends StoreOperation {
    */
   public IOException renameFailed(Exception ex) {
     LOG.debug("Rename has failed", ex);
-    IOUtils.cleanupWithLogger(LOG, moveState);
+    IOUtils.cleanupWithLogger(LOG, operationState);
     noteRenameFinished();
     return convertToIOException(ex);
   }

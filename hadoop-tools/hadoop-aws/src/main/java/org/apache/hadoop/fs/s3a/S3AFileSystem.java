@@ -99,6 +99,7 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.FunctionsRaisingIOE;
 import org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
 import org.apache.hadoop.util.DurationInfo;
@@ -2007,7 +2008,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       PutObjectResult result = s3.putObject(putObjectRequest);
       incrementPutCompletedStatistics(true, len);
       // update metadata
-      finishedWrite(putObjectRequest.getKey(), len);
+      finishedWrite(putObjectRequest.getKey(), len, null);
       return result;
     } catch (AmazonClientException e) {
       incrementPutCompletedStatistics(false, len);
@@ -3066,7 +3067,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     UploadResult result = waitForUploadCompletion(key, info);
     listener.uploadCompleted();
     // post-write actions
-    finishedWrite(key, info.getLength());
+    finishedWrite(key, info.getLength(), null);
     return result;
   }
 
@@ -3376,7 +3377,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Perform post-write actions.
    * Calls {@link #deleteUnnecessaryFakeDirectories(Path)} and then
-   * {@link S3Guard#addAncestors(MetadataStore, Path, String)}}.
+   * {@link S3Guard#addAncestors(MetadataStore, Path, String, BulkOperationState)}}.
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
    *
@@ -3388,6 +3389,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * </ol>
    * @param key key written to
    * @param length  total length of file written
+   * @param operationState state of any ongoing bulk operation.
    * @throws MetadataPersistenceException if metadata about the write could
    * not be saved to the metadata store and
    * fs.s3a.metadatastore.fail.on.write.error=true
@@ -3395,7 +3397,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @InterfaceAudience.Private
   @Retries.RetryTranslated("Except if failOnMetadataWriteError=false, in which"
       + " case RetryExceptionsSwallowed")
-  void finishedWrite(String key, long length)
+  void finishedWrite(String key,
+      long length,
+      @Nullable final BulkOperationState operationState)
       throws MetadataPersistenceException {
     LOG.debug("Finished write to {}, len {}", key, length);
     Path p = keyToQualifiedPath(key);
@@ -3405,11 +3409,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
-        S3Guard.addAncestors(metadataStore, p, username);
+        S3Guard.addAncestors(metadataStore, p, username, operationState);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username);
-        S3Guard.putAndReturn(metadataStore, status, instrumentation);
+        S3Guard.putAndReturn(metadataStore, status, instrumentation,
+            operationState);
       }
     } catch (IOException e) {
       if (failOnMetadataWriteError) {

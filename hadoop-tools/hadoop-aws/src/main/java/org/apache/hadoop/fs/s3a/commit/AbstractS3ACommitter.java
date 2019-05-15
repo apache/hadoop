@@ -442,14 +442,27 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     }
     LOG.debug("{}: committing the output of {} task(s)",
         getRole(), pending.size());
-    Tasks.foreach(pending)
-        .stopOnFailure()
-        .executeWith(buildThreadPool(context))
-        .onFailure((commit, exception) ->
-                getCommitOperations().abortSingleCommit(commit))
-        .abortWith(commit -> getCommitOperations().abortSingleCommit(commit))
-        .revertWith(commit -> getCommitOperations().revertCommit(commit))
-        .run(commit -> getCommitOperations().commitOrFail(commit));
+    try(CommitOperations.CommitContext commitContext
+            = initiateCommitOperation()) {
+      Tasks.foreach(pending)
+          .stopOnFailure()
+          .executeWith(buildThreadPool(context))
+          .onFailure((commit, exception) ->
+              commitContext.abortSingleCommit(commit))
+          .abortWith(commitContext::abortSingleCommit)
+          .revertWith(commitContext::revertCommit)
+          .run(commitContext::commitOrFail);
+    }
+  }
+
+  /**
+   * Start the final commit/abort commit operations.
+   * @return a commit context through which the operations can be invoked.
+   * @throws IOException failure.
+   */
+  protected CommitOperations.CommitContext initiateCommitOperation()
+      throws IOException {
+    return getCommitOperations().initiateCommitOperation(getOutputPath());
   }
 
   /**
@@ -531,7 +544,9 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     Path dest = getOutputPath();
     try (DurationInfo d =
              new DurationInfo(LOG, "Aborting all pending commits under %s",
-                 dest)) {
+                 dest);
+         CommitOperations.CommitContext commitContext
+             = initiateCommitOperation()) {
       CommitOperations ops = getCommitOperations();
       List<MultipartUpload> pending;
       try {
@@ -544,7 +559,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       Tasks.foreach(pending)
           .executeWith(buildThreadPool(getJobContext()))
           .suppressExceptions(suppressExceptions)
-          .run(u -> ops.abortMultipartCommit(u.getKey(), u.getUploadId()));
+          .run(u -> commitContext.abortMultipartCommit(
+              u.getKey(), u.getUploadId()));
     }
   }
 
@@ -752,11 +768,13 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       LOG.info("{}: no pending commits to abort", getRole());
     } else {
       try (DurationInfo d = new DurationInfo(LOG,
-          "Aborting %s uploads", pending.size())) {
+          "Aborting %s uploads", pending.size());
+           CommitOperations.CommitContext commitContext
+               = initiateCommitOperation()) {
         Tasks.foreach(pending)
             .executeWith(buildThreadPool(context))
             .suppressExceptions(suppressExceptions)
-            .run(commit -> getCommitOperations().abortSingleCommit(commit));
+            .run(commitContext::abortSingleCommit);
       }
     }
   }

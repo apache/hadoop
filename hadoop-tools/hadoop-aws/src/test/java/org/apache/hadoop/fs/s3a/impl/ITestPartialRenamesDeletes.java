@@ -342,7 +342,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public void testCannotTouchUnderRODir() throws Throwable {
     forbidden("touching the empty child " + readOnlyChild,
         "",
-        () -> touch(roleFS, readOnlyChild));
+        () -> {
+          touch(roleFS, readOnlyChild);
+          return readOnlyChild;
+        });
   }
   @Test
   public void testCannotReadUnderNoReadDir() throws Throwable {

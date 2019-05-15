@@ -357,8 +357,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final Path newDir = new Path(root, "newDir");
     LOG.info("doTestBatchWrite: oldDir={}, newDir={}", oldDir, newDir);
 
-    ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
-    ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
+    ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)), null);
+    ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)), null);
 
     final List<PathMetadata> oldMetas = numDelete < 0 ? null :
         new ArrayList<>(numDelete);
@@ -511,7 +511,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     ddbms.put(new PathMetadata(new S3AFileStatus(true,
         new Path(rootPath, "foo"),
-        UserGroupInformation.getCurrentUser().getShortUserName())));
+        UserGroupInformation.getCurrentUser().getShortUserName())), null);
     verifyRootDirectory(ddbms.get(rootPath), false);
   }
 
@@ -562,9 +562,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String destRoot = testRoot + "/c/d/e/dest";
 
     final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)));
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)), null);
     final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)));
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)), null);
 
     // We don't put the destRoot path here, since put() would create ancestor
     // entries, and we want to ensure that move() does it, instead.

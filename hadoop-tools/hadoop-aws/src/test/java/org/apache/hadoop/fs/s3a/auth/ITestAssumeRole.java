@@ -608,12 +608,16 @@ public class ITestAssumeRole extends AbstractS3ATestBase {
       // all those commits must fail
       List<SinglePendingCommit> commits = pendingCommits.getLeft().getCommits();
       assertEquals(range, commits.size());
-      commits.parallelStream().forEach(
-          (c) -> {
-            CommitOperations.MaybeIOE maybeIOE = operations.commit(c, "origin");
-            Path path = c.destinationPath();
-            assertCommitAccessDenied(path, maybeIOE);
-          });
+      try(CommitOperations.CommitContext commitContext
+              = operations.initiateCommitOperation(uploadDest)) {
+        commits.parallelStream().forEach(
+            (c) -> {
+              CommitOperations.MaybeIOE maybeIOE =
+                  commitContext.commit(c, "origin");
+              Path path = c.destinationPath();
+              assertCommitAccessDenied(path, maybeIOE);
+            });
+      }
 
       // fail of all list and abort of .pending files.
       LOG.info("abortAllSinglePendingCommits({})", readOnlyDir);

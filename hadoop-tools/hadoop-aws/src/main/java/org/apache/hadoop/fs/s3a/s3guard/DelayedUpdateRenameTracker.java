@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -57,9 +56,9 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest,
-      final Closeable moveState) {
+      final BulkOperationState operationState) {
     super("DelayedUpdateRenameTracker", storeContext, metadataStore, sourceRoot, dest,
-        moveState);
+        operationState);
     this.metadataStore = storeContext.getMetadataStore();
   }
 
@@ -127,7 +126,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
 
   @Override
   public void completeRename() throws IOException {
-    metadataStore.move(sourcePaths, destMetas, getMoveState());
+    metadataStore.move(sourcePaths, destMetas, getOperationState());
     super.completeRename();
   }
 
@@ -137,7 +136,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
     try {
       // the destination paths are updated; the source is left alone.
       // either the delete operation didn't begin, or the
-      metadataStore.move(new ArrayList<>(0), destMetas, getMoveState());
+      metadataStore.move(new ArrayList<>(0), destMetas, getOperationState());
       for (Path deletedPath : deletedPaths) {
         // this is not ideal in that it may leave parent stuff around.
         metadataStore.delete(deletedPath);

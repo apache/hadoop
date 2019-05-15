@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -82,9 +81,9 @@ public class ProgressiveRenameTracker extends RenameTracker {
       final MetadataStore metadataStore,
       final Path sourceRoot,
       final Path dest,
-      final Closeable moveState) {
+      final BulkOperationState operationState) {
     super("ProgressiveRenameTracker",
-        storeContext, metadataStore, sourceRoot, dest, moveState);
+        storeContext, metadataStore, sourceRoot, dest, operationState);
   }
 
   /**
@@ -141,7 +140,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
     // outside the lock, the entriesToAdd list has all new files to create.
     // ...so update the store.
-    store.move(null, entriesToAdd, getMoveState());
+    store.move(null, entriesToAdd, getOperationState());
   }
 
   /**
@@ -181,7 +180,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // ...so update the store.
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "adding %s metastore entries", entriesToAdd.size())) {
-      store.move(null, entriesToAdd, getMoveState());
+      store.move(null, entriesToAdd, getOperationState());
     }
   }
 
@@ -207,7 +206,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // delete the paths from the metastore
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "delete %s metastore entries", paths.size())) {
-      getMetadataStore().move(paths, null, getMoveState());
+      getMetadataStore().move(paths, null, getOperationState());
     }
   }
 
@@ -215,7 +214,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
   public void completeRename() throws IOException {
     // this should all have happened.
     LOG.debug("Rename completed for {}", this);
-    getMetadataStore().move(pathsToDelete, destMetas, getMoveState());
+    getMetadataStore().move(pathsToDelete, destMetas, getOperationState());
     super.completeRename();
   }
 
