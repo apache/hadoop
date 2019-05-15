@@ -45,7 +45,8 @@ public class RouterStoragePolicy {
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, true);
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("setStoragePolicy",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(),
@@ -67,7 +68,8 @@ public class RouterStoragePolicy {
   public void unsetStoragePolicy(String src) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
 
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(src, true);
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(src, true, false);
     RemoteMethod method = new RemoteMethod("unsetStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
@@ -82,7 +84,8 @@ public class RouterStoragePolicy {
       throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
 
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, false);
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(path, false, false);
     RemoteMethod method = new RemoteMethod("getStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
@@ -92,7 +95,8 @@ public class RouterStoragePolicy {
   public void satisfyStoragePolicy(String path) throws IOException {
     rpcServer.checkOperation(NameNode.OperationCategory.READ, true);
 
-    List<RemoteLocation> locations = rpcServer.getLocationsForPath(path, true);
+    List<RemoteLocation> locations =
+        rpcServer.getLocationsForPath(path, true, false);
     RemoteMethod method = new RemoteMethod("satisfyStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
