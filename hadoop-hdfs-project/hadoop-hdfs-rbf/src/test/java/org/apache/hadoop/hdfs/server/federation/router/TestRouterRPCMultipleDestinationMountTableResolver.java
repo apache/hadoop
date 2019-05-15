@@ -38,7 +38,9 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
@@ -84,6 +86,7 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
         new RouterConfigBuilder().stateStore().admin().quota().rpc().build();
 
     Configuration hdfsConf = new Configuration(false);
+    hdfsConf.setBoolean(DFSConfigKeys.DFS_NAMENODE_ACLS_ENABLED_KEY, true);
 
     cluster.addRouterOverrides(routerConf);
     cluster.addNamenodeOverrides(hdfsConf);
@@ -404,6 +407,38 @@ public class TestRouterRPCMultipleDestinationMountTableResolver {
     resolver.loadCache(true);
 
     return addResponse.getStatus();
+  }
+
+  @Test
+  public void testACLMultipleDestinations() throws Exception {
+    setupOrderMountPath(DestinationOrder.HASH_ALL);
+    Path mountPath = new Path("/mount/dir/dir");
+    Path nsPath = new Path("/tmp/dir/dir");
+    List<AclEntry> aclSpec = Collections.singletonList(
+        AclEntry.parseAclEntry("default:USER:TestUser:rwx", true));
+    routerFs.setAcl(mountPath, aclSpec);
+    assertEquals(5, nnFs0.getAclStatus(nsPath).getEntries().size());
+    assertEquals(5, nnFs1.getAclStatus(nsPath).getEntries().size());
+    aclSpec = Collections
+        .singletonList(AclEntry.parseAclEntry("USER:User:rwx::", true));
+
+    routerFs.modifyAclEntries(mountPath, aclSpec);
+    assertEquals(7, nnFs0.getAclStatus(nsPath).getEntries().size());
+    assertEquals(7, nnFs1.getAclStatus(nsPath).getEntries().size());
+
+    routerFs.removeAclEntries(mountPath, aclSpec);
+    assertEquals(6, nnFs0.getAclStatus(nsPath).getEntries().size());
+    assertEquals(6, nnFs1.getAclStatus(nsPath).getEntries().size());
+
+    routerFs.modifyAclEntries(mountPath, aclSpec);
+    routerFs.removeDefaultAcl(mountPath);
+    assertEquals(2, nnFs0.getAclStatus(nsPath).getEntries().size());
+    assertEquals(2, nnFs1.getAclStatus(nsPath).getEntries().size());
+
+    routerFs.removeAcl(mountPath);
+    assertEquals(0, nnFs0.getAclStatus(nsPath).getEntries().size());
+    assertEquals(0, nnFs1.getAclStatus(nsPath).getEntries().size());
+
   }
 
   @Test
