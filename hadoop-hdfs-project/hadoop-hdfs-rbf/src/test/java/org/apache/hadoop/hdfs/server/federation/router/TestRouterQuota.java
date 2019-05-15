@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.federation.router;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
@@ -34,7 +35,9 @@ import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -791,5 +794,35 @@ public class TestRouterQuota {
 
     assertEquals(nsQuota, quota1.getQuota());
     assertEquals(ssQuota, quota1.getSpaceQuota());
+  }
+
+  @Test
+  public void testNoQuotaaExceptionForUnrelatedOperations() throws Exception {
+    FileSystem nnFs = nnContext1.getFileSystem();
+    DistributedFileSystem routerFs =
+        (DistributedFileSystem) routerContext.getFileSystem();
+    Path path = new Path("/quota");
+    nnFs.mkdirs(new Path("/dir"));
+    MountTable mountTable1 = MountTable.newInstance("/quota",
+        Collections.singletonMap("ns0", "/dir"));
+    mountTable1.setQuota(new RouterQuotaUsage.Builder().quota(0).build());
+    addMountTable(mountTable1);
+    routerFs.mkdirs(new Path("/quota/1"));
+    routerContext.getRouter().getQuotaCacheUpdateService().periodicInvoke();
+
+    // Quota check for related operation.
+    intercept(NSQuotaExceededException.class,
+        "The NameSpace quota (directories and files) is exceeded",
+        () -> routerFs.mkdirs(new Path("/quota/2")));
+
+    //Quotas shouldn't be checked for unrelated operations.
+    routerFs.setStoragePolicy(path, "COLD");
+    routerFs.setErasureCodingPolicy(path, "RS-6-3-1024k");
+    routerFs.unsetErasureCodingPolicy(path);
+    routerFs.setPermission(path, new FsPermission((short) 01777));
+    routerFs.setOwner(path, "user", "group");
+    routerFs.setTimes(path, 1L, 1L);
+    routerFs.listStatus(path);
+    routerFs.getContentSummary(path);
   }
 }
