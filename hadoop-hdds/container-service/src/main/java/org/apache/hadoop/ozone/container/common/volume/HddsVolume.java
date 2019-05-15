@@ -44,6 +44,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * HddsVolume represents volume in a datanode. {@link VolumeSet} maintains a
@@ -85,6 +86,7 @@ public class HddsVolume
   private String datanodeUuid;    // id of the DataNode
   private long cTime;             // creation time of the file system state
   private int layoutVersion;      // layout version of the storage data
+  private final AtomicLong committedBytes; // till Open containers become full
 
   /**
    * Run a check on the current volume to determine if it is healthy.
@@ -168,6 +170,7 @@ public class HddsVolume
               .storageType(b.storageType)
               .configuredCapacity(b.configuredCapacity);
       this.volumeInfo = volumeBuilder.build();
+      this.committedBytes = new AtomicLong(0);
 
       LOG.info("Creating Volume: " + this.hddsRootDir + " of  storage type : " +
           b.storageType + " and capacity : " + volumeInfo.getCapacity());
@@ -181,6 +184,7 @@ public class HddsVolume
       volumeInfo = null;
       storageID = UUID.randomUUID().toString();
       state = VolumeState.FAILED;
+      committedBytes = null;
     }
   }
 
@@ -419,6 +423,23 @@ public class HddsVolume
     INCONSISTENT,
     NOT_FORMATTED,
     NOT_INITIALIZED
+  }
+
+  /**
+   * add "delta" bytes to committed space in the volume.
+   * @param delta bytes to add to committed space counter
+   * @return bytes of committed space
+   */
+  public long incCommittedBytes(long delta) {
+    return committedBytes.addAndGet(delta);
+  }
+
+  /**
+   * return the committed space in the volume.
+   * @return bytes of committed space
+   */
+  public long getCommittedBytes() {
+    return committedBytes.get();
   }
 
   /**
