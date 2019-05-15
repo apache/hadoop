@@ -2430,6 +2430,8 @@ public class TestRMContainerAllocator {
     ApplicationId applicationId = ApplicationId.newInstance(1, 1);
     ApplicationAttemptId applicationAttemptId =
         ApplicationAttemptId.newInstance(applicationId, 1);
+
+    // ABORTED
     ContainerId containerId =
         ContainerId.newContainerId(applicationAttemptId, 1);
     ContainerStatus status = ContainerStatus.newInstance(
@@ -2448,6 +2450,7 @@ public class TestRMContainerAllocator {
         abortedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent.getType());
 
+    // PREEMPTED
     ContainerId containerId2 =
         ContainerId.newContainerId(applicationAttemptId, 2);
     ContainerStatus status2 = ContainerStatus.newInstance(containerId2,
@@ -2464,6 +2467,25 @@ public class TestRMContainerAllocator {
     TaskAttemptEvent abortedEvent2 = allocator.createContainerFinishedEvent(
         preemptedStatus, attemptId);
     Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent2.getType());
+
+    // KILLED_BY_CONTAINER_SCHEDULER
+    ContainerId containerId3 =
+        ContainerId.newContainerId(applicationAttemptId, 3);
+    ContainerStatus status3 = ContainerStatus.newInstance(containerId3,
+        ContainerState.RUNNING, "", 0);
+
+    ContainerStatus killedByContainerSchedulerStatus =
+        ContainerStatus.newInstance(containerId3, ContainerState.RUNNING, "",
+            ContainerExitStatus.KILLED_BY_CONTAINER_SCHEDULER);
+
+    TaskAttemptEvent event3 = allocator.createContainerFinishedEvent(status3,
+        attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_CONTAINER_COMPLETED,
+        event3.getType());
+
+    TaskAttemptEvent abortedEvent3 = allocator.createContainerFinishedEvent(
+        killedByContainerSchedulerStatus, attemptId);
+    Assert.assertEquals(TaskAttemptEventType.TA_KILL, abortedEvent3.getType());
   }
 
   @Test
