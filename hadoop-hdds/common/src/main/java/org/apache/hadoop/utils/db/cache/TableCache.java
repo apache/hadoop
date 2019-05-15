@@ -60,15 +60,4 @@ public interface TableCache<CACHEKEY extends CacheKey,
    * @return size
    */
   int size();
-
-  /**
-   * Defines type of cache need to be used by OM RocksDB tables.
-   */
-  enum CACHETYPE {
-    FULLCACHE, // Table uses full cache, no cleanup will be happening for the
-    // cache entries.
-    PARTIALCACHE, // Table uses partial cache, when cleanup is called it will
-    // evict the entries from the cache.
-    NOCACHE // No cache used for the table.
-  }
 }

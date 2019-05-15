@@ -38,7 +38,6 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.utils.RocksDBStoreMBean;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.utils.db.cache.TableCache;
 import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.rocksdb.ColumnFamilyDescriptor;
 import org.rocksdb.ColumnFamilyHandle;
@@ -259,10 +258,9 @@ public class RDBStore implements DBStore {
 
   @Override
   public <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
-      Class<KEY> keyType, Class<VALUE> valueType,
-      TableCache.CACHETYPE cachetype) throws IOException {
+      Class<KEY> keyType, Class<VALUE> valueType) throws IOException {
     return new TypedTable<KEY, VALUE>(getTable(name), codecRegistry, keyType,
-        valueType, cachetype);
+        valueType);
   }
 
   @Override

@@ -60,7 +60,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRE
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
-import org.apache.hadoop.utils.db.cache.TableCache;
 import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -247,50 +246,41 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    */
   protected void initializeOmTables() throws IOException {
     userTable =
-        this.store.getTable(USER_TABLE, String.class, VolumeList.class,
-            TableCache.CACHETYPE.PARTIALCACHE);
+        this.store.getTable(USER_TABLE, String.class, VolumeList.class);
     checkTableStatus(userTable, USER_TABLE);
     volumeTable =
-        this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class,
-        TableCache.CACHETYPE.FULLCACHE);
+        this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class);
     checkTableStatus(volumeTable, VOLUME_TABLE);
 
     bucketTable =
-        this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class,
-            TableCache.CACHETYPE.FULLCACHE);
+        this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class);
 
     checkTableStatus(bucketTable, BUCKET_TABLE);
 
-    keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class,
-        TableCache.CACHETYPE.PARTIALCACHE);
+    keyTable = this.store.getTable(KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(keyTable, KEY_TABLE);
 
     deletedTable =
-        this.store.getTable(DELETED_TABLE, String.class, OmKeyInfo.class,
-            TableCache.CACHETYPE.NOCACHE);
+        this.store.getTable(DELETED_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(deletedTable, DELETED_TABLE);
 
     openKeyTable =
-        this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class,
-            TableCache.CACHETYPE.PARTIALCACHE);
+        this.store.getTable(OPEN_KEY_TABLE, String.class, OmKeyInfo.class);
     checkTableStatus(openKeyTable, OPEN_KEY_TABLE);
 
-    s3Table = this.store.getTable(S3_TABLE, String.class, String.class,
-        TableCache.CACHETYPE.PARTIALCACHE);
+    s3Table = this.store.getTable(S3_TABLE, String.class, String.class);
     checkTableStatus(s3Table, S3_TABLE);
 
     multipartInfoTable = this.store.getTable(MULTIPARTINFO_TABLE,
-        String.class, OmMultipartKeyInfo.class,
-        TableCache.CACHETYPE.PARTIALCACHE);
+        String.class, OmMultipartKeyInfo.class);
     checkTableStatus(multipartInfoTable, MULTIPARTINFO_TABLE);
 
     dTokenTable = this.store.getTable(DELEGATION_TOKEN_TABLE,
-        OzoneTokenIdentifier.class, Long.class,
-        TableCache.CACHETYPE.PARTIALCACHE);
+        OzoneTokenIdentifier.class, Long.class);
     checkTableStatus(dTokenTable, DELEGATION_TOKEN_TABLE);
 
     s3SecretTable = this.store.getTable(S3_SECRET_TABLE, String.class,
-        S3SecretValue.class, TableCache.CACHETYPE.PARTIALCACHE);
+        S3SecretValue.class);
     checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
   }
 

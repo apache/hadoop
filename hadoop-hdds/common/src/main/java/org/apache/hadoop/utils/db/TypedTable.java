@@ -23,7 +23,6 @@ import java.io.IOException;
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
-import org.apache.hadoop.utils.db.cache.FullTableCache;
 import org.apache.hadoop.utils.db.cache.PartialTableCache;
 import org.apache.hadoop.utils.db.cache.TableCache;
 
@@ -48,30 +47,16 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   private final TableCache<CacheKey<KEY>, CacheValue<VALUE>> cache;
 
+
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
       Class<VALUE> valueType) {
-    this(rawTable, codecRegistry, keyType, valueType,
-        null);
-  }
-
-
-  public TypedTable(
-      Table<byte[], byte[]> rawTable,
-      CodecRegistry codecRegistry, Class<KEY> keyType,
-      Class<VALUE> valueType, TableCache.CACHETYPE cachetype) {
     this.rawTable = rawTable;
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    if (cachetype == TableCache.CACHETYPE.FULLCACHE) {
-      cache = new FullTableCache<>();
-    } else if (cachetype == TableCache.CACHETYPE.PARTIALCACHE) {
-      cache = new PartialTableCache<>();
-    } else {
-      cache = null;
-    }
+    cache = new PartialTableCache<>();
   }
 
   @Override
@@ -110,16 +95,15 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public VALUE get(KEY key) throws IOException {
     // Here the metadata lock will guarantee that cache is not updated for same
     // key during get key.
-    if (cache != null) {
-      CacheValue< VALUE > cacheValue = cache.get(new CacheKey<>(key));
-      if (cacheValue != null) {
-        // We have a value in cache, return the value.
-        return cacheValue.getValue();
-      }
+    CacheValue< VALUE > cacheValue = cache.get(new CacheKey<>(key));
+    if (cacheValue == null) {
+      // If no cache for the table or if it does not exist in cache get from
+      // RocksDB table.
+      return getFromTable(key);
+    } else {
+      // We have a value in cache, return the value.
+      return cacheValue.getValue();
     }
-    // If no cache for the table or if it does not exist in cache get from
-    // RocksDB table.
-    return getFromTable(key);
   }
 
   private VALUE getFromTable(KEY key) throws IOException {

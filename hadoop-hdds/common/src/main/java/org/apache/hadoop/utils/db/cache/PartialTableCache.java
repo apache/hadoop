@@ -28,17 +28,14 @@ import java.util.concurrent.Executors;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
-
-
 /**
- * This is used for the tables where we don't want to cache entire table in
- * in-memory.
+ * Cache implementation for the table, this cache is partial cache, this will
+ * be cleaned up, after entries are flushed to DB.
  */
 @Private
 @Evolving
 public class PartialTableCache<CACHEKEY extends CacheKey,
-    CACHEVALUE extends CacheValue>
-    implements TableCache<CACHEKEY, CACHEVALUE> {
+    CACHEVALUE extends CacheValue> implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
   private final TreeSet<EpochEntry<CACHEKEY>> epochEntries;

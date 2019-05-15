@@ -34,7 +34,6 @@ import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
-import org.apache.hadoop.utils.db.cache.TableCache;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -118,15 +117,6 @@ public class TestTypedRDBTableStore {
         rdbStore.getTable(name),
         codecRegistry,
         String.class, String.class);
-  }
-
-  private TypedTable<String, String> createTypedTableWithCache(String name,
-      TableCache.CACHETYPE cachetype)
-      throws IOException {
-    return new TypedTable<String, String>(
-        rdbStore.getTable(name),
-        codecRegistry,
-        String.class, String.class, cachetype);
   }
 
   @Test
@@ -254,8 +244,8 @@ public class TestTypedRDBTableStore {
   @Test
   public void testTypedTableWithCache() throws Exception {
     int iterCount = 10;
-    try (Table<String, String> testTable = createTypedTableWithCache(
-        "Seven", TableCache.CACHETYPE.FULLCACHE)) {
+    try (Table<String, String> testTable = createTypedTable(
+        "Seven")) {
 
       for (int x = 0; x < iterCount; x++) {
         String key = Integer.toString(x);
@@ -279,8 +269,8 @@ public class TestTypedRDBTableStore {
   public void testTypedTableWithCacheWithFewDeletedOperationType()
       throws Exception {
     int iterCount = 10;
-    try (Table<String, String> testTable = createTypedTableWithCache(
-        "Seven", TableCache.CACHETYPE.PARTIALCACHE)) {
+    try (Table<String, String> testTable = createTypedTable(
+        "Seven")) {
 
       for (int x = 0; x < iterCount; x++) {
         String key = Integer.toString(x);

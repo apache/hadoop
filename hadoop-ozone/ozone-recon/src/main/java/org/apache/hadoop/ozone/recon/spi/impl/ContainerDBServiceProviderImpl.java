@@ -39,7 +39,6 @@ import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.apache.hadoop.utils.db.TableIterator;
-import org.apache.hadoop.utils.db.cache.TableCache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,8 +64,7 @@ public class ContainerDBServiceProviderImpl
   public ContainerDBServiceProviderImpl(DBStore dbStore) {
     try {
       this.containerKeyTable = dbStore.getTable(CONTAINER_KEY_TABLE,
-          ContainerKeyPrefix.class, Integer.class,
-          TableCache.CACHETYPE.NOCACHE);
+          ContainerKeyPrefix.class, Integer.class);
     } catch (IOException e) {
       LOG.error("Unable to create Container Key Table. " + e);
     }
@@ -87,7 +85,7 @@ public class ContainerDBServiceProviderImpl
     File oldDBLocation = containerDbStore.getDbLocation();
     containerDbStore = ReconContainerDBProvider.getNewDBStore(configuration);
     containerKeyTable = containerDbStore.getTable(CONTAINER_KEY_TABLE,
-        ContainerKeyPrefix.class, Integer.class, TableCache.CACHETYPE.NOCACHE);
+        ContainerKeyPrefix.class, Integer.class);
 
     if (oldDBLocation.exists()) {
       LOG.info("Cleaning up old Recon Container DB at {}.",
