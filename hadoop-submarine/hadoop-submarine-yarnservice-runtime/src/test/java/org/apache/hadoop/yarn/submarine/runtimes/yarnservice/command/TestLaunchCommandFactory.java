@@ -18,8 +18,8 @@ package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command.TensorBoardLaunchCommand;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.command.TensorFlowPsLaunchCommand;
@@ -32,33 +32,34 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 /**
- * This class is to test the {@link LaunchCommandFactory}.
+ * This class is to test the {@link TensorFlowLaunchCommandFactory}.
  */
 public class TestLaunchCommandFactory {
 
-  private LaunchCommandFactory createLaunchCommandFactory(
-      RunJobParameters parameters) {
+  private TensorFlowLaunchCommandFactory createLaunchCommandFactory(
+      TensorFlowRunJobParameters parameters) {
     HadoopEnvironmentSetup hadoopEnvSetup = mock(HadoopEnvironmentSetup.class);
     Configuration configuration = mock(Configuration.class);
-    return new LaunchCommandFactory(hadoopEnvSetup, parameters, configuration);
+    return new TensorFlowLaunchCommandFactory(hadoopEnvSetup, parameters,
+        configuration);
   }
 
   @Test
   public void createLaunchCommandWorkerAndPrimaryWorker() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setWorkerLaunchCmd("testWorkerLaunchCommand");
-    LaunchCommandFactory launchCommandFactory = createLaunchCommandFactory(
-        parameters);
+    TensorFlowLaunchCommandFactory launchCommandFactory =
+        createLaunchCommandFactory(parameters);
     Component mockComponent = mock(Component.class);
 
     AbstractLaunchCommand launchCommand =
-        launchCommandFactory.createLaunchCommand(TaskType.PRIMARY_WORKER,
+        launchCommandFactory.createLaunchCommand(TensorFlowRole.PRIMARY_WORKER,
             mockComponent);
 
     assertTrue(launchCommand instanceof TensorFlowWorkerLaunchCommand);
 
     launchCommand =
-        launchCommandFactory.createLaunchCommand(TaskType.WORKER,
+        launchCommandFactory.createLaunchCommand(TensorFlowRole.WORKER,
             mockComponent);
     assertTrue(launchCommand instanceof TensorFlowWorkerLaunchCommand);
 
@@ -66,14 +67,14 @@ public class TestLaunchCommandFactory {
 
   @Test
   public void createLaunchCommandPs() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPSLaunchCmd("testPSLaunchCommand");
-    LaunchCommandFactory launchCommandFactory = createLaunchCommandFactory(
-        parameters);
+    TensorFlowLaunchCommandFactory launchCommandFactory =
+        createLaunchCommandFactory(parameters);
     Component mockComponent = mock(Component.class);
 
     AbstractLaunchCommand launchCommand =
-        launchCommandFactory.createLaunchCommand(TaskType.PS,
+        launchCommandFactory.createLaunchCommand(TensorFlowRole.PS,
             mockComponent);
 
     assertTrue(launchCommand instanceof TensorFlowPsLaunchCommand);
@@ -81,14 +82,14 @@ public class TestLaunchCommandFactory {
 
   @Test
   public void createLaunchCommandTensorboard() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setCheckpointPath("testCheckpointPath");
-    LaunchCommandFactory launchCommandFactory =
+    TensorFlowLaunchCommandFactory launchCommandFactory =
         createLaunchCommandFactory(parameters);
     Component mockComponent = mock(Component.class);
 
     AbstractLaunchCommand launchCommand =
-        launchCommandFactory.createLaunchCommand(TaskType.TENSORBOARD,
+        launchCommandFactory.createLaunchCommand(TensorFlowRole.TENSORBOARD,
             mockComponent);
 
     assertTrue(launchCommand instanceof TensorBoardLaunchCommand);

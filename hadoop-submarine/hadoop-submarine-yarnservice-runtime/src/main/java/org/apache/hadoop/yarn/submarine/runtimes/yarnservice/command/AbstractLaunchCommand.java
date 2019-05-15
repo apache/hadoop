@@ -17,11 +17,9 @@
 package org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command;
 
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.HadoopEnvironmentSetup;
 import java.io.IOException;
-import java.util.Objects;
 
 /**
  * Abstract base class for Launch command implementations for Services.
@@ -32,10 +30,9 @@ public abstract class AbstractLaunchCommand {
   private final LaunchScriptBuilder builder;
 
   public AbstractLaunchCommand(HadoopEnvironmentSetup hadoopEnvSetup,
-      TaskType taskType, Component component, RunJobParameters parameters)
-      throws IOException {
-    Objects.requireNonNull(taskType, "TaskType must not be null!");
-    this.builder = new LaunchScriptBuilder(taskType.name(), hadoopEnvSetup,
+      Component component, RunJobParameters parameters,
+      String launchCommandPrefix) throws IOException {
+    this.builder = new LaunchScriptBuilder(launchCommandPrefix, hadoopEnvSetup,
         parameters, component);
   }
 

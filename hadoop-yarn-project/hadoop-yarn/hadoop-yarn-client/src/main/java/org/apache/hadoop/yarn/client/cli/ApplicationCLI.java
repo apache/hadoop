@@ -143,6 +143,9 @@ public class ApplicationCLI extends YarnCLI {
 
   @Override
   public int run(String[] args) throws Exception {
+    int exitCode = -1;
+
+    // Prepare the command's title and options
     Options opts = new Options();
     String title = null;
     if (firstArg != null) {
@@ -150,622 +153,71 @@ public class ApplicationCLI extends YarnCLI {
     } else if (args.length > 0) {
       title = args[0];
     }
-    if (title != null && (title.equalsIgnoreCase(APPLICATION) || title
-        .equalsIgnoreCase(APP))) {
+    if (APPLICATION.equalsIgnoreCase(title) || APP.equalsIgnoreCase(title)) {
       title = APPLICATION;
-      opts.addOption(STATUS_CMD, true,
-          "Prints the status of the application. If app ID is"
-              + " provided, it prints the generic YARN application status."
-              + " If name is provided, it prints the application specific"
-              + " status based on app's own implementation, and -appTypes"
-              + " option must be specified unless it is the default"
-              + " yarn-service type.");
-      opts.addOption(LIST_CMD, false, "List applications. "
-          + "Supports optional use of -appTypes to filter applications "
-          + "based on application type, -appStates to filter applications "
-          + "based on application state and -appTags to filter applications "
-          + "based on application tag.");
-      opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
-          + "different queue. Deprecated command. Use 'changeQueue' instead.");
-      opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
-          + " specify which queue to move an application to.");
-      opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-      Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to "
-          + "filter applications based on "
-          + "input comma-separated list of application types.");
-      appTypeOpt.setValueSeparator(',');
-      appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
-      appTypeOpt.setArgName("Types");
-      opts.addOption(appTypeOpt);
-      Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list "
-          + "to filter applications based on input comma-separated list of "
-          + "application states. " + getAllValidApplicationStates());
-      appStateOpt.setValueSeparator(',');
-      appStateOpt.setArgs(Option.UNLIMITED_VALUES);
-      appStateOpt.setArgName("States");
-      opts.addOption(appStateOpt);
-      Option appTagOpt = new Option(APP_TAG_CMD, true, "Works with -list to "
-          + "filter applications based on input comma-separated list of "
-          + "application tags.");
-      appTagOpt.setValueSeparator(',');
-      appTagOpt.setArgs(Option.UNLIMITED_VALUES);
-      appTagOpt.setArgName("Tags");
-      opts.addOption(appTagOpt);
-      opts.addOption(APP_ID, true, "Specify Application Id to be operated");
-      opts.addOption(UPDATE_PRIORITY, true,
-          "update priority of an application. ApplicationId can be"
-              + " passed using 'appId' option.");
-      opts.addOption(UPDATE_LIFETIME, true,
-          "update timeout of an application from NOW. ApplicationId can be"
-              + " passed using 'appId' option. Timeout value is in seconds.");
-      opts.addOption(CHANGE_APPLICATION_QUEUE, true,
-          "Moves application to a new queue. ApplicationId can be"
-              + " passed using 'appId' option. 'movetoqueue' command is"
-              + " deprecated, this new command 'changeQueue' performs same"
-              + " functionality.");
-      Option killOpt = new Option(KILL_CMD, true, "Kills the application. "
-          + "Set of applications can be provided separated with space");
-      killOpt.setValueSeparator(' ');
-      killOpt.setArgs(Option.UNLIMITED_VALUES);
-      killOpt.setArgName("Application ID");
-      opts.addOption(killOpt);
-      opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
-      opts.getOption(QUEUE_CMD).setArgName("Queue Name");
-      opts.getOption(STATUS_CMD).setArgName("Application Name or ID");
-      opts.getOption(APP_ID).setArgName("Application ID");
-      opts.getOption(UPDATE_PRIORITY).setArgName("Priority");
-      opts.getOption(UPDATE_LIFETIME).setArgName("Timeout");
-      opts.getOption(CHANGE_APPLICATION_QUEUE).setArgName("Queue Name");
-      opts.addOption(LAUNCH_CMD, true, "Launches application from " +
-          "specification file (saves specification and starts application). " +
-          "Options -updateLifetime and -changeQueue can be specified to alter" +
-          " the values provided in the file. Supports -appTypes option to " +
-          "specify which client implementation to use.");
-      opts.addOption(STOP_CMD, true, "Stops application gracefully (may be " +
-          "started again later). If name is provided, appType must be " +
-          "provided unless it is the default yarn-service. If ID is provided," +
-          " the appType will be looked up. Supports -appTypes option to " +
-          "specify which client implementation to use.");
-      opts.addOption(START_CMD, true, "Starts a previously saved " +
-          "application. Supports -appTypes option to specify which client " +
-          "implementation to use.");
-      opts.addOption(SAVE_CMD, true, "Saves specification file for " +
-          "an application. Options -updateLifetime and -changeQueue can be " +
-          "specified to alter the values provided in the file. Supports " +
-          "-appTypes option to specify which client implementation to use.");
-      opts.addOption(DESTROY_CMD, true, "Destroys a saved application " +
-          "specification and removes all application data permanently. " +
-          "Supports -appTypes option to specify which client implementation " +
-          "to use.");
-      opts.addOption(FLEX_CMD, true, "Changes number of " +
-          "running containers for a component of an application / " +
-          "long-running service. Requires -component option. If name is " +
-          "provided, appType must be provided unless it is the default " +
-          "yarn-service. If ID is provided, the appType will be looked up. " +
-          "Supports -appTypes option to specify which client implementation " +
-          "to use.");
-      opts.addOption(DECOMMISSION, true, "Decommissions component " +
-          "instances for an application / long-running service. Requires " +
-          "-instances option. Supports -appTypes option to specify which " +
-          "client implementation to use.");
-      opts.addOption(COMPONENT, true, "Works with -flex option to change " +
-          "the number of components/containers running for an application / " +
-          "long-running service. Supports absolute or relative changes, such " +
-          "as +1, 2, or -3.");
-      opts.addOption(ENABLE_FAST_LAUNCH, true, "Uploads AM dependencies " +
-          "to HDFS to make future launches faster. Supports -appTypes option " +
-          "to specify which client implementation to use. Optionally a " +
-          "destination folder for the tarball can be specified.");
-      opts.addOption(UPGRADE_CMD, true, "Upgrades an application/long-" +
-          "running service. It requires either -initiate, -instances, or " +
-          "-finalize options.");
-      opts.addOption(UPGRADE_EXPRESS, true, "Works with -upgrade option to " +
-          "perform express upgrade.  It requires the upgraded application " +
-          "specification file.");
-      opts.addOption(UPGRADE_INITIATE, true, "Works with -upgrade option to " +
-          "initiate the application upgrade. It requires the upgraded " +
-          "application specification file.");
-      opts.addOption(COMPONENT_INSTS, true, "Works with -upgrade option to " +
-          "trigger the upgrade of specified component instances of the " +
-          "application. Also works with -decommission option to decommission " +
-          "specified component instances. Multiple instances should be " +
-          "separated by commas.");
-      opts.addOption(COMPONENTS, true, "Works with -upgrade option to " +
-          "trigger the upgrade of specified components of the application. " +
-          "Multiple components should be separated by commas.");
-      opts.addOption(UPGRADE_FINALIZE, false, "Works with -upgrade option to " +
-          "finalize the upgrade.");
-      opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and " +
-          "-initiate options to initiate the upgrade of the application with " +
-          "the ability to finalize the upgrade automatically.");
-      opts.addOption(UPGRADE_CANCEL, false, "Works with -upgrade option to " +
-          "cancel current upgrade.");
-      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
-          + "By default, it will take default cluster id from the RM");
-      opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
-      opts.getOption(LAUNCH_CMD).setArgs(2);
-      opts.getOption(START_CMD).setArgName("Application Name");
-      opts.getOption(STOP_CMD).setArgName("Application Name or ID");
-      opts.getOption(SAVE_CMD).setArgName("Application Name> <File Name");
-      opts.getOption(SAVE_CMD).setArgs(2);
-      opts.getOption(DESTROY_CMD).setArgName("Application Name");
-      opts.getOption(FLEX_CMD).setArgName("Application Name or ID");
-      opts.getOption(COMPONENT).setArgName("Component Name> <Count");
-      opts.getOption(COMPONENT).setArgs(2);
-      opts.getOption(ENABLE_FAST_LAUNCH).setOptionalArg(true);
-      opts.getOption(ENABLE_FAST_LAUNCH).setArgName("Destination Folder");
-      opts.getOption(UPGRADE_CMD).setArgName("Application Name");
-      opts.getOption(UPGRADE_CMD).setArgs(1);
-      opts.getOption(UPGRADE_INITIATE).setArgName("File Name");
-      opts.getOption(UPGRADE_INITIATE).setArgs(1);
-      opts.getOption(COMPONENT_INSTS).setArgName("Component Instances");
-      opts.getOption(COMPONENT_INSTS).setValueSeparator(',');
-      opts.getOption(COMPONENT_INSTS).setArgs(Option.UNLIMITED_VALUES);
-      opts.getOption(COMPONENTS).setArgName("Components");
-      opts.getOption(COMPONENTS).setValueSeparator(',');
-      opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
-      opts.getOption(DECOMMISSION).setArgName("Application Name");
-      opts.getOption(DECOMMISSION).setArgs(1);
-      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
-    } else if (title != null && title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
-      opts.addOption(STATUS_CMD, true,
-          "Prints the status of the application attempt.");
-      opts.addOption(LIST_CMD, true,
-          "List application attempts for application.");
-      opts.addOption(FAIL_CMD, true, "Fails application attempt.");
-      opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
-          + "By default, it will take default cluster id from the RM");
-      opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
-      opts.getOption(LIST_CMD).setArgName("Application ID");
-      opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
-      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
-    } else if (title != null && title.equalsIgnoreCase(CONTAINER)) {
-      opts.addOption(SHELL_CMD, true,
-          "Run a shell in the container.");
-      opts.addOption(STATUS_CMD, true,
-          "Prints the status of the container.");
-      opts.addOption(LIST_CMD, true,
-          "List containers for application attempt when application " +
-          "attempt ID is provided. When application name is provided, " +
-          "then it finds the instances of the application based on app's " +
-          "own implementation, and -appTypes option must be specified " +
-          "unless it is the default yarn-service type. With app name, it " +
-          "supports optional use of -version to filter instances based on " +
-          "app version, -components to filter instances based on component " +
-          "names, -states to filter instances based on instance state.");
-      opts.addOption(HELP_CMD, false, "Displays help for all commands.");
-      opts.getOption(SHELL_CMD).setArgName("Container ID [bash|sh]");
-      opts.getOption(SHELL_CMD).setArgs(3);
-      opts.getOption(STATUS_CMD).setArgName("Container ID");
-      opts.getOption(LIST_CMD).setArgName("Application Name or Attempt ID");
-      opts.addOption(APP_TYPE_CMD, true, "Works with -list to " +
-          "specify the app type when application name is provided.");
-      opts.getOption(APP_TYPE_CMD).setValueSeparator(',');
-      opts.getOption(APP_TYPE_CMD).setArgs(Option.UNLIMITED_VALUES);
-      opts.getOption(APP_TYPE_CMD).setArgName("Types");
-
-      opts.addOption(VERSION, true, "Works with -list "
-          + "to filter instances based on input application version.");
-      opts.getOption(VERSION).setArgs(1);
-
-      opts.addOption(COMPONENTS, true, "Works with -list to " +
-          "filter instances based on input comma-separated list of " +
-          "component names.");
-      opts.getOption(COMPONENTS).setValueSeparator(',');
-      opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
-
-      opts.addOption(STATES, true, "Works with -list to " +
-          "filter instances based on input comma-separated list of " +
-          "instance states.");
-      opts.getOption(STATES).setValueSeparator(',');
-      opts.getOption(STATES).setArgs(Option.UNLIMITED_VALUES);
-
-      opts.addOption(SIGNAL_CMD, true,
-          "Signal the container. The available signal commands are " +
-          java.util.Arrays.asList(SignalContainerCommand.values()) +
-          " Default command is OUTPUT_THREAD_DUMP.");
-      opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
-      opts.getOption(SIGNAL_CMD).setArgs(3);
-      opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. "
-          + "By default, it will take default cluster id from the RM");
-      opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
+      addApplicationOptions(opts);
+    } else if (APPLICATION_ATTEMPT.equalsIgnoreCase(title)) {
+      addApplicationAttemptOptions(opts);
+    } else if (CONTAINER.equalsIgnoreCase(title)) {
+      addContainerOptions(opts);
     }
 
-    int exitCode = -1;
-    CommandLine cliParser = null;
-    try {
-      cliParser = new GnuParser().parse(opts, args);
-    } catch (MissingArgumentException ex) {
-      sysout.println("Missing argument for options");
+    // Create CLI Parser
+    CommandLine cliParser = createCLIParser(opts, args);
+    if (cliParser == null) {
       printUsage(title, opts);
       return exitCode;
     }
-    String[] unparsedArgs = cliParser.getArgs();
-    if (firstArg == null) {
-      if (unparsedArgs.length != 1) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-    } else {
-      if (unparsedArgs.length != 0) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-    }
 
+    // Create and start YarnClient
     if (cliParser.hasOption(CLUSTER_ID_OPTION)) {
       String clusterIdStr = cliParser.getOptionValue(CLUSTER_ID_OPTION);
       getConf().set(YarnConfiguration.RM_CLUSTER_ID, clusterIdStr);
     }
     createAndStartYarnClient();
 
+    // Execute command
     if (cliParser.hasOption(STATUS_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD, APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      if (title.equalsIgnoreCase(APPLICATION) ||
-          title.equalsIgnoreCase(APP)) {
-        String appIdOrName = cliParser.getOptionValue(STATUS_CMD);
-        try {
-          // try parsing appIdOrName, if it succeeds, it means it's appId
-          ApplicationId.fromString(appIdOrName);
-          exitCode = printApplicationReport(appIdOrName);
-        } catch (IllegalArgumentException e) {
-          // not appId format, it could be appName.
-          // Print app specific report, if app-type is not provided,
-          // assume it is yarn-service type.
-          AppAdminClient client = AppAdminClient
-              .createAppAdminClient(getSingleAppTypeFromCLI(cliParser),
-                  getConf());
-          try {
-            sysout.println(client.getStatusString(appIdOrName));
-            exitCode = 0;
-          } catch (ApplicationNotFoundException exception) {
-            System.err.println("Application with name '" + appIdOrName
-                + "' doesn't exist in RM or Timeline Server.");
-            return -1;
-          } catch (Exception ie) {
-            System.err.println(ie.getMessage());
-            return -1;
-          }
-        }
-      } else if (title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
-        exitCode = printApplicationAttemptReport(cliParser
-            .getOptionValue(STATUS_CMD));
-      } else if (title.equalsIgnoreCase(CONTAINER)) {
-        exitCode = printContainerReport(cliParser.getOptionValue(STATUS_CMD));
-      }
-      return exitCode;
+      return executeStatusCommand(cliParser, title, opts);
     } else if (cliParser.hasOption(LIST_CMD)) {
-      if (title.equalsIgnoreCase(APPLICATION) ||
-          title.equalsIgnoreCase(APP)) {
-        allAppStates = false;
-        Set<String> appTypes = new HashSet<String>();
-        if (cliParser.hasOption(APP_TYPE_CMD)) {
-          String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
-          if (types != null) {
-            for (String type : types) {
-              if (!type.trim().isEmpty()) {
-                appTypes.add(StringUtils.toUpperCase(type).trim());
-              }
-            }
-          }
-        }
-
-        EnumSet<YarnApplicationState> appStates = EnumSet
-            .noneOf(YarnApplicationState.class);
-        if (cliParser.hasOption(APP_STATE_CMD)) {
-          String[] states = cliParser.getOptionValues(APP_STATE_CMD);
-          if (states != null) {
-            for (String state : states) {
-              if (!state.trim().isEmpty()) {
-                if (state.trim().equalsIgnoreCase(ALLSTATES_OPTION)) {
-                  allAppStates = true;
-                  break;
-                }
-                try {
-                  appStates.add(YarnApplicationState.valueOf(
-                      StringUtils.toUpperCase(state).trim()));
-                } catch (IllegalArgumentException ex) {
-                  sysout.println("The application state " + state
-                      + " is invalid.");
-                  sysout.println(getAllValidApplicationStates());
-                  return exitCode;
-                }
-              }
-            }
-          }
-        }
-
-        Set<String> appTags = new HashSet<String>();
-        if (cliParser.hasOption(APP_TAG_CMD)) {
-          String[] tags = cliParser.getOptionValues(APP_TAG_CMD);
-          if (tags != null) {
-            for (String tag : tags) {
-              if (!tag.trim().isEmpty()) {
-                appTags.add(tag.trim());
-              }
-            }
-          }
-        }
-        listApplications(appTypes, appStates, appTags);
-      } else if (title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, LIST_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        listApplicationAttempts(cliParser.getOptionValue(LIST_CMD));
-      } else if (title.equalsIgnoreCase(CONTAINER)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, LIST_CMD, APP_TYPE_CMD,
-            VERSION, COMPONENTS, STATES)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        String appAttemptIdOrName = cliParser.getOptionValue(LIST_CMD);
-        try {
-          // try parsing attempt id, if it succeeds, it means it's appId
-          ApplicationAttemptId.fromString(appAttemptIdOrName);
-          listContainers(appAttemptIdOrName);
-        } catch (IllegalArgumentException e) {
-          // not appAttemptId format, it could be appName. If app-type is not
-          // provided, assume it is yarn-service type.
-          AppAdminClient client = AppAdminClient
-              .createAppAdminClient(getSingleAppTypeFromCLI(cliParser),
-                  getConf());
-          String version = cliParser.getOptionValue(VERSION);
-          String[] components = cliParser.getOptionValues(COMPONENTS);
-          String[] instanceStates = cliParser.getOptionValues(STATES);
-          try {
-            sysout.println(client.getInstances(appAttemptIdOrName,
-                components == null ? null : Arrays.asList(components),
-                version, instanceStates == null ? null :
-                    Arrays.asList(instanceStates)));
-            return 0;
-          } catch (ApplicationNotFoundException exception) {
-            System.err.println("Application with name '" + appAttemptIdOrName
-                + "' doesn't exist in RM or Timeline Server.");
-            return -1;
-          } catch (Exception ex) {
-            System.err.println(ex.getMessage());
-            return -1;
-          }
-        }
-      }
+      return executeListCommand(cliParser, title, opts);
     } else if (cliParser.hasOption(KILL_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, KILL_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      return killApplication(cliParser.getOptionValues(KILL_CMD));
+      return executeKillCommand(cliParser, title, opts);
     } else if (cliParser.hasOption(MOVE_TO_QUEUE_CMD)) {
-      if (!cliParser.hasOption(QUEUE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      moveApplicationAcrossQueues(cliParser.getOptionValue(MOVE_TO_QUEUE_CMD),
-          cliParser.getOptionValue(QUEUE_CMD));
+      return executeMoveToQueueCommand(cliParser, title, opts);
     } else if (cliParser.hasOption(FAIL_CMD)) {
-      if (!title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      failApplicationAttempt(cliParser.getOptionValue(FAIL_CMD));
+      return executeFailCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(UPDATE_PRIORITY)) {
+      return executeUpdatePriorityCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(SIGNAL_CMD)) {
+      return executeSignalCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(SHELL_CMD)) {
+      return executeShellCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(LAUNCH_CMD)) {
+      return executeLaunchCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(STOP_CMD)) {
+      return executeStopCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(START_CMD)) {
+      return executeStartCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(SAVE_CMD)) {
+      return executeSaveCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(DESTROY_CMD)) {
+      return executeDestroyCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(FLEX_CMD)) {
+      return executeFlexCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(ENABLE_FAST_LAUNCH)) {
+      return executeEnableFastLaunchCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(UPDATE_LIFETIME)) {
+      return executeUpdateLifeTimeCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
+      return executeChangeApplicationQueueCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(UPGRADE_CMD)) {
+      return executeUpgradeCommand(cliParser, title, opts);
+    } else if (cliParser.hasOption(DECOMMISSION)) {
+      return executeDecommissionCommand(cliParser, title, opts);
     } else if (cliParser.hasOption(HELP_CMD)) {
       printUsage(title, opts);
       return 0;
-    } else if (cliParser.hasOption(UPDATE_PRIORITY)) {
-      if (!cliParser.hasOption(APP_ID)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      updateApplicationPriority(cliParser.getOptionValue(APP_ID),
-          cliParser.getOptionValue(UPDATE_PRIORITY));
-    } else if (cliParser.hasOption(SIGNAL_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, SIGNAL_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      final String[] signalArgs = cliParser.getOptionValues(SIGNAL_CMD);
-      final String containerId = signalArgs[0];
-      SignalContainerCommand command =
-          SignalContainerCommand.OUTPUT_THREAD_DUMP;
-      if (signalArgs.length == 2) {
-        command = SignalContainerCommand.valueOf(signalArgs[1]);
-      }
-      signalToContainer(containerId, command);
-    } else if (cliParser.hasOption(SHELL_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, SHELL_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      final String[] shellArgs = cliParser.getOptionValues(SHELL_CMD);
-      final String containerId = shellArgs[0];
-      ShellContainerCommand command =
-          ShellContainerCommand.BASH;
-      if (shellArgs.length == 2) {
-        command = ShellContainerCommand.valueOf(shellArgs[1].toUpperCase());
-      }
-      shellToContainer(containerId, command);
-    } else if (cliParser.hasOption(LAUNCH_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, LAUNCH_CMD, APP_TYPE_CMD,
-          UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      Long lifetime = null;
-      if (cliParser.hasOption(UPDATE_LIFETIME)) {
-        lifetime = Long.parseLong(cliParser.getOptionValue(UPDATE_LIFETIME));
-      }
-      String queue = null;
-      if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
-        queue = cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE);
-      }
-      String[] nameAndFile = cliParser.getOptionValues(LAUNCH_CMD);
-      return AppAdminClient.createAppAdminClient(appType, getConf())
-          .actionLaunch(nameAndFile[1], nameAndFile[0], lifetime, queue);
-    } else if (cliParser.hasOption(STOP_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, STOP_CMD, APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String[] appNameAndType = getAppNameAndType(cliParser, STOP_CMD);
-      return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
-          .actionStop(appNameAndType[0]);
-    } else if (cliParser.hasOption(START_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, START_CMD, APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      return AppAdminClient.createAppAdminClient(appType, getConf())
-          .actionStart(cliParser.getOptionValue(START_CMD));
-    } else if (cliParser.hasOption(SAVE_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, SAVE_CMD, APP_TYPE_CMD,
-          UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      Long lifetime = null;
-      if (cliParser.hasOption(UPDATE_LIFETIME)) {
-        lifetime = Long.parseLong(cliParser.getOptionValue(UPDATE_LIFETIME));
-      }
-      String queue = null;
-      if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
-        queue = cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE);
-      }
-      String[] nameAndFile = cliParser.getOptionValues(SAVE_CMD);
-      return AppAdminClient.createAppAdminClient(appType, getConf())
-          .actionSave(nameAndFile[1], nameAndFile[0], lifetime, queue);
-    } else if (cliParser.hasOption(DESTROY_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, DESTROY_CMD, APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      return AppAdminClient.createAppAdminClient(appType, getConf())
-          .actionDestroy(cliParser.getOptionValue(DESTROY_CMD));
-    } else if (cliParser.hasOption(FLEX_CMD)) {
-      if (!cliParser.hasOption(COMPONENT) ||
-          hasAnyOtherCLIOptions(cliParser, opts, FLEX_CMD, COMPONENT,
-              APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String[] rawCounts = cliParser.getOptionValues(COMPONENT);
-      Map<String, String> counts = new HashMap<>(rawCounts.length/2);
-      for (int i = 0; i < rawCounts.length - 1; i+=2) {
-        counts.put(rawCounts[i], rawCounts[i+1]);
-      }
-      String[] appNameAndType = getAppNameAndType(cliParser, FLEX_CMD);
-      return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
-          .actionFlex(appNameAndType[0], counts);
-    } else if (cliParser.hasOption(ENABLE_FAST_LAUNCH)) {
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      String uploadDestinationFolder = cliParser
-          .getOptionValue(ENABLE_FAST_LAUNCH);
-      if (hasAnyOtherCLIOptions(cliParser, opts, ENABLE_FAST_LAUNCH,
-          APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      return AppAdminClient.createAppAdminClient(appType, getConf())
-          .enableFastLaunch(uploadDestinationFolder);
-    } else if (cliParser.hasOption(UPDATE_LIFETIME)) {
-      if (!cliParser.hasOption(APP_ID)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-
-      long timeoutInSec =
-          Long.parseLong(cliParser.getOptionValue(UPDATE_LIFETIME));
-
-      updateApplicationTimeout(cliParser.getOptionValue(APP_ID),
-          ApplicationTimeoutType.LIFETIME, timeoutInSec);
-    } else if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
-      if (!cliParser.hasOption(APP_ID)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      moveApplicationAcrossQueues(cliParser.getOptionValue(APP_ID),
-          cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE));
-    } else if (cliParser.hasOption(UPGRADE_CMD)) {
-      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_EXPRESS,
-          UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE,
-          UPGRADE_CANCEL, COMPONENT_INSTS, COMPONENTS, APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String appType = getSingleAppTypeFromCLI(cliParser);
-      AppAdminClient client =  AppAdminClient.createAppAdminClient(appType,
-          getConf());
-      String appName = cliParser.getOptionValue(UPGRADE_CMD);
-      if (cliParser.hasOption(UPGRADE_EXPRESS)) {
-        File file = new File(cliParser.getOptionValue(UPGRADE_EXPRESS));
-        if (!file.exists()) {
-          System.err.println(file.getAbsolutePath() + " does not exist.");
-          return exitCode;
-        }
-        return client.actionUpgradeExpress(appName, file);
-      } else if (cliParser.hasOption(UPGRADE_INITIATE)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
-            UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, APP_TYPE_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        String fileName = cliParser.getOptionValue(UPGRADE_INITIATE);
-        if (cliParser.hasOption(UPGRADE_AUTO_FINALIZE)) {
-          return client.initiateUpgrade(appName, fileName, true);
-        } else {
-          return client.initiateUpgrade(appName, fileName, false);
-        }
-      } else if (cliParser.hasOption(COMPONENT_INSTS)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
-            COMPONENT_INSTS, APP_TYPE_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
-        return client.actionUpgradeInstances(appName, Arrays.asList(instances));
-      } else if (cliParser.hasOption(COMPONENTS)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
-            COMPONENTS, APP_TYPE_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        String[] components = cliParser.getOptionValues(COMPONENTS);
-        return client.actionUpgradeComponents(appName,
-            Arrays.asList(components));
-      } else if (cliParser.hasOption(UPGRADE_FINALIZE)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
-            UPGRADE_FINALIZE, APP_TYPE_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        return client.actionStart(appName);
-      } else if (cliParser.hasOption(UPGRADE_CANCEL)) {
-        if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
-            UPGRADE_CANCEL, APP_TYPE_CMD)) {
-          printUsage(title, opts);
-          return exitCode;
-        }
-        return client.actionCancelUpgrade(appName);
-      }
-    } else if (cliParser.hasOption(DECOMMISSION)) {
-      if (!cliParser.hasOption(COMPONENT_INSTS) ||
-          hasAnyOtherCLIOptions(cliParser, opts, DECOMMISSION, COMPONENT_INSTS,
-              APP_TYPE_CMD)) {
-        printUsage(title, opts);
-        return exitCode;
-      }
-      String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
-      String[] appNameAndType = getAppNameAndType(cliParser, DECOMMISSION);
-      return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
-          .actionDecommissionInstances(appNameAndType[0],
-              Arrays.asList(instances));
     } else {
       syserr.println("Invalid Command Usage : ");
       printUsage(title, opts);
@@ -881,7 +333,7 @@ public class ApplicationCLI extends YarnCLI {
 
   /**
    * Prints the application attempt report for an application attempt id.
-   * 
+   *
    * @param applicationAttemptId
    * @return exitCode
    * @throws YarnException
@@ -938,7 +390,7 @@ public class ApplicationCLI extends YarnCLI {
 
   /**
    * Prints the container report for an container id.
-   * 
+   *
    * @param containerId
    * @return exitCode
    * @throws YarnException
@@ -1142,7 +594,7 @@ public class ApplicationCLI extends YarnCLI {
 
   /**
    * Prints the application report for an application id.
-   * 
+   *
    * @param applicationId
    * @return ApplicationReport
    * @throws YarnException
@@ -1333,6 +785,688 @@ public class ApplicationCLI extends YarnCLI {
           + " to cluster max priority OR keeping old priority"
           + " as application is in final states");
     }
+  }
+
+  private void addApplicationOptions(Options opts) {
+    opts.addOption(STATUS_CMD, true, "Prints the status of the application. "
+        + "If app ID is provided, it prints the generic YARN application "
+        + "status. If name is provided, it prints the application specific "
+        + "status based on app's own implementation, and -appTypes option "
+        + "must be specified unless it is the default yarn-service type.");
+    opts.addOption(LIST_CMD, false, "List applications. Supports optional use "
+        + "of -appTypes to filter applications based on application type, "
+        + "-appStates to filter applications based on application state and "
+        + "-appTags to filter applications based on application tag.");
+    opts.addOption(MOVE_TO_QUEUE_CMD, true, "Moves the application to a "
+        + "different queue. Deprecated command. Use 'changeQueue' instead.");
+    opts.addOption(QUEUE_CMD, true, "Works with the movetoqueue command to"
+        + " specify which queue to move an application to.");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    Option appTypeOpt = new Option(APP_TYPE_CMD, true, "Works with -list to "
+        + "filter applications based on input comma-separated list of "
+        + "application types.");
+    appTypeOpt.setValueSeparator(',');
+    appTypeOpt.setArgs(Option.UNLIMITED_VALUES);
+    appTypeOpt.setArgName("Types");
+    opts.addOption(appTypeOpt);
+    Option appStateOpt = new Option(APP_STATE_CMD, true, "Works with -list to "
+        + "filter applications based on input comma-separated list of "
+        + "application states. " + getAllValidApplicationStates());
+    appStateOpt.setValueSeparator(',');
+    appStateOpt.setArgs(Option.UNLIMITED_VALUES);
+    appStateOpt.setArgName("States");
+    opts.addOption(appStateOpt);
+    Option appTagOpt = new Option(APP_TAG_CMD, true, "Works with -list to "
+        + "filter applications based on input comma-separated list of "
+        + "application tags.");
+    appTagOpt.setValueSeparator(',');
+    appTagOpt.setArgs(Option.UNLIMITED_VALUES);
+    appTagOpt.setArgName("Tags");
+    opts.addOption(appTagOpt);
+    opts.addOption(APP_ID, true, "Specify Application Id to be operated");
+    opts.addOption(UPDATE_PRIORITY, true, "update priority of an application. "
+        + "ApplicationId can be passed using 'appId' option.");
+    opts.addOption(UPDATE_LIFETIME, true, "update timeout of an application "
+        + "from NOW. ApplicationId can be passed using 'appId' option. Timeout "
+        + "value is in seconds.");
+    opts.addOption(CHANGE_APPLICATION_QUEUE, true, "Moves application to a new "
+        + "queue. ApplicationId can be  passed using 'appId' option. "
+        + "'movetoqueue' command is  deprecated, this new command "
+        + "'changeQueue' performs same functionality.");
+    Option killOpt = new Option(KILL_CMD, true, "Kills the application. Set of "
+        + "applications can be provided separated with space");
+    killOpt.setValueSeparator(' ');
+    killOpt.setArgs(Option.UNLIMITED_VALUES);
+    killOpt.setArgName("Application ID");
+    opts.addOption(killOpt);
+    opts.getOption(MOVE_TO_QUEUE_CMD).setArgName("Application ID");
+    opts.getOption(QUEUE_CMD).setArgName("Queue Name");
+    opts.getOption(STATUS_CMD).setArgName("Application Name or ID");
+    opts.getOption(APP_ID).setArgName("Application ID");
+    opts.getOption(UPDATE_PRIORITY).setArgName("Priority");
+    opts.getOption(UPDATE_LIFETIME).setArgName("Timeout");
+    opts.getOption(CHANGE_APPLICATION_QUEUE).setArgName("Queue Name");
+    opts.addOption(LAUNCH_CMD, true, "Launches application from specification "
+        + "file (saves specification and starts application). Options "
+        + "-updateLifetime and -changeQueue can be specified to alter the "
+        + "values provided in the file. Supports -appTypes option to specify "
+        + "which client implementation to use.");
+    opts.addOption(STOP_CMD, true, "Stops application gracefully (may be "
+        + "started again later). If name is provided, appType must be "
+        + "provided unless it is the default yarn-service. If ID is provided, "
+        + "the appType will be looked up. Supports -appTypes option to specify "
+        + "which client implementation to use.");
+    opts.addOption(START_CMD, true, "Starts a previously saved application. "
+        + "Supports -appTypes option to specify which client implementation "
+        + "to use.");
+    opts.addOption(SAVE_CMD, true, "Saves specification file for an "
+        + "application. Options -updateLifetime and -changeQueue can be "
+        + "specified to alter the values provided in the file. Supports "
+        + "-appTypes option to specify which client implementation to use.");
+    opts.addOption(DESTROY_CMD, true, "Destroys a saved application "
+        + "specification and removes all application data permanently. "
+        + "Supports -appTypes option to specify which client implementation "
+        + "to use.");
+    opts.addOption(FLEX_CMD, true, "Changes number of running containers for a "
+        + "component of an application / long-running service. Requires "
+        + "-component option. If name is provided, appType must be provided "
+        + "unless it is the default yarn-service. If ID is provided, the "
+        + "appType will be looked up. Supports -appTypes option to specify "
+        + "which client implementation to use.");
+    opts.addOption(DECOMMISSION, true, "Decommissions component instances for "
+        + "an application / long-running service. Requires -instances option. "
+        + "Supports -appTypes option to specify which client implementation to "
+        + "use.");
+    opts.addOption(COMPONENT, true, "Works with -flex option to change the "
+        + "number of components/containers running for an application / "
+        + "long-running service. Supports absolute or relative changes, such "
+        + "as +1, 2, or -3.");
+    opts.addOption(ENABLE_FAST_LAUNCH, true, "Uploads AM dependencies to HDFS "
+        + "to make future launches faster. Supports -appTypes option to "
+        + "specify which client implementation to use. Optionally a "
+        + "destination folder for the tarball can be specified.");
+    opts.addOption(UPGRADE_CMD, true, "Upgrades an application/long-running "
+        + "service. It requires either -initiate, -instances, or -finalize "
+        + "options.");
+    opts.addOption(UPGRADE_EXPRESS, true, "Works with -upgrade option to "
+        + "perform express upgrade.  It requires the upgraded application "
+        + "specification file.");
+    opts.addOption(UPGRADE_INITIATE, true, "Works with -upgrade option to "
+        + "initiate the application upgrade. It requires the upgraded "
+        + "application specification file.");
+    opts.addOption(COMPONENT_INSTS, true, "Works with -upgrade option to "
+        + "trigger the upgrade of specified component instances of the "
+        + "application. Also works with -decommission option to decommission "
+        + "specified component instances. Multiple instances should be "
+        + "separated by commas.");
+    opts.addOption(COMPONENTS, true, "Works with -upgrade option to trigger "
+        + "the upgrade of specified components of the application. Multiple "
+        + "components should be separated by commas.");
+    opts.addOption(UPGRADE_FINALIZE, false, "Works with -upgrade option to "
+        + "finalize the upgrade.");
+    opts.addOption(UPGRADE_AUTO_FINALIZE, false, "Works with -upgrade and "
+        + "-initiate options to initiate the upgrade of the application with "
+        + "the ability to finalize the upgrade automatically.");
+    opts.addOption(UPGRADE_CANCEL, false, "Works with -upgrade option to "
+        + "cancel current upgrade.");
+    opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. By default, it will "
+        + "take default cluster id from the RM");
+    opts.getOption(LAUNCH_CMD).setArgName("Application Name> <File Name");
+    opts.getOption(LAUNCH_CMD).setArgs(2);
+    opts.getOption(START_CMD).setArgName("Application Name");
+    opts.getOption(STOP_CMD).setArgName("Application Name or ID");
+    opts.getOption(SAVE_CMD).setArgName("Application Name> <File Name");
+    opts.getOption(SAVE_CMD).setArgs(2);
+    opts.getOption(DESTROY_CMD).setArgName("Application Name");
+    opts.getOption(FLEX_CMD).setArgName("Application Name or ID");
+    opts.getOption(COMPONENT).setArgName("Component Name> <Count");
+    opts.getOption(COMPONENT).setArgs(2);
+    opts.getOption(ENABLE_FAST_LAUNCH).setOptionalArg(true);
+    opts.getOption(ENABLE_FAST_LAUNCH).setArgName("Destination Folder");
+    opts.getOption(UPGRADE_CMD).setArgName("Application Name");
+    opts.getOption(UPGRADE_CMD).setArgs(1);
+    opts.getOption(UPGRADE_INITIATE).setArgName("File Name");
+    opts.getOption(UPGRADE_INITIATE).setArgs(1);
+    opts.getOption(COMPONENT_INSTS).setArgName("Component Instances");
+    opts.getOption(COMPONENT_INSTS).setValueSeparator(',');
+    opts.getOption(COMPONENT_INSTS).setArgs(Option.UNLIMITED_VALUES);
+    opts.getOption(COMPONENTS).setArgName("Components");
+    opts.getOption(COMPONENTS).setValueSeparator(',');
+    opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
+    opts.getOption(DECOMMISSION).setArgName("Application Name");
+    opts.getOption(DECOMMISSION).setArgs(1);
+    opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
+  }
+
+  private void addApplicationAttemptOptions(Options opts) {
+    opts.addOption(STATUS_CMD, true, "Prints the status of the application "
+        + "attempt.");
+    opts.addOption(LIST_CMD, true, "List application attempts for "
+        + "application.");
+    opts.addOption(FAIL_CMD, true, "Fails application attempt.");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. By default, it will "
+        + "take default cluster id from the RM");
+    opts.getOption(STATUS_CMD).setArgName("Application Attempt ID");
+    opts.getOption(LIST_CMD).setArgName("Application ID");
+    opts.getOption(FAIL_CMD).setArgName("Application Attempt ID");
+    opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
+  }
+
+  private void addContainerOptions(Options opts) {
+    opts.addOption(SHELL_CMD, true, "Run a shell in the container.");
+    opts.addOption(STATUS_CMD, true,
+        "Prints the status of the container.");
+    opts.addOption(LIST_CMD, true, "List containers for application attempt "
+        + "when application attempt ID is provided. When application name is "
+        + "provided, then it finds the instances of the application based on "
+        + "app's own implementation, and -appTypes option must be specified "
+        + "unless it is the default yarn-service type. With app name, it "
+        + "supports optional use of -version to filter instances based on app "
+        + "version, -components to filter instances based on component names, "
+        + "-states to filter instances based on instance state.");
+    opts.addOption(HELP_CMD, false, "Displays help for all commands.");
+    opts.getOption(SHELL_CMD).setArgName("Container ID [bash|sh]");
+    opts.getOption(SHELL_CMD).setArgs(3);
+    opts.getOption(STATUS_CMD).setArgName("Container ID");
+    opts.getOption(LIST_CMD).setArgName("Application Name or Attempt ID");
+    opts.addOption(APP_TYPE_CMD, true, "Works with -list to specify the app "
+        + "type when application name is provided.");
+    opts.getOption(APP_TYPE_CMD).setValueSeparator(',');
+    opts.getOption(APP_TYPE_CMD).setArgs(Option.UNLIMITED_VALUES);
+    opts.getOption(APP_TYPE_CMD).setArgName("Types");
+
+    opts.addOption(VERSION, true, "Works with -list to filter instances "
+        + "based on input application version.");
+    opts.getOption(VERSION).setArgs(1);
+
+    opts.addOption(COMPONENTS, true, "Works with -list to filter instances "
+        + "based on input comma-separated list of component names.");
+    opts.getOption(COMPONENTS).setValueSeparator(',');
+    opts.getOption(COMPONENTS).setArgs(Option.UNLIMITED_VALUES);
+
+    opts.addOption(STATES, true, "Works with -list to filter instances based "
+        + "on input comma-separated list of instance states.");
+    opts.getOption(STATES).setValueSeparator(',');
+    opts.getOption(STATES).setArgs(Option.UNLIMITED_VALUES);
+
+    opts.addOption(SIGNAL_CMD, true, "Signal the container. The available "
+        + "signal commands are "
+        + java.util.Arrays.asList(SignalContainerCommand.values())
+        + " Default command is OUTPUT_THREAD_DUMP.");
+    opts.getOption(SIGNAL_CMD).setArgName("container ID [signal command]");
+    opts.getOption(SIGNAL_CMD).setArgs(3);
+    opts.addOption(CLUSTER_ID_OPTION, true, "ClusterId. By default, it will "
+        + "take default cluster id from the RM");
+    opts.getOption(CLUSTER_ID_OPTION).setArgName("Cluster ID");
+  }
+
+  private CommandLine createCLIParser(Options opts, String[] args)
+      throws Exception {
+    CommandLine cliParser;
+    try {
+      cliParser = new GnuParser().parse(opts, args);
+    } catch (MissingArgumentException ex) {
+      sysout.println("Missing argument for options");
+      cliParser = null;
+    }
+    if (cliParser != null) {
+      String[] unparsedArgs = cliParser.getArgs();
+      if (firstArg == null) {
+        if (unparsedArgs.length != 1) {
+          cliParser = null;
+        }
+      } else {
+        if (unparsedArgs.length != 0) {
+          cliParser = null;
+        }
+      }
+    }
+    return cliParser;
+  }
+
+  private int executeStatusCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, STATUS_CMD, APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    if (title.equalsIgnoreCase(APPLICATION) ||
+        title.equalsIgnoreCase(APP)) {
+      String appIdOrName = cliParser.getOptionValue(STATUS_CMD);
+      try {
+        // try parsing appIdOrName, if it succeeds, it means it's appId
+        ApplicationId.fromString(appIdOrName);
+        exitCode = printApplicationReport(appIdOrName);
+      } catch (IllegalArgumentException e) {
+        // not appId format, it could be appName.
+        // Print app specific report, if app-type is not provided,
+        // assume it is yarn-service type.
+        AppAdminClient client = AppAdminClient
+            .createAppAdminClient(getSingleAppTypeFromCLI(cliParser),
+                getConf());
+        try {
+          sysout.println(client.getStatusString(appIdOrName));
+          exitCode = 0;
+        } catch (ApplicationNotFoundException exception) {
+          System.err.println("Application with name '" + appIdOrName
+              + "' doesn't exist in RM or Timeline Server.");
+          return -1;
+        } catch (Exception ie) {
+          System.err.println(ie.getMessage());
+          return -1;
+        }
+      }
+    } else if (title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
+      exitCode = printApplicationAttemptReport(cliParser
+          .getOptionValue(STATUS_CMD));
+    } else if (title.equalsIgnoreCase(CONTAINER)) {
+      exitCode = printContainerReport(cliParser.getOptionValue(STATUS_CMD));
+    }
+    return exitCode;
+  }
+
+  private int executeListCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (APPLICATION.equalsIgnoreCase(title) || APP.equalsIgnoreCase(title)) {
+      allAppStates = false;
+      Set<String> appTypes = new HashSet<>();
+      if (cliParser.hasOption(APP_TYPE_CMD)) {
+        String[] types = cliParser.getOptionValues(APP_TYPE_CMD);
+        if (types != null) {
+          for (String type : types) {
+            if (!type.trim().isEmpty()) {
+              appTypes.add(StringUtils.toUpperCase(type).trim());
+            }
+          }
+        }
+      }
+
+      EnumSet<YarnApplicationState> appStates = EnumSet.noneOf(
+          YarnApplicationState.class);
+      if (cliParser.hasOption(APP_STATE_CMD)) {
+        String[] states = cliParser.getOptionValues(APP_STATE_CMD);
+        if (states != null) {
+          for (String state : states) {
+            if (!state.trim().isEmpty()) {
+              if (state.trim().equalsIgnoreCase(ALLSTATES_OPTION)) {
+                allAppStates = true;
+                break;
+              }
+              try {
+                appStates.add(YarnApplicationState.valueOf(
+                    StringUtils.toUpperCase(state).trim()));
+              } catch (IllegalArgumentException ex) {
+                sysout.println("The application state " + state
+                    + " is invalid.");
+                sysout.println(getAllValidApplicationStates());
+                return exitCode;
+              }
+            }
+          }
+        }
+      }
+
+      Set<String> appTags = new HashSet<>();
+      if (cliParser.hasOption(APP_TAG_CMD)) {
+        String[] tags = cliParser.getOptionValues(APP_TAG_CMD);
+        if (tags != null) {
+          for (String tag : tags) {
+            if (!tag.trim().isEmpty()) {
+              appTags.add(tag.trim());
+            }
+          }
+        }
+      }
+      listApplications(appTypes, appStates, appTags);
+    } else if (APPLICATION_ATTEMPT.equalsIgnoreCase(title)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, LIST_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      listApplicationAttempts(cliParser.getOptionValue(LIST_CMD));
+    } else if (CONTAINER.equalsIgnoreCase(title)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, LIST_CMD, APP_TYPE_CMD,
+          VERSION, COMPONENTS, STATES)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String appAttemptIdOrName = cliParser.getOptionValue(LIST_CMD);
+      try {
+        // try parsing attempt id, if it succeeds, it means it's appId
+        ApplicationAttemptId.fromString(appAttemptIdOrName);
+        listContainers(appAttemptIdOrName);
+      } catch (IllegalArgumentException e) {
+        // not appAttemptId format, it could be appName. If app-type is not
+        // provided, assume it is yarn-service type.
+        AppAdminClient client = AppAdminClient.createAppAdminClient(
+            getSingleAppTypeFromCLI(cliParser), getConf());
+        String version = cliParser.getOptionValue(VERSION);
+        String[] components = cliParser.getOptionValues(COMPONENTS);
+        String[] instanceStates = cliParser.getOptionValues(STATES);
+        try {
+          sysout.println(client.getInstances(appAttemptIdOrName,
+              components == null ? null : Arrays.asList(components),
+              version, instanceStates == null ? null :
+                  Arrays.asList(instanceStates)));
+          return 0;
+        } catch (ApplicationNotFoundException exception) {
+          System.err.println("Application with name '" + appAttemptIdOrName
+              + "' doesn't exist in RM or Timeline Server.");
+          return -1;
+        } catch (Exception ex) {
+          System.err.println(ex.getMessage());
+          return -1;
+        }
+      }
+    }
+    return 0;
+  }
+
+  private int executeKillCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, KILL_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    return killApplication(cliParser.getOptionValues(KILL_CMD));
+  }
+
+  private int executeMoveToQueueCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(QUEUE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    moveApplicationAcrossQueues(cliParser.getOptionValue(MOVE_TO_QUEUE_CMD),
+        cliParser.getOptionValue(QUEUE_CMD));
+    return 0;
+  }
+
+  private int executeFailCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!title.equalsIgnoreCase(APPLICATION_ATTEMPT)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    failApplicationAttempt(cliParser.getOptionValue(FAIL_CMD));
+    return 0;
+  }
+
+  private int executeUpdatePriorityCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(APP_ID)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    updateApplicationPriority(cliParser.getOptionValue(APP_ID),
+        cliParser.getOptionValue(UPDATE_PRIORITY));
+    return 0;
+  }
+
+  private int executeSignalCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, SIGNAL_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    final String[] signalArgs = cliParser.getOptionValues(SIGNAL_CMD);
+    final String containerId = signalArgs[0];
+    SignalContainerCommand command =
+        SignalContainerCommand.OUTPUT_THREAD_DUMP;
+    if (signalArgs.length == 2) {
+      command = SignalContainerCommand.valueOf(signalArgs[1]);
+    }
+    signalToContainer(containerId, command);
+    return 0;
+  }
+
+  private int executeShellCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception  {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, SHELL_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    final String[] shellArgs = cliParser.getOptionValues(SHELL_CMD);
+    final String containerId = shellArgs[0];
+    ShellContainerCommand command =
+        ShellContainerCommand.BASH;
+    if (shellArgs.length == 2) {
+      command = ShellContainerCommand.valueOf(shellArgs[1].toUpperCase());
+    }
+    shellToContainer(containerId, command);
+    return 0;
+  }
+
+  private int executeLaunchCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, LAUNCH_CMD, APP_TYPE_CMD,
+        UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    Long lifetime = null;
+    if (cliParser.hasOption(UPDATE_LIFETIME)) {
+      lifetime = Long.parseLong(cliParser.getOptionValue(UPDATE_LIFETIME));
+    }
+    String queue = null;
+    if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
+      queue = cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE);
+    }
+    String[] nameAndFile = cliParser.getOptionValues(LAUNCH_CMD);
+    return AppAdminClient.createAppAdminClient(appType, getConf())
+        .actionLaunch(nameAndFile[1], nameAndFile[0], lifetime, queue);
+  }
+
+  private int executeStopCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, STOP_CMD, APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String[] appNameAndType = getAppNameAndType(cliParser, STOP_CMD);
+    return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
+        .actionStop(appNameAndType[0]);
+  }
+
+  private int executeStartCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, START_CMD, APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    return AppAdminClient.createAppAdminClient(appType, getConf())
+        .actionStart(cliParser.getOptionValue(START_CMD));
+  }
+
+  private int executeSaveCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, SAVE_CMD, APP_TYPE_CMD,
+        UPDATE_LIFETIME, CHANGE_APPLICATION_QUEUE)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    Long lifetime = null;
+    if (cliParser.hasOption(UPDATE_LIFETIME)) {
+      lifetime = Long.parseLong(cliParser.getOptionValue(UPDATE_LIFETIME));
+    }
+    String queue = null;
+    if (cliParser.hasOption(CHANGE_APPLICATION_QUEUE)) {
+      queue = cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE);
+    }
+    String[] nameAndFile = cliParser.getOptionValues(SAVE_CMD);
+    return AppAdminClient.createAppAdminClient(appType, getConf())
+        .actionSave(nameAndFile[1], nameAndFile[0], lifetime, queue);
+  }
+
+  private int executeDestroyCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, DESTROY_CMD, APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    return AppAdminClient.createAppAdminClient(appType, getConf())
+        .actionDestroy(cliParser.getOptionValue(DESTROY_CMD));
+  }
+
+  private int executeFlexCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(COMPONENT) ||
+        hasAnyOtherCLIOptions(cliParser, opts, FLEX_CMD, COMPONENT,
+            APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String[] rawCounts = cliParser.getOptionValues(COMPONENT);
+    Map<String, String> counts = new HashMap<>(rawCounts.length/2);
+    for (int i = 0; i < rawCounts.length - 1; i+=2) {
+      counts.put(rawCounts[i], rawCounts[i+1]);
+    }
+    String[] appNameAndType = getAppNameAndType(cliParser, FLEX_CMD);
+    return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
+        .actionFlex(appNameAndType[0], counts);
+  }
+
+  private int executeEnableFastLaunchCommand(CommandLine cliParser,
+      String title, Options opts) throws Exception {
+    int exitCode = -1;
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    String uploadDestinationFolder = cliParser
+        .getOptionValue(ENABLE_FAST_LAUNCH);
+    if (hasAnyOtherCLIOptions(cliParser, opts, ENABLE_FAST_LAUNCH,
+        APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    return AppAdminClient.createAppAdminClient(appType, getConf())
+        .enableFastLaunch(uploadDestinationFolder);
+  }
+
+  private int executeUpdateLifeTimeCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(APP_ID)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    long timeoutInSec = Long.parseLong(
+        cliParser.getOptionValue(UPDATE_LIFETIME));
+    updateApplicationTimeout(cliParser.getOptionValue(APP_ID),
+        ApplicationTimeoutType.LIFETIME, timeoutInSec);
+    return 0;
+  }
+
+  private int executeChangeApplicationQueueCommand(CommandLine cliParser,
+      String title, Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(APP_ID)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    moveApplicationAcrossQueues(cliParser.getOptionValue(APP_ID),
+        cliParser.getOptionValue(CHANGE_APPLICATION_QUEUE));
+    return 0;
+  }
+
+  private int executeUpgradeCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD, UPGRADE_EXPRESS,
+        UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, UPGRADE_FINALIZE,
+        UPGRADE_CANCEL, COMPONENT_INSTS, COMPONENTS, APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String appType = getSingleAppTypeFromCLI(cliParser);
+    AppAdminClient client =  AppAdminClient.createAppAdminClient(appType,
+        getConf());
+    String appName = cliParser.getOptionValue(UPGRADE_CMD);
+    if (cliParser.hasOption(UPGRADE_EXPRESS)) {
+      File file = new File(cliParser.getOptionValue(UPGRADE_EXPRESS));
+      if (!file.exists()) {
+        System.err.println(file.getAbsolutePath() + " does not exist.");
+        return exitCode;
+      }
+      return client.actionUpgradeExpress(appName, file);
+    } else if (cliParser.hasOption(UPGRADE_INITIATE)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+          UPGRADE_INITIATE, UPGRADE_AUTO_FINALIZE, APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String fileName = cliParser.getOptionValue(UPGRADE_INITIATE);
+      if (cliParser.hasOption(UPGRADE_AUTO_FINALIZE)) {
+        return client.initiateUpgrade(appName, fileName, true);
+      } else {
+        return client.initiateUpgrade(appName, fileName, false);
+      }
+    } else if (cliParser.hasOption(COMPONENT_INSTS)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+          COMPONENT_INSTS, APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
+      return client.actionUpgradeInstances(appName, Arrays.asList(instances));
+    } else if (cliParser.hasOption(COMPONENTS)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+          COMPONENTS, APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      String[] components = cliParser.getOptionValues(COMPONENTS);
+      return client.actionUpgradeComponents(appName,
+          Arrays.asList(components));
+    } else if (cliParser.hasOption(UPGRADE_FINALIZE)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+          UPGRADE_FINALIZE, APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      return client.actionStart(appName);
+    } else if (cliParser.hasOption(UPGRADE_CANCEL)) {
+      if (hasAnyOtherCLIOptions(cliParser, opts, UPGRADE_CMD,
+          UPGRADE_CANCEL, APP_TYPE_CMD)) {
+        printUsage(title, opts);
+        return exitCode;
+      }
+      return client.actionCancelUpgrade(appName);
+    }
+    return 0;
+  }
+
+  private int executeDecommissionCommand(CommandLine cliParser, String title,
+      Options opts) throws Exception {
+    int exitCode = -1;
+    if (!cliParser.hasOption(COMPONENT_INSTS) ||
+        hasAnyOtherCLIOptions(cliParser, opts, DECOMMISSION, COMPONENT_INSTS,
+            APP_TYPE_CMD)) {
+      printUsage(title, opts);
+      return exitCode;
+    }
+    String[] instances = cliParser.getOptionValues(COMPONENT_INSTS);
+    String[] appNameAndType = getAppNameAndType(cliParser, DECOMMISSION);
+    return AppAdminClient.createAppAdminClient(appNameAndType[1], getConf())
+        .actionDecommissionInstances(appNameAndType[0],
+            Arrays.asList(instances));
   }
 
   @SuppressWarnings("unchecked")

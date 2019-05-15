@@ -26,8 +26,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -41,24 +43,24 @@ public class TestTensorFlowPsComponent {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   private ComponentTestCommons testCommons =
-      new ComponentTestCommons(TaskType.PS);
+      new ComponentTestCommons(TensorFlowRole.PS);
 
   @Before
   public void setUp() throws IOException {
-    testCommons.setup();
+    testCommons.setupTensorFlow();
   }
 
   private TensorFlowPsComponent createPsComponent(RunJobParameters parameters) {
     return new TensorFlowPsComponent(
         testCommons.fsOperations,
         testCommons.mockClientContext.getRemoteDirectoryManager(),
-        testCommons.mockLaunchCommandFactory,
+        (TensorFlowLaunchCommandFactory) testCommons.mockLaunchCommandFactory,
         parameters,
         testCommons.yarnConfig);
   }
 
   private void verifyCommons(Component component) throws IOException {
-    assertEquals(testCommons.taskType.getComponentName(), component.getName());
+    assertEquals(testCommons.role.getComponentName(), component.getName());
     testCommons.verifyCommonConfigEnvs(component);
 
     assertTrue(component.getConfiguration().getProperties().isEmpty());
@@ -69,7 +71,7 @@ public class TestTensorFlowPsComponent {
         new Artifact().type(Artifact.TypeEnum.DOCKER).id("testPSDockerImage"),
         component.getArtifact());
 
-    String taskTypeUppercase = testCommons.taskType.name().toUpperCase();
+    String taskTypeUppercase = testCommons.role.getName().toUpperCase();
     String expectedScriptName = String.format("run-%s.sh", taskTypeUppercase);
     assertEquals(String.format("./%s", expectedScriptName),
         component.getLaunchCommand());
@@ -81,7 +83,7 @@ public class TestTensorFlowPsComponent {
 
   @Test
   public void testPSComponentWithNullResource() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPsResource(null);
 
     TensorFlowPsComponent psComponent =
@@ -94,7 +96,7 @@ public class TestTensorFlowPsComponent {
 
   @Test
   public void testPSComponentWithNullJobName() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPsResource(testCommons.resource);
     parameters.setNumPS(1);
     parameters.setName(null);
@@ -111,7 +113,7 @@ public class TestTensorFlowPsComponent {
   public void testPSComponentZeroNumberOfPS() throws IOException {
     testCommons.yarnConfig.set("hadoop.registry.dns.domain-name", "testDomain");
 
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPsResource(testCommons.resource);
     parameters.setName("testJobName");
     parameters.setPsDockerImage("testPSDockerImage");
@@ -129,7 +131,7 @@ public class TestTensorFlowPsComponent {
   public void testPSComponentNumPSIsOne() throws IOException {
     testCommons.yarnConfig.set("hadoop.registry.dns.domain-name", "testDomain");
 
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPsResource(testCommons.resource);
     parameters.setName("testJobName");
     parameters.setNumPS(1);
@@ -148,7 +150,7 @@ public class TestTensorFlowPsComponent {
   public void testPSComponentNumPSIsTwo() throws IOException {
     testCommons.yarnConfig.set("hadoop.registry.dns.domain-name", "testDomain");
 
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setPsResource(testCommons.resource);
     parameters.setName("testJobName");
     parameters.setNumPS(2);

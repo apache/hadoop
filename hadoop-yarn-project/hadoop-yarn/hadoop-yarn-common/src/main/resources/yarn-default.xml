@@ -4187,4 +4187,28 @@
     <name>yarn.nodemanager.csi-driver.names</name>
     <value></value>
   </property>
+
+  <property>
+    <description>The cleanup interval for activities in milliseconds.</description>
+    <name>yarn.resourcemanager.activities-manager.cleanup-interval-ms</name>
+    <value>5000</value>
+  </property>
+
+  <property>
+    <description>Time to live for scheduler activities in milliseconds.</description>
+    <name>yarn.resourcemanager.activities-manager.scheduler-activities.ttl-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>Time to live for app activities in milliseconds.</description>
+    <name>yarn.resourcemanager.activities-manager.app-activities.ttl-ms</name>
+    <value>600000</value>
+  </property>
+
+  <property>
+    <description>Max queue length for app activities.</description>
+    <name>yarn.resourcemanager.activities-manager.app-activities.max-queue-length</name>
+    <value>1000</value>
+  </property>
 </configuration>

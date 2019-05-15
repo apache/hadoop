@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.qjournal.MiniQJMHACluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.namenode.TestFsck;
+import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -111,6 +112,17 @@ public class TestObserverNode {
       return;
     }
     fail("active cannot be transitioned to observer");
+  }
+
+  /**
+   * Test that non-ClientProtocol proxies such as
+   * {@link org.apache.hadoop.tools.GetUserMappingsProtocol} still work
+   * when run in an environment with observers.
+   */
+  @Test
+  public void testGetGroups() throws Exception {
+    GetGroups getGroups = new GetGroups(conf);
+    assertEquals(0, getGroups.run(new String[0]));
   }
 
   @Test
