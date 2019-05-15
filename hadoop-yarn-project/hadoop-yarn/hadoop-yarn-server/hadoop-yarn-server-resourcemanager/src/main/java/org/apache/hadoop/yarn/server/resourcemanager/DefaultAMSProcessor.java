@@ -116,6 +116,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
   private RMContext rmContext;
   private ResourceProfilesManager resourceProfilesManager;
   private boolean timelineServiceV2Enabled;
+  private boolean nodelabelsEnabled;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
@@ -124,6 +125,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     this.resourceProfilesManager = rmContext.getResourceProfilesManager();
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(rmContext.getYarnConfiguration());
+    this.nodelabelsEnabled = YarnConfiguration
+        .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -241,7 +244,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     try {
       RMServerUtils.normalizeAndValidateRequests(ask,
           maximumCapacity, app.getQueue(),
-          getScheduler(), getRmContext());
+          getScheduler(), getRmContext(), nodelabelsEnabled);
     } catch (InvalidResourceRequestException e) {
       RMAppAttempt rmAppAttempt = app.getRMAppAttempt(appAttemptId);
       handleInvalidResourceException(e, rmAppAttempt);

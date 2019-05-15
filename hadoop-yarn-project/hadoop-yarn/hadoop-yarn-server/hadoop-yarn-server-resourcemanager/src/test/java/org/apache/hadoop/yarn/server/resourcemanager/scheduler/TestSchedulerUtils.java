@@ -1050,7 +1050,8 @@ public class TestSchedulerUtils {
       Resource maxAllocation)
       throws InvalidResourceRequestException {
     SchedulerUtils.normalizeAndValidateRequest(resReq, maxAllocation, queueName,
-        scheduler, rmContext, null);
+        rmContext, null, YarnConfiguration
+            .areNodeLabelsEnabled(rmContext.getYarnConfiguration()));
   }
 
   private static class InvalidResourceRequestExceptionMessageGenerator {

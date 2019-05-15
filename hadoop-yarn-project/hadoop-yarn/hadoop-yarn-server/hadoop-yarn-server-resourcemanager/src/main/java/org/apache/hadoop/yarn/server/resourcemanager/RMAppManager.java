@@ -96,6 +96,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
   private Configuration conf;
   private YarnAuthorizationProvider authorizer;
   private boolean timelineServiceV2Enabled;
+  private boolean nodeLabelsEnabled;
 
   public RMAppManager(RMContext context,
       YarnScheduler scheduler, ApplicationMasterService masterService,
@@ -118,6 +119,8 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
     this.authorizer = YarnAuthorizationProvider.getInstance(conf);
     this.timelineServiceV2Enabled = YarnConfiguration.
         timelineServiceV2Enabled(conf);
+    this.nodeLabelsEnabled = YarnConfiguration
+        .areNodeLabelsEnabled(rmContext.getYarnConfiguration());
   }
 
   /**
@@ -575,7 +578,7 @@ public class RMAppManager implements EventHandler<RMAppManagerEvent>,
         Resource maxAllocation = scheduler.getMaximumResourceCapability(queue);
         for (ResourceRequest amReq : amReqs) {
           SchedulerUtils.normalizeAndValidateRequest(amReq, maxAllocation,
-              queue, scheduler, isRecovery, rmContext, null);
+              queue, isRecovery, rmContext, null, nodeLabelsEnabled);
 
           amReq.setCapability(scheduler.getNormalizedResource(
               amReq.getCapability(), maxAllocation));

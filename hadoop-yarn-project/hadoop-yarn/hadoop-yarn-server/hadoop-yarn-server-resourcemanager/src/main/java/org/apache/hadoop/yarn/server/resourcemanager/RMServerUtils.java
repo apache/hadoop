@@ -244,7 +244,8 @@ public class RMServerUtils {
    */
   public static void normalizeAndValidateRequests(List<ResourceRequest> ask,
       Resource maximumAllocation, String queueName, YarnScheduler scheduler,
-      RMContext rmContext) throws InvalidResourceRequestException {
+      RMContext rmContext, boolean nodeLabelsEnabled)
+          throws InvalidResourceRequestException {
     // Get queue from scheduler
     QueueInfo queueInfo = null;
     try {
@@ -256,7 +257,7 @@ public class RMServerUtils {
 
     for (ResourceRequest resReq : ask) {
       SchedulerUtils.normalizeAndValidateRequest(resReq, maximumAllocation,
-          queueName, scheduler, rmContext, queueInfo);
+          queueName, rmContext, queueInfo, nodeLabelsEnabled);
     }
   }
 
