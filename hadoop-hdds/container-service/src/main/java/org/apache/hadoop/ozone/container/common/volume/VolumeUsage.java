@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.container.common.volume;
 
 import com.google.common.annotations.VisibleForTesting;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CachingGetSpaceUsed;
 import org.apache.hadoop.fs.DF;
@@ -182,6 +183,10 @@ public class VolumeUsage {
    * Only for testing. Do not use otherwise.
    */
   @VisibleForTesting
+  @SuppressFBWarnings(
+      value = "IS2_INCONSISTENT_SYNC",
+      justification = "scmUsage is an AtomicReference. No additional " +
+          "synchronization is needed.")
   public void setScmUsageForTesting(GetSpaceUsed scmUsageForTest) {
     scmUsage.set(scmUsageForTest);
   }
