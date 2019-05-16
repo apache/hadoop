@@ -39,9 +39,9 @@ python generate_cifar10_tfrecords.py --data-dir=cifar-10-data
 hadoop fs -put cifar-10-data/ /dataset/cifar-10-data
 ```
 
-**Please note that:**
+**Warning:**
 
-YARN service doesn't allow multiple services with the same name, so please run following command
+Please note that YARN service doesn't allow multiple services with the same name, so please run following command
 ```
 yarn application -destroy <service-name>
 ```
@@ -49,7 +49,7 @@ to delete services if you want to reuse the same service name.
 
 ## Prepare Docker images
 
-Refer to [Write Dockerfile](WriteDockerfile.md) to build a Docker image or use prebuilt one.
+Refer to [Write Dockerfile](WriteDockerfileTF.html) to build a Docker image or use prebuilt one.
 
 ## Run Tensorflow jobs
 
@@ -91,6 +91,8 @@ Explanations:
 
 - `>1` num_workers indicates it is a distributed training.
 - Parameters / resources / Docker image of parameter server can be specified separately. For many cases, parameter server doesn't require GPU.
+
+For the meaning of the individual parameters, see the [QuickStart](QuickStart.html) page!
 
 *Outputs of distributed training*
 

@@ -304,7 +304,7 @@ https://github.com/NVIDIA/nvidia-docker
 
 ### Tensorflow Image
 
-There is no need to install CUDNN and CUDA on the servers, because CUDNN and CUDA can be added in the docker images. we can get basic docker images by referring to WriteDockerfile.md.
+There is no need to install CUDNN and CUDA on the servers, because CUDNN and CUDA can be added in the docker images. We can get basic docker images by referring to [Write Dockerfile](WriteDockerfileTF.html).
 
 ### Test tensorflow in a docker container
 

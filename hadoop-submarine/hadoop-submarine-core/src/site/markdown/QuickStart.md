@@ -24,15 +24,18 @@ Optional:
 
 - Enable YARN DNS. (When yarn service runtime is required.)
 - Enable GPU on YARN support. (When GPU-based training is required.)
-- Docker images for submarine jobs. (When docker container is required.)
+- Docker images for Submarine jobs. (When docker container is required.)
 ```
   # Get prebuilt docker images (No liability)
   docker pull hadoopsubmarine/tf-1.13.1-gpu:0.0.1
   # Or build your own docker images
   docker build . -f Dockerfile.gpu.tf_1.13.1 -t tf-1.13.1-gpu-base:0.0.1
 ```
-More details, please refer to
-[How to write Dockerfile for Submarine jobs](WriteDockerfile.html)
+For more details, please refer to:
+
+- [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
+
+- [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
 
 ## Run jobs
 
@@ -120,7 +123,7 @@ reported from `entry_script.py`.
 
 ### Submarine Configuration
 
-For submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
+For Submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
 
 |Configuration Name | Description |
 |:---- |:---- |
@@ -235,7 +238,7 @@ Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
 
 ## Build from source code
 
-If you want to build submarine project by yourself, you can follow the steps:
+If you want to build the Submarine project by yourself, you can follow the steps:
 
 - Run 'mvn install -DskipTests' from Hadoop source top level once.
 

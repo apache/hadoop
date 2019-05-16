@@ -293,7 +293,7 @@ https://github.com/NVIDIA/nvidia-docker
 
 ### Tensorflow Image
 
-CUDNN 和 CUDA 其实不需要在物理机上安装，因为 Sumbmarine 中提供了已经包含了CUDNN 和 CUDA 的镜像文件，基础的Dockfile可参见WriteDockerfile.md
+CUDNN 和 CUDA 其实不需要在物理机上安装，因为 Submarine 中提供了已经包含了CUDNN 和 CUDA 的镜像文件，基础的Dockfile可参见WriteDockerfileTF.md
 
 ### 测试 TF 环境
 

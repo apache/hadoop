@@ -98,10 +98,10 @@ We provided following examples for you to build tensorflow docker images.
 
 For Tensorflow 1.13.1 (Precompiled to CUDA 10.x)
 
-- *docker/base/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only.
-- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only, and included models
-- *docker/base/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10.
-- *docker/with-cifar10-models/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10, with models.
+- *docker/tensorflow/base/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only.
+- *docker/tensorflow/with-cifar10-models/ubuntu-16.04/Dockerfile.cpu.tf_1.13.1*: Tensorflow 1.13.1 supports CPU only, and included models
+- *docker/tensorflow/base/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10.
+- *docker/tensorflow/with-cifar10-models/ubuntu-16.04/Dockerfile.gpu.tf_1.13.1*: Tensorflow 1.13.1 supports GPU, which is prebuilt to CUDA10, with models.
 
 ## Build Docker images
 
