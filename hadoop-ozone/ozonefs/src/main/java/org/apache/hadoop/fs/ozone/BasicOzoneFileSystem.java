@@ -498,20 +498,24 @@ public class BasicOzoneFileSystem extends FileSystem {
     LOG.trace("listStatus() path:{}", f);
     int numEntries = LISTING_PAGE_SIZE;
     LinkedList<OzoneFileStatus> statuses = new LinkedList<>();
-    List<OzoneFileStatus> tmpStatus;
+    List<OzoneFileStatus> tmpStatusList;
     String startKey = "";
 
     do {
-      tmpStatus = adapter.listStatus(pathToKey(f), false, startKey, numEntries);
-      if (!tmpStatus.isEmpty()) {
+      tmpStatusList =
+          adapter.listStatus(pathToKey(f), false, startKey, numEntries);
+      if (!tmpStatusList.isEmpty()) {
         if (startKey.isEmpty()) {
-          statuses.addAll(tmpStatus);
+          statuses.addAll(tmpStatusList);
         } else {
-          statuses.addAll(tmpStatus.subList(1, tmpStatus.size()));
+          statuses.addAll(tmpStatusList.subList(1, tmpStatusList.size()));
         }
         startKey = pathToKey(statuses.getLast().getPath());
       }
-    } while (tmpStatus.size() == numEntries);
+      // listStatus returns entries numEntries in size if available.
+      // Any lesser number of entries indicate that the required entries have
+      // exhausted.
+    } while (tmpStatusList.size() == numEntries);
 
     for (OzoneFileStatus status : statuses) {
       status.makeQualified(uri, status.getPath().makeQualified(uri, workingDir),

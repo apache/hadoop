@@ -1360,8 +1360,8 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
       // Check if this is the root of the filesystem.
       if (keyName.length() == 0) {
         validateBucket(volumeName, bucketName);
@@ -1418,8 +1418,8 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
       // Check if this is the root of the filesystem.
       if (keyName.length() == 0) {
@@ -1430,7 +1430,7 @@ public class KeyManagerImpl implements KeyManager {
       OzoneFileStatus status =
           verifyNoFilesInPath(volumeName, bucketName, keyPath, false);
       if (status != null && OzoneFSUtils.pathToKey(status.getPath())
-          .equals(keyPath.toString())) {
+          .equals(keyName)) {
         // if directory already exists
         return;
       }
@@ -1490,9 +1490,8 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = args.getKeyName();
     OpenKeySession keySession;
 
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-
       OzoneFileStatus fileStatus;
       try {
         fileStatus = getFileStatus(args);
@@ -1539,8 +1538,8 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
       OzoneFileStatus fileStatus = getFileStatus(args);
       if (fileStatus.isFile()) {
         return fileStatus.getKeyInfo();
@@ -1573,8 +1572,8 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = args.getKeyName();
 
     List<OzoneFileStatus> fileStatusList = new ArrayList<>();
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
       if (Strings.isNullOrEmpty(startKey)) {
         OzoneFileStatus fileStatus = getFileStatus(args);
         if (fileStatus.isFile()) {

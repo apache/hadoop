@@ -236,12 +236,10 @@ public class TestOzoneFileSystem {
       paths.add(p.getName());
     }
 
-    // ListStatus on root should return dir1 (even though /dir1 key does not
-    // exist) and dir2 only. dir12 is not an immediate child of root and
-    // hence should not be listed.
     FileStatus[] fileStatuses = o3fs.listStatus(root);
-    assertEquals("FileStatus should return only the immediate children", numDirs,
-        fileStatuses.length);
+    assertEquals(
+        "Total directories listed do not match the existing directories",
+        numDirs, fileStatuses.length);
 
     for (int i=0; i < numDirs; i++) {
       assertTrue(paths.contains(fileStatuses[i].getPath().getName()));
