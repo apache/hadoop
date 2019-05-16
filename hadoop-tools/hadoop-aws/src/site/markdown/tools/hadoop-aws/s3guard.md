@@ -1219,8 +1219,8 @@ See [Fail on Error](#fail-on-error) for more detail.
 
 ```
 com.amazonaws.services.dynamodbv2.model.ResourceInUseException:
-  Attempt to change a resource which is still in use: Table is being deleted: s
-    3guard.test.testDynamoDBInitDestroy351245027 
+  Attempt to change a resource which is still in use: Table is being deleted:
+   s3guard.test.testDynamoDBInitDestroy351245027
     (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ResourceInUseException;)
 ```
 

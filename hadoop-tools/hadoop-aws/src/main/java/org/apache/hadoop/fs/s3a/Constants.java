@@ -143,11 +143,11 @@ public final class Constants {
   // the maximum number of tasks cached if all threads are already uploading
   public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
 
-  public static final int DEFAULT_MAX_TOTAL_TASKS = 5;
+  public static final int DEFAULT_MAX_TOTAL_TASKS = 32;
 
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = DEFAULT_MAX_TOTAL_TASKS * 2;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 48;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -305,7 +305,7 @@ public final class Constants {
    * upload, where {@link #FAST_UPLOAD_ACTIVE_BLOCKS} is used instead.
    * Value: {@value}
    */
-  public static final int DEFAULT_EXECUTOR_CAPACITY = 10;
+  public static final int DEFAULT_EXECUTOR_CAPACITY = 16;
 
   // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
   // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl

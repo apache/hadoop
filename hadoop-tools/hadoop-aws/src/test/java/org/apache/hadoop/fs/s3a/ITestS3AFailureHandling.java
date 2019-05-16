@@ -151,7 +151,7 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
 
   /**
    * See what happens when you delete two entries which do not exist.
-   * The call succeeds; if
+   * It must not raise an exception.
    */
   @Test
   public void testMultiObjectDeleteMissingEntriesSucceeds() throws Throwable {
