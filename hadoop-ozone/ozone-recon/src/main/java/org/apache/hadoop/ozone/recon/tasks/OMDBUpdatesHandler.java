@@ -61,29 +61,8 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
   public void put(int cfIndex, byte[] keyBytes, byte[] valueBytes) throws
       RocksDBException {
     try {
-      String tableName = tablesNames.get(cfIndex);
-      Class keyType = getKeyType(tableName);
-      Class valueType = getValueType(tableName);
-      if (valueType == null) {
-        return;
-      }
-      Object key = codecRegistry.asObject(keyBytes, keyType);
-      Object value = codecRegistry.asObject(valueBytes, valueType);
-      OMDBUpdateEvent.OMUpdateEventBuilder builder =
-          new OMDBUpdateEvent.OMUpdateEventBuilder<>();
-      builder.setTable(tableName);
-      builder.setKey(key);
-      builder.setValue(value);
-      builder.setAction(OMDBUpdateEvent.OMDBUpdateAction.PUT);
-      OMDBUpdateEvent putEvent = builder.build();
-      // Temporarily adding to an event buffer for testing. In subsequent JIRAs,
-      // a Recon side class will be implemented that requests delta updates
-      // from OM and calls on this handler. In that case, we will fill up
-      // this buffer and pass it on to the ReconTaskController which has
-      // tasks waiting on OM events.
-      omdbUpdateEvents.add(putEvent);
-      LOG.info("Generated OM update Event for table : " + putEvent.getTable()
-          + ", Key = " + putEvent.getKey());
+      processEvent(cfIndex, keyBytes, valueBytes,
+          OMDBUpdateEvent.OMDBUpdateAction.PUT);
     } catch (IOException ioEx) {
       LOG.error("Exception when reading key : " + ioEx);
     }
@@ -92,20 +71,45 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
   @Override
   public void delete(int cfIndex, byte[] keyBytes) throws RocksDBException {
     try {
-      String tableName = tablesNames.get(cfIndex);
-      Class keyType = getKeyType(tableName);
-      Object key = codecRegistry.asObject(keyBytes, keyType);
+      processEvent(cfIndex, keyBytes, null,
+          OMDBUpdateEvent.OMDBUpdateAction.DELETE);
+    } catch (IOException ioEx) {
+      LOG.error("Exception when reading key : " + ioEx);
+    }
+  }
+
+  /**
+   *
+   */
+  private void processEvent(int cfIndex, byte[] keyBytes, byte[]
+      valueBytes, OMDBUpdateEvent.OMDBUpdateAction action)
+      throws IOException {
+    String tableName = tablesNames.get(cfIndex);
+    Class keyType = getKeyType(tableName);
+    Class valueType = getValueType(tableName);
+    if (valueType != null) {
       OMDBUpdateEvent.OMUpdateEventBuilder builder =
           new OMDBUpdateEvent.OMUpdateEventBuilder<>();
       builder.setTable(tableName);
+
+      Object key = codecRegistry.asObject(keyBytes, keyType);
       builder.setKey(key);
-      builder.setAction(OMDBUpdateEvent.OMDBUpdateAction.DELETE);
-      OMDBUpdateEvent deleteEvent = builder.build();
-      LOG.info("Generated OM delete Event for table : " + deleteEvent.getTable()
-          + ", Key = " + deleteEvent.getKey());
-      omdbUpdateEvents.add(deleteEvent);
-    } catch (IOException ioEx) {
-      LOG.error("Exception when reading key : " + ioEx);
+
+      if (!action.equals(OMDBUpdateEvent.OMDBUpdateAction.DELETE)) {
+        Object value = codecRegistry.asObject(valueBytes, valueType);
+        builder.setValue(value);
+      }
+
+      builder.setAction(action);
+      OMDBUpdateEvent event = builder.build();
+      LOG.info("Generated OM update Event for table : " + event.getTable()
+          + ", Key = " + event.getKey());
+      // Temporarily adding to an event buffer for testing. In subsequent JIRAs,
+      // a Recon side class will be implemented that requests delta updates
+      // from OM and calls on this handler. In that case, we will fill up
+      // this buffer and pass it on to the ReconTaskController which has
+      // tasks waiting on OM events.
+      omdbUpdateEvents.add(event);
     }
   }
 
