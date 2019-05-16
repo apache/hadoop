@@ -62,11 +62,6 @@ public final class PipelineFactory {
     return providers.get(type).create(factor, nodes);
   }
 
-  @VisibleForTesting
-  public PipelineProvider getProvider(ReplicationType type) {
-    return providers.get(type);
-  }
-
   public void shutdown() {
     providers.values().forEach(provider -> provider.shutdown());
   }
