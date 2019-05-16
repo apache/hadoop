@@ -51,7 +51,7 @@ public abstract class ChangeDetectionPolicy {
       LoggerFactory.getLogger(ChangeDetectionPolicy.class);
 
   @VisibleForTesting
-  public static final String CHANGE_DETECTED = "change detected";
+  public static final String CHANGE_DETECTED = "change detected  on client";
 
   private final Mode mode;
   private final boolean requireVersion;
@@ -299,13 +299,14 @@ public abstract class ChangeDetectionPolicy {
     case Client:
     case Server:
     default:
-      // mode == Client (or Server, but really won't be called for Server)
+      // mode == Client or Server; will trigger on version failures
+      // of getObjectMetadata even on server.
       return new ImmutablePair<>(true,
           new RemoteFileChangedException(uri,
               operation,
               String.format("%s "
                       + CHANGE_DETECTED
-                      + " on %s%s."
+                      + " during %s%s."
                     + " Expected %s got %s",
               getSource(), operation, positionText, revisionId, newRevisionId)));
     }

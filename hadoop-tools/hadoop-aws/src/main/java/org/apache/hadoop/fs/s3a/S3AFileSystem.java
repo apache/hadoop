@@ -3042,6 +3042,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           setOptionalCopyObjectRequestParameters(copyObjectRequest);
           copyObjectRequest.setCannedAccessControlList(cannedACL);
           copyObjectRequest.setNewObjectMetadata(dstom);
+          Optional.ofNullable(srcom.getStorageClass())
+              .ifPresent(copyObjectRequest::setStorageClass);
           Copy copy = transfers.copy(copyObjectRequest);
           copy.addProgressListener(progressListener);
           CopyOutcome copyOutcome = CopyOutcome.waitForCopy(copy);

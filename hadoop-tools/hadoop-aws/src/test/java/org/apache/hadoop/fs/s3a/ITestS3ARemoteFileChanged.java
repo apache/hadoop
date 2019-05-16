@@ -26,7 +26,6 @@ import java.util.Collection;
 import java.util.Optional;
 
 import com.amazonaws.AmazonClientException;
-import com.amazonaws.AmazonServiceException;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
@@ -64,12 +63,12 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.apache.hadoop.test.LambdaTestUtils.interceptFuture;
-import static org.apache.http.HttpStatus.SC_PRECONDITION_FAILED;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
@@ -219,9 +218,11 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         CHANGE_DETECT_SOURCE,
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,
-        RETRY_INTERVAL);
+        RETRY_INTERVAL,
+        METADATASTORE_AUTHORITATIVE);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
+    conf.setBoolean(METADATASTORE_AUTHORITATIVE, false);
 
     // reduce retry limit so FileNotFoundException cases timeout faster,
     // speeding up the tests
@@ -418,8 +419,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         .get()
         .close();
 
-    // select() makes a getFileStaus() call before the consistency checking
-    // that will match the stub.  As such, we need an extra inconsistency here
+    // select() makes a getFileStatus() call before the consistency checking
+    // that will match the stub. As such, we need an extra inconsistency here
     // to cross the threshold
     int getMetadataInconsistencyCount = TEST_MAX_RETRIES + 2;
     final Path testpath2 = writeEventuallyConsistentFileVersion(
@@ -564,15 +565,26 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // the configured retry limit
       // the expected exception is not RemoteFileChangedException due to
       // https://github.com/aws/aws-sdk-java/issues/1644
+      // If this test is failing after an AWS SDK update,
+      // then it means the SDK bug is fixed.
+      // Please update this test to match the new behavior.
       AWSClientIOException exception =
           intercept(AWSClientIOException.class,
               "Unable to complete transfer: null",
               "expected copy() failure",
               () -> fs.rename(testpath2, dest2));
       AmazonClientException cause = exception.getCause();
-      assertNotNull(cause);
+      if (cause == null) {
+        // no cause; something else went wrong: throw.
+        throw new AssertionError("No inner cause",
+            exception);
+      }
       Throwable causeCause = cause.getCause();
-      assertTrue(causeCause instanceof NullPointerException);
+      if (!(causeCause instanceof NullPointerException)) {
+        // null causeCause or it is the wrong type: throw
+        throw new AssertionError("Innermost cause is not NPE",
+            exception);
+      }
     } else {
       fs.rename(testpath2, dest2);
     }
@@ -610,7 +622,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       // should fail since the inconsistency is set up to persist longer than
       // the configured retry limit
       intercept(RemoteFileChangedException.class,
-          "change detected on copy",
+          CHANGE_DETECTED,
           "expected copy() failure",
           () -> fs.rename(testpath2, dest2));
     } else {
