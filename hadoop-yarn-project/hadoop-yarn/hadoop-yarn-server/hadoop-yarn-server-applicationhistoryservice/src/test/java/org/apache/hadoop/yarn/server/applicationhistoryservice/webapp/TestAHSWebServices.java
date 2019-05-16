@@ -29,14 +29,12 @@ import java.net.URI;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
-import javax.xml.bind.JAXBContext;
 import javax.ws.rs.core.MediaType;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -950,15 +948,6 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertThat(logMeta.get(0).getFileName()).isEqualTo(fileName);
     assertThat(logMeta.get(0).getFileSize()).isEqualTo(
         String.valueOf(content.length()));
-  }
-
-  @Test
-  public void testContextFactory() throws Exception {
-    JAXBContext jaxbContext1 = ContextFactory.createContext(
-        new Class[]{}, Collections.EMPTY_MAP);
-    JAXBContext jaxbContext2 = ContextFactory.createContext(
-        new Class[]{}, Collections.EMPTY_MAP);
-    assertEquals(jaxbContext1, jaxbContext2);
   }
 
   private static String getRedirectURL(String url) {
