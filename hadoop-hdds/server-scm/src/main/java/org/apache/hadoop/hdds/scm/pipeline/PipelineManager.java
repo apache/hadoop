@@ -75,6 +75,4 @@ public interface PipelineManager extends Closeable, PipelineManagerMXBean {
   void startPipelineCreator();
 
   void triggerPipelineCreation();
-
-  PipelineFactory getPipelineFactory();
 }

@@ -40,6 +40,6 @@ public class MockRatisPipelineProvider extends RatisPipelineProvider {
 
   @Override
   public void shutdown() {
-
+    // Do nothing.
   }
 }

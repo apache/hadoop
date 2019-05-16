@@ -1017,9 +1017,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       LOG.error("SCM Metadata store stop failed", ex);
     }
-
-    // shutdown pipeline provider.
-    pipelineManager.getPipelineFactory().shutdown();
   }
 
   /**

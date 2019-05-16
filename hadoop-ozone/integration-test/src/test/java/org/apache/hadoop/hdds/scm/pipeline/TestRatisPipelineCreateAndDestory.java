@@ -21,7 +21,6 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.io.MultipleIOException;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -97,15 +96,14 @@ public class TestRatisPipelineCreateAndDestory {
     }
 
     // try creating another pipeline now
-    RatisPipelineProvider ratisPipelineProvider = (RatisPipelineProvider)
-        pipelineManager.getPipelineFactory().getProvider(
-            HddsProtos.ReplicationType.RATIS);
     try {
-      ratisPipelineProvider.createPipeline(pipelines.get(0));
+      pipelineManager.createPipeline(HddsProtos.ReplicationType.RATIS,
+          HddsProtos.ReplicationFactor.THREE);
       Assert.fail("pipeline creation should fail after shutting down pipeline");
     } catch (IOException ioe) {
-      // in case the pipeline creation fails, MultipleIOException is thrown
-      Assert.assertTrue(ioe instanceof MultipleIOException);
+      // As now all datanodes are shutdown, they move to stale state, there
+      // will be no sufficient datanodes to create the pipeline.
+      Assert.assertTrue(ioe instanceof InsufficientDatanodesException);
     }
 
     // make sure pipelines is destroyed

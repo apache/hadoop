@@ -77,7 +77,7 @@ public class RatisPipelineProvider implements PipelineProvider {
       (pool -> {
         final ForkJoinWorkerThread worker = ForkJoinPool.
             defaultForkJoinWorkerThreadFactory.newThread(pool);
-        worker.setName("ratisCreatePipeline" + worker.getPoolIndex());
+        worker.setName("RATISCREATEPIPELINE" + worker.getPoolIndex());
         return worker;
       });
 
@@ -180,17 +180,6 @@ public class RatisPipelineProvider implements PipelineProvider {
   }
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {
-    createPipeline(pipeline);
-  }
-
-  /**
-   * Sends ratis command to create pipeline on all the datanodes.
-   *
-   * @param pipeline  - Pipeline to be created
-   * @throws IOException if creation fails
-   */
-  public void createPipeline(Pipeline pipeline)
-      throws IOException {
     final RaftGroup group = RatisHelper.newRaftGroup(pipeline);
     LOG.debug("creating pipeline:{} with {}", pipeline.getId(), group);
     callRatisRpc(pipeline.getNodes(),

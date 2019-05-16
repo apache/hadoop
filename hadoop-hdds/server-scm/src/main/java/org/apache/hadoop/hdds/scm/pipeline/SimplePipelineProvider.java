@@ -75,6 +75,6 @@ public class SimplePipelineProvider implements PipelineProvider {
 
   @Override
   public void shutdown() {
-
+    // Do nothing.
   }
 }

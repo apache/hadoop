@@ -347,11 +347,6 @@ public class SCMPipelineManager implements PipelineManager {
     backgroundPipelineCreator.triggerPipelineCreation();
   }
 
-  @Override
-  public PipelineFactory getPipelineFactory() {
-    return pipelineFactory;
-  }
-
   /**
    * Moves the pipeline to CLOSED state and sends close container command for
    * all the containers in the pipeline.
@@ -425,5 +420,7 @@ public class SCMPipelineManager implements PipelineManager {
     if(metrics != null) {
       metrics.unRegister();
     }
+    // shutdown pipeline provider.
+    pipelineFactory.shutdown();
   }
 }
