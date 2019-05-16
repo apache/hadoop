@@ -46,13 +46,11 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDBUpdatesHandler.class);
 
-  private OMMetadataManager omMetadataManager;
   private Map<Integer, String> tablesNames;
   private CodecRegistry codecRegistry;
   private List<OMDBUpdateEvent> omdbUpdateEvents = new ArrayList<>();
 
   public OMDBUpdatesHandler(OMMetadataManager omMetadataManager) {
-    this.omMetadataManager = omMetadataManager;
     tablesNames = omMetadataManager.getStore().getTableNames();
     codecRegistry = omMetadataManager.getStore().getCodecRegistry();
   }
