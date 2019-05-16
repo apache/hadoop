@@ -46,6 +46,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -80,8 +82,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   private final OzoneManagerProtocol
       ozoneManagerClient;
   private final XceiverClientManager xceiverClientManager;
-  private final OzoneAcl.OzoneACLRights userRights;
-  private final OzoneAcl.OzoneACLRights groupRights;
+  private final ACLType userRights;
+  private final ACLType groupRights;
   private int chunkSize;
   private final long streamBufferFlushSize;
   private final long streamBufferMaxSize;
@@ -176,8 +178,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     long quota = args.getQuota() == null ?
         OzoneConsts.MAX_QUOTA_IN_BYTES : args.getQuota().sizeInBytes();
     OzoneAcl userAcl =
-        new OzoneAcl(OzoneAcl.OzoneACLType.USER,
-            args.getUserName(), userRights);
+        new OzoneAcl(ACLIdentityType.USER, args.getUserName(), userRights);
     OmVolumeArgs.Builder builder = OmVolumeArgs.newBuilder();
     builder.setAdminName(args.getAdminName())
         .setOwnerName(args.getUserName())
@@ -187,7 +188,7 @@ public final class DistributedStorageHandler implements StorageHandler {
     if (args.getGroups() != null) {
       for (String group : args.getGroups()) {
         OzoneAcl groupAcl =
-            new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, group, groupRights);
+            new OzoneAcl(ACLIdentityType.GROUP, group, groupRights);
         builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(groupAcl));
       }
     }

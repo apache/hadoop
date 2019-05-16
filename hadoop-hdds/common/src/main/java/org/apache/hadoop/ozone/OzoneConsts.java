@@ -56,8 +56,6 @@ public final class OzoneConsts {
 
   public static final String OZONE_ACL_READ = "r";
   public static final String OZONE_ACL_WRITE = "w";
-  public static final String OZONE_ACL_READ_WRITE = "rw";
-  public static final String OZONE_ACL_WRITE_READ = "wr";
   public static final String OZONE_ACL_DELETE = "d";
   public static final String OZONE_ACL_LIST = "l";
   public static final String OZONE_ACL_ALL = "a";

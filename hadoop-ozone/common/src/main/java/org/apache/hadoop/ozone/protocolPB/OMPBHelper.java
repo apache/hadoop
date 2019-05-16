@@ -41,13 +41,22 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Utilities for converting protobuf classes.
  */
 public final class OMPBHelper {
+  private static Logger LOG = LoggerFactory.getLogger(OMPBHelper.class);
 
   private OMPBHelper() {
     /** Hidden constructor */
@@ -72,24 +81,19 @@ public final class OMPBHelper {
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
-    OzoneAclInfo.OzoneAclRights aclRights;
-    switch(acl.getRights()) {
-    case READ:
-      aclRights = OzoneAclRights.READ;
-      break;
-    case WRITE:
-      aclRights = OzoneAclRights.WRITE;
-      break;
-    case READ_WRITE:
-      aclRights = OzoneAclRights.READ_WRITE;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL right is not recognized");
+    List<OzoneAclRights> aclRights = new ArrayList<>();
+
+    for(ACLType right: acl.getRights()) {
+      try {
+        aclRights.add(OzoneAclRights.valueOf(right.name()));
+      } catch (IllegalArgumentException iae) {
+        LOG.error("ACL:{} right is not recognized.", acl);
+      }
     }
 
     return OzoneAclInfo.newBuilder().setType(aclType)
         .setName(acl.getName())
-        .setRights(aclRights)
+        .addAllRights(aclRights)
         .build();
   }
 
@@ -98,33 +102,28 @@ public final class OMPBHelper {
    * @return OzoneAcl
    */
   public static OzoneAcl convertOzoneAcl(OzoneAclInfo aclInfo) {
-    OzoneAcl.OzoneACLType aclType;
+    ACLIdentityType aclType;
     switch(aclInfo.getType()) {
     case USER:
-      aclType = OzoneAcl.OzoneACLType.USER;
+      aclType = ACLIdentityType.USER;
       break;
     case GROUP:
-      aclType = OzoneAcl.OzoneACLType.GROUP;
+      aclType = ACLIdentityType.GROUP;
       break;
     case WORLD:
-      aclType = OzoneAcl.OzoneACLType.WORLD;
+      aclType = ACLIdentityType.WORLD;
       break;
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
-    OzoneAcl.OzoneACLRights aclRights;
-    switch(aclInfo.getRights()) {
-    case READ:
-      aclRights = OzoneAcl.OzoneACLRights.READ;
-      break;
-    case WRITE:
-      aclRights = OzoneAcl.OzoneACLRights.WRITE;
-      break;
-    case READ_WRITE:
-      aclRights = OzoneAcl.OzoneACLRights.READ_WRITE;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL right is not recognized");
+
+    List<IAccessAuthorizer.ACLType> aclRights = new ArrayList<>();
+    for(OzoneAclRights acl:aclInfo.getRightsList()) {
+      try {
+        aclRights.add(ACLType.valueOf(acl.name()));
+      } catch(IllegalArgumentException iae) {
+        LOG.error("ACL:{} right is not recognized.", acl);
+      }
     }
 
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);

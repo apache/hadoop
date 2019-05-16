@@ -55,6 +55,8 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.util.OzoneVersionInfo;
 import org.apache.hadoop.ozone.web.handlers.BucketArgs;
 import org.apache.hadoop.ozone.web.handlers.KeyArgs;
@@ -356,30 +358,29 @@ public class TestOzoneManager {
     createVolumeArgs.setGroups(groupName);
     storageHandler.createVolume(createVolumeArgs);
 
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, userName,
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, userName,
+        ACLType.READ);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, userAcl));
-    OzoneAcl group = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, groupName[0],
-        OzoneAcl.OzoneACLRights.READ);
+    OzoneAcl group = new OzoneAcl(ACLIdentityType.GROUP, groupName[0],
+        ACLType.READ);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, group));
 
     // Create a different user and access should fail
     String falseUserName = "user" + RandomStringUtils.randomNumeric(5);
     OzoneAcl falseUserAcl =
-        new OzoneAcl(OzoneAcl.OzoneACLType.USER, falseUserName,
-            OzoneAcl.OzoneACLRights.READ_WRITE);
+        new OzoneAcl(ACLIdentityType.USER, falseUserName,
+            ACLType.ALL);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseUserAcl));
     // Checking access with user name and Group Type should fail
-    OzoneAcl falseGroupAcl = new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, userName,
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl falseGroupAcl = new OzoneAcl(ACLIdentityType.GROUP, userName,
+        ACLType.ALL);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseGroupAcl));
 
     // Access for acl type world should also fail
     OzoneAcl worldAcl =
-        new OzoneAcl(OzoneAcl.OzoneACLType.WORLD, "",
-            OzoneAcl.OzoneACLRights.READ);
+        new OzoneAcl(ACLIdentityType.WORLD, "", ACLType.READ);
     Assert.assertFalse(storageHandler.checkVolumeAccess(volumeName, worldAcl));
 
     Assert.assertEquals(0, omMetrics.getNumVolumeCheckAccessFails());

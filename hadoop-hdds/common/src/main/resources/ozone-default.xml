@@ -542,7 +542,7 @@
   </property>
   <property>
     <name>ozone.om.group.rights</name>
-    <value>READ_WRITE</value>
+    <value>ALL</value>
     <tag>OM, SECURITY</tag>
     <description>
       Default group permissions in Ozone OM.
@@ -642,7 +642,7 @@
   </property>
   <property>
     <name>ozone.om.user.rights</name>
-    <value>READ_WRITE</value>
+    <value>ALL</value>
     <tag>OM, SECURITY</tag>
     <description>
       Default user permissions used in OM.
@@ -1809,7 +1809,7 @@
       assumed.
     </description>
   </property>
-  
+
   <property>
     <name>hdds.block.token.enabled</name>
     <value>false</value>

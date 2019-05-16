@@ -54,6 +54,7 @@ import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.web.response.ListBuckets;
 import org.apache.hadoop.ozone.web.response.ListKeys;
 import org.apache.hadoop.ozone.web.response.ListVolumes;
@@ -112,7 +113,7 @@ public class RestClient implements ClientProtocol {
   private final URI ozoneRestUri;
   private final CloseableHttpClient httpClient;
   private final UserGroupInformation ugi;
-  private final OzoneAcl.OzoneACLRights userRights;
+  private final ACLType userRights;
 
    /**
     * Creates RestClient instance with the given configuration.
