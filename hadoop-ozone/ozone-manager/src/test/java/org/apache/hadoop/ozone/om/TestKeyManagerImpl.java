@@ -394,17 +394,17 @@ public class TestKeyManagerImpl {
         startKey.substring(0, startKey.length() - 1), 100);
     Assert.assertEquals(numEntries, fileStatuses.size());
 
-    for (String dir : directorySet) {
+    for (String directory : directorySet) {
       // verify status list received for each directory with recursive flag set
       // to false
-      OmKeyArgs dirArgs = createKeyArgs(dir);
+      OmKeyArgs dirArgs = createKeyArgs(directory);
       fileStatuses = keyManager.listStatus(dirArgs, false, "", 100);
-      verifyFileStatus(dir, fileStatuses, directorySet, fileSet, false);
+      verifyFileStatus(directory, fileStatuses, directorySet, fileSet, false);
 
       // verify status list received for each directory with recursive flag set
       // to true
       fileStatuses = keyManager.listStatus(dirArgs, true, "", 100);
-      verifyFileStatus(dir, fileStatuses, directorySet, fileSet, true);
+      verifyFileStatus(directory, fileStatuses, directorySet, fileSet, true);
 
       // verify list status call with using the startKey parameter and
       // recursive flag set to false. After every call to listStatus use the
@@ -419,7 +419,7 @@ public class TestKeyManagerImpl {
             2);
         tmpStatusSet.addAll(tempFileStatus);
       } while (tempFileStatus.size() == 2);
-      verifyFileStatus(dir, new ArrayList<>(tmpStatusSet), directorySet,
+      verifyFileStatus(directory, new ArrayList<>(tmpStatusSet), directorySet,
           fileSet, false);
 
       // verify list status call with using the startKey parameter and
@@ -435,7 +435,8 @@ public class TestKeyManagerImpl {
             2);
         tmpStatusSet.addAll(tempFileStatus);
       } while (tempFileStatus.size() == 2);
-      verifyFileStatus(dir, new ArrayList<>(tmpStatusSet), directorySet, fileSet, true);
+      verifyFileStatus(directory, new ArrayList<>(tmpStatusSet), directorySet,
+          fileSet, true);
     }
   }
 
@@ -471,8 +472,9 @@ public class TestKeyManagerImpl {
     }
   }
 
-  private void verifyFileStatus(String dir, List<OzoneFileStatus> fileStatuses,
-      Set<String> directorySet, Set<String> fileSet, boolean recursive) {
+  private void verifyFileStatus(String directory,
+      List<OzoneFileStatus> fileStatuses, Set<String> directorySet,
+      Set<String> fileSet, boolean recursive) {
 
     for (OzoneFileStatus fileStatus : fileStatuses) {
       String keyName = OzoneFSUtils.pathToKey(fileStatus.getPath());
@@ -480,7 +482,7 @@ public class TestKeyManagerImpl {
       if (!recursive) {
         // if recursive is false, verify all the statuses have the input
         // directory as parent
-        Assert.assertEquals(parent, dir);
+        Assert.assertEquals(parent, directory);
       }
       // verify filestatus is present in directory or file set accordingly
       if (fileStatus.isDirectory()) {
@@ -496,11 +498,11 @@ public class TestKeyManagerImpl {
     entrySet.addAll(fileSet);
     for (String entry : entrySet) {
       if (OzoneFSUtils.getParent(entry)
-          .startsWith(OzoneFSUtils.addTrailingSlashIfNeeded(dir))) {
+          .startsWith(OzoneFSUtils.addTrailingSlashIfNeeded(directory))) {
         if (recursive) {
           numEntries++;
         } else if (OzoneFSUtils.getParent(entry)
-            .equals(OzoneFSUtils.addTrailingSlashIfNeeded(dir))) {
+            .equals(OzoneFSUtils.addTrailingSlashIfNeeded(directory))) {
           numEntries++;
         }
       }

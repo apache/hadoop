@@ -23,7 +23,10 @@ import java.nio.file.Paths;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
-public class OzoneFSUtils {
+/**
+ * Utility class for OzoneFileSystem.
+ */
+public final class OzoneFSUtils {
 
   private OzoneFSUtils() {}
 
