@@ -99,7 +99,7 @@ fi
 #To avoid docker volume permission problems
 sudo chmod o+rwx /data
 
-"$DIR"/envtoconf.py --destination /opt/hadoop/etc/hadoop
+"$DIR"/envtoconf.py --destination "${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
 
 if [ -n "$ENSURE_NAMENODE_DIR" ]; then
   CLUSTERID_OPTS=""
