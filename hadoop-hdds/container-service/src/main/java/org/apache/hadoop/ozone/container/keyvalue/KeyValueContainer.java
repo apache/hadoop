@@ -74,6 +74,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
 import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .Result.UNSUPPORTED_REQUEST;
 
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -349,11 +350,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
   void compactDB() throws StorageContainerException {
     try {
-      MetadataStore db = BlockUtils.getDB(containerData, config);
-      db.compactDB();
-      LOG.info("Container {} is closed with bcsId {}.",
-          containerData.getContainerID(),
-          containerData.getBlockCommitSequenceId());
+      try(ReferenceCountedDB db = BlockUtils.getDB(containerData, config)) {
+        db.getStore().compactDB();
+        LOG.info("Container {} is closed with bcsId {}.",
+            containerData.getContainerID(),
+            containerData.getBlockCommitSequenceId());
+      }
     } catch (StorageContainerException ex) {
       throw ex;
     } catch (IOException ex) {

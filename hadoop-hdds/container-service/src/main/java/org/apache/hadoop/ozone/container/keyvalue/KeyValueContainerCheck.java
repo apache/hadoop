@@ -36,6 +36,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -236,41 +237,41 @@ public class KeyValueContainerCheck {
 
 
     onDiskContainerData.setDbFile(dbFile);
-    MetadataStore db = BlockUtils
-        .getDB(onDiskContainerData, checkConfig);
-
-    iterateBlockDB(db);
+    try(ReferenceCountedDB db = BlockUtils.getDB(onDiskContainerData, checkConfig)) {
+      iterateBlockDB(db);
+    }
   }
 
-  private void iterateBlockDB(MetadataStore db)
+  private void iterateBlockDB(ReferenceCountedDB db)
       throws IOException {
     Preconditions.checkState(db != null);
 
     // get "normal" keys from the Block DB
-    KeyValueBlockIterator kvIter = new KeyValueBlockIterator(containerID,
-        new File(onDiskContainerData.getContainerPath()));
+    try(KeyValueBlockIterator kvIter = new KeyValueBlockIterator(containerID,
+        new File(onDiskContainerData.getContainerPath()))) {
 
-    // ensure there is a chunk file for each key in the DB
-    while (kvIter.hasNext()) {
-      BlockData block = kvIter.nextBlock();
+      // ensure there is a chunk file for each key in the DB
+      while (kvIter.hasNext()) {
+        BlockData block = kvIter.nextBlock();
 
-      List<ContainerProtos.ChunkInfo> chunkInfoList = block.getChunks();
-      for (ContainerProtos.ChunkInfo chunk : chunkInfoList) {
-        File chunkFile;
-        chunkFile = ChunkUtils.getChunkFile(onDiskContainerData,
-            ChunkInfo.getFromProtoBuf(chunk));
+        List<ContainerProtos.ChunkInfo> chunkInfoList = block.getChunks();
+        for (ContainerProtos.ChunkInfo chunk : chunkInfoList) {
+          File chunkFile;
+          chunkFile = ChunkUtils.getChunkFile(onDiskContainerData,
+              ChunkInfo.getFromProtoBuf(chunk));
 
-        if (!chunkFile.exists()) {
-          // concurrent mutation in Block DB? lookup the block again.
-          byte[] bdata = db.get(
-              Longs.toByteArray(block.getBlockID().getLocalID()));
-          if (bdata == null) {
-            LOG.trace("concurrency with delete, ignoring deleted block");
-            break; // skip to next block from kvIter
-          } else {
-            String errorStr = "Missing chunk file "
-                + chunkFile.getAbsolutePath();
-            throw new IOException(errorStr);
+          if (!chunkFile.exists()) {
+            // concurrent mutation in Block DB? lookup the block again.
+            byte[] bdata = db.getStore().get(
+                Longs.toByteArray(block.getBlockID().getLocalID()));
+            if (bdata == null) {
+              LOG.trace("concurrency with delete, ignoring deleted block");
+              break; // skip to next block from kvIter
+            } else {
+              String errorStr = "Missing chunk file "
+                  + chunkFile.getAbsolutePath();
+              throw new IOException(errorStr);
+            }
           }
         }
       }
