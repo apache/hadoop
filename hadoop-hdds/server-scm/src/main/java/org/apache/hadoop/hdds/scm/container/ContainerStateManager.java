@@ -296,10 +296,10 @@ public class ContainerStateManager {
         .setReplicationFactor(pipeline.getFactor())
         .setReplicationType(pipeline.getType())
         .build();
-    pipelineManager.addContainerToPipeline(pipeline.getId(),
-        ContainerID.valueof(containerID));
     Preconditions.checkNotNull(containerInfo);
     containers.addContainer(containerInfo);
+    pipelineManager.addContainerToPipeline(pipeline.getId(),
+        ContainerID.valueof(containerID));
     containerStateCount.incrementAndGet(containerInfo.getState());
     LOG.trace("New container allocated: {}", containerInfo);
     return containerInfo;
