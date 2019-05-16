@@ -18,31 +18,13 @@
 
 package org.apache.hadoop.ozone;
 
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.ozone.container.common.SCMTestUtils;
-import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .DatanodeStateMachine;
-import org.apache.hadoop.ozone.container.common.statemachine
-    .EndpointStateMachine;
-import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.TestUtils;
-import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.test.PathUtils;
-import org.apache.hadoop.test.TestGenericTestUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.yaml.snakeyaml.Yaml;
+import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -52,10 +34,29 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.apache.hadoop.hdds.protocol.DatanodeDetails.Port;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
-import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
-import static org.junit.Assert.*;
+import org.apache.commons.lang3.RandomUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.XceiverClientGrpc;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
+import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.container.common.SCMTestUtils;
+import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
+import org.apache.hadoop.ozone.container.common.statemachine.EndpointStateMachine;
+import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
+import org.apache.hadoop.test.PathUtils;
+import org.apache.hadoop.test.TestGenericTestUtils;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.Test;
+import org.yaml.snakeyaml.Yaml;
 
 /**
  * Test cases for mini ozone cluster.
@@ -167,6 +168,17 @@ public class TestMiniOzoneCluster {
     } catch (Exception e) {
       assertTrue(e instanceof IOException);
     }
+
+    // Test upgrade scenario - protobuf file instead of yaml
+    File protoFile = new File(WRITE_TMP, "valid-proto.id");
+    try (FileOutputStream out = new FileOutputStream(protoFile)) {
+      HddsProtos.DatanodeDetailsProto proto = id1.getProtoBufMessage();
+      proto.writeTo(out);
+    }
+    validId = ContainerUtils.readDatanodeDetailsFrom(protoFile);
+    assertEquals(validId.getCertSerialId(), certSerialId);
+    assertEquals(id1, validId);
+    assertEquals(id1.getProtoBufMessage(), validId.getProtoBufMessage());
   }
 
   @Test
