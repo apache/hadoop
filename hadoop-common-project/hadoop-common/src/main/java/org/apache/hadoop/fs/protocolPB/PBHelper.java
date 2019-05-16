@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.protocolPB;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.util.StringInterner;
 
 import java.io.IOException;
 
@@ -91,8 +92,8 @@ public final class PBHelper {
     mtime = proto.getModificationTime();
     atime = proto.getAccessTime();
     permission = convert(proto.getPermission());
-    owner = proto.getOwner();
-    group = proto.getGroup();
+    owner = StringInterner.weakIntern(proto.getOwner());
+    group = StringInterner.weakIntern(proto.getGroup());
     int flags = proto.getFlags();
     FileStatus fileStatus = new FileStatus(length, isdir, blockReplication,
         blocksize, mtime, atime, permission, owner, group, symlink, path,
