@@ -42,7 +42,6 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.InvalidLabelResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException;
 import org.apache.hadoop.yarn.exceptions.InvalidResourceRequestException
@@ -259,12 +258,12 @@ public class SchedulerUtils {
   }
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
-      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
-      boolean isRecovery, RMContext rmContext, QueueInfo queueInfo)
-      throws InvalidResourceRequestException {
+      Resource maximumAllocation, String queueName, boolean isRecovery,
+      RMContext rmContext, QueueInfo queueInfo, boolean nodeLabelsEnabled)
+          throws InvalidResourceRequestException {
     Configuration conf = rmContext.getYarnConfiguration();
     // If Node label is not enabled throw exception
-    if (null != conf && !YarnConfiguration.areNodeLabelsEnabled(conf)) {
+    if (null != conf && !nodeLabelsEnabled) {
       String labelExp = resReq.getNodeLabelExpression();
       if (!(RMNodeLabelsManager.NO_LABEL.equals(labelExp)
           || null == labelExp)) {
@@ -280,7 +279,8 @@ public class SchedulerUtils {
     }
     if (null == queueInfo) {
       try {
-        queueInfo = scheduler.getQueueInfo(queueName, false, false);
+        queueInfo = rmContext.getScheduler().getQueueInfo(queueName, false,
+            false);
       } catch (IOException e) {
         //Queue may not exist since it could be auto-created in case of
         // dynamic queues
@@ -294,11 +294,11 @@ public class SchedulerUtils {
   }
 
   public static void normalizeAndValidateRequest(ResourceRequest resReq,
-      Resource maximumAllocation, String queueName, YarnScheduler scheduler,
-      RMContext rmContext, QueueInfo queueInfo)
-      throws InvalidResourceRequestException {
-    normalizeAndValidateRequest(resReq, maximumAllocation, queueName, scheduler,
-        false, rmContext, queueInfo);
+      Resource maximumAllocation, String queueName, RMContext rmContext,
+      QueueInfo queueInfo, boolean nodeLabelsEnabled)
+          throws InvalidResourceRequestException {
+    normalizeAndValidateRequest(resReq, maximumAllocation, queueName, false,
+        rmContext, queueInfo, nodeLabelsEnabled);
   }
 
   /**

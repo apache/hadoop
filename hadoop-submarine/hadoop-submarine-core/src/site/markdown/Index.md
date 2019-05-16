@@ -22,6 +22,8 @@ Goals of Submarine:
 
 - Support run distributed Tensorflow jobs with simple configs.
 
+- Support run standalone PyTorch jobs with simple configs.
+
 - Support run user-specified Docker images.
 
 - Support specify GPU and other resources.
@@ -37,7 +39,9 @@ Click below contents if you want to understand more.
 
 - [Examples](Examples.html)
 
-- [How to write Dockerfile for Submarine jobs](WriteDockerfile.html)
+- [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
+
+- [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
 
 - [Developer guide](DeveloperGuide.html)
 

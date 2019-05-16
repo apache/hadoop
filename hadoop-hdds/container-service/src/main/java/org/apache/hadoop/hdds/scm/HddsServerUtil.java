@@ -253,25 +253,15 @@ public final class HddsServerUtil {
     //
     // Here we check that staleNodeInterval is at least five times more than the
     // frequency at which the accounting thread is going to run.
-    try {
-      sanitizeUserArgs(staleNodeIntervalMs, heartbeatThreadFrequencyMs,
-          5, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Stale Node Interval is cannot be honored due to " +
-              "mis-configured {}. ex:  {}",
-          OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, ex);
-      throw ex;
-    }
+    staleNodeIntervalMs = sanitizeUserArgs(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeIntervalMs, OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        heartbeatThreadFrequencyMs, 5, 1000);
 
     // Make sure that stale node value is greater than configured value that
     // datanodes are going to send HBs.
-    try {
-      sanitizeUserArgs(staleNodeIntervalMs, heartbeatIntervalMs, 3, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Stale Node Interval MS is cannot be honored due to " +
-          "mis-configured {}. ex:  {}", HDDS_HEARTBEAT_INTERVAL, ex);
-      throw ex;
-    }
+    staleNodeIntervalMs = sanitizeUserArgs(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeIntervalMs, HDDS_HEARTBEAT_INTERVAL, heartbeatIntervalMs, 3,
+        1000);
     return staleNodeIntervalMs;
   }
 
@@ -290,16 +280,10 @@ public final class HddsServerUtil {
         OZONE_SCM_DEADNODE_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
 
-    try {
-      // Make sure that dead nodes Ms is at least twice the time for staleNodes
-      // with a max of 1000 times the staleNodes.
-      sanitizeUserArgs(deadNodeIntervalMs, staleNodeIntervalMs, 2, 1000);
-    } catch (IllegalArgumentException ex) {
-      LOG.error("Dead Node Interval MS is cannot be honored due to " +
-          "mis-configured {}. ex:  {}", OZONE_SCM_STALENODE_INTERVAL, ex);
-      throw ex;
-    }
-    return deadNodeIntervalMs;
+    // Make sure that dead nodes Ms is at least twice the time for staleNodes
+    // with a max of 1000 times the staleNodes.
+    return sanitizeUserArgs(OZONE_SCM_DEADNODE_INTERVAL, deadNodeIntervalMs,
+        OZONE_SCM_STALENODE_INTERVAL, staleNodeIntervalMs, 2, 1000);
   }
 
   /**
