@@ -139,7 +139,13 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Groups;
+import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ProxyUsers;
+import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
+import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -158,7 +164,7 @@ import com.google.protobuf.BlockingService;
  * {@link org.apache.hadoop.hdfs.server.namenode.NameNode NameNode}.
  */
 public class RouterRpcServer extends AbstractService
-    implements ClientProtocol, NamenodeProtocol {
+    implements ClientProtocol, NamenodeProtocol, RefreshUserMappingsProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
@@ -257,6 +263,12 @@ public class RouterRpcServer extends AbstractService
     BlockingService nnPbService = NamenodeProtocolService
         .newReflectiveBlockingService(namenodeProtocolXlator);
 
+    RefreshUserMappingsProtocolServerSideTranslatorPB refreshUserMappingXlator =
+        new RefreshUserMappingsProtocolServerSideTranslatorPB(this);
+    BlockingService refreshUserMappingService =
+        RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService.
+        newReflectiveBlockingService(refreshUserMappingXlator);
+
     InetSocketAddress confRpcAddress = conf.getSocketAddr(
         RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
         RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
@@ -283,6 +295,8 @@ public class RouterRpcServer extends AbstractService
     // Add all the RPC protocols that the Router implements
     DFSUtil.addPBProtocol(
         conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
+    DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
+        refreshUserMappingService, this.rpcServer);
 
     // Set service-level authorization security policy
     this.serviceAuthEnabled = conf.getBoolean(
@@ -1660,5 +1674,17 @@ public class RouterRpcServer extends AbstractService
       return isPathAll(path);
     }
     return false;
+  }
+
+  @Override
+  public void refreshUserToGroupsMappings() throws IOException {
+    LOG.info("Refresh user groups mapping in Router.");
+    Groups.getUserToGroupsMappingService().refresh();
+  }
+
+  @Override
+  public void refreshSuperUserGroupsConfiguration() throws IOException {
+    LOG.info("Refresh superuser groups configuration in Router.");
+    ProxyUsers.refreshSuperUserGroupsConfiguration();
   }
 }
