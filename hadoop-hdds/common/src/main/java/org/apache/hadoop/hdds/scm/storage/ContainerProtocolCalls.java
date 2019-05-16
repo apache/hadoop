@@ -116,9 +116,8 @@ public final class ContainerProtocolCalls  {
     }
 
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response);
-
+    ContainerCommandResponseProto response =
+        xceiverClient.sendCommand(request, validator);
     return response.getGetBlock();
   }
 
@@ -153,8 +152,8 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response);
+    ContainerCommandResponseProto response =
+        xceiverClient.sendCommand(request, validator);
     return response.getGetCommittedBlockLength();
   }
 
@@ -184,8 +183,8 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response);
+    ContainerCommandResponseProto response =
+        xceiverClient.sendCommand(request, validator);
     return response.getPutBlock();
   }
 
@@ -228,35 +227,31 @@ public final class ContainerProtocolCalls  {
    * @param chunk information about chunk to read
    * @param blockID ID of the block
    * @param traceID container protocol call args
-   * @param excludeDns datamode to exclude while executing the command
+   * @param validator function to validate the response
    * @return container protocol read chunk response
    * @throws IOException if there is an I/O error while performing the call
    */
-  public static XceiverClientReply readChunk(XceiverClientSpi xceiverClient,
-      ChunkInfo chunk, BlockID blockID, String traceID,
-      List<DatanodeDetails> excludeDns)
-      throws IOException {
-    ReadChunkRequestProto.Builder readChunkRequest = ReadChunkRequestProto
-        .newBuilder()
-        .setBlockID(blockID.getDatanodeBlockIDProtobuf())
-        .setChunkData(chunk);
+  public static ContainerProtos.ReadChunkResponseProto readChunk(
+      XceiverClientSpi xceiverClient, ChunkInfo chunk, BlockID blockID,
+      String traceID, CheckedFunction validator) throws IOException {
+    ReadChunkRequestProto.Builder readChunkRequest =
+        ReadChunkRequestProto.newBuilder()
+            .setBlockID(blockID.getDatanodeBlockIDProtobuf())
+            .setChunkData(chunk);
     String id = xceiverClient.getPipeline().getFirstNode().getUuidString();
-    ContainerCommandRequestProto.Builder builder = ContainerCommandRequestProto
-        .newBuilder()
-        .setCmdType(Type.ReadChunk)
-        .setContainerID(blockID.getContainerID())
-        .setTraceID(traceID)
-        .setDatanodeUuid(id)
-        .setReadChunk(readChunkRequest);
+    ContainerCommandRequestProto.Builder builder =
+        ContainerCommandRequestProto.newBuilder().setCmdType(Type.ReadChunk)
+            .setContainerID(blockID.getContainerID()).setTraceID(traceID)
+            .setDatanodeUuid(id).setReadChunk(readChunkRequest);
     String encodedToken = getEncodedBlockToken(new Text(blockID.
         getContainerBlockID().toString()));
     if (encodedToken != null) {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    XceiverClientReply reply =
-        xceiverClient.sendCommand(request, excludeDns);
-    return reply;
+    ContainerCommandResponseProto reply =
+        xceiverClient.sendCommand(request, validator);
+    return reply.getReadChunk();
   }
 
   /**
@@ -291,8 +286,7 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = xceiverClient.sendCommand(request);
-    validateContainerResponse(response);
+    xceiverClient.sendCommand(request, validator);
   }
 
   /**
@@ -384,8 +378,8 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = client.sendCommand(request);
-    validateContainerResponse(response);
+    ContainerCommandResponseProto response =
+        client.sendCommand(request, validator);
     return response.getPutSmallFile();
   }
 
@@ -416,9 +410,7 @@ public final class ContainerProtocolCalls  {
     request.setCreateContainer(createRequest.build());
     request.setDatanodeUuid(id);
     request.setTraceID(traceID);
-    ContainerCommandResponseProto response = client.sendCommand(
-        request.build());
-    validateContainerResponse(response);
+    client.sendCommand(request.build(), validator);
   }
 
   /**
@@ -444,12 +436,10 @@ public final class ContainerProtocolCalls  {
     request.setDeleteContainer(deleteRequest);
     request.setTraceID(traceID);
     request.setDatanodeUuid(id);
-    if(encodedToken != null) {
+    if (encodedToken != null) {
       request.setEncodedToken(encodedToken);
     }
-    ContainerCommandResponseProto response =
-        client.sendCommand(request.build());
-    validateContainerResponse(response);
+    client.sendCommand(request.build(), validator);
   }
 
   /**
@@ -505,8 +495,7 @@ public final class ContainerProtocolCalls  {
       request.setEncodedToken(encodedToken);
     }
     ContainerCommandResponseProto response =
-        client.sendCommand(request.build());
-    validateContainerResponse(response);
+        client.sendCommand(request.build(), validator);
 
     return response.getReadContainer();
   }
@@ -544,9 +533,8 @@ public final class ContainerProtocolCalls  {
       builder.setEncodedToken(encodedToken);
     }
     ContainerCommandRequestProto request = builder.build();
-    ContainerCommandResponseProto response = client.sendCommand(request);
-    validateContainerResponse(response);
-
+    ContainerCommandResponseProto response =
+        client.sendCommand(request, validator);
     return response.getGetSmallFile();
   }
 
@@ -598,4 +586,9 @@ public final class ContainerProtocolCalls  {
         .append(blockId.getLocalID())
         .toString());
   }
+
+  private static CheckedFunction
+      <ContainerProtos.ContainerCommandResponseProto, IOException>
+      validator = (response) ->
+    validateContainerResponse(response);
 }

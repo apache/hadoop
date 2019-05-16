@@ -114,8 +114,7 @@ public class TestBlockInputStream {
     }
 
     @Override
-    protected ByteString readChunk(final ChunkInfo chunkInfo,
-        List<DatanodeDetails> excludeDns, List<DatanodeDetails> dnListFromReply)
+    protected ByteString readChunk(final ChunkInfo chunkInfo)
         throws IOException {
       return getByteString(chunkInfo.getChunkName(), (int) chunkInfo.getLen());
     }
