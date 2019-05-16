@@ -13,6 +13,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.utils.db.RDBStore;
@@ -171,4 +172,18 @@ public class TestOMDBUpdatesHandler {
     assertEquals(volumeKey, volEvent.getKey());
   }
 
+  @Test
+  public void testGetValueType() throws IOException {
+    OzoneConfiguration configuration = createNewTestPath();
+    OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(configuration);
+    OMDBUpdatesHandler omdbUpdatesHandler =
+        new OMDBUpdatesHandler(metaMgr);
+
+    assertEquals(OmKeyInfo.class, omdbUpdatesHandler.getValueType(
+        metaMgr.getKeyTable().getName()));
+    assertEquals(OmVolumeArgs.class, omdbUpdatesHandler.getValueType(
+        metaMgr.getVolumeTable().getName()));
+    assertEquals(OmBucketInfo.class, omdbUpdatesHandler.getValueType(
+        metaMgr.getBucketTable().getName()));
+  }
 }

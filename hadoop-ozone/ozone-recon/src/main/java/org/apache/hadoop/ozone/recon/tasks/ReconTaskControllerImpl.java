@@ -100,8 +100,6 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   @Override
   public void consumeOMEvents(OMUpdateEventBatch events)
       throws InterruptedException {
-
-
     taskSemaphore.acquire();
 
     try {
@@ -112,18 +110,8 @@ public class ReconTaskControllerImpl implements ReconTaskController {
         tasks.add(() -> task.process(events));
       }
 
-      List<String> failedTasks = new ArrayList<>();
       List<Future<Pair>> results = executorService.invokeAll(tasks);
-      for (Future<Pair> f : results) {
-        String taskName = f.get().getLeft().toString();
-        if (!(Boolean)f.get().getRight()) {
-          failedTasks.add(f.get().getLeft().toString());
-        } else {
-          taskFailureCounter.get(taskName).set(0);
-          storeLastCompletedTransaction(taskName, events.getLastEventInfo());
-        }
-
-      }
+      List<String> failedTasks = processTaskResults(results, events);
 
       //Retry
       List<String> retryFailedTasks = new ArrayList<>();
@@ -134,19 +122,12 @@ public class ReconTaskControllerImpl implements ReconTaskController {
           tasks.add(() -> task.process(events));
         }
         results = executorService.invokeAll(tasks);
-        for (Future<Pair> f : results) {
-          String taskName = f.get().getLeft().toString();
-          if (!(Boolean) f.get().getRight()) {
-            LOG.info("Retry step failed for task : " + taskName);
-            retryFailedTasks.add(taskName);
-          } else {
-            taskFailureCounter.get(taskName).set(0);
-            storeLastCompletedTransaction(taskName, events.getLastEventInfo());
-          }
-        }
+        retryFailedTasks = processTaskResults(results, events);
       }
 
       //Reprocess
+      //TODO Move to a separate task queue since reprocess may be a heavy
+      //operation for large OM DB instances
       if (!retryFailedTasks.isEmpty()) {
         tasks.clear();
         for (String taskName : failedTasks) {
@@ -154,24 +135,17 @@ public class ReconTaskControllerImpl implements ReconTaskController {
           tasks.add(() -> task.reprocess(omMetadataManager));
         }
         results = executorService.invokeAll(tasks);
-        for (Future<Pair> f : results) {
-          String taskName = f.get().getLeft().toString();
-          if (!(Boolean) f.get().getRight()) {
-            LOG.info("Reprocess step failed for task : " + taskName);
-            if (taskFailureCounter.get(taskName).incrementAndGet() >
-                TASK_FAILURE_THRESHOLD) {
-              LOG.info("Blacklisting Task since it failed retry and " +
-                  "reprocess more than " + TASK_FAILURE_THRESHOLD + " times.");
-              reconDBUpdateTasks.remove(taskName);
-            }
-          } else {
-            taskFailureCounter.get(taskName).set(0);
-            storeLastCompletedTransaction(taskName,
-                events.getLastEventInfo());
+        List<String> reprocessFailedTasks = processTaskResults(results, events);
+        for (String taskName : reprocessFailedTasks) {
+          LOG.info("Reprocess step failed for task : " + taskName);
+          if (taskFailureCounter.get(taskName).incrementAndGet() >
+              TASK_FAILURE_THRESHOLD) {
+            LOG.info("Blacklisting Task since it failed retry and " +
+                "reprocess more than " + TASK_FAILURE_THRESHOLD + " times.");
+            reconDBUpdateTasks.remove(taskName);
           }
         }
       }
-
     } catch (ExecutionException e) {
       LOG.error("Unexpected error : ", e);
     } finally {
@@ -195,5 +169,30 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   @Override
   public Map<String, ReconDBUpdateTask> getRegisteredTasks() {
     return reconDBUpdateTasks;
+  }
+
+  /**
+   * Wait on results of all tasks.
+   * @param results Set of Futures.
+   * @param events Events.
+   * @return List of failed task names
+   * @throws ExecutionException execution Exception
+   * @throws InterruptedException Interrupted Exception
+   */
+  private List<String> processTaskResults(List<Future<Pair>> results,
+                                          OMUpdateEventBatch events)
+      throws ExecutionException, InterruptedException {
+    List<String> failedTasks = new ArrayList<>();
+    for (Future<Pair> f : results) {
+      String taskName = f.get().getLeft().toString();
+      if (!(Boolean)f.get().getRight()) {
+        LOG.info("Failed task : " + taskName);
+        failedTasks.add(f.get().getLeft().toString());
+      } else {
+        taskFailureCounter.get(taskName).set(0);
+        storeLastCompletedTransaction(taskName, events.getLastEventInfo());
+      }
+    }
+    return failedTasks;
   }
 }

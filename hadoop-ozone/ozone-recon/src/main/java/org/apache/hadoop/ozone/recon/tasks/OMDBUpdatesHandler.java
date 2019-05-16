@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.utils.db.CodecRegistry;
+import org.apache.ratis.thirdparty.com.google.common.annotations.VisibleForTesting;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.WriteBatch;
 import org.slf4j.Logger;
@@ -40,7 +41,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Class used to listen on OM RocksDB updates.
  */
-public class OMDBUpdatesHandler extends WriteBatch.Handler{
+public class OMDBUpdatesHandler extends WriteBatch.Handler {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDBUpdatesHandler.class);
@@ -196,7 +197,8 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler{
    * @param name table name
    * @return Value type based on table name.
    */
-  private Class getValueType(String name) {
+  @VisibleForTesting
+  protected Class getValueType(String name) {
     switch (name) {
     case KEY_TABLE : return OmKeyInfo.class;
     case VOLUME_TABLE : return OmVolumeArgs.class;

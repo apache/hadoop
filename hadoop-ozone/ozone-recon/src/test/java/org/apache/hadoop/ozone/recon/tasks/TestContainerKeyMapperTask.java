@@ -105,7 +105,7 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testReprocess() throws Exception{
+  public void testReprocessOMDB() throws Exception{
 
     Map<ContainerKeyPrefix, Integer> keyPrefixesForContainer =
         containerDbServiceProvider.getKeyPrefixesForContainer(1);
@@ -164,7 +164,7 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testProcess() throws IOException {
+  public void testProcessOMEvents() throws IOException {
     Map<ContainerKeyPrefix, Integer> keyPrefixesForContainer =
         containerDbServiceProvider.getKeyPrefixesForContainer(1);
     assertTrue(keyPrefixesForContainer.isEmpty());

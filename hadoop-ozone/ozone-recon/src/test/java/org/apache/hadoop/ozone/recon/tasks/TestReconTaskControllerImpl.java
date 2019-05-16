@@ -168,5 +168,4 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     Assert.assertEquals(Long.valueOf(0L), dbRecord.getLastUpdatedTimestamp());
     Assert.assertEquals(Long.valueOf(0L), dbRecord.getLastUpdatedSeqNumber());
   }
-
 }
