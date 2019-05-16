@@ -36,7 +36,7 @@ RUN chown hadoop /opt
 ADD scripts /opt/
 ADD scripts/krb5.conf /etc/
 RUN yum install -y krb5-workstation
-RUN mkdir -p /etc/hadoop && mkdir -p /var/log/hadoop && chmod 777 /etc/hadoop && chmod 777 /var/log/hadoop
+RUN mkdir -p /etc/hadoop && mkdir -p /var/log/hadoop && chmod 1777 /etc/hadoop && chmod 1777 /var/log/hadoop
 ENV HADOOP_LOG_DIR=/var/log/hadoop
 ENV HADOOP_CONF_DIR=/etc/hadoop
 WORKDIR /opt/hadoop
