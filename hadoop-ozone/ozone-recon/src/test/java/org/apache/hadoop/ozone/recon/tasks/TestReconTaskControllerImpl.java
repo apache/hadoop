@@ -87,7 +87,7 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
   public void testConsumeOMEvents() throws Exception {
 
     ReconDBUpdateTask reconDBUpdateTaskMock = mock(ReconDBUpdateTask.class);
-    when(reconDBUpdateTaskMock.getTablesListeningOn()).thenReturn(Collections
+    when(reconDBUpdateTaskMock.getTaskTables()).thenReturn(Collections
         .EMPTY_LIST);
     when(reconDBUpdateTaskMock.getTaskName()).thenReturn("MockTask");
     when(reconDBUpdateTaskMock.process(any(OMUpdateEventBatch.class)))

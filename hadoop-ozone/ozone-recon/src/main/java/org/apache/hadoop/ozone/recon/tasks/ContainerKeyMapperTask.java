@@ -100,7 +100,7 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
 
 
   @Override
-  protected Collection<String> getTablesListeningOn() {
+  protected Collection<String> getTaskTables() {
     return tables;
   }
 

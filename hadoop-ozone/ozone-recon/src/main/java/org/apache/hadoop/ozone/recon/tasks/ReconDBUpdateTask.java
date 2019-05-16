@@ -47,7 +47,7 @@ public abstract class ReconDBUpdateTask {
    * Empty list means the task is NOT listening on any tables.
    * @return Collection of Tables.
    */
-  protected abstract Collection<String> getTablesListeningOn();
+  protected abstract Collection<String> getTaskTables();
 
   /**
    * Process a set of OM events on tables that the task is listening on.
