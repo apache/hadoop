@@ -28,6 +28,7 @@ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MetricsRegistry;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeInt;
+import org.apache.hadoop.metrics2.lib.MutableQuantiles;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -86,6 +87,9 @@ public class OpportunisticSchedulerMetrics {
   @Metric("Aggregate # of allocated off-switch opportunistic containers")
   MutableCounterLong aggregateOffSwitchOContainersAllocated;
 
+  @Metric("Aggregate latency for opportunistic container allocation")
+  MutableQuantiles allocateLatencyOQuantiles;
+
   @VisibleForTesting
   public int getAllocatedContainers() {
     return allocatedOContainers.value();
@@ -137,5 +141,9 @@ public class OpportunisticSchedulerMetrics {
 
   public void incrOffSwitchOppContainers() {
     aggregateOffSwitchOContainersAllocated.incr();
+  }
+
+  public void addAllocateOLatencyEntry(long latency) {
+    allocateLatencyOQuantiles.add(latency);
   }
 }

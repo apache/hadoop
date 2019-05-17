@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.SecurityUtil;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -241,9 +242,15 @@ public class OpportunisticContainerAllocator {
     private final Map<String, AtomicInteger> nodeLocations = new HashMap<>();
     private final Map<String, AtomicInteger> rackLocations = new HashMap<>();
     private final ResourceRequest request;
+    private final long timestamp;
 
     EnrichedResourceRequest(ResourceRequest request) {
       this.request = request;
+      timestamp = Time.monotonicNow();
+    }
+
+    long getTimestamp() {
+      return timestamp;
     }
 
     ResourceRequest getRequest() {
