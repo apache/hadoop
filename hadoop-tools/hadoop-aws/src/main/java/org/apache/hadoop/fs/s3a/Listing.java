@@ -202,7 +202,7 @@ public class Listing {
      * @param status status value: may be null, in which case
      * the iterator is empty.
      */
-    public SingleStatusRemoteIterator(S3ALocatedFileStatus status) {
+    SingleStatusRemoteIterator(S3ALocatedFileStatus status) {
       this.status = status;
     }
 

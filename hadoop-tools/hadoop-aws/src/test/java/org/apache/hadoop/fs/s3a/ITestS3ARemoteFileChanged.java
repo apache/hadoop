@@ -415,7 +415,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   public void testReadFileChangedOutOfSyncMetadata() throws Throwable {
     final Path testpath = writeOutOfSyncFileVersion("fileChangedOutOfSync.dat");
 
-    try (final FSDataInputStream instream = fs.open(testpath)) {
+    try (FSDataInputStream instream = fs.open(testpath)) {
       if (expectedExceptionInteractions.contains(InteractionType.READ)) {
         expectReadFailure(instream);
       } else {

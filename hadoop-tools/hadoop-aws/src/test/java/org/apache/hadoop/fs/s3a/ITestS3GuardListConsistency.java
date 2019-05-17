@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 
-import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import org.junit.Assume;
 import org.junit.Test;

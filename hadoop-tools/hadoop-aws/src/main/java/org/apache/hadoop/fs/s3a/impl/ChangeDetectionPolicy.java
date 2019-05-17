@@ -355,7 +355,8 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
+    public void applyRevisionConstraint(GetObjectMetadataRequest request,
+        String revisionId) {
       // GetObjectMetadataRequest doesn't support eTag qualification
     }
 
@@ -427,7 +428,8 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
+    public void applyRevisionConstraint(GetObjectMetadataRequest request,
+        String revisionId) {
       if (revisionId != null) {
         LOG.debug("Restricting metadata request to version {}", revisionId);
         request.withVersionId(revisionId);
@@ -488,7 +490,8 @@ public abstract class ChangeDetectionPolicy {
     }
 
     @Override
-    public void applyRevisionConstraint(GetObjectMetadataRequest request, String revisionId) {
+    public void applyRevisionConstraint(GetObjectMetadataRequest request,
+        String revisionId) {
 
     }
 

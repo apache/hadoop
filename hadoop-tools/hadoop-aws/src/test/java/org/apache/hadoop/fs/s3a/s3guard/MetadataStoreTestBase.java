@@ -958,8 +958,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       long blockSize, long modificationTime, Path path) {
     if (isDir) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, null);
-    }
-    else {
+    } else {
       return new S3AFileStatus(size, modificationTime, path, blockSize, null,
           null, null);
     }
@@ -969,8 +968,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       boolean isDir, long newModTime) throws IOException {
     if (isDir) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, OWNER);
-    }
-    else {
+    } else {
       return new S3AFileStatus(size, newModTime, path, BLOCK_SIZE, OWNER,
           null, null);
     }

@@ -1367,7 +1367,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Low-level call to get at the object metadata.
    * @param path path to the object
    * @param changeTracker the change tracker to detect version inconsistencies
-   * @param invoker the invoker providing the retry policy
+   * @param changeInvoker the invoker providing the retry policy
    * @param operation the operation being performed (e.g. "read" or "copy")
    * @return metadata
    * @throws IOException IO and object access problems.
@@ -1375,13 +1375,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   @Retries.RetryTranslated
   public ObjectMetadata getObjectMetadata(Path path,
-      ChangeTracker changeTracker, Invoker invoker, String operation)
+      ChangeTracker changeTracker, Invoker changeInvoker, String operation)
       throws IOException {
     return once("getObjectMetadata", path.toString(),
         () ->
             // this always does a full HEAD to the object
             getObjectMetadata(
-                pathToKey(path), changeTracker, invoker, operation));
+                pathToKey(path), changeTracker, changeInvoker, operation));
   }
 
   /**
@@ -1561,7 +1561,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Uses changeTracker to detect an unexpected file version (eTag or versionId)
    * @param key key
    * @param changeTracker the change tracker to detect unexpected object version
-   * @param invoker the invoker providing the retry policy
+   * @param changeInvoker the invoker providing the retry policy
    * @param operation the operation (e.g. "read" or "copy") triggering this call
    * @return the metadata
    * @throws IOException if the retry invocation raises one (it shouldn't).
@@ -1570,13 +1570,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryRaw
   protected ObjectMetadata getObjectMetadata(String key,
       ChangeTracker changeTracker,
-      Invoker invoker,
+      Invoker changeInvoker,
       String operation) throws IOException {
     GetObjectMetadataRequest request =
         new GetObjectMetadataRequest(bucket, key);
     //SSE-C requires to be filled in if enabled for object metadata
     generateSSECustomerKey().ifPresent(request::setSSECustomerKey);
-    ObjectMetadata meta = invoker.retryUntranslated("GET " + key, true,
+    ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
           if (changeTracker != null) {

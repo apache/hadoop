@@ -627,15 +627,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Make a FileStatus object for a directory at given path.  The FileStatus
-   * only contains what S3A needs, and omits mod time since S3A uses its own
-   * implementation which returns current system time.
-   * @param owner  username of owner
+   * Make a S3AFileStatus object for a directory at given path.
+   * The FileStatus only contains what S3A needs, and omits mod time
+   * since S3A uses its own implementation which returns current system time.
+   * @param dirOwner  username of owner
    * @param path   path to dir
-   * @return new FileStatus
+   * @return new S3AFileStatus
    */
-  private S3AFileStatus makeDirStatus(String owner, Path path) {
-    return new S3AFileStatus(Tristate.UNKNOWN, path, owner);
+  private S3AFileStatus makeDirStatus(String dirOwner, Path path) {
+    return new S3AFileStatus(Tristate.UNKNOWN, path, dirOwner);
   }
 
   @Override

@@ -300,7 +300,7 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
   }
 
   private Matcher<InitiateMultipartUploadRequest>
-  correctInitiateMultipartUploadRequest(final String key) {
+      correctInitiateMultipartUploadRequest(final String key) {
     return new BaseMatcher<InitiateMultipartUploadRequest>() {
       @Override
       public void describeTo(Description description) {
@@ -320,7 +320,7 @@ public class TestObjectChangeDetectionAttributes extends AbstractS3AMockTest {
   }
 
   private Matcher<CompleteMultipartUploadRequest>
-  correctMultipartUploadRequest(final String key) {
+      correctMultipartUploadRequest(final String key) {
     return new BaseMatcher<CompleteMultipartUploadRequest>() {
       @Override
       public boolean matches(Object item) {
