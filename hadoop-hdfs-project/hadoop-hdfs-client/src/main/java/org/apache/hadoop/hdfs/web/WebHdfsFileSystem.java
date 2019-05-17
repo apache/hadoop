@@ -609,7 +609,13 @@ public class WebHdfsFileSystem extends FileSystem
       boolean pathAlreadyEncoded = false;
       try {
         fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
-        pathAlreadyEncoded = true;
+        //below condition check added as part of fixing HDFS-14323 to make
+        //sure pathAlreadyEncoded is not set in the case the input url does
+        //not have any encoded sequence already.This will help pulling data
+        //from 2.x hadoop cluster to 3.x using 3.x distcp client operation
+        if(!fspathUri.getPath().equals(fspathUriDecoded)) {
+          pathAlreadyEncoded = true;
+        }
       } catch (IllegalArgumentException ex) {
         LOG.trace("Cannot decode URL encoded file", ex);
       }
