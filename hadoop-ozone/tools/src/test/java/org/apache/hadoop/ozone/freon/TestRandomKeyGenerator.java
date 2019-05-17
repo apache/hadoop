@@ -73,7 +73,6 @@ public class TestRandomKeyGenerator {
     Assert.assertEquals(2, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
-    Assert.assertEquals(10240 - 36, randomKeyGenerator.getKeyValueLength());
   }
 
   @Test
@@ -108,5 +107,24 @@ public class TestRandomKeyGenerator {
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfVolumesCreated());
     Assert.assertEquals(10, randomKeyGenerator.getNumberOfBucketsCreated());
     Assert.assertEquals(100, randomKeyGenerator.getNumberOfKeysAdded());
+  }
+
+  @Test
+  public void bigFileThan2GB() throws Exception {
+    RandomKeyGenerator randomKeyGenerator =
+        new RandomKeyGenerator((OzoneConfiguration) cluster.getConf());
+    randomKeyGenerator.setNumOfVolumes(1);
+    randomKeyGenerator.setNumOfBuckets(1);
+    randomKeyGenerator.setNumOfKeys(1);
+    randomKeyGenerator.setNumOfThreads(1);
+    randomKeyGenerator.setKeySize(10L + Integer.MAX_VALUE);
+    randomKeyGenerator.setFactor(ReplicationFactor.THREE);
+    randomKeyGenerator.setType(ReplicationType.RATIS);
+    randomKeyGenerator.setValidateWrites(true);
+    randomKeyGenerator.call();
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfVolumesCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfBucketsCreated());
+    Assert.assertEquals(1, randomKeyGenerator.getNumberOfKeysAdded());
+    Assert.assertEquals(1, randomKeyGenerator.getSuccessfulValidationCount());
   }
 }
