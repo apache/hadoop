@@ -18,9 +18,12 @@
 
 package org.apache.hadoop.yarn.server.scheduler;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.server.api.protocolrecords.RemoteNode;
+import org.apache.hadoop.yarn.server.metrics.OpportunisticSchedulerMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,7 +194,14 @@ public class OpportunisticContainerContext {
             err.removeLocation(allocation.getResourceName());
           }
         }
+        getOppSchedulerMetrics().addAllocateOLatencyEntry(
+            Time.monotonicNow() - err.getTimestamp());
       }
     }
+  }
+
+  @VisibleForTesting
+  OpportunisticSchedulerMetrics getOppSchedulerMetrics() {
+    return OpportunisticSchedulerMetrics.getMetrics();
   }
 }
