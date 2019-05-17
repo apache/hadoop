@@ -189,15 +189,14 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           // factors are handled by pipeline creator
           pipeline = pipelineManager.createPipeline(type, factor);
         } catch (IOException e) {
-          LOG.warn("Pipeline creation failed for type:{} factor:{}",
-              type, factor, e);
-          LOG.info("Checking one more time for suitable pipelines");
+          LOG.warn("Pipeline creation failed for type:{} factor:{}. Retrying " +
+                  "get pipelines call once.", type, factor, e);
           availablePipelines = pipelineManager
               .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
                   excludeList.getDatanodes(), excludeList.getPipelineIds());
           if (availablePipelines.size() == 0) {
-            LOG.info("Could not find available pipeline even after trying " +
-                "once more");
+            LOG.info("Could not find available pipeline of type:{} and " +
+                "factor:{} even after retrying", type, factor);
             break;
           }
         }
