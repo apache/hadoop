@@ -253,7 +253,7 @@ The following properties should be set in yarn-site.xml:
 </configuration>
 ```
 
-In addition, a container-executer.cfg file must exist and contain settings for
+In addition, a container-executor.cfg file must exist and contain settings for
 the container executor. The file must be owned by root with permissions 0400.
 The format of the file is the standard Java properties file format, for example
 
@@ -365,7 +365,7 @@ Application Submission
 Before attempting to launch a Docker container, make sure that the LCE
 configuration is working for applications requesting regular YARN containers.
 If after enabling the LCE one or more NodeManagers fail to start, the cause is
-most likely that the ownership and/or permissions on the container-executer
+most likely that the ownership and/or permissions on the container-executor
 binary are incorrect. Check the logs to confirm.
 
 In order to run an application in a Docker container, set the following

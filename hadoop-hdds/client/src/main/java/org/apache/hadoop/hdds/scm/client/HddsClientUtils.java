@@ -28,8 +28,11 @@ import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -40,6 +43,10 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.ratis.protocol.AlreadyClosedException;
+import org.apache.ratis.protocol.GroupMismatchException;
+import org.apache.ratis.protocol.NotReplicatedException;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,8 +57,12 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
-
+import java.util.concurrent.TimeoutException;
 
 /**
  * Utility methods for Ozone and Container Clients.
@@ -71,6 +82,18 @@ public final class HddsClientUtils {
 
   private HddsClientUtils() {
   }
+
+  private static final List<Class<? extends Exception>> EXCEPTION_LIST =
+      new ArrayList<Class<? extends Exception>>() {{
+        add(TimeoutException.class);
+        add(ContainerNotOpenException.class);
+        add(RaftRetryFailureException.class);
+        add(AlreadyClosedException.class);
+        add(GroupMismatchException.class);
+        // Not Replicated Exception will be thrown if watch For commit
+        // does not succeed
+        add(NotReplicatedException.class);
+      }};
 
   /**
    * Date format that used in ozone. Here the format is thread safe to use.
@@ -289,5 +312,50 @@ public final class HddsClientUtils {
                 NetUtils.getDefaultSocketFactory(conf),
                 Client.getRpcTimeout(conf)));
     return scmSecurityClient;
+  }
+
+  public static Throwable checkForException(Exception e) throws IOException {
+    Throwable t = e;
+    while (t != null) {
+      for (Class<? extends Exception> cls : getExceptionList()) {
+        if (cls.isInstance(t)) {
+          return t;
+        }
+      }
+      t = t.getCause();
+    }
+
+    throw e instanceof IOException ? (IOException)e : new IOException(e);
+  }
+
+  public static RetryPolicy createRetryPolicy(int maxRetryCount,
+      long retryInterval) {
+    // retry with fixed sleep between retries
+    return RetryPolicies.retryUpToMaximumCountWithFixedSleep(
+        maxRetryCount, retryInterval, TimeUnit.MILLISECONDS);
+  }
+
+  public static Map<Class<? extends Throwable>,
+      RetryPolicy> getRetryPolicyByException(int maxRetryCount,
+      long retryInterval) {
+    Map<Class<? extends Throwable>, RetryPolicy> policyMap = new HashMap<>();
+    for (Class<? extends Exception> ex : EXCEPTION_LIST) {
+      if (ex == TimeoutException.class
+          || ex == RaftRetryFailureException.class) {
+        // retry without sleep
+        policyMap.put(ex, createRetryPolicy(maxRetryCount, 0));
+      } else {
+        // retry with fixed sleep between retries
+        policyMap.put(ex, createRetryPolicy(maxRetryCount, retryInterval));
+      }
+    }
+    // Default retry policy
+    policyMap
+        .put(Exception.class, createRetryPolicy(maxRetryCount, retryInterval));
+    return policyMap;
+  }
+
+  public static List<Class<? extends Exception>> getExceptionList() {
+    return EXCEPTION_LIST;
   }
 }

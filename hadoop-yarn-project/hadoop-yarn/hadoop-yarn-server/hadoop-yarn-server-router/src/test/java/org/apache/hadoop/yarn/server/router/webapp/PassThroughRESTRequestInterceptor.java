@@ -167,8 +167,10 @@ public class PassThroughRESTRequestInterceptor
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
-      String appId, String time) {
-    return getNextInterceptor().getAppActivities(hsr, appId, time);
+      String appId, String time, Set<String> requestPriorities,
+      Set<String> allocationRequestIds) {
+    return getNextInterceptor().getAppActivities(hsr, appId, time,
+        requestPriorities, allocationRequestIds);
   }
 
   @Override

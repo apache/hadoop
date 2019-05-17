@@ -21,7 +21,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ResourceInformation;
 import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -35,7 +35,7 @@ public final class TonyUtils {
   private static final Log LOG = LogFactory.getLog(TonyUtils.class);
 
   public static Configuration tonyConfFromClientContext(
-      RunJobParameters parameters) {
+      TensorFlowRunJobParameters parameters) {
     Configuration tonyConf = new Configuration();
     tonyConf.setInt(
         TonyConfigurationKeys.getInstancesKey(Constants.WORKER_JOB_NAME),

@@ -14,7 +14,7 @@
 
 # Developer Guide
 
-By default, submarine uses YARN service framework as runtime. If you want to add your own implementation. You can add a new `RuntimeFactory` implementation and configure following option to `submarine.xml` (which should be placed under same `$HADOOP_CONF_DIR`)
+By default, Submarine uses YARN service framework as runtime. If you want to add your own implementation, you can add a new `RuntimeFactory` implementation and configure following option to `submarine.xml` (which should be placed under same `$HADOOP_CONF_DIR`)
 
 ```
 <property>

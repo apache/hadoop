@@ -37,6 +37,7 @@ import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerState;
 import org.apache.hadoop.yarn.api.records.ContainerStatus;
+import org.apache.hadoop.yarn.api.records.ExecutionType;
 import org.apache.hadoop.yarn.api.records.NodeAttribute;
 import org.apache.hadoop.yarn.api.records.NodeAttributeType;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -210,7 +211,7 @@ public class TestProtocolRecords {
         new ContainerStatusPBImpl(((ContainerStatusPBImpl) status).getProto());
     Assert.assertEquals(ips, pb.getIPs());
     Assert.assertEquals("locahost123", pb.getHost());
-
+    Assert.assertEquals(ExecutionType.GUARANTEED, pb.getExecutionType());
     status.setIPs(null);
     Assert.assertNull(status.getIPs());
   }

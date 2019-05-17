@@ -18,12 +18,16 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.Priority;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 /*
  * It contains allocation information for one application within a period of
@@ -104,5 +108,24 @@ public class AppAllocation {
 
   public List<ActivityNode> getAllocationAttempts() {
     return allocationAttempts;
+  }
+
+  public AppAllocation filterAllocationAttempts(Set<String> requestPriorities,
+      Set<String> allocationRequestIds) {
+    AppAllocation appAllocation =
+        new AppAllocation(this.priority, this.nodeId, this.queueName);
+    appAllocation.appState = this.appState;
+    appAllocation.containerId = this.containerId;
+    appAllocation.timestamp = this.timestamp;
+    appAllocation.diagnostic = this.diagnostic;
+    Predicate<ActivityNode> predicate = (e) ->
+        (CollectionUtils.isEmpty(requestPriorities) || requestPriorities
+            .contains(e.getRequestPriority())) && (
+            CollectionUtils.isEmpty(allocationRequestIds)
+                || allocationRequestIds.contains(e.getAllocationRequestId()));
+    appAllocation.allocationAttempts =
+        this.allocationAttempts.stream().filter(predicate)
+            .collect(Collectors.toList());
+    return appAllocation;
   }
 }

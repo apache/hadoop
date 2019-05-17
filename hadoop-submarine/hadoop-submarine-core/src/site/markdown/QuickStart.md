@@ -24,15 +24,18 @@ Optional:
 
 - Enable YARN DNS. (When yarn service runtime is required.)
 - Enable GPU on YARN support. (When GPU-based training is required.)
-- Docker images for submarine jobs. (When docker container is required.)
+- Docker images for Submarine jobs. (When docker container is required.)
 ```
   # Get prebuilt docker images (No liability)
   docker pull hadoopsubmarine/tf-1.13.1-gpu:0.0.1
   # Or build your own docker images
   docker build . -f Dockerfile.gpu.tf_1.13.1 -t tf-1.13.1-gpu-base:0.0.1
 ```
-More details, please refer to
-[How to write Dockerfile for Submarine jobs](WriteDockerfile.html)
+For more details, please refer to:
+
+- [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
+
+- [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
 
 ## Run jobs
 
@@ -40,6 +43,10 @@ More details, please refer to
 
 ```$xslt
 usage: job run
+
+ -framework <arg>             Framework to use.
+                              Valid values are: tensorflow, pytorch.
+                              The default framework is Tensorflow.
  -checkpoint_path <arg>       Training output directory of the job, could
                               be local or other FS directory. This
                               typically includes checkpoint files and
@@ -116,7 +123,7 @@ reported from `entry_script.py`.
 
 ### Submarine Configuration
 
-For submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
+For Submarine internal configuration, please create a `submarine.xml` which should be placed under `$HADOOP_CONF_DIR`.
 
 |Configuration Name | Description |
 |:---- |:---- |
@@ -130,6 +137,7 @@ For submarine internal configuration, please create a `submarine.xml` which shou
 #### Commandline
 ```
 yarn jar path-to/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job run \
+  --framework tensorflow \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current --name tf-job-001 \
   --docker_image <your-docker-image> \
@@ -163,6 +171,7 @@ See below screenshot:
 ```
 yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
  --name tf-job-001 --docker_image <your-docker-image> \
+ --framework tensorflow \
  --input_path hdfs://default/dataset/cifar-10-data \
  --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
@@ -208,6 +217,7 @@ After that, you can run ```tensorboard --logdir=<checkpoint-path>``` to view Ten
 yarn app -destroy tensorboard-service; \
 yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
   job run --name tensorboard-service --verbose --docker_image <your-docker-image> \
+  --framework tensorflow \
   --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
   --num_workers 0 --tensorboard
@@ -228,7 +238,7 @@ Or you can use `yarn logs -applicationId <applicationId>` to get logs from CLI
 
 ## Build from source code
 
-If you want to build submarine project by yourself, you can follow the steps:
+If you want to build the Submarine project by yourself, you can follow the steps:
 
 - Run 'mvn install -DskipTests' from Hadoop source top level once.
 

@@ -204,6 +204,7 @@ public class TestAppManager extends AppManagerTestBase{
     metricsPublisher = mock(SystemMetricsPublisher.class);
     context.setSystemMetricsPublisher(metricsPublisher);
     context.setRMApplicationHistoryWriter(writer);
+    ((RMContextImpl)context).setYarnConfiguration(new YarnConfiguration());
     return context;
   }
 

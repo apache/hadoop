@@ -16,9 +16,10 @@
 
 package org.apache.hadoop.yarn.submarine.runtimes.yarnservice;
 
+import org.apache.curator.shaded.com.google.common.collect.ImmutableList;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Component;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
@@ -28,6 +29,8 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
+import java.util.Objects;
 
 import static org.apache.hadoop.yarn.submarine.runtimes.yarnservice.FileSystemOperations.needHdfs;
 import static org.apache.hadoop.yarn.submarine.utils.ClassPathUtilities.findFileOnClassPath;
@@ -128,10 +131,22 @@ public class HadoopEnvironmentSetup {
   }
 
   private boolean doesNeedHdfs(RunJobParameters parameters, boolean hadoopEnv) {
-    return needHdfs(parameters.getInputPath()) ||
-        needHdfs(parameters.getPSLaunchCmd()) ||
-        needHdfs(parameters.getWorkerLaunchCmd()) ||
-        hadoopEnv;
+    List<String> launchCommands = parameters.getLaunchCommands();
+    if (launchCommands != null) {
+      launchCommands.removeIf(Objects::isNull);
+    }
+
+    ImmutableList.Builder<String> listBuilder = ImmutableList.builder();
+
+    if (launchCommands != null && !launchCommands.isEmpty()) {
+      listBuilder.addAll(launchCommands);
+    }
+    if (parameters.getInputPath() != null) {
+      listBuilder.add(parameters.getInputPath());
+    }
+    List<String> stringsToCheck = listBuilder.build();
+
+    return needHdfs(stringsToCheck) || hadoopEnv;
   }
 
   private void appendHdfsHome(PrintWriter fw, String hdfsHome) {

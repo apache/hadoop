@@ -160,7 +160,9 @@ public class OzoneContainer {
       LOG.info("Background container scrubber has been disabled by {}",
               HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
     } else {
-      this.scrubber = new ContainerScrubber(containerSet, config);
+      if (this.scrubber == null) {
+        this.scrubber = new ContainerScrubber(containerSet, config);
+      }
       scrubber.up();
     }
   }

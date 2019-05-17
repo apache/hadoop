@@ -37,6 +37,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -193,6 +194,15 @@ public class FileSystemOperations {
       IOException {
     FileSystem fs = FileSystem.get(yarnConfig);
     fs.setPermission(destPath, new FsPermission(permission));
+  }
+
+  public static boolean needHdfs(List<String> stringsToCheck) {
+    for (String content : stringsToCheck) {
+      if (content != null && content.contains("hdfs://")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public static boolean needHdfs(String content) {

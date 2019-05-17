@@ -20,8 +20,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.Component;
 import org.apache.hadoop.yarn.service.api.records.Component.RestartPolicyEnum;
-import org.apache.hadoop.yarn.submarine.client.cli.param.RunJobParameters;
-import org.apache.hadoop.yarn.submarine.common.api.TaskType;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
+import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
+import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.TensorFlowLaunchCommandFactory;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,11 +44,11 @@ public class TestTensorBoardComponent {
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
   private ComponentTestCommons testCommons =
-      new ComponentTestCommons(TaskType.TENSORBOARD);
+      new ComponentTestCommons(TensorFlowRole.TENSORBOARD);
 
   @Before
   public void setUp() throws IOException {
-    testCommons.setup();
+    testCommons.setupTensorFlow();
   }
 
   private TensorBoardComponent createTensorBoardComponent(
@@ -55,13 +57,13 @@ public class TestTensorBoardComponent {
         testCommons.fsOperations,
         testCommons.mockClientContext.getRemoteDirectoryManager(),
         parameters,
-        testCommons.mockLaunchCommandFactory,
+        (TensorFlowLaunchCommandFactory) testCommons.mockLaunchCommandFactory,
         testCommons.yarnConfig);
   }
 
   @Test
   public void testTensorBoardComponentWithNullResource() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setTensorboardResource(null);
 
     TensorBoardComponent tensorBoardComponent =
@@ -74,7 +76,7 @@ public class TestTensorBoardComponent {
 
   @Test
   public void testTensorBoardComponentWithNullJobName() throws IOException {
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setTensorboardResource(testCommons.resource);
     parameters.setName(null);
 
@@ -90,7 +92,7 @@ public class TestTensorBoardComponent {
   public void testTensorBoardComponent() throws IOException {
     testCommons.yarnConfig.set("hadoop.registry.dns.domain-name", "testDomain");
 
-    RunJobParameters parameters = new RunJobParameters();
+    TensorFlowRunJobParameters parameters = new TensorFlowRunJobParameters();
     parameters.setTensorboardResource(testCommons.resource);
     parameters.setName("testJobName");
     parameters.setTensorboardDockerImage("testTBDockerImage");
@@ -100,7 +102,7 @@ public class TestTensorBoardComponent {
 
     Component component = tensorBoardComponent.createComponent();
 
-    assertEquals(testCommons.taskType.getComponentName(), component.getName());
+    assertEquals(testCommons.role.getComponentName(), component.getName());
     testCommons.verifyCommonConfigEnvs(component);
 
     assertEquals(1L, (long) component.getNumberOfContainers());

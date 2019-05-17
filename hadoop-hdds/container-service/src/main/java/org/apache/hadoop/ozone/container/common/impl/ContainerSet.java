@@ -68,6 +68,8 @@ public class ContainerSet {
     if(containerMap.putIfAbsent(containerId, container) == null) {
       LOG.debug("Container with container Id {} is added to containerMap",
           containerId);
+      // wish we could have done this from ContainerData.setState
+      container.getContainerData().commitSpace();
       return true;
     } else {
       LOG.warn("Container already exists with container Id {}", containerId);

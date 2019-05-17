@@ -22,11 +22,12 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.DataChecksum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -42,11 +43,13 @@ import java.nio.channels.FileChannel;
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class MemoryMappableBlockLoader extends MappableBlockLoader {
-
+  private static final Logger LOG =
+      LoggerFactory.getLogger(MemoryMappableBlockLoader.class);
   private MemoryCacheStats memCacheStats;
 
   @Override
   void initialize(FsDatasetCache cacheManager) throws IOException {
+    LOG.info("Initializing cache loader: MemoryMappableBlockLoader.");
     this.memCacheStats = cacheManager.getMemCacheStats();
   }
 
@@ -149,11 +152,6 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
   }
 
   @Override
-  public String getCacheCapacityConfigKey() {
-    return DFSConfigKeys.DFS_DATANODE_MAX_LOCKED_MEMORY_KEY;
-  }
-
-  @Override
   public long getCacheUsed() {
     return memCacheStats.getCacheUsed();
   }
@@ -164,22 +162,17 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
   }
 
   @Override
-  long reserve(long bytesCount) {
+  long reserve(ExtendedBlockId key, long bytesCount) {
     return memCacheStats.reserve(bytesCount);
   }
 
   @Override
-  long release(long bytesCount) {
+  long release(ExtendedBlockId key, long bytesCount) {
     return memCacheStats.release(bytesCount);
   }
 
   @Override
   public boolean isTransientCache() {
     return true;
-  }
-
-  @Override
-  public String getCachedPath(ExtendedBlockId key) {
-    return null;
   }
 }

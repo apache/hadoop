@@ -33,6 +33,12 @@ class ParamBuilderForTest {
     return this;
   }
 
+  ParamBuilderForTest withFramework(String framework) {
+    params.add("--framework");
+    params.add(framework);
+    return this;
+  }
+
   ParamBuilderForTest withDockerImage(String dockerImage) {
     params.add("--docker_image");
     params.add(dockerImage);

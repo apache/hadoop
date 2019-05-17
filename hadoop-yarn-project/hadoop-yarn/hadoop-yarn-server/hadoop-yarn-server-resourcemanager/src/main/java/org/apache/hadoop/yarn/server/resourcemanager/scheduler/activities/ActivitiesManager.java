@@ -19,8 +19,11 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.service.AbstractService;
@@ -43,6 +46,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.*;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 /**
  * A class to store node or application allocations.
@@ -70,7 +74,10 @@ public class ActivitiesManager extends AbstractService {
   private boolean recordNextAvailableNode = false;
   private List<NodeAllocation> lastAvailableNodeActivities = null;
   private Thread cleanUpThread;
-  private int timeThreshold = 600 * 1000;
+  private long activitiesCleanupIntervalMs;
+  private long schedulerActivitiesTTL;
+  private long appActivitiesTTL;
+  private int appActivitiesMaxQueueLength;
   private final RMContext rmContext;
   private volatile boolean stopped;
   private ThreadLocal<DiagnosticsCollectorManager> diagnosticCollectorManager;
@@ -87,9 +94,32 @@ public class ActivitiesManager extends AbstractService {
         () -> new DiagnosticsCollectorManager(
             new GenericDiagnosticsCollector()));
     this.rmContext = rmContext;
+    if (rmContext.getYarnConfiguration() != null) {
+      setupConfForCleanup(rmContext.getYarnConfiguration());
+    }
   }
 
-  public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId) {
+  private void setupConfForCleanup(Configuration conf) {
+    activitiesCleanupIntervalMs = conf.getLong(
+        YarnConfiguration.RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS,
+        YarnConfiguration.
+            DEFAULT_RM_ACTIVITIES_MANAGER_CLEANUP_INTERVAL_MS);
+    schedulerActivitiesTTL = conf.getLong(
+        YarnConfiguration.RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_TTL_MS,
+        YarnConfiguration.
+            DEFAULT_RM_ACTIVITIES_MANAGER_SCHEDULER_ACTIVITIES_TTL_MS);
+    appActivitiesTTL = conf.getLong(
+        YarnConfiguration.RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS,
+        YarnConfiguration.
+            DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS);
+    appActivitiesMaxQueueLength = conf.getInt(YarnConfiguration.
+            RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH,
+        YarnConfiguration.
+            DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH);
+  }
+
+  public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId,
+      Set<String> requestPriorities, Set<String> allocationRequestIds) {
     RMApp app = rmContext.getRMApps().get(applicationId);
     if (app != null && app.getFinalApplicationStatus()
         == FinalApplicationStatus.UNDEFINED) {
@@ -97,7 +127,16 @@ public class ActivitiesManager extends AbstractService {
           completedAppAllocations.get(applicationId);
       List<AppAllocation> allocations = null;
       if (curAllocations != null) {
-        allocations = new ArrayList(curAllocations);
+        if (CollectionUtils.isNotEmpty(requestPriorities) || CollectionUtils
+            .isNotEmpty(allocationRequestIds)) {
+          allocations = curAllocations.stream().map(e -> e
+              .filterAllocationAttempts(requestPriorities,
+                  allocationRequestIds))
+              .filter(e -> !e.getAllocationAttempts().isEmpty())
+              .collect(Collectors.toList());
+        } else {
+          allocations = new ArrayList(curAllocations);
+        }
       }
       return new AppActivitiesInfo(allocations, applicationId);
     } else {
@@ -140,12 +179,13 @@ public class ActivitiesManager extends AbstractService {
         while (!stopped && !Thread.currentThread().isInterrupted()) {
           Iterator<Map.Entry<NodeId, List<NodeAllocation>>> ite =
               completedNodeAllocations.entrySet().iterator();
+          long curTS = SystemClock.getInstance().getTime();
           while (ite.hasNext()) {
             Map.Entry<NodeId, List<NodeAllocation>> nodeAllocation = ite.next();
             List<NodeAllocation> allocations = nodeAllocation.getValue();
-            long currTS = SystemClock.getInstance().getTime();
-            if (allocations.size() > 0 && allocations.get(0).getTimeStamp()
-                - currTS > timeThreshold) {
+            if (allocations.size() > 0
+                && curTS - allocations.get(0).getTimeStamp()
+                > schedulerActivitiesTTL) {
               ite.remove();
             }
           }
@@ -159,11 +199,29 @@ public class ActivitiesManager extends AbstractService {
             if (rmApp == null || rmApp.getFinalApplicationStatus()
                 != FinalApplicationStatus.UNDEFINED) {
               iteApp.remove();
+            } else {
+              Iterator<AppAllocation> appActivitiesIt =
+                  appAllocation.getValue().iterator();
+              while (appActivitiesIt.hasNext()) {
+                if (curTS - appActivitiesIt.next().getTime()
+                    > appActivitiesTTL) {
+                  appActivitiesIt.remove();
+                } else {
+                  break;
+                }
+              }
+              if (appAllocation.getValue().isEmpty()) {
+                iteApp.remove();
+                LOG.debug("Removed all expired activities from cache for {}.",
+                    rmApp.getApplicationId());
+              }
             }
           }
 
+          LOG.debug("Remaining apps in app activities cache: {}",
+              completedAppAllocations.keySet());
           try {
-            Thread.sleep(5000);
+            Thread.sleep(activitiesCleanupIntervalMs);
           } catch (InterruptedException e) {
             LOG.info(getName() + " thread interrupted");
             break;
@@ -278,7 +336,7 @@ public class ActivitiesManager extends AbstractService {
           appAllocations = curAppAllocations;
         }
       }
-      if (appAllocations.size() == 1000) {
+      if (appAllocations.size() == appActivitiesMaxQueueLength) {
         appAllocations.poll();
       }
       appAllocations.add(appAllocation);
