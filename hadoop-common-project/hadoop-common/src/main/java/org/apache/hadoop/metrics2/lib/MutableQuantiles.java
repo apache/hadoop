@@ -107,7 +107,7 @@ public class MutableQuantiles extends MutableMetric {
     estimator = new SampleQuantiles(quantiles);
 
     this.interval = interval;
-    scheduledTask = scheduler.scheduleAtFixedRate(new RolloverSample(this),
+    scheduledTask = scheduler.scheduleWithFixedDelay(new RolloverSample(this),
         interval, interval, TimeUnit.SECONDS);
   }
 
