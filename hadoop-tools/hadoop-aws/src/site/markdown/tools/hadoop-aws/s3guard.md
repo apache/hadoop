@@ -644,9 +644,13 @@ Metadata Store Diagnostics:
 The "magic" committer is supported
 
 S3A Client
+  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
   Endpoint: fs.s3a.endpoint=s3-eu-west-1.amazonaws.com
   Encryption: fs.s3a.server-side-encryption-algorithm=none
   Input seek policy: fs.s3a.experimental.input.fadvise=normal
+  Change Detection Source: fs.s3a.change.detection.source=etag
+  Change Detection Mode: fs.s3a.change.detection.mode=server
+Delegation token support is disabled
 ```
 
 This listing includes all the information about the table supplied from

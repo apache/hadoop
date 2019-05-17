@@ -33,14 +33,13 @@ import org.slf4j.Logger;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
-import java.util.stream.StreamSupport;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3N_FOLDER_SUFFIX;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createFileStatus;
@@ -320,7 +319,7 @@ public class Listing {
     /** Iterator over the current set of results. */
     private ListIterator<S3AFileStatus> statusBatchIterator;
 
-    private final Set<S3AFileStatus> providedStatus;
+    private final Map<Path, S3AFileStatus> providedStatus;
     private Iterator<S3AFileStatus> providedStatusIterator;
 
     /**
@@ -341,11 +340,12 @@ public class Listing {
       this.source = source;
       this.filter = filter;
       this.acceptor = acceptor;
-      this.providedStatus = new HashSet<>();
+      this.providedStatus = new HashMap<>();
       for (; providedStatus != null && providedStatus.hasNext();) {
         final S3AFileStatus status = providedStatus.next();
-        if (filter.accept(status.getPath()) && acceptor.accept(status)) {
-          this.providedStatus.add(status);
+        Path path = status.getPath();
+        if (filter.accept(path) && acceptor.accept(status)) {
+          this.providedStatus.put(path, status);
         }
       }
       // build the first set of results. This will not trigger any
@@ -378,7 +378,7 @@ public class Listing {
         // turn to file status that are only in provided list
         if (providedStatusIterator == null) {
           LOG.debug("Start iterating the provided status.");
-          providedStatusIterator = providedStatus.iterator();
+          providedStatusIterator = providedStatus.values().iterator();
         }
         return false;
       }
@@ -390,20 +390,17 @@ public class Listing {
       final S3AFileStatus status;
       if (sourceHasNext()) {
         status = statusBatchIterator.next();
-        // We remove from provided list the file status listed by S3 so that
+        // We remove from provided map the file status listed by S3 so that
         // this does not return duplicate items.
 
         // The provided status is returned as it is assumed to have the better
         // metadata (i.e. the eTag and versionId from S3Guard)
-        Optional<S3AFileStatus> provided =
-            StreamSupport.stream(providedStatus.spliterator(), false)
-                .filter(element -> status.equals(element)).findFirst();
-        if (provided.isPresent()) {
-          providedStatus.remove(status);
+        S3AFileStatus provided = providedStatus.remove(status.getPath());
+        if (provided != null) {
           LOG.debug(
               "Removed and returned the status from provided file status {}",
               status);
-          return provided.get();
+          return provided;
         }
       } else {
         if (providedStatusIterator.hasNext()) {

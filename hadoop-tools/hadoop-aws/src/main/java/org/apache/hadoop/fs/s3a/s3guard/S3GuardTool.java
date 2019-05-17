@@ -1166,7 +1166,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
           magic ? "is" : "is not");
 
       println(out, "%nS3A Client");
-
+      printOption(out, "\tSigning Algorithm", SIGNING_ALGORITHM, "(unset)");
       String endpoint = conf.getTrimmed(ENDPOINT, "");
       println(out, "\tEndpoint: %s=%s",
           ENDPOINT,
@@ -1175,6 +1175,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
           printOption(out, "\tEncryption", SERVER_SIDE_ENCRYPTION_ALGORITHM,
               "none");
       printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
+      printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,
+          CHANGE_DETECT_SOURCE_DEFAULT);
+      printOption(out, "\tChange Detection Mode", CHANGE_DETECT_MODE,
+          CHANGE_DETECT_MODE_DEFAULT);
 
       // look at delegation token support
       if (fs.getDelegationTokens().isPresent()) {
