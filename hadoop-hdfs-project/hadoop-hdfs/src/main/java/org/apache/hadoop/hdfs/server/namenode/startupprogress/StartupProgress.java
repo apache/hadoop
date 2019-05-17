@@ -84,13 +84,14 @@ public class StartupProgress {
   }
 
   /**
-   * Begins execution of the specified step within the specified phase.
+   * Begins execution of the specified step within the specified phase. This is
+   * a no-op if the phase is already completed.
    * 
-   * @param phase Phase to begin
+   * @param phase Phase within which the step should be started
    * @param step Step to begin
    */
   public void beginStep(Phase phase, Step step) {
-    if (!isComplete()) {
+    if (!isComplete(phase)) {
       lazyInitStep(phase, step).beginTime = monotonicNow();
     }
   }
@@ -107,13 +108,14 @@ public class StartupProgress {
   }
 
   /**
-   * Ends execution of the specified step within the specified phase.
-   * 
-   * @param phase Phase to end
+   * Ends execution of the specified step within the specified phase. This is
+   * a no-op if the phase is already completed.
+   *
+   * @param phase Phase within which the step should be ended
    * @param step Step to end
    */
   public void endStep(Phase phase, Step step) {
-    if (!isComplete()) {
+    if (!isComplete(phase)) {
       lazyInitStep(phase, step).endTime = monotonicNow();
     }
   }
@@ -149,7 +151,7 @@ public class StartupProgress {
    * @return Counter associated with phase and step
    */
   public Counter getCounter(Phase phase, Step step) {
-    if (!isComplete()) {
+    if (!isComplete(phase)) {
       final StepTracking tracking = lazyInitStep(phase, step);
       return new Counter() {
         @Override
@@ -242,12 +244,17 @@ public class StartupProgress {
    * @return boolean true if the entire startup process has completed
    */
   private boolean isComplete() {
-    for (Phase phase: EnumSet.allOf(Phase.class)) {
-      if (getStatus(phase) != Status.COMPLETE) {
-        return false;
-      }
-    }
-    return true;
+    return EnumSet.allOf(Phase.class).stream().allMatch(this::isComplete);
+  }
+
+  /**
+   * Returns true if the given startup phase has been completed.
+   *
+   * @param phase Which phase to check for completion
+   * @return boolean true if the given startup phase has completed.
+   */
+  private boolean isComplete(Phase phase) {
+    return getStatus(phase) == Status.COMPLETE;
   }
 
   /**
