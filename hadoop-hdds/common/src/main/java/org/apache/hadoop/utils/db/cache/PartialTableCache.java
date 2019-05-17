@@ -24,7 +24,9 @@ import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -48,7 +50,10 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     epochEntries = new TreeSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
     // time.
-    executorService = Executors.newSingleThreadExecutor();
+    ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
+        .setNameFormat("PartialTableCache Cleanup Thread - %d").build();
+    executorService = Executors.newSingleThreadExecutor(build);
+
   }
 
   @Override
