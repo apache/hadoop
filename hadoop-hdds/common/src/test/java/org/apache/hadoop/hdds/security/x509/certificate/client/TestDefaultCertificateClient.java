@@ -97,7 +97,6 @@ public class TestDefaultCertificateClient {
     config.set(HDDS_METADATA_DIR_NAME, dnMetaDirPath.toString());
     dnSecurityConfig = new SecurityConfig(config);
 
-
     keyGenerator = new HDDSKeyGenerator(omSecurityConfig);
     omKeyCodec = new KeyCodec(omSecurityConfig);
     dnKeyCodec = new KeyCodec(dnSecurityConfig);
@@ -323,19 +322,25 @@ public class TestDefaultCertificateClient {
   @Test
   public void testStoreCertificate() throws Exception {
     KeyPair keyPair = keyGenerator.generateKey();
+    KeyPair keyPair2 = keyGenerator.generateKey();
     X509Certificate cert1 = generateX509Cert(keyPair);
     X509Certificate cert2 = generateX509Cert(keyPair);
     X509Certificate cert3 = generateX509Cert(keyPair);
+    X509Certificate cert4 = generateX509Cert(keyPair2);
 
     dnCertClient.storeCertificate(getPEMEncodedString(cert1), true);
     dnCertClient.storeCertificate(getPEMEncodedString(cert2), true);
     dnCertClient.storeCertificate(getPEMEncodedString(cert3), true);
+    // Test storage of CA Cert.
+    dnCertClient.storeCertificate(getPEMEncodedString(cert3), true, true);
 
     assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
         .toString()));
     assertNotNull(dnCertClient.getCertificate(cert2.getSerialNumber()
         .toString()));
     assertNotNull(dnCertClient.getCertificate(cert3.getSerialNumber()
+        .toString()));
+    assertNotNull(dnCertClient.getCertificate(cert4.getSerialNumber()
         .toString()));
   }
 

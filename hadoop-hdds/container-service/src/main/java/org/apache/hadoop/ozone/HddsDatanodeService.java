@@ -281,6 +281,9 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
       datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
           getSerialNumber().toString());
       persistDatanodeDetails(datanodeDetails);
+      // Get SCM CA certificate and store it in filesystem.
+      String pemEncodedRootCert = secureScmClient.getCACertificate();
+      dnCertClient.storeCertificate(pemEncodedRootCert, true, true);
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
