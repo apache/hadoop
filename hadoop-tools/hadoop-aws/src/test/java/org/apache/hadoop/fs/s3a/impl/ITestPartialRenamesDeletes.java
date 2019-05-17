@@ -50,24 +50,14 @@ import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
 import org.apache.hadoop.util.DurationInfo;
 
-import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.ASSUMED_ROLE_ARN;
-import static org.apache.hadoop.fs.s3a.Constants.ENABLE_MULTI_DELETE;
-import static org.apache.hadoop.fs.s3a.Constants.MAXIMUM_CONNECTIONS;
-import static org.apache.hadoop.fs.s3a.Constants.MAX_THREADS;
-import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestPropertyBool;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.reset;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.Statistic.FILES_DELETE_REJECTED;
 import static org.apache.hadoop.fs.s3a.Statistic.OBJECT_DELETE_REQUESTS;
@@ -148,7 +138,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   public static final int DIR_COUNT_SCALED = 4;
   public static final int DEPTH = 2;
   public static final int DEPTH_SCALED = 2;
-  
+
   /**
    * A role FS; if non-null it is closed in teardown.
    */
@@ -252,7 +242,16 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   @Override
   public void teardown() throws Exception {
     S3AUtils.closeAll(LOG, roleFS);
-    super.teardown();
+    try(DurationInfo ignored =
+            new DurationInfo(LOG, "Delete and purge store")) {
+      S3AFileSystem fs = getFileSystem();
+      Path testCasePath = fs.qualify(getContract().getTestPath());
+      rm(fs, testCasePath, true, false);
+      fs.getMetadataStore().prune(0,
+          PathMetadataDynamoDBTranslation.pathToParentKey((testCasePath)));
+    } finally {
+      super.teardown();
+    }
   }
 
   /**
@@ -437,8 +436,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * data is read only to the client calling rename().
    * This will cause the inner delete() operations to fail, whose outcomes
    * are explored.
-   * Multiple files are created (in parallel) for some renames, so exploring
-   * the outcome on bulk delete calls, including verifying that a
+   * Multiple files are created (in parallel) for some renames, so the test
+   * explores the outcome on bulk delete calls, including verifying that a
    * MultiObjectDeleteException is translated to an AccessDeniedException.
    * <ol>
    *   <li>The exception raised is AccessDeniedException,
@@ -481,7 +480,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           .containsAll(createdFiles)
           .containsExactlyInAnyOrderElementsOf(createdFiles);
     }
-    LOG.info("Result of renaming read-only files is AccessDeniedException",
+    LOG.info("Result of renaming read-only files is (Correctly) AccessDeniedException",
         deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, expectedFileCount);
@@ -515,8 +514,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   }
 
   @Test
-  public void testCopyDirFailsInNoWrite() throws Throwable {
-    describe("Try to copy to a write-only destination");
+  public void testCopyDirFailsToReadOnlyDir() throws Throwable {
+    describe("Try to copy to a read-only destination");
     roleFS.mkdirs(writableDir);
     S3AFileSystem fs = getFileSystem();
     List<Path> files = createFiles(fs, writableDir, dirDepth, fileCount,
@@ -699,7 +698,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       MetadataStore store = fs.getMetadataStore();
       try(DurationInfo ignored =
               new DurationInfo(LOG, true, "prune %s", path)) {
-        store.prune(System.currentTimeMillis(), fs.pathToKey(path));
+        store.prune(System.currentTimeMillis(),
+            PathMetadataDynamoDBTranslation.pathToParentKey(fs.qualify(path)));
       }
     }
   }
@@ -716,9 +716,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
       try (DurationInfo ignore =
                new DurationInfo(LOG, "ls -R %s", path)) {
         applyLocatedFiles(getFileSystem().listFiles(path, recursive),
-            (status) -> {
-              files.add(status.getPath());
-            });
+            (status) -> files.add(status.getPath()));
       }
     return files;
   }

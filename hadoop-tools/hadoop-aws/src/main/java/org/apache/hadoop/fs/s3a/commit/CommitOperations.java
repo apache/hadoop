@@ -559,6 +559,9 @@ public class CommitOperations {
    */
   public final class CommitContext implements Closeable {
 
+    /**
+     * State of any metastore.
+     */
     private final BulkOperationState operationState;
 
     private CommitContext(@Nullable final BulkOperationState operationState) {
@@ -627,6 +630,16 @@ public class CommitOperations {
     public void close() throws IOException {
       IOUtils.cleanupWithLogger(LOG, operationState);
     }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "CommitContext{");
+      sb.append("operationState=").append(operationState);
+      sb.append('}');
+      return sb.toString();
+    }
+
   }
 
   /**

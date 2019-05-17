@@ -34,6 +34,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -187,7 +188,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * sub-tree.
  *
  * Some mutating operations, notably {@link #deleteSubtree(Path)} and
- * {@link MetadataStore#move(Collection, Collection, AutoCloseable)}, are less efficient with this schema.
+ * {@link MetadataStore#move(Collection, Collection, BulkOperationState)}
+ * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
  *
  * By default, DynamoDB access is performed within the same AWS region as
@@ -279,7 +281,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private RetryPolicy batchWriteRetryPolicy;
 
-  private S3AInstrumentation.S3GuardInstrumentation instrumentation;
+  private Optional<S3AInstrumentation.S3GuardInstrumentation> instrumentation;
 
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
@@ -389,7 +391,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     initTable();
 
-    instrumentation.initialized();
+    instrumentation.ifPresent(
+        S3AInstrumentation.S3GuardInstrumentation::initialized);
   }
 
   /**
@@ -403,7 +406,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     owner = fs;
     conf = owner.getConf();
     StoreContext context = owner.createStoreContext();
-    instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
+    instrumentation = Optional.of(
+        context.getInstrumentation().getS3GuardInstrumentation());
     username = context.getUsername();
     executor = context.createThrottledExecutor();
   }
@@ -589,9 +593,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         path.toString(),
         true,
         () -> table.getItem(spec));
-    if (instrumentation != null) {
-      instrumentation.recordsRead(1);
-    }
+    recordsRead(1);
     return item;
   }
 
@@ -736,8 +738,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /**
    * Build the list of all parent entries.
-   * <b>Thread safety:</b> none. if access the move state is to be synchronized,
-   * callers must do this.
+   * <b>Thread safety:</b> none. Callers are expected to
+   * synchronize on ancestorState as required.
    * @param pathsToCreate paths to create
    * @param ancestorState ongoing ancestor state.
    * @return the full ancestry paths
@@ -747,6 +749,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final AncestorState ancestorState) {
     // Key on path to allow fast lookup
     Map<Path, DDBPathMetadata> ancestry = ancestorState.getAncestry();
+    List<DDBPathMetadata> ancestorsToAdd = new ArrayList<>(0);
 
     for (DDBPathMetadata meta : pathsToCreate) {
       Preconditions.checkArgument(meta != null);
@@ -754,18 +757,30 @@ public class DynamoDBMetadataStore implements MetadataStore,
       if (path.isRoot()) {
         break;
       }
-      ancestry.put(path, new DDBPathMetadata(meta));
+      // add the new entry
+      DDBPathMetadata entry = new DDBPathMetadata(meta);
+      DDBPathMetadata oldEntry = ancestry.put(path, entry);
+      if (oldEntry != null) {
+        // check for and warn if the existing bulk operation overwrote it.
+        // this should never occur outside tests.
+        LOG.warn("Overwriting a S3Guard entry created in the operation: {}",
+            oldEntry);
+        continue;
+      }
+      ancestorsToAdd.add(entry);
       Path parent = path.getParent();
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
         LOG.debug("auto-create ancestor path {} for child path {}",
             parent, path);
         final FileStatus status = makeDirStatus(parent, username);
-        ancestry.put(parent, new DDBPathMetadata(status, Tristate.FALSE,
-            false));
+        DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
+            false);
+        ancestry.put(parent, md);
+        ancestorsToAdd.add(md);
         parent = parent.getParent();
       }
     }
-    return ancestry.values();
+    return ancestorsToAdd;
   }
 
   /**
@@ -889,9 +904,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           () -> dynamoDB.batchWriteItem(writeItems));
       // Check for unprocessed keys in case of exceeding provisioned throughput
       Map<String, List<WriteRequest>> unprocessed = res.getUnprocessedItems();
-      if (instrumentation != null) {
-        instrumentation.recordsWritten(batchSize - unprocessed.size());
-      }
+      recordsWritten(batchSize - unprocessed.size());
       int retryCount = 0;
       while (!unprocessed.isEmpty()) {
         batchWriteCapacityExceededEvents.incrementAndGet();
@@ -906,9 +919,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             true,
             () -> dynamoDB.batchWriteItemUnprocessed(upx));
         unprocessed = res.getUnprocessedItems();
-        if (instrumentation != null) {
-          instrumentation.recordsWritten(batchSize - unprocessed.size());
-        }
+        recordsWritten(batchSize - unprocessed.size());
       }
     }
     return batches;
@@ -1097,9 +1108,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   public synchronized void close() {
-    if (instrumentation != null) {
-      instrumentation.storeClosed();
-    }
+    instrumentation.ifPresent(
+        S3AInstrumentation.S3GuardInstrumentation::storeClosed);
     try {
       if (dynamoDB != null) {
         LOG.debug("Shutting down {}", this);
@@ -1196,9 +1206,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
         itemCount++;
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
-          if (delay > 0) {
-            Thread.sleep(delay);
-          }
           processBatchWriteRequest(pathToKey(deletionBatch), null);
 
           // set authoritative false for each pruned dir listing
@@ -1208,11 +1215,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
           parentPathSet.clear();
 
           deletionBatch.clear();
+          if (delay > 0) {
+            Thread.sleep(delay);
+          }
         }
       }
       // final batch of deletes
       if (!deletionBatch.isEmpty()) {
-        Thread.sleep(delay);
         processBatchWriteRequest(pathToKey(deletionBatch), null);
 
         // set authoritative false for each pruned dir listing
@@ -1783,9 +1792,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
       // throttled
-      if (instrumentation != null) {
-        instrumentation.throttled();
-      }
+      instrumentation.ifPresent(
+          S3AInstrumentation.S3GuardInstrumentation::throttled);
       int eventCount = throttleEventCount.addAndGet(1);
       if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
         LOG.warn("DynamoDB IO limits reached in {};"
@@ -1801,11 +1809,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.info("Retrying {}: {}", text, ex.toString());
       LOG.debug("Retrying {}", text, ex);
     }
-
-    if (instrumentation != null) {
-      // note a retry
-      instrumentation.retrying();
-    }
+    instrumentation.ifPresent(
+        S3AInstrumentation.S3GuardInstrumentation::retrying);
     if (owner != null) {
       owner.metastoreOperationRetried(ex, attempts, idempotent);
     }
@@ -1840,6 +1845,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Record the number of records written.
+   * @param count count of records.
+   */
+  private void recordsWritten(final int count) {
+    instrumentation.ifPresent(i -> i.recordsWritten(count));
+  }
+
+  /**
+   * Record the number of records read.
+   * @param count count of records.
+   */
+  private void recordsRead(final int count) {
+    instrumentation.ifPresent(i -> i.recordsRead(count));
+  }
+
+  /**
    * Initiate the rename operation by creating the tracker and the ongoing
    * move state.
    * @param storeContext store context.
@@ -1851,9 +1872,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final FileStatus sourceStatus, final Path dest) {
+      final FileStatus sourceStatus,
+      final Path dest) {
     return new ProgressiveRenameTracker(storeContext, this, source, dest,
-        new AncestorState());
+        new AncestorState(dest));
+  }
+
+  @Override
+  public AncestorState initiateBulkWrite(final Path dest)
+      throws IOException {
+    return new AncestorState(dest);
   }
 
   /**
@@ -1908,24 +1936,48 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (state != null) {
       return (AncestorState) state;
     } else {
-      return new AncestorState();
+      return new AncestorState(null);
     }
   }
 
   /**
    * This tracks all the ancestors created,
    * across multiple move/write operations.
-   * This is to avoid duplicate creation of ancestors even during
-   * rename operations managed by a rename tracker.
+   * This is to avoid duplicate creation of ancestors during bulk commits
+   * and rename operations managed by a rename tracker.
    */
   @VisibleForTesting
   static final class AncestorState extends BulkOperationState {
 
     private final Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
 
-    public Map<Path, DDBPathMetadata> getAncestry() {
+    private final Path dest;
+
+    AncestorState(final Path dest) {
+      super();
+      this.dest = dest;
+    }
+
+    private Map<Path, DDBPathMetadata> getAncestry() {
       return ancestry;
     }
 
+    int size() {
+      return ancestry.size();
+    }
+
+    public Path getDest() {
+      return dest;
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "AncestorState{");
+      sb.append("dest=").append(dest);
+      sb.append("size=").append(size());
+      sb.append('}');
+      return sb.toString();
+    }
   }
 }

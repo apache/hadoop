@@ -36,16 +36,17 @@ import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
-
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.google.common.collect.Lists;
+import org.assertj.core.api.Assertions;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Tristate;
-
 import org.apache.hadoop.io.IOUtils;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -62,6 +63,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
@@ -150,22 +152,24 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // be configured to use this test.
     testDynamoDBTableName = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
     String dynamoDbTableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
-    Assume.assumeTrue("No DynamoDB table name configured", !StringUtils
+    Assume.assumeTrue("No DynamoDB table name configured in " + S3GUARD_DDB_TABLE_NAME_KEY,
+        !StringUtils
             .isEmpty(dynamoDbTableName));
 
     // We should assert that the table name is configured, so the test should
     // fail if it's not configured.
-    assertTrue("Test DynamoDB table name '"
+    assertNotNull("Test DynamoDB table name '"
         + S3GUARD_DDB_TEST_TABLE_NAME_KEY + "' should be set to run "
-        + "integration tests.", testDynamoDBTableName != null);
+        + "integration tests.", testDynamoDBTableName);
 
     // We should assert that the test table is not the same as the production
     // table, as the test table could be modified and destroyed multiple
     // times during the test.
-    assertTrue("Test DynamoDB table name: '"
+    assertNotEquals("Test DynamoDB table name: '"
         + S3GUARD_DDB_TEST_TABLE_NAME_KEY + "' and production table name: '"
         + S3GUARD_DDB_TABLE_NAME_KEY + "' can not be the same.",
-        !conf.get(S3GUARD_DDB_TABLE_NAME_KEY).equals(testDynamoDBTableName));
+        testDynamoDBTableName,
+        conf.get(S3GUARD_DDB_TABLE_NAME_KEY));
 
     // We can use that table in the test if these assertions are valid
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
@@ -388,11 +392,22 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // move the old paths to new paths and verify
-    ms.move(pathsToDelete, newMetas, null);
-    assertEquals(0, ms.listChildren(oldDir).withoutTombstones().numEntries());
+    AncestorState state = checkNotNull(ms.initiateBulkWrite(newDir),
+        "No state from initiateBulkWrite()");
+    assertEquals(newDir, state.getDest());
+
+    ms.move(pathsToDelete, newMetas, state);
+    assertEquals("Number of children in source directory",
+        0, ms.listChildren(oldDir).withoutTombstones().numEntries());
     if (newMetas != null) {
-      assertTrue(CollectionUtils
-          .isEqualCollection(newMetas, ms.listChildren(newDir).getListing()));
+      Assertions.assertThat(ms.listChildren(newDir).getListing())
+          .describedAs("Directory listing")
+          .containsAll(newMetas);
+      if (!newMetas.isEmpty()) {
+        Assertions.assertThat(state.size())
+            .describedAs("Size of ancestor state")
+            .isGreaterThan(newMetas.size());
+      }
     }
   }
 

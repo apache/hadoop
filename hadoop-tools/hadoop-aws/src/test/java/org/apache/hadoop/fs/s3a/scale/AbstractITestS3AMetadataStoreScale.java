@@ -181,10 +181,11 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     long count = 0;
     NanoTimer putTimer = new NanoTimer();
     describe("Inserting into MetadataStore");
-    BulkOperationState operationState = ms.initiateBulkWrite(BUCKET_ROOT);
-    for (PathMetadata p : paths) {
-      ms.put(p, operationState);
-      count++;
+    try(BulkOperationState operationState = ms.initiateBulkWrite(BUCKET_ROOT)) {
+      for (PathMetadata p : paths) {
+        ms.put(p, operationState);
+        count++;
+      }
     }
     putTimer.end();
     printTiming(LOG, "put", putTimer, count);
