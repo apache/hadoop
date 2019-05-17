@@ -59,8 +59,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
   @Override
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
     cache.put(cacheKey, value);
-    CacheValue cacheValue = cache.get(cacheKey);
-    epochEntries.add(new EpochEntry<>(cacheValue.getEpoch(), cacheKey));
+    epochEntries.add(new EpochEntry<>(value.getEpoch(), cacheKey));
   }
 
   @Override
