@@ -242,16 +242,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   @Override
   public void teardown() throws Exception {
     S3AUtils.closeAll(LOG, roleFS);
-    try(DurationInfo ignored =
-            new DurationInfo(LOG, "Delete and purge store")) {
-      S3AFileSystem fs = getFileSystem();
-      Path testCasePath = fs.qualify(getContract().getTestPath());
-      rm(fs, testCasePath, true, false);
-      fs.getMetadataStore().prune(0,
-          PathMetadataDynamoDBTranslation.pathToParentKey((testCasePath)));
-    } finally {
-      super.teardown();
-    }
+    super.teardown();
   }
 
   /**
