@@ -29,14 +29,12 @@ import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 /**
  * Unit tests for {@link HddsVolume}.
@@ -134,15 +132,8 @@ public class TestHddsVolume {
     assertTrue("scmUsed cache file should be saved on shutdown",
         scmUsedFile.exists());
 
-    try {
-      // Volume.getAvailable() should fail with IOException
-      // as usage thread is shutdown.
-      volume.getAvailable();
-      fail("HddsVolume#shutdown test failed");
-    } catch (Exception ex) {
-      assertTrue(ex instanceof IOException);
-      assertTrue(ex.getMessage().contains(
-          "Volume Usage thread is not running."));
-    }
+    // Volume.getAvailable() should succeed even when usage thread
+    // is shutdown.
+    volume.getAvailable();
   }
 }

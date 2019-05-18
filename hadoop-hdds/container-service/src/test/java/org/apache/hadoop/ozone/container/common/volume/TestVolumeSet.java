@@ -35,7 +35,6 @@ import static org.apache.hadoop.ozone.container.common.volume.HddsVolume
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -213,18 +212,10 @@ public class TestVolumeSet {
 
     volumeSet.shutdown();
 
-    // Verify that the volumes are shutdown and the volumeUsage is set to null.
+    // Verify that volume usage can be queried during shutdown.
     for (HddsVolume volume : volumesList) {
-      Assert.assertNull(volume.getVolumeInfo().getUsageForTesting());
-      try {
-        // getAvailable() should throw null pointer exception as usage is null.
-        volume.getAvailable();
-        fail("Volume shutdown failed.");
-      } catch (IOException ex) {
-        // Do Nothing. Exception is expected.
-        assertTrue(ex.getMessage().contains(
-            "Volume Usage thread is not running."));
-      }
+      Assert.assertNotNull(volume.getVolumeInfo().getUsageForTesting());
+      volume.getAvailable();
     }
   }
 
