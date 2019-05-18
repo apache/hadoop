@@ -18,25 +18,27 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.Serializable;
 import java.util.Comparator;
 
 import org.apache.hadoop.fs.Path;
 
 /**
- * A comparator of path ordering where those paths which are higher up
- * the tree come first.
- * This can be used to ensure the sort order of changes.
+ * Comparator of path ordering for sorting collections.
  *
- * Policy
+ * The definition of "topmost" is:
  * <ol>
- *   <li>higher up entries come first</li>
- *   <li>Root is topmost</li>
+ *   <li>The depth of a path is the primary comparator.</li>
+ *   <li>Root is topmost, "0"</li>
+ *   <li>If two paths are of equal depth, {@link Path#compareTo(Path)}</li>
+ *   is used. This delegates to URI compareTo.
  *   <li>repeated sorts do not change the order</li>
  * </ol>
  */
-@SuppressWarnings("ComparatorNotSerializable")
-class PathOrderComparators {
+final class PathOrderComparators {
 
+  private PathOrderComparators() {
+  }
 
   /**
    * The shallowest paths come first.
@@ -66,7 +68,7 @@ class PathOrderComparators {
   static final Comparator<PathMetadata> TOPMOST_PM_LAST
       = new PathMetadataComparator(TOPMOST_PATH_LAST);
 
-  private static class TopmostFirst implements Comparator<Path> {
+  private static class TopmostFirst implements Comparator<Path>, Serializable {
 
     @Override
     public int compare(Path pathL, Path pathR) {
@@ -108,14 +110,13 @@ class PathOrderComparators {
       }
       return 0;
     }
-
   }
 
   /**
    * Compare on path status.
    */
   private static final class PathMetadataComparator implements
-      Comparator<PathMetadata> {
+      Comparator<PathMetadata>, Serializable {
 
     private final Comparator<Path> inner;
 

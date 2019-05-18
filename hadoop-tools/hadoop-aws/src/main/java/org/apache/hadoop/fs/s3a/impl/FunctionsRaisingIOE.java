@@ -21,12 +21,10 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.IOException;
 
 /**
- * Function of arity 1 which may raise an IOException.
- * @param <T>
- * @param <P>
+ * Evolving support for functional programming/lambda-expressions.
+ * Currently in the s3a module for experimentation and evolution; at
+ * some point it could be pulled into hadoop-common.
  */
-
-
 public final class FunctionsRaisingIOE {
 
   private FunctionsRaisingIOE() {

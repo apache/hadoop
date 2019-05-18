@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
-import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
@@ -111,8 +110,8 @@ public class TestPartialDeleteFailures {
   }
 
   /**
-   * Build a list of paths from a vararg stream list.DistributedFileSystem
-   * @param paths paths in
+   * Build a list of qualified paths from vararg parameters.
+   * @param paths paths to qualify and then convert to a lst.
    * @return same paths as a list.
    */
   private List<Path> pathList(String... paths) {
@@ -339,9 +338,11 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public RenameTracker initiateRenameOperation(final StoreContext storeContext,
+    public RenameTracker initiateRenameOperation(
+        final StoreContext storeContext,
         final Path source,
-        final FileStatus sourceStatus, final Path dest) throws IOException {
+        final FileStatus sourceStatus,
+        final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");
     }
   }

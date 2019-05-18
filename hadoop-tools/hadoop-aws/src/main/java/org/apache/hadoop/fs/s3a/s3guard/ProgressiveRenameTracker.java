@@ -57,7 +57,8 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
  *     When deletes are executed, the store is also updated.
  *   </li>
  *   <li>
- *     And at the completion of a successful rename, the source directory is also removed.
+ *     And at the completion of a successful rename, the source directory
+ *     is also removed.
  *   </li>
  * </ol>
  * <pre>

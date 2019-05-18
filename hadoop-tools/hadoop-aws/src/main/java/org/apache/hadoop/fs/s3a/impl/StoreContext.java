@@ -58,7 +58,7 @@ public class StoreContext {
   /** Filesystem URI. */
   private final URI fsURI;
 
-  /** Bucket name */
+  /** Bucket name. */
   private final String bucket;
 
   /** FS configuration after all per-bucket overrides applied. */
@@ -75,7 +75,7 @@ public class StoreContext {
    * Optional as the AWS call to evaluate this may fail from a permissions
    * or other IOE.
    */
-  public final Optional<String> bucketLocation;
+  private final Optional<String> bucketLocation;
 
   /**
    * Bounded thread pool for async operations.
@@ -300,7 +300,7 @@ public class StoreContext {
 
   /**
    * Create a new executor with the capacity defined in
-   * {@link #executorCapacity}
+   * {@link #executorCapacity}.
    * @return a new executor for exclusive use by the caller.
    */
   public ListeningExecutorService createThrottledExecutor() {
@@ -311,8 +311,15 @@ public class StoreContext {
     return owner;
   }
 
-  public File createTempFile(String pathStr, long size) throws IOException {
-    return tempFileFactory.createTempFile(pathStr, size);
+  /**
+   * Create a temporary file somewhere.
+   * @param prefix prefix for the temporary file
+   * @param size expected size.
+   * @return a file reference.
+   * @throws IOException failure.
+   */
+  public File createTempFile(String prefix, long size) throws IOException {
+    return tempFileFactory.createTempFile(prefix, size);
   }
 
   /**
@@ -322,6 +329,6 @@ public class StoreContext {
    */
   @FunctionalInterface
   public interface TempFileFactory {
-    File createTempFile(String pathStr, long size) throws IOException;
+    File createTempFile(String prefix, long size) throws IOException;
   }
 }

@@ -281,7 +281,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private RetryPolicy batchWriteRetryPolicy;
 
-  private Optional<S3AInstrumentation.S3GuardInstrumentation> instrumentation;
+  private Optional<S3AInstrumentation.S3GuardInstrumentation> instrumentation =
+      Optional.empty();
 
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;

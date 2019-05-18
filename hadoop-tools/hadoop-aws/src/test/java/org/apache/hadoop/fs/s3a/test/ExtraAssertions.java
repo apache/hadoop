@@ -34,17 +34,19 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
  * Some extra assertions for tests.
  */
 @InterfaceAudience.Private
-public class ExtraAssertions {
+public final class ExtraAssertions {
 
   private static final Logger LOG = LoggerFactory.getLogger(
       ExtraAssertions.class);
+
+  private ExtraAssertions() {
+  }
 
   /**
    * Assert that the number of files in a destination matches that expected.

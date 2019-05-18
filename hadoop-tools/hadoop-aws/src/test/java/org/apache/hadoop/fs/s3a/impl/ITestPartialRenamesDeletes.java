@@ -114,7 +114,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /**
    * For submitting work.
    */
-  private static final ListeningExecutorService executor =
+  private static final ListeningExecutorService EXECUTOR =
       BlockingThreadPoolExecutorService.newInstance(
           EXECUTOR_THREAD_COUNT,
           EXECUTOR_THREAD_COUNT * 2,
@@ -145,7 +145,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private S3AFileSystem roleFS;
 
   /**
-   * Base path for this test run; it's all
+   * Base path for this test run.
    */
   private Path basePath;
 
@@ -160,6 +160,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /** delete policy: single or multi? */
   private final boolean multiDelete;
 
+  /**
+   * Configuration for the assume role FS.
+   */
   private Configuration assumedRoleConfig;
 
   private int fileCount;
@@ -185,6 +188,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     });
   }
 
+  /**
+   * Constructor.
+   * @param multiDelete single vs multi delete in the role FS?
+   */
   public ITestPartialRenamesDeletes(final boolean multiDelete) {
     this.multiDelete = multiDelete;
   }
@@ -301,10 +308,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // ramp up the number of connections we can have for maximum PUT
     // performance
-    removeBucketOverrides(bucketName, conf, MAX_THREADS, MAXIMUM_CONNECTIONS);
+    removeBucketOverrides(bucketName, conf,
+        MAX_THREADS,
+        MAXIMUM_CONNECTIONS,
+        S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY);
     conf.setInt(MAX_THREADS, EXECUTOR_THREAD_COUNT);
     conf.setInt(MAXIMUM_CONNECTIONS, EXECUTOR_THREAD_COUNT * 2);
-    conf.setBoolean(ENABLE_MULTI_DELETE, multiDelete);
     // turn off prune delays, so as to stop scale tests creating
     // so much cruft that future CLI prune commands take forever
     conf.setInt(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, 0);
@@ -448,7 +457,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
     // create a set of files
     // this is done in parallel as it is 10x faster on a long-haul test run.
-    List<Path> createdFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount, dirCount);
+    List<Path> createdFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount,
+        dirCount);
     // are they all there?
     int expectedFileCount = createdFiles.size();
     assertFileCount("files ready to rename", roleFS,
@@ -471,7 +481,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           .containsAll(createdFiles)
           .containsExactlyInAnyOrderElementsOf(createdFiles);
     }
-    LOG.info("Result of renaming read-only files is (Correctly) AccessDeniedException",
+    LOG.info("Result of renaming read-only files is as expected",
         deniedException);
     assertFileCount("files in the source directory", roleFS,
         readOnlyDir, expectedFileCount);
@@ -558,8 +568,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // the full FS
     S3AFileSystem fs = getFileSystem();
 
-    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount, dirCount);
-    List<Path> deletableFiles = createFiles(fs, writableDir, dirDepth, fileCount, dirCount);
+    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount,
+        dirCount);
+    List<Path> deletableFiles = createFiles(fs, writableDir, dirDepth, fileCount,
+        dirCount);
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);
@@ -630,7 +642,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @return the expected exception.
    * @throws Exception any other failure.
    */
-  private AccessDeniedException expectDeleteForbidden(Path path) throws Exception {
+  private AccessDeniedException expectDeleteForbidden(Path path)
+      throws Exception {
     try(DurationInfo ignored =
             new DurationInfo(LOG, true, "delete %s", path)) {
       return forbidden("Expected an error deleting "  + path,
@@ -702,13 +715,14 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * @return an unordered set of the paths.
    * @throws IOException failure
    */
-  private Set<Path> listFilesUnderPath(Path path, boolean recursive) throws IOException {
+  private Set<Path> listFilesUnderPath(Path path, boolean recursive)
+      throws IOException {
     Set<Path> files = new TreeSet<>();
-      try (DurationInfo ignore =
-               new DurationInfo(LOG, "ls -R %s", path)) {
-        applyLocatedFiles(getFileSystem().listFiles(path, recursive),
-            (status) -> files.add(status.getPath()));
-      }
+    try (DurationInfo ignore =
+             new DurationInfo(LOG, "ls -R %s", path)) {
+      applyLocatedFiles(getFileSystem().listFiles(path, recursive),
+          (status) -> files.add(status.getPath()));
+    }
     return files;
   }
 
@@ -720,7 +734,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private static CompletableFuture<Path> put(FileSystem fs,
       Path path, String text) {
-    return submit(executor, () -> {
+    return submit(EXECUTOR, () -> {
       try (DurationInfo ignore =
                new DurationInfo(LOG, false, "Creating %s", path)) {
         createFile(fs, path, true, text.getBytes(Charsets.UTF_8));

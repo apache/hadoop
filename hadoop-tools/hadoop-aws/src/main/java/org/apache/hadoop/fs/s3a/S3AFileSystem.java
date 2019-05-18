@@ -1272,12 +1272,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // the list.
     final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
         completeActiveCopies = (String reason) -> {
-          LOG.debug("Waiting for {} active copies to complete: {}",
-              activeCopies.size(), reason);
-          waitForCompletion(activeCopies);
-          activeCopies.clear();
-          return null;
-        };
+            LOG.debug("Waiting for {} active copies to complete: {}",
+                activeCopies.size(), reason);
+            waitForCompletion(activeCopies);
+            activeCopies.clear();
+            return null;
+          };
 
     try {
       if (srcStatus.isFile()) {

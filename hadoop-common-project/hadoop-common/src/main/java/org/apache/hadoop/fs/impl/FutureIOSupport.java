@@ -114,7 +114,7 @@ public final class FutureIOSupport {
 
   /**
    * Extract the cause of a completion failure and rethrow it if an IOE
-   * or RTE
+   * or RTE.
    * @param e exception.
    * @param <T> type of return value.
    * @return nothing, ever.

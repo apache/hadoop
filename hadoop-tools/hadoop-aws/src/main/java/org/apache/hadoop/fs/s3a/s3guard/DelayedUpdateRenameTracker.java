@@ -57,8 +57,8 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       final Path sourceRoot,
       final Path dest,
       final BulkOperationState operationState) {
-    super("DelayedUpdateRenameTracker", storeContext, metadataStore, sourceRoot, dest,
-        operationState);
+    super("DelayedUpdateRenameTracker", storeContext, metadataStore,
+        sourceRoot, dest, operationState);
     this.metadataStore = storeContext.getMetadataStore();
   }
 

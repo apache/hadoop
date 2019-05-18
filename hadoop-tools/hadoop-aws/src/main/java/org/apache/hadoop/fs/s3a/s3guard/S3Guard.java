@@ -500,7 +500,7 @@ public final class S3Guard {
   }
 
   /**
-   * This adds all new ancestors of a path as directories
+   * This adds all new ancestors of a path as directories.
    * @param metadataStore store
    * @param qualifiedPath path to update
    * @param username username to use in all new FileStatus entries.

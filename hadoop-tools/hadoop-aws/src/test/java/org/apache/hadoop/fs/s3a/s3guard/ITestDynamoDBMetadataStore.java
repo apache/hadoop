@@ -152,9 +152,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // be configured to use this test.
     testDynamoDBTableName = conf.get(S3GUARD_DDB_TEST_TABLE_NAME_KEY);
     String dynamoDbTableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
-    Assume.assumeTrue("No DynamoDB table name configured in " + S3GUARD_DDB_TABLE_NAME_KEY,
-        !StringUtils
-            .isEmpty(dynamoDbTableName));
+    Assume.assumeTrue("No DynamoDB table name configured in "
+            + S3GUARD_DDB_TABLE_NAME_KEY,
+        !StringUtils.isEmpty(dynamoDbTableName));
 
     // We should assert that the table name is configured, so the test should
     // fail if it's not configured.
@@ -576,10 +576,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String srcRoot = testRoot + "/a/b/src";
     final String destRoot = testRoot + "/c/d/e/dest";
 
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(null);
     final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)), null);
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)),
+        bulkWrite);
     final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)), null);
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)),
+        bulkWrite);
 
     // We don't put the destRoot path here, since put() would create ancestor
     // entries, and we want to ensure that move() does it, instead.
@@ -589,8 +592,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         strToPath(srcRoot),
         strToPath(srcRoot + "/dir1"),
         strToPath(srcRoot + "/dir1/dir2"),
-        strToPath(srcRoot + "/file1.txt")
-    );
+        strToPath(srcRoot + "/file1.txt"));
     final Collection<PathMetadata> pathsToCreate = Lists.newArrayList(
         new PathMetadata(basicFileStatus(strToPath(destRoot),
             0, true)),
@@ -602,8 +604,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             1024, false))
     );
 
-    ddbms.move(fullSourcePaths, pathsToCreate, null);
+    ddbms.move(fullSourcePaths, pathsToCreate, bulkWrite);
 
+    bulkWrite.close();
     // assert that all the ancestors should have been populated automatically
     assertCached(testRoot + "/c");
     assertCached(testRoot + "/c/d");
