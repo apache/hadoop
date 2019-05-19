@@ -43,12 +43,12 @@ scheduling:
 
 roles:
   worker:
-    resources: memory=20480M,vcores=32,gpu=2
+    resources: memory=20480M,vcores=32
     replicas: 3
     launch_cmd: testLaunchCmdWorker
     docker_image: testDockerImageWorker
   ps:
-    resources: memory=20500M,vcores=34,gpu=4
+    resources: memory=20500M,vcores=34
     replicas: 4
     launch_cmd: testLaunchCmdPs
     docker_image: testDockerImagePs
@@ -59,4 +59,4 @@ security:
   distribute_keytab: true
 
 tensorBoard:
-  resources: memory=21000M,vcores=37,gpu=3
+  resources: memory=21000M,vcores=37
