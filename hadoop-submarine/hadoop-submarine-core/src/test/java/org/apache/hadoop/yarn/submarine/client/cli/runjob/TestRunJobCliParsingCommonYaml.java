@@ -16,15 +16,14 @@
 
 package org.apache.hadoop.yarn.submarine.client.cli.runjob;
 
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.submarine.client.cli.YamlConfigTestUtils;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.YamlParseException;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,10 +31,10 @@ import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 import static org.apache.hadoop.yarn.submarine.client.cli.runjob.TestRunJobCliParsingCommon.getMockClientContext;
 import static org.junit.Assert.assertFalse;
@@ -49,6 +48,8 @@ public class TestRunJobCliParsingCommonYaml {
   private static final String DIR_NAME = "runjob-common-yaml";
   private static final String TF_DIR = "runjob-pytorch-yaml";
   private File yamlConfig;
+  private static Logger LOG = LoggerFactory.getLogger(
+      TestRunJobCliParsingCommonYaml.class);
 
   @Before
   public void before() {
@@ -62,10 +63,12 @@ public class TestRunJobCliParsingCommonYaml {
 
   @BeforeClass
   public static void configureResourceTypes() {
-    List<ResourceTypeInfo> resTypes = new ArrayList<>(
-        ResourceUtils.getResourcesTypeInfo());
-    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
-    ResourceUtils.reinitializeResources(resTypes);
+    try {
+      ResourceUtils.configureResourceType(ResourceUtils.GPU_URI);
+    } catch (SubmarineRuntimeException e) {
+      LOG.info("The hadoop dependency doesn't support gpu resource, " +
+          "so just skip this test case.");
+    }
   }
 
   @Rule
