@@ -34,6 +34,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -61,7 +62,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * Create a directory listing metadata container.
    *
    * @param path Path of the directory. If this path has a host component, then
-   *     all paths added later via {@link #put(FileStatus)} must also have
+   *     all paths added later via {@link #put(S3AFileStatus)} must also have
    *     the same host.
    * @param listing Entries in the directory.
    * @param isAuthoritative true iff listing is the full contents of the
@@ -225,7 +226,7 @@ public class DirListingMetadata extends ExpirableMetadata {
    * @return true if the status was added or replaced with a new value. False
    * if the same FileStatus value was already present.
    */
-  public boolean put(FileStatus childFileStatus) {
+  public boolean put(S3AFileStatus childFileStatus) {
     Preconditions.checkNotNull(childFileStatus,
         "childFileStatus must be non-null");
     Path childPath = childStatusToPathKey(childFileStatus);
