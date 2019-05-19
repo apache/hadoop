@@ -246,12 +246,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  FileStatus basicFileStatus(Path path, int size, boolean isDir)
+  S3AFileStatus basicFileStatus(Path path, int size, boolean isDir)
       throws IOException {
     String owner = UserGroupInformation.getCurrentUser().getShortUserName();
     return isDir
         ? new S3AFileStatus(true, path, owner)
-        : new S3AFileStatus(size, getModTime(), path, BLOCK_SIZE, owner);
+        : new S3AFileStatus(size, getModTime(), path, BLOCK_SIZE, owner,
+            null, null);
   }
 
   private DynamoDBMetadataStore getDynamoMetadataStore() throws IOException {

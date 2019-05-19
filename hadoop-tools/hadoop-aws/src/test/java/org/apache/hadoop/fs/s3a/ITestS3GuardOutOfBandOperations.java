@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -37,6 +38,8 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 
@@ -243,6 +246,12 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   @Test
   public void testOutOfBandDeletes() throws Exception {
+    ChangeDetectionPolicy changeDetectionPolicy =
+        ((S3AFileSystem) getFileSystem()).getChangeDetectionPolicy();
+    Assume.assumeFalse("FNF not expected when using a bucket with"
+            + " object versioning",
+        changeDetectionPolicy.getSource() == Source.VersionId);
+
     Path testFileName = path("OutOfBandDelete-" + UUID.randomUUID());
     outOfBandDeletes(testFileName, authoritative);
   }

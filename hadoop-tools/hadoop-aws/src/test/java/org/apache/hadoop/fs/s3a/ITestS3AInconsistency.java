@@ -24,9 +24,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -106,6 +110,12 @@ public class ITestS3AInconsistency extends AbstractS3ATestBase {
   @Test
   public void testOpenDeleteRead() throws Exception {
     S3AFileSystem fs = getFileSystem();
+    ChangeDetectionPolicy changeDetectionPolicy =
+        ((S3AFileSystem) fs).getChangeDetectionPolicy();
+    Assume.assumeFalse("FNF not expected when using a bucket with"
+            + " object versioning",
+        changeDetectionPolicy.getSource() == Source.VersionId);
+
     Path p = path("testOpenDeleteRead.txt");
     writeTextFile(fs, p, "1337c0d3z", true);
     try (InputStream s = fs.open(p)) {

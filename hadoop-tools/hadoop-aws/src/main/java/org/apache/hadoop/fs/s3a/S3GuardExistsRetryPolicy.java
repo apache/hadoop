@@ -42,6 +42,7 @@ public class S3GuardExistsRetryPolicy extends S3ARetryPolicy {
   protected Map<Class<? extends Exception>, RetryPolicy> createExceptionMap() {
     Map<Class<? extends Exception>, RetryPolicy> b = super.createExceptionMap();
     b.put(FileNotFoundException.class, retryIdempotentCalls);
+    b.put(RemoteFileChangedException.class, retryIdempotentCalls);
     return b;
   }
 }

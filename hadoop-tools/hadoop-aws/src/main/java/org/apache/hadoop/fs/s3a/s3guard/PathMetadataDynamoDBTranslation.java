@@ -40,9 +40,9 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -70,6 +70,8 @@ final class PathMetadataDynamoDBTranslation {
   static final String IS_DELETED = "is_deleted";
   static final String IS_AUTHORITATIVE = "is_authoritative";
   static final String LAST_UPDATED = "last_updated";
+  static final String ETAG = "etag";
+  static final String VERSION_ID = "version_id";
 
   /** Used while testing backward compatibility. */
   @VisibleForTesting
@@ -135,7 +137,7 @@ final class PathMetadataDynamoDBTranslation {
 
     boolean isDir = item.hasAttribute(IS_DIR) && item.getBoolean(IS_DIR);
     boolean isAuthoritativeDir = false;
-    final FileStatus fileStatus;
+    final S3AFileStatus fileStatus;
     long lastUpdated = 0;
     if (isDir) {
       isAuthoritativeDir = !IGNORED_FIELDS.contains(IS_AUTHORITATIVE)
@@ -146,8 +148,10 @@ final class PathMetadataDynamoDBTranslation {
       long len = item.hasAttribute(FILE_LENGTH) ? item.getLong(FILE_LENGTH) : 0;
       long modTime = item.hasAttribute(MOD_TIME) ? item.getLong(MOD_TIME) : 0;
       long block = item.hasAttribute(BLOCK_SIZE) ? item.getLong(BLOCK_SIZE) : 0;
-      fileStatus = new FileStatus(len, false, 1, block, modTime, 0, null,
-          username, username, path);
+      String eTag = item.getString(ETAG);
+      String versionId = item.getString(VERSION_ID);
+      fileStatus = new S3AFileStatus(
+          len, modTime, path, block, username, eTag, versionId);
     }
     lastUpdated =
         !IGNORED_FIELDS.contains(LAST_UPDATED)
@@ -172,7 +176,7 @@ final class PathMetadataDynamoDBTranslation {
    */
   static Item pathMetadataToItem(DDBPathMetadata meta) {
     Preconditions.checkNotNull(meta);
-    final FileStatus status = meta.getFileStatus();
+    final S3AFileStatus status = meta.getFileStatus();
     final Item item = new Item().withPrimaryKey(pathToKey(status.getPath()));
     if (status.isDirectory()) {
       item.withBoolean(IS_DIR, true);
@@ -183,6 +187,12 @@ final class PathMetadataDynamoDBTranslation {
       item.withLong(FILE_LENGTH, status.getLen())
           .withLong(MOD_TIME, status.getModificationTime())
           .withLong(BLOCK_SIZE, status.getBlockSize());
+      if (status.getETag() != null) {
+        item.withString(ETAG, status.getETag());
+      }
+      if (status.getVersionId() != null) {
+        item.withString(VERSION_ID, status.getVersionId());
+      }
     }
     item.withBoolean(IS_DELETED, meta.isDeleted());
 

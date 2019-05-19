@@ -26,6 +26,8 @@ import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL;
 
@@ -51,7 +53,7 @@ public class TestS3Guard extends Assert {
         Arrays.asList(m1, m2), false);
 
     // Two other files in s3
-    List<FileStatus> s3Listing = Arrays.asList(
+    List<S3AFileStatus> s3Listing = Arrays.asList(
         makeFileStatus("s3a://bucket/dir/s3-file3", false),
         makeFileStatus("s3a://bucket/dir/s3-file4", false)
     );
@@ -86,12 +88,15 @@ public class TestS3Guard extends Assert {
     return new PathMetadata(makeFileStatus(pathStr, isDir));
   }
 
-  private FileStatus makeFileStatus(String pathStr, boolean isDir) {
+  private S3AFileStatus makeFileStatus(String pathStr, boolean isDir) {
     Path p = new Path(pathStr);
+    S3AFileStatus fileStatus;
     if (isDir) {
-      return new FileStatus(0, true, 1, 1, System.currentTimeMillis(), p);
+      fileStatus = new S3AFileStatus(Tristate.UNKNOWN, p, null);
     } else {
-      return new FileStatus(100, false, 1, 1, System.currentTimeMillis(), p);
+      fileStatus = new S3AFileStatus(
+          100, System.currentTimeMillis(), p, 1, null, null, null);
     }
+    return fileStatus;
   }
 }

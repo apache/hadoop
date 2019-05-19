@@ -41,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
@@ -231,7 +230,7 @@ public class ITestDynamoDBMetadataStoreScale
             long pruneItems = 0;
             for (long i = 0; i < iterations; i++) {
               Path longPath = pathOfDepth(BATCH_SIZE, String.valueOf(i));
-              FileStatus status = basicFileStatus(longPath, 0, false, 12345,
+              S3AFileStatus status = basicFileStatus(longPath, 0, false,
                   12345);
               PathMetadata pm = new PathMetadata(status);
               synchronized (toCleanup) {

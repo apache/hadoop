@@ -18,7 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
@@ -36,18 +36,18 @@ public class DDBPathMetadata extends PathMetadata {
     this.setLastUpdated(pmd.getLastUpdated());
   }
 
-  public DDBPathMetadata(FileStatus fileStatus) {
+  public DDBPathMetadata(S3AFileStatus fileStatus) {
     super(fileStatus);
     this.isAuthoritativeDir = false;
   }
 
-  public DDBPathMetadata(FileStatus fileStatus, Tristate isEmptyDir,
+  public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
       boolean isDeleted) {
     super(fileStatus, isEmptyDir, isDeleted);
     this.isAuthoritativeDir = false;
   }
 
-  public DDBPathMetadata(FileStatus fileStatus, Tristate isEmptyDir,
+  public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
       boolean isDeleted, boolean isAuthoritativeDir, long lastUpdated) {
     super(fileStatus, isEmptyDir, isDeleted);
     this.isAuthoritativeDir = isAuthoritativeDir;

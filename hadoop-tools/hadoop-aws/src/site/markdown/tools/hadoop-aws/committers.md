@@ -690,10 +690,15 @@ Filesystem s3a://landsat-pds is not using S3Guard
 The "magic" committer is not supported
 
 S3A Client
-  Endpoint: fs.s3a.endpoint=(unset)
+  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
+  Endpoint: fs.s3a.endpoint=s3.amazonaws.com
   Encryption: fs.s3a.server-side-encryption-algorithm=none
   Input seek policy: fs.s3a.experimental.input.fadvise=normal
-2017-09-27 19:18:57,917 INFO util.ExitUtil: Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
+  Change Detection Source: fs.s3a.change.detection.source=etag
+  Change Detection Mode: fs.s3a.change.detection.mode=server
+Delegation token support is disabled
+2019-05-17 13:53:38,245 [main] INFO  util.ExitUtil (ExitUtil.java:terminate(210)) -
+ Exiting with status 46: 46: The magic committer is not enabled for s3a://landsat-pds
 ```
 
 ## Error message: "File being created has a magic path, but the filesystem has magic file support disabled:

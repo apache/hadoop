@@ -153,7 +153,8 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     this.serverSideEncryptionKey = s3Attributes.getServerSideEncryptionKey();
     this.changeTracker = new ChangeTracker(uri,
         ctx.getChangeDetectionPolicy(),
-        streamStatistics.getVersionMismatchCounter());
+        streamStatistics.getVersionMismatchCounter(),
+        s3Attributes);
     setInputPolicy(ctx.getInputPolicy());
     setReadahead(ctx.getReadahead());
   }
@@ -344,9 +345,12 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
   private void lazySeek(long targetPos, long len) throws IOException {
 
     // With S3Guard, the metadatastore gave us metadata for the file in
-    // open(), so we use a slightly different retry policy.
+    // open(), so we use a slightly different retry policy, but only on initial
+    // open.  After that, an exception generally means the file has changed
+    // and there is no point retrying anymore.
     Invoker invoker = context.getReadInvoker();
-    invoker.retry("lazySeek", pathStr, true,
+    invoker.maybeRetry(streamStatistics.openOperations == 0,
+        "lazySeek", pathStr, true,
         () -> {
           //For lazy seek
           seekInStream(targetPos, len);

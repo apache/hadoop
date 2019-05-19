@@ -522,12 +522,15 @@ $ hadoop s3guard bucket-info s3a://landsat-pds/
 Filesystem s3a://landsat-pds
 Location: us-west-2
 Filesystem s3a://landsat-pds is not using S3Guard
-The "magic" committer is supported
+The "magic" committer is not supported
 
 S3A Client
+  Signing Algorithm: fs.s3a.signing-algorithm=(unset)
   Endpoint: fs.s3a.endpoint=s3.amazonaws.com
   Encryption: fs.s3a.server-side-encryption-algorithm=none
   Input seek policy: fs.s3a.experimental.input.fadvise=normal
+  Change Detection Source: fs.s3a.change.detection.source=etag
+  Change Detection Mode: fs.s3a.change.detection.mode=server
 Delegation Support enabled: token kind = S3ADelegationToken/Session
 Hadoop security mode: SIMPLE
 ```
