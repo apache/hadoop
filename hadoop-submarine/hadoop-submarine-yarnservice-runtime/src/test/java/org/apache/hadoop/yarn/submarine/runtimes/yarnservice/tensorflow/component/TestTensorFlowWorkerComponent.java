@@ -33,7 +33,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants.CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
@@ -209,8 +208,11 @@ public class TestTensorFlowWorkerComponent {
     Component component = workerComponent.createComponent();
 
     assertEquals(1L, (long) component.getNumberOfContainers());
+    // If the dependencies are upgraded to hadoop 3.3.0.
+    // yarn.service.container-state-report-as-service-state can be replaced
+    // with CONTAINER_STATE_REPORT_AS_SERVICE_STATE
     verifyCommons(component, ImmutableMap.of(
-        CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true"));
+        "yarn.service.container-state-report-as-service-state", "true"));
   }
 
 }

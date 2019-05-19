@@ -40,7 +40,7 @@ scheduling:
 
 roles:
   worker:
-    resources: memory=20480M,vcores=32,gpu=2
+    resources: memory=20480M,vcores=32
     replicas: 3
     launch_cmd: testLaunchCmdWorker
     docker_image: testDockerImageWorker

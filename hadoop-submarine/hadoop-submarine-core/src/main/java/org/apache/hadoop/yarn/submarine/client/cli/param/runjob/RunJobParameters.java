@@ -45,7 +45,7 @@ import org.apache.hadoop.yarn.submarine.client.cli.runjob.RoleParameters;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
 import org.yaml.snakeyaml.introspector.Property;
 import org.yaml.snakeyaml.introspector.PropertyUtils;
 
@@ -271,8 +271,7 @@ public abstract class RunJobParameters extends RunParameters {
         throw new ParseException(
             "--" + CliConstants.WORKER_RES + " is absent.");
       }
-      return ResourceUtils.createResourceFromString(workerResourceStr,
-          clientContext.getOrCreateYarnClient().getResourceTypeInfo());
+      return ResourceUtils.createResourceFromString(workerResourceStr);
     }
     return null;
   }

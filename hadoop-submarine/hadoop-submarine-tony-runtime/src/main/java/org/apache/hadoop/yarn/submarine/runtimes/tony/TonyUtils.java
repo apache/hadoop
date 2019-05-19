@@ -19,9 +19,8 @@ import com.linkedin.tony.util.Utils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.exceptions.ResourceNotFoundException;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,7 +51,7 @@ public final class TonyUtils {
       tonyConf.setLong(
           TonyConfigurationKeys.getResourceKey(Constants.PS_JOB_NAME,
               Constants.MEMORY),
-          parameters.getPsResource().getMemorySize());
+          ResourceUtils.getMemorySize(parameters.getPsResource()));
     }
     if (parameters.getWorkerResource() != null) {
       tonyConf.setInt(
@@ -62,16 +61,12 @@ public final class TonyUtils {
       tonyConf.setLong(
           TonyConfigurationKeys.getResourceKey(Constants.WORKER_JOB_NAME,
               Constants.MEMORY),
-          parameters.getWorkerResource().getMemorySize());
-      try {
-        tonyConf.setLong(
-            TonyConfigurationKeys.getResourceKey(Constants.WORKER_JOB_NAME,
-                Constants.GPUS),
-            parameters.getWorkerResource()
-                .getResourceValue(ResourceInformation.GPU_URI));
-      } catch (ResourceNotFoundException rnfe) {
-        LOG.error("GPU resources not enabled.");
-      }
+          ResourceUtils.getMemorySize(parameters.getWorkerResource()));
+      tonyConf.setLong(
+          TonyConfigurationKeys.getResourceKey(Constants.WORKER_JOB_NAME,
+              Constants.GPUS),
+          ResourceUtils.getResourceValue(parameters.getWorkerResource(),
+              ResourceUtils.GPU_URI));
     }
     if (parameters.getQueue() != null) {
       tonyConf.set(

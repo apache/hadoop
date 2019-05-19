@@ -23,6 +23,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>hadoop-submarine-tony-runtime</artifactId>
+    <name>Hadoop Submarine Tony Runtime</name>
     <dependencies>
         <dependency>
             <groupId>org.apache.hadoop</groupId>

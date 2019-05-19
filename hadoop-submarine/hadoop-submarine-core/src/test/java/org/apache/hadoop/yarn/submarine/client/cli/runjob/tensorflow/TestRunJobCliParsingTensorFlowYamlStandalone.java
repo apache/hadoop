@@ -132,14 +132,14 @@ public class TestRunJobCliParsingTensorFlowYamlStandalone {
   private void assertWorkerValues(Role worker) {
     assertEquals("testLaunchCmdWorker", worker.getLaunchCmd());
     assertEquals("testDockerImageWorker", worker.getDockerImage());
-    assertEquals("memory=20480M,vcores=32,gpu=2", worker.getResources());
+    assertEquals("memory=20480M,vcores=32", worker.getResources());
     assertEquals(3, worker.getReplicas());
   }
 
   private void assertPsValues(Role ps) {
     assertEquals("testLaunchCmdPs", ps.getLaunchCmd());
     assertEquals("testDockerImagePs", ps.getDockerImage());
-    assertEquals("memory=20500M,vcores=34,gpu=4", ps.getResources());
+    assertEquals("memory=20500M,vcores=34", ps.getResources());
     assertEquals(4, ps.getReplicas());
   }
 
@@ -161,7 +161,7 @@ public class TestRunJobCliParsingTensorFlowYamlStandalone {
     TensorBoard tensorBoard = yamlConfigFile.getTensorBoard();
     assertNotNull("Tensorboard should not be null!", tensorBoard);
     assertEquals("tensorboardDockerImage", tensorBoard.getDockerImage());
-    assertEquals("memory=21000M,vcores=37,gpu=3", tensorBoard.getResources());
+    assertEquals("memory=21000M,vcores=37", tensorBoard.getResources());
   }
 
   @Before

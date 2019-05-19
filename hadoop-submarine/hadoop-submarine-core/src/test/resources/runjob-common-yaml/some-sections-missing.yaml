@@ -40,10 +40,10 @@ configs:
 
 roles:
   worker:
-    resources: memory=20480M,vcores=32,gpu=2
+    resources: memory=20480M,vcores=32
     replicas: 3
     launch_cmd: testLaunchCmdWorker
   ps:
-    resources: memory=20500M,vcores=34,gpu=4
+    resources: memory=20500M,vcores=34
     replicas: 4
     launch_cmd: testLaunchCmdPs

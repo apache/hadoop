@@ -30,7 +30,6 @@ import org.apache.hadoop.yarn.submarine.runtimes.yarnservice.command.LaunchComma
 import java.io.IOException;
 import java.util.Objects;
 
-import static org.apache.hadoop.yarn.service.conf.YarnServiceConstants.CONTAINER_STATE_REPORT_AS_SERVICE_STATE;
 import static org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.TensorFlowCommons.addCommonEnvironments;
 import static org.apache.hadoop.yarn.submarine.runtimes.yarnservice.tensorflow.TensorFlowCommons.getScriptFileName;
 import static org.apache.hadoop.yarn.submarine.utils.DockerUtilities.getDockerArtifact;
@@ -85,8 +84,11 @@ public abstract class AbstractComponent {
     if (role.equals(TensorFlowRole.PRIMARY_WORKER) ||
         role.equals(PyTorchRole.PRIMARY_WORKER)) {
       component.setNumberOfContainers(1L);
+      // If the dependencies are upgraded to hadoop 3.3.0.
+      // yarn.service.container-state-report-as-service-state can be replaced
+      // with CONTAINER_STATE_REPORT_AS_SERVICE_STATE
       component.getConfiguration().setProperty(
-          CONTAINER_STATE_REPORT_AS_SERVICE_STATE, "true");
+          "yarn.service.container-state-report-as-service-state", "true");
     } else {
       component.setNumberOfContainers(
           (long) parameters.getNumWorkers() - 1);

@@ -20,7 +20,7 @@
   <parent>
     <groupId>org.apache.hadoop</groupId>
     <artifactId>hadoop-project</artifactId>
-    <version>3.3.0-SNAPSHOT</version>
+    <version>3.2.0</version>
     <relativePath/>
   </parent>
   <artifactId>hadoop-submarine</artifactId>
@@ -32,29 +32,126 @@
     <hadoop.common.build.dir>${basedir}/../hadoop-common-project/hadoop-common/target</hadoop.common.build.dir>
   </properties>
 
-  <!-- Do not add dependencies here, add them to the POM of the leaf module -->
-
   <modules>
     <module>hadoop-submarine-core</module>
-    <module>hadoop-submarine-yarnservice-runtime</module>
-    <module>hadoop-submarine-tony-runtime</module>
+    <module>hadoop-submarine-all</module>
+    <module>hadoop-submarine-dist</module>
   </modules>
 
- <profiles>
-  <profile>
-    <id>clover</id>
-    <activation>
-      <activeByDefault>false</activeByDefault>
-      <property>
-        <name>clover</name>
-      </property>
-    </activation>
+  <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>com.cenqua.clover</groupId>
-        <artifactId>clover</artifactId>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-core</artifactId>
+        <version>2.23.4</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-services-api</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-api</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-common</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-yarn-client</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-hdfs</artifactId>
+        <version>${hadoop.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-lang3</artifactId>
+        <version>3.7</version>
       </dependency>
     </dependencies>
-  </profile>
-</profiles>
+  </dependencyManagement>
+
+  <profiles>
+    <profile>
+      <id>hadoop-3.2</id>
+      <properties>
+        <hadoop.version>3.2.0</hadoop.version>
+      </properties>
+      <modules>
+        <module>hadoop-submarine-yarnservice-runtime</module>
+        <module>hadoop-submarine-tony-runtime</module>
+      </modules>
+    </profile>
+
+    <!-- Default profile-->
+    <profile>
+      <id>hadoop-3.1</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
+      <properties>
+        <hadoop.version>3.1.2</hadoop.version>
+      </properties>
+      <modules>
+        <module>hadoop-submarine-yarnservice-runtime</module>
+        <module>hadoop-submarine-tony-runtime</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <id>hadoop-2.9</id>
+      <properties>
+        <hadoop.version>2.9.2</hadoop.version>
+      </properties>
+      <modules>
+        <module>hadoop-submarine-tony-runtime</module>
+      </modules>
+    </profile>
+
+    <profile>
+      <id>hadoop-2.7</id>
+      <properties>
+        <hadoop.version>2.7.3</hadoop.version>
+      </properties>
+      <modules>
+        <module>hadoop-submarine-tony-runtime</module>
+      </modules>
+    </profile>
+
+    <profile>
+     <id>clover</id>
+     <activation>
+       <activeByDefault>false</activeByDefault>
+       <property>
+         <name>clover</name>
+       </property>
+     </activation>
+     <dependencies>
+       <dependency>
+         <groupId>com.cenqua.clover</groupId>
+         <artifactId>clover</artifactId>
+       </dependency>
+     </dependencies>
+    </profile>
+  </profiles>
+
 </project>
