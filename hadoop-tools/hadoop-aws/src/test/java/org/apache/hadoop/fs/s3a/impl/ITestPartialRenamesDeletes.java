@@ -568,10 +568,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     // the full FS
     S3AFileSystem fs = getFileSystem();
 
-    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir, dirDepth, fileCount,
-        dirCount);
-    List<Path> deletableFiles = createFiles(fs, writableDir, dirDepth, fileCount,
-        dirCount);
+    List<Path> readOnlyFiles = createFiles(fs, readOnlyDir,
+        dirDepth, fileCount, dirCount);
+    List<Path> deletableFiles = createFiles(fs,
+        writableDir, dirDepth, fileCount, dirCount);
 
     // as a safety check, verify that one of the deletable files can be deleted
     Path head = deletableFiles.remove(0);

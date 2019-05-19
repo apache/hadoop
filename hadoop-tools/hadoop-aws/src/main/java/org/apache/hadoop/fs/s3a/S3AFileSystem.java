@@ -1272,12 +1272,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // the list.
     final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
         completeActiveCopies = (String reason) -> {
-            LOG.debug("Waiting for {} active copies to complete: {}",
-                activeCopies.size(), reason);
-            waitForCompletion(activeCopies);
-            activeCopies.clear();
-            return null;
-          };
+          LOG.debug("Waiting for {} active copies to complete: {}",
+              activeCopies.size(), reason);
+          waitForCompletion(activeCopies);
+          activeCopies.clear();
+          return null;
+        };
 
     try {
       if (srcStatus.isFile()) {
@@ -1322,7 +1322,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
         // These are the lists of keys to delete and of their paths, the
         // latter being used to update the rename tracker.
-        final List<DeleteObjectsRequest.KeyVersion> keysToDelete = new ArrayList<>();
+        final List<DeleteObjectsRequest.KeyVersion> keysToDelete =
+            new ArrayList<>();
         final List<Path> pathsToDelete = new ArrayList<>();
         // to update the lists of keys and paths.
         final BiFunction<Path, String, Void> queueToDelete =
@@ -1335,14 +1336,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // then delete all queued keys + paths to delete.
         final FunctionsRaisingIOE.FunctionRaisingIOE<String, Void>
             completeActiveCopiesAndDeleteSources =
-            (String reason) -> {
-              completeActiveCopies.apply(reason);
-              removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
-              // now reset the lists.
-              keysToDelete.clear();
-              pathsToDelete.clear();
-              return null;
-            };
+                (reason) -> {
+                  completeActiveCopies.apply(reason);
+                  removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
+                  // now reset the lists.
+                  keysToDelete.clear();
+                  pathsToDelete.clear();
+                  return null;
+                };
 
         if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
           // delete unnecessary fake directory at the destination.

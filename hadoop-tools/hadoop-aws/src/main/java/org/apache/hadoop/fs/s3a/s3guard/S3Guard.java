@@ -172,9 +172,12 @@ public final class S3Guard {
     try {
       ms.put(new PathMetadata(status), operationState);
     } finally {
-      instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+      instrumentation.addValueToQuantiles(
+          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
           (System.nanoTime() - startTimeNano));
-      instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
+      instrumentation.incrementCounter(
+          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
+          1);
     }
     return status;
   }

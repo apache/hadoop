@@ -41,6 +41,10 @@ public final class FunctionsRaisingIOE {
     R apply(T p) throws IOException;
   }
 
+  /**
+   * This is a callable which only raises an IOException.
+   * @param <R> return type
+   */
   @FunctionalInterface
   public interface CallableRaisingIOE<R> {
 

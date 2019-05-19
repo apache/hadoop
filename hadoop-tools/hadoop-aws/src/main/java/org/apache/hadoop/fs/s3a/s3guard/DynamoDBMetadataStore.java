@@ -34,7 +34,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
@@ -281,8 +280,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private RetryPolicy batchWriteRetryPolicy;
 
-  private Optional<S3AInstrumentation.S3GuardInstrumentation> instrumentation =
-      Optional.empty();
+  private S3AInstrumentation.S3GuardInstrumentation instrumentation;
 
   /** Owner FS: only valid if configured with an owner FS. */
   private S3AFileSystem owner;
@@ -392,8 +390,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     initTable();
 
-    instrumentation.ifPresent(
-        S3AInstrumentation.S3GuardInstrumentation::initialized);
+    instrumentation.initialized();
   }
 
   /**
@@ -407,8 +404,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     owner = fs;
     conf = owner.getConf();
     StoreContext context = owner.createStoreContext();
-    instrumentation = Optional.of(
-        context.getInstrumentation().getS3GuardInstrumentation());
+    instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
     username = context.getUsername();
     executor = context.createThrottledExecutor();
   }
@@ -1101,16 +1097,17 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // next add all children of the directory
     metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
 
-    // and sort
+    // sort so highest-level entries are written to the store first.
+    // if a sequence fails, no orphan entries will have been written.
     metasToPut.sort(PathOrderComparators.TOPMOST_PM_FIRST);
-
     processBatchWriteRequest(null, pathMetadataToItem(metasToPut));
   }
 
   @Override
   public synchronized void close() {
-    instrumentation.ifPresent(
-        S3AInstrumentation.S3GuardInstrumentation::storeClosed);
+    if (instrumentation != null) {
+      instrumentation.storeClosed();
+    }
     try {
       if (dynamoDB != null) {
         LOG.debug("Shutting down {}", this);
@@ -1793,8 +1790,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       boolean idempotent) {
     if (S3AUtils.isThrottleException(ex)) {
       // throttled
-      instrumentation.ifPresent(
-          S3AInstrumentation.S3GuardInstrumentation::throttled);
+      if (instrumentation != null) {
+        instrumentation.throttled();
+      }
       int eventCount = throttleEventCount.addAndGet(1);
       if (attempts == 1 && eventCount < THROTTLE_EVENT_LOG_LIMIT) {
         LOG.warn("DynamoDB IO limits reached in {};"
@@ -1810,8 +1808,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.info("Retrying {}: {}", text, ex.toString());
       LOG.debug("Retrying {}", text, ex);
     }
-    instrumentation.ifPresent(
-        S3AInstrumentation.S3GuardInstrumentation::retrying);
+
+    if (instrumentation != null) {
+      // note a retry
+      instrumentation.retrying();
+    }
     if (owner != null) {
       owner.metastoreOperationRetried(ex, attempts, idempotent);
     }
@@ -1850,7 +1851,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsWritten(final int count) {
-    instrumentation.ifPresent(i -> i.recordsWritten(count));
+    if (instrumentation != null) {
+      instrumentation.recordsWritten(count);
+    }
   }
 
   /**
@@ -1858,7 +1861,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param count count of records.
    */
   private void recordsRead(final int count) {
-    instrumentation.ifPresent(i -> i.recordsRead(count));
+    if (instrumentation != null) {
+      instrumentation.recordsRead(count);
+    }
   }
 
   /**
@@ -1871,7 +1876,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @return the rename tracker
    */
   @Override
-  public RenameTracker initiateRenameOperation(final StoreContext storeContext,
+  public RenameTracker initiateRenameOperation(
+      final StoreContext storeContext,
       final Path source,
       final FileStatus sourceStatus,
       final Path dest) {

@@ -163,7 +163,8 @@ public final class MultiObjectDeleteSupport {
    * @return a tuple of (undeleted, deleted, failures)
    */
   public Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
-     processDeleteFailure(
+      processDeleteFailure(
+
       final MultiObjectDeleteException deleteException,
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
     final MetadataStore metadataStore =
