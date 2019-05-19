@@ -1042,30 +1042,25 @@ public final class S3ATestUtils {
    * Verify the status entry of a directory matches that expected.
    * @param status status entry to check
    * @param replication replication factor
-   * @param modTime modified time
-   * @param accessTime access time
    * @param owner owner
-   * @param group user group
-   * @param permission permission.
    */
-  public static void verifyDirStatus(FileStatus status,
+  public static void verifyDirStatus(S3AFileStatus status,
       int replication,
-      long modTime,
-      long accessTime,
-      String owner,
-      String group,
-      FsPermission permission) {
+      String owner) {
     String details = status.toString();
     assertTrue("Is a dir: " + details, status.isDirectory());
     assertEquals("zero length: " + details, 0, status.getLen());
-
-    assertEquals("Mod time: " + details, modTime, status.getModificationTime());
+    // S3AFileStatus always assigns modTime = System.currentTimeMillis()
+    assertTrue("Mod time: " + details, status.getModificationTime() > 0);
     assertEquals("Replication value: " + details, replication,
         status.getReplication());
-    assertEquals("Access time: " + details, accessTime, status.getAccessTime());
+    assertEquals("Access time: " + details, 0, status.getAccessTime());
     assertEquals("Owner: " + details, owner, status.getOwner());
-    assertEquals("Group: " + details, group, status.getGroup());
-    assertEquals("Permission: " + details, permission, status.getPermission());
+    // S3AFileStatus always assigns group=owner
+    assertEquals("Group: " + details, owner, status.getGroup());
+    // S3AFileStatus always assigns permission = default
+    assertEquals("Permission: " + details,
+        FsPermission.getDefault(), status.getPermission());
   }
 
   /**
