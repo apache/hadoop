@@ -273,6 +273,9 @@
             <exclude>webapps/static/nvd3-1.8.5.min.js.map</exclude>
             <exclude>webapps/static/nvd3-1.8.5.min.js</exclude>
             <exclude>**/dependency-reduced-pom.xml</exclude>
+            <exclude>**/node_modules/**</exclude>
+            <exclude>**/yarn.lock</exclude>
+            <exclude>**/ozone-recon-web/build/**</exclude>
           </excludes>
         </configuration>
       </plugin>

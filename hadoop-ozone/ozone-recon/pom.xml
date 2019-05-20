@@ -75,27 +75,84 @@
           <excludeFilterFile>${basedir}/dev-support/findbugsExcludeFile.xml</excludeFilterFile>
         </configuration>
       </plugin>
+      <!--
+      1. used for local installation of node and yarn
+      2. to install dependencies with yarn install
+      3. building the frontend application
+      -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
+        <groupId>com.github.eirslett</groupId>
+        <artifactId>frontend-maven-plugin</artifactId>
+        <version>1.6</version>
+        <configuration>
+          <installDirectory>target</installDirectory>
+          <workingDirectory>${basedir}/src/main/resources/webapps/recon/ozone-recon-web</workingDirectory>
+        </configuration>
         <executions>
           <execution>
-            <id>copy-common-html</id>
-            <phase>prepare-package</phase>
+            <id>Install node and yarn locally to the project</id>
             <goals>
-              <goal>unpack</goal>
+              <goal>install-node-and-yarn</goal>
             </goals>
             <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.apache.hadoop</groupId>
-                  <artifactId>hadoop-hdds-server-framework</artifactId>
-                  <outputDirectory>${project.build.outputDirectory}
-                  </outputDirectory>
-                  <includes>webapps/static/**/*.*</includes>
-                </artifactItem>
-              </artifactItems>
-              <overWriteSnapshots>true</overWriteSnapshots>
+              <nodeVersion>v12.1.0</nodeVersion>
+              <yarnVersion>v1.9.2</yarnVersion>
+            </configuration>
+          </execution>
+          <execution>
+            <id>yarn install</id>
+            <goals>
+              <goal>yarn</goal>
+            </goals>
+            <configuration>
+              <arguments>install</arguments>
+            </configuration>
+          </execution>
+          <execution>
+            <id>Build frontend</id>
+            <goals>
+              <goal>yarn</goal>
+            </goals>
+            <configuration>
+              <arguments>run build</arguments>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-resources-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>Copy frontend build to target</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/webapps/recon</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/resources/webapps/recon/ozone-recon-web/build</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>Copy frontend static files to target</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.outputDirectory}/webapps/static</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>${basedir}/src/main/resources/webapps/recon/ozone-recon-web/build/static</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
             </configuration>
           </execution>
         </executions>
@@ -260,6 +317,11 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-jdbc</artifactId>
       <version>${spring.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.activation</groupId>
+      <artifactId>activation</artifactId>
+      <version>1.1.1</version>
     </dependency>
   </dependencies>
 </project>
