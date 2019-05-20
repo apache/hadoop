@@ -170,7 +170,8 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
           status.getOwner());
     } else {
       return new S3AFileStatus(status.getLen(), status.getModificationTime(),
-          status.getPath(), status.getBlockSize(), status.getOwner());
+          status.getPath(), status.getBlockSize(), status.getOwner(),
+          status.getETag(), status.getVersionId());
     }
   }
 
@@ -207,7 +208,8 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   }
 
   protected static S3AFileStatus makeFileStatus(Path path) throws IOException {
-    return new S3AFileStatus(SIZE, ACCESS_TIME, path, BLOCK_SIZE, OWNER);
+    return new S3AFileStatus(SIZE, ACCESS_TIME, path, BLOCK_SIZE, OWNER,
+        null, null);
   }
 
   protected static S3AFileStatus makeDirStatus(Path p) throws IOException {

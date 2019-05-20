@@ -177,7 +177,7 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key, long length) {
+  void finishedWrite(String key, long length, String eTag, String versionId) {
 
   }
 

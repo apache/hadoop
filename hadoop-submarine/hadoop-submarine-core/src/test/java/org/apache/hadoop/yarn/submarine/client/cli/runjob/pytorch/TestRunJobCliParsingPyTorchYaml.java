@@ -24,29 +24,28 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
-import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.submarine.client.cli.YamlConfigTestUtils;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.PyTorchRunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.yaml.YamlParseException;
 import org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Test class that verifies the correctness of PyTorch
@@ -56,6 +55,8 @@ public class TestRunJobCliParsingPyTorchYaml {
   private static final String OVERRIDDEN_PREFIX = "overridden_";
   private static final String DIR_NAME = "runjob-pytorch-yaml";
   private File yamlConfig;
+  private static Logger LOG = LoggerFactory.getLogger(
+      TestRunJobCliParsingPyTorchYaml.class);
 
   @Before
   public void before() {
@@ -65,14 +66,6 @@ public class TestRunJobCliParsingPyTorchYaml {
   @After
   public void after() {
     YamlConfigTestUtils.deleteFile(yamlConfig);
-  }
-
-  @BeforeClass
-  public static void configureResourceTypes() {
-    List<ResourceTypeInfo> resTypes = new ArrayList<>(
-        ResourceUtils.getResourcesTypeInfo());
-    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
-    ResourceUtils.reinitializeResources(resTypes);
   }
 
   @Rule
@@ -105,23 +98,38 @@ public class TestRunJobCliParsingPyTorchYaml {
     }
   }
 
-  private void verifyWorkerValues(RunJobParameters jobRunParameters,
-      String prefix) {
+  private PyTorchRunJobParameters verifyWorkerCommonValues(RunJobParameters
+      jobRunParameters, String prefix) {
     assertTrue(RunJobParameters.class + " must be an instance of " +
             PyTorchRunJobParameters.class,
         jobRunParameters instanceof PyTorchRunJobParameters);
-    PyTorchRunJobParameters tensorFlowParams =
+    PyTorchRunJobParameters pyTorchParams =
         (PyTorchRunJobParameters) jobRunParameters;
 
-    assertEquals(3, tensorFlowParams.getNumWorkers());
+    assertEquals(3, pyTorchParams.getNumWorkers());
     assertEquals(prefix + "testLaunchCmdWorker",
-        tensorFlowParams.getWorkerLaunchCmd());
+        pyTorchParams.getWorkerLaunchCmd());
     assertEquals(prefix + "testDockerImageWorker",
-        tensorFlowParams.getWorkerDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(20480L, 32,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "2").build()),
-        tensorFlowParams.getWorkerResource());
+        pyTorchParams.getWorkerDockerImage());
+    return pyTorchParams;
+  }
+
+  private void verifyWorkerValues(RunJobParameters jobRunParameters,
+      String prefix) {
+    PyTorchRunJobParameters pyTorchParams = verifyWorkerCommonValues
+        (jobRunParameters, prefix);
+    assertEquals(Resources.createResource(20480, 32),
+        pyTorchParams.getWorkerResource());
+  }
+
+  private void verifyWorkerValuesWithGpu(RunJobParameters jobRunParameters,
+      String prefix) {
+
+    PyTorchRunJobParameters pyTorchParams = verifyWorkerCommonValues
+        (jobRunParameters, prefix);
+    Resource workResource = Resources.createResource(20480, 32);
+    ResourceUtils.setResource(workResource, ResourceUtils.GPU_URI, 2);
+    assertEquals(workResource, pyTorchParams.getWorkerResource());
   }
 
   private void verifySecurityValues(RunJobParameters jobRunParameters) {
@@ -143,6 +151,30 @@ public class TestRunJobCliParsingPyTorchYaml {
     RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
     verifyBasicConfigValues(jobRunParameters);
     verifyWorkerValues(jobRunParameters, "");
+    verifySecurityValues(jobRunParameters);
+  }
+
+  @Test
+  public void testValidGpuYamlParsing() throws Exception {
+    try {
+      ResourceUtils.configureResourceType(ResourceUtils.GPU_URI);
+    } catch (SubmarineRuntimeException e) {
+      LOG.info("The hadoop dependency doesn't support gpu resource, " +
+          "so just skip this test case.");
+      return;
+    }
+
+    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
+    Assert.assertFalse(SubmarineLogs.isVerbose());
+
+    yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
+        DIR_NAME + "/valid-gpu-config.yaml");
+    runJobCli.run(
+        new String[] {"-f", yamlConfig.getAbsolutePath(), "--verbose"});
+
+    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
+    verifyBasicConfigValues(jobRunParameters);
+    verifyWorkerValuesWithGpu(jobRunParameters, "");
     verifySecurityValues(jobRunParameters);
   }
 

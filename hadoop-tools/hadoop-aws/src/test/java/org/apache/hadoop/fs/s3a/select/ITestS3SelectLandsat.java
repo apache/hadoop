@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.select;
 import java.io.IOException;
 import java.util.List;
 
+import org.junit.Assume;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +33,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -190,6 +193,11 @@ public class ITestS3SelectLandsat extends AbstractS3SelectTest {
     // disable the gzip codec, so that the record readers do not
     // get confused
     enablePassthroughCodec(selectConf, ".gz");
+    ChangeDetectionPolicy changeDetectionPolicy =
+        getLandsatFS().getChangeDetectionPolicy();
+    Assume.assumeFalse("the standard landsat bucket doesn't have versioning",
+        changeDetectionPolicy.getSource() == Source.VersionId
+            && changeDetectionPolicy.isRequireVersion());
   }
 
   protected int getMaxLines() {

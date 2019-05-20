@@ -48,7 +48,7 @@ public class TestS3AResourceScope extends HadoopTestBase {
 
   @Test
   public void testS3AFilesArePrivateOtherContstructor() throws Throwable {
-    S3AFileStatus status = new S3AFileStatus(0, 0, PATH, 1, "self");
+    S3AFileStatus status = new S3AFileStatus(0, 0, PATH, 1, "self", null, null);
     assertTrue("Not encrypted: " + status, status.isEncrypted());
     assertNotExecutable(status);
   }

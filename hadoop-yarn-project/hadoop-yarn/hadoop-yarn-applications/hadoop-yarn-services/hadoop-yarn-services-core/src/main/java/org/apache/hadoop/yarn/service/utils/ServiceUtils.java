@@ -451,6 +451,7 @@ public final class ServiceUtils {
    * @param sliderConfDir relative path to the dir containing slider config
    *                      options to put on the classpath -or null
    * @param libdir directory containing the JAR files
+   * @param configClassPath extra class path configured in yarn-site.xml
    * @param usingMiniMRCluster flag to indicate the MiniMR cluster is in use
    * (and hence the current classpath should be used, not anything built up)
    * @return a classpath
@@ -458,6 +459,7 @@ public final class ServiceUtils {
   public static ClasspathConstructor buildClasspath(String sliderConfDir,
       String libdir,
       SliderFileSystem sliderFileSystem,
+      String configClassPath,
       boolean usingMiniMRCluster) {
 
     ClasspathConstructor classpath = new ClasspathConstructor();
@@ -479,6 +481,11 @@ public final class ServiceUtils {
       classpath.addRemoteClasspathEnvVar();
       classpath.append(ApplicationConstants.Environment.HADOOP_CONF_DIR.$$());
     }
+
+    if (!configClassPath.isEmpty()) {
+      classpath.appendAll(Arrays.asList(configClassPath.split(",")));
+    }
+
     return classpath;
   }
 
