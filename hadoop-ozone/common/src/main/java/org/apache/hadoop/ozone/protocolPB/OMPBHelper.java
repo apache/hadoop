@@ -46,8 +46,6 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ArrayList;
@@ -56,7 +54,6 @@ import java.util.ArrayList;
  * Utilities for converting protobuf classes.
  */
 public final class OMPBHelper {
-  private static final Logger LOG = LoggerFactory.getLogger(OMPBHelper.class);
 
   private OMPBHelper() {
     /** Hidden constructor */
@@ -68,7 +65,7 @@ public final class OMPBHelper {
    */
   public static OzoneAclInfo convertOzoneAcl(OzoneAcl acl) {
     OzoneAclInfo.OzoneAclType aclType;
-    switch(acl.getType()) {
+    switch (acl.getType()) {
     case USER:
       aclType = OzoneAclType.USER;
       break;
@@ -78,17 +75,19 @@ public final class OMPBHelper {
     case WORLD:
       aclType = OzoneAclType.WORLD;
       break;
+    case ANONYMOUS:
+      aclType = OzoneAclType.ANONYMOUS;
+      break;
+    case CLIENT_IP:
+      aclType = OzoneAclType.CLIENT_IP;
+      break;
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
     List<OzoneAclRights> aclRights = new ArrayList<>();
 
-    for(ACLType right: acl.getRights()) {
-      try {
-        aclRights.add(OzoneAclRights.valueOf(right.name()));
-      } catch (IllegalArgumentException iae) {
-        LOG.error("ACL:{} right is not recognized.", acl);
-      }
+    for (ACLType right : acl.getRights()) {
+      aclRights.add(OzoneAclRights.valueOf(right.name()));
     }
 
     return OzoneAclInfo.newBuilder().setType(aclType)
@@ -103,7 +102,7 @@ public final class OMPBHelper {
    */
   public static OzoneAcl convertOzoneAcl(OzoneAclInfo aclInfo) {
     ACLIdentityType aclType;
-    switch(aclInfo.getType()) {
+    switch (aclInfo.getType()) {
     case USER:
       aclType = ACLIdentityType.USER;
       break;
@@ -113,19 +112,20 @@ public final class OMPBHelper {
     case WORLD:
       aclType = ACLIdentityType.WORLD;
       break;
+    case ANONYMOUS:
+      aclType = ACLIdentityType.ANONYMOUS;
+      break;
+    case CLIENT_IP:
+      aclType = ACLIdentityType.CLIENT_IP;
+      break;
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
 
     List<IAccessAuthorizer.ACLType> aclRights = new ArrayList<>();
-    for(OzoneAclRights acl:aclInfo.getRightsList()) {
-      try {
-        aclRights.add(ACLType.valueOf(acl.name()));
-      } catch(IllegalArgumentException iae) {
-        LOG.error("ACL:{} right is not recognized.", acl);
-      }
+    for (OzoneAclRights acl : aclInfo.getRightsList()) {
+      aclRights.add(ACLType.valueOf(acl.name()));
     }
-
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }
 

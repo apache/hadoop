@@ -19,13 +19,14 @@
 package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
 
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -57,6 +58,15 @@ public class TestOzoneAcls {
     testMatrix.put(null, Boolean.FALSE);
     testMatrix.put(" user:bilbo:", Boolean.FALSE);
     testMatrix.put(" user:bilbo:rx", Boolean.TRUE);
+    testMatrix.put(" user:bilbo:rwdlncxy", Boolean.TRUE);
+    testMatrix.put(" group:bilbo:rwdlncxy", Boolean.TRUE);
+    testMatrix.put(" world::rwdlncxy", Boolean.TRUE);
+    testMatrix.put(" user:bilbo:rncxy", Boolean.TRUE);
+    testMatrix.put(" group:bilbo:ncxy", Boolean.TRUE);
+    testMatrix.put(" world::ncxy", Boolean.TRUE);
+    testMatrix.put(" user:bilbo:rwcxy", Boolean.TRUE);
+    testMatrix.put(" group:bilbo:rwcxy", Boolean.TRUE);
+    testMatrix.put(" world::rwcxy", Boolean.TRUE);
     testMatrix.put(" user:bilbo:mk", Boolean.FALSE);
     testMatrix.put(" user::rw", Boolean.FALSE);
     testMatrix.put("user11:bilbo:rw", Boolean.FALSE);
@@ -112,32 +122,50 @@ public class TestOzoneAcls {
   public void testAclValues() {
     OzoneAcl acl = OzoneAcl.parseAcl("user:bilbo:rw");
     assertEquals(acl.getName(), "bilbo");
-    assertEquals(Arrays.asList(ACLType.READ, ACLType.WRITE), acl.getRights());
+    assertEquals(Arrays.asList(READ, WRITE), acl.getRights());
     assertEquals(ACLIdentityType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:a");
     assertEquals("bilbo", acl.getName());
-    assertEquals(Arrays.asList(ACLType.ALL), acl.getRights());
+    assertEquals(Arrays.asList(ALL), acl.getRights());
     assertEquals(ACLIdentityType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:r");
     assertEquals("bilbo", acl.getName());
-    assertEquals(Arrays.asList(ACLType.READ), acl.getRights());
+    assertEquals(Arrays.asList(READ), acl.getRights());
     assertEquals(ACLIdentityType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("user:bilbo:w");
     assertEquals("bilbo", acl.getName());
-    assertEquals(Arrays.asList(ACLType.WRITE), acl.getRights());
+    assertEquals(Arrays.asList(WRITE), acl.getRights());
     assertEquals(ACLIdentityType.USER, acl.getType());
 
     acl = OzoneAcl.parseAcl("group:hobbit:a");
     assertEquals(acl.getName(), "hobbit");
-    assertEquals(Arrays.asList(ACLType.ALL), acl.getRights());
+    assertEquals(Arrays.asList(ALL), acl.getRights());
     assertEquals(ACLIdentityType.GROUP, acl.getType());
 
     acl = OzoneAcl.parseAcl("world::a");
     assertEquals(acl.getName(), "");
-    assertEquals(Arrays.asList(ACLType.ALL), acl.getRights());
+    assertEquals(Arrays.asList(ALL), acl.getRights());
+    assertEquals(ACLIdentityType.WORLD, acl.getType());
+
+    acl = OzoneAcl.parseAcl("user:bilbo:rwdlncxy");
+    assertEquals(acl.getName(), "bilbo");
+    assertEquals(Arrays.asList(READ, WRITE, DELETE, LIST, NONE, CREATE,
+        READ_ACL, WRITE_ACL), acl.getRights());
+    assertEquals(ACLIdentityType.USER, acl.getType());
+
+    acl = OzoneAcl.parseAcl("group:hadoop:rwdlncxy");
+    assertEquals(acl.getName(), "hadoop");
+    assertEquals(Arrays.asList(READ, WRITE, DELETE, LIST, NONE, CREATE,
+        READ_ACL, WRITE_ACL), acl.getRights());
+    assertEquals(ACLIdentityType.GROUP, acl.getType());
+
+    acl = OzoneAcl.parseAcl("world::rwdlncxy");
+    assertEquals(acl.getName(), "");
+    assertEquals(Arrays.asList(READ, WRITE, DELETE, LIST, NONE, CREATE,
+        READ_ACL, WRITE_ACL), acl.getRights());
     assertEquals(ACLIdentityType.WORLD, acl.getType());
   }
 

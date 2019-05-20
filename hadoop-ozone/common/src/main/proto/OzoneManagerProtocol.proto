@@ -448,6 +448,8 @@ message OzoneAclInfo {
         USER = 1;
         GROUP = 2;
         WORLD = 3;
+        ANONYMOUS = 4;
+        CLIENT_IP = 5;
     }
 
     enum OzoneAclRights {

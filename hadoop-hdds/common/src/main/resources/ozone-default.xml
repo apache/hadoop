@@ -541,14 +541,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.group.rights</name>
-    <value>ALL</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default group permissions in Ozone OM.
-    </description>
-  </property>
-  <property>
     <name>ozone.om.handler.count.key</name>
     <value>20</value>
     <tag>OM, PERFORMANCE</tag>
