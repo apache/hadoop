@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 
@@ -129,7 +130,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate);
+          ms.move(toDelete, toCreate, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
@@ -181,9 +182,11 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     long count = 0;
     NanoTimer putTimer = new NanoTimer();
     describe("Inserting into MetadataStore");
-    for (PathMetadata p : paths) {
-      ms.put(p);
-      count++;
+    try(BulkOperationState operationState = ms.initiateBulkWrite(BUCKET_ROOT)) {
+      for (PathMetadata p : paths) {
+        ms.put(p, operationState);
+        count++;
+      }
     }
     putTimer.end();
     printTiming(LOG, "put", putTimer, count);

@@ -128,17 +128,16 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
    * This does not attempt to open it; that is only done on the first
    * actual read() operation.
    * @param ctx operation context
-   * @param s3Attributes object attributes from a HEAD request
-   * @param contentLength length of content
+   * @param s3Attributes object attributes
    * @param client S3 client to use
    */
   public S3AInputStream(S3AReadOpContext ctx,
       S3ObjectAttributes s3Attributes,
-      long contentLength,
       AmazonS3 client) {
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
+    long contentLength = s3Attributes.getLen();
     Preconditions.checkArgument(contentLength >= 0, "Negative content length");
     this.context = ctx;
     this.bucket = s3Attributes.getBucket();

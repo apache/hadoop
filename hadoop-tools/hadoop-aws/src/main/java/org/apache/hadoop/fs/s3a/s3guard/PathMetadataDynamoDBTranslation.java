@@ -51,7 +51,8 @@ import org.apache.hadoop.fs.s3a.Tristate;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-final class PathMetadataDynamoDBTranslation {
+@VisibleForTesting
+public final class PathMetadataDynamoDBTranslation {
 
   /** The HASH key name of each item. */
   @VisibleForTesting
@@ -289,7 +290,8 @@ final class PathMetadataDynamoDBTranslation {
    * @param path path to convert
    * @return string for parent key
    */
-  static String pathToParentKey(Path path) {
+  @VisibleForTesting
+  public static String pathToParentKey(Path path) {
     Preconditions.checkNotNull(path);
     Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
     URI uri = path.toUri();

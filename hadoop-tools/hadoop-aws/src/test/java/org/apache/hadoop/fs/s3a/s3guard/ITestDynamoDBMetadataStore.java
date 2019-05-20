@@ -35,17 +35,18 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
-
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import com.google.common.collect.Lists;
+import org.assertj.core.api.Assertions;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Tristate;
-
 import org.apache.hadoop.io.IOUtils;
+
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
@@ -62,6 +63,7 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
@@ -159,7 +161,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     testDynamoDBTableName = conf.get(
         S3ATestConstants.S3GUARD_DDB_TEST_TABLE_NAME_KEY);
     String dynamoDbTableName = conf.getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
-    Assume.assumeTrue("No DynamoDB table name configured",
+    Assume.assumeTrue("No DynamoDB table name configured in "
+            + S3GUARD_DDB_TABLE_NAME_KEY,
         !StringUtils.isEmpty(dynamoDbTableName));
 
     // We should assert that the table name is configured, so the test should
@@ -191,14 +194,23 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @AfterClass
   public static void afterClassTeardown() {
     LOG.debug("Destroying static DynamoDBMetadataStore.");
-    if (ddbmsStatic != null) {
+    shutdown(ddbmsStatic);
+    ddbmsStatic = null;
+  }
+
+  /**
+   * Destroy and then close() a metastore instance.
+   * Exceptions are caught and logged at debug.
+   * @param ddbms store -may be null.
+   */
+  private static void shutdown(final DynamoDBMetadataStore ddbms) {
+    if (ddbms != null) {
       try {
-        ddbmsStatic.destroy();
-      } catch (Exception e) {
-        LOG.warn("Failed to destroy tables in teardown", e);
+        ddbms.destroy();
+        IOUtils.closeStream(ddbms);
+      } catch (IOException e) {
+        LOG.debug("On ddbms shutdown", e);
       }
-      IOUtils.closeStream(ddbmsStatic);
-      ddbmsStatic = null;
     }
   }
 
@@ -273,6 +285,15 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             null, null);
   }
 
+  /**
+   * Create a directory status entry.
+   * @param dir directory.
+   * @return the status
+   */
+  private S3AFileStatus dirStatus(Path dir) throws IOException {
+    return basicFileStatus(dir, 0, true);
+  }
+
   private DynamoDBMetadataStore getDynamoMetadataStore() throws IOException {
     return (DynamoDBMetadataStore) getContract().getMetadataStore();
   }
@@ -329,8 +350,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           expectedRegion,
           ddbms.getRegion());
     } finally {
-      ddbms.destroy();
-      ddbms.close();
+      shutdown(ddbms);
     }
   }
 
@@ -371,8 +391,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           keySchema(),
           ddbms.getTable().describe().getKeySchema());
     } finally {
-      ddbms.destroy();
-      ddbms.close();
+      shutdown(ddbms);
     }
   }
 
@@ -406,14 +425,14 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final Path newDir = new Path(root, "newDir");
     LOG.info("doTestBatchWrite: oldDir={}, newDir={}", oldDir, newDir);
 
-    ms.put(new PathMetadata(basicFileStatus(oldDir, 0, true)));
-    ms.put(new PathMetadata(basicFileStatus(newDir, 0, true)));
+    ms.put(new PathMetadata(dirStatus(oldDir)), null);
+    ms.put(new PathMetadata(dirStatus(newDir)), null);
 
     final List<PathMetadata> oldMetas = numDelete < 0 ? null :
         new ArrayList<>(numDelete);
     for (int i = 0; i < numDelete; i++) {
       oldMetas.add(new PathMetadata(
-          basicFileStatus(new Path(oldDir, "child" + i), i, true)));
+          basicFileStatus(new Path(oldDir, "child" + i), i, false)));
     }
     final List<PathMetadata> newMetas = numPut < 0 ? null :
         new ArrayList<>(numPut);
@@ -437,11 +456,22 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // move the old paths to new paths and verify
-    ms.move(pathsToDelete, newMetas);
-    assertEquals(0, ms.listChildren(oldDir).withoutTombstones().numEntries());
+    AncestorState state = checkNotNull(ms.initiateBulkWrite(newDir),
+        "No state from initiateBulkWrite()");
+    assertEquals(newDir, state.getDest());
+
+    ms.move(pathsToDelete, newMetas, state);
+    assertEquals("Number of children in source directory",
+        0, ms.listChildren(oldDir).withoutTombstones().numEntries());
     if (newMetas != null) {
-      assertTrue(CollectionUtils
-          .isEqualCollection(newMetas, ms.listChildren(newDir).getListing()));
+      Assertions.assertThat(ms.listChildren(newDir).getListing())
+          .describedAs("Directory listing")
+          .containsAll(newMetas);
+      if (!newMetas.isEmpty()) {
+        Assertions.assertThat(state.size())
+            .describedAs("Size of ancestor state")
+            .isGreaterThan(newMetas.size());
+      }
     }
   }
 
@@ -500,8 +530,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
       conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
     } finally {
-      ddbms.destroy();
-      ddbms.close();
+      shutdown(ddbms);
     }
   }
 
@@ -527,13 +556,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       intercept(IOException.class, E_INCOMPATIBLE_VERSION,
           () -> ddbms.initTable());
     } finally {
-      ddbms.destroy();
-      ddbms.close();
+      shutdown(ddbms);
     }
   }
-
-
-
 
   /**
    * Test that initTable fails with IOException when table does not exist and
@@ -574,7 +599,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     ddbms.put(new PathMetadata(new S3AFileStatus(true,
         new Path(rootPath, "foo"),
-        UserGroupInformation.getCurrentUser().getShortUserName())));
+        UserGroupInformation.getCurrentUser().getShortUserName())), null);
     verifyRootDirectory(ddbms.get(rootPath), false);
   }
 
@@ -624,10 +649,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String srcRoot = testRoot + "/a/b/src";
     final String destRoot = testRoot + "/c/d/e/dest";
 
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(null);
     final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)));
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)),
+        bulkWrite);
     final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
-    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)));
+    ddbms.put(new PathMetadata(basicFileStatus(nestedPath2, 0, true)),
+        bulkWrite);
 
     // We don't put the destRoot path here, since put() would create ancestor
     // entries, and we want to ensure that move() does it, instead.
@@ -637,8 +665,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         strToPath(srcRoot),
         strToPath(srcRoot + "/dir1"),
         strToPath(srcRoot + "/dir1/dir2"),
-        strToPath(srcRoot + "/file1.txt")
-    );
+        strToPath(srcRoot + "/file1.txt"));
     final Collection<PathMetadata> pathsToCreate = Lists.newArrayList(
         new PathMetadata(basicFileStatus(strToPath(destRoot),
             0, true)),
@@ -650,8 +677,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             1024, false))
     );
 
-    ddbms.move(fullSourcePaths, pathsToCreate);
+    ddbms.move(fullSourcePaths, pathsToCreate, bulkWrite);
 
+    bulkWrite.close();
     // assert that all the ancestors should have been populated automatically
     assertCached(testRoot + "/c");
     assertCached(testRoot + "/c/d");
@@ -725,9 +753,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       intercept(IOException.class, "",
           "Should have failed after the table is destroyed!",
           () -> ddbms.listChildren(testPath));
-    } finally {
       ddbms.destroy();
-      ddbms.close();
+    } finally {
+      shutdown(ddbms);
     }
   }
 
@@ -766,8 +794,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
       }
     } finally {
-      ddbms.destroy();
-      ddbms.close();
+      shutdown(ddbms);
     }
   }
 

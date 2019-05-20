@@ -29,6 +29,7 @@ import java.util.concurrent.Callable;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
+import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import org.junit.Assert;
@@ -251,7 +252,9 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
           try {
             table.delete();
             table.waitForDelete();
-          } catch (ResourceNotFoundException e) { /* Ignore */ }
+          } catch (ResourceNotFoundException | ResourceInUseException e) {
+            /* Ignore */
+          }
         }
       }
     }

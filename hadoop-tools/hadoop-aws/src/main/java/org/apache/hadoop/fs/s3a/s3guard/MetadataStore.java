@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
@@ -27,9 +28,11 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
  * {@code MetadataStore} defines the set of operations that any metadata store
@@ -149,12 +152,15 @@ public interface MetadataStore extends Closeable {
    * @param pathsToDelete Collection of all paths that were removed from the
    *                      source directory tree of the move.
    * @param pathsToCreate Collection of all PathMetadata for the new paths
-   *                      that were created at the destination of the rename
-   *                      ().
+   *                      that were created at the destination of the rename().
+   * @param operationState     Any ongoing state supplied to the rename tracker
+   *                      which is to be passed in with each move operation.
    * @throws IOException if there is an error
    */
-  void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException;
+  void move(
+      @Nullable Collection<Path> pathsToDelete,
+      @Nullable Collection<PathMetadata> pathsToCreate,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Saves metadata for exactly one path.
@@ -170,14 +176,32 @@ public interface MetadataStore extends Closeable {
   void put(PathMetadata meta) throws IOException;
 
   /**
+   * Saves metadata for exactly one path, potentially
+   * using any bulk operation state to eliminate duplicate work.
+   *
+   * Implementations may pre-create all the path's ancestors automatically.
+   * Implementations must update any {@code DirListingMetadata} objects which
+   * track the immediate parent of this file.
+   *
+   * @param meta the metadata to save
+   * @param operationState operational state for a bulk update
+   * @throws IOException if there is an error
+   */
+  @RetryTranslated
+  void put(PathMetadata meta,
+      @Nullable BulkOperationState operationState) throws IOException;
+
+  /**
    * Saves metadata for any number of paths.
    *
    * Semantics are otherwise the same as single-path puts.
    *
    * @param metas the metadata to save
+   * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void put(Collection<PathMetadata> metas) throws IOException;
+  void put(Collection<PathMetadata> metas,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Save directory listing metadata. Callers may save a partial directory
@@ -252,4 +276,33 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Start a rename operation.
+   *
+   * @param storeContext store context.
+   * @param source source path
+   * @param sourceStatus status of the source file/dir
+   * @param dest destination path.
+   * @return the rename tracker
+   * @throws IOException Failure.
+   */
+  RenameTracker initiateRenameOperation(
+      StoreContext storeContext,
+      Path source,
+      FileStatus sourceStatus,
+      Path dest)
+      throws IOException;
+
+  /**
+   * Initiate a bulk update and create an operation state for it.
+   * This may then be passed into put operations.
+   * @param dest path under which updates will be explicitly put.
+   * @return null or a store-specific state to pass into the put operations.
+   * @throws IOException failure
+   */
+  default BulkOperationState initiateBulkWrite(Path dest) throws IOException {
+    return null;
+  }
+
 }

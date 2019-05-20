@@ -80,6 +80,16 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private MetadataStore ms;
   private S3AFileSystem rawFs;
 
+  /**
+   * The test timeout is increased in case previous tests have created
+   * many tombstone markers which now need to be purged.
+   * @return the test timeout.
+   */
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  }
+
   protected static void expectResult(int expected,
       String message,
       S3GuardTool tool,
@@ -187,19 +197,21 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       fs.mkdirs(path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
-      ms.put(new PathMetadata(status));
+      ms.put(new PathMetadata(status), null);
     }
   }
 
   protected static void putFile(MetadataStore ms, S3AFileStatus f)
       throws IOException {
     assertNotNull(f);
-    ms.put(new PathMetadata(f));
-    Path parent = f.getPath().getParent();
-    while (parent != null) {
-      S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
-      ms.put(new PathMetadata(dir));
-      parent = parent.getParent();
+    try(BulkOperationState bulkWrite = ms.initiateBulkWrite(f.getPath())) {
+      ms.put(new PathMetadata(f), bulkWrite);
+      Path parent = f.getPath().getParent();
+      while (parent != null) {
+        S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
+        ms.put(new PathMetadata(dir), bulkWrite);
+        parent = parent.getParent();
+      }
     }
   }
 
