@@ -23,8 +23,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 
@@ -75,6 +77,18 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
 
   public void setCreationTime(long time) {
     this.creationTime = time;
+  }
+
+  public void addAcl(OzoneAcl acl) throws OMException {
+    this.aclMap.addAcl(acl);
+  }
+
+  public void setAcls(List<OzoneAcl> acls) throws OMException {
+    this.aclMap.setAcls(acls);
+  }
+
+  public void removeAcl(OzoneAcl acl) throws OMException {
+    this.aclMap.removeAcl(acl);
   }
 
   /**
@@ -232,7 +246,8 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
         .build();
   }
 
-  public static OmVolumeArgs getFromProtobuf(VolumeInfo volInfo) {
+  public static OmVolumeArgs getFromProtobuf(VolumeInfo volInfo)
+      throws OMException {
 
     OmOzoneAclMap aclMap =
         OmOzoneAclMap.ozoneAclGetFromProtobuf(volInfo.getVolumeAclsList());
