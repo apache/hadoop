@@ -22,6 +22,7 @@ package org.apache.hadoop.utils.db;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 import org.rocksdb.ColumnFamilyHandle;
@@ -33,9 +34,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * RocksDB implementation of ozone metadata store.
+ * RocksDB implementation of ozone metadata store. This class should be only
+ * used as part of TypedTable as it's underlying implementation to access the
+ * metadata store content. All other user's using Table should use TypedTable.
  */
-public class RDBTable implements Table<byte[], byte[]> {
+@InterfaceAudience.Private
+class RDBTable implements Table<byte[], byte[]> {
 
 
   private static final Logger LOG =
@@ -52,7 +56,7 @@ public class RDBTable implements Table<byte[], byte[]> {
    * @param handle - ColumnFamily Handle.
    * @param writeOptions - RocksDB write Options.
    */
-  public RDBTable(RocksDB db, ColumnFamilyHandle handle,
+  RDBTable(RocksDB db, ColumnFamilyHandle handle,
       WriteOptions writeOptions) {
     this.db = db;
     this.handle = handle;
