@@ -227,7 +227,8 @@ public class BlockDeletingService extends BackgroundService{
           }
         });
 
-        // Once files are deleted... replace deleting entries with deleted entries
+        // Once files are deleted... replace deleting entries with deleted
+        // entries
         BatchOperation batch = new BatchOperation();
         succeedBlocks.forEach(entry -> {
           String blockId =

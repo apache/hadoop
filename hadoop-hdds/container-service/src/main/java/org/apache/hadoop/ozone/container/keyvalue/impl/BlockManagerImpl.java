@@ -84,16 +84,15 @@ public class BlockManagerImpl implements BlockManager {
         "cannot be negative");
     // We are not locking the key manager since LevelDb serializes all actions
     // against a single DB. We rely on DB level locking to avoid conflicts.
-    try(ReferenceCountedDB db = BlockUtils.getDB((KeyValueContainerData) container
-        .getContainerData(), config)) {
-
+    try(ReferenceCountedDB db = BlockUtils.
+        getDB((KeyValueContainerData) container.getContainerData(), config)) {
       // This is a post condition that acts as a hint to the user.
       // Should never fail.
       Preconditions.checkNotNull(db, "DB cannot be null here");
 
       long bcsId = data.getBlockCommitSequenceId();
-      long containerBCSId = ((KeyValueContainerData) container.getContainerData())
-          .getBlockCommitSequenceId();
+      long containerBCSId = ((KeyValueContainerData) container.
+          getContainerData()).getBlockCommitSequenceId();
 
       // default blockCommitSequenceId for any block is 0. It the putBlock
       // request is not coming via Ratis(for test scenarios), it will be 0.
@@ -161,8 +160,8 @@ public class BlockManagerImpl implements BlockManager {
       }
       byte[] kData = db.getStore().get(Longs.toByteArray(blockID.getLocalID()));
       if (kData == null) {
-        throw new StorageContainerException("Unable to find the block." + blockID,
-            NO_SUCH_BLOCK);
+        throw new StorageContainerException("Unable to find the block." +
+            blockID, NO_SUCH_BLOCK);
       }
       ContainerProtos.BlockData blockData =
           ContainerProtos.BlockData.parseFrom(kData);

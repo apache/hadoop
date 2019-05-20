@@ -175,7 +175,8 @@ public final class KeyValueContainerUtil {
     }
     kvContainerData.setDbFile(dbFile);
 
-    try(ReferenceCountedDB metadata = BlockUtils.getDB(kvContainerData, config)) {
+    try(ReferenceCountedDB metadata =
+            BlockUtils.getDB(kvContainerData, config)) {
       long bytesUsed = 0;
       List<Map.Entry<byte[], byte[]>> liveKeys = metadata.getStore()
           .getRangeKVs(null, Integer.MAX_VALUE,

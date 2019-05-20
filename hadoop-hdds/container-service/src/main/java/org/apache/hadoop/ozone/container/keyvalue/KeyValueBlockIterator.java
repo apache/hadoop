@@ -150,6 +150,6 @@ public class KeyValueBlockIterator implements BlockIterator<BlockData>,
   }
 
   public void close() {
-   db.close();
+    db.close();
   }
 }

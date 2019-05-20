@@ -40,7 +40,6 @@ import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.MetadataKeyFilters;
 import org.apache.hadoop.utils.MetadataKeyFilters.KeyPrefixFilter;
-import org.apache.hadoop.utils.MetadataStore;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 
 import java.io.IOException;

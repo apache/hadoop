@@ -30,7 +30,6 @@ import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.ChunkUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerLocationUtil;
-import org.apache.hadoop.utils.MetadataStore;
 
 import java.io.File;
 import java.io.IOException;
@@ -237,7 +236,8 @@ public class KeyValueContainerCheck {
 
 
     onDiskContainerData.setDbFile(dbFile);
-    try(ReferenceCountedDB db = BlockUtils.getDB(onDiskContainerData, checkConfig)) {
+    try(ReferenceCountedDB db =
+            BlockUtils.getDB(onDiskContainerData, checkConfig)) {
       iterateBlockDB(db);
     }
   }

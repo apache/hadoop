@@ -54,7 +54,6 @@ import org.apache.hadoop.ozone.container.keyvalue.helpers
     .KeyValueContainerLocationUtil;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
-import org.apache.hadoop.utils.MetadataStore;
 
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.FileUtils;

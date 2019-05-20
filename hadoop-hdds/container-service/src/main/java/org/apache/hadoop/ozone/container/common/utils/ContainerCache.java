@@ -211,9 +211,11 @@ public final class ContainerCache extends LRUMap {
       cleanup();
     }
 
-    private void setEvicted(boolean force) {
-      Preconditions.checkState(!force || (referenceCount.get() == 0),
-          "Force:%b, referencount:%d", force, referenceCount.get());
+    private void setEvicted(boolean checkNoReferences) {
+      Preconditions.checkState(!checkNoReferences ||
+              (referenceCount.get() == 0),
+          "checkNoReferences:%b, referencount:%d",
+          checkNoReferences, referenceCount.get());
       isEvicted.set(true);
       cleanup();
     }

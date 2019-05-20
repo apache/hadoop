@@ -198,7 +198,8 @@ public class DeleteBlocksCommandHandler implements CommandHandler {
     }
 
     int newDeletionBlocks = 0;
-    try(ReferenceCountedDB containerDB = BlockUtils.getDB(containerData, conf)) {
+    try(ReferenceCountedDB containerDB =
+            BlockUtils.getDB(containerData, conf)) {
       for (Long blk : delTX.getLocalIDList()) {
         BatchOperation batch = new BatchOperation();
         byte[] blkBytes = Longs.toByteArray(blk);

@@ -197,8 +197,8 @@ public class ContainerReader implements Runnable {
                 .updateDeleteTransactionId(Longs.fromByteArray(delTxnId));
           }
           // sets the BlockCommitSequenceId.
-          byte[] bcsId = containerDB.getStore().get(
-              DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
+          byte[] bcsId = containerDB.getStore().get(DFSUtil.string2Bytes(
+              OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
           if (bcsId != null) {
             kvContainerData
                 .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
