@@ -58,7 +58,7 @@ public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
 
   @AfterClass
   public static void teardownClusters() throws IOException {
-    clusterBinding.terminate();
+    terminateCluster(clusterBinding);
   }
 
   @Override

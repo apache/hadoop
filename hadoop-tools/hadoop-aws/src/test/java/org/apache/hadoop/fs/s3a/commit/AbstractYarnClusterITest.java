@@ -138,6 +138,12 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return new ClusterBinding(miniDFSClusterService, yarnCluster);
   }
 
+  protected static void terminateCluster(ClusterBinding clusterBinding) {
+    if (clusterBinding != null) {
+      clusterBinding.terminate();
+    }
+  }
+
   /**
    * Get the cluster binding for this subclass
    * @return
