@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -135,7 +136,6 @@ public final class S3Guard {
     return aClass;
   }
 
-
   /**
    * Helper function which puts a given S3AFileStatus into the MetadataStore and
    * returns the same S3AFileStatus. Instrumentation monitors the put operation.
@@ -149,13 +149,57 @@ public final class S3Guard {
   public static S3AFileStatus putAndReturn(MetadataStore ms,
       S3AFileStatus status,
       S3AInstrumentation instrumentation) throws IOException {
+    return putAndReturn(ms, status, instrumentation, null);
+  }
+
+  /**
+   * Helper function which puts a given S3AFileStatus into the MetadataStore and
+   * returns the same S3AFileStatus. Instrumentation monitors the put operation.
+   * @param ms MetadataStore to {@code put()} into.
+   * @param status status to store
+   * @param instrumentation instrumentation of the s3a file system
+   * @param operationState possibly-null metastore state tracker.
+   * @return The same status as passed in
+   * @throws IOException if metadata store update failed
+   */
+  @RetryTranslated
+  public static S3AFileStatus putAndReturn(
+      final MetadataStore ms,
+      final S3AFileStatus status,
+      final S3AInstrumentation instrumentation,
+      @Nullable final BulkOperationState operationState) throws IOException {
     long startTimeNano = System.nanoTime();
-    ms.put(new PathMetadata(status));
-    instrumentation.addValueToQuantiles(S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
-        (System.nanoTime() - startTimeNano));
-    instrumentation.incrementCounter(S3GUARD_METADATASTORE_PUT_PATH_REQUEST, 1);
+    try {
+      ms.put(new PathMetadata(status), operationState);
+    } finally {
+      instrumentation.addValueToQuantiles(
+          S3GUARD_METADATASTORE_PUT_PATH_LATENCY,
+          (System.nanoTime() - startTimeNano));
+      instrumentation.incrementCounter(
+          S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
+          1);
+    }
     return status;
   }
+
+  /**
+   * Initiate a bulk update and create an operation state for it.
+   * This may then be passed into put operations.
+   * @param metastore store
+   * @param path path under which updates will be explicitly put.
+   * @return a store-specific state to pass into the put operations, or null
+   * @throws IOException failure
+   */
+  public static BulkOperationState initiateBulkWrite(
+      @Nullable final MetadataStore metastore,
+      final Path path) throws IOException {
+    if (metastore == null || isNullMetadataStore(metastore)) {
+      return null;
+    } else {
+      return metastore.initiateBulkWrite(path);
+    }
+  }
+
 
   /**
    * Convert the data of a directory listing to an array of {@link FileStatus}
@@ -242,7 +286,7 @@ public final class S3Guard {
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          ms.put(new PathMetadata(s));
+          ms.put(new PathMetadata(s), null);
         }
       }
 
@@ -357,7 +401,7 @@ public final class S3Guard {
       }
 
       // Batched put
-      ms.put(pathMetas);
+      ms.put(pathMetas, null);
     } catch (IOException ioe) {
       LOG.error("MetadataStore#put() failure:", ioe);
     }
@@ -461,8 +505,19 @@ public final class S3Guard {
     }
   }
 
+  /**
+   * This adds all new ancestors of a path as directories.
+   * @param metadataStore store
+   * @param qualifiedPath path to update
+   * @param username username to use in all new FileStatus entries.
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws IOException failure
+   */
+  @Retries.RetryTranslated
   public static void addAncestors(MetadataStore metadataStore,
-      Path qualifiedPath, String username) throws IOException {
+      Path qualifiedPath,
+      String username,
+      @Nullable final BulkOperationState operationState) throws IOException {
     Collection<PathMetadata> newDirs = new ArrayList<>();
     Path parent = qualifiedPath.getParent();
     while (!parent.isRoot()) {
@@ -476,7 +531,9 @@ public final class S3Guard {
       }
       parent = parent.getParent();
     }
-    metadataStore.put(newDirs);
+    if (!newDirs.isEmpty()) {
+      metadataStore.put(newDirs, operationState);
+    }
   }
 
   private static void addMoveStatus(Collection<Path> srcPaths,

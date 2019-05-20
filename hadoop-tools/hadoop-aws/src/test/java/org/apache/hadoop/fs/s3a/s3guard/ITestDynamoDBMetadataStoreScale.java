@@ -237,7 +237,7 @@ public class ITestDynamoDBMetadataStoreScale
                 toCleanup.add(pm);
               }
 
-              ddbms.put(pm);
+              ddbms.put(pm, null);
 
               pruneItems++;
 
@@ -273,7 +273,7 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/get");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     try {
       execute("get",
           OPERATIONS_PER_THREAD,
@@ -317,7 +317,7 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/list");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     try {
       Path parent = path.getParent();
       execute("list",
@@ -336,7 +336,7 @@ public class ITestDynamoDBMetadataStoreScale
     Path path = new Path("s3a://example.org/putDirMarker");
     S3AFileStatus status = new S3AFileStatus(true, path, "alice");
     PathMetadata metadata = new PathMetadata(status);
-    ddbms.put(metadata);
+    ddbms.put(metadata, null);
     DirListingMetadata children = ddbms.listChildren(path.getParent());
     try {
       execute("list",
@@ -355,12 +355,14 @@ public class ITestDynamoDBMetadataStoreScale
     Path base = new Path("s3a://example.org/test_080_fullPathsToPut");
     Path child = new Path(base, "child");
     List<PathMetadata> pms = new ArrayList<>();
-    ddbms.put(new PathMetadata(makeDirStatus(base)));
-    ddbms.put(new PathMetadata(makeDirStatus(child)));
+    BulkOperationState bulkUpdate
+        = ddbms.initiateBulkWrite(child);
+    ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
+    ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
     ddbms.getInvoker().retry("set up directory tree",
         base.toString(),
         true,
-        () -> ddbms.put(pms));
+        () -> ddbms.put(pms, bulkUpdate));
     try {
       DDBPathMetadata dirData = ddbms.get(child, true);
       execute("list",
