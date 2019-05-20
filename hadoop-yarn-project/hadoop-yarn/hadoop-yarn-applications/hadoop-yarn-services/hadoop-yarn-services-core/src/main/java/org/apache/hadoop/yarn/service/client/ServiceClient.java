@@ -1234,11 +1234,15 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
     return cmdStr;
   }
 
-  private Map<String, String> addAMEnv() throws IOException {
+  @VisibleForTesting
+  protected Map<String, String> addAMEnv() throws IOException {
     Map<String, String> env = new HashMap<>();
-    ClasspathConstructor classpath =
-        buildClasspath(YarnServiceConstants.SUBMITTED_CONF_DIR, "lib", fs, getConfig()
-            .getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false));
+    ClasspathConstructor classpath = buildClasspath(
+        YarnServiceConstants.SUBMITTED_CONF_DIR,
+        "lib",
+        fs,
+        getConfig().get(YarnServiceConf.YARN_SERVICE_CLASSPATH, ""),
+        getConfig().getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false));
     env.put("CLASSPATH", classpath.buildClasspath());
     env.put("LANG", "en_US.UTF-8");
     env.put("LC_ALL", "en_US.UTF-8");
