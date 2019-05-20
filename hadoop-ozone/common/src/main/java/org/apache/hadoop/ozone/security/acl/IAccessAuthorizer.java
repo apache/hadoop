@@ -140,7 +140,8 @@ public interface IAccessAuthorizer {
     USER(OzoneConsts.OZONE_ACL_USER_TYPE),
     GROUP(OzoneConsts.OZONE_ACL_GROUP_TYPE),
     CLIENT_IP(OzoneConsts.OZONE_ACL_IP_TYPE),
-    WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE);
+    WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE),
+    ANONYMOUS(OzoneConsts.OZONE_ACL_ANONYMOUS_TYPE);
 
     @Override
     public String toString() {

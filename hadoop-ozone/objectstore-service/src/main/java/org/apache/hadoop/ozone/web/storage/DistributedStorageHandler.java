@@ -44,10 +44,10 @@ import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -111,10 +111,10 @@ public final class DistributedStorageHandler implements StorageHandler {
 
     chunkSize = (int)conf.getStorageSize(ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_KEY,
         ScmConfigKeys.OZONE_SCM_CHUNK_SIZE_DEFAULT, StorageUnit.BYTES);
-    userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
-        OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
-    groupRights = conf.getEnum(OMConfigKeys.OZONE_OM_GROUP_RIGHTS,
-        OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
+    // Get default acl rights for user and group.
+    OzoneAclConfig aclConfig = conf.getObject(OzoneAclConfig.class);
+    this.userRights = aclConfig.getUserDefaultRights();
+    this.groupRights = aclConfig.getGroupDefaultRights();
     if(chunkSize > OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE) {
       LOG.warn("The chunk size ({}) is not allowed to be more than"
               + " the maximum size ({}),"

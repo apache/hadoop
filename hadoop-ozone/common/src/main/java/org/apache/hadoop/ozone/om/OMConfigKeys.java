@@ -19,9 +19,6 @@ package org.apache.hadoop.ozone.om;
 
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.ratis.util.TimeDuration;
 
 /**
@@ -79,15 +76,6 @@ public final class OMConfigKeys {
   public static final String OZONE_OM_USER_MAX_VOLUME =
       "ozone.om.user.max.volume";
   public static final int OZONE_OM_USER_MAX_VOLUME_DEFAULT = 1024;
-
-  // OM Default user/group permissions
-  public static final String OZONE_OM_USER_RIGHTS =
-      "ozone.om.user.rights";
-  public static final ACLType OZONE_OM_USER_RIGHTS_DEFAULT = ACLType.ALL;
-
-  public static final String OZONE_OM_GROUP_RIGHTS =
-      "ozone.om.group.rights";
-  public static final ACLType OZONE_OM_GROUP_RIGHTS_DEFAULT = ACLType.ALL;
 
   public static final String OZONE_KEY_DELETING_LIMIT_PER_TASK =
       "ozone.key.deleting.limit.per.task";

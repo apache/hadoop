@@ -30,7 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
 /**
- * This class is to test acl stoarge and retreival in ozone store.
+ * This class is to test acl storage and retrieval in ozone store.
  */
 public class TestOzoneAcls {
 

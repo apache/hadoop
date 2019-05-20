@@ -113,8 +113,8 @@ public class TestOzoneShell {
   /**
    * Set the timeout for every test.
    */
-//  @Rule
-//  public Timeout testTimeout = new Timeout(300000);
+  @Rule
+  public Timeout testTimeout = new Timeout(300000);
 
   private static String url;
   private static File baseDir;

@@ -56,7 +56,7 @@ import java.util.ArrayList;
  * Utilities for converting protobuf classes.
  */
 public final class OMPBHelper {
-  private static Logger LOG = LoggerFactory.getLogger(OMPBHelper.class);
+  private static final Logger LOG = LoggerFactory.getLogger(OMPBHelper.class);
 
   private OMPBHelper() {
     /** Hidden constructor */

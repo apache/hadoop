@@ -24,8 +24,6 @@ import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 
 import java.util.List;
 import java.util.LinkedList;
@@ -69,6 +67,9 @@ public class OmOzoneAclMap {
     }
 
     List<OzoneAclRights> storedRights = getAcl(acl.getType(), acl.getName());
+    if(storedRights == null) {
+      return false;
+    }
 
     for (OzoneAclRights right : storedRights) {
       switch (right) {

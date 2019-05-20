@@ -641,14 +641,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.user.rights</name>
-    <value>ALL</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default user permissions used in OM.
-    </description>
-  </property>
-  <property>
     <name>ozone.om.db.dirs</name>
     <value/>
     <tag>OZONE, OM, STORAGE, PERFORMANCE</tag>
