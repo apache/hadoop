@@ -182,18 +182,27 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
           pipelineManager
               .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
                   excludeList.getDatanodes(), excludeList.getPipelineIds());
-      Pipeline pipeline;
+      Pipeline pipeline = null;
       if (availablePipelines.size() == 0) {
         try {
           // TODO: #CLUTIL Remove creation logic when all replication types and
           // factors are handled by pipeline creator
           pipeline = pipelineManager.createPipeline(type, factor);
         } catch (IOException e) {
-          LOG.error("Pipeline creation failed for type:{} factor:{}",
-              type, factor, e);
-          break;
+          LOG.warn("Pipeline creation failed for type:{} factor:{}. Retrying " +
+                  "get pipelines call once.", type, factor, e);
+          availablePipelines = pipelineManager
+              .getPipelines(type, factor, Pipeline.PipelineState.OPEN,
+                  excludeList.getDatanodes(), excludeList.getPipelineIds());
+          if (availablePipelines.size() == 0) {
+            LOG.info("Could not find available pipeline of type:{} and " +
+                "factor:{} even after retrying", type, factor);
+            break;
+          }
         }
-      } else {
+      }
+
+      if (null == pipeline) {
         // TODO: #CLUTIL Make the selection policy driven.
         pipeline = availablePipelines
             .get((int) (Math.random() * availablePipelines.size()));
