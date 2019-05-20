@@ -70,7 +70,7 @@ public class TestOzoneContainer {
   private KeyValueContainer keyValueContainer;
   private final DatanodeDetails datanodeDetails = createDatanodeDetails();
   private HashMap<String, Long> commitSpaceMap; //RootDir -> committed space
-  private final int NUM_TEST_CONTAINERS = 10;
+  private final int numTestContainers = 10;
 
   @Before
   public void setUp() throws Exception {
@@ -94,7 +94,7 @@ public class TestOzoneContainer {
     }
 
     // Add containers to disk
-    for (int i=0; i < NUM_TEST_CONTAINERS; i++) {
+    for (int i = 0; i < numTestContainers; i++) {
       long freeBytes = 0;
       long volCommitBytes;
       long maxCap = (long) StorageUnit.GB.toBytes(1);
@@ -130,7 +130,7 @@ public class TestOzoneContainer {
         OzoneContainer(datanodeDetails, conf, context, null);
 
     ContainerSet containerset = ozoneContainer.getContainerSet();
-    assertEquals(NUM_TEST_CONTAINERS, containerset.containerCount());
+    assertEquals(numTestContainers, containerset.containerCount());
 
     verifyCommittedSpace(ozoneContainer);
   }

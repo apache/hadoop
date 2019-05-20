@@ -225,7 +225,8 @@ public class ContainerReader implements Runnable {
     }
   }
 
-  private void initializeUsedBytes(KeyValueContainer container) throws IOException {
+  private void initializeUsedBytes(KeyValueContainer container)
+      throws IOException {
     KeyValueBlockIterator blockIter = new KeyValueBlockIterator(
         container.getContainerData().getContainerID(),
         new File(container.getContainerData().getContainerPath()));
