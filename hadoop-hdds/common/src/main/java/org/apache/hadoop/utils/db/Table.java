@@ -21,8 +21,10 @@ package org.apache.hadoop.utils.db;
 
 import java.io.IOException;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceStability;
-
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 /**
  * Interface for key-value store that stores ozone metadata. Ozone metadata is
  * stored as key value pairs, both key and value are arbitrary byte arrays. Each
@@ -96,6 +98,28 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
    * @throws IOException on failure.
    */
   String getName() throws IOException;
+
+  /**
+   * Add entry to the table cache.
+   *
+   * If the cacheKey already exists, it will override the entry.
+   * @param cacheKey
+   * @param cacheValue
+   */
+  default void addCacheEntry(CacheKey<KEY> cacheKey,
+      CacheValue<VALUE> cacheValue) {
+    throw new NotImplementedException("addCacheEntry is not implemented");
+  }
+
+  /**
+   * Removes all the entries from the table cache which are having epoch value
+   * less
+   * than or equal to specified epoch value.
+   * @param epoch
+   */
+  default void cleanupCache(long epoch) {
+    throw new NotImplementedException("cleanupCache is not implemented");
+  }
 
   /**
    * Class used to represent the key and value pair of a db entry.
