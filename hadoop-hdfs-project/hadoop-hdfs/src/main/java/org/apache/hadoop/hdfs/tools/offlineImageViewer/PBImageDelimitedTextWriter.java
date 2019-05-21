@@ -60,7 +60,10 @@ public class PBImageDelimitedTextWriter extends PBImageTextWriter {
   @Override
   public String getEntry(String parent, INode inode) {
     StringBuffer buffer = new StringBuffer();
+    Long inodeId = inode.getId();
+    append(buffer, inodeId);
     String inodeName = inode.getName().toStringUtf8();
+    Long inodeId = inode.getId()
     Path path = new Path(parent.isEmpty() ? "/" : parent,
       inodeName.isEmpty() ? "/" : inodeName);
     append(buffer, path.toString());
