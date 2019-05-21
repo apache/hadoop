@@ -451,15 +451,24 @@ message OzoneAclInfo {
         USER = 1;
         GROUP = 2;
         WORLD = 3;
+        ANONYMOUS = 4;
+        CLIENT_IP = 5;
     }
+
     enum OzoneAclRights {
-        READ = 1;
-        WRITE = 2;
-        READ_WRITE = 3;
+        CREATE = 1;
+        LIST = 2;
+        DELETE = 3;
+        READ = 4;
+        WRITE = 5;
+        READ_ACL = 6;
+        WRITE_ACL = 7;
+        ALL = 8;
+        NONE = 9;
     }
     required OzoneAclType type = 1;
     required string name = 2;
-    required OzoneAclRights rights = 3;
+    repeated OzoneAclRights rights = 3;
 }
 
 message CreateBucketRequest {

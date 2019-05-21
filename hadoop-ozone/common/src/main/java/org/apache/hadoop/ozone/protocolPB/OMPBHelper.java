@@ -41,8 +41,14 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
+
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * Utilities for converting protobuf classes.
@@ -59,7 +65,7 @@ public final class OMPBHelper {
    */
   public static OzoneAclInfo convertOzoneAcl(OzoneAcl acl) {
     OzoneAclInfo.OzoneAclType aclType;
-    switch(acl.getType()) {
+    switch (acl.getType()) {
     case USER:
       aclType = OzoneAclType.USER;
       break;
@@ -69,27 +75,24 @@ public final class OMPBHelper {
     case WORLD:
       aclType = OzoneAclType.WORLD;
       break;
+    case ANONYMOUS:
+      aclType = OzoneAclType.ANONYMOUS;
+      break;
+    case CLIENT_IP:
+      aclType = OzoneAclType.CLIENT_IP;
+      break;
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
-    OzoneAclInfo.OzoneAclRights aclRights;
-    switch(acl.getRights()) {
-    case READ:
-      aclRights = OzoneAclRights.READ;
-      break;
-    case WRITE:
-      aclRights = OzoneAclRights.WRITE;
-      break;
-    case READ_WRITE:
-      aclRights = OzoneAclRights.READ_WRITE;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL right is not recognized");
+    List<OzoneAclRights> aclRights = new ArrayList<>();
+
+    for (ACLType right : acl.getRights()) {
+      aclRights.add(OzoneAclRights.valueOf(right.name()));
     }
 
     return OzoneAclInfo.newBuilder().setType(aclType)
         .setName(acl.getName())
-        .setRights(aclRights)
+        .addAllRights(aclRights)
         .build();
   }
 
@@ -98,35 +101,31 @@ public final class OMPBHelper {
    * @return OzoneAcl
    */
   public static OzoneAcl convertOzoneAcl(OzoneAclInfo aclInfo) {
-    OzoneAcl.OzoneACLType aclType;
-    switch(aclInfo.getType()) {
+    ACLIdentityType aclType;
+    switch (aclInfo.getType()) {
     case USER:
-      aclType = OzoneAcl.OzoneACLType.USER;
+      aclType = ACLIdentityType.USER;
       break;
     case GROUP:
-      aclType = OzoneAcl.OzoneACLType.GROUP;
+      aclType = ACLIdentityType.GROUP;
       break;
     case WORLD:
-      aclType = OzoneAcl.OzoneACLType.WORLD;
+      aclType = ACLIdentityType.WORLD;
+      break;
+    case ANONYMOUS:
+      aclType = ACLIdentityType.ANONYMOUS;
+      break;
+    case CLIENT_IP:
+      aclType = ACLIdentityType.CLIENT_IP;
       break;
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
-    OzoneAcl.OzoneACLRights aclRights;
-    switch(aclInfo.getRights()) {
-    case READ:
-      aclRights = OzoneAcl.OzoneACLRights.READ;
-      break;
-    case WRITE:
-      aclRights = OzoneAcl.OzoneACLRights.WRITE;
-      break;
-    case READ_WRITE:
-      aclRights = OzoneAcl.OzoneACLRights.READ_WRITE;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL right is not recognized");
-    }
 
+    List<IAccessAuthorizer.ACLType> aclRights = new ArrayList<>();
+    for (OzoneAclRights acl : aclInfo.getRightsList()) {
+      aclRights.add(ACLType.valueOf(acl.name()));
+    }
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }
 
