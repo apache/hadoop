@@ -67,7 +67,11 @@ class StripedBlockReconstructor extends StripedReconstructor
       LOG.warn("Failed to reconstruct striped block: {}", getBlockGroup(), e);
       getDatanode().getMetrics().incrECFailedReconstructionTasks();
     } finally {
-      getDatanode().decrementXmitsInProgress(getXmits());
+      float xmitWeight = getErasureCodingWorker().getXmitWeight();
+      // if the xmits is smaller than 1, the xmitsSubmitted should be set to 1
+      // because if it set to zero, we cannot to measure the xmits submitted
+      int xmitsSubmitted = Math.max((int) (getXmits() * xmitWeight), 1);
+      getDatanode().decrementXmitsInProgress(xmitsSubmitted);
       final DataNodeMetrics metrics = getDatanode().getMetrics();
       metrics.incrECReconstructionTasks();
       metrics.incrECReconstructionBytesRead(getBytesRead());
