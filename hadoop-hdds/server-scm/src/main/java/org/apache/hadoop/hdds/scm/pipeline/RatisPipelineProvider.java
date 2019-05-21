@@ -56,6 +56,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinWorkerThread;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -71,7 +72,7 @@ public class RatisPipelineProvider implements PipelineProvider {
   private final Configuration conf;
 
   // Set parallelism at 3, as now in Ratis we create 1 and 3 node pipelines.
-  private final int parallelisimForPool = 3;
+  private final int parallelismForPool = 3;
 
   private final ForkJoinPool.ForkJoinWorkerThreadFactory factory =
       (pool -> {
@@ -82,7 +83,7 @@ public class RatisPipelineProvider implements PipelineProvider {
       });
 
   private final ForkJoinPool forkJoinPool = new ForkJoinPool(
-      parallelisimForPool, factory, null, false);
+      parallelismForPool, factory, null, false);
 
 
   RatisPipelineProvider(NodeManager nodeManager,
@@ -177,6 +178,12 @@ public class RatisPipelineProvider implements PipelineProvider {
   @Override
   public void shutdown() {
     forkJoinPool.shutdownNow();
+    try {
+      forkJoinPool.awaitTermination(60, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      LOG.error("Unexpected exception occurred during shutdown of " +
+              "RatisPipelineProvider", e);
+    }
   }
 
   protected void initializePipeline(Pipeline pipeline) throws IOException {
