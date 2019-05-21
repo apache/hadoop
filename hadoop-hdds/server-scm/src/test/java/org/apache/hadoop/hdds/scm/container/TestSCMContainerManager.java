@@ -60,8 +60,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.fail;
-
 /**
  * Tests for Container ContainerManager.
  */
@@ -162,8 +160,7 @@ public class TestSCMContainerManager {
     List<CompletableFuture<ContainerInfo>> futureList =
         new ArrayList<>(threadCount);
     for (int i = 0; i < threadCount; i++) {
-      final CompletableFuture<ContainerInfo> future =
-          new CompletableFuture<>();
+      final CompletableFuture<ContainerInfo> future = new CompletableFuture<>();
       CompletableFuture.supplyAsync(() -> {
         try {
           ContainerInfo containerInfo = containerManager
@@ -176,8 +173,10 @@ public class TestSCMContainerManager {
           return containerInfo;
         } catch (IOException e) {
           future.completeExceptionally(e);
-        } return future;
-      }, executors.get(i)); futureList.add(future);
+        }
+        return future;
+      }, executors.get(i));
+      futureList.add(future);
     }
     try {
       CompletableFuture

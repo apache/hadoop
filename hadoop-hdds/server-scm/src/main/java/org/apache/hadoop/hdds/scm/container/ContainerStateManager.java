@@ -263,11 +263,15 @@ public class ContainerStateManager {
       }
       pipeline = pipelines.get((int) containerCount.get() % pipelines.size());
     }
-    return allocateContainer(pipelineManager, owner, pipeline);
+    synchronized (pipeline) {
+      return allocateContainer(pipelineManager, owner, pipeline);
+    }
   }
 
   /**
    * Allocates a new container based on the type, replication etc.
+   * This method should be called only after the lock on the pipeline is held
+   * on which the container will be allocated.
    *
    * @param pipelineManager   - Pipeline Manager class.
    * @param owner             - Owner of the container.
