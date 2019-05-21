@@ -2946,6 +2946,31 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  @Override
+  public List<OzoneFileStatus> listStatus(OmKeyArgs args, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
+          args.getVolumeName(), args.getBucketName(), args.getKeyName());
+    }
+    boolean auditSuccess = true;
+    try {
+      metrics.incNumListStatus();
+      return keyManager.listStatus(args, recursive, startKey, numEntries);
+    } catch (Exception ex) {
+      metrics.incNumListStatusFails();
+      auditSuccess = false;
+      AUDIT.logWriteFailure(buildAuditMessageForFailure(OMAction.LIST_STATUS,
+          (args == null) ? null : args.toAuditMap(), ex));
+      throw ex;
+    } finally {
+      if(auditSuccess){
+        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+            OMAction.LIST_STATUS, (args == null) ? null : args.toAuditMap()));
+      }
+    }
+  }
+
   /**
    * Startup options.
    */

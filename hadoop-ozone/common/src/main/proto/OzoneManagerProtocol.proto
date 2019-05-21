@@ -85,6 +85,7 @@ enum Type {
   CreateDirectory = 71;
   CreateFile = 72;
   LookupFile = 73;
+  ListStatus = 74;
 }
 
 message OMRequest {
@@ -141,6 +142,7 @@ message OMRequest {
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
   optional CreateFileRequest                createFileRequest              = 72;
   optional LookupFileRequest                lookupFileRequest              = 73;
+  optional ListStatusRequest                listStatusRequest              = 74;
 }
 
 message OMResponse {
@@ -200,6 +202,7 @@ message OMResponse {
   optional CreateDirectoryResponse            createDirectoryResponse      = 71;
   optional CreateFileResponse                 createFileResponse           = 72;
   optional LookupFileResponse                 lookupFileResponse           = 73;
+  optional ListStatusResponse                 listStatusResponse           = 74;
 }
 
 enum Status {
@@ -561,12 +564,16 @@ message KeyInfo {
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
 }
 
+message OzoneFileStatusProto {
+    required hadoop.fs.FileStatusProto status = 1;
+}
+
 message GetFileStatusRequest {
     required KeyArgs keyArgs = 1;
 }
 
 message GetFileStatusResponse {
-    required hadoop.fs.FileStatusProto status = 1;
+    required OzoneFileStatusProto status = 1;
 }
 
 message CreateDirectoryRequest {
@@ -597,6 +604,17 @@ message LookupFileRequest {
 
 message LookupFileResponse {
     optional KeyInfo keyInfo = 1;
+}
+
+message ListStatusRequest {
+    required KeyArgs keyArgs = 1;
+    required bool recursive = 2;
+    required string startKey = 3;
+    required uint64 numEntries = 4;
+}
+
+message ListStatusResponse {
+    repeated OzoneFileStatusProto statuses = 1;
 }
 
 message CreateKeyRequest {
