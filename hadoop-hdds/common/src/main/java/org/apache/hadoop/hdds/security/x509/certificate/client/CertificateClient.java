@@ -135,6 +135,18 @@ public interface CertificateClient {
    *
    * @param pemEncodedCert        - pem encoded X509 Certificate
    * @param force                 - override any existing file
+   * @throws CertificateException - on Error.
+   *
+   */
+  void storeCertificate(String pemEncodedCert, boolean force)
+      throws CertificateException;
+
+  /**
+   * Stores the Certificate  for this client. Don't use this api to add
+   * trusted certificates of others.
+   *
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
    * @param caCert                - Is CA certificate.
    * @throws CertificateException - on Error.
    *

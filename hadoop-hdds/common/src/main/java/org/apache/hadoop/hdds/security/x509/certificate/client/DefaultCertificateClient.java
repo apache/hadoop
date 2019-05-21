@@ -252,7 +252,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
           (OzoneConfiguration) securityConfig.getConfiguration());
       String pemEncodedCert =
           scmSecurityProtocolClient.getCertificate(certId);
-      this.storeCertificate(pemEncodedCert, true, false);
+      this.storeCertificate(pemEncodedCert, true);
       return CertificateCodec.getX509Certificate(pemEncodedCert);
     } catch (Exception e) {
       getLogger().error("Error while getting Certificate with " +
@@ -447,6 +447,21 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   public X509Certificate queryCertificate(String query) {
     // TODO:
     throw new UnsupportedOperationException("Operation not supported");
+  }
+
+  /**
+   * Stores the Certificate  for this client. Don't use this api to add trusted
+   * certificates of others.
+   *
+   * @param pemEncodedCert        - pem encoded X509 Certificate
+   * @param force                 - override any existing file
+   * @throws CertificateException - on Error.
+   *
+   */
+  @Override
+  public void storeCertificate(String pemEncodedCert, boolean force)
+      throws CertificateException {
+    this.storeCertificate(pemEncodedCert, force, false);
   }
 
   /**
