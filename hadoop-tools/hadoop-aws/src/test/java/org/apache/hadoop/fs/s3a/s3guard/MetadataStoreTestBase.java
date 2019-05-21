@@ -653,7 +653,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     createNewDirs("/pruneFiles");
 
     long oldTime = getTime();
-    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime)), null);
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/old", 1, oldTime)),
+        null);
     DirListingMetadata ls2 = ms.listChildren(strToPath("/pruneFiles"));
     if (!allowMissing()) {
       assertListingsEqual(ls2.getListing(), "/pruneFiles/old");
@@ -664,7 +665,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     Thread.sleep(1);
     long cutoff = System.currentTimeMillis();
     long newTime = getTime();
-    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime)), null);
+    ms.put(new PathMetadata(makeFileStatus("/pruneFiles/new", 1, newTime)),
+        null);
 
     DirListingMetadata ls;
     ls = ms.listChildren(strToPath("/pruneFiles"));

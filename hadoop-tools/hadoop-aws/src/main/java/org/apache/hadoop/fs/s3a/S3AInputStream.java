@@ -137,13 +137,13 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getBucket()),
         "No Bucket");
     Preconditions.checkArgument(isNotEmpty(s3Attributes.getKey()), "No Key");
-    long contentLength = s3Attributes.getLen();
-    Preconditions.checkArgument(contentLength >= 0, "Negative content length");
+    long l = s3Attributes.getLen();
+    Preconditions.checkArgument(l >= 0, "Negative content length");
     this.context = ctx;
     this.bucket = s3Attributes.getBucket();
     this.key = s3Attributes.getKey();
     this.pathStr = ctx.dstFileStatus.getPath().toString();
-    this.contentLength = contentLength;
+    this.contentLength = l;
     this.client = client;
     this.uri = "s3a://" + this.bucket + "/" + this.key;
     this.streamStatistics = ctx.instrumentation.newInputStreamStatistics();

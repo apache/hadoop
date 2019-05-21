@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.Optional;
 import java.util.function.Function;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -112,7 +111,7 @@ public class StoreContext {
   private final Function<String, Path> keyToPathQualifier;
 
   /** Factory for temporary files. */
-  private final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long , File>
+  private final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long, File>
       tempFileFactory;
 
   /**

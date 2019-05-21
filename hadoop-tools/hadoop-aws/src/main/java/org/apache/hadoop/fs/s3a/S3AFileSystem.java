@@ -2829,6 +2829,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   S3AFileStatus innerGetFileStatus(final Path f,
       boolean needEmptyDirectoryFlag) throws IOException {
     entryPoint(INVOCATION_GET_FILE_STATUS);
+    checkNotClosed();
     final Path path = qualify(f);
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({})", path, key);
