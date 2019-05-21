@@ -22,6 +22,13 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import org.apache.commons.io.FileUtils;
@@ -45,6 +52,7 @@ import org.apache.hadoop.ozone.om.helpers.*;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.AfterClass;
@@ -112,6 +120,22 @@ public class TestKeyManagerImpl {
     metadataManager.stop();
     keyManager.stop();
     FileUtils.deleteDirectory(dir);
+  }
+
+  @After
+  public void cleanupTest() throws IOException {
+    List<OzoneFileStatus> fileStatuses = keyManager
+        .listStatus(createBuilder().setKeyName("").build(), true, "", 100000);
+    for (OzoneFileStatus fileStatus : fileStatuses) {
+      if (fileStatus.isFile()) {
+        keyManager.deleteKey(
+            createKeyArgs(fileStatus.getPath().toString().substring(1)));
+      } else {
+        keyManager.deleteKey(createKeyArgs(OzoneFSUtils
+            .addTrailingSlashIfNeeded(
+                fileStatus.getPath().toString().substring(1))));
+      }
+    }
   }
 
   private static void createBucket(String volumeName, String bucketName)
@@ -329,6 +353,193 @@ public class TestKeyManagerImpl {
         throw ex;
       }
     }
+  }
+
+  private OmKeyArgs createKeyArgs(String toKeyName) {
+    return createBuilder().setKeyName(toKeyName).build();
+  }
+
+  @Test
+  public void testListStatus() throws IOException {
+    String superDir = RandomStringUtils.randomAlphabetic(5);
+
+    int numDirectories = 5;
+    int numFiles = 5;
+    // set of directory descendants of root
+    Set<String> directorySet = new TreeSet<>();
+    // set of file descendants of root
+    Set<String> fileSet = new TreeSet<>();
+    createDepthTwoDirectory(superDir, numDirectories, numFiles, directorySet,
+        fileSet);
+    // set of all descendants of root
+    Set<String> children = new TreeSet<>(directorySet);
+    children.addAll(fileSet);
+    // number of entries in the filesystem
+    int numEntries = directorySet.size() + fileSet.size();
+
+    OmKeyArgs rootDirArgs = createKeyArgs("");
+    List<OzoneFileStatus> fileStatuses =
+        keyManager.listStatus(rootDirArgs, true, "", 100);
+    // verify the number of status returned is same as number of entries
+    Assert.assertEquals(numEntries, fileStatuses.size());
+
+    fileStatuses = keyManager.listStatus(rootDirArgs, false, "", 100);
+    // the number of immediate children of root is 1
+    Assert.assertEquals(1, fileStatuses.size());
+
+    // if startKey is the first descendant of the root then listStatus should
+    // return all the entries.
+    String startKey = children.iterator().next();
+    fileStatuses = keyManager.listStatus(rootDirArgs, true,
+        startKey.substring(0, startKey.length() - 1), 100);
+    Assert.assertEquals(numEntries, fileStatuses.size());
+
+    for (String directory : directorySet) {
+      // verify status list received for each directory with recursive flag set
+      // to false
+      OmKeyArgs dirArgs = createKeyArgs(directory);
+      fileStatuses = keyManager.listStatus(dirArgs, false, "", 100);
+      verifyFileStatus(directory, fileStatuses, directorySet, fileSet, false);
+
+      // verify status list received for each directory with recursive flag set
+      // to true
+      fileStatuses = keyManager.listStatus(dirArgs, true, "", 100);
+      verifyFileStatus(directory, fileStatuses, directorySet, fileSet, true);
+
+      // verify list status call with using the startKey parameter and
+      // recursive flag set to false. After every call to listStatus use the
+      // latest received file status as the startKey until no more entries are
+      // left to list.
+      List<OzoneFileStatus> tempFileStatus = null;
+      Set<OzoneFileStatus> tmpStatusSet = new HashSet<>();
+      do {
+        tempFileStatus = keyManager.listStatus(dirArgs, false,
+            tempFileStatus != null ? OzoneFSUtils.pathToKey(
+                tempFileStatus.get(tempFileStatus.size() - 1).getPath()) : null,
+            2);
+        tmpStatusSet.addAll(tempFileStatus);
+      } while (tempFileStatus.size() == 2);
+      verifyFileStatus(directory, new ArrayList<>(tmpStatusSet), directorySet,
+          fileSet, false);
+
+      // verify list status call with using the startKey parameter and
+      // recursive flag set to true. After every call to listStatus use the
+      // latest received file status as the startKey until no more entries are
+      // left to list.
+      tempFileStatus = null;
+      tmpStatusSet = new HashSet<>();
+      do {
+        tempFileStatus = keyManager.listStatus(dirArgs, true,
+            tempFileStatus != null ? OzoneFSUtils.pathToKey(
+                tempFileStatus.get(tempFileStatus.size() - 1).getPath()) : null,
+            2);
+        tmpStatusSet.addAll(tempFileStatus);
+      } while (tempFileStatus.size() == 2);
+      verifyFileStatus(directory, new ArrayList<>(tmpStatusSet), directorySet,
+          fileSet, true);
+    }
+  }
+
+  /**
+   * Creates a depth two directory.
+   *
+   * @param superDir       Super directory to create
+   * @param numDirectories number of directory children
+   * @param numFiles       number of file children
+   * @param directorySet   set of descendant directories for the super directory
+   * @param fileSet        set of descendant files for the super directory
+   */
+  private void createDepthTwoDirectory(String superDir, int numDirectories,
+      int numFiles, Set<String> directorySet, Set<String> fileSet)
+      throws IOException {
+    // create super directory
+    OmKeyArgs superDirArgs = createKeyArgs(superDir);
+    keyManager.createDirectory(superDirArgs);
+    directorySet.add(superDir);
+
+    // add directory children to super directory
+    Set<String> childDirectories =
+        createDirectories(superDir, new HashMap<>(), numDirectories);
+    directorySet.addAll(childDirectories);
+    // add file to super directory
+    fileSet.addAll(createFiles(superDir, new HashMap<>(), numFiles));
+
+    // for each child directory create files and directories
+    for (String child : childDirectories) {
+      fileSet.addAll(createFiles(child, new HashMap<>(), numFiles));
+      directorySet
+          .addAll(createDirectories(child, new HashMap<>(), numDirectories));
+    }
+  }
+
+  private void verifyFileStatus(String directory,
+      List<OzoneFileStatus> fileStatuses, Set<String> directorySet,
+      Set<String> fileSet, boolean recursive) {
+
+    for (OzoneFileStatus fileStatus : fileStatuses) {
+      String keyName = OzoneFSUtils.pathToKey(fileStatus.getPath());
+      String parent = Paths.get(keyName).getParent().toString();
+      if (!recursive) {
+        // if recursive is false, verify all the statuses have the input
+        // directory as parent
+        Assert.assertEquals(parent, directory);
+      }
+      // verify filestatus is present in directory or file set accordingly
+      if (fileStatus.isDirectory()) {
+        Assert.assertTrue(directorySet.contains(keyName));
+      } else {
+        Assert.assertTrue(fileSet.contains(keyName));
+      }
+    }
+
+    // count the number of entries which should be present in the directory
+    int numEntries = 0;
+    Set<String> entrySet = new TreeSet<>(directorySet);
+    entrySet.addAll(fileSet);
+    for (String entry : entrySet) {
+      if (OzoneFSUtils.getParent(entry)
+          .startsWith(OzoneFSUtils.addTrailingSlashIfNeeded(directory))) {
+        if (recursive) {
+          numEntries++;
+        } else if (OzoneFSUtils.getParent(entry)
+            .equals(OzoneFSUtils.addTrailingSlashIfNeeded(directory))) {
+          numEntries++;
+        }
+      }
+    }
+    // verify the number of entries match the status list size
+    Assert.assertEquals(fileStatuses.size(), numEntries);
+  }
+
+  private Set<String> createDirectories(String parent,
+      Map<String, List<String>> directoryMap, int numDirectories)
+      throws IOException {
+    Set<String> keyNames = new TreeSet<>();
+    for (int i = 0; i < numDirectories; i++) {
+      String keyName = parent + "/" + RandomStringUtils.randomAlphabetic(5);
+      OmKeyArgs keyArgs = createBuilder().setKeyName(keyName).build();
+      keyManager.createDirectory(keyArgs);
+      keyNames.add(keyName);
+    }
+    directoryMap.put(parent, new ArrayList<>(keyNames));
+    return keyNames;
+  }
+
+  private List<String> createFiles(String parent,
+      Map<String, List<String>> fileMap, int numFiles) throws IOException {
+    List<String> keyNames = new ArrayList<>();
+    for (int i = 0; i < numFiles; i++) {
+      String keyName = parent + "/" + RandomStringUtils.randomAlphabetic(5);
+      OmKeyArgs keyArgs = createBuilder().setKeyName(keyName).build();
+      OpenKeySession keySession = keyManager.createFile(keyArgs, false, false);
+      keyArgs.setLocationInfoList(
+          keySession.getKeyInfo().getLatestVersionLocations()
+              .getLocationList());
+      keyManager.commitKey(keyArgs, keySession.getId());
+      keyNames.add(keyName);
+    }
+    fileMap.put(parent, keyNames);
+    return keyNames;
   }
 
   private OmKeyArgs.Builder createBuilder() {

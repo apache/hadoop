@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Ozone Manager FileSystem interface.
@@ -37,4 +38,7 @@ public interface OzoneManagerFS {
       boolean isRecursive) throws IOException;
 
   OmKeyInfo lookupFile(OmKeyArgs args) throws IOException;
+
+  List<OzoneFileStatus> listStatus(OmKeyArgs keyArgs, boolean recursive,
+      String startKey, long numEntries) throws IOException;
 }
