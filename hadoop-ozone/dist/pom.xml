@@ -286,7 +286,7 @@
   </dependencies>
   <profiles>
     <profile>
-      <id>k8s-dev</id>
+      <id>docker-build</id>
       <properties>
         <docker.image>${user.name}/ozone:${project.version}</docker.image>
       </properties>
@@ -321,7 +321,7 @@
       </build>
     </profile>
     <profile>
-      <id>k8s-dev-push</id>
+      <id>docker-push</id>
       <build>
         <plugins>
           <plugin>
