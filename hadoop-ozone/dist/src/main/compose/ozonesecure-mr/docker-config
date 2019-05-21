@@ -168,7 +168,7 @@ LOG4J2.PROPERTIES_rootLogger.appenderRef.stdout.ref=STDOUT
 
 OZONE_DATANODE_SECURE_USER=root
 KEYTAB_DIR=/etc/security/keytabs
-KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop
+KERBEROS_KEYTABS=dn om scm HTTP testuser s3g rm nm yarn jhs hadoop spark
 KERBEROS_KEYSTORES=hadoop
 KERBEROS_SERVER=kdc
 JAVA_HOME=/usr/lib/jvm/jre
