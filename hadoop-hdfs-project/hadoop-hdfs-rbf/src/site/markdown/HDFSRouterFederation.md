@@ -169,7 +169,15 @@ It is similar to the mount table in [ViewFs](../hadoop-hdfs/ViewFs.html) where i
 
 
 ### Security
-Secure authentication and authorization are not supported yet, so the Router will not proxy to Hadoop clusters with security enabled.
+Router supports security similar to [current security model](../hadoop-common/SecureMode.html) in HDFS. This feature is available for both RPC and Web based calls. It has the capability to proxy to underlying secure HDFS clusters.
+
+Similar to Namenode, support exists for both kerberos and token based authentication for clients connecting to routers. Router internally relies on existing security related configs of `core-site.xml` and `hdfs-site.xml` to support this feature. In addition to that, routers need to be configured with its own keytab and principal.
+
+For token based authentication, router issues delegation tokens to upstream clients without communicating with downstream namenodes. Router uses its own credentials to securely proxy to downstream namenode on behalf of upstream real user. Router principal has to be configured as a superuser in all secure downstream namenodes. Refer [here](../hadoop-common/Superusers.html) to configure proxy user for namenode. Along with that, user owning router daemons should be configured with the same identity as namenode process itself. Refer [here](../hadoop-hdfs/HdfsPermissionsGuide.html#The_Super-User) for details.
+Router relies on a state store to distribute tokens across all routers. Apart from default implementation provided users can plugin their own implementation of state store for token management. Default implementation relies on zookeeper for token management. Since a large router/zookeeper cluster could potentially hold millions of tokens, `jute.maxbuffer` system property that zookeeper clients rely on should be appropriately configured in router daemons.
+
+
+See the Apache JIRA ticket [HDFS-13532](https://issues.apache.org/jira/browse/HDFS-13532) for more information on this feature.
 
 
 Deployment
@@ -443,6 +451,18 @@ Global quota supported in federation.
 |:---- |:---- |:---- |
 | dfs.federation.router.quota.enable | `false` | If `true`, the quota system enabled in the Router. In that case, setting or clearing sub-cluster's quota directly is not recommended since Router Admin server will override sub-cluster's quota with global quota.|
 | dfs.federation.router.quota-cache.update.interval | 60s | How often the Router updates quota cache. This setting supports multiple time unit suffixes. If no suffix is specified then milliseconds is assumed. |
+
+### Security
+
+Kerberos and Delegation token supported in federation.
+
+| Property | Default | Description|
+|:---- |:---- |:---- |
+| dfs.federation.router.keytab.file |  | The keytab file used by router to login as its service principal. The principal name is configured with 'dfs.federation.router.kerberos.principal'.|
+| dfs.federation.router.kerberos.principal | | The Router service principal. This is typically set to router/_HOST@REALM.TLD. Each Router will substitute _HOST with its own fully qualified hostname at startup. The _HOST placeholder allows using the same configuration setting on all Routers in an HA setup. |
+| dfs.federation.router.kerberos.principal.hostname |  | The hostname for the Router containing this configuration file.  Will be different for each machine. Defaults to current hostname. |
+| dfs.federation.router.kerberos.internal.spnego.principal | `${dfs.web.authentication.kerberos.principal}` | The server principal used by the Router for web UI SPNEGO authentication when Kerberos security is enabled. This is typically set to HTTP/_HOST@REALM.TLD The SPNEGO server principal begins with the prefix HTTP/ by convention. If the value is '*', the web server will attempt to login with every principal specified in the keytab file 'dfs.web.authentication.kerberos.keytab'. |
+| dfs.federation.router.secret.manager.class | `org.apache.hadoop.hdfs.server.federation.router.security.token.ZKDelegationTokenSecretManagerImpl` |  Class to implement state store to delegation tokens. Default implementation uses zookeeper as the backend to store delegation tokens. |
 
 Metrics
 -------
