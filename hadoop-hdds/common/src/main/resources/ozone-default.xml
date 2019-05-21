@@ -541,14 +541,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.group.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default group permissions in Ozone OM.
-    </description>
-  </property>
-  <property>
     <name>ozone.om.handler.count.key</name>
     <value>20</value>
     <tag>OM, PERFORMANCE</tag>
@@ -638,14 +630,6 @@
       defined only for operational purposes. Only an administrator can create a
       volume, once a volume is created there are no restrictions on the number
       of buckets or keys inside each bucket a user can create.
-    </description>
-  </property>
-  <property>
-    <name>ozone.om.user.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default user permissions used in OM.
     </description>
   </property>
   <property>
@@ -1809,7 +1793,7 @@
       assumed.
     </description>
   </property>
-  
+
   <property>
     <name>hdds.block.token.enabled</name>
     <value>false</value>

@@ -112,7 +112,7 @@ public class RestClient implements ClientProtocol {
   private final URI ozoneRestUri;
   private final CloseableHttpClient httpClient;
   private final UserGroupInformation ugi;
-  private final OzoneAcl.OzoneACLRights userRights;
+  // private final OzoneAcl.OzoneACLRights userRights;
 
    /**
     * Creates RestClient instance with the given configuration.
@@ -161,8 +161,8 @@ public class RestClient implements ClientProtocol {
                   .build())
           .build();
 
-      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
-          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
+//      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+//          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
 
       // TODO: Add new configuration parameter to configure RestServerSelector.
       RestServerSelector defaultSelector = new DefaultRestServerSelector();

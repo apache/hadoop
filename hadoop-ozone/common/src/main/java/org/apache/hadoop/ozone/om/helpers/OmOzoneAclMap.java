@@ -37,7 +37,7 @@ import java.util.HashMap;
 @SuppressWarnings("ProtocolBufferOrdinal")
 public class OmOzoneAclMap {
   // per Acl Type user:rights map
-  private ArrayList<Map<String, OzoneAclRights>> aclMaps;
+  private ArrayList<Map<String, List<OzoneAclRights>>> aclMaps;
 
   OmOzoneAclMap() {
     aclMaps = new ArrayList<>();
@@ -46,51 +46,75 @@ public class OmOzoneAclMap {
     }
   }
 
-  private Map<String, OzoneAclRights> getMap(OzoneAclType type) {
+  private Map<String, List<OzoneAclRights>> getMap(OzoneAclType type) {
     return aclMaps.get(type.ordinal());
   }
 
   // For a given acl type and user, get the stored acl
-  private OzoneAclRights getAcl(OzoneAclType type, String user) {
+  private List<OzoneAclRights> getAcl(OzoneAclType type, String user) {
     return getMap(type).get(user);
   }
 
   // Add a new acl to the map
   public void addAcl(OzoneAclInfo acl) {
-    getMap(acl.getType()).put(acl.getName(), acl.getRights());
+    getMap(acl.getType()).put(acl.getName(), acl.getRightsList());
   }
 
   // for a given acl, check if the user has access rights
   public boolean hasAccess(OzoneAclInfo acl) {
-    OzoneAclRights storedRights = getAcl(acl.getType(), acl.getName());
-    if (storedRights != null) {
-      switch (acl.getRights()) {
-      case READ:
-        return (storedRights == OzoneAclRights.READ)
-            || (storedRights == OzoneAclRights.READ_WRITE);
+    if (acl == null) {
+      return false;
+    }
+
+    List<OzoneAclRights> storedRights = getAcl(acl.getType(), acl.getName());
+    if(storedRights == null) {
+      return false;
+    }
+
+    for (OzoneAclRights right : storedRights) {
+      switch (right) {
+      case CREATE:
+        return (right == OzoneAclRights.CREATE)
+            || (right == OzoneAclRights.ALL);
+      case LIST:
+        return (right == OzoneAclRights.LIST)
+            || (right == OzoneAclRights.ALL);
       case WRITE:
-        return (storedRights == OzoneAclRights.WRITE)
-            || (storedRights == OzoneAclRights.READ_WRITE);
-      case READ_WRITE:
-        return (storedRights == OzoneAclRights.READ_WRITE);
+        return (right == OzoneAclRights.WRITE)
+            || (right == OzoneAclRights.ALL);
+      case READ:
+        return (right == OzoneAclRights.READ)
+            || (right == OzoneAclRights.ALL);
+      case DELETE:
+        return (right == OzoneAclRights.DELETE)
+            || (right == OzoneAclRights.ALL);
+      case READ_ACL:
+        return (right == OzoneAclRights.READ_ACL)
+            || (right == OzoneAclRights.ALL);
+      case WRITE_ACL:
+        return (right == OzoneAclRights.WRITE_ACL)
+            || (right == OzoneAclRights.ALL);
+      case ALL:
+        return (right == OzoneAclRights.ALL);
+      case NONE:
+        return !(right == OzoneAclRights.NONE);
       default:
         return false;
       }
-    } else {
-      return false;
     }
+    return false;
   }
 
   // Convert this map to OzoneAclInfo Protobuf List
   public List<OzoneAclInfo> ozoneAclGetProtobuf() {
     List<OzoneAclInfo> aclList = new LinkedList<>();
     for (OzoneAclType type: OzoneAclType.values()) {
-      for (Map.Entry<String, OzoneAclRights> entry :
+      for (Map.Entry<String, List<OzoneAclRights>> entry :
           aclMaps.get(type.ordinal()).entrySet()) {
         OzoneAclInfo aclInfo = OzoneAclInfo.newBuilder()
             .setName(entry.getKey())
             .setType(type)
-            .setRights(entry.getValue())
+            .addAllRights(entry.getValue())
             .build();
         aclList.add(aclInfo);
       }

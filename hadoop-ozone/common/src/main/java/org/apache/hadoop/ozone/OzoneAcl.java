@@ -19,6 +19,11 @@
 
 package org.apache.hadoop.ozone;
 
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -32,9 +37,9 @@ import java.util.Objects;
  * </ul>
  */
 public class OzoneAcl {
-  private OzoneACLType type;
+  private ACLIdentityType type;
   private String name;
-  private OzoneACLRights rights;
+  private List<ACLType> rights;
 
   /**
    * Constructor for OzoneAcl.
@@ -47,16 +52,37 @@ public class OzoneAcl {
    *
    * @param type - Type
    * @param name - Name of user
-   * @param rights - Rights
+   * @param acl - Rights
    */
-  public OzoneAcl(OzoneACLType type, String name, OzoneACLRights rights) {
+  public OzoneAcl(ACLIdentityType type, String name, ACLType acl) {
     this.name = name;
-    this.rights = rights;
+    this.rights = new ArrayList<>();
+    this.rights.add(acl);
     this.type = type;
-    if (type == OzoneACLType.WORLD && name.length() != 0) {
+    if (type == ACLIdentityType.WORLD && name.length() != 0) {
       throw new IllegalArgumentException("Unexpected name part in world type");
     }
-    if (((type == OzoneACLType.USER) || (type == OzoneACLType.GROUP))
+    if (((type == ACLIdentityType.USER) || (type == ACLIdentityType.GROUP))
+        && (name.length() == 0)) {
+      throw new IllegalArgumentException("User or group name is required");
+    }
+  }
+
+  /**
+   * Constructor for OzoneAcl.
+   *
+   * @param type - Type
+   * @param name - Name of user
+   * @param acls - Rights
+   */
+  public OzoneAcl(ACLIdentityType type, String name, List<ACLType> acls) {
+    this.name = name;
+    this.rights = acls;
+    this.type = type;
+    if (type == ACLIdentityType.WORLD && name.length() != 0) {
+      throw new IllegalArgumentException("Unexpected name part in world type");
+    }
+    if (((type == ACLIdentityType.USER) || (type == ACLIdentityType.GROUP))
         && (name.length() == 0)) {
       throw new IllegalArgumentException("User or group name is required");
     }
@@ -78,17 +104,20 @@ public class OzoneAcl {
       throw new IllegalArgumentException("ACLs are not in expected format");
     }
 
-    OzoneACLType aclType = OzoneACLType.valueOf(parts[0].toUpperCase());
-    OzoneACLRights rights = OzoneACLRights.getACLRight(parts[2].toLowerCase());
+    ACLIdentityType aclType = ACLIdentityType.valueOf(parts[0].toUpperCase());
+    List<ACLType> acls = new ArrayList<>();
+    for (char ch : parts[2].toCharArray()) {
+      acls.add(ACLType.getACLRight(String.valueOf(ch)));
+    }
 
     // TODO : Support sanitation of these user names by calling into
     // userAuth Interface.
-    return new OzoneAcl(aclType, parts[1], rights);
+    return new OzoneAcl(aclType, parts[1], acls);
   }
 
   @Override
   public String toString() {
-    return type + ":" + name + ":" + OzoneACLRights.getACLRightsString(rights);
+    return type + ":" + name + ":" + ACLType.getACLString(rights);
   }
 
   /**
@@ -120,7 +149,7 @@ public class OzoneAcl {
    *
    * @return - Rights
    */
-  public OzoneACLRights getRights() {
+  public List<ACLType> getRights() {
     return rights;
   }
 
@@ -129,7 +158,7 @@ public class OzoneAcl {
    *
    * @return type
    */
-  public OzoneACLType getType() {
+  public ACLIdentityType getType() {
     return type;
   }
 
@@ -150,9 +179,7 @@ public class OzoneAcl {
       return false;
     }
     OzoneAcl otherAcl = (OzoneAcl) obj;
-    return otherAcl.getName().equals(this.getName()) &&
-        otherAcl.getRights() == this.getRights() &&
-        otherAcl.getType() == this.getType();
+    return otherAcl.toString().equals(this.toString());
   }
 
   /**
@@ -177,57 +204,4 @@ public class OzoneAcl {
       value = val;
     }
   }
-
-  /**
-   * ACL rights.
-   */
-  public enum OzoneACLRights {
-    READ, WRITE, READ_WRITE;
-
-    /**
-     * Returns the ACL rights based on passed in String.
-     *
-     * @param type ACL right string
-     *
-     * @return OzoneACLRights
-     */
-    public static OzoneACLRights getACLRight(String type) {
-      if (type == null || type.isEmpty()) {
-        throw new IllegalArgumentException("ACL right cannot be empty");
-      }
-
-      switch (type) {
-      case OzoneConsts.OZONE_ACL_READ:
-        return OzoneACLRights.READ;
-      case OzoneConsts.OZONE_ACL_WRITE:
-        return OzoneACLRights.WRITE;
-      case OzoneConsts.OZONE_ACL_READ_WRITE:
-      case OzoneConsts.OZONE_ACL_WRITE_READ:
-        return OzoneACLRights.READ_WRITE;
-      default:
-        throw new IllegalArgumentException("ACL right is not recognized");
-      }
-
-    }
-
-    /**
-     * Returns String representation of ACL rights.
-     * @param acl OzoneACLRights
-     * @return String representation of acl
-     */
-    public static String getACLRightsString(OzoneACLRights acl) {
-      switch(acl) {
-      case READ:
-        return OzoneConsts.OZONE_ACL_READ;
-      case WRITE:
-        return OzoneConsts.OZONE_ACL_WRITE;
-      case READ_WRITE:
-        return OzoneConsts.OZONE_ACL_READ_WRITE;
-      default:
-        throw new IllegalArgumentException("ACL right is not recognized");
-      }
-    }
-
-  }
-
 }

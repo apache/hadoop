@@ -73,7 +73,6 @@ import org.apache.hadoop.ozone.om.protocolPB
     .OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -85,6 +84,9 @@ import org.apache.hadoop.hdds.scm.protocolPB
 import org.apache.hadoop.hdds.scm.protocolPB
     .StorageContainerLocationProtocolPB;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.OzoneAclConfig;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -121,8 +123,8 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   private final int bytesPerChecksum;
   private boolean verifyChecksum;
   private final UserGroupInformation ugi;
-  private final OzoneAcl.OzoneACLRights userRights;
-  private final OzoneAcl.OzoneACLRights groupRights;
+  private final ACLType userRights;
+  private final ACLType groupRights;
   private final long streamBufferFlushSize;
   private final long streamBufferMaxSize;
   private final long blockSize;
@@ -141,10 +143,11 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     Preconditions.checkNotNull(conf);
     this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
-    this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
-        OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
-    this.groupRights = conf.getEnum(OMConfigKeys.OZONE_OM_GROUP_RIGHTS,
-        OMConfigKeys.OZONE_OM_GROUP_RIGHTS_DEFAULT);
+    // Get default acl rights for user and group.
+    OzoneAclConfig aclConfig = this.conf.getObject(OzoneAclConfig.class);
+    this.userRights = aclConfig.getUserDefaultRights();
+    this.groupRights = aclConfig.getGroupDefaultRights();
+
     this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
         this.conf, clientId.toString(), ugi);
     long scmVersion =
@@ -256,13 +259,13 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         OzoneQuota.parseQuota(volArgs.getQuota()).sizeInBytes();
     List<OzoneAcl> listOfAcls = new ArrayList<>();
     //User ACL
-    listOfAcls.add(new OzoneAcl(OzoneAcl.OzoneACLType.USER,
+    listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
             owner, userRights));
     //Group ACLs of the User
     List<String> userGroups = Arrays.asList(UserGroupInformation
         .createRemoteUser(owner).getGroupNames());
     userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, group, groupRights)));
+        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
     //ACLs from VolumeArgs
     if(volArgs.getAcls() != null) {
       listOfAcls.addAll(volArgs.getAcls());
@@ -403,13 +406,13 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
 
     List<OzoneAcl> listOfAcls = new ArrayList<>();
     //User ACL
-    listOfAcls.add(new OzoneAcl(OzoneAcl.OzoneACLType.USER,
+    listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
         ugi.getUserName(), userRights));
     //Group ACLs of the User
     List<String> userGroups = Arrays.asList(UserGroupInformation
         .createRemoteUser(ugi.getUserName()).getGroupNames());
     userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(OzoneAcl.OzoneACLType.GROUP, group, groupRights)));
+        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
     //ACLs from BucketArgs
     if(bucketArgs.getAcls() != null) {
       listOfAcls.addAll(bucketArgs.getAcls());

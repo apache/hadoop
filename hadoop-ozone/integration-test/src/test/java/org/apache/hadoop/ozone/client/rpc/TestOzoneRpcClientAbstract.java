@@ -82,6 +82,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
@@ -260,7 +262,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   }
 
-  
+
   @Test
   public void testCreateBucket()
       throws IOException, OzoneException {
@@ -420,8 +422,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.READ);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
@@ -439,8 +441,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.ALL);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
@@ -480,9 +482,7 @@ public abstract class TestOzoneRpcClientAbstract {
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
     List<OzoneAcl> acls = new ArrayList<>();
-    acls.add(new OzoneAcl(
-        OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE));
+    acls.add(new OzoneAcl(ACLIdentityType.USER, "test", ACLType.ALL));
     OzoneBucket bucket = volume.getBucket(bucketName);
     bucket.addAcls(acls);
     OzoneBucket newBucket = volume.getBucket(bucketName);
@@ -495,8 +495,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.ALL);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
