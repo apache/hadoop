@@ -20,10 +20,12 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 
 import org.apache.hadoop.conf.StorageUnit;
+import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.common.statemachine.StateContext;
@@ -32,16 +34,18 @@ import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingP
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
+import org.apache.hadoop.util.DiskChecker;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
 
-
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.DISK_OUT_OF_SPACE;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -103,6 +107,39 @@ public class TestOzoneContainer {
     assertEquals(10, containerset.containerCount());
   }
 
+  @Test
+  public void testContainerCreateDiskFull() throws Exception {
+    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
+    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
+    long containerSize = (long) StorageUnit.MB.toBytes(100);
+    boolean diskSpaceException = false;
+
+    // Format the volumes
+    for (HddsVolume volume : volumeSet.getVolumesList()) {
+      volume.format(UUID.randomUUID().toString());
+
+      // eat up all available space except size of 1 container
+      volume.incCommittedBytes(volume.getAvailable() - containerSize);
+      // eat up 10 bytes more, now available space is less than 1 container
+      volume.incCommittedBytes(10);
+    }
+    keyValueContainerData = new KeyValueContainerData(99, containerSize,
+        UUID.randomUUID().toString(), datanodeDetails.getUuidString());
+    keyValueContainer = new KeyValueContainer(
+        keyValueContainerData, conf);
+
+    // we expect an out of space Exception
+    try {
+      keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
+    } catch (StorageContainerException e) {
+      if (e.getResult() == DISK_OUT_OF_SPACE) {
+        diskSpaceException = true;
+      }
+    }
+
+    // Test failed if there was no exception
+    assertEquals(true, diskSpaceException);
+  }
 
   private DatanodeDetails createDatanodeDetails() {
     Random random = new Random();
