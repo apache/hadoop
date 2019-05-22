@@ -37,4 +37,9 @@ public class MockRatisPipelineProvider extends RatisPipelineProvider {
   protected void initializePipeline(Pipeline pipeline) throws IOException {
     // do nothing as the datanodes do not exists
   }
+
+  @Override
+  public void shutdown() {
+    // Do nothing.
+  }
 }
