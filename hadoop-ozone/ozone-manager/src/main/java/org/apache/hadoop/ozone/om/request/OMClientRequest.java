@@ -19,13 +19,19 @@
 package org.apache.hadoop.ozone.om.request;
 
 import java.io.IOException;
+import java.net.InetAddress;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * OMClientRequest provides methods which every write OM request should
@@ -68,6 +74,52 @@ public abstract class OMClientRequest {
   @VisibleForTesting
   public OMRequest getOmRequest() {
     return omRequest;
+  }
+
+  /**
+   * Get UGI information from the OMRequest.
+   * @return
+   */
+  public OzoneManagerProtocolProtos.UgiInfo getUgiInfo() {
+    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+    InetAddress remoteAddress = ProtobufRpcEngine.Server.getRemoteIp();
+    OzoneManagerProtocolProtos.UgiInfo.Builder ugi =
+        OzoneManagerProtocolProtos.UgiInfo.newBuilder();
+
+    if (user != null) {
+      ugi.setUserName(user.getUserName());
+    }
+
+    if (remoteAddress != null) {
+      ugi.setRemoteAddress(remoteAddress.getHostAddress()).build();
+    }
+
+    return ugi.build();
+  }
+
+  /**
+   * Check Acls of ozone object.
+   * @param ozoneManager
+   * @param resType
+   * @param storeType
+   * @param aclType
+   * @param vol
+   * @param bucket
+   * @param key
+   * @throws IOException
+   */
+  public void checkAcls(OzoneManager ozoneManager,
+      OzoneObj.ResourceType resType,
+      OzoneObj.StoreType storeType, IAccessAuthorizer.ACLType aclType,
+      String vol, String bucket, String key) throws IOException {
+    ozoneManager.checkAcls(resType, storeType, aclType, vol, bucket, key,
+        createUGI(), InetAddress.getByName(omRequest.getUgiInfo()
+            .getRemoteAddress()));
+  }
+
+  private UserGroupInformation createUGI() {
+    return UserGroupInformation.createRemoteUser(
+        omRequest.getUgiInfo().getUserName());
   }
 
 }

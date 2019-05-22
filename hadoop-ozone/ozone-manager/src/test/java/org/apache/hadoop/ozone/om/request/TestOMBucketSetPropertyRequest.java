@@ -89,7 +89,7 @@ public class TestOMBucketSetPropertyRequest {
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);
 
-    Assert.assertEquals(omRequest,
+    Assert.assertNotEquals(omRequest,
         omBucketSetPropertyRequest.preExecute(ozoneManager));
   }
 
@@ -104,7 +104,8 @@ public class TestOMBucketSetPropertyRequest {
         bucketName, true);
 
     // Create with default BucketInfo values
-    TestOMRequestUtils.addEntryToDB(volumeName, bucketName, omMetadataManager);
+    TestOMRequestUtils.addVolumeAndBucketCreateEntriesToDB(volumeName,
+        bucketName, omMetadataManager);
 
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);

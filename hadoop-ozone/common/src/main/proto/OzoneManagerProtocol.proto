@@ -97,6 +97,8 @@ message OMRequest {
 
   required string clientId = 3;
 
+  optional UgiInfo ugiInfo = 4;
+
   optional CreateVolumeRequest              createVolumeRequest            = 11;
   optional SetVolumePropertyRequest         setVolumePropertyRequest       = 12;
   optional CheckVolumeAccessRequest         checkVolumeAccessRequest       = 13;
@@ -258,8 +260,14 @@ enum Status {
     DIRECTORY_NOT_FOUND = 45;
     FILE_ALREADY_EXISTS = 46;
     NOT_A_FILE = 47;
+
+    PERMISSION_DENIED = 48;
 }
 
+message UgiInfo {
+    optional string userName = 1;
+    optional string remoteAddress = 3;
+}
 
 message VolumeInfo {
     required string adminName = 1;

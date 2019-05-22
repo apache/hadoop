@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 
+import java.net.InetAddress;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.KeyPair;
@@ -1723,30 +1724,57 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private void checkAcls(ResourceType resType, StoreType store,
       ACLType acl, String vol, String bucket, String key)
       throws OzoneAclException {
-    if(!isAclEnabled) {
-      return;
-    }
+    checkAcls(resType, store, acl, vol, bucket, key,
+        ProtobufRpcEngine.Server.getRemoteUser(),
+        ProtobufRpcEngine.Server.getRemoteIp());
+  }
 
+  /**
+   * CheckAcls for the ozone object.
+   * @param resType
+   * @param storeType
+   * @param aclType
+   * @param vol
+   * @param bucket
+   * @param key
+   * @param ugi
+   * @param remoteAddress
+   * @throws OzoneAclException
+   */
+  @SuppressWarnings("parameternumber")
+  public void checkAcls(ResourceType resType, StoreType storeType,
+      ACLType aclType, String vol, String bucket, String key,
+      UserGroupInformation ugi, InetAddress remoteAddress)
+      throws OzoneAclException {
     OzoneObj obj = OzoneObjInfo.Builder.newBuilder()
         .setResType(resType)
-        .setStoreType(store)
+        .setStoreType(storeType)
         .setVolumeName(vol)
         .setBucketName(bucket)
         .setKeyName(key).build();
-    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
+
     RequestContext context = RequestContext.newBuilder()
-        .setClientUgi(user)
-        .setIp(ProtobufRpcEngine.Server.getRemoteIp())
+        .setClientUgi(ugi)
+        .setIp(remoteAddress)
         .setAclType(ACLIdentityType.USER)
-        .setAclRights(acl)
+        .setAclRights(aclType)
         .build();
     if (!accessAuthorizer.checkAccess(obj, context)) {
       LOG.warn("User {} doesn't have {} permission to access {}",
-          user.getUserName(), acl, resType);
-      throw new OzoneAclException("User " + user.getUserName() + " doesn't " +
-          "have " + acl + " permission to access " + resType,
+          ugi.getUserName(), aclType, resType);
+      throw new OzoneAclException("User " + ugi.getUserName() + " doesn't " +
+          "have " + aclType + " permission to access " + resType,
           ErrorCode.PERMISSION_DENIED);
     }
+  }
+
+  /**
+   *
+   * Return true if Ozone acl's are enabled, else false.
+   * @return boolean
+   */
+  public boolean getAclsEnabled() {
+    return isAclEnabled;
   }
 
   /**

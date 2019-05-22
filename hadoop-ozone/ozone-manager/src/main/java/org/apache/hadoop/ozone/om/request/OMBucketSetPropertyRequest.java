@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -43,6 +44,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.utils.db.cache.CacheKey;
@@ -60,7 +63,7 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
   }
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
-    return getOmRequest();
+    return getOmRequest().toBuilder().setUgiInfo(getUgiInfo()).build();
   }
 
   @Override
@@ -82,15 +85,22 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     String volumeName = bucketArgs.getVolumeName();
     String bucketName = bucketArgs.getBucketName();
 
-    // acquire lock
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-
     OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
         OzoneManagerProtocolProtos.Type.CreateBucket).setStatus(
         OzoneManagerProtocolProtos.Status.OK);
     OmBucketInfo omBucketInfo = null;
 
     try {
+      // check Acl
+      if (ozoneManager.getAclsEnabled()) {
+        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+            volumeName, bucketName, null);
+      }
+
+      // acquire lock
+      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
           omMetadataManager.getBucketTable().get(bucketKey);
@@ -145,8 +155,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       omMetadataManager.getBucketTable().addCacheEntry(
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
-
-      // TODO: check acls
     } catch (IOException ex) {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();

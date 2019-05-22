@@ -22,11 +22,11 @@ import org.apache.hadoop.ozone.om.request.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
+import org.apache.hadoop.ozone.security.acl.OzoneAclException;
 
 import java.io.IOException;
 
@@ -60,12 +60,13 @@ public final class OzoneManagerRatisUtils {
   }
 
   /**
-   * Convert exception result to {@link OzoneManagerProtocolProtos.Status}.
+   * Convert exception result to OzoneManagerProtocolProtos.Status.
    * @param exception
-   * @return {@link OzoneManagerProtocolProtos.Status}
+   * @return OzoneManagerProtocolProtos.Status
    */
   public static Status exceptionToResponseStatus(IOException exception) {
-    if (exception instanceof OMException) {
+    if (exception instanceof OMException |
+        exception instanceof OzoneAclException) {
       return Status.values()[((OMException) exception).getResult().ordinal()];
     } else {
       return Status.INTERNAL_ERROR;

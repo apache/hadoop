@@ -48,6 +48,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.util.Time;
@@ -95,8 +97,8 @@ public class OMBucketCreateRequest extends OMClientRequest {
     }
 
     newCreateBucketRequest.setBucketInfo(newBucketInfo.build());
-    return getOmRequest().toBuilder().setCreateBucketRequest(
-        newCreateBucketRequest.build()).build();
+    return getOmRequest().toBuilder().setUgiInfo(getUgiInfo())
+        .setCreateBucketRequest(newCreateBucketRequest.build()).build();
   }
 
   @Override
@@ -117,11 +119,19 @@ public class OMBucketCreateRequest extends OMClientRequest {
         OzoneManagerProtocolProtos.Status.OK);
     OmBucketInfo omBucketInfo = null;
 
-
-    metadataManager.getLock().acquireVolumeLock(volumeName);
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-
     try {
+
+      // check Acl
+      if (ozoneManager.getAclsEnabled()) {
+        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.CREATE,
+            volumeName, bucketName, null);
+      }
+
+      // acquire locks
+      metadataManager.getLock().acquireVolumeLock(volumeName);
+      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
       String volumeKey = metadataManager.getVolumeKey(volumeName);
       String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
@@ -146,7 +156,6 @@ public class OMBucketCreateRequest extends OMClientRequest {
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
-      // TODO: check acls
     } catch (IOException ex) {
       omMetrics.incNumBucketCreateFails();
       LOG.error("Bucket creation failed for bucket:{} in volume:{}",

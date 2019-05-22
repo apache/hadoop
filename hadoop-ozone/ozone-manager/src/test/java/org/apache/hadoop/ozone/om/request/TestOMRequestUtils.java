@@ -34,8 +34,16 @@ public final class TestOMRequestUtils {
   private TestOMRequestUtils() {
     //Do nothing
   }
-  public static void addEntryToDB(String volumeName, String bucketName,
-      OMMetadataManager omMetadataManager)
+
+  /**
+   * Add Bucket and volume create entries in OM DB.
+   * @param volumeName
+   * @param bucketName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addVolumeAndBucketCreateEntriesToDB(String volumeName,
+      String bucketName, OMMetadataManager omMetadataManager)
       throws Exception {
 
     createVolumeEntryToDDB(volumeName, bucketName, omMetadataManager);
@@ -48,6 +56,13 @@ public final class TestOMRequestUtils {
         omMetadataManager.getBucketKey(volumeName, bucketName), omBucketInfo);
   }
 
+  /**
+   * Add Create Volume entry in OM DB.
+   * @param volumeName
+   * @param bucketName
+   * @param omMetadataManager
+   * @throws Exception
+   */
   public static void createVolumeEntryToDDB(String volumeName,
       String bucketName, OMMetadataManager omMetadataManager)
       throws Exception {

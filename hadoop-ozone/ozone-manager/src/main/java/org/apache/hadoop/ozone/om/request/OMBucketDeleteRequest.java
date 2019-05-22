@@ -37,6 +37,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
@@ -53,8 +55,7 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
   @Override
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
-    // For Delete Bucket there are no preExecute steps
-    return getOmRequest();
+    return getOmRequest().toBuilder().setUgiInfo(getUgiInfo()).build();
   }
 
   @Override
@@ -65,11 +66,9 @@ public class OMBucketDeleteRequest extends OMClientRequest {
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
     OMRequest omRequest = getOmRequest();
+
     String volumeName = omRequest.getDeleteBucketRequest().getVolumeName();
     String bucketName = omRequest.getDeleteBucketRequest().getBucketName();
-
-    // acquire lock
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
     // Generate end user response
     OMResponse.Builder omResponse = OMResponse.newBuilder()
@@ -77,6 +76,17 @@ public class OMBucketDeleteRequest extends OMClientRequest {
         .setCmdType(omRequest.getCmdType());
 
     try {
+
+      // check Acl
+      if (ozoneManager.getAclsEnabled()) {
+        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+            volumeName, bucketName, null);
+      }
+
+      // acquire lock
+      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
       // No need to check volume exists here, as bucket cannot be created
       // with out volume creation.
       //Check if bucket exists
@@ -100,7 +110,6 @@ public class OMBucketDeleteRequest extends OMClientRequest {
       omMetadataManager.getBucketTable().addCacheEntry(
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.absent(), transactionLogIndex));
-      // TODO: update cache and check acls
     } catch (IOException ex) {
       omMetrics.incNumBucketDeleteFails();
       LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
