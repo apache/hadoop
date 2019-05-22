@@ -18,12 +18,11 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
-import com.google.common.base.Preconditions;
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
-import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,20 +35,19 @@ import java.util.Iterator;
 public class ContainerScrubber implements Runnable {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerScrubber.class);
-  private final ContainerSet containerSet;
   private final OzoneConfiguration config;
   private final long timePerContainer = 10000; // 10 sec in millis
   private boolean halt;
   private Thread scrubThread;
+  private ContainerController controller;
 
-  public ContainerScrubber(ContainerSet cSet, OzoneConfiguration conf) {
-    Preconditions.checkNotNull(cSet,
-        "ContainerScrubber received a null ContainerSet");
-    Preconditions.checkNotNull(conf);
-    this.containerSet = cSet;
+
+  public ContainerScrubber(OzoneConfiguration conf,
+      ContainerController controller) {
     this.config = conf;
     this.halt = false;
     this.scrubThread = null;
+    this.controller = controller;
   }
 
   @Override public void run() {
@@ -130,12 +128,13 @@ public class ContainerScrubber implements Runnable {
 
   private void scrub() {
 
-    Iterator<Container> containerIt = containerSet.getContainerIterator();
+    Iterator<Container> containerIt = controller.getContainerSetIterator();
     long count = 0;
 
     while (containerIt.hasNext()) {
       TimeStamp startTime = new TimeStamp(System.currentTimeMillis());
       Container container = containerIt.next();
+      Handler containerHandler = controller.getHandler(container);
 
       if (this.halt) {
         break; // stop if requested
