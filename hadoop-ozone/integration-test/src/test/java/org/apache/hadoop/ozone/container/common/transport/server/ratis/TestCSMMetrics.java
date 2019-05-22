@@ -112,6 +112,8 @@ public class TestCSMMetrics {
       assertCounter("NumWriteStateMachineOps", 0L, metric);
       assertCounter("NumReadStateMachineOps", 0L, metric);
       assertCounter("NumApplyTransactionOps", 0L, metric);
+      assertCounter("NumBytesWrittenCount", 0L, metric);
+      assertCounter("NumBytesCommittedCount", 0L, metric);
 
       // Write Chunk
       BlockID blockID = ContainerTestHelper.getTestBlockID(ContainerTestHelper.
@@ -127,7 +129,9 @@ public class TestCSMMetrics {
       metric = getMetrics(CSMMetrics.SOURCE_NAME +
               RaftGroupId.valueOf(pipeline.getId().getId()).toString());
       assertCounter("NumWriteStateMachineOps", 1L, metric);
+      assertCounter("NumBytesWrittenCount", 1024L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
+      assertCounter("NumBytesCommittedCount", 1024L, metric);
 
       //Read Chunk
       ContainerProtos.ContainerCommandRequestProto readChunkRequest =
@@ -139,7 +143,7 @@ public class TestCSMMetrics {
 
       metric = getMetrics(CSMMetrics.SOURCE_NAME +
           RaftGroupId.valueOf(pipeline.getId().getId()).toString());
-      assertCounter("NumReadStateMachineOps", 1L, metric);
+      assertCounter("NumQueryStateMachineOps", 1L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
     } finally {
       if (client != null) {

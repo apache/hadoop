@@ -626,6 +626,10 @@ public class ContainerStateMachine extends BaseStateMachine {
             applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
         Preconditions.checkState(previous == null);
+        if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
+          metrics.incNumBytesCommittedCount(
+              requestProto.getWriteChunk().getChunkData().getLen());
+        }
         updateLastApplied();
       });
       return future;

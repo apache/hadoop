@@ -24,7 +24,6 @@ import org.apache.hadoop.metrics2.annotation.Metric;
 import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
-import org.apache.hadoop.metrics2.lib.MutableRate;
 import org.apache.ratis.protocol.RaftGroupId;
 
 /**
@@ -38,10 +37,11 @@ public class CSMMetrics {
 
   // ratis op metrics metrics
   private @Metric MutableCounterLong numWriteStateMachineOps;
-  private @Metric MutableCounterLong queryStateMachineOps;
+  private @Metric MutableCounterLong numQueryStateMachineOps;
   private @Metric MutableCounterLong numApplyTransactionOps;
   private @Metric MutableCounterLong numReadStateMachineOps;
   private @Metric MutableCounterLong numBytesWrittenCount;
+  private @Metric MutableCounterLong numBytesCommittedCount;
 
   // Failure Metrics
   private @Metric MutableCounterLong numWriteStateMachineFails;
@@ -65,7 +65,7 @@ public class CSMMetrics {
   }
 
   public void incNumQueryStateMachineOps() {
-    queryStateMachineOps.incr();
+    numQueryStateMachineOps.incr();
   }
 
   public void incNumReadStateMachineOps() {
@@ -88,6 +88,10 @@ public class CSMMetrics {
     numBytesWrittenCount.incr(value);
   }
 
+  public void incNumBytesCommittedCount(long value) {
+    numBytesCommittedCount.incr(value);
+  }
+
   public void incNumReadStateMachineFails() {
     numReadStateMachineFails.incr();
   }
@@ -106,8 +110,8 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumReadStateMachineOps() {
-    return queryStateMachineOps.value();
+  public long getNumQueryStateMachineOps() {
+    return numQueryStateMachineOps.value();
   }
 
   @VisibleForTesting
@@ -143,6 +147,11 @@ public class CSMMetrics {
   @VisibleForTesting
   public long getNumBytesWrittenCount() {
     return numBytesWrittenCount.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesCommittedCount() {
+    return numBytesCommittedCount.value();
   }
 
 
