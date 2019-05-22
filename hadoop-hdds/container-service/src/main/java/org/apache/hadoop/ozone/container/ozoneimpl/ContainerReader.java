@@ -165,14 +165,21 @@ public class ContainerReader implements Runnable {
             "Skipping loading of this container.", containerFile);
         return;
       }
-      verifyContainerData(containerData);
+      verifyAndFixupContainerData(containerData);
     } catch (IOException ex) {
       LOG.error("Failed to parse ContainerFile for ContainerID: {}",
           containerID, ex);
     }
   }
 
-  public void verifyContainerData(ContainerData containerData)
+  /**
+   * verify ContainerData loaded from disk and fix-up stale members.
+   * Specifically blockCommitSequenceId, delete related metadata
+   * and bytesUsed
+   * @param containerData
+   * @throws IOException
+   */
+  public void verifyAndFixupContainerData(ContainerData containerData)
       throws IOException {
     switch (containerData.getContainerType()) {
     case KeyValueContainer:
