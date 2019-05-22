@@ -36,7 +36,7 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.DiskChecker;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 
 import org.junit.Assert;
 import org.junit.Before;
@@ -132,23 +132,24 @@ public class TestKeyValueContainer {
   private void addBlocks(int count) throws Exception {
     long containerId = keyValueContainerData.getContainerID();
 
-    MetadataStore metadataStore = BlockUtils.getDB(keyValueContainer
-        .getContainerData(), conf);
-    for (int i=0; i < count; i++) {
-      // Creating BlockData
-      BlockID blockID = new BlockID(containerId, i);
-      BlockData blockData = new BlockData(blockID);
-      blockData.addMetadata("VOLUME", "ozone");
-      blockData.addMetadata("OWNER", "hdfs");
-      List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
-      ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
-          .getLocalID(), 0), 0, 1024);
-      chunkList.add(info.getProtoBufMessage());
-      blockData.setChunks(chunkList);
-      metadataStore.put(Longs.toByteArray(blockID.getLocalID()), blockData
-          .getProtoBufMessage().toByteArray());
+    try(ReferenceCountedDB metadataStore = BlockUtils.getDB(keyValueContainer
+        .getContainerData(), conf)) {
+      for (int i = 0; i < count; i++) {
+        // Creating BlockData
+        BlockID blockID = new BlockID(containerId, i);
+        BlockData blockData = new BlockData(blockID);
+        blockData.addMetadata("VOLUME", "ozone");
+        blockData.addMetadata("OWNER", "hdfs");
+        List<ContainerProtos.ChunkInfo> chunkList = new ArrayList<>();
+        ChunkInfo info = new ChunkInfo(String.format("%d.data.%d", blockID
+            .getLocalID(), 0), 0, 1024);
+        chunkList.add(info.getProtoBufMessage());
+        blockData.setChunks(chunkList);
+        metadataStore.getStore().put(Longs.toByteArray(blockID.getLocalID()),
+            blockData
+            .getProtoBufMessage().toByteArray());
+      }
     }
-
   }
 
   @SuppressWarnings("RedundantCast")
@@ -191,9 +192,12 @@ public class TestKeyValueContainer {
 
     int numberOfKeysToWrite = 12;
     //write one few keys to check the key count after import
-    MetadataStore metadataStore = BlockUtils.getDB(keyValueContainerData, conf);
-    for (int i = 0; i < numberOfKeysToWrite; i++) {
-      metadataStore.put(("test" + i).getBytes(UTF_8), "test".getBytes(UTF_8));
+    try(ReferenceCountedDB metadataStore =
+        BlockUtils.getDB(keyValueContainerData, conf)) {
+      for (int i = 0; i < numberOfKeysToWrite; i++) {
+        metadataStore.getStore().put(("test" + i).getBytes(UTF_8),
+            "test".getBytes(UTF_8));
+      }
     }
     BlockUtils.removeDB(keyValueContainerData, conf);
 

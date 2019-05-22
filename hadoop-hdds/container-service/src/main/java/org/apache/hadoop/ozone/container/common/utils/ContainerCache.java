@@ -28,8 +28,11 @@ import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -92,8 +95,8 @@ public final class ContainerCache extends LRUMap {
       MapIterator iterator = cache.mapIterator();
       while (iterator.hasNext()) {
         iterator.next();
-        MetadataStore db = (MetadataStore) iterator.getValue();
-        closeDB((String)iterator.getKey(), db);
+        ReferenceCountedDB db = (ReferenceCountedDB) iterator.getValue();
+        db.setEvicted(true);
       }
       // reset the cache
       cache.clear();
@@ -107,11 +110,11 @@ public final class ContainerCache extends LRUMap {
    */
   @Override
   protected boolean removeLRU(LinkEntry entry) {
-    MetadataStore db = (MetadataStore) entry.getValue();
+    ReferenceCountedDB db = (ReferenceCountedDB) entry.getValue();
     String dbFile = (String)entry.getKey();
     lock.lock();
     try {
-      closeDB(dbFile, db);
+      db.setEvicted(false);
       return true;
     } catch (Exception e) {
       LOG.error("Eviction for db:{} failed", dbFile, e);
@@ -128,26 +131,30 @@ public final class ContainerCache extends LRUMap {
    * @param containerDBType - DB type of the container.
    * @param containerDBPath - DB path of the container.
    * @param conf - Hadoop Configuration.
-   * @return MetadataStore.
+   * @return ReferenceCountedDB.
    */
-  public MetadataStore getDB(long containerID, String containerDBType,
+  public ReferenceCountedDB getDB(long containerID, String containerDBType,
                              String containerDBPath, Configuration conf)
       throws IOException {
     Preconditions.checkState(containerID >= 0,
         "Container ID cannot be negative.");
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore) this.get(containerDBPath);
+      ReferenceCountedDB db = (ReferenceCountedDB) this.get(containerDBPath);
 
       if (db == null) {
-        db = MetadataStoreBuilder.newBuilder()
+        MetadataStore metadataStore =
+            MetadataStoreBuilder.newBuilder()
             .setDbFile(new File(containerDBPath))
             .setCreateIfMissing(false)
             .setConf(conf)
             .setDBType(containerDBType)
             .build();
+        db = new ReferenceCountedDB(metadataStore, containerDBPath);
         this.put(containerDBPath, db);
       }
+      // increment the reference before returning the object
+      db.incrementReference();
       return db;
     } catch (Exception e) {
       LOG.error("Error opening DB. Container:{} ContainerPath:{}",
@@ -161,16 +168,70 @@ public final class ContainerCache extends LRUMap {
   /**
    * Remove a DB handler from cache.
    *
-   * @param containerPath - path of the container db file.
+   * @param containerDBPath - path of the container db file.
    */
-  public void removeDB(String containerPath) {
+  public void removeDB(String containerDBPath) {
     lock.lock();
     try {
-      MetadataStore db = (MetadataStore)this.get(containerPath);
-      closeDB(containerPath, db);
-      this.remove(containerPath);
+      ReferenceCountedDB db = (ReferenceCountedDB)this.get(containerDBPath);
+      if (db != null) {
+        // marking it as evicted will close the db as well.
+        db.setEvicted(true);
+      }
+      this.remove(containerDBPath);
     } finally {
       lock.unlock();
+    }
+  }
+
+
+  /**
+   * Class to implement reference counting over instances handed by Container
+   * Cache.
+   */
+  public class ReferenceCountedDB implements Closeable {
+    private final AtomicInteger referenceCount;
+    private final AtomicBoolean isEvicted;
+    private final MetadataStore store;
+    private final String containerDBPath;
+
+    public ReferenceCountedDB(MetadataStore store, String containerDBPath) {
+      this.referenceCount = new AtomicInteger(0);
+      this.isEvicted = new AtomicBoolean(false);
+      this.store = store;
+      this.containerDBPath = containerDBPath;
+    }
+
+    private void incrementReference() {
+      this.referenceCount.incrementAndGet();
+    }
+
+    private void decrementReference() {
+      this.referenceCount.decrementAndGet();
+      cleanup();
+    }
+
+    private void setEvicted(boolean checkNoReferences) {
+      Preconditions.checkState(!checkNoReferences ||
+              (referenceCount.get() == 0),
+          "checkNoReferences:%b, referencount:%d",
+          checkNoReferences, referenceCount.get());
+      isEvicted.set(true);
+      cleanup();
+    }
+
+    private void cleanup() {
+      if (referenceCount.get() == 0 && isEvicted.get() && store != null) {
+        closeDB(containerDBPath, store);
+      }
+    }
+
+    public MetadataStore getStore() {
+      return store;
+    }
+
+    public void close() {
+      decrementReference();
     }
   }
 }

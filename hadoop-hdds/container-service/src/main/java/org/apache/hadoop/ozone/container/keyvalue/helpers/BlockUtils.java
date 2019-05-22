@@ -37,7 +37,7 @@ import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 
 import java.io.IOException;
 
@@ -66,7 +66,7 @@ public final class BlockUtils {
    * @return MetadataStore handle.
    * @throws StorageContainerException
    */
-  public static MetadataStore getDB(KeyValueContainerData containerData,
+  public static ReferenceCountedDB getDB(KeyValueContainerData containerData,
                                     Configuration conf) throws
       StorageContainerException {
     Preconditions.checkNotNull(containerData);
