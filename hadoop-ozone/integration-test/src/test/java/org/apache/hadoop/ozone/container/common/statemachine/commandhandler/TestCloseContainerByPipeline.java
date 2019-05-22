@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -226,7 +226,7 @@ public class TestCloseContainerByPipeline {
     List<DatanodeDetails> datanodes = pipeline.getNodes();
     Assert.assertEquals(3, datanodes.size());
 
-    List<MetadataStore> metadataStores = new ArrayList<>(datanodes.size());
+    List<ReferenceCountedDB> metadataStores = new ArrayList<>(datanodes.size());
     for (DatanodeDetails details : datanodes) {
       Assert.assertFalse(isContainerClosed(cluster, containerID, details));
       //send the order to close the container
@@ -237,8 +237,10 @@ public class TestCloseContainerByPipeline {
       Container dnContainer = cluster.getHddsDatanodes().get(index)
           .getDatanodeStateMachine().getContainer().getContainerSet()
           .getContainer(containerID);
-      metadataStores.add(BlockUtils.getDB((KeyValueContainerData) dnContainer
-          .getContainerData(), conf));
+      try(ReferenceCountedDB store = BlockUtils.getDB(
+          (KeyValueContainerData) dnContainer.getContainerData(), conf)) {
+        metadataStores.add(store);
+      }
     }
 
     // There should be as many rocks db as the number of datanodes in pipeline.

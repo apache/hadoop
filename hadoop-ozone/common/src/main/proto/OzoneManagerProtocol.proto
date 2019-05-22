@@ -85,6 +85,7 @@ enum Type {
   CreateDirectory = 71;
   CreateFile = 72;
   LookupFile = 73;
+  ListStatus = 74;
 }
 
 message OMRequest {
@@ -141,6 +142,7 @@ message OMRequest {
   optional CreateDirectoryRequest           createDirectoryRequest         = 71;
   optional CreateFileRequest                createFileRequest              = 72;
   optional LookupFileRequest                lookupFileRequest              = 73;
+  optional ListStatusRequest                listStatusRequest              = 74;
 }
 
 message OMResponse {
@@ -200,6 +202,7 @@ message OMResponse {
   optional CreateDirectoryResponse            createDirectoryResponse      = 71;
   optional CreateFileResponse                 createFileResponse           = 72;
   optional LookupFileResponse                 lookupFileResponse           = 73;
+  optional ListStatusResponse                 listStatusResponse           = 74;
 }
 
 enum Status {
@@ -448,15 +451,24 @@ message OzoneAclInfo {
         USER = 1;
         GROUP = 2;
         WORLD = 3;
+        ANONYMOUS = 4;
+        CLIENT_IP = 5;
     }
+
     enum OzoneAclRights {
-        READ = 1;
-        WRITE = 2;
-        READ_WRITE = 3;
+        CREATE = 1;
+        LIST = 2;
+        DELETE = 3;
+        READ = 4;
+        WRITE = 5;
+        READ_ACL = 6;
+        WRITE_ACL = 7;
+        ALL = 8;
+        NONE = 9;
     }
     required OzoneAclType type = 1;
     required string name = 2;
-    required OzoneAclRights rights = 3;
+    repeated OzoneAclRights rights = 3;
 }
 
 message CreateBucketRequest {
@@ -561,12 +573,16 @@ message KeyInfo {
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
 }
 
+message OzoneFileStatusProto {
+    required hadoop.fs.FileStatusProto status = 1;
+}
+
 message GetFileStatusRequest {
     required KeyArgs keyArgs = 1;
 }
 
 message GetFileStatusResponse {
-    required hadoop.fs.FileStatusProto status = 1;
+    required OzoneFileStatusProto status = 1;
 }
 
 message CreateDirectoryRequest {
@@ -597,6 +613,17 @@ message LookupFileRequest {
 
 message LookupFileResponse {
     optional KeyInfo keyInfo = 1;
+}
+
+message ListStatusRequest {
+    required KeyArgs keyArgs = 1;
+    required bool recursive = 2;
+    required string startKey = 3;
+    required uint64 numEntries = 4;
+}
+
+message ListStatusResponse {
+    repeated OzoneFileStatusProto statuses = 1;
 }
 
 message CreateKeyRequest {

@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.DatanodeDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.OzoneManagerDetailsProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCACertificateRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertificateRequestProto.Builder;
 import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetDataNodeCertRequestProto;
@@ -79,18 +80,8 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   @Override
   public String getDataNodeCertificate(DatanodeDetailsProto dataNodeDetails,
       String certSignReq) throws IOException {
-    SCMGetDataNodeCertRequestProto.Builder builder =
-        SCMGetDataNodeCertRequestProto
-            .newBuilder()
-            .setCSR(certSignReq)
-            .setDatanodeDetails(dataNodeDetails);
-    try {
-      return rpcProxy
-          .getDataNodeCertificate(NULL_RPC_CONTROLLER, builder.build())
-          .getX509Certificate();
-    } catch (ServiceException e) {
-      throw ProtobufHelper.getRemoteException(e);
-    }
+    return getDataNodeCertificateChain(dataNodeDetails, certSignReq)
+        .getX509Certificate();
   }
 
   /**
@@ -103,13 +94,25 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
   @Override
   public String getOMCertificate(OzoneManagerDetailsProto omDetails,
       String certSignReq) throws IOException {
+    return getOMCertChain(omDetails, certSignReq).getX509Certificate();
+  }
+
+  /**
+   * Get SCM signed certificate for OM.
+   *
+   * @param omDetails       - OzoneManager Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return byte[]         - SCM signed certificate.
+   */
+  public SCMGetCertResponseProto getOMCertChain(
+      OzoneManagerDetailsProto omDetails, String certSignReq)
+      throws IOException {
     SCMGetOMCertRequestProto.Builder builder = SCMGetOMCertRequestProto
         .newBuilder()
         .setCSR(certSignReq)
         .setOmDetails(omDetails);
     try {
-      return rpcProxy.getOMCertificate(NULL_RPC_CONTROLLER, builder.build())
-          .getX509Certificate();
+      return rpcProxy.getOMCertificate(NULL_RPC_CONTROLLER, builder.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }
@@ -130,6 +133,28 @@ public class SCMSecurityProtocolClientSideTranslatorPB implements
     try {
       return rpcProxy.getCertificate(NULL_RPC_CONTROLLER, builder.build())
           .getX509Certificate();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  /**
+   * Get SCM signed certificate for Datanode.
+   *
+   * @param dnDetails       - Datanode Details.
+   * @param certSignReq     - Certificate signing request.
+   * @return byte[]         - SCM signed certificate.
+   */
+  public SCMGetCertResponseProto getDataNodeCertificateChain(
+      DatanodeDetailsProto dnDetails, String certSignReq)
+      throws IOException {
+    SCMGetDataNodeCertRequestProto.Builder builder =
+        SCMGetDataNodeCertRequestProto.newBuilder()
+            .setCSR(certSignReq)
+            .setDatanodeDetails(dnDetails);
+    try {
+      return rpcProxy.getDataNodeCertificate(NULL_RPC_CONTROLLER,
+          builder.build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

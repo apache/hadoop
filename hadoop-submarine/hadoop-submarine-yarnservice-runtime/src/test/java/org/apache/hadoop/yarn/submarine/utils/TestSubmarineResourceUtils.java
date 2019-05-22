@@ -19,12 +19,17 @@ package org.apache.hadoop.yarn.submarine.utils;
 import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.LocalConfigurationProvider;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.service.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvider;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.junit.After;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 
 import static org.junit.Assert.*;
@@ -33,13 +38,48 @@ import static org.junit.Assert.*;
  * This class is to test {@link SubmarineResourceUtils}.
  */
 public class TestSubmarineResourceUtils {
+  /**
+   * With the dependencies of hadoop 3.2.0, Need to create a
+   * CustomResourceTypesConfigurationProvider implementations. If the
+   * dependencies are upgraded to hadoop 3.3.0. It can be replaced by
+   * org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationProvi-
+   * der
+   */
+  private static class CustomResourceTypesConfigurationProvider
+      extends LocalConfigurationProvider {
+
+    @Override
+    public InputStream getConfigurationInputStream(Configuration bootstrapConf,
+        String name) throws YarnException, IOException {
+      if (YarnConfiguration.RESOURCE_TYPES_CONFIGURATION_FILE.equals(name)) {
+        return new ByteArrayInputStream(
+            ("<configuration>\n" +
+                " <property>\n" +
+                "   <name>yarn.resource-types</name>\n" +
+                "   <value>" + CUSTOM_RESOURCE_NAME + "</value>\n" +
+                " </property>\n" +
+                " <property>\n" +
+                "   <name>yarn.resource-types.a-custom-resource.units</name>\n"
+                +
+                "   <value>G</value>\n" +
+                " </property>\n" +
+                "</configuration>\n").getBytes());
+      } else {
+        return super.getConfigurationInputStream(bootstrapConf, name);
+      }
+    }
+  }
+
   private static final String CUSTOM_RESOURCE_NAME = "a-custom-resource";
 
   private void initResourceTypes() {
-    CustomResourceTypesConfigurationProvider.initResourceTypes(
-        ImmutableMap.<String, String>builder()
-            .put(CUSTOM_RESOURCE_NAME, "G")
-            .build());
+    // If the dependencies are upgraded to hadoop 3.3.0. It can be replaced by
+    // org.apache.hadoop.yarn.util.resource.CustomResourceTypesConfigurationPro-
+    // vider
+    Configuration configuration = new Configuration();
+    configuration.set(YarnConfiguration.RM_CONFIGURATION_PROVIDER_CLASS,
+        CustomResourceTypesConfigurationProvider.class.getName());
+    ResourceUtils.resetResourceTypes(configuration);
   }
 
   @After

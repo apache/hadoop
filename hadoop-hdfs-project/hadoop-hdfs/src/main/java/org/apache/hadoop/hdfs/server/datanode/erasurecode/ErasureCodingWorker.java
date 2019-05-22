@@ -170,4 +170,8 @@ public final class ErasureCodingWorker {
     stripedReconstructionPool.shutdown();
     stripedReadPool.shutdown();
   }
+
+  public float getXmitWeight() {
+    return xmitWeight;
+  }
 }

@@ -45,6 +45,7 @@ public interface DBStore extends AutoCloseable {
    */
   Table<byte[], byte[]> getTable(String name) throws IOException;
 
+
   /**
    * Gets an existing TableStore with implicit key/value conversion.
    *

@@ -61,4 +61,8 @@ public final class PipelineFactory {
       List<DatanodeDetails> nodes) {
     return providers.get(type).create(factor, nodes);
   }
+
+  public void shutdown() {
+    providers.values().forEach(provider -> provider.shutdown());
+  }
 }

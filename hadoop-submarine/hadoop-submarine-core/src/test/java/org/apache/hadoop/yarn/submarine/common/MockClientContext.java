@@ -20,15 +20,6 @@ package org.apache.hadoop.yarn.submarine.common;
 
 import org.apache.hadoop.yarn.submarine.common.fs.MockRemoteDirectoryManager;
 import org.apache.hadoop.yarn.submarine.common.fs.RemoteDirectoryManager;
-import org.apache.hadoop.yarn.client.api.YarnClient;
-import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
-
-import java.io.IOException;
-
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class MockClientContext extends ClientContext {
 
@@ -43,19 +34,5 @@ public class MockClientContext extends ClientContext {
   public void setRemoteDirectoryMgr(
       RemoteDirectoryManager remoteDirectoryMgr) {
     this.remoteDirectoryMgr = remoteDirectoryMgr;
-  }
-
-  @Override
-  public synchronized YarnClient getOrCreateYarnClient() {
-    YarnClient client = mock(YarnClient.class);
-    try {
-      when(client.getResourceTypeInfo()).thenReturn(
-          ResourceUtils.getResourcesTypeInfo());
-    } catch (YarnException e) {
-      fail(e.getMessage());
-    } catch (IOException e) {
-      fail(e.getMessage());
-    }
-    return client;
   }
 }

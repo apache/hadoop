@@ -20,6 +20,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.OzoneConsts;
 
+import java.util.List;
+
 /**
  * Public API for Ozone ACLs. Security providers providing support for Ozone
  * ACLs should implement this.
@@ -84,7 +86,8 @@ public interface IAccessAuthorizer {
       case OzoneConsts.OZONE_ACL_NONE:
         return ACLType.NONE;
       default:
-        throw new IllegalArgumentException("ACL right is not recognized");
+        throw new IllegalArgumentException(type + " ACL right is not " +
+            "recognized");
       }
 
     }
@@ -92,10 +95,18 @@ public interface IAccessAuthorizer {
     /**
      * Returns String representation of ACL rights.
      *
-     * @param acl ACLType
+     * @param acls ACLType
      * @return String representation of acl
      */
-    public static String getACLRightsString(ACLType acl) {
+    public static String getACLString(List<ACLType> acls) {
+      StringBuffer sb = new StringBuffer();
+      acls.forEach(acl -> {
+        sb.append(getAclString(acl));
+      });
+      return sb.toString();
+    }
+
+    public static String getAclString(ACLType acl) {
       switch (acl) {
       case READ:
         return OzoneConsts.OZONE_ACL_READ;
@@ -129,7 +140,8 @@ public interface IAccessAuthorizer {
     USER(OzoneConsts.OZONE_ACL_USER_TYPE),
     GROUP(OzoneConsts.OZONE_ACL_GROUP_TYPE),
     CLIENT_IP(OzoneConsts.OZONE_ACL_IP_TYPE),
-    WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE);
+    WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE),
+    ANONYMOUS(OzoneConsts.OZONE_ACL_ANONYMOUS_TYPE);
 
     @Override
     public String toString() {

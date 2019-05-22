@@ -52,12 +52,11 @@ public final class OzoneConsts {
   public static final String OZONE_ACL_USER_TYPE = "user";
   public static final String OZONE_ACL_GROUP_TYPE = "group";
   public static final String OZONE_ACL_WORLD_TYPE = "world";
+  public static final String OZONE_ACL_ANONYMOUS_TYPE = "anonymous";
   public static final String OZONE_ACL_IP_TYPE = "ip";
 
   public static final String OZONE_ACL_READ = "r";
   public static final String OZONE_ACL_WRITE = "w";
-  public static final String OZONE_ACL_READ_WRITE = "rw";
-  public static final String OZONE_ACL_WRITE_READ = "wr";
   public static final String OZONE_ACL_DELETE = "d";
   public static final String OZONE_ACL_LIST = "l";
   public static final String OZONE_ACL_ALL = "a";

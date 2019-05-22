@@ -50,7 +50,7 @@ import org.apache.hadoop.ozone.ozShell.TestOzoneShell;
 import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -300,9 +300,12 @@ public class TestBlockDeletion {
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet();
     OzoneTestUtils.performOperationOnKeyContainers((blockID) -> {
-      MetadataStore db = BlockUtils.getDB((KeyValueContainerData) dnContainerSet
-          .getContainer(blockID.getContainerID()).getContainerData(), conf);
-      Assert.assertNotNull(db.get(Longs.toByteArray(blockID.getLocalID())));
+      try(ReferenceCountedDB db =
+          BlockUtils.getDB((KeyValueContainerData) dnContainerSet
+          .getContainer(blockID.getContainerID()).getContainerData(), conf)) {
+        Assert.assertNotNull(db.getStore().get(
+            Longs.toByteArray(blockID.getLocalID())));
+      }
     }, omKeyLocationInfoGroups);
   }
 
@@ -312,13 +315,16 @@ public class TestBlockDeletion {
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet();
     OzoneTestUtils.performOperationOnKeyContainers((blockID) -> {
-      MetadataStore db = BlockUtils.getDB((KeyValueContainerData) dnContainerSet
-          .getContainer(blockID.getContainerID()).getContainerData(), conf);
-      Assert.assertNull(db.get(Longs.toByteArray(blockID.getLocalID())));
-      Assert.assertNull(db.get(DFSUtil.string2Bytes(
-          OzoneConsts.DELETING_KEY_PREFIX + blockID.getLocalID())));
-      Assert.assertNotNull(DFSUtil
-          .string2Bytes(OzoneConsts.DELETED_KEY_PREFIX + blockID.getLocalID()));
+      try(ReferenceCountedDB db =
+          BlockUtils.getDB((KeyValueContainerData) dnContainerSet
+          .getContainer(blockID.getContainerID()).getContainerData(), conf)) {
+        Assert.assertNull(db.getStore().get(
+            Longs.toByteArray(blockID.getLocalID())));
+        Assert.assertNull(db.getStore().get(DFSUtil.string2Bytes(
+            OzoneConsts.DELETING_KEY_PREFIX + blockID.getLocalID())));
+        Assert.assertNotNull(DFSUtil.string2Bytes(
+            OzoneConsts.DELETED_KEY_PREFIX + blockID.getLocalID()));
+      }
       containerIdsWithDeletedBlocks.add(blockID.getContainerID());
     }, omKeyLocationInfoGroups);
   }

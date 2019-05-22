@@ -226,7 +226,8 @@ public class WriteOperationHelper {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long)} to update the filesystem.
+   * {@link S3AFileSystem#finishedWrite(String, long, String, String)}
+   * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
    * @param uploadId multipart operation Id
@@ -247,20 +248,22 @@ public class WriteOperationHelper {
       throw new IOException(
           "No upload parts in multipart upload to " + destKey);
     }
-    CompleteMultipartUploadResult uploadResult = invoker.retry("Completing multipart commit", destKey,
-        true,
-        retrying,
-        () -> {
-          // a copy of the list is required, so that the AWS SDK doesn't
-          // attempt to sort an unmodifiable list.
-          return owner.getAmazonS3Client().completeMultipartUpload(
-              new CompleteMultipartUploadRequest(bucket,
-                  destKey,
-                  uploadId,
-                  new ArrayList<>(partETags)));
-        }
+    CompleteMultipartUploadResult uploadResult =
+        invoker.retry("Completing multipart commit", destKey,
+            true,
+            retrying,
+            () -> {
+              // a copy of the list is required, so that the AWS SDK doesn't
+              // attempt to sort an unmodifiable list.
+              return owner.getAmazonS3Client().completeMultipartUpload(
+                  new CompleteMultipartUploadRequest(bucket,
+                      destKey,
+                      uploadId,
+                      new ArrayList<>(partETags)));
+            }
     );
-    owner.finishedWrite(destKey, length);
+    owner.finishedWrite(destKey, length, uploadResult.getETag(),
+        uploadResult.getVersionId());
     return uploadResult;
   }
 

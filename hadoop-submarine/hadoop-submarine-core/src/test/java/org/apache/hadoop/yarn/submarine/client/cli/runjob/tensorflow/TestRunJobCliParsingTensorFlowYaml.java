@@ -18,26 +18,25 @@
 package org.apache.hadoop.yarn.submarine.client.cli.runjob.tensorflow;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.apache.hadoop.yarn.api.records.ResourceInformation;
-import org.apache.hadoop.yarn.api.records.ResourceTypeInfo;
-import org.apache.hadoop.yarn.resourcetypes.ResourceTypesTestHelper;
+import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.submarine.client.cli.YamlConfigTestUtils;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.RunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.param.runjob.TensorFlowRunJobParameters;
 import org.apache.hadoop.yarn.submarine.client.cli.runjob.RunJobCli;
 import org.apache.hadoop.yarn.submarine.common.conf.SubmarineLogs;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.submarine.common.exception.SubmarineRuntimeException;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
+import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
 import static org.apache.hadoop.yarn.submarine.client.cli.runjob.TestRunJobCliParsingCommon.getMockClientContext;
@@ -53,6 +52,8 @@ public class TestRunJobCliParsingTensorFlowYaml {
   private static final String OVERRIDDEN_PREFIX = "overridden_";
   private static final String DIR_NAME = "runjob-tensorflow-yaml";
   private File yamlConfig;
+  private static Logger LOG = LoggerFactory.getLogger(
+      TestRunJobCliParsingTensorFlowYaml.class);
 
   @Before
   public void before() {
@@ -62,14 +63,6 @@ public class TestRunJobCliParsingTensorFlowYaml {
   @After
   public void after() {
     YamlConfigTestUtils.deleteFile(yamlConfig);
-  }
-
-  @BeforeClass
-  public static void configureResourceTypes() {
-    List<ResourceTypeInfo> resTypes = new ArrayList<>(
-        ResourceUtils.getResourcesTypeInfo());
-    resTypes.add(ResourceTypeInfo.newInstance(ResourceInformation.GPU_URI, ""));
-    ResourceUtils.reinitializeResources(resTypes);
   }
 
   @Rule
@@ -114,14 +107,12 @@ public class TestRunJobCliParsingTensorFlowYaml {
     assertEquals(prefix + "testLaunchCmdPs", tensorFlowParams.getPSLaunchCmd());
     assertEquals(prefix + "testDockerImagePs",
         tensorFlowParams.getPsDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(20500L, 34,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "4").build()),
+    assertEquals(Resources.createResource(20500, 34),
         tensorFlowParams.getPsResource());
   }
 
-  private void verifyWorkerValues(RunJobParameters jobRunParameters,
-      String prefix) {
+  private TensorFlowRunJobParameters verifyWorkerCommonValues(
+      RunJobParameters jobRunParameters, String prefix) {
     assertTrue(RunJobParameters.class + " must be an instance of " +
             TensorFlowRunJobParameters.class,
         jobRunParameters instanceof TensorFlowRunJobParameters);
@@ -133,10 +124,24 @@ public class TestRunJobCliParsingTensorFlowYaml {
         tensorFlowParams.getWorkerLaunchCmd());
     assertEquals(prefix + "testDockerImageWorker",
         tensorFlowParams.getWorkerDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(20480L, 32,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "2").build()),
+    return tensorFlowParams;
+  }
+
+  private void verifyWorkerValues(RunJobParameters jobRunParameters,
+      String prefix) {
+    TensorFlowRunJobParameters tensorFlowParams = verifyWorkerCommonValues
+        (jobRunParameters, prefix);
+    assertEquals(Resources.createResource(20480, 32),
         tensorFlowParams.getWorkerResource());
+  }
+
+  private void verifyWorkerValuesWithGpu(RunJobParameters jobRunParameters,
+                                  String prefix) {
+    TensorFlowRunJobParameters tensorFlowParams = verifyWorkerCommonValues
+        (jobRunParameters, prefix);
+    Resource workResource = Resources.createResource(20480, 32);
+    ResourceUtils.setResource(workResource, ResourceUtils.GPU_URI, 2);
+    assertEquals(workResource, tensorFlowParams.getWorkerResource());
   }
 
   private void verifySecurityValues(RunJobParameters jobRunParameters) {
@@ -155,9 +160,7 @@ public class TestRunJobCliParsingTensorFlowYaml {
     assertTrue(tensorFlowParams.isTensorboardEnabled());
     assertEquals("tensorboardDockerImage",
         tensorFlowParams.getTensorboardDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(21000L, 37,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "3").build()),
+    assertEquals(Resources.createResource(21000, 37),
         tensorFlowParams.getTensorboardResource());
   }
 
@@ -175,6 +178,32 @@ public class TestRunJobCliParsingTensorFlowYaml {
     verifyBasicConfigValues(jobRunParameters);
     verifyPsValues(jobRunParameters, "");
     verifyWorkerValues(jobRunParameters, "");
+    verifySecurityValues(jobRunParameters);
+    verifyTensorboardValues(jobRunParameters);
+  }
+
+  @Test
+  public void testValidGpuYamlParsing() throws Exception {
+    try {
+      ResourceUtils.configureResourceType(ResourceUtils.GPU_URI);
+    } catch (SubmarineRuntimeException e) {
+      LOG.info("The hadoop dependency doesn't support gpu resource, " +
+          "so just skip this test case.");
+      return;
+    }
+
+    RunJobCli runJobCli = new RunJobCli(getMockClientContext());
+    Assert.assertFalse(SubmarineLogs.isVerbose());
+
+    yamlConfig = YamlConfigTestUtils.createTempFileWithContents(
+        DIR_NAME + "/valid-gpu-config.yaml");
+    runJobCli.run(
+        new String[] {"-f", yamlConfig.getAbsolutePath(), "--verbose"});
+
+    RunJobParameters jobRunParameters = runJobCli.getRunJobParameters();
+    verifyBasicConfigValues(jobRunParameters);
+    verifyPsValues(jobRunParameters, "");
+    verifyWorkerValuesWithGpu(jobRunParameters, "");
     verifySecurityValues(jobRunParameters);
     verifyTensorboardValues(jobRunParameters);
   }
@@ -240,9 +269,7 @@ public class TestRunJobCliParsingTensorFlowYaml {
     assertTrue(tensorFlowParams.isTensorboardEnabled());
     assertNull("tensorboardDockerImage should be null!",
         tensorFlowParams.getTensorboardDockerImage());
-    assertEquals(ResourceTypesTestHelper.newResource(21000L, 37,
-        ImmutableMap.<String, String> builder()
-            .put(ResourceInformation.GPU_URI, "3").build()),
+    assertEquals(Resources.createResource(21000, 37),
         tensorFlowParams.getTensorboardResource());
   }
 

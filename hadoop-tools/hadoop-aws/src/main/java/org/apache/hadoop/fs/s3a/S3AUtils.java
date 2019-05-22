@@ -533,16 +533,20 @@ public final class S3AUtils {
    * @param summary summary from AWS
    * @param blockSize block size to declare.
    * @param owner owner of the file
+   * @param eTag S3 object eTag or null if unavailable
+   * @param versionId S3 object versionId or null if unavailable
    * @return a status entry
    */
   public static S3AFileStatus createFileStatus(Path keyPath,
       S3ObjectSummary summary,
       long blockSize,
-      String owner) {
+      String owner,
+      String eTag,
+      String versionId) {
     long size = summary.getSize();
     return createFileStatus(keyPath,
         objectRepresentsDirectory(summary.getKey(), size),
-        size, summary.getLastModified(), blockSize, owner);
+        size, summary.getLastModified(), blockSize, owner, eTag, versionId);
   }
 
   /**
@@ -555,22 +559,27 @@ public final class S3AUtils {
    * @param size file length
    * @param blockSize block size for file status
    * @param owner Hadoop username
+   * @param eTag S3 object eTag or null if unavailable
+   * @param versionId S3 object versionId or null if unavailable
    * @return a status entry
    */
   public static S3AFileStatus createUploadFileStatus(Path keyPath,
-      boolean isDir, long size, long blockSize, String owner) {
+      boolean isDir, long size, long blockSize, String owner,
+      String eTag, String versionId) {
     Date date = isDir ? null : new Date();
-    return createFileStatus(keyPath, isDir, size, date, blockSize, owner);
+    return createFileStatus(keyPath, isDir, size, date, blockSize, owner,
+        eTag, versionId);
   }
 
   /* Date 'modified' is ignored when isDir is true. */
   private static S3AFileStatus createFileStatus(Path keyPath, boolean isDir,
-      long size, Date modified, long blockSize, String owner) {
+      long size, Date modified, long blockSize, String owner,
+      String eTag, String versionId) {
     if (isDir) {
       return new S3AFileStatus(Tristate.UNKNOWN, keyPath, owner);
     } else {
       return new S3AFileStatus(size, dateToLong(modified), keyPath, blockSize,
-          owner);
+          owner, eTag, versionId);
     }
   }
 

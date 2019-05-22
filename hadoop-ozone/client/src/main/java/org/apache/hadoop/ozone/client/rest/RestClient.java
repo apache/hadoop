@@ -112,7 +112,7 @@ public class RestClient implements ClientProtocol {
   private final URI ozoneRestUri;
   private final CloseableHttpClient httpClient;
   private final UserGroupInformation ugi;
-  private final OzoneAcl.OzoneACLRights userRights;
+  // private final OzoneAcl.OzoneACLRights userRights;
 
    /**
     * Creates RestClient instance with the given configuration.
@@ -161,8 +161,8 @@ public class RestClient implements ClientProtocol {
                   .build())
           .build();
 
-      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
-          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
+//      this.userRights = conf.getEnum(OMConfigKeys.OZONE_OM_USER_RIGHTS,
+//          OMConfigKeys.OZONE_OM_USER_RIGHTS_DEFAULT);
 
       // TODO: Add new configuration parameter to configure RestServerSelector.
       RestServerSelector defaultSelector = new DefaultRestServerSelector();
@@ -1110,6 +1110,14 @@ public class RestClient implements ClientProtocol {
   public OzoneOutputStream createFile(String volumeName, String bucketName,
       String keyName, long size, ReplicationType type, ReplicationFactor factor,
       boolean overWrite, boolean recursive) {
+    throw new UnsupportedOperationException(
+        "Ozone REST protocol does not " + "support this operation.");
+  }
+
+  @Override
+  public List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
+      String keyName, boolean recursive, String startKey, long numEntries)
+      throws IOException {
     throw new UnsupportedOperationException(
         "Ozone REST protocol does not " + "support this operation.");
   }

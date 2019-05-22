@@ -164,6 +164,22 @@ See below screenshot:
 
 ![alt text](./images/tensorboard-service.png "Tensorboard service")
 
+If there is no hadoop client, we can also use the java command and the uber jar, hadoop-submarine-all-*.jar, to submit the job.
+
+```
+java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
+  org.apache.hadoop.yarn.submarine.client.cli.Cli job run \
+  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
+  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 --name tf-job-001 \
+  --docker_image <your-docker-image> \
+  --input_path hdfs://default/dataset/cifar-10-data  \
+  --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
+  --worker_resources memory=4G,vcores=2,gpu=2  \
+  --worker_launch_cmd "python ... (Your training application cmd)" \
+  --tensorboard # this will launch a companion tensorboard container for monitoring
+```
+
+
 ### Launch Distributed Tensorflow Application:
 
 #### Commandline
@@ -176,6 +192,20 @@ yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
  --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
+ --num_workers 2 \
+ --worker_resources memory=8G,vcores=2,gpu=1 --worker_launch_cmd "cmd for worker ..." \
+ --num_ps 2 \
+ --ps_resources memory=4G,vcores=2,gpu=0 --ps_launch_cmd "cmd for ps" \
+```
+Or
+```
+java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
+ org.apache.hadoop.yarn.submarine.client.cli.Cli job run \
+ --name tf-job-001 --docker_image <your docker image> \
+ --input_path hdfs://default/dataset/cifar-10-data \
+ --checkpoint_path hdfs://default/tmp/cifar-10-jobdir \
+ --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
+ --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
  --num_workers 2 \
  --worker_resources memory=8G,vcores=2,gpu=1 --worker_launch_cmd "cmd for worker ..." \
  --num_ps 2 \
@@ -197,7 +227,11 @@ yarn jar hadoop-yarn-applications-submarine-<version>.jar job run \
 ```
 yarn jar hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar job show --name tf-job-001
 ```
-
+Or
+```
+java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
+ org.apache.hadoop.yarn.submarine.client.cli.Cli job show --name tf-job-001
+```
 Output looks like:
 ```
 Job Meta Info:
@@ -222,6 +256,17 @@ yarn jar /tmp/hadoop-yarn-applications-submarine-3.2.0-SNAPSHOT.jar \
   --env DOCKER_HADOOP_HDFS_HOME=/hadoop-current \
   --num_workers 0 --tensorboard
 ```
+Or
+```
+# Cleanup previous service if needed
+yarn app -destroy tensorboard-service; \
+java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
+  org.apache.hadoop.yarn.submarine.client.cli.Cli job run \
+  --name tensorboard-service --verbose --docker_image wtan/tf-1.8.0-cpu:0.0.3 \
+  --env DOCKER_JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/jre/ \
+  --env DOCKER_HADOOP_HDFS_HOME=/hadoop-3.1.0 \
+  --num_workers 0 --tensorboard
+```
 
 You can view multiple job training history like from the `Tensorboard` link:
 
@@ -243,3 +288,17 @@ If you want to build the Submarine project by yourself, you can follow the steps
 - Run 'mvn install -DskipTests' from Hadoop source top level once.
 
 - Navigate to hadoop-submarine folder and run 'mvn clean package'.
+
+    - By Default, hadoop-submarine is built based on hadoop 3.1.2 dependencies.
+      Both yarn service runtime and tony runtime are built.
+      You can also add a parameter of "-Phadoop-3.2" to specify the dependencies
+      to hadoop 3.2.0.
+
+    - Hadoop-submarine can support hadoop 2.9.2 and hadoop 2.7.4 as well.
+      You can add "-Phadoop-2.9" to build submarine based on hadoop 2.9.2.
+      For example:
+      ```
+      mvn clean package -Phadoop-2.9
+      ```
+      As yarn service is based on hadoop 3.*, so only tony runtime is built
+      in this case.
