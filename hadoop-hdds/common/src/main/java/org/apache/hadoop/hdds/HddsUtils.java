@@ -178,7 +178,7 @@ public final class HddsUtils {
    * @return {@link SCMSecurityProtocol}
    * @throws IOException
    */
-  public static SCMSecurityProtocol getScmSecurityClient(
+  public static SCMSecurityProtocolClientSideTranslatorPB getScmSecurityClient(
       OzoneConfiguration conf, InetSocketAddress address) throws IOException {
     RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
         ProtobufRpcEngine.class);

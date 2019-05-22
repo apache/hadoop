@@ -26,7 +26,8 @@ import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
+import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
@@ -271,16 +272,25 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
     try {
       PKCS10CertificationRequest csr = getCSR(config);
       // TODO: For SCM CA we should fetch certificate from multiple SCMs.
-      SCMSecurityProtocol secureScmClient =
+      SCMSecurityProtocolClientSideTranslatorPB secureScmClient =
           HddsUtils.getScmSecurityClient(config,
               HddsUtils.getScmAddressForSecurityProtocol(config));
-
-      String pemEncodedCert = secureScmClient.getDataNodeCertificate(
-          datanodeDetails.getProtoBufMessage(), getEncodedString(csr));
-      dnCertClient.storeCertificate(pemEncodedCert, true);
-      datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
-          getSerialNumber().toString());
-      persistDatanodeDetails(datanodeDetails);
+      SCMGetCertResponseProto response = secureScmClient.
+          getDataNodeCertificateChain(datanodeDetails.getProtoBufMessage(),
+              getEncodedString(csr));
+      // Persist certificates.
+      if(response.hasX509CACertificate()) {
+        String pemEncodedCert = response.getX509Certificate();
+        dnCertClient.storeCertificate(pemEncodedCert, true);
+        dnCertClient.storeCertificate(response.getX509CACertificate(), true,
+            true);
+        datanodeDetails.setCertSerialId(getX509Certificate(pemEncodedCert).
+            getSerialNumber().toString());
+        persistDatanodeDetails(datanodeDetails);
+      } else {
+        throw new RuntimeException("Unable to retrieve datanode certificate " +
+            "chain");
+      }
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);

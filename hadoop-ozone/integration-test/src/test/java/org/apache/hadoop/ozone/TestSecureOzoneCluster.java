@@ -40,6 +40,7 @@ import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.HDDSKeyGenerator;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.io.Text;
@@ -98,6 +99,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKE
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_EXPIRED;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -780,6 +782,12 @@ public final class TestSecureOzoneCluster {
           "SCM signed certificate"));
       X509Certificate certificate = om.getCertificateClient().getCertificate();
       validateCertificate(certificate);
+      String pemEncodedCACert =
+          scm.getSecurityProtocolServer().getCACertificate();
+      X509Certificate caCert = CertificateCodec.getX509Cert(pemEncodedCACert);
+      X509Certificate caCertStored = om.getCertificateClient()
+          .getCertificate(caCert.getSerialNumber().toString());
+      assertEquals(caCert, caCertStored);
     } finally {
       if (scm != null) {
         scm.stop();

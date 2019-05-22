@@ -61,7 +61,9 @@ public class SCMSecurityProtocolServerSideTranslatorPB implements
           SCMGetCertResponseProto
               .newBuilder()
               .setResponseCode(ResponseCode.success)
-              .setX509Certificate(certificate);
+              .setX509Certificate(certificate)
+              .setX509CACertificate(impl.getCACertificate());
+
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
@@ -87,7 +89,8 @@ public class SCMSecurityProtocolServerSideTranslatorPB implements
           SCMGetCertResponseProto
               .newBuilder()
               .setResponseCode(ResponseCode.success)
-              .setX509Certificate(certificate);
+              .setX509Certificate(certificate)
+              .setX509CACertificate(impl.getCACertificate());
       return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
