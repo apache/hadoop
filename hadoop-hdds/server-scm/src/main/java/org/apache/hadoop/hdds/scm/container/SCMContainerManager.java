@@ -386,18 +386,17 @@ public class SCMContainerManager implements ContainerManager {
 
   public ContainerInfo getMatchingContainer(final long sizeRequired,
       String owner, Pipeline pipeline, List<ContainerID> excludedContainers) {
+    NavigableSet<ContainerID> containerIDs;
     try {
-      //TODO: #CLUTIL See if lock is required here
-      NavigableSet<ContainerID> containerIDs =
-          pipelineManager.getContainersInPipeline(pipeline.getId());
+      synchronized (pipeline) {
+        //TODO: #CLUTIL See if lock is required here
+        containerIDs =
+            pipelineManager.getContainersInPipeline(pipeline.getId());
 
-      containerIDs = getContainersForOwner(containerIDs, owner);
-      if (containerIDs.size() < numContainerPerOwnerInPipeline) {
-        synchronized (pipeline) {
+        containerIDs = getContainersForOwner(containerIDs, owner);
+        if (containerIDs.size() < numContainerPerOwnerInPipeline) {
           // TODO: #CLUTIL Maybe we can add selection logic inside synchronized
           // as well
-          containerIDs = getContainersForOwner(
-              pipelineManager.getContainersInPipeline(pipeline.getId()), owner);
           if (containerIDs.size() < numContainerPerOwnerInPipeline) {
             ContainerInfo containerInfo =
                 containerStateManager.allocateContainer(pipelineManager, owner,

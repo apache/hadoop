@@ -43,14 +43,20 @@ import org.junit.rules.ExpectedException;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -142,6 +148,43 @@ public class TestSCMContainerManager {
           .getUuid());
     }
     Assert.assertTrue(pipelineList.size() > 5);
+  }
+
+  @Test
+  public void testAllocateContainerInParallel() throws Exception {
+    int threadCount = 20;
+    List<ExecutorService> executors = new ArrayList<>(threadCount);
+    for (int i = 0; i < threadCount; i++) {
+      executors.add(Executors.newSingleThreadExecutor());
+    }
+    List<CompletableFuture<ContainerInfo>> futureList =
+        new ArrayList<>(threadCount);
+    for (int i = 0; i < threadCount; i++) {
+      final CompletableFuture<ContainerInfo> future = new CompletableFuture<>();
+      CompletableFuture.supplyAsync(() -> {
+        try {
+          ContainerInfo containerInfo = containerManager
+              .allocateContainer(xceiverClientManager.getType(),
+                  xceiverClientManager.getFactor(), containerOwner);
+
+          Assert.assertNotNull(containerInfo);
+          Assert.assertNotNull(containerInfo.getPipelineID());
+          future.complete(containerInfo);
+          return containerInfo;
+        } catch (IOException e) {
+          future.completeExceptionally(e);
+        }
+        return future;
+      }, executors.get(i));
+      futureList.add(future);
+    }
+    try {
+      CompletableFuture
+          .allOf(futureList.toArray(new CompletableFuture[futureList.size()]))
+          .get();
+    } catch (Exception e) {
+      Assert.fail("testAllocateBlockInParallel failed");
+    }
   }
 
   @Test
