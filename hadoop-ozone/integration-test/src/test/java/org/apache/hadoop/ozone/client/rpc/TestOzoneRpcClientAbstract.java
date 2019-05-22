@@ -953,18 +953,19 @@ public abstract class TestOzoneRpcClientAbstract {
             .getContainerData());
     String containerPath = new File(containerData.getMetadataPath())
         .getParent();
-    KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
-        containerID, new File(containerPath));
-    while (keyValueBlockIterator.hasNext()) {
-      BlockData blockData = keyValueBlockIterator.nextBlock();
-      if (blockData.getBlockID().getLocalID() == localID) {
-        long length = 0;
-        List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
-        for (ContainerProtos.ChunkInfo chunk : chunks) {
-          length += chunk.getLen();
+    try(KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
+        containerID, new File(containerPath))) {
+      while (keyValueBlockIterator.hasNext()) {
+        BlockData blockData = keyValueBlockIterator.nextBlock();
+        if (blockData.getBlockID().getLocalID() == localID) {
+          long length = 0;
+          List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
+          for (ContainerProtos.ChunkInfo chunk : chunks) {
+            length += chunk.getLen();
+          }
+          Assert.assertEquals(length, keyValue.getBytes().length);
+          break;
         }
-        Assert.assertEquals(length, keyValue.getBytes().length);
-        break;
       }
     }
   }
@@ -1115,31 +1116,32 @@ public abstract class TestOzoneRpcClientAbstract {
         (KeyValueContainerData) container.getContainerData();
     String containerPath =
         new File(containerData.getMetadataPath()).getParent();
-    KeyValueBlockIterator keyValueBlockIterator =
-        new KeyValueBlockIterator(containerID, new File(containerPath));
+    try (KeyValueBlockIterator keyValueBlockIterator =
+        new KeyValueBlockIterator(containerID, new File(containerPath))) {
 
-    // Find the block corresponding to the key we put. We use the localID of
-    // the BlockData to identify out key.
-    BlockData blockData = null;
-    while (keyValueBlockIterator.hasNext()) {
-      blockData = keyValueBlockIterator.nextBlock();
-      if (blockData.getBlockID().getLocalID() == localID) {
-        break;
+      // Find the block corresponding to the key we put. We use the localID of
+      // the BlockData to identify out key.
+      BlockData blockData = null;
+      while (keyValueBlockIterator.hasNext()) {
+        blockData = keyValueBlockIterator.nextBlock();
+        if (blockData.getBlockID().getLocalID() == localID) {
+          break;
+        }
       }
+      Assert.assertNotNull("Block not found", blockData);
+
+      // Get the location of the chunk file
+      String chunkName = blockData.getChunks().get(0).getChunkName();
+      String containreBaseDir =
+          container.getContainerData().getVolume().getHddsRootDir().getPath();
+      File chunksLocationPath = KeyValueContainerLocationUtil
+          .getChunksLocationPath(containreBaseDir, scmId, containerID);
+      File chunkFile = new File(chunksLocationPath, chunkName);
+
+      // Corrupt the contents of the chunk file
+      String newData = new String("corrupted data");
+      FileUtils.writeByteArrayToFile(chunkFile, newData.getBytes());
     }
-    Assert.assertNotNull("Block not found", blockData);
-
-    // Get the location of the chunk file
-    String chunkName = blockData.getChunks().get(0).getChunkName();
-    String containreBaseDir =
-        container.getContainerData().getVolume().getHddsRootDir().getPath();
-    File chunksLocationPath = KeyValueContainerLocationUtil
-        .getChunksLocationPath(containreBaseDir, scmId, containerID);
-    File chunkFile = new File(chunksLocationPath, chunkName);
-
-    // Corrupt the contents of the chunk file
-    String newData = new String("corrupted data");
-    FileUtils.writeByteArrayToFile(chunkFile, newData.getBytes());
   }
 
   @Test
