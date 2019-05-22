@@ -15,36 +15,36 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.protocolPB;
+package org.apache.hadoop.ozone.om.response;
 
 import java.io.IOException;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * Handler to handle OM requests in OM HA.
+ * Response for SetBucketProperty request.
  */
-public interface OzoneManagerHARequestHandler extends RequestHandler {
+public class OMBucketSetPropertyResponse extends OMClientResponse {
+  private OmBucketInfo omBucketInfo;
 
-  /**
-   * Handle start Transaction Requests from OzoneManager StateMachine.
-   * @param omRequest
-   * @return OMRequest - New OM Request which will be applied during apply
-   * Transaction
-   * @throws IOException
-   */
-  OMRequest handleStartTransaction(OMRequest omRequest) throws IOException;
+  public OMBucketSetPropertyResponse(OmBucketInfo omBucketInfo,
+      OMResponse omResponse) {
+    super(omResponse);
+    this.omBucketInfo = omBucketInfo;
+  }
 
-  /**
-   * Handle Apply Transaction Requests from OzoneManager StateMachine.
-   * @param omRequest
-   * @param transactionLogIndex - ratis transaction log index
-   * @return OMResponse
-   */
-  OMResponse handleApplyTransaction(OMRequest omRequest,
-      long transactionLogIndex);
+  @Override
+  public void addToDBBatch(OMMetadataManager omMetadataManager,
+      BatchOperation batchOperation) throws IOException {
+    String dbBucketKey =
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().putWithBatch(batchOperation, dbBucketKey,
+        omBucketInfo);
+  }
 
 }

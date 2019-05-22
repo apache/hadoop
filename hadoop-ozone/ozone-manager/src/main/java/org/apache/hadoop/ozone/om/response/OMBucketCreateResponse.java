@@ -22,16 +22,20 @@ import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
  * Response for CreateBucket request.
  */
-public final class OMBucketCreateResponse implements OMClientResponse {
+public final class OMBucketCreateResponse extends OMClientResponse {
 
   private final OmBucketInfo omBucketInfo;
 
-  public OMBucketCreateResponse(OmBucketInfo omBucketInfo) {
+  public OMBucketCreateResponse(OmBucketInfo omBucketInfo,
+      OMResponse omResponse) {
+    super(omResponse);
     this.omBucketInfo = omBucketInfo;
   }
 
@@ -48,4 +52,5 @@ public final class OMBucketCreateResponse implements OMClientResponse {
   public OmBucketInfo getOmBucketInfo() {
     return omBucketInfo;
   }
+
 }

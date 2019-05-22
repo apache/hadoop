@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class OzoneManagerDoubleBuffer {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OzoneManagerDoubleBuffer.class.getName());
+      LoggerFactory.getLogger(OzoneManagerDoubleBuffer.class);
 
   // Taken unbounded queue, if sync thread is taking too long time, we
   // might end up taking huge memory to add entries to the buffer.

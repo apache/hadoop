@@ -102,7 +102,7 @@ public class BucketManagerImpl implements BucketManager {
    * @param bucketInfo - OmBucketInfo.
    */
   @Override
-  public OmBucketInfo createBucket(OmBucketInfo bucketInfo) throws IOException {
+  public void createBucket(OmBucketInfo bucketInfo) throws IOException {
     Preconditions.checkNotNull(bucketInfo);
     String volumeName = bucketInfo.getVolumeName();
     String bucketName = bucketInfo.getBucketName();
@@ -165,11 +165,8 @@ public class BucketManagerImpl implements BucketManager {
       }
 
       OmBucketInfo omBucketInfo = omBucketInfoBuilder.build();
-      if (!isRatisEnabled) {
-        commitCreateBucketInfoToDB(omBucketInfo);
-      }
+      commitCreateBucketInfoToDB(omBucketInfo);
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
-      return omBucketInfo;
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Bucket creation failed for bucket:{} in volume:{}",
@@ -179,18 +176,6 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
-    }
-  }
-
-
-  public void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException {
-    Preconditions.checkNotNull(omBucketInfo);
-    try {
-      commitCreateBucketInfoToDB(omBucketInfo);
-    } catch (IOException ex) {
-      LOG.error("Apply CreateBucket Failed for bucket: {}, volume: {}",
-          omBucketInfo.getBucketName(), omBucketInfo.getVolumeName(), ex);
-      throw ex;
     }
   }
 
@@ -243,7 +228,7 @@ public class BucketManagerImpl implements BucketManager {
    * @throws IOException - On Failure.
    */
   @Override
-  public OmBucketInfo setBucketProperty(OmBucketArgs args) throws IOException {
+  public void setBucketProperty(OmBucketArgs args) throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -296,11 +281,7 @@ public class BucketManagerImpl implements BucketManager {
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
       OmBucketInfo omBucketInfo = bucketInfoBuilder.build();
-
-      if (!isRatisEnabled) {
-        commitSetBucketPropertyInfoToDB(omBucketInfo);
-      }
-      return omBucketInfo;
+      commitSetBucketPropertyInfoToDB(omBucketInfo);
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
@@ -309,18 +290,6 @@ public class BucketManagerImpl implements BucketManager {
       throw ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-    }
-  }
-
-  public void applySetBucketProperty(OmBucketInfo omBucketInfo)
-      throws IOException {
-    try {
-      commitSetBucketPropertyInfoToDB(omBucketInfo);
-    } catch (IOException ex) {
-      LOG.error("Apply SetBucket property failed for bucket:{} in " +
-              "volume:{}", omBucketInfo.getBucketName(),
-          omBucketInfo.getVolumeName(), ex);
-      throw ex;
     }
   }
 
@@ -377,10 +346,7 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket is not empty",
             OMException.ResultCodes.BUCKET_NOT_EMPTY);
       }
-
-      if (!isRatisEnabled) {
-        commitDeleteBucketInfoToOMDB(bucketKey);
-      }
+      commitDeleteBucketInfoToOMDB(bucketKey);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
@@ -389,20 +355,6 @@ public class BucketManagerImpl implements BucketManager {
       throw ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-    }
-  }
-
-  public void applyDeleteBucket(String volumeName, String bucketName)
-      throws IOException {
-    Preconditions.checkNotNull(volumeName);
-    Preconditions.checkNotNull(bucketName);
-    try {
-      commitDeleteBucketInfoToOMDB(metadataManager.getBucketKey(volumeName,
-          bucketName));
-    } catch (IOException ex) {
-      LOG.error("Apply DeleteBucket Failed for bucket: {}, volume: {}",
-          bucketName, volumeName, ex);
-      throw ex;
     }
   }
 
