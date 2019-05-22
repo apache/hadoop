@@ -74,7 +74,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -393,7 +393,7 @@ public final class XceiverServerRatis extends XceiverServer {
     if (ozoneConf.getBoolean(OzoneConfigKeys
             .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket()) {
+      try (Socket socket = new Socket()) {
         socket.setReuseAddress(true);
         SocketAddress address = new InetSocketAddress(0);
         socket.bind(address);

@@ -44,6 +44,7 @@ import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
 import org.apache.ratis.thirdparty.io.grpc.ServerInterceptors;
 import org.apache.ratis.thirdparty.io.grpc.netty.GrpcSslContexts;
 import org.apache.ratis.thirdparty.io.grpc.netty.NettyServerBuilder;
+import org.apache.ratis.thirdparty.io.netty.channel.ChannelOption;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.ClientAuth;
 import org.apache.ratis.thirdparty.io.netty.handler.ssl.SslContextBuilder;
 import org.slf4j.Logger;
@@ -52,7 +53,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.List;
@@ -89,7 +90,7 @@ public final class XceiverServerGrpc extends XceiverServer {
     // use that as the container port
     if (conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket()) {
+      try (Socket socket = new Socket()) {
         socket.setReuseAddress(true);
         SocketAddress address = new InetSocketAddress(0);
         socket.bind(address);
@@ -105,6 +106,7 @@ public final class XceiverServerGrpc extends XceiverServer {
     NettyServerBuilder nettyServerBuilder =
         ((NettyServerBuilder) ServerBuilder.forPort(port))
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE);
+    nettyServerBuilder.withChildOption(ChannelOption.SO_REUSEADDR, true);
 
     ServerCredentialInterceptor credInterceptor =
         new ServerCredentialInterceptor(getBlockTokenVerifier());
