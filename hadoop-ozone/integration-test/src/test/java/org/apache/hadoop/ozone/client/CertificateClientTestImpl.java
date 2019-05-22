@@ -139,7 +139,11 @@ public class CertificateClientTestImpl implements CertificateClient {
   @Override
   public void storeCertificate(String cert, boolean force)
       throws CertificateException {
+  }
 
+  @Override
+  public void storeCertificate(String cert, boolean force, boolean caCert)
+      throws CertificateException {
   }
 
   /**

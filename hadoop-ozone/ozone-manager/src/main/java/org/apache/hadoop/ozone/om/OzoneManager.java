@@ -43,6 +43,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.protocol.proto.SCMSecurityProtocolProtos.SCMGetCertResponseProto;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.protocolPB.SCMSecurityProtocolPB;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -785,8 +786,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @return {@link SCMSecurityProtocol}
    * @throws IOException
    */
-  private static SCMSecurityProtocol getScmSecurityClient(
-      OzoneConfiguration conf) throws IOException {
+  private static SCMSecurityProtocolClientSideTranslatorPB
+      getScmSecurityClient(OzoneConfiguration conf) throws IOException {
     RPC.setProtocolEngine(conf, SCMSecurityProtocolPB.class,
         ProtobufRpcEngine.class);
     long scmVersion =
@@ -1455,16 +1456,28 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     HddsProtos.OzoneManagerDetailsProto omDetailsProto =
         omDetailsProtoBuilder.build();
     LOG.info("OzoneManager ports added:{}", omDetailsProto.getPortsList());
-    SCMSecurityProtocol secureScmClient = getScmSecurityClient(config);
+    SCMSecurityProtocolClientSideTranslatorPB secureScmClient =
+        getScmSecurityClient(config);
 
-    String pemEncodedCert = secureScmClient.getOMCertificate(omDetailsProto,
-        getEncodedString(csr));
+    SCMGetCertResponseProto response = secureScmClient.
+        getOMCertChain(omDetailsProto, getEncodedString(csr));
+    String pemEncodedCert = response.getX509Certificate();
 
     try {
-      client.storeCertificate(pemEncodedCert, true);
-      // Persist om cert serial id.
-      omStore.setOmCertSerialId(CertificateCodec.
-          getX509Certificate(pemEncodedCert).getSerialNumber().toString());
+
+
+      // Store SCM CA certificate.
+      if(response.hasX509CACertificate()) {
+        String pemEncodedRootCert = response.getX509CACertificate();
+        client.storeCertificate(pemEncodedRootCert, true, true);
+        client.storeCertificate(pemEncodedCert, true);
+        // Persist om cert serial id.
+        omStore.setOmCertSerialId(CertificateCodec.
+            getX509Certificate(pemEncodedCert).getSerialNumber().toString());
+      } else {
+        throw new RuntimeException("Unable to retrieve OM certificate " +
+            "chain");
+      }
     } catch (IOException | CertificateException e) {
       LOG.error("Error while storing SCM signed certificate.", e);
       throw new RuntimeException(e);
