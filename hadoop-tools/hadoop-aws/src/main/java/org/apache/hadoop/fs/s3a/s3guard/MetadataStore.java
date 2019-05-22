@@ -31,6 +31,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
@@ -130,6 +131,19 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   DirListingMetadata listChildren(Path path) throws IOException;
+
+  /**
+   * This adds all new ancestors of a path as directories.
+   * @param metadataStore store
+   * @param qualifiedPath path to update
+   * @param username username to use in all new FileStatus entries.
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws IOException failure
+   */
+  @RetryTranslated
+  void addAncestors(
+      Path qualifiedPath,
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Record the effects of a {@link FileSystem#rename(Path, Path)} in the

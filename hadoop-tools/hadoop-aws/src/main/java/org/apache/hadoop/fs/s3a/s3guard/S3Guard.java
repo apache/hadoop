@@ -507,33 +507,23 @@ public final class S3Guard {
 
   /**
    * This adds all new ancestors of a path as directories.
+   * This forwards to {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
+   * <p>
+   * Originally it implemented the logic to probe for an add ancestors,
+   * but with the addition of a store-specific bulk operation state
+   * it became unworkable.
+   *
    * @param metadataStore store
    * @param qualifiedPath path to update
-   * @param username username to use in all new FileStatus entries.
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException failure
    */
   @Retries.RetryTranslated
-  public static void addAncestors(MetadataStore metadataStore,
-      Path qualifiedPath,
-      String username,
+  public static void addAncestors(
+      final MetadataStore metadataStore,
+      final Path qualifiedPath,
       @Nullable final BulkOperationState operationState) throws IOException {
-    Collection<PathMetadata> newDirs = new ArrayList<>();
-    Path parent = qualifiedPath.getParent();
-    while (!parent.isRoot()) {
-      PathMetadata directory = metadataStore.get(parent);
-      if (directory == null || directory.isDeleted()) {
-        S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.FALSE, parent, username);
-        PathMetadata meta = new PathMetadata(s3aStatus, Tristate.FALSE, false);
-        newDirs.add(meta);
-      } else {
-        break;
-      }
-      parent = parent.getParent();
-    }
-    if (!newDirs.isEmpty()) {
-      metadataStore.put(newDirs, operationState);
-    }
+    metadataStore.addAncestors(qualifiedPath, operationState);
   }
 
   private static void addMoveStatus(Collection<Path> srcPaths,

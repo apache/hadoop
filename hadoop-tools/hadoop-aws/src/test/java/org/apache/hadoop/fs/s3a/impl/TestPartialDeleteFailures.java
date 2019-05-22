@@ -344,6 +344,12 @@ public class TestPartialDeleteFailures {
         final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");
     }
+
+    @Override
+    public void addAncestors(final Path qualifiedPath,
+        @Nullable final BulkOperationState operationState) throws IOException {
+
+    }
   }
 
 }

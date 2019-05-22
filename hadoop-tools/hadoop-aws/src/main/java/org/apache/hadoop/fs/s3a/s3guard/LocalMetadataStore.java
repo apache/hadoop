@@ -33,12 +33,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -75,6 +77,8 @@ public class LocalMetadataStore implements MetadataStore {
   /* Null iff this FS does not have an associated URI host. */
   private String uriHost;
 
+  private String username;
+
   @Override
   public void initialize(FileSystem fileSystem) throws IOException {
     Preconditions.checkNotNull(fileSystem);
@@ -105,6 +109,7 @@ public class LocalMetadataStore implements MetadataStore {
     }
 
     localCache = builder.build();
+    username = UserGroupInformation.getCurrentUser().getShortUserName();
   }
 
   @Override
@@ -553,5 +558,28 @@ public class LocalMetadataStore implements MetadataStore {
       final FileStatus sourceStatus, final Path dest) throws IOException {
     return new ProgressiveRenameTracker(storeContext, this, source, dest,
         null);
+  }
+
+  @Override
+  public void addAncestors(final Path qualifiedPath,
+      @Nullable final BulkOperationState operationState) throws IOException {
+
+    Collection<PathMetadata> newDirs = new ArrayList<>();
+    Path parent = qualifiedPath.getParent();
+    while (!parent.isRoot()) {
+      PathMetadata directory = get(parent);
+      if (directory == null || directory.isDeleted()) {
+        S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, parent,
+            username);
+        PathMetadata meta = new PathMetadata(status, Tristate.FALSE, false);
+        newDirs.add(meta);
+      } else {
+        break;
+      }
+      parent = parent.getParent();
+    }
+    if (!newDirs.isEmpty()) {
+      put(newDirs, operationState);
+    }
   }
 }

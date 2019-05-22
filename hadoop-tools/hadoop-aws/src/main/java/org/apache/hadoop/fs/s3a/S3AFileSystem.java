@@ -3532,7 +3532,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   /**
    * Perform post-write actions.
    * Calls {@link #deleteUnnecessaryFakeDirectories(Path)} and then
-   * {@link S3Guard#addAncestors(MetadataStore, Path, String, BulkOperationState)}}.
+   * updates any metastore.
    * This operation MUST be called after any PUT/multipart PUT completes
    * successfully.
    *
@@ -3565,7 +3565,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
-        S3Guard.addAncestors(metadataStore, p, username, operationState);
+        S3Guard.addAncestors(metadataStore, p, operationState);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username, eTag, versionId);

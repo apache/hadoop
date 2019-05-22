@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -138,6 +140,11 @@ public class NullMetadataStore implements MetadataStore {
       final Path dest)
       throws IOException {
     return new NullRenameTracker(storeContext, source, dest, this);
+  }
+
+  @Override
+  public void addAncestors(final Path qualifiedPath,
+      @Nullable final BulkOperationState operationState) throws IOException {
   }
 
   private static final class NullRenameTracker extends RenameTracker {

@@ -756,8 +756,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // Key on path to allow fast lookup
     Map<Path, DDBPathMetadata> ancestry = ancestorState.getAncestry();
     List<DDBPathMetadata> ancestorsToAdd = new ArrayList<>(0);
-
-    for (DDBPathMetadata meta : pathsToCreate) {
+    // we sort the inputs to guarantee that the topmost entries come first.
+    // that way if the put request contains both parents and children
+    // then the existing parents will not be re-created -they will just
+    // be added to the ancestor list first.
+    List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
+    sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
+    for (DDBPathMetadata meta : sortedPaths) {
       Preconditions.checkArgument(meta != null);
       Path path = meta.getFileStatus().getPath();
       if (path.isRoot()) {
@@ -787,6 +792,71 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
     }
     return ancestorsToAdd;
+  }
+
+  /**
+   * {@inheritDoc}
+   * <p>
+   * if {@code operationState is not null, when this method returns the
+   * operation state will be updated with all new entries created.
+   * This ensures that subsequent operations with the same store will not
+   * trigger new updates.
+   * The scan on
+   * @param qualifiedPath path to update
+   * @param operationState (nullable) operational state for a bulk update
+   * @throws IOException on failure.
+   */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
+  @Override
+  @Retries.RetryTranslated
+  public void addAncestors(
+      Path qualifiedPath,
+      @Nullable final BulkOperationState operationState) throws IOException {
+
+    Collection<DDBPathMetadata> newDirs = new ArrayList<>();
+    final AncestorState ancestorState = extractOrCreate(operationState);
+    Map<Path, DDBPathMetadata> ancestry = ancestorState.getAncestry();
+    Path parent = qualifiedPath.getParent();
+
+    // iterate up the parents.
+    // note that only ancestorState get/set operations are synchronized;
+    // the DDB read between them is not. As a result, more than one
+    // thread may probe the state, find the entry missing, do the database
+    // query and add the entry.
+    // This is done to avoid making the remote dynamo query part of the synchronized
+    // block.
+    // If a race does occur, the cost is simply one extra GET and potentially
+    // one extra PUT
+    while (!parent.isRoot()) {
+      synchronized (ancestorState) {
+        if (ancestry.containsKey(parent)) {
+          // the ancestry map contains the key, so no need to even look for it.
+          break;
+        }
+      }
+      PathMetadata directory = get(parent);
+      if (directory == null || directory.isDeleted()) {
+        S3AFileStatus status = makeDirStatus(username, parent);
+        DDBPathMetadata meta = new DDBPathMetadata(status, Tristate.FALSE,
+            false);
+        newDirs.add(meta);
+        synchronized (ancestorState) {
+          ancestry.put(parent, meta);
+        }
+      } else {
+        // the directory exists. Add it to the ancestor state for next time.
+        synchronized (ancestorState) {
+          ancestry.put(parent, new DDBPathMetadata(directory));
+        }
+        break;
+      }
+      parent = parent.getParent();
+    }
+    // the listing of directories to put is all those parents which we know
+    // are not in the store or BulkOperationState.
+    if (!newDirs.isEmpty()) {
+      innerPut(newDirs, operationState);
+    }
   }
 
   /**
@@ -1008,6 +1078,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     innerPut(pathMetaToDDBPathMeta(metas), operationState);
   }
 
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Retries.RetryTranslated
   private void innerPut(
       final Collection<DDBPathMetadata> metas,
