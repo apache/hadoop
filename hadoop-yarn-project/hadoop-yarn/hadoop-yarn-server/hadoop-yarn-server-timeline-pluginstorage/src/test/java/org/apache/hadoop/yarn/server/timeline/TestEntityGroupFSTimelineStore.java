@@ -268,7 +268,8 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     Path irrelevantDirPath = new Path(testDoneDirPath, "irrelevant");
     fs.mkdirs(irrelevantDirPath);
 
-    Path doneAppHomeDir = new Path(new Path(testDoneDirPath, "0000"), "001");
+    Path doneAppHomeDir = new Path(new Path(new Path(testDoneDirPath,
+        Long.toString(mainTestAppId.getClusterTimestamp())), "0000"), "001");
     // First application, untouched after creation
     Path appDirClean = new Path(doneAppHomeDir, appDirName);
     Path attemptDirClean = new Path(appDirClean, attemptDirName);
@@ -300,7 +301,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Should retain all logs after this run
     MutableCounterLong dirsCleaned = store.metrics.getLogsDirsCleaned();
     long before = dirsCleaned.value();
-    store.cleanLogs(testDoneDirPath, fs, 10000);
+    store.cleanLogs(testDoneDirPath, 10000);
     assertTrue(fs.exists(irrelevantDirPath));
     assertTrue(fs.exists(irrelevantFilePath));
     assertTrue(fs.exists(filePath));
@@ -317,7 +318,7 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     // Touch the third application by creating a new dir
     fs.mkdirs(new Path(dirPathHold, "holdByMe"));
 
-    store.cleanLogs(testDoneDirPath, fs, 1000);
+    store.cleanLogs(testDoneDirPath, 1000);
 
     // Verification after the second cleaner call
     assertTrue(fs.exists(irrelevantDirPath));
@@ -330,6 +331,52 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
     assertFalse(fs.exists(appDirClean));
     assertFalse(fs.exists(appDirEmpty));
     assertEquals(before + 2L, dirsCleaned.value());
+  }
+
+  @Test
+  public void testCleanBuckets() throws Exception {
+    // ClusterTimeStampDir with App Log Dirs
+    Path clusterTimeStampDir1 = new Path(testDoneDirPath,
+        Long.toString(sampleAppIds.get(0).getClusterTimestamp()));
+    Path appDir1 = new Path(new Path(new Path(
+        clusterTimeStampDir1, "0000"), "000"), sampleAppIds.get(0).toString());
+    Path appDir2 = new Path(new Path(new Path(
+        clusterTimeStampDir1, "0000"), "001"), sampleAppIds.get(1).toString());
+    Path appDir3 = new Path(new Path(new Path(
+        clusterTimeStampDir1, "0000"), "002"), sampleAppIds.get(2).toString());
+    Path appDir4 = new Path(new Path(new Path(
+        clusterTimeStampDir1, "0001"), "000"), sampleAppIds.get(3).toString());
+
+    // ClusterTimeStampDir with no App Log Dirs
+    Path clusterTimeStampDir2 = new Path(testDoneDirPath, "1235");
+
+    // Irrevelant ClusterTimeStampDir
+    Path clusterTimeStampDir3 = new Path(testDoneDirPath, "irrevelant");
+    Path appDir5 = new Path(new Path(new Path(
+        clusterTimeStampDir3, "0000"), "000"), sampleAppIds.get(4).toString());
+
+    fs.mkdirs(appDir1);
+    fs.mkdirs(appDir2);
+    fs.mkdirs(appDir3);
+    fs.mkdirs(appDir4);
+    fs.mkdirs(clusterTimeStampDir2);
+    fs.mkdirs(appDir5);
+
+    Thread.sleep(2000);
+
+    store.cleanLogs(testDoneDirPath, 1000);
+
+    // ClusterTimeStampDir will be removed only if no App Log Dir Present
+    assertTrue(fs.exists(clusterTimeStampDir1));
+    assertFalse(fs.exists(appDir1));
+    assertFalse(fs.exists(appDir2));
+    assertFalse(fs.exists(appDir3));
+    assertFalse(fs.exists(appDir4));
+    assertFalse(fs.exists(clusterTimeStampDir2));
+    assertTrue(fs.exists(appDir5));
+
+    store.cleanLogs(testDoneDirPath, 1000);
+    assertFalse(fs.exists(clusterTimeStampDir1));
   }
 
   @Test
