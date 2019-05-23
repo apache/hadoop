@@ -24,11 +24,9 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.ozone.om.response.OMBucketCreateResponse;
-import org.apache.hadoop.ozone.om.response.OMBucketDeleteResponse;
-import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.utils.db.BatchOperation;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -40,19 +38,19 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.om.response.OMBucketCreateResponse;
+import org.apache.hadoop.ozone.om.response.OMBucketDeleteResponse;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
-
-
 
 import static org.apache.hadoop.hdds.HddsConfigKeys.OZONE_METADATA_DIRS;
 import static org.junit.Assert.fail;
 
 /**
- * This class tests OzoneManagerDouble Buffer.
+ * This class tests OzoneManagerDouble Buffer with actual OMResponse classes.
  */
-public class TestOzoneManagerDoubleBuffer {
+public class TestOzoneManagerDoubleBufferWithOMResponse {
 
   private OMMetadataManager omMetadataManager;
   private OzoneManagerDoubleBuffer doubleBuffer;
@@ -61,7 +59,8 @@ public class TestOzoneManagerDoubleBuffer {
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
-  private void setup() throws IOException  {
+  @Before
+  public void setup() throws IOException  {
     OzoneConfiguration configuration = new OzoneConfiguration();
     configuration.set(OZONE_METADATA_DIRS,
         folder.newFolder().getAbsolutePath());
@@ -70,32 +69,19 @@ public class TestOzoneManagerDoubleBuffer {
     doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager);
   }
 
-  private void stop() {
+  @After
+  public void stop() {
     doubleBuffer.stop();
   }
 
-  @Test(timeout = 300_000)
-  public void testDoubleBufferWithDummyResponse() throws Exception {
-    try {
-      setup();
-      String volumeName = UUID.randomUUID().toString();
-      int bucketCount = 100;
-      for (int i=0; i < bucketCount; i++) {
-        doubleBuffer.add(createDummyBucketResponse(volumeName,
-            UUID.randomUUID().toString()), trxId.incrementAndGet());
-      }
-      GenericTestUtils.waitFor(() ->
-              doubleBuffer.getFlushedTransactionCount() == bucketCount, 100,
-          120000);
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getBucketTable()) == (bucketCount));
-      Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
-    } finally {
-      stop();
-    }
-  }
-
-
+  /**
+   * This tests OzoneManagerDoubleBuffer implementation. It calls
+   * testDoubleBuffer with number of iterations to do transactions and
+   * number of buckets to be created in each iteration. It then
+   * verifies OM DB entries count is matching with total number of
+   * transactions or not.
+   * @throws Exception
+   */
   @Test(timeout = 300_000)
   public void testDoubleBuffer() throws Exception {
     // This test checks whether count in tables are correct or not.
@@ -105,118 +91,123 @@ public class TestOzoneManagerDoubleBuffer {
     testDoubleBuffer(1000, 1000);
   }
 
-
-
+  /**
+   * This test first creates a volume, and then does a mix of transactions
+   * like create/delete buckets and add them to double buffer. Then it
+   * verifies OM DB entries are matching with actual responses added to
+   * double buffer or not.
+   * @throws Exception
+   */
   @Test
   public void testDoubleBufferWithMixOfTransactions() throws Exception {
     // This test checks count, data in table is correct or not.
-    try {
-      setup();
+    Queue< OMBucketCreateResponse > bucketQueue =
+        new ConcurrentLinkedQueue<>();
+    Queue< OMBucketDeleteResponse > deleteBucketQueue =
+        new ConcurrentLinkedQueue<>();
 
-      Queue< OMBucketCreateResponse > bucketQueue =
-          new ConcurrentLinkedQueue<>();
-      Queue< OMBucketDeleteResponse > deleteBucketQueue =
-          new ConcurrentLinkedQueue<>();
-
-      String volumeName = UUID.randomUUID().toString();
-      OMVolumeCreateResponse omVolumeCreateResponse = createVolume(volumeName);
-      doubleBuffer.add(omVolumeCreateResponse, trxId.incrementAndGet());
+    String volumeName = UUID.randomUUID().toString();
+    OMVolumeCreateResponse omVolumeCreateResponse = createVolume(volumeName);
+    doubleBuffer.add(omVolumeCreateResponse, trxId.incrementAndGet());
 
 
-      int bucketCount = 10;
+    int bucketCount = 10;
 
-      doMixTransactions(volumeName, 10, deleteBucketQueue, bucketQueue);
+    doMixTransactions(volumeName, 10, deleteBucketQueue, bucketQueue);
 
-      // As for every 2 transactions of create bucket we add deleted bucket.
-      final int deleteCount = 5;
+    // As for every 2 transactions of create bucket we add deleted bucket.
+    final int deleteCount = 5;
 
-      // We are doing +1 for volume transaction.
-      GenericTestUtils.waitFor(() ->
-          doubleBuffer.getFlushedTransactionCount() ==
-              (bucketCount + deleteCount + 1), 100, 120000);
+    // We are doing +1 for volume transaction.
+    GenericTestUtils.waitFor(() ->
+        doubleBuffer.getFlushedTransactionCount() ==
+            (bucketCount + deleteCount + 1), 100, 120000);
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getVolumeTable()) == 1);
+    Assert.assertTrue(omMetadataManager.countRowsInTable(
+        omMetadataManager.getVolumeTable()) == 1);
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getBucketTable()) == 5);
+    Assert.assertTrue(omMetadataManager.countRowsInTable(
+        omMetadataManager.getBucketTable()) == 5);
 
-      // Now after this in our DB we should have 5 buckets and one volume
+    // Now after this in our DB we should have 5 buckets and one volume
 
+    checkVolume(volumeName, omVolumeCreateResponse);
 
-      checkVolume(volumeName, omVolumeCreateResponse);
+    checkCreateBuckets(bucketQueue);
 
-      checkCreateBuckets(bucketQueue);
-
-      checkDeletedBuckets(deleteBucketQueue);
-    } finally {
-      stop();
-    }
+    checkDeletedBuckets(deleteBucketQueue);
   }
 
+  /**
+   * This test first creates a volume, and then does a mix of transactions
+   * like create/delete buckets in parallel and add to double buffer. Then it
+   * verifies OM DB entries are matching with actual responses added to
+   * double buffer or not.
+   * @throws Exception
+   */
   @Test
   public void testDoubleBufferWithMixOfTransactionsParallel() throws Exception {
     // This test checks count, data in table is correct or not.
-    try {
-      setup();
 
-      Queue< OMBucketCreateResponse > bucketQueue =
-          new ConcurrentLinkedQueue<>();
-      Queue< OMBucketDeleteResponse > deleteBucketQueue =
-          new ConcurrentLinkedQueue<>();
+    Queue< OMBucketCreateResponse > bucketQueue =
+        new ConcurrentLinkedQueue<>();
+    Queue< OMBucketDeleteResponse > deleteBucketQueue =
+        new ConcurrentLinkedQueue<>();
 
-      String volumeName1 = UUID.randomUUID().toString();
-      OMVolumeCreateResponse omVolumeCreateResponse1 =
-          createVolume(volumeName1);
+    String volumeName1 = UUID.randomUUID().toString();
+    OMVolumeCreateResponse omVolumeCreateResponse1 =
+        createVolume(volumeName1);
 
-      String volumeName2 = UUID.randomUUID().toString();
-      OMVolumeCreateResponse omVolumeCreateResponse2 =
-          createVolume(volumeName2);
+    String volumeName2 = UUID.randomUUID().toString();
+    OMVolumeCreateResponse omVolumeCreateResponse2 =
+        createVolume(volumeName2);
 
-      doubleBuffer.add(omVolumeCreateResponse1, trxId.incrementAndGet());
+    doubleBuffer.add(omVolumeCreateResponse1, trxId.incrementAndGet());
 
-      doubleBuffer.add(omVolumeCreateResponse2, trxId.incrementAndGet());
+    doubleBuffer.add(omVolumeCreateResponse2, trxId.incrementAndGet());
 
-      Daemon daemon1 = new Daemon(() -> doMixTransactions(volumeName1, 10,
-          deleteBucketQueue, bucketQueue));
-      Daemon daemon2 = new Daemon(() -> doMixTransactions(volumeName2, 10,
-          deleteBucketQueue, bucketQueue));
+    Daemon daemon1 = new Daemon(() -> doMixTransactions(volumeName1, 10,
+        deleteBucketQueue, bucketQueue));
+    Daemon daemon2 = new Daemon(() -> doMixTransactions(volumeName2, 10,
+        deleteBucketQueue, bucketQueue));
 
-      daemon1.start();
-      daemon2.start();
+    daemon1.start();
+    daemon2.start();
 
-      int bucketCount = 20;
+    int bucketCount = 20;
 
       // As for every 2 transactions of create bucket we add deleted bucket.
-      final int deleteCount = 10;
+    final int deleteCount = 10;
 
-      // We are doing +1 for volume transaction.
-      GenericTestUtils.waitFor(() -> doubleBuffer.getFlushedTransactionCount()
-              == (bucketCount + deleteCount + 2),
-          100,
-          120000);
+    // We are doing +1 for volume transaction.
+    GenericTestUtils.waitFor(() -> doubleBuffer.getFlushedTransactionCount()
+            == (bucketCount + deleteCount + 2), 100, 120000);
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getVolumeTable()) == 2);
+    Assert.assertTrue(omMetadataManager.countRowsInTable(
+        omMetadataManager.getVolumeTable()) == 2);
 
-      Assert.assertTrue(omMetadataManager.countRowsInTable(
-          omMetadataManager.getBucketTable()) == 10);
+    Assert.assertTrue(omMetadataManager.countRowsInTable(
+        omMetadataManager.getBucketTable()) == 10);
 
-      // Now after this in our DB we should have 5 buckets and one volume
+    // Now after this in our DB we should have 5 buckets and one volume
 
 
-      checkVolume(volumeName1, omVolumeCreateResponse1);
-      checkVolume(volumeName2, omVolumeCreateResponse2);
+    checkVolume(volumeName1, omVolumeCreateResponse1);
+    checkVolume(volumeName2, omVolumeCreateResponse2);
 
-      checkCreateBuckets(bucketQueue);
+    checkCreateBuckets(bucketQueue);
 
-      checkDeletedBuckets(deleteBucketQueue);
-    } finally {
-      stop();
-    }
+    checkDeletedBuckets(deleteBucketQueue);
   }
 
-
+  /**
+   * This method add's a mix of createBucket/DeleteBucket responses to double
+   * buffer. Total number of responses added is specified by bucketCount.
+   * @param volumeName
+   * @param bucketCount
+   * @param deleteBucketQueue
+   * @param bucketQueue
+   */
   private void doMixTransactions(String volumeName, int bucketCount,
       Queue<OMBucketDeleteResponse> deleteBucketQueue,
       Queue<OMBucketCreateResponse> bucketQueue) {
@@ -237,6 +228,13 @@ public class TestOzoneManagerDoubleBuffer {
     }
   }
 
+  /**
+   * Verifies volume table data is matching with actual response added to
+   * double buffer.
+   * @param volumeName
+   * @param omVolumeCreateResponse
+   * @throws Exception
+   */
   private void checkVolume(String volumeName,
       OMVolumeCreateResponse omVolumeCreateResponse) throws Exception {
     OmVolumeArgs tableVolumeArgs = omMetadataManager.getVolumeTable().get(
@@ -254,6 +252,11 @@ public class TestOzoneManagerDoubleBuffer {
         tableVolumeArgs.getCreationTime());
   }
 
+  /**
+   * Verifies bucket table data is matching with actual response added to
+   * double buffer.
+   * @param bucketQueue
+   */
   private void checkCreateBuckets(Queue<OMBucketCreateResponse> bucketQueue) {
     bucketQueue.forEach((omBucketCreateResponse) -> {
       OmBucketInfo omBucketInfo = omBucketCreateResponse.getOmBucketInfo();
@@ -278,6 +281,11 @@ public class TestOzoneManagerDoubleBuffer {
     });
   }
 
+  /**
+   * Verifies deleted bucket responses added to double buffer are actually
+   * removed from the OM DB or not.
+   * @param deleteBucketQueue
+   */
   private void checkDeletedBuckets(Queue<OMBucketDeleteResponse>
       deleteBucketQueue) {
     deleteBucketQueue.forEach((omBucketDeleteResponse -> {
@@ -292,9 +300,19 @@ public class TestOzoneManagerDoubleBuffer {
     }));
   }
 
+  /**
+   * Create bucketCount number of createBucket responses for each iteration.
+   * All these iterations are run in parallel. Then verify OM DB has correct
+   * number of entries or not.
+   * @param iterations
+   * @param bucketCount
+   * @throws Exception
+   */
   public void testDoubleBuffer(int iterations, int bucketCount)
       throws Exception {
     try {
+      // Calling setup and stop here because this method is called from a
+      // single test multiple times.
       setup();
       for (int i = 0; i < iterations; i++) {
         Daemon d1 = new Daemon(() ->
@@ -320,10 +338,15 @@ public class TestOzoneManagerDoubleBuffer {
     }
   }
 
-
-  public void doTransactions(String volumeName, int buckets) {
+  /**
+   * This method adds bucketCount number of createBucket responses to double
+   * buffer.
+   * @param volumeName
+   * @param bucketCount
+   */
+  public void doTransactions(String volumeName, int bucketCount) {
     doubleBuffer.add(createVolume(volumeName), trxId.incrementAndGet());
-    for (int i=0; i< buckets; i++) {
+    for (int i=0; i< bucketCount; i++) {
       doubleBuffer.add(createBucket(volumeName, UUID.randomUUID().toString()),
           trxId.incrementAndGet());
       // For every 100 buckets creation adding 100ms delay
@@ -338,6 +361,11 @@ public class TestOzoneManagerDoubleBuffer {
     }
   }
 
+  /**
+   * Create OMVolumeCreateResponse for specified volume.
+   * @param volumeName
+   * @return OMVolumeCreateResponse
+   */
   private OMVolumeCreateResponse createVolume(String volumeName) {
     OmVolumeArgs omVolumeArgs =
         OmVolumeArgs.newBuilder()
@@ -351,6 +379,12 @@ public class TestOzoneManagerDoubleBuffer {
     return new OMVolumeCreateResponse(omVolumeArgs, volumeList);
   }
 
+  /**
+   * Create OMBucketCreateResponse for specified volume and bucket.
+   * @param volumeName
+   * @param bucketName
+   * @return OMBucketCreateResponse
+   */
   private OMBucketCreateResponse createBucket(String volumeName,
       String bucketName) {
     OmBucketInfo omBucketInfo =
@@ -359,39 +393,17 @@ public class TestOzoneManagerDoubleBuffer {
     return new OMBucketCreateResponse(omBucketInfo);
   }
 
-  private OMDummyCreateBucketResponse createDummyBucketResponse(
-      String volumeName, String bucketName) {
-    OmBucketInfo omBucketInfo =
-        OmBucketInfo.newBuilder().setVolumeName(volumeName)
-            .setBucketName(bucketName).setCreationTime(Time.now()).build();
-    return new OMDummyCreateBucketResponse(omBucketInfo);
-  }
-
+  /**
+   * Create OMBucketDeleteResponse for specified volume and bucket.
+   * @param volumeName
+   * @param bucketName
+   * @return OMBucketDeleteResponse
+   */
   private OMBucketDeleteResponse deleteBucket(String volumeName,
       String bucketName) {
     return new OMBucketDeleteResponse(volumeName, bucketName);
   }
 
-  /**
-   * DummyCreatedBucket Response class used in testing.
-   */
-  public static class OMDummyCreateBucketResponse implements OMClientResponse {
-    private final OmBucketInfo omBucketInfo;
 
-    public OMDummyCreateBucketResponse(OmBucketInfo omBucketInfo) {
-      this.omBucketInfo = omBucketInfo;
-    }
-
-    @Override
-    public void addToDBBatch(OMMetadataManager omMetadataManager,
-        BatchOperation batchOperation) throws IOException {
-      String dbBucketKey =
-          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
-              omBucketInfo.getBucketName());
-      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
-          dbBucketKey, omBucketInfo);
-    }
-
-  }
 }
 
