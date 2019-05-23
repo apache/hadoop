@@ -695,13 +695,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   public void testAppLogDirCreation() throws Exception {
-    final String logSuffix = "bucket_logs";
-    final String inputSuffix = "logs";
+    final String inputSuffix = "logs-tfile";
     this.conf.set(YarnConfiguration.NM_LOG_DIRS,
         localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, inputSuffix);
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, "logs");
 
     InlineDispatcher dispatcher = new InlineDispatcher();
     dispatcher.init(this.conf);
@@ -734,10 +733,10 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
     Path userDir = fs.makeQualified(new Path(
         remoteRootLogDir.getAbsolutePath(), this.user));
-    Path suffixDir = new Path(userDir, logSuffix);
     Path bucketDir = fs.makeQualified(LogAggregationUtils.getRemoteBucketDir(
         new Path(remoteRootLogDir.getAbsolutePath()),
             this.user, inputSuffix, appId));
+    Path suffixDir = bucketDir.getParent();
     Path appDir = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
         new Path(remoteRootLogDir.getAbsolutePath()), appId,
             this.user, inputSuffix));
@@ -775,13 +774,12 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
     // Verify we do not create bucket dir again
     ApplicationId appId4 = BuilderUtils.newApplicationId(2, 10003);
-    Path bucketDir4 = fs.makeQualified(LogAggregationUtils.getRemoteBucketDir(
-        new Path(remoteRootLogDir.getAbsolutePath()),
-        this.user, logSuffix, appId4));
-    new File(bucketDir4.toUri().getPath()).mkdir();
     Path appDir4 = fs.makeQualified(LogAggregationUtils.getRemoteAppLogDir(
             new Path(remoteRootLogDir.getAbsolutePath()),
             appId4, this.user, inputSuffix));
+    Path bucketDir4 = appDir4.getParent();
+    new File(bucketDir4.toUri().getPath()).mkdir();
+
     aggSvc.handle(new LogHandlerAppStartedEvent(appId4, this.user, null,
         this.acls, contextWithAllContainers));
     verify(spyFs, never()).mkdirs(eq(bucketDir4), isA(FsPermission.class));
