@@ -76,7 +76,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
     this.ozoneManagerDoubleBuffer =
-        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager());
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
+            this::takeSnapshot);
     this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
         ozoneManagerDoubleBuffer);
   }
@@ -169,6 +170,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       return ozoneManager.saveRatisSnapshot();
     }
     return 0;
+  }
+
+  public long takeSnapshot(long appliedIndex) throws IOException {
+    this.lastAppliedIndex = appliedIndex;
+    return takeSnapshot();
   }
 
   /**

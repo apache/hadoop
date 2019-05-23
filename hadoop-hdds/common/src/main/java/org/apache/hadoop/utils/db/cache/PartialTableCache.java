@@ -58,12 +58,16 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
 
   @Override
   public CACHEVALUE get(CACHEKEY cachekey) {
-    return cache.get(cachekey);
+    synchronized (cache) {
+      return cache.get(cachekey);
+    }
   }
 
   @Override
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
-    cache.put(cacheKey, value);
+    synchronized (cache) {
+      cache.put(cacheKey, value);
+    }
     epochEntries.add(new EpochEntry<>(value.getEpoch(), cacheKey));
   }
 
@@ -83,14 +87,16 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
          iterator.hasNext();) {
       currentEntry = iterator.next();
       CACHEKEY cachekey = currentEntry.getCachekey();
-      CacheValue cacheValue = cache.get(cachekey);
-      if (cacheValue.getEpoch() <= epoch) {
-        cache.remove(cachekey);
-        iterator.remove();
-      } else {
-        // If currentEntry epoch is greater than epoch, we have deleted all
-        // entries less than specified epoch. So, we can break.
-        break;
+      synchronized (cache) {
+        CacheValue cacheValue = cache.get(cachekey);
+        if (cacheValue.getEpoch() <= epoch) {
+          cache.remove(cachekey);
+          iterator.remove();
+        } else {
+          // If currentEntry epoch is greater than epoch, we have deleted all
+          // entries less than specified epoch. So, we can break.
+          break;
+        }
       }
     }
   }

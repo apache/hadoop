@@ -63,12 +63,15 @@ public class OzoneManagerDoubleBuffer {
   private final AtomicLong flushedTransactionCount = new AtomicLong(0);
   private final AtomicLong flushIterations = new AtomicLong(0);
   private volatile boolean isRunning;
+  private OzoneManagerRatisSnapshot ratisSnapshot;
 
 
-  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager) {
+  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
+      OzoneManagerRatisSnapshot ratisSnapshot) {
     this.currentBuffer = new ConcurrentLinkedQueue<>();
     this.readyBuffer = new ConcurrentLinkedQueue<>();
     this.omMetadataManager = omMetadataManager;
+    this.ratisSnapshot = ratisSnapshot;
 
     isRunning = true;
     // Daemon thread which runs in back ground and flushes transactions to DB.
@@ -109,8 +112,25 @@ public class OzoneManagerDoubleBuffer {
           LOG.debug("Sync Iteration {} flushed transactions in this " +
                   "iteration{}", flushIterations.get(),
               flushedTransactionsSize);
+
+          long lastUpdatedIndex =
+              readyBuffer.stream().map(DoubleBufferEntry::getTrxLogIndex)
+                  .max(Long::compareTo).get();
           readyBuffer.clear();
-          // TODO: update the last updated index in OzoneManagerStateMachine.
+
+          // Update last update index once after buffer flush, so when OM
+          // restarts we don't apply all the transactions which are
+          // already flushed. As ratis take's snapshot periodically after
+          // 400k transactions(current default value).
+          try {
+            ratisSnapshot.takeSnapshot(lastUpdatedIndex);
+          } catch (IOException ex) {
+            // We don't need to terminate OM when taking snapshot fails. or
+            // Do we need to terminate?
+            LOG.error("Error occurred during take Snapshot", ex);
+          }
+
+          //TODO: clear cache
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
