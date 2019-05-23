@@ -190,8 +190,11 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     //Generate Recon container DB data.
     ContainerKeyMapperTask containerKeyMapperTask = new ContainerKeyMapperTask(
-        ozoneManagerServiceProvider, containerDbServiceProvider);
-    containerKeyMapperTask.run();
+        containerDbServiceProvider,
+        ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+    ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot();
+    containerKeyMapperTask.reprocess(ozoneManagerServiceProvider
+        .getOMMetadataManagerInstance());
   }
 
   @Test

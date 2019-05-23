@@ -23,10 +23,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -34,9 +31,10 @@ import java.util.Map;
 
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
@@ -48,14 +46,11 @@ import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.ReconContainerDBProvider;
-import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
@@ -110,7 +105,7 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testRun() throws Exception{
+  public void testReprocessOMDB() throws Exception{
 
     Map<ContainerKeyPrefix, Integer> keyPrefixesForContainer =
         containerDbServiceProvider.getKeyPrefixesForContainer(1);
@@ -137,25 +132,17 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
     OmKeyLocationInfoGroup omKeyLocationInfoGroup = new
         OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
 
-    writeDataToOm(omMetadataManager,
+    writeDataToOm(reconOMMetadataManager,
         "key_one",
         "bucketOne",
         "sampleVol",
         Collections.singletonList(omKeyLocationInfoGroup));
 
-    //Take snapshot of OM DB and copy over to Recon OM DB.
-    DBCheckpoint checkpoint = omMetadataManager.getStore()
-        .getCheckpoint(true);
-    File tarFile = OmUtils.createTarFile(checkpoint.getCheckpointLocation());
-    InputStream inputStream = new FileInputStream(tarFile);
-    PowerMockito.stub(PowerMockito.method(ReconUtils.class,
-        "makeHttpCall",
-        CloseableHttpClient.class, String.class))
-        .toReturn(inputStream);
-
-    ContainerKeyMapperTask containerKeyMapperTask = new ContainerKeyMapperTask(
-        ozoneManagerServiceProvider, containerDbServiceProvider);
-    containerKeyMapperTask.run();
+    ContainerKeyMapperTask containerKeyMapperTask =
+        new ContainerKeyMapperTask(containerDbServiceProvider,
+        ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+    containerKeyMapperTask.reprocess(ozoneManagerServiceProvider
+        .getOMMetadataManagerInstance());
 
     keyPrefixesForContainer =
         containerDbServiceProvider.getKeyPrefixesForContainer(1);
@@ -176,6 +163,130 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         keyPrefixesForContainer.get(containerKeyPrefix).intValue());
   }
 
+  @Test
+  public void testProcessOMEvents() throws IOException {
+    Map<ContainerKeyPrefix, Integer> keyPrefixesForContainer =
+        containerDbServiceProvider.getKeyPrefixesForContainer(1);
+    assertTrue(keyPrefixesForContainer.isEmpty());
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(2);
+    assertTrue(keyPrefixesForContainer.isEmpty());
+
+    Pipeline pipeline = getRandomPipeline();
+
+    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
+    BlockID blockID1 = new BlockID(1, 1);
+    OmKeyLocationInfo omKeyLocationInfo1 = getOmKeyLocationInfo(blockID1,
+        pipeline);
+
+    BlockID blockID2 = new BlockID(2, 1);
+    OmKeyLocationInfo omKeyLocationInfo2
+        = getOmKeyLocationInfo(blockID2, pipeline);
+
+    omKeyLocationInfoList.add(omKeyLocationInfo1);
+    omKeyLocationInfoList.add(omKeyLocationInfo2);
+
+    OmKeyLocationInfoGroup omKeyLocationInfoGroup = new
+        OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
+
+    String bucket = "bucketOne";
+    String volume = "sampleVol";
+    String key = "key_one";
+    String omKey = omMetadataManager.getOzoneKey(volume, bucket, key);
+    OmKeyInfo omKeyInfo = buildOmKeyInfo(volume, bucket, key,
+        omKeyLocationInfoGroup);
+
+    OMDBUpdateEvent keyEvent1 = new OMDBUpdateEvent.
+        OMUpdateEventBuilder<String, OmKeyInfo>()
+        .setKey(omKey)
+        .setValue(omKeyInfo)
+        .setTable(omMetadataManager.getKeyTable().getName())
+        .setAction(OMDBUpdateEvent.OMDBUpdateAction.PUT)
+        .build();
+
+    BlockID blockID3 = new BlockID(1, 2);
+    OmKeyLocationInfo omKeyLocationInfo3 =
+        getOmKeyLocationInfo(blockID3, pipeline);
+
+    BlockID blockID4 = new BlockID(3, 1);
+    OmKeyLocationInfo omKeyLocationInfo4
+        = getOmKeyLocationInfo(blockID4, pipeline);
+
+    omKeyLocationInfoList = new ArrayList<>();
+    omKeyLocationInfoList.add(omKeyLocationInfo3);
+    omKeyLocationInfoList.add(omKeyLocationInfo4);
+    omKeyLocationInfoGroup = new OmKeyLocationInfoGroup(0,
+        omKeyLocationInfoList);
+
+    String key2 = "key_two";
+    writeDataToOm(reconOMMetadataManager, key2, bucket, volume, Collections
+        .singletonList(omKeyLocationInfoGroup));
+
+    omKey = omMetadataManager.getOzoneKey(volume, bucket, key2);
+    OMDBUpdateEvent keyEvent2 = new OMDBUpdateEvent.
+        OMUpdateEventBuilder<String, OmKeyInfo>()
+        .setKey(omKey)
+        .setAction(OMDBUpdateEvent.OMDBUpdateAction.DELETE)
+        .setTable(omMetadataManager.getKeyTable().getName())
+        .build();
+
+    OMUpdateEventBatch omUpdateEventBatch = new OMUpdateEventBatch(new
+        ArrayList<OMDBUpdateEvent>() {{
+          add(keyEvent1);
+          add(keyEvent2);
+        }});
+
+    ContainerKeyMapperTask containerKeyMapperTask =
+        new ContainerKeyMapperTask(containerDbServiceProvider,
+            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+    containerKeyMapperTask.reprocess(ozoneManagerServiceProvider
+        .getOMMetadataManagerInstance());
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(1);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(2);
+    assertTrue(keyPrefixesForContainer.isEmpty());
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(3);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+
+    // Process PUT & DELETE event.
+    containerKeyMapperTask.process(omUpdateEventBatch);
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(1);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(2);
+    assertTrue(keyPrefixesForContainer.size() == 1);
+
+    keyPrefixesForContainer = containerDbServiceProvider
+        .getKeyPrefixesForContainer(3);
+    assertTrue(keyPrefixesForContainer.isEmpty());
+
+  }
+
+  private OmKeyInfo buildOmKeyInfo(String volume,
+                                   String bucket,
+                                   String key,
+                                   OmKeyLocationInfoGroup
+                                       omKeyLocationInfoGroup) {
+    return new OmKeyInfo.Builder()
+        .setBucketName(bucket)
+        .setVolumeName(volume)
+        .setKeyName(key)
+        .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
+        .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
+        .setOmKeyLocationInfos(Collections.singletonList(
+            omKeyLocationInfoGroup))
+        .build();
+  }
   /**
    * Get Test OzoneConfiguration instance.
    * @return OzoneConfiguration

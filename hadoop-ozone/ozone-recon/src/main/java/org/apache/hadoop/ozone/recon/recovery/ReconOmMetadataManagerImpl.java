@@ -64,7 +64,6 @@ public class ReconOmMetadataManagerImpl extends OmMetadataManagerImpl
     try {
       DBStoreBuilder dbStoreBuilder =
           DBStoreBuilder.newBuilder(ozoneConfiguration)
-          .setReadOnly(true)
           .setName(dbFile.getName())
           .setPath(dbFile.toPath().getParent());
       addOMTablesAndCodecs(dbStoreBuilder);

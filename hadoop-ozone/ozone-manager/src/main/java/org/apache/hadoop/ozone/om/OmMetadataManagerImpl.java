@@ -100,16 +100,16 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |-------------------------------------------------------------------|
    */
 
-  private static final String USER_TABLE = "userTable";
-  private static final String VOLUME_TABLE = "volumeTable";
-  private static final String BUCKET_TABLE = "bucketTable";
-  private static final String KEY_TABLE = "keyTable";
-  private static final String DELETED_TABLE = "deletedTable";
-  private static final String OPEN_KEY_TABLE = "openKeyTable";
-  private static final String S3_TABLE = "s3Table";
-  private static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
-  private static final String S3_SECRET_TABLE = "s3SecretTable";
-  private static final String DELEGATION_TOKEN_TABLE = "dTokenTable";
+  public static final String USER_TABLE = "userTable";
+  public static final String VOLUME_TABLE = "volumeTable";
+  public static final String BUCKET_TABLE = "bucketTable";
+  public static final String KEY_TABLE = "keyTable";
+  public static final String DELETED_TABLE = "deletedTable";
+  public static final String OPEN_KEY_TABLE = "openKeyTable";
+  public static final String S3_TABLE = "s3Table";
+  public static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
+  public static final String S3_SECRET_TABLE = "s3SecretTable";
+  public static final String DELEGATION_TOKEN_TABLE = "dTokenTable";
 
   private DBStore store;
 

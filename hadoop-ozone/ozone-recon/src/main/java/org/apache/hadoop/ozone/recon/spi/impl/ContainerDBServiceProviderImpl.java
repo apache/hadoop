@@ -191,4 +191,15 @@ public class ContainerDBServiceProviderImpl
     }
     return containers;
   }
+
+  @Override
+  public void deleteContainerMapping(ContainerKeyPrefix containerKeyPrefix)
+      throws IOException {
+    containerKeyTable.delete(containerKeyPrefix);
+  }
+
+  @Override
+  public TableIterator getContainerTableIterator() throws IOException {
+    return containerKeyTable.iterator();
+  }
 }

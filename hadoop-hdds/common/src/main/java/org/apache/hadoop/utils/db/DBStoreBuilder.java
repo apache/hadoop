@@ -57,7 +57,6 @@ public final class DBStoreBuilder {
   private List<String> tableNames;
   private Configuration configuration;
   private CodecRegistry registry;
-  private boolean readOnly = false;
 
   private DBStoreBuilder(Configuration configuration) {
     tables = new HashSet<>();
@@ -114,11 +113,6 @@ public final class DBStoreBuilder {
     return this;
   }
 
-  public DBStoreBuilder setReadOnly(boolean rdOnly) {
-    readOnly = rdOnly;
-    return this;
-  }
-
   /**
    * Builds a DBStore instance and returns that.
    *
@@ -137,7 +131,7 @@ public final class DBStoreBuilder {
     if (!dbFile.getParentFile().exists()) {
       throw new IOException("The DB destination directory should exist.");
     }
-    return new RDBStore(dbFile, options, tables, registry, readOnly);
+    return new RDBStore(dbFile, options, tables, registry);
   }
 
   /**

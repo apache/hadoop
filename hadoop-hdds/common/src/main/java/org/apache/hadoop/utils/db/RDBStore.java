@@ -64,15 +64,16 @@ public class RDBStore implements DBStore {
   private ObjectName statMBeanName;
   private RDBCheckpointManager checkPointManager;
   private String checkpointsParentDir;
+  private List<ColumnFamilyHandle> columnFamilyHandles;
 
   @VisibleForTesting
   public RDBStore(File dbFile, DBOptions options,
                   Set<TableConfig> families) throws IOException {
-    this(dbFile, options, families, new CodecRegistry(), false);
+    this(dbFile, options, families, new CodecRegistry());
   }
 
   public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
-                  CodecRegistry registry, boolean readOnly)
+                  CodecRegistry registry)
       throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
@@ -81,7 +82,7 @@ public class RDBStore implements DBStore {
     codecRegistry = registry;
     final List<ColumnFamilyDescriptor> columnFamilyDescriptors =
         new ArrayList<>();
-    final List<ColumnFamilyHandle> columnFamilyHandles = new ArrayList<>();
+    columnFamilyHandles = new ArrayList<>();
 
     for (TableConfig family : families) {
       columnFamilyDescriptors.add(family.getDescriptor());
@@ -93,13 +94,8 @@ public class RDBStore implements DBStore {
     writeOptions = new WriteOptions();
 
     try {
-      if (readOnly) {
-        db = RocksDB.openReadOnly(dbOptions, dbLocation.getAbsolutePath(),
-            columnFamilyDescriptors, columnFamilyHandles);
-      } else {
-        db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
-            columnFamilyDescriptors, columnFamilyHandles);
-      }
+      db = RocksDB.open(dbOptions, dbLocation.getAbsolutePath(),
+          columnFamilyDescriptors, columnFamilyHandles);
 
       for (int x = 0; x < columnFamilyHandles.size(); x++) {
         handleTable.put(
@@ -299,7 +295,31 @@ public class RDBStore implements DBStore {
     return dbLocation;
   }
 
+  @Override
+  public Map<Integer, String> getTableNames() {
+    Map<Integer, String> tableNames = new HashMap<>();
+    StringCodec stringCodec = new StringCodec();
+
+    for (ColumnFamilyHandle columnFamilyHandle : columnFamilyHandles) {
+      try {
+        tableNames.put(columnFamilyHandle.getID(), stringCodec
+            .fromPersistedFormat(columnFamilyHandle.getName()));
+      } catch (RocksDBException | IOException e) {
+        LOG.error("Unexpected exception while reading column family handle " +
+            "name", e);
+      }
+    }
+    return tableNames;
+  }
+
+  @Override
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
   }
+
+  @VisibleForTesting
+  public RocksDB getDb() {
+    return db;
+  }
+
 }

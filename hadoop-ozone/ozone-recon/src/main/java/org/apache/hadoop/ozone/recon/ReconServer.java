@@ -23,6 +23,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPS
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT;
 
+import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -67,7 +68,7 @@ public class ReconServer extends GenericCli {
           @Override
           protected void configureServlets() {
             rest("/api/*")
-                .packages("org.apache.hadoop.ozone.recon.api");
+              .packages("org.apache.hadoop.ozone.recon.api");
           }
         });
 
@@ -100,10 +101,6 @@ public class ReconServer extends GenericCli {
     OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
         .getInstance(OzoneManagerServiceProvider.class);
 
-    // Schedule the task to read OM DB and write the reverse mapping to Recon
-    // container DB.
-    ContainerKeyMapperTask containerKeyMapperTask = new ContainerKeyMapperTask(
-        ozoneManagerServiceProvider, containerDBServiceProvider);
     long initialDelay = configuration.getTimeDuration(
         RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY,
         RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT,
@@ -113,8 +110,22 @@ public class ReconServer extends GenericCli {
         RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
 
-    scheduler.scheduleWithFixedDelay(containerKeyMapperTask, initialDelay,
-        interval, TimeUnit.MILLISECONDS);
+
+    scheduler.scheduleWithFixedDelay(() -> {
+      try {
+        ozoneManagerServiceProvider.updateReconOmDBWithNewSnapshot();
+        // Schedule the task to read OM DB and write the reverse mapping to
+        // Recon container DB.
+        ContainerKeyMapperTask containerKeyMapperTask =
+            new ContainerKeyMapperTask(containerDBServiceProvider,
+                ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+        containerKeyMapperTask.reprocess(
+            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+      } catch (IOException e) {
+        LOG.error("Unable to get OM " +
+            "Snapshot", e);
+      }
+    }, initialDelay, interval, TimeUnit.MILLISECONDS);
   }
 
   void stop() throws Exception {
