@@ -22,7 +22,11 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.test.LambdaTestUtils;
+
+import org.junit.Assume;
 import org.junit.Test;
 
 import java.io.FileNotFoundException;
@@ -43,6 +47,12 @@ public class ITestS3ADelayedFNF extends AbstractS3ATestBase {
   @Test
   public void testNotFoundFirstRead() throws Exception {
     FileSystem fs = getFileSystem();
+    ChangeDetectionPolicy changeDetectionPolicy =
+        ((S3AFileSystem) fs).getChangeDetectionPolicy();
+    Assume.assumeFalse("FNF not expected when using a bucket with"
+            + " object versioning",
+        changeDetectionPolicy.getSource() == Source.VersionId);
+
     Path p = path("some-file");
     ContractTestUtils.createFile(fs, p, false, new byte[] {20, 21, 22});
 

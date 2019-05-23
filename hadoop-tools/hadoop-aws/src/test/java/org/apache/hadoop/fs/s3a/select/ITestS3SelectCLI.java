@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.List;
 
+import org.junit.Assume;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
@@ -34,6 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Statistic;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
+import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool;
 import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.util.OperationDuration;
@@ -80,6 +83,11 @@ public class ITestS3SelectCLI extends AbstractS3SelectTest {
     selectConf = new Configuration(getConfiguration());
     localFile = getTempFilename();
     landsatSrc = getLandsatGZ().toString();
+    ChangeDetectionPolicy changeDetectionPolicy =
+        getLandsatFS().getChangeDetectionPolicy();
+    Assume.assumeFalse("the standard landsat bucket doesn't have versioning",
+        changeDetectionPolicy.getSource() == Source.VersionId
+            && changeDetectionPolicy.isRequireVersion());
   }
 
   @Override

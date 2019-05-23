@@ -22,17 +22,13 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.LinkedList;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -46,6 +42,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -494,130 +491,37 @@ public class BasicOzoneFileSystem extends FileSystem {
     }
   }
 
-  private class ListStatusIterator extends OzoneListingIterator {
-    // _fileStatuses_ maintains a list of file(s) which is either the input
-    // path itself or a child of the input directory path.
-    private List<FileStatus> fileStatuses = new ArrayList<>(LISTING_PAGE_SIZE);
-    // _subDirStatuses_ maintains a list of sub-dirs of the input directory
-    // path.
-    private Map<Path, FileStatus> subDirStatuses =
-        new HashMap<>(LISTING_PAGE_SIZE);
-    private Path f; // the input path
-
-    ListStatusIterator(Path f) throws IOException {
-      super(f);
-      this.f = f;
-    }
-
-    /**
-     * Add the key to the listStatus result if the key corresponds to the
-     * input path or is an immediate child of the input path.
-     *
-     * @param key key to be processed
-     * @return always returns true
-     * @throws IOException
-     */
-    @Override
-    boolean processKey(String key) throws IOException {
-      Path keyPath = new Path(OZONE_URI_DELIMITER + key);
-      if (key.equals(getPathKey())) {
-        if (pathIsDirectory()) {
-          // if input path is a directory, we add the sub-directories and
-          // files under this directory.
-          return true;
-        } else {
-          addFileStatus(keyPath);
-          return true;
-        }
-      }
-      // Left with only subkeys now
-      // We add only the immediate child files and sub-dirs i.e. we go only
-      // upto one level down the directory tree structure.
-      if (pathToKey(keyPath.getParent()).equals(pathToKey(f))) {
-        // This key is an immediate child. Can be file or directory
-        if (key.endsWith(OZONE_URI_DELIMITER)) {
-          // Key is a directory
-          addSubDirStatus(keyPath);
-        } else {
-          addFileStatus(keyPath);
-        }
-      } else {
-        // This key is not the immediate child of the input directory. So we
-        // traverse the parent tree structure of this key until we get the
-        // immediate child of the input directory.
-        Path immediateChildPath = getImmediateChildPath(keyPath.getParent());
-        if (immediateChildPath != null) {
-          addSubDirStatus(immediateChildPath);
-        }
-      }
-      return true;
-    }
-
-    /**
-     * Adds the FileStatus of keyPath to final result of listStatus.
-     *
-     * @param filePath path to the file
-     * @throws FileNotFoundException
-     */
-    void addFileStatus(Path filePath) throws IOException {
-      fileStatuses.add(getFileStatus(filePath));
-    }
-
-    /**
-     * Adds the FileStatus of the subdir to final result of listStatus, if not
-     * already included.
-     *
-     * @param dirPath path to the dir
-     * @throws FileNotFoundException
-     */
-    void addSubDirStatus(Path dirPath) throws IOException {
-      // Check if subdir path is already included in statuses.
-      if (!subDirStatuses.containsKey(dirPath)) {
-        subDirStatuses.put(dirPath, getFileStatus(dirPath));
-      }
-    }
-
-    /**
-     * Traverse the parent directory structure of keyPath to determine the
-     * which parent/ grand-parent/.. is the immediate child of the input path f.
-     *
-     * @param keyPath path whose parent directory structure should be traversed.
-     * @return immediate child path of the input path f.
-     */
-    Path getImmediateChildPath(Path keyPath) {
-      Path path = keyPath;
-      Path parent = path.getParent();
-      while (parent != null) {
-        if (pathToKey(parent).equals(pathToKey(f))) {
-          return path;
-        }
-        path = parent;
-        parent = path.getParent();
-      }
-      return null;
-    }
-
-    /**
-     * Return the result of listStatus operation. If the input path is a
-     * file, return the status for only that file. If the input path is a
-     * directory, return the statuses for all the child files and sub-dirs.
-     */
-    FileStatus[] getStatuses() {
-      List<FileStatus> result = Stream.concat(
-          fileStatuses.stream(), subDirStatuses.values().stream())
-          .collect(Collectors.toList());
-      return result.toArray(new FileStatus[result.size()]);
-    }
-  }
-
   @Override
   public FileStatus[] listStatus(Path f) throws IOException {
     incrementCounter(Statistic.INVOCATION_LIST_STATUS);
     statistics.incrementReadOps(1);
     LOG.trace("listStatus() path:{}", f);
-    ListStatusIterator iterator = new ListStatusIterator(f);
-    iterator.iterate();
-    return iterator.getStatuses();
+    int numEntries = LISTING_PAGE_SIZE;
+    LinkedList<OzoneFileStatus> statuses = new LinkedList<>();
+    List<OzoneFileStatus> tmpStatusList;
+    String startKey = "";
+
+    do {
+      tmpStatusList =
+          adapter.listStatus(pathToKey(f), false, startKey, numEntries);
+      if (!tmpStatusList.isEmpty()) {
+        if (startKey.isEmpty()) {
+          statuses.addAll(tmpStatusList);
+        } else {
+          statuses.addAll(tmpStatusList.subList(1, tmpStatusList.size()));
+        }
+        startKey = pathToKey(statuses.getLast().getPath());
+      }
+      // listStatus returns entries numEntries in size if available.
+      // Any lesser number of entries indicate that the required entries have
+      // exhausted.
+    } while (tmpStatusList.size() == numEntries);
+
+    for (OzoneFileStatus status : statuses) {
+      status.makeQualified(uri, status.getPath().makeQualified(uri, workingDir),
+          getUsername(), getUsername());
+    }
+    return statuses.toArray(new FileStatus[0]);
   }
 
   @Override

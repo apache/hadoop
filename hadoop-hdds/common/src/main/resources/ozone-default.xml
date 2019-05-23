@@ -54,7 +54,7 @@
   </property>
   <property>
     <name>dfs.container.chunk.write.sync</name>
-    <value>true</value>
+    <value>false</value>
     <tag>OZONE, CONTAINER, MANAGEMENT</tag>
     <description>Determines whether the chunk writes in the container happen as
       sync I/0 or buffered I/O operation.
@@ -541,14 +541,6 @@
     </description>
   </property>
   <property>
-    <name>ozone.om.group.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default group permissions in Ozone OM.
-    </description>
-  </property>
-  <property>
     <name>ozone.om.handler.count.key</name>
     <value>20</value>
     <tag>OM, PERFORMANCE</tag>
@@ -638,14 +630,6 @@
       defined only for operational purposes. Only an administrator can create a
       volume, once a volume is created there are no restrictions on the number
       of buckets or keys inside each bucket a user can create.
-    </description>
-  </property>
-  <property>
-    <name>ozone.om.user.rights</name>
-    <value>READ_WRITE</value>
-    <tag>OM, SECURITY</tag>
-    <description>
-      Default user permissions used in OM.
     </description>
   </property>
   <property>
@@ -1052,7 +1036,7 @@
   </property>
   <property>
     <name>ozone.scm.stale.node.interval</name>
-    <value>90s</value>
+    <value>5m</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       The interval for stale node flagging. Please
@@ -1291,7 +1275,7 @@
   </property>
   <property>
     <name>ozone.scm.pipeline.destroy.timeout</name>
-    <value>300s</value>
+    <value>66s</value>
     <tag>OZONE, SCM, PIPELINE</tag>
     <description>
       Once a pipeline is closed, SCM should wait for the above configured time
@@ -1809,7 +1793,7 @@
       assumed.
     </description>
   </property>
-  
+
   <property>
     <name>hdds.block.token.enabled</name>
     <value>false</value>

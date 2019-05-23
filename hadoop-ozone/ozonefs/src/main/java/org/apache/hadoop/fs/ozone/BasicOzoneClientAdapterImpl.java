@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -251,6 +252,19 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
   public Iterator<BasicKeyInfo> listKeys(String pathKey) {
     incrementCounter(Statistic.OBJECTS_LIST);
     return new IteratorAdapter(bucket.listKeys(pathKey));
+  }
+
+  public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries) throws IOException {
+    try {
+      incrementCounter(Statistic.OBJECTS_LIST);
+      return bucket.listStatus(keyName, recursive, startKey, numEntries);
+    } catch (OMException e) {
+      if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
+        throw new FileNotFoundException(e.getMessage());
+      }
+      throw e;
+    }
   }
 
   @Override

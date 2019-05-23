@@ -282,6 +282,7 @@
   <description>The max timeout before receiving remote task's first heartbeat.
     This parameter is in order to avoid waiting for the container
     to start indefinitely, which made task stuck in the NEW state.
+    A value of 0 disables the timeout.
   </description>
 </property>
 

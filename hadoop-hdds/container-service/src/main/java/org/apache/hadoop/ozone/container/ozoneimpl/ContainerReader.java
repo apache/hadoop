@@ -41,7 +41,7 @@ import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.KeyValueContainerUtil;
 import org.apache.hadoop.utils.MetadataKeyFilters;
-import org.apache.hadoop.utils.MetadataStore;
+import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,33 +191,36 @@ public class ContainerReader implements Runnable {
         KeyValueContainerUtil.parseKVContainerData(kvContainerData, config);
         KeyValueContainer kvContainer = new KeyValueContainer(
             kvContainerData, config);
-        MetadataStore containerDB = BlockUtils.getDB(kvContainerData, config);
-        MetadataKeyFilters.KeyPrefixFilter filter =
-            new MetadataKeyFilters.KeyPrefixFilter()
-                .addFilter(OzoneConsts.DELETING_KEY_PREFIX);
-        int numPendingDeletionBlocks =
-            containerDB.getSequentialRangeKVs(null, Integer.MAX_VALUE, filter)
-                .size();
-        kvContainerData.incrPendingDeletionBlocks(numPendingDeletionBlocks);
-        byte[] delTxnId = containerDB.get(
-            DFSUtil.string2Bytes(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX));
-        if (delTxnId != null) {
-          kvContainerData
-              .updateDeleteTransactionId(Longs.fromByteArray(delTxnId));
-        }
-        // sets the BlockCommitSequenceId.
-        byte[] bcsId = containerDB.get(
-            DFSUtil.string2Bytes(OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
-        if (bcsId != null) {
-          kvContainerData
-              .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
-        }
-        if (kvContainer.getContainerState()
+        try(ReferenceCountedDB containerDB = BlockUtils.getDB(kvContainerData,
+            config)) {
+          MetadataKeyFilters.KeyPrefixFilter filter =
+              new MetadataKeyFilters.KeyPrefixFilter()
+                  .addFilter(OzoneConsts.DELETING_KEY_PREFIX);
+          int numPendingDeletionBlocks =
+              containerDB.getStore().getSequentialRangeKVs(null,
+                  Integer.MAX_VALUE, filter)
+                  .size();
+          kvContainerData.incrPendingDeletionBlocks(numPendingDeletionBlocks);
+          byte[] delTxnId = containerDB.getStore().get(
+              DFSUtil.string2Bytes(OzoneConsts.DELETE_TRANSACTION_KEY_PREFIX));
+          if (delTxnId != null) {
+            kvContainerData
+                .updateDeleteTransactionId(Longs.fromByteArray(delTxnId));
+          }
+          // sets the BlockCommitSequenceId.
+          byte[] bcsId = containerDB.getStore().get(DFSUtil.string2Bytes(
+              OzoneConsts.BLOCK_COMMIT_SEQUENCE_ID_PREFIX));
+          if (bcsId != null) {
+            kvContainerData
+                .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
+          }
+          if (kvContainer.getContainerState()
             == ContainerProtos.ContainerDataProto.State.OPEN) {
-          // commitSpace for Open Containers relies on usedBytes
-          initializeUsedBytes(kvContainer);
+            // commitSpace for Open Containers relies on usedBytes
+            initializeUsedBytes(kvContainer);
+          }
+          containerSet.addContainer(kvContainer);
         }
-        containerSet.addContainer(kvContainer);
       } else {
         throw new StorageContainerException("Container File is corrupted. " +
             "ContainerType is KeyValueContainer but cast to " +

@@ -30,7 +30,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
+import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * MetadataStore unit test for {@link LocalMetadataStore}.
@@ -168,8 +170,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
 
   private static void populateEntry(Cache<Path, LocalMetadataEntry> cache,
       Path path) {
-    FileStatus fileStatus = new FileStatus(0, true, 0, 0, 0, path);
-    cache.put(path, new LocalMetadataEntry(new PathMetadata(fileStatus)));
+    S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.UNKNOWN, path, null);
+    cache.put(path, new LocalMetadataEntry(new PathMetadata(s3aStatus)));
   }
 
   private static long sizeOfMap(Cache<Path, LocalMetadataEntry> cache) {
@@ -196,9 +198,8 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  protected void verifyDirStatus(FileStatus status) {
-    S3ATestUtils.verifyDirStatus(status, REPLICATION, getModTime(),
-        getAccessTime(), OWNER, GROUP, PERMISSION);
+  protected void verifyDirStatus(S3AFileStatus status) {
+    S3ATestUtils.verifyDirStatus(status, REPLICATION, OWNER);
   }
 
 }

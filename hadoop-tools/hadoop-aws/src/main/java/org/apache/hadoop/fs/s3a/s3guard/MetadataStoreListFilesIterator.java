@@ -33,9 +33,9 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 
 /**
  * {@code MetadataStoreListFilesIterator} is a {@link RemoteIterator} that
@@ -85,14 +85,14 @@ import org.apache.hadoop.fs.RemoteIterator;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class MetadataStoreListFilesIterator implements
-    RemoteIterator<FileStatus> {
+    RemoteIterator<S3AFileStatus> {
   public static final Logger LOG = LoggerFactory.getLogger(
       MetadataStoreListFilesIterator.class);
 
   private final boolean allowAuthoritative;
   private final MetadataStore metadataStore;
   private final Set<Path> tombstones = new HashSet<>();
-  private Iterator<FileStatus> leafNodesIterator = null;
+  private Iterator<S3AFileStatus> leafNodesIterator = null;
 
   public MetadataStoreListFilesIterator(MetadataStore ms, PathMetadata meta,
       boolean allowAuthoritative) throws IOException {
@@ -104,7 +104,7 @@ public class MetadataStoreListFilesIterator implements
 
   private void prefetch(PathMetadata meta) throws IOException {
     final Queue<PathMetadata> queue = new LinkedList<>();
-    final Collection<FileStatus> leafNodes = new ArrayList<>();
+    final Collection<S3AFileStatus> leafNodes = new ArrayList<>();
 
     if (meta != null) {
       final Path path = meta.getFileStatus().getPath();
@@ -121,7 +121,7 @@ public class MetadataStoreListFilesIterator implements
 
     while(!queue.isEmpty()) {
       PathMetadata nextMetadata = queue.poll();
-      FileStatus nextStatus = nextMetadata.getFileStatus();
+      S3AFileStatus nextStatus = nextMetadata.getFileStatus();
       if (nextStatus.isFile()) {
         // All files are leaf nodes by definition
         leafNodes.add(nextStatus);
@@ -159,7 +159,7 @@ public class MetadataStoreListFilesIterator implements
   }
 
   @Override
-  public FileStatus next() {
+  public S3AFileStatus next() {
     return leafNodesIterator.next();
   }
 

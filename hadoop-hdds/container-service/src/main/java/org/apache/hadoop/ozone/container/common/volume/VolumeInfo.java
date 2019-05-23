@@ -39,7 +39,8 @@ public final class VolumeInfo {
   private final StorageType storageType;
 
   // Space usage calculator
-  private VolumeUsage usage;
+  private final VolumeUsage usage;
+
   // Capacity configured. This is useful when we want to
   // limit the visible capacity for tests. If negative, then we just
   // query from the filesystem.
@@ -97,36 +98,21 @@ public final class VolumeInfo {
 
   public long getCapacity() throws IOException {
     if (configuredCapacity < 0) {
-      if (usage == null) {
-        throw new IOException("Volume Usage thread is not running. This error" +
-            " is usually seen during DataNode shutdown.");
-      }
       return usage.getCapacity();
     }
     return configuredCapacity;
   }
 
   public long getAvailable() throws IOException {
-    if (usage == null) {
-      throw new IOException("Volume Usage thread is not running. This error " +
-          "is usually seen during DataNode shutdown.");
-    }
     return usage.getAvailable();
   }
 
   public long getScmUsed() throws IOException {
-    if (usage == null) {
-      throw new IOException("Volume Usage thread is not running. This error " +
-          "is usually seen during DataNode shutdown.");
-    }
     return usage.getScmUsed();
   }
 
   protected void shutdownUsageThread() {
-    if (usage != null) {
-      usage.shutdown();
-    }
-    usage = null;
+    usage.shutdown();
   }
 
   public String getRootDir() {

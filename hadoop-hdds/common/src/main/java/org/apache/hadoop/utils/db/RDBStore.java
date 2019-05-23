@@ -298,4 +298,8 @@ public class RDBStore implements DBStore {
   public File getDbLocation() {
     return dbLocation;
   }
+
+  public CodecRegistry getCodecRegistry() {
+    return codecRegistry;
+  }
 }

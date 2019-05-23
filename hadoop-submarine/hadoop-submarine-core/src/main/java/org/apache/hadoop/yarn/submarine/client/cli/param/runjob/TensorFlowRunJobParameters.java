@@ -27,7 +27,7 @@ import org.apache.hadoop.yarn.submarine.client.cli.param.ParametersHolder;
 import org.apache.hadoop.yarn.submarine.client.cli.runjob.RoleParameters;
 import org.apache.hadoop.yarn.submarine.common.ClientContext;
 import org.apache.hadoop.yarn.submarine.common.api.TensorFlowRole;
-import org.apache.hadoop.yarn.util.resource.ResourceUtils;
+import org.apache.hadoop.yarn.submarine.common.resource.ResourceUtils;
 
 import java.io.IOException;
 import java.util.List;
@@ -127,8 +127,7 @@ public class TensorFlowRunJobParameters extends RunJobParameters {
       if (psResourceStr == null) {
         throw new ParseException("--" + CliConstants.PS_RES + " is absent.");
       }
-      return ResourceUtils.createResourceFromString(psResourceStr,
-          clientContext.getOrCreateYarnClient().getResourceTypeInfo());
+      return ResourceUtils.createResourceFromString(psResourceStr);
     }
     return null;
   }
@@ -151,9 +150,8 @@ public class TensorFlowRunJobParameters extends RunJobParameters {
     if (tensorboardResourceStr == null || tensorboardResourceStr.isEmpty()) {
       tensorboardResourceStr = CliConstants.TENSORBOARD_DEFAULT_RESOURCES;
     }
-    Resource tensorboardResource =
-        ResourceUtils.createResourceFromString(tensorboardResourceStr,
-            clientContext.getOrCreateYarnClient().getResourceTypeInfo());
+    Resource tensorboardResource = ResourceUtils.createResourceFromString(
+            tensorboardResourceStr);
     String tensorboardDockerImage =
         parametersHolder.getOptionValue(CliConstants.TENSORBOARD_DOCKER_IMAGE);
     return new RoleParameters(TensorFlowRole.TENSORBOARD, 1, null,

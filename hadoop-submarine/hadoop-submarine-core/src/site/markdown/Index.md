@@ -12,7 +12,8 @@
   limitations under the License. See accompanying LICENSE file.
 -->
 
-Submarine is a project which allows infra engineer / data scientist to run *unmodified* Tensorflow programs on YARN.
+Submarine is a project which allows infra engineer / data scientist to run
+*unmodified* Tensorflow or PyTorch programs on YARN or Kubernetes.
 
 Goals of Submarine:
 
@@ -42,7 +43,5 @@ Click below contents if you want to understand more.
 - [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
 
 - [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
-
-- [Developer guide](DeveloperGuide.html)
 
 - [Installation guides](HowToInstall.html)

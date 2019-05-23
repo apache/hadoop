@@ -44,12 +44,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.MultipartUtils;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.auth.delegation.S3ADelegationTokens;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -703,7 +703,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         if (dirCache.contains(parent)) {
           return;
         }
-        FileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
+        S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());
         getStore().put(new PathMetadata(dir));
         dirCache.add(parent);
@@ -718,13 +718,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
-      RemoteIterator<LocatedFileStatus> it = getFilesystem()
+      RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
 
       while (it.hasNext()) {
-        LocatedFileStatus located = it.next();
-        FileStatus child;
+        S3ALocatedFileStatus located = it.next();
+        S3AFileStatus child;
         if (located.isDirectory()) {
           child = DynamoDBMetadataStore.makeDirStatus(located.getPath(),
               located.getOwner());
@@ -734,7 +734,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getModificationTime(),
               located.getPath(),
               located.getBlockSize(),
-              located.getOwner());
+              located.getOwner(),
+              located.getETag(),
+              located.getVersionId());
         }
         putParentsIfNotPresent(child);
         getStore().put(new PathMetadata(child));
@@ -761,7 +763,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         filePath = "/";
       }
       Path path = new Path(filePath);
-      FileStatus status = getFilesystem().getFileStatus(path);
+      S3AFileStatus status = (S3AFileStatus) getFilesystem()
+          .getFileStatus(path);
 
       try {
         initMetadataStore(false);
@@ -1163,7 +1166,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
           magic ? "is" : "is not");
 
       println(out, "%nS3A Client");
-
+      printOption(out, "\tSigning Algorithm", SIGNING_ALGORITHM, "(unset)");
       String endpoint = conf.getTrimmed(ENDPOINT, "");
       println(out, "\tEndpoint: %s=%s",
           ENDPOINT,
@@ -1172,6 +1175,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
           printOption(out, "\tEncryption", SERVER_SIDE_ENCRYPTION_ALGORITHM,
               "none");
       printOption(out, "\tInput seek policy", INPUT_FADVISE, INPUT_FADV_NORMAL);
+      printOption(out, "\tChange Detection Source", CHANGE_DETECT_SOURCE,
+          CHANGE_DETECT_SOURCE_DEFAULT);
+      printOption(out, "\tChange Detection Mode", CHANGE_DETECT_MODE,
+          CHANGE_DETECT_MODE_DEFAULT);
 
       // look at delegation token support
       if (fs.getDelegationTokens().isPresent()) {

@@ -44,8 +44,6 @@ import org.apache.hadoop.hdds.tracing.StringCodec;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.OzoneAcl.OzoneACLRights;
-import org.apache.hadoop.ozone.OzoneAcl.OzoneACLType;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -59,6 +57,8 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.web.ozShell.OzoneShell;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -744,8 +744,9 @@ public class TestOzoneShell {
 
     OzoneAcl acl = bucket.getAcls().get(aclSize);
     assertTrue(acl.getName().equals("frodo")
-        && acl.getType() == OzoneACLType.USER
-        && acl.getRights()== OzoneACLRights.READ_WRITE);
+        && acl.getType() == ACLIdentityType.USER
+        && acl.getRights().contains(ACLType.READ)
+        && acl.getRights().contains(ACLType.WRITE));
 
     args = new String[] {"bucket", "update",
         url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
@@ -756,8 +757,8 @@ public class TestOzoneShell {
     acl = bucket.getAcls().get(aclSize);
     assertEquals(1 + aclSize, bucket.getAcls().size());
     assertTrue(acl.getName().equals("samwise")
-        && acl.getType() == OzoneACLType.GROUP
-        && acl.getRights()== OzoneACLRights.READ);
+        && acl.getType() == ACLIdentityType.GROUP
+        && acl.getRights().contains(ACLType.READ));
 
     // test update bucket for a non-exist bucket
     args = new String[] {"bucket", "update",

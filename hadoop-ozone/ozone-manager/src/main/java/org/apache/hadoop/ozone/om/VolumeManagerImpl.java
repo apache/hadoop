@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
@@ -484,7 +485,8 @@ public class VolumeManagerImpl implements VolumeManager {
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Check volume access failed for volume:{} user:{} rights:{}",
-            volume, userAcl.getName(), userAcl.getRights(), ex);
+            volume, userAcl.getName(),
+            StringUtils.join(userAcl.getRightsList(), ","), ex);
       }
       throw ex;
     } finally {

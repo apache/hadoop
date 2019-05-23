@@ -24,6 +24,7 @@ import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Res
 import static org.apache.hadoop.ozone.container.common.impl.ContainerData.CHARSET_ENCODING;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
@@ -50,6 +52,9 @@ import com.google.common.base.Preconditions;
  * A set of helper functions to create proper responses.
  */
 public final class ContainerUtils {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ContainerUtils.class);
 
   private ContainerUtils() {
     //never constructed.
@@ -198,7 +203,7 @@ public final class ContainerUtils {
         throw new IOException("Unable to overwrite the datanode ID file.");
       }
     } else {
-      if(!path.getParentFile().exists() &&
+      if (!path.getParentFile().exists() &&
           !path.getParentFile().mkdirs()) {
         throw new IOException("Unable to create datanode ID directories.");
       }
@@ -221,8 +226,16 @@ public final class ContainerUtils {
     try {
       return DatanodeIdYaml.readDatanodeIdFile(path);
     } catch (IOException e) {
-      throw new IOException("Failed to parse DatanodeDetails from "
-          + path.getAbsolutePath(), e);
+      LOG.warn("Error loading DatanodeDetails yaml from " +
+          path.getAbsolutePath(), e);
+      // Try to load as protobuf before giving up
+      try (FileInputStream in = new FileInputStream(path)) {
+        return DatanodeDetails.getFromProtoBuf(
+            HddsProtos.DatanodeDetailsProto.parseFrom(in));
+      } catch (IOException io) {
+        throw new IOException("Failed to parse DatanodeDetails from "
+            + path.getAbsolutePath(), io);
+      }
     }
   }
 
