@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -68,9 +70,11 @@ public class AggregatedLogDeletionService extends AbstractService {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
       this.suffix = LogAggregationUtils.getBucketSuffix();
-      this.remoteRootLogDir =
-        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
+      LogAggregationFileControllerFactory factory =
+          new LogAggregationFileControllerFactory(conf);
+      LogAggregationFileController fileController =
+          factory.getFileControllerForWrite();
+      this.remoteRootLogDir = fileController.getRemoteRootLogDir();
       this.rmClient = rmClient;
     }
     
