@@ -2419,8 +2419,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public void deleteBucket(String volume, String bucket) throws IOException {
-    checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.WRITE, volume,
-        bucket, null);
+    if (isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.WRITE, volume,
+          bucket, null);
+    }
     Map<String, String> auditMap = buildAuditMap(volume);
     auditMap.put(OzoneConsts.BUCKET, bucket);
     try {
