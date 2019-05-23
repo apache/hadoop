@@ -37,11 +37,12 @@
     \__________________________________________________________/ (_)
 ```
 
-Submarine is a project which allows infra engineer / data scientist to run *unmodified* Tensorflow programs on YARN.
+Submarine is a project which allows infra engineer / data scientist to run
+*unmodified* Tensorflow or PyTorch programs on YARN or Kubernetes.
 
 Goals of Submarine:
 - It allows jobs easy access data/models in HDFS and other storages.
-- Can launch services to serve Tensorflow/MXNet models.
+- Can launch services to serve Tensorflow/PyTorch models.
 - Support run distributed Tensorflow jobs with simple configs.
 - Support run user-specified Docker images.
 - Support specify GPU and other resources.
@@ -51,5 +52,3 @@ Goals of Submarine:
 Please jump to [QuickStart](src/site/markdown/QuickStart.md) guide to quickly understand how to use this framework.
 
 Please jump to [Examples](src/site/markdown/Examples.md) to try other examples like running Distributed Tensorflow Training for CIFAR 10.
-
-If you're a developer, please find [Developer](src/site/markdown/DeveloperGuide.md) guide for more details.
