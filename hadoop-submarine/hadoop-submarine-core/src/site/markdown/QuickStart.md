@@ -18,7 +18,7 @@
 
 Must:
 
-- Apache Hadoop 3.1.x, YARN service enabled.
+- Apache Hadoop version newer than 2.7.3
 
 Optional:
 
@@ -36,6 +36,20 @@ For more details, please refer to:
 - [How to write Dockerfile for Submarine TensorFlow jobs](WriteDockerfileTF.html)
 
 - [How to write Dockerfile for Submarine PyTorch jobs](WriteDockerfilePT.html)
+
+## Submarine runtimes
+After submarine 0.2.0, it supports two runtimes which are YARN native service
+ runtime and Linkedin's TonY runtime. Each runtime can support both Tensorflow
+ and Pytorch framework. And the user don't need to worry about the usage
+ because the two runtime implements the same interface.
+
+To use the TonY runtime, please set below value in the submarine configuration.
+
+|Configuration Name | Description |
+|:---- |:---- |
+| `submarine.runtime.class` | org.apache.hadoop.yarn.submarine.runtimes.tony.TonyRuntimeFactory |
+
+For more details of TonY runtime, please check [TonY runtime guide](TonYRuntimeGuide.html)
 
 ## Run jobs
 
@@ -164,7 +178,8 @@ See below screenshot:
 
 ![alt text](./images/tensorboard-service.png "Tensorboard service")
 
-If there is no hadoop client, we can also use the java command and the uber jar, hadoop-submarine-all-*.jar, to submit the job.
+After v0.2.0, if there is no hadoop client, we can also use the java command
+and the uber jar, hadoop-submarine-all-*.jar, to submit the job.
 
 ```
 java -cp /path-to/hadoop-conf:/path-to/hadoop-submarine-all-*.jar \
