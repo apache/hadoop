@@ -247,16 +247,16 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
- --framework tensorflow \
  --num_workers 2 \
  --worker_resources memory=3G,vcores=2 \
  --num_ps 2 \
  --ps_resources memory=3G,vcores=2 \
  --worker_launch_cmd "venv.zip/venv/bin/python mnist_distributed.py" \
  --ps_launch_cmd "venv.zip/venv/bin/python mnist_distributed.py" \
- --insecure
+ --insecure \
  --conf tony.containers.resources=PATH_TO_VENV_YOU_CREATED/venv.zip#archive,PATH_TO_MNIST_EXAMPLE/mnist_distributed.py, \
-PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar
+PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar \
+--conf tony.application.framework=pytorch
 
 ```
 You should then be able to see links and status of the jobs from command line:
@@ -284,7 +284,6 @@ CLASSPATH=$(hadoop classpath --glob): \
 /home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
- --framework tensorflow \
  --docker_image hadoopsubmarine/tf-1.8.0-cpu:0.0.3 \
  --input_path hdfs://pi-aw:9000/dataset/cifar-10-data \
  --worker_resources memory=3G,vcores=2 \
@@ -297,5 +296,6 @@ java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --env HADOOP_COMMON_HOME=/hadoop-3.1.0 \
  --env HADOOP_HDFS_HOME=/hadoop-3.1.0 \
  --env HADOOP_CONF_DIR=/hadoop-3.1.0/etc/hadoop \
- --conf tony.containers.resources=--conf tony.containers.resources=/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar
+ --conf tony.containers.resources=PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar \
+ --conf tony.application.framework=pytorch
 ```
