@@ -22,6 +22,8 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.net.NetConstants;
+import org.apache.hadoop.hdds.scm.net.NodeImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -35,9 +37,9 @@ import java.util.UUID;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class DatanodeDetails implements Comparable<DatanodeDetails> {
-
-  /**
+public class DatanodeDetails extends NodeImpl implements
+    Comparable<DatanodeDetails> {
+/**
    * DataNode's unique identifier in the cluster.
    */
   private final UUID uuid;
@@ -47,18 +49,19 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
   private List<Port> ports;
   private String certSerialId;
 
-
   /**
    * Constructs DatanodeDetails instance. DatanodeDetails.Builder is used
    * for instantiating DatanodeDetails.
    * @param uuid DataNode's UUID
    * @param ipAddress IP Address of this DataNode
    * @param hostName DataNode's hostname
+   * @param networkLocation DataNode's network location path
    * @param ports Ports used by the DataNode
    * @param certSerialId serial id from SCM issued certificate.
    */
   private DatanodeDetails(String uuid, String ipAddress, String hostName,
-      List<Port> ports, String certSerialId) {
+      String networkLocation, List<Port> ports, String certSerialId) {
+    super(hostName, networkLocation, NetConstants.NODE_COST_DEFAULT);
     this.uuid = UUID.fromString(uuid);
     this.ipAddress = ipAddress;
     this.hostName = hostName;
@@ -67,6 +70,8 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
   }
 
   protected DatanodeDetails(DatanodeDetails datanodeDetails) {
+    super(datanodeDetails.getHostName(), datanodeDetails.getNetworkLocation(),
+        datanodeDetails.getCost());
     this.uuid = datanodeDetails.uuid;
     this.ipAddress = datanodeDetails.ipAddress;
     this.hostName = datanodeDetails.hostName;
@@ -223,6 +228,8 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
         ipAddress +
         ", host: " +
         hostName +
+        ", networkLocation: " +
+        getNetworkLocation() +
         ", certSerialId: " + certSerialId +
         "}";
   }
@@ -259,6 +266,7 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     private String id;
     private String ipAddress;
     private String hostName;
+    private String networkLocation;
     private List<Port> ports;
     private String certSerialId;
 
@@ -304,6 +312,17 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
     }
 
     /**
+     * Sets the network location of DataNode.
+     *
+     * @param loc location
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setNetworkLocation(String loc) {
+      this.networkLocation = loc;
+      return this;
+    }
+
+    /**
      * Adds a DataNode Port.
      *
      * @param port DataNode port
@@ -334,9 +353,12 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
      */
     public DatanodeDetails build() {
       Preconditions.checkNotNull(id);
-      return new DatanodeDetails(id, ipAddress, hostName, ports, certSerialId);
+      if (networkLocation == null) {
+        networkLocation = NetConstants.DEFAULT_RACK;
+      }
+      return new DatanodeDetails(id, ipAddress, hostName, networkLocation,
+          ports, certSerialId);
     }
-
   }
 
   /**
@@ -437,5 +459,4 @@ public class DatanodeDetails implements Comparable<DatanodeDetails> {
   public void setCertSerialId(String certSerialId) {
     this.certSerialId = certSerialId;
   }
-
 }
