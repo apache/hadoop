@@ -24,6 +24,8 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationIntrospector;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -456,42 +458,75 @@ public class EntityGroupFSTimelineStore extends CompositeService
    *                dirpath should be a directory that contains a set of
    *                application log directories. The cleaner method will not
    *                work if the given dirpath itself is an application log dir.
-   * @param fs
    * @param retainMillis
    * @throws IOException
    */
   @InterfaceAudience.Private
   @VisibleForTesting
-  void cleanLogs(Path dirpath, FileSystem fs, long retainMillis)
+  void cleanLogs(Path dirpath, long retainMillis)
       throws IOException {
+    long now = Time.now();
+    RemoteIterator<FileStatus> iter = list(dirpath);
+    while (iter.hasNext()) {
+      FileStatus stat = iter.next();
+      Path clusterTimeStampPath = stat.getPath();
+      if (isValidClusterTimeStampDir(clusterTimeStampPath)) {
+        MutableBoolean appLogDirPresent = new MutableBoolean(false);
+        cleanAppLogDir(clusterTimeStampPath, retainMillis, appLogDirPresent);
+        if (appLogDirPresent.isFalse() &&
+            (now - stat.getModificationTime() > retainMillis)) {
+          deleteDir(clusterTimeStampPath);
+        }
+      }
+    }
+  }
+
+
+  private void cleanAppLogDir(Path dirpath, long retainMillis,
+      MutableBoolean appLogDirPresent) throws IOException {
     long now = Time.now();
     // Depth first search from root directory for all application log dirs
     RemoteIterator<FileStatus> iter = list(dirpath);
     while (iter.hasNext()) {
       FileStatus stat = iter.next();
+      Path childPath = stat.getPath();
       if (stat.isDirectory()) {
         // If current is an application log dir, decide if we need to remove it
         // and remove if necessary.
         // Otherwise, keep iterating into it.
-        ApplicationId appId = parseApplicationId(dirpath.getName());
+        ApplicationId appId = parseApplicationId(childPath.getName());
         if (appId != null) { // Application log dir
-          if (shouldCleanAppLogDir(dirpath, now, fs, retainMillis)) {
-            try {
-              LOG.info("Deleting {}", dirpath);
-              if (!fs.delete(dirpath, true)) {
-                LOG.error("Unable to remove " + dirpath);
-              }
-              metrics.incrLogsDirsCleaned();
-            } catch (IOException e) {
-              LOG.error("Unable to remove " + dirpath, e);
-            }
+          appLogDirPresent.setTrue();
+          if (shouldCleanAppLogDir(childPath, now, fs, retainMillis)) {
+            deleteDir(childPath);
           }
         } else { // Keep cleaning inside
-          cleanLogs(stat.getPath(), fs, retainMillis);
+          cleanAppLogDir(childPath, retainMillis, appLogDirPresent);
         }
       }
     }
   }
+
+  private void deleteDir(Path path) {
+    try {
+      LOG.info("Deleting {}", path);
+      if (fs.delete(path, true)) {
+        metrics.incrLogsDirsCleaned();
+      } else {
+        LOG.error("Unable to remove {}", path);
+      }
+    } catch (IOException e) {
+      LOG.error("Unable to remove {}", path, e);
+    }
+  }
+
+  private boolean isValidClusterTimeStampDir(Path clusterTimeStampPath)
+      throws IOException {
+    FileStatus stat = fs.getFileStatus(clusterTimeStampPath);
+    return stat.isDirectory() &&
+        StringUtils.isNumeric(clusterTimeStampPath.getName());
+  }
+
 
   private static boolean shouldCleanAppLogDir(Path appLogPath, long now,
       FileSystem fs, long logRetainMillis) throws IOException {
@@ -908,7 +943,7 @@ public class EntityGroupFSTimelineStore extends CompositeService
       LOG.debug("Cleaner starting");
       long startTime = Time.monotonicNow();
       try {
-        cleanLogs(doneRootPath, fs, logRetainMillis);
+        cleanLogs(doneRootPath, logRetainMillis);
       } catch (Exception e) {
         Throwable t = extract(e);
         if (t instanceof InterruptedException) {
