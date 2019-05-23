@@ -145,13 +145,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
   @Option(
       names = "--validateWrites",
-      description = "Specifies whether to validate keys after writtting"
+      description = "Specifies whether to validate keys after writing"
   )
   private boolean validateWrites = false;
 
   @Option(
       names = "--bufferSize",
-      description = "Specifies the buffer size while writting",
+      description = "Specifies the buffer size while writing",
       defaultValue = "4096"
   )
   private int bufferSize = 4096;
@@ -281,8 +281,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
       writeValidationSuccessCount = 0L;
       writeValidationFailureCount = 0L;
 
-      validationQueue =
-          new LinkedBlockingQueue<>();
+      validationQueue = new LinkedBlockingQueue<>();
       validator = new Thread(new Validator());
       validator.start();
       LOG.info("Data validation is enabled.");
