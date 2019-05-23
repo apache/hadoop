@@ -66,6 +66,7 @@ import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.proto.RaftProtos.RoleInfoProto;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
+import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -240,8 +241,9 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT_DEFAULT,
         StorageUnit.BYTES);
-    RaftServerConfigKeys.Log.setElementLimit(properties, logQueueNumElements);
-    RaftServerConfigKeys.Log.setByteLimit(properties, logQueueByteLimit);
+    RaftServerConfigKeys.Log.setQueueElementLimit(
+        properties, logQueueNumElements);
+    RaftServerConfigKeys.Log.setQueueByteLimit(properties, logQueueByteLimit);
 
     int numSyncRetries = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES,
@@ -253,6 +255,10 @@ public final class XceiverServerRatis extends XceiverServer {
     // Enable the StateMachineCaching
     RaftServerConfigKeys.Log.StateMachineData
         .setCachingEnabled(properties, true);
+
+    RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
+        false);
+
     return properties;
   }
 
@@ -595,6 +601,14 @@ public final class XceiverServerRatis extends XceiverServer {
   }
 
   void handleNoLeader(RaftGroup group, RoleInfoProto roleInfoProto) {
+    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+  }
+
+  void handleInstallSnapshotFromLeader(RaftGroup group,
+      RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+    LOG.warn("Install snapshot notification received from Leader with " +
+        "termIndex : " + firstTermIndexInLog +
+        ", terminating pipeline " + group.getGroupId());
     handlePipelineFailure(group.getGroupId(), roleInfoProto);
   }
 }

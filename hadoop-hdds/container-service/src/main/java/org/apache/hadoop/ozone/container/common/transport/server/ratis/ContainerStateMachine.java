@@ -668,6 +668,17 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   @Override
+  public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
+      RaftGroup group, RoleInfoProto roleInfoProto,
+      TermIndex firstTermIndexInLog) {
+    ratisServer.handleInstallSnapshotFromLeader(group, roleInfoProto,
+        firstTermIndexInLog);
+    final CompletableFuture<TermIndex> future = new CompletableFuture<>();
+    future.complete(firstTermIndexInLog);
+    return future;
+  }
+
+  @Override
   public void close() throws IOException {
     evictStateMachineCache();
   }
