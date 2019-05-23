@@ -96,7 +96,7 @@ public class TestReplicationManager {
     containerPlacementPolicy = Mockito.mock(ContainerPlacementPolicy.class);
 
     Mockito.when(containerPlacementPolicy.chooseDatanodes(
-        Mockito.anyListOf(DatanodeDetails.class),
+        Mockito.anyListOf(DatanodeDetails.class), null,
         Mockito.anyInt(), Mockito.anyLong()))
         .thenAnswer(invocation -> {
           int count = (int) invocation.getArguments()[1];

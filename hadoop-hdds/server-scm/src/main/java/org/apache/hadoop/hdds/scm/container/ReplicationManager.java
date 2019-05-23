@@ -484,7 +484,7 @@ public class ReplicationManager {
             .getReplicationFactor().getNumber();
         final int delta = replicationFactor - getReplicaCount(id, replicas);
         final List<DatanodeDetails> selectedDatanodes = containerPlacement
-            .chooseDatanodes(source, delta, container.getUsedBytes());
+            .chooseDatanodes(source, null, delta, container.getUsedBytes());
 
         LOG.info("Container {} is under replicated. Expected replica count" +
                 " is {}, but found {}.", id, replicationFactor,

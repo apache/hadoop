@@ -78,8 +78,8 @@ public class TestSCMContainerPlacementCapacity {
     for (int i = 0; i < 1000; i++) {
 
       //when
-      List<DatanodeDetails> datanodeDetails =
-          scmContainerPlacementRandom.chooseDatanodes(existingNodes, 1, 15);
+      List<DatanodeDetails> datanodeDetails = scmContainerPlacementRandom
+          .chooseDatanodes(existingNodes, null, 1, 15);
 
       //then
       Assert.assertEquals(1, datanodeDetails.size());
