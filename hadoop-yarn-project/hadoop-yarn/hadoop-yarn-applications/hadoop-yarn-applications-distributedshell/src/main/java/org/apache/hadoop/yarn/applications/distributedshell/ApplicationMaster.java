@@ -774,15 +774,25 @@ public class ApplicationMaster {
   }
 
   private void cleanup() {
-    Path dst = null;
     try {
-      FileSystem fs = FileSystem.get(conf);
-      dst = new Path(fs.getHomeDirectory(), getRelativePath(appName,
-          appId.toString(), ""));
-      fs.delete(dst, true);
-    } catch(IOException e) {
-      LOG.warn("Failed to remove application staging directory {}", dst);
+      appSubmitterUgi.doAs(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws IOException {
+          FileSystem fs = FileSystem.get(conf);
+          Path dst = new Path(getAppSubmitterHomeDir(),
+              getRelativePath(appName, appId.toString(), ""));
+          fs.delete(dst, true);
+          return null;
+        }
+      });
+    } catch(Exception e) {
+      LOG.warn("Failed to remove application staging directory", e);
     }
+  }
+
+  private Path getAppSubmitterHomeDir() {
+    return new Path("/user/" +
+        System.getenv(ApplicationConstants.Environment.USER.name()));
   }
 
   /**
@@ -1485,7 +1495,7 @@ public class ApplicationMaster {
             String relativePath =
                 getRelativePath(appName, appId.toString(), fileName);
             Path dst =
-                new Path(fs.getHomeDirectory(), relativePath);
+                new Path(getAppSubmitterHomeDir(), relativePath);
             FileStatus fileStatus = fs.getFileStatus(dst);
             LocalResource localRes = LocalResource.newInstance(
                 URL.fromURI(dst.toUri()),
