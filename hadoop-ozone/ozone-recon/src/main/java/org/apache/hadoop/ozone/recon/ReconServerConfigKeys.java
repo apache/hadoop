@@ -112,6 +112,10 @@ public final class ReconServerConfigKeys {
   public static final String OZONE_RECON_SQL_MAX_IDLE_CONNECTION_TEST_STMT =
       "ozone.recon.sql.db.conn.idle.test";
 
+  public static final String OZONE_RECON_TASK_THREAD_COUNT_KEY =
+      "ozone.recon.task.thread.count";
+  public static final int OZONE_RECON_TASK_THREAD_COUNT_DEFAULT = 1;
+
   /**
    * Private constructor for utility class.
    */

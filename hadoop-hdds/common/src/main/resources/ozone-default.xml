@@ -2472,4 +2472,12 @@
       connections.
     </description>
   </property>
+  <property>
+    <name>ozone.recon.task.thread.count</name>
+    <value>1</value>
+    <tag>OZONE, RECON</tag>
+    <description>
+      The number of Recon Tasks that are waiting on updates from OM.
+    </description>
+  </property>
 </configuration>
