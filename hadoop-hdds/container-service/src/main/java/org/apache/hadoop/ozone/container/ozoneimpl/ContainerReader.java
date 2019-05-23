@@ -215,7 +215,7 @@ public class ContainerReader implements Runnable {
                 .updateBlockCommitSequenceId(Longs.fromByteArray(bcsId));
           }
           if (kvContainer.getContainerState()
-            == ContainerProtos.ContainerDataProto.State.OPEN) {
+              == ContainerProtos.ContainerDataProto.State.OPEN) {
             // commitSpace for Open Containers relies on usedBytes
             initializeUsedBytes(kvContainer);
           }
