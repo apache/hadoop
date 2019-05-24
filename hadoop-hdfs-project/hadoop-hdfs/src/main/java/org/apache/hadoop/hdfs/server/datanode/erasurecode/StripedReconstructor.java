@@ -275,8 +275,4 @@ abstract class StripedReconstructor {
   DataNode getDatanode() {
     return datanode;
   }
-
-  public ErasureCodingWorker getErasureCodingWorker() {
-    return erasureCodingWorker;
-  }
 }
