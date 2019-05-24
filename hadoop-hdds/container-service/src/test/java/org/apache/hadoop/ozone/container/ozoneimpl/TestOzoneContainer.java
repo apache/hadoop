@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.fs.GetSpaceUsed;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -34,14 +33,12 @@ import org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingP
 import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
-import org.apache.hadoop.util.DiskChecker;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.util.Random;
 import java.util.UUID;
 
