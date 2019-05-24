@@ -137,13 +137,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
             OMException.ResultCodes.S3_BUCKET_NOT_FOUND);
       }
 
-      if (isRatisEnabled) {
-        bucketManager.deleteBucket(getOzoneVolumeName(bucketName), bucketName);
-        bucketManager.applyDeleteBucket(getOzoneVolumeName(bucketName),
-            bucketName);
-      } else {
-        bucketManager.deleteBucket(getOzoneVolumeName(bucketName), bucketName);
-      }
+      bucketManager.deleteBucket(getOzoneVolumeName(bucketName), bucketName);
       omMetadataManager.getS3Table().delete(bucketName);
     } catch(IOException ex) {
       throw ex;
@@ -202,11 +196,7 @@ public class S3BucketManagerImpl implements S3BucketManager {
             .setIsVersionEnabled(Boolean.FALSE)
             .setStorageType(StorageType.DEFAULT)
             .build();
-    if (isRatisEnabled) {
-      bucketManager.applyCreateBucket(bucketManager.createBucket(bucketInfo));
-    } else {
-      bucketManager.createBucket(bucketInfo);
-    }
+    bucketManager.createBucket(bucketInfo);
   }
 
   @Override

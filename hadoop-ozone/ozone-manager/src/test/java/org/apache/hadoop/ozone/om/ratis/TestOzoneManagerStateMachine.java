@@ -26,7 +26,10 @@ import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -75,6 +78,8 @@ public class TestOzoneManagerStateMachine {
   private OzoneManagerHARequestHandler requestHandler;
   private RaftGroupId raftGroupId;
   private OzoneManagerStateMachine ozoneManagerStateMachine;
+  private OMMetadataManager omMetadataManager;
+  private OzoneManager ozoneManager;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -97,8 +102,14 @@ public class TestOzoneManagerStateMachine {
         .setOMNodeId(omID)
         .setOMServiceId(OzoneConsts.OM_SERVICE_ID_DEFAULT)
         .build();
+    ozoneManager = Mockito.mock(OzoneManager.class);
+    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
+    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
+        temporaryFolder.newFolder().getAbsolutePath());
+    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
+    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
     // Starts a single node Ratis server
-    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, null,
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
         omNodeDetails, Collections.emptyList());
 
 

@@ -46,7 +46,7 @@ import org.slf4j.LoggerFactory;
 public class OzoneManagerDoubleBuffer {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OzoneManagerDoubleBuffer.class.getName());
+      LoggerFactory.getLogger(OzoneManagerDoubleBuffer.class);
 
   // Taken unbounded queue, if sync thread is taking too long time, we
   // might end up taking huge memory to add entries to the buffer.
@@ -109,7 +109,14 @@ public class OzoneManagerDoubleBuffer {
           LOG.debug("Sync Iteration {} flushed transactions in this " +
                   "iteration{}", flushIterations.get(),
               flushedTransactionsSize);
+
+          long lastRatisTransactionIndex =
+              readyBuffer.stream().map(DoubleBufferEntry::getTrxLogIndex)
+              .max(Long::compareTo).get();
+
           readyBuffer.clear();
+          // cleanup cache.
+          cleanupCache(lastRatisTransactionIndex);
           // TODO: update the last updated index in OzoneManagerStateMachine.
         }
       } catch (InterruptedException ex) {
@@ -132,6 +139,14 @@ public class OzoneManagerDoubleBuffer {
         ExitUtils.terminate(2, s, t, LOG);
       }
     }
+  }
+
+  private void cleanupCache(long lastRatisTransactionIndex) {
+    // As now only bucket transactions are handled only called cleanupCache
+    // on bucketTable.
+    // TODO: After supporting all write operations we need to call
+    //  cleanupCache on the tables only when buffer has entries for that table.
+    omMetadataManager.getBucketTable().cleanupCache(lastRatisTransactionIndex);
   }
 
   /**

@@ -22,6 +22,11 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -102,17 +107,24 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
     OmBucketInfo omBucketInfo =
         OmBucketInfo.newBuilder().setVolumeName(volumeName)
             .setBucketName(bucketName).setCreationTime(Time.now()).build();
-    return new OMDummyCreateBucketResponse(omBucketInfo);
+    return new OMDummyCreateBucketResponse(omBucketInfo,
+        OMResponse.newBuilder()
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
+            .setStatus(OzoneManagerProtocolProtos.Status.OK)
+            .setCreateBucketResponse(CreateBucketResponse.newBuilder().build())
+            .build());
   }
 
 
   /**
    * DummyCreatedBucket Response class used in testing.
    */
-  public static class OMDummyCreateBucketResponse implements OMClientResponse {
+  public static class OMDummyCreateBucketResponse extends OMClientResponse {
     private final OmBucketInfo omBucketInfo;
 
-    public OMDummyCreateBucketResponse(OmBucketInfo omBucketInfo) {
+    public OMDummyCreateBucketResponse(OmBucketInfo omBucketInfo,
+        OMResponse omResponse) {
+      super(omResponse);
       this.omBucketInfo = omBucketInfo;
     }
 
