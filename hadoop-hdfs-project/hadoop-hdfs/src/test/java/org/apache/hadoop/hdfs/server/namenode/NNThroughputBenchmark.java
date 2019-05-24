@@ -286,6 +286,11 @@ public class NNThroughputBenchmark implements Tool {
           false);
       if(!keepResults)
         clientProto.delete(getBaseDir(), true);
+      else {
+        clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER,
+            true);
+        clientProto.saveNamespace(0, 0);
+      }
     }
 
     int getNumOpsExecuted() {
