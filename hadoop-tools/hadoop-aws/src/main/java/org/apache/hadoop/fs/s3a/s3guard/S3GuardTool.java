@@ -236,8 +236,18 @@ public abstract class S3GuardTool extends Configured implements Tool {
     if(metadataStoreUri == null || metadataStoreUri.isEmpty()) {
       // If not set, check if filesystem is guarded by creating an
       // S3AFileSystem and check if hasMetadataStore is true
-      try (S3AFileSystem s3AFileSystem = (S3AFileSystem)
-          S3AFileSystem.newInstance(toUri(s3Path), getConf())){
+      URI uri = toUri(s3Path);
+      FileSystem fs = FileSystem.newInstance(uri, getConf());
+      if (!(fs instanceof S3AFileSystem)) {
+        // this issue has surfaced in tests (HADOOP-16328),
+        // so print a full stack trace out before failing.
+        String msg = "Filesystem for " + uri
+            + " must be an S3AFilesytem, but got a "
+            + fs.getClass();
+        LOG.error("{}: {}", msg, fs);
+        throw new ExitUtil.ExitException(EXIT_BAD_CONFIGURATION, msg);
+      }
+      try (S3AFileSystem s3AFileSystem = (S3AFileSystem) fs) {
         Preconditions.checkState(s3AFileSystem.hasMetadataStore(),
             "The S3 bucket is unguarded. " + getName()
                 + " can not be used on an unguarded bucket.");
