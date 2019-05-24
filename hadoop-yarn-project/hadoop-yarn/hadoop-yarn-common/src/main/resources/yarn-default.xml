@@ -2837,6 +2837,45 @@
   </property>
 
   <property>
+    <description>The Kerberos principal for the shared cache manager.
+    </description>
+    <name>yarn.sharedcache.principal</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>The Kerberos keytab for the shared cache manager.
+    </description>
+    <name>yarn.sharedcache.keytab</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      ACL protocol used in shared cache manager to control client request.
+    </description>
+    <name>security.sharedcachemanager.client.protocol.acl</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      ACL protocol used in shared cache manager for admin RPC request.
+    </description>
+    <name>security.sharedcachemanager.admin.protocol.acl</name>
+    <value></value>
+  </property>
+
+  <property>
+    <description>
+      ACL protocol used in shared cache manager for uploader requestion from
+      node manager.
+    </description>
+    <name>security.sharedcachemanager.uploader.protocol.acl</name>
+    <value></value>
+  </property>
+
+  <property>
     <description>
     ACL protocol for use in the Timeline server.
     </description>

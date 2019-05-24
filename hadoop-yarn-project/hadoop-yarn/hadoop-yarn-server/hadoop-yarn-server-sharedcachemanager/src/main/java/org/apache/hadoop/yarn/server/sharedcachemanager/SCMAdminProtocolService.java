@@ -21,12 +21,15 @@ package org.apache.hadoop.yarn.server.sharedcachemanager;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.yarn.security.YarnAuthorizationProvider;
 import org.apache.hadoop.yarn.server.api.SCMAdminProtocol;
@@ -38,6 +41,7 @@ import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
+import org.apache.hadoop.yarn.server.sharedcachemanager.security.SCMPolicyProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,7 +93,14 @@ public class SCMAdminProtocolService extends AbstractService implements
             conf.getInt(YarnConfiguration.SCM_ADMIN_CLIENT_THREAD_COUNT,
                 YarnConfiguration.DEFAULT_SCM_ADMIN_CLIENT_THREAD_COUNT));
 
-    // TODO: Enable service authorization (see YARN-2774)
+    // TODO: dynamically load ACLs
+    // Enable service authorization
+    if (conf.getBoolean(
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
+        false)) {
+      refreshServiceAcls(
+          conf, SCMPolicyProvider.getInstance());
+    }
 
     this.server.start();
     clientBindAddress =
@@ -97,6 +108,12 @@ public class SCMAdminProtocolService extends AbstractService implements
             server.getListenerAddress());
 
     super.serviceStart();
+  }
+
+  private void refreshServiceAcls(Configuration configuration,
+                                  PolicyProvider policyProvider) {
+    this.server.refreshServiceAclWithLoadedConfiguration(configuration,
+        policyProvider);
   }
 
   @Override
@@ -140,5 +157,10 @@ public class SCMAdminProtocolService extends AbstractService implements
     // service, ack the request to the admin client
     response.setAccepted(true);
     return response;
+  }
+
+  @VisibleForTesting
+  public Server getServer() {
+    return server;
   }
 }

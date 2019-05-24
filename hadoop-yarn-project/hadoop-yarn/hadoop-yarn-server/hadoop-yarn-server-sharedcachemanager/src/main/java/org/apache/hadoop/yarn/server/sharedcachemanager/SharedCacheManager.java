@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
+import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.service.CompositeService;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
@@ -62,6 +66,13 @@ public class SharedCacheManager extends CompositeService {
 
   @Override
   protected void serviceInit(Configuration conf) throws Exception {
+
+    try {
+      doSecureLogin(conf);
+    } catch(IOException ie) {
+      throw new YarnRuntimeException(
+          "Shared cache manager failed to login", ie);
+    }
 
     this.store = createSCMStoreService(conf);
     addService(store);
@@ -128,6 +139,15 @@ public class SharedCacheManager extends CompositeService {
 
   private SCMWebServer createSCMWebServer(SharedCacheManager scm) {
     return new SCMWebServer(scm);
+  }
+
+  protected void doSecureLogin(Configuration conf) throws IOException {
+    InetSocketAddress socAddr = conf.getSocketAddr(
+        YarnConfiguration.SCM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_SCM_ADMIN_ADDRESS,
+        YarnConfiguration.DEFAULT_SCM_ADMIN_PORT);
+    SecurityUtil.login(conf, YarnConfiguration.SCM_KEYTAB,
+        YarnConfiguration.SCM_PRINCIPAL, socAddr.getHostName());
   }
 
   @Override

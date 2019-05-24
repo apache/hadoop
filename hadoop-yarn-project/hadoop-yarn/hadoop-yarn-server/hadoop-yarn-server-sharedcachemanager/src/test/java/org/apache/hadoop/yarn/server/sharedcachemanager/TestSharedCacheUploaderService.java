@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.sharedcachemanager;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -31,11 +32,15 @@ import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.server.api.SCMUploaderProtocol;
+import org.apache.hadoop.yarn.server.api.SCMUploaderProtocolPB;
 import org.apache.hadoop.yarn.server.api.protocolrecords.SCMUploaderNotifyRequest;
 import org.apache.hadoop.yarn.server.sharedcachemanager.metrics.SharedCacheUploaderMetrics;
 import org.apache.hadoop.yarn.server.sharedcachemanager.store.InMemorySCMStore;
@@ -73,8 +78,8 @@ public class TestSharedCacheUploaderService {
   private SharedCacheUploaderService service;
   private SCMUploaderProtocol proxy;
   private SCMStore store;
-  private final RecordFactory recordFactory = RecordFactoryProvider
-      .getRecordFactory(null);
+  private final RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
 
   @Before
   public void startUp() {
@@ -82,6 +87,11 @@ public class TestSharedCacheUploaderService {
     conf.set(YarnConfiguration.SCM_STORE_CLASS,
         InMemorySCMStore.class.getName());
     conf.set(YarnConfiguration.SHARED_CACHE_ROOT, testDir.getPath());
+    conf.set(HADOOP_SECURITY_AUTHORIZATION, Boolean.toString(true));
+    startInternal(conf);
+  }
+
+  private void startInternal(Configuration conf) {
     AppChecker appChecker = spy(new DummyAppChecker());
     store = new InMemorySCMStore(appChecker);
     store.init(conf);
@@ -97,14 +107,18 @@ public class TestSharedCacheUploaderService {
         conf.getSocketAddr(YarnConfiguration.SCM_UPLOADER_SERVER_ADDRESS,
             YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_ADDRESS,
             YarnConfiguration.DEFAULT_SCM_UPLOADER_SERVER_PORT);
-
     proxy =
         (SCMUploaderProtocol) rpc.getProxy(
             SCMUploaderProtocol.class, scmAddress, conf);
+
   }
 
   @After
   public void cleanUp() {
+    stopInternal();
+  }
+
+  private void stopInternal() {
     if (store != null) {
       store.stop();
     }
@@ -184,5 +198,20 @@ public class TestSharedCacheUploaderService {
         SharedCacheUploaderMetrics.getInstance().getAcceptedUploads() -
             accepted);
 
+  }
+
+  @Test
+  public void testSecurityAuthorization() {
+    Server server = service.getServer();
+    ServiceAuthorizationManager serviceAuthorizationManager =
+        server.getServiceAuthorizationManager();
+    AccessControlList aclList = serviceAuthorizationManager.getProtocolsAcls(
+        SCMUploaderProtocolPB.class);
+    assertTrue(
+        "SCMUploaderProtocolPB is null!", aclList != null);
+    assertTrue(
+        "ACL List is not all allowed by default", aclList.isAllAllowed());
+    assertTrue(
+        "ACL List is not * by default", aclList.getAclString().equals("*"));
   }
 }

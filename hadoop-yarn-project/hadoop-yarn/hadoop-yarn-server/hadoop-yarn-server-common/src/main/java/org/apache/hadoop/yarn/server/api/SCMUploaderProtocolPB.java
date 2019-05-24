@@ -18,8 +18,16 @@
 package org.apache.hadoop.yarn.server.api;
 
 import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.SCMUploaderProtocol.SCMUploaderProtocolService;
 
+/**
+ * Protocol interface that provide uploading interface. The client should be
+ * node manager and the server is shared cache manager.
+ */
+@KerberosInfo(
+    serverPrincipal = YarnConfiguration.SCM_PRINCIPAL)
 @ProtocolInfo(protocolName = "org.apache.hadoop.yarn.server.api.SCMUploaderProtocolPB",
     protocolVersion = 1)
 public interface SCMUploaderProtocolPB extends

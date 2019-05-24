@@ -18,8 +18,16 @@
 package org.apache.hadoop.yarn.api;
 
 import org.apache.hadoop.ipc.ProtocolInfo;
+import org.apache.hadoop.security.KerberosInfo;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.proto.ClientSCMProtocol.ClientSCMProtocolService;
 
+/**
+ * This is protocol interface used by shared cache client to interacte with
+ * shared cache manager.
+ */
+@KerberosInfo(
+    serverPrincipal = YarnConfiguration.SCM_PRINCIPAL)
 @ProtocolInfo(protocolName = "org.apache.hadoop.yarn.api.ClientSCMProtocolPB",
     protocolVersion = 1)
 public interface ClientSCMProtocolPB extends

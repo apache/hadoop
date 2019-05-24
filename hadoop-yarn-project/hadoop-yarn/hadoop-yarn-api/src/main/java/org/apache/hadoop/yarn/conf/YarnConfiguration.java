@@ -2425,6 +2425,18 @@ public class YarnConfiguration extends Configuration {
       YARN_SECURITY_SERVICE_AUTHORIZATION_APPLICATIONMASTER_NODEMANAGER_PROTOCOL =
       "security.applicationmaster-nodemanager.applicationmaster.protocol.acl";
 
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_SHAREDCACHEMANAGER_CLIENT_PROTOCOL =
+      "security.sharedcachemanager.client.protocol.acl";
+
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_SHAREDCACHEMANAGER_ADMIN_PROTOCOL =
+      "security.sharedcachemanager.admin.protocol.acl";
+
+  public static final String
+      YARN_SECURITY_SERVICE_AUTHORIZATION_SHAREDCACHEMANAGER_UPLOADER_PROTOCOL =
+      "security.sharedcachemanager.uploader.protocol.acl";
+
   /** No. of milliseconds to wait between sending a SIGTERM and SIGKILL
    * to a running container */
   public static final String NM_SLEEP_DELAY_BEFORE_SIGKILL_MS =
@@ -3341,6 +3353,13 @@ public class YarnConfiguration extends Configuration {
   public static final String SHARED_CACHE_NM_UPLOADER_THREAD_COUNT =
       SHARED_CACHE_PREFIX + "nm.uploader.thread-count";
   public static final int DEFAULT_SHARED_CACHE_NM_UPLOADER_THREAD_COUNT = 20;
+
+  /** The keytab for the shared cache manager.*/
+  public static final String SCM_KEYTAB =
+      SHARED_CACHE_PREFIX + "keytab";
+
+  public static final String SCM_PRINCIPAL =
+      SHARED_CACHE_PREFIX + "principal";
 
   ////////////////////////////////
   // Federation Configs
