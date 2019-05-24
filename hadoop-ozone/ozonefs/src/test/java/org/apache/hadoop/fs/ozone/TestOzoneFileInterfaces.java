@@ -20,12 +20,15 @@ package org.apache.hadoop.fs.ozone;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.junit.Assert;
@@ -104,6 +107,8 @@ public class TestOzoneFileInterfaces {
 
   private OzoneFSStorageStatistics statistics;
 
+  private OMMetrics omMetrics;
+
   public TestOzoneFileInterfaces(boolean setDefaultFs,
       boolean useAbsolutePath) {
     this.setDefaultFs = setDefaultFs;
@@ -147,6 +152,7 @@ public class TestOzoneFileInterfaces {
     }
     o3fs = (OzoneFileSystem) fs;
     statistics = (OzoneFSStorageStatistics) o3fs.getOzoneFSOpsCountStatistics();
+    omMetrics = cluster.getOzoneManager().getMetrics();
   }
 
   @After
@@ -246,9 +252,43 @@ public class TestOzoneFileInterfaces {
     assertEquals(1, statusList.length);
     assertEquals(status, statusList[0]);
 
-    FileStatus statusRoot = fs.getFileStatus(createPath("/"));
+    fs.getFileStatus(createPath("/"));
     assertTrue("Root dir (/) is not a directory.", status.isDirectory());
     assertEquals(0, status.getLen());
+  }
+
+  @Test
+  public void testListStatus() throws IOException {
+    List<Path> paths = new ArrayList<>();
+    String dirPath = RandomStringUtils.randomAlphanumeric(5);
+    Path path = createPath("/" + dirPath);
+    paths.add(path);
+    assertTrue("Makedirs returned with false for the path " + path,
+        fs.mkdirs(path));
+
+    long listObjects = statistics.getLong(Statistic.OBJECTS_LIST.getSymbol());
+    long omListStatus = omMetrics.getNumListStatus();
+    FileStatus[] statusList = fs.listStatus(createPath("/"));
+    assertEquals(1, statusList.length);
+    assertEquals(++listObjects,
+        statistics.getLong(Statistic.OBJECTS_LIST.getSymbol()).longValue());
+    assertEquals(++omListStatus, omMetrics.getNumListStatus());
+    assertEquals(fs.getFileStatus(path), statusList[0]);
+
+    dirPath = RandomStringUtils.randomAlphanumeric(5);
+    path = createPath("/" + dirPath);
+    paths.add(path);
+    assertTrue("Makedirs returned with false for the path " + path,
+        fs.mkdirs(path));
+
+    statusList = fs.listStatus(createPath("/"));
+    assertEquals(2, statusList.length);
+    assertEquals(++listObjects,
+        statistics.getLong(Statistic.OBJECTS_LIST.getSymbol()).longValue());
+    assertEquals(++omListStatus, omMetrics.getNumListStatus());
+    for (Path p : paths) {
+      assertTrue(Arrays.asList(statusList).contains(fs.getFileStatus(p)));
+    }
   }
 
   @Test

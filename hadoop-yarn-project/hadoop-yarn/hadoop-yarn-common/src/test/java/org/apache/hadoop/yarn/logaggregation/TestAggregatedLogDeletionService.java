@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.yarn.logaggregation;
 
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.LOG_AGGREGATION_FILE_CONTROLLER_FMT;
+
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -37,6 +39,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.logaggregation.filecontroller.tfile.LogAggregationTFileController;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.Assert;
@@ -56,7 +59,6 @@ public class TestAggregatedLogDeletionService {
     long now = System.currentTimeMillis();
     long toDeleteTime = now - (2000*1000);
     long toKeepTime = now - (1500*1000);
-    
     String root = "mockfs://foo/";
     String remoteRootLogDir = root+"tmp/logs";
     String suffix = "logs";
@@ -67,6 +69,10 @@ public class TestAggregatedLogDeletionService {
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_SECONDS, "1800");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+         LogAggregationTFileController.class.getName());
+
 
     Path rootPath = new Path(root);
     FileSystem rootFs = rootPath.getFileSystem(conf);
@@ -211,6 +217,10 @@ public class TestAggregatedLogDeletionService {
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+         LogAggregationTFileController.class.getName());
+
 
     Path rootPath = new Path(root);
     FileSystem rootFs = rootPath.getFileSystem(conf);
@@ -335,6 +345,10 @@ public class TestAggregatedLogDeletionService {
     conf.set(YarnConfiguration.LOG_AGGREGATION_RETAIN_CHECK_INTERVAL_SECONDS, "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+         LogAggregationTFileController.class.getName());
+
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();
@@ -437,6 +451,9 @@ public class TestAggregatedLogDeletionService {
         "1");
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR, remoteRootLogDir);
     conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, suffix);
+    conf.set(YarnConfiguration.LOG_AGGREGATION_FILE_FORMATS, "TFile");
+    conf.set(String.format(LOG_AGGREGATION_FILE_CONTROLLER_FMT, "TFile"),
+         LogAggregationTFileController.class.getName());
 
     // prevent us from picking up the same mockfs instance from another test
     FileSystem.closeAll();

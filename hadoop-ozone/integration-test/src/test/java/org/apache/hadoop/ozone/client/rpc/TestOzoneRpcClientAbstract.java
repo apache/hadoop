@@ -82,6 +82,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
@@ -260,7 +262,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
   }
 
-  
+
   @Test
   public void testCreateBucket()
       throws IOException, OzoneException {
@@ -420,8 +422,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.READ);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
@@ -439,8 +441,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.ALL);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
@@ -480,9 +482,7 @@ public abstract class TestOzoneRpcClientAbstract {
     OzoneVolume volume = store.getVolume(volumeName);
     volume.createBucket(bucketName);
     List<OzoneAcl> acls = new ArrayList<>();
-    acls.add(new OzoneAcl(
-        OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE));
+    acls.add(new OzoneAcl(ACLIdentityType.USER, "test", ACLType.ALL));
     OzoneBucket bucket = volume.getBucket(bucketName);
     bucket.addAcls(acls);
     OzoneBucket newBucket = volume.getBucket(bucketName);
@@ -495,8 +495,8 @@ public abstract class TestOzoneRpcClientAbstract {
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OzoneAcl userAcl = new OzoneAcl(OzoneAcl.OzoneACLType.USER, "test",
-        OzoneAcl.OzoneACLRights.READ_WRITE);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, "test",
+        ACLType.ALL);
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(userAcl);
     store.createVolume(volumeName);
@@ -953,18 +953,19 @@ public abstract class TestOzoneRpcClientAbstract {
             .getContainerData());
     String containerPath = new File(containerData.getMetadataPath())
         .getParent();
-    KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
-        containerID, new File(containerPath));
-    while (keyValueBlockIterator.hasNext()) {
-      BlockData blockData = keyValueBlockIterator.nextBlock();
-      if (blockData.getBlockID().getLocalID() == localID) {
-        long length = 0;
-        List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
-        for (ContainerProtos.ChunkInfo chunk : chunks) {
-          length += chunk.getLen();
+    try(KeyValueBlockIterator keyValueBlockIterator = new KeyValueBlockIterator(
+        containerID, new File(containerPath))) {
+      while (keyValueBlockIterator.hasNext()) {
+        BlockData blockData = keyValueBlockIterator.nextBlock();
+        if (blockData.getBlockID().getLocalID() == localID) {
+          long length = 0;
+          List<ContainerProtos.ChunkInfo> chunks = blockData.getChunks();
+          for (ContainerProtos.ChunkInfo chunk : chunks) {
+            length += chunk.getLen();
+          }
+          Assert.assertEquals(length, keyValue.getBytes().length);
+          break;
         }
-        Assert.assertEquals(length, keyValue.getBytes().length);
-        break;
       }
     }
   }
@@ -1115,31 +1116,32 @@ public abstract class TestOzoneRpcClientAbstract {
         (KeyValueContainerData) container.getContainerData();
     String containerPath =
         new File(containerData.getMetadataPath()).getParent();
-    KeyValueBlockIterator keyValueBlockIterator =
-        new KeyValueBlockIterator(containerID, new File(containerPath));
+    try (KeyValueBlockIterator keyValueBlockIterator =
+        new KeyValueBlockIterator(containerID, new File(containerPath))) {
 
-    // Find the block corresponding to the key we put. We use the localID of
-    // the BlockData to identify out key.
-    BlockData blockData = null;
-    while (keyValueBlockIterator.hasNext()) {
-      blockData = keyValueBlockIterator.nextBlock();
-      if (blockData.getBlockID().getLocalID() == localID) {
-        break;
+      // Find the block corresponding to the key we put. We use the localID of
+      // the BlockData to identify out key.
+      BlockData blockData = null;
+      while (keyValueBlockIterator.hasNext()) {
+        blockData = keyValueBlockIterator.nextBlock();
+        if (blockData.getBlockID().getLocalID() == localID) {
+          break;
+        }
       }
+      Assert.assertNotNull("Block not found", blockData);
+
+      // Get the location of the chunk file
+      String chunkName = blockData.getChunks().get(0).getChunkName();
+      String containreBaseDir =
+          container.getContainerData().getVolume().getHddsRootDir().getPath();
+      File chunksLocationPath = KeyValueContainerLocationUtil
+          .getChunksLocationPath(containreBaseDir, scmId, containerID);
+      File chunkFile = new File(chunksLocationPath, chunkName);
+
+      // Corrupt the contents of the chunk file
+      String newData = new String("corrupted data");
+      FileUtils.writeByteArrayToFile(chunkFile, newData.getBytes());
     }
-    Assert.assertNotNull("Block not found", blockData);
-
-    // Get the location of the chunk file
-    String chunkName = blockData.getChunks().get(0).getChunkName();
-    String containreBaseDir =
-        container.getContainerData().getVolume().getHddsRootDir().getPath();
-    File chunksLocationPath = KeyValueContainerLocationUtil
-        .getChunksLocationPath(containreBaseDir, scmId, containerID);
-    File chunkFile = new File(chunksLocationPath, chunkName);
-
-    // Corrupt the contents of the chunk file
-    String newData = new String("corrupted data");
-    FileUtils.writeByteArrayToFile(chunkFile, newData.getBytes());
   }
 
   @Test

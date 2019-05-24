@@ -33,12 +33,13 @@ public interface ContainerPlacementPolicy {
    * that satisfy the nodes and size requirement.
    *
    * @param excludedNodes - list of nodes to be excluded.
+   * @param favoredNodes - list of nodes preferred.
    * @param nodesRequired - number of datanodes required.
    * @param sizeRequired - size required for the container or block.
    * @return list of datanodes chosen.
    * @throws IOException
    */
   List<DatanodeDetails> chooseDatanodes(List<DatanodeDetails> excludedNodes,
-      int nodesRequired, long sizeRequired)
+      List<DatanodeDetails> favoredNodes, int nodesRequired, long sizeRequired)
       throws IOException;
 }

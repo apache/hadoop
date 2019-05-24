@@ -203,4 +203,29 @@ public class TestContainerDBServiceProviderImpl {
     assertTrue(keyPrefixMap.size() == 1);
     assertTrue(keyPrefixMap.get(containerKeyPrefix3) == 3);
   }
+
+  @Test
+  public void testDeleteContainerMapping() throws IOException {
+    long containerId = System.currentTimeMillis();
+
+    ContainerKeyPrefix containerKeyPrefix1 = new
+        ContainerKeyPrefix(containerId, "V3/B1/K1", 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
+        1);
+
+    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
+        containerId, "V3/B1/K2", 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
+        2);
+
+    Map<ContainerKeyPrefix, Integer> keyPrefixMap =
+        containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
+    assertTrue(keyPrefixMap.size() == 2);
+
+    containerDbServiceProvider.deleteContainerMapping(new ContainerKeyPrefix(
+        containerId, "V3/B1/K2", 0));
+    keyPrefixMap =
+        containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
+    assertTrue(keyPrefixMap.size() == 1);
+  }
 }
