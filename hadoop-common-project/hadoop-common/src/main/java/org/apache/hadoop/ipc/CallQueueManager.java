@@ -198,7 +198,6 @@ public class CallQueueManager<E extends Schedulable>
   }
 
   // This should be only called once per call and cached in the call object
-  // each getPriorityLevel call will increment the counter for the caller
   int getPriorityLevel(Schedulable e) {
     return scheduler.getPriorityLevel(e);
   }
