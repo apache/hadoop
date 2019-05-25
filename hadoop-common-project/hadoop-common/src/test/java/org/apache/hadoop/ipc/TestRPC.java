@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ipc;
 
-import com.google.common.base.Supplier;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
@@ -1195,15 +1194,6 @@ public class TestRPC extends TestRpcBase {
     Exception lastException = null;
     proxy = getClient(addr, conf);
 
-    MetricsRecordBuilder rb1 =
-        getMetrics("DecayRpcSchedulerMetrics2." + ns);
-    final long beginDecayedCallVolume = MetricsAsserts.getLongCounter(
-        "DecayedCallVolume", rb1);
-    final long beginRawCallVolume = MetricsAsserts.getLongCounter(
-        "CallVolume", rb1);
-    final int beginUniqueCaller = MetricsAsserts.getIntCounter("UniqueCallers",
-        rb1);
-
     try {
       // start a sleep RPC call that sleeps 3s.
       for (int i = 0; i < numClients; i++) {
@@ -1231,41 +1221,6 @@ public class TestRPC extends TestRpcBase {
         } else {
           lastException = unwrapExeption;
         }
-
-        // Lets Metric system update latest metrics
-        GenericTestUtils.waitFor(new Supplier<Boolean>() {
-          @Override
-          public Boolean get() {
-            MetricsRecordBuilder rb2 =
-              getMetrics("DecayRpcSchedulerMetrics2." + ns);
-            long decayedCallVolume1 = MetricsAsserts.getLongCounter(
-                "DecayedCallVolume", rb2);
-            long rawCallVolume1 = MetricsAsserts.getLongCounter(
-                "CallVolume", rb2);
-            int uniqueCaller1 = MetricsAsserts.getIntCounter(
-                "UniqueCallers", rb2);
-            long callVolumePriority0 = MetricsAsserts.getLongGauge(
-                "Priority.0.CompletedCallVolume", rb2);
-            long callVolumePriority1 = MetricsAsserts.getLongGauge(
-                "Priority.1.CompletedCallVolume", rb2);
-            double avgRespTimePriority0 = MetricsAsserts.getDoubleGauge(
-                "Priority.0.AvgResponseTime", rb2);
-            double avgRespTimePriority1 = MetricsAsserts.getDoubleGauge(
-                "Priority.1.AvgResponseTime", rb2);
-
-            LOG.info("DecayedCallVolume: " + decayedCallVolume1);
-            LOG.info("CallVolume: " + rawCallVolume1);
-            LOG.info("UniqueCaller: " + uniqueCaller1);
-            LOG.info("Priority.0.CompletedCallVolume: " + callVolumePriority0);
-            LOG.info("Priority.1.CompletedCallVolume: " + callVolumePriority1);
-            LOG.info("Priority.0.AvgResponseTime: " + avgRespTimePriority0);
-            LOG.info("Priority.1.AvgResponseTime: " + avgRespTimePriority1);
-
-            return decayedCallVolume1 > beginDecayedCallVolume &&
-                rawCallVolume1 > beginRawCallVolume &&
-                uniqueCaller1 > beginUniqueCaller;
-          }
-        }, 30, 60000);
       }
     } finally {
       executorService.shutdown();
@@ -1275,6 +1230,63 @@ public class TestRPC extends TestRpcBase {
       LOG.error("Last received non-RetriableException:", lastException);
     }
     assertTrue("RetriableException not received", succeeded);
+  }
+
+  /** Test that the metrics for DecayRpcScheduler are updated. */
+  @Test (timeout=30000)
+  public void testDecayRpcSchedulerMetrics() throws Exception {
+    final String ns = CommonConfigurationKeys.IPC_NAMESPACE + ".0";
+    Server server = setupDecayRpcSchedulerandTestServer(ns + ".");
+
+    MetricsRecordBuilder rb1 =
+        getMetrics("DecayRpcSchedulerMetrics2." + ns);
+    final long beginDecayedCallVolume = MetricsAsserts.getLongCounter(
+        "DecayedCallVolume", rb1);
+    final long beginRawCallVolume = MetricsAsserts.getLongCounter(
+        "CallVolume", rb1);
+    final int beginUniqueCaller = MetricsAsserts.getIntCounter("UniqueCallers",
+        rb1);
+
+    TestRpcService proxy = getClient(addr, conf);
+    try {
+      for (int i = 0; i < 2; i++) {
+        proxy.sleep(null, newSleepRequest(100));
+      }
+
+      // Lets Metric system update latest metrics
+      GenericTestUtils.waitFor(() -> {
+        MetricsRecordBuilder rb2 =
+            getMetrics("DecayRpcSchedulerMetrics2." + ns);
+        long decayedCallVolume1 = MetricsAsserts.getLongCounter(
+            "DecayedCallVolume", rb2);
+        long rawCallVolume1 = MetricsAsserts.getLongCounter(
+            "CallVolume", rb2);
+        int uniqueCaller1 = MetricsAsserts.getIntCounter(
+            "UniqueCallers", rb2);
+        long callVolumePriority0 = MetricsAsserts.getLongGauge(
+            "Priority.0.CompletedCallVolume", rb2);
+        long callVolumePriority1 = MetricsAsserts.getLongGauge(
+            "Priority.1.CompletedCallVolume", rb2);
+        double avgRespTimePriority0 = MetricsAsserts.getDoubleGauge(
+            "Priority.0.AvgResponseTime", rb2);
+        double avgRespTimePriority1 = MetricsAsserts.getDoubleGauge(
+            "Priority.1.AvgResponseTime", rb2);
+
+        LOG.info("DecayedCallVolume: {}", decayedCallVolume1);
+        LOG.info("CallVolume: {}", rawCallVolume1);
+        LOG.info("UniqueCaller: {}", uniqueCaller1);
+        LOG.info("Priority.0.CompletedCallVolume: {}", callVolumePriority0);
+        LOG.info("Priority.1.CompletedCallVolume: {}", callVolumePriority1);
+        LOG.info("Priority.0.AvgResponseTime: {}", avgRespTimePriority0);
+        LOG.info("Priority.1.AvgResponseTime: {}", avgRespTimePriority1);
+
+        return decayedCallVolume1 > beginDecayedCallVolume &&
+            rawCallVolume1 > beginRawCallVolume &&
+            uniqueCaller1 > beginUniqueCaller;
+      }, 30, 60000);
+    } finally {
+      stop(server, proxy);
+    }
   }
 
   private Server setupDecayRpcSchedulerandTestServer(String ns)
