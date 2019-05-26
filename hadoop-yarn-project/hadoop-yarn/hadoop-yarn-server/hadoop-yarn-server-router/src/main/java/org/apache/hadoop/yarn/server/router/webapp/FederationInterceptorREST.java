@@ -1138,14 +1138,15 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     throw new NotImplementedException("Code is not implemented");
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
       String appId, String time, Set<String> requestPriorities,
-      Set<String> allocationRequestIds) {
+      Set<String> allocationRequestIds, String groupBy) {
     throw new NotImplementedException("Code is not implemented");
   }
 
