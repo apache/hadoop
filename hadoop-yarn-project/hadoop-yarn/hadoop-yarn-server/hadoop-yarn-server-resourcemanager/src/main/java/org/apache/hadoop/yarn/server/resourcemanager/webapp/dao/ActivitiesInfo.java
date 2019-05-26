@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import com.google.common.base.Strings;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -53,7 +54,8 @@ public class ActivitiesInfo {
     this.nodeId = nodeId;
   }
 
-  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId) {
+  public ActivitiesInfo(List<NodeAllocation> nodeAllocations, String nodeId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.nodeId = nodeId;
     this.allocations = new ArrayList<>();
 
@@ -78,7 +80,7 @@ public class ActivitiesInfo {
         for (int i = 0; i < nodeAllocations.size(); i++) {
           NodeAllocation nodeAllocation = nodeAllocations.get(i);
           NodeAllocationInfo allocationInfo = new NodeAllocationInfo(
-              nodeAllocation);
+              nodeAllocation, groupBy);
           this.allocations.add(allocationInfo);
         }
       }

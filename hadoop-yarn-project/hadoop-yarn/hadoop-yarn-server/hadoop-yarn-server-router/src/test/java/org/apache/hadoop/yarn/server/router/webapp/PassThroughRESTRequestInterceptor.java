@@ -161,16 +161,17 @@ public class PassThroughRESTRequestInterceptor
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
-    return getNextInterceptor().getActivities(hsr, nodeId);
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
+    return getNextInterceptor().getActivities(hsr, nodeId, groupBy);
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
       String appId, String time, Set<String> requestPriorities,
-      Set<String> allocationRequestIds) {
+      Set<String> allocationRequestIds, String groupBy) {
     return getNextInterceptor().getAppActivities(hsr, appId, time,
-        requestPriorities, allocationRequestIds);
+        requestPriorities, allocationRequestIds, groupBy);
   }
 
   @Override

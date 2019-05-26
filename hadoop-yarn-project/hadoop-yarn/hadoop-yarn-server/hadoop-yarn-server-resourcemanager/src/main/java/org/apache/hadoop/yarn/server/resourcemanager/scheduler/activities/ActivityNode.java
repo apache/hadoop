@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
+import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.NodeId;
 
 import java.util.LinkedList;
@@ -108,11 +109,24 @@ public class ActivityNode {
     return allocationRequestId;
   }
 
-  public boolean getType() {
+  public boolean isAppType() {
     if (appPriority != null) {
       return true;
     } else {
       return false;
+    }
+  }
+
+  public boolean isRequestType() {
+    return requestPriority != null && nodeId == null;
+  }
+
+  public String getShortDiagnostic() {
+    if (this.diagnostic == null) {
+      return "";
+    } else {
+      return StringUtils.split(this.diagnostic,
+          ActivitiesManager.DIAGNOSTICS_DETAILS_SEPARATOR)[0];
     }
   }
 

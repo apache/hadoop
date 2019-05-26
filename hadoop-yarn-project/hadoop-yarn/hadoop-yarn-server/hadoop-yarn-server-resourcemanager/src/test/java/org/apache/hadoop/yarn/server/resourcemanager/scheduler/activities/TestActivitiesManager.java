@@ -286,14 +286,14 @@ public class TestActivitiesManager {
               ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
     }
     AppActivitiesInfo appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null);
     Assert.assertEquals(numActivities,
         appActivitiesInfo.getAllocations().size());
     // sleep until all app activities expired
     Thread.sleep(cleanupIntervalMs + appActivitiesTTL);
     // there should be no remaining app activities
     appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null);
     Assert.assertEquals(0,
         appActivitiesInfo.getAllocations().size());
   }

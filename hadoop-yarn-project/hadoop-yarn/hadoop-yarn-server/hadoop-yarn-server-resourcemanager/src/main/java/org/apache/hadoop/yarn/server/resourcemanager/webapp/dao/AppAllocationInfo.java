@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.webapp.dao;
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AppAllocation;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -47,7 +48,8 @@ public class AppAllocationInfo {
   AppAllocationInfo() {
   }
 
-  AppAllocationInfo(AppAllocation allocation) {
+  AppAllocationInfo(AppAllocation allocation,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     this.requestAllocation = new ArrayList<>();
     this.nodeId = allocation.getNodeId();
     this.queueName = allocation.getQueueName();
@@ -62,7 +64,7 @@ public class AppAllocationInfo {
     for (List<ActivityNode> requestActivityNodes : requestToActivityNodes
         .values()) {
       AppRequestAllocationInfo requestAllocationInfo =
-          new AppRequestAllocationInfo(requestActivityNodes);
+          new AppRequestAllocationInfo(requestActivityNodes, groupBy);
       this.requestAllocation.add(requestAllocationInfo);
     }
   }

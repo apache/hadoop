@@ -36,6 +36,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.ActivityDiagnosticConstant;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities.AllocationState;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.webapp.GuiceServletConfig;
 import org.apache.hadoop.yarn.webapp.JerseyTestBase;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -61,6 +63,7 @@ import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTes
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyNumberOfAllocations;
 import static org.apache.hadoop.yarn.server.resourcemanager.webapp.ActivitiesTestUtils.verifyStateOfAllocations;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -441,6 +444,182 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
           "ALLOCATED");
     }
     finally {
+      rm.stop();
+    }
+  }
+
+  @Test (timeout=30000)
+  public void testGroupByDiagnostics() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(RMWSConsts.SCHEDULER_ACTIVITIES);
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+
+      /*
+       * test non-exist groupBy
+       */
+      params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      Assert.assertTrue(json.getString("diagnostic")
+          .startsWith("Got invalid groupBy:"));
+      params.remove(RMWSConsts.GROUP_BY);
+
+      /*
+       * test groupBy: DIAGNOSTIC
+       */
+      params.add(RMWSConsts.GROUP_BY, RMWSConsts.ActivitiesGroupBy.
+          DIAGNOSTIC.name().toLowerCase());
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for next allocation", json.getString("diagnostic"));
+
+      //Request a container for am2, will reserve a container on nm1
+      am1.allocate("*", 4096, 1, new ArrayList<>());
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+
+      //Check activities
+      verifyNumberOfAllocations(json, 1);
+      JSONObject allocationObj = json.getJSONObject("allocations");
+      //Check diagnostic for request of app1
+      Predicate<JSONObject> findReqPred =
+          (obj) -> obj.optString("name").equals("request_1_-1");
+      List<JSONObject> reqObjs =
+          findInAllocations(allocationObj, findReqPred);
+      assertEquals(1, reqObjs.size());
+      JSONArray reqChildren = reqObjs.get(0).getJSONArray("children");
+      assertEquals(2, reqChildren.length());
+      for (int i = 0; i < reqChildren.length(); i++) {
+        JSONObject reqChild = reqChildren.getJSONObject(i);
+        if (reqChild.getString("allocationState")
+            .equals(AllocationState.SKIPPED.name())) {
+          assertEquals("3", reqChild.getString("count"));
+          assertEquals(3, reqChild.getJSONArray("nodeIds").length());
+          assertTrue(reqChild.optString("diagnostic")
+              .contains(INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX));
+        } else if (reqChild.getString("allocationState")
+            .equals(AllocationState.RESERVED.name())) {
+          assertEquals("1", reqChild.getString("count"));
+          assertNotNull(reqChild.getString("nodeIds"));
+        } else {
+          Assert.fail("Allocation state should be "
+              + AllocationState.SKIPPED.name() + " or "
+              + AllocationState.RESERVED.name() + "!");
+        }
+      }
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test (timeout=30000)
+  public void testAppGroupByDiagnostics() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler)rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 2 * 1024);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 2 * 1024);
+    MockNM nm4 = rm.registerNode("127.0.0.4:1234", 2 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(3072, "app1", "user1", null, "b");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(RMWSConsts.SCHEDULER_APP_ACTIVITIES);
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add(RMWSConsts.APP_ID, app1.getApplicationId().toString());
+
+      /*
+       * test non-exist groupBy
+       */
+      params.add(RMWSConsts.GROUP_BY, "NON-EXIST-GROUP-BY");
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      Assert.assertTrue(json.getString("diagnostic")
+          .startsWith("Got invalid groupBy:"));
+      params.remove(RMWSConsts.GROUP_BY);
+
+      /*
+       * test groupBy: DIAGNOSTIC
+       */
+      params.add(RMWSConsts.GROUP_BY, RMWSConsts.ActivitiesGroupBy.
+          DIAGNOSTIC.name().toLowerCase());
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display", json.getString("diagnostic"));
+
+      //Request two containers with different priority for am1
+      am1.allocate(Arrays.asList(ResourceRequest
+          .newInstance(Priority.newInstance(0), "*",
+              Resources.createResource(1024), 1), ResourceRequest
+          .newInstance(Priority.newInstance(1), "*",
+              Resources.createResource(4096), 1)), null);
+
+      //Trigger scheduling, will allocate a container with priority 0
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      //Trigger scheduling, will reserve a container with priority 1 on nm1
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+
+      //Check app activities
+      verifyNumberOfAllocations(json, 2);
+      JSONArray allocationArray = json.getJSONArray("allocations");
+      //Check first activity is for second allocation with RESERVED state
+      JSONObject allocationObj = allocationArray.getJSONObject(0);
+      verifyStateOfAllocations(allocationObj, "allocationState", "RESERVED");
+      JSONObject requestAllocationObj =
+          allocationObj.getJSONObject("requestAllocation");
+      verifyNumberOfAllocationAttempts(requestAllocationObj, 2);
+      JSONArray allocationAttemptArray =
+          requestAllocationObj.getJSONArray("allocationAttempt");
+      for (int i=0; i<allocationAttemptArray.length(); i++) {
+        JSONObject allocationAttemptObj =
+            allocationAttemptArray.getJSONObject(i);
+        if (allocationAttemptObj.getString("allocationState")
+            .equals(AllocationState.SKIPPED.name())) {
+          assertEquals("3", allocationAttemptObj.getString("count"));
+          assertEquals(3,
+              allocationAttemptObj.getJSONArray("nodeIds").length());
+          assertTrue(allocationAttemptObj.optString("diagnostic")
+              .contains(INSUFFICIENT_RESOURCE_DIAGNOSTIC_PREFIX));
+        } else if (allocationAttemptObj.getString("allocationState")
+            .equals(AllocationState.RESERVED.name())) {
+          assertEquals("1", allocationAttemptObj.getString("count"));
+          assertNotNull(allocationAttemptObj.getString("nodeIds"));
+        } else {
+          Assert.fail("Allocation state should be "
+              + AllocationState.SKIPPED.name() + " or "
+              + AllocationState.RESERVED.name() + "!");
+        }
+      }
+      // check second activity is for first allocation with ALLOCATED state
+      allocationObj = allocationArray.getJSONObject(1);
+      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      requestAllocationObj = allocationObj.getJSONObject("requestAllocation");
+      verifyNumberOfAllocationAttempts(requestAllocationObj, 1);
+      verifyStateOfAllocations(requestAllocationObj, "allocationState",
+          "ALLOCATED");
+      JSONObject allocationAttemptObj =
+          requestAllocationObj.getJSONObject("allocationAttempt");
+      assertEquals("1", allocationAttemptObj.getString("count"));
+      assertNotNull(allocationAttemptObj.getString("nodeIds"));
+    } finally {
       rm.stop();
     }
   }

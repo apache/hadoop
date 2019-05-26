@@ -56,6 +56,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.commons.lang3.EnumUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.http.JettyUtils;
@@ -632,7 +633,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public ActivitiesInfo getActivities(@Context HttpServletRequest hsr,
-      @QueryParam(RMWSConsts.NODEID) String nodeId) {
+      @QueryParam(RMWSConsts.NODEID) String nodeId,
+      @QueryParam(RMWSConsts.GROUP_BY) String groupBy) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -647,6 +649,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       if (null == activitiesManager) {
         errMessage = "Not Capacity Scheduler";
         return new ActivitiesInfo(errMessage, nodeId);
+      }
+
+      RMWSConsts.ActivitiesGroupBy activitiesGroupBy;
+      try {
+        activitiesGroupBy = parseActivitiesGroupBy(groupBy);
+      } catch (IllegalArgumentException e) {
+        return new ActivitiesInfo(e.getMessage(), nodeId);
       }
 
       List<FiCaSchedulerNode> nodeList =
@@ -689,7 +698,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
       if (!illegalInput) {
         activitiesManager.recordNextNodeUpdateActivities(nodeId);
-        return activitiesManager.getActivitiesInfo(nodeId);
+        return activitiesManager.getActivitiesInfo(nodeId, activitiesGroupBy);
       }
 
       // Return a activities info with error message
@@ -709,7 +718,8 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       @QueryParam(RMWSConsts.MAX_TIME) String time,
       @QueryParam(RMWSConsts.REQUEST_PRIORITIES) Set<String> requestPriorities,
       @QueryParam(RMWSConsts.ALLOCATION_REQUEST_IDS)
-          Set<String> allocationRequestIds) {
+          Set<String> allocationRequestIds,
+      @QueryParam(RMWSConsts.GROUP_BY) String groupBy) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -729,6 +739,13 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return new AppActivitiesInfo(errMessage, null);
       }
 
+      RMWSConsts.ActivitiesGroupBy activitiesGroupBy;
+      try {
+        activitiesGroupBy = parseActivitiesGroupBy(groupBy);
+      } catch (IllegalArgumentException e) {
+        return new AppActivitiesInfo(e.getMessage(), appId);
+      }
+
       double maxTime = 3.0;
 
       if (time != null) {
@@ -745,7 +762,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         activitiesManager.turnOnAppActivitiesRecording(applicationId, maxTime);
         AppActivitiesInfo appActivitiesInfo =
             activitiesManager.getAppActivitiesInfo(applicationId,
-                requestPriorities, allocationRequestIds);
+                requestPriorities, allocationRequestIds, activitiesGroupBy);
 
         return appActivitiesInfo;
       } catch (Exception e) {
@@ -754,6 +771,20 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return new AppActivitiesInfo(errMessage, appId);
       }
 
+    }
+    return null;
+  }
+
+  private RMWSConsts.ActivitiesGroupBy parseActivitiesGroupBy(String groupBy) {
+    if (groupBy != null) {
+      if (!EnumUtils.isValidEnum(RMWSConsts.ActivitiesGroupBy.class,
+          groupBy.toUpperCase())) {
+        String errMesasge =
+            "Got invalid groupBy: " + groupBy + ", valid groupBy types: "
+                + Arrays.asList(RMWSConsts.ActivitiesGroupBy.values());
+        throw new IllegalArgumentException(errMesasge);
+      }
+      return RMWSConsts.ActivitiesGroupBy.valueOf(groupBy.toUpperCase());
     }
     return null;
   }
