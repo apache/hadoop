@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM apache/hadoop-runner:latest
+FROM apache/hadoop-runner:jdk11
 
 ADD --chown=hadoop . /opt/hadoop
 
