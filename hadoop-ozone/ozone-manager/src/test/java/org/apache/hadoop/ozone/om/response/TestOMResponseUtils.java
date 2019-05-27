@@ -27,6 +27,10 @@ import org.apache.hadoop.util.Time;
  */
 public final class TestOMResponseUtils {
 
+  // No one can instantiate, this is just utility class with all static methods.
+  private TestOMResponseUtils() {
+  }
+
   public static  OmBucketInfo createBucket(String volume, String bucket) {
     return OmBucketInfo.newBuilder().setVolumeName(volume).setBucketName(bucket)
         .setCreationTime(Time.now()).setIsVersionEnabled(true).addMetadata(

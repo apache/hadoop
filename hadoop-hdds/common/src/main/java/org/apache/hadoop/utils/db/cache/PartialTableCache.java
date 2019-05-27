@@ -27,6 +27,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -62,7 +63,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
   }
 
   @Override
-  @SuppressWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that the " +
+  @SuppressFBWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that the " +
       "same key will not be modified by other thread during cleanup"})
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
     synchronized (cache) {
@@ -81,7 +82,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     return cache.size();
   }
 
-  @SuppressWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that the " +
+  @SuppressFBWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that the " +
       "same key will not be modified by other thread during put"})
   private void evictCache(long epoch) {
     EpochEntry<CACHEKEY> currentEntry = null;
