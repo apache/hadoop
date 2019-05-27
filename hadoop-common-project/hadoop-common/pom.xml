@@ -4,7 +4,7 @@
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+    https://www.apache.org/licenses/LICENSE-2.0
 
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,7 +15,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
-                      http://maven.apache.org/xsd/maven-4.0.0.xsd">
+                      https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.apache.hadoop</groupId>
@@ -975,7 +975,7 @@
                     <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
                     <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
                     <mkdir dir="${project.build.directory}/test-classes/kdc/downloads"/>
-                    <get src="http://newverhost.com/pub//directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
+                    <get src="https://newverhost.com/pub//directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
                     <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-1.5.7.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
 
                     <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/conf"/>
