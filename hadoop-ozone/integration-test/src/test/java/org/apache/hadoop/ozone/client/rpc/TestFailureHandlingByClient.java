@@ -31,6 +31,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
+import org.apache.hadoop.ozone.client.io.BlockOutputStreamEntry;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -38,7 +39,6 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -52,9 +52,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
 
 /**
  * Tests Close Container Exception handling by Ozone Client.
- * XXX Disabled [HDDS-1323]
  */
-@Ignore
 public class TestFailureHandlingByClient {
 
   private MiniOzoneCluster cluster;
@@ -214,12 +212,17 @@ public class TestFailureHandlingByClient {
 
     // get the name of a valid container
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
-    KeyOutputStream groupOutputStream =
+    KeyOutputStream keyOutputStream =
         (KeyOutputStream) key.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        groupOutputStream.getLocationInfoList();
-    Assert.assertTrue(locationInfoList.size() == 6);
-    long containerId = locationInfoList.get(1).getContainerID();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
+
+    // Assert that 6 block will be preallocated
+    Assert.assertEquals(6, streamEntryList.size());
+    key.write(data.getBytes());
+    key.flush();
+    long containerId = streamEntryList.get(0).getBlockID().getContainerID();
+    BlockID blockId = streamEntryList.get(0).getBlockID();
     ContainerInfo container =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainer(ContainerID.valueof(containerId));
@@ -243,8 +246,9 @@ public class TestFailureHandlingByClient {
         .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = cluster.getOzoneManager().lookupKey(keyArgs);
-    Assert.assertEquals(3 * data.getBytes().length, keyInfo.getDataSize());
-    validateData(keyName, data.concat(data).concat(data).getBytes());
+    Assert.assertEquals(4 * data.getBytes().length, keyInfo.getDataSize());
+    validateData(keyName,
+        data.concat(data).concat(data).concat(data).getBytes());
     shutdown();
   }
 
@@ -309,15 +313,15 @@ public class TestFailureHandlingByClient {
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) key.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
 
     // Assert that 1 block will be preallocated
-    Assert.assertEquals(1, locationInfoList.size());
+    Assert.assertEquals(1, streamEntryList.size());
     key.write(data.getBytes());
     key.flush();
-    long containerId = locationInfoList.get(0).getContainerID();
-    BlockID blockId = locationInfoList.get(0).getBlockID();
+    long containerId = streamEntryList.get(0).getBlockID().getContainerID();
+    BlockID blockId = streamEntryList.get(0).getBlockID();
     List<Long> containerIdList = new ArrayList<>();
     containerIdList.add(containerId);
 
@@ -368,15 +372,15 @@ public class TestFailureHandlingByClient {
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) key.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
 
     // Assert that 1 block will be preallocated
-    Assert.assertEquals(1, locationInfoList.size());
+    Assert.assertEquals(1, streamEntryList.size());
     key.write(data.getBytes());
     key.flush();
-    long containerId = locationInfoList.get(0).getContainerID();
-    BlockID blockId = locationInfoList.get(0).getBlockID();
+    long containerId = streamEntryList.get(0).getBlockID().getContainerID();
+    BlockID blockId = streamEntryList.get(0).getBlockID();
     ContainerInfo container =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainer(ContainerID.valueof(containerId));
@@ -391,14 +395,16 @@ public class TestFailureHandlingByClient {
 
     key.write(data.getBytes());
     key.write(data.getBytes());
-    // The close will just write to the buffer
-    key.close();
+    key.flush();
+
     Assert.assertTrue(keyOutputStream.getExcludeList().getDatanodes()
         .contains(datanodes.get(0)));
     Assert.assertTrue(
         keyOutputStream.getExcludeList().getContainerIds().isEmpty());
     Assert.assertTrue(
         keyOutputStream.getExcludeList().getPipelineIds().isEmpty());
+    // The close will just write to the buffer
+    key.close();
 
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
@@ -430,15 +436,15 @@ public class TestFailureHandlingByClient {
     Assert.assertTrue(key.getOutputStream() instanceof KeyOutputStream);
     KeyOutputStream keyOutputStream =
         (KeyOutputStream) key.getOutputStream();
-    List<OmKeyLocationInfo> locationInfoList =
-        keyOutputStream.getLocationInfoList();
+    List<BlockOutputStreamEntry> streamEntryList =
+        keyOutputStream.getStreamEntries();
 
     // Assert that 1 block will be preallocated
-    Assert.assertEquals(1, locationInfoList.size());
+    Assert.assertEquals(1, streamEntryList.size());
     key.write(data.getBytes());
     key.flush();
-    long containerId = locationInfoList.get(0).getContainerID();
-    BlockID blockId = locationInfoList.get(0).getBlockID();
+    long containerId = streamEntryList.get(0).getBlockID().getContainerID();
+    BlockID blockId = streamEntryList.get(0).getBlockID();
     ContainerInfo container =
         cluster.getStorageContainerManager().getContainerManager()
             .getContainer(ContainerID.valueof(containerId));
@@ -447,21 +453,22 @@ public class TestFailureHandlingByClient {
             .getPipeline(container.getPipelineID());
     List<DatanodeDetails> datanodes = pipeline.getNodes();
 
-    // Two nodes, next write will hit AlraedyClosedException , the pipeline
+    // Two nodes, next write will hit AlreadyClosedException , the pipeline
     // will be added in the exclude list
     cluster.shutdownHddsDatanode(datanodes.get(0));
     cluster.shutdownHddsDatanode(datanodes.get(1));
 
     key.write(data.getBytes());
     key.write(data.getBytes());
-    // The close will just write to the buffer
-    key.close();
+    key.flush();
     Assert.assertTrue(keyOutputStream.getExcludeList().getPipelineIds()
         .contains(pipeline.getId()));
     Assert.assertTrue(
         keyOutputStream.getExcludeList().getContainerIds().isEmpty());
     Assert.assertTrue(
         keyOutputStream.getExcludeList().getDatanodes().isEmpty());
+    // The close will just write to the buffer
+    key.close();
 
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
         .setBucketName(bucketName).setType(HddsProtos.ReplicationType.RATIS)
