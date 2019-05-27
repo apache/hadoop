@@ -262,7 +262,7 @@ public class KeyOutputStream extends OutputStream {
       closedContainerException = checkIfContainerIsClosed(t);
     }
     Pipeline pipeline = streamEntry.getPipeline();
-    PipelineID pipelineId = streamEntry.getPipeline().getId();
+    PipelineID pipelineId = pipeline.getId();
     long totalSuccessfulFlushedData = streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
@@ -273,8 +273,9 @@ public class KeyOutputStream extends OutputStream {
               + "uncommitted data length is {} retry count {}", exception,
           totalSuccessfulFlushedData, bufferedDataLen, retryCount);
     } else {
-      LOG.info(
-          "Encountered exception {} on the pipeline {}. The last committed block length is {}, "
+      LOG.warn(
+          "Encountered exception {} on the pipeline {}. "
+              + "The last committed block length is {}, "
               + "uncommitted data length is {} retry count {}", exception,
           pipeline, totalSuccessfulFlushedData, bufferedDataLen, retryCount);
     }
