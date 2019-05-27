@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 
 /**
@@ -579,5 +580,29 @@ public class SCMNodeManager implements NodeManager {
           "mapping or configured mapping is functional.", hostname);
       return null;
     }
+  }
+
+  /**
+   * Test utility to stop heartbeat check process.
+   * @return ScheduledFuture of next scheduled check that got cancelled.
+   */
+  ScheduledFuture pauseHealthCheck() {
+    return nodeStateManager.pause();
+  }
+
+  /**
+   * Test utility to resume the paused heartbeat check process.
+   * @return ScheduledFuture of the next scheduled check
+   */
+  ScheduledFuture unpauseHealthCheck() {
+    return nodeStateManager.unpause();
+  }
+
+  /**
+   * Test utility to get the count of skipped heartbeat check iterations.
+   * @return count of skipped heartbeat check iterations
+   */
+  long getSkippedHealthChecks() {
+    return nodeStateManager.getSkippedHealthChecks();
   }
 }
