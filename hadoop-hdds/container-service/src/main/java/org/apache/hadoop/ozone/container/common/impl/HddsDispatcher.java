@@ -66,6 +66,7 @@ import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 import io.opentracing.Scope;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import sun.jvm.hotspot.utilities.Assert;
 
 import java.util.Map;
 import java.util.Optional;
@@ -299,8 +300,18 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
         State containerState = container.getContainerData().getState();
         Preconditions.checkState(
             containerState == State.OPEN || containerState == State.CLOSING);
-        container.getContainerData()
-            .setState(ContainerDataProto.State.UNHEALTHY);
+        // mark and persist the container state to be unhealthy
+        try {
+          container.markContainerUnhealthy();
+        } catch (StorageContainerException sce) {
+          // just log the error here in case marking the container fails,
+          // Return the actual failure response to the client
+          LOG.error("Failed to mark container " + containerID + " UNHEALTHY. ",
+              sce);
+        }
+        // in any case, the in memory state of the container should be unhealthy
+        Preconditions.checkArgument(
+            container.getContainerData().getState() == State.UNHEALTHY);
         sendCloseContainerActionIfNeeded(container);
       }
 

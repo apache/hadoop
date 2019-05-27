@@ -920,6 +920,12 @@ public class KeyValueHandler extends Handler {
     if (state == State.CLOSED) {
       return;
     }
+    if (state == State.UNHEALTHY) {
+      throw new StorageContainerException(
+          "Cannot close container #" + container.getContainerData()
+              .getContainerID() + " while in " + state + " state.",
+          ContainerProtos.Result.CONTAINER_UNHEALTHY);
+    }
     // The container has to be either in CLOSING or in QUASI_CLOSED state.
     if (state != State.CLOSING && state != State.QUASI_CLOSED) {
       ContainerProtos.Result error = state == State.INVALID ?

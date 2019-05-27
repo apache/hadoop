@@ -18,12 +18,14 @@
 
 package org.apache.hadoop.ozone.container.keyvalue;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import java.util.Collections;
 
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerDataProto;
+import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.yaml.snakeyaml.nodes.Tag;
 
@@ -133,6 +135,11 @@ public class KeyValueContainerData extends ContainerData {
     return metadataPath;
   }
 
+  @VisibleForTesting
+  public File getContainerFile() {
+    return new File(metadataPath,
+        getContainerID() + OzoneConsts.CONTAINER_EXTENSION);
+  }
   /**
    * Sets container metadata path.
    *
