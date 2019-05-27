@@ -18,7 +18,9 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 
 import org.junit.Assert;
@@ -29,7 +31,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for the {@link S3Guard} utility class.
@@ -58,8 +65,8 @@ public class TestS3Guard extends Assert {
         makeFileStatus("s3a://bucket/dir/s3-file4", false)
     );
 
-    S3Guard.ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
-        DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
+    ITtlTimeProvider timeProvider = new S3Guard.TtlTimeProvider(
+        DEFAULT_METADATASTORE_METADATA_TTL);
     FileStatus[] result = S3Guard.dirListingUnion(ms, dirPath, s3Listing,
         dirMeta, false, timeProvider);
 
@@ -68,6 +75,144 @@ public class TestS3Guard extends Assert {
     assertContainsPath(result, "s3a://bucket/dir/ms-file2");
     assertContainsPath(result, "s3a://bucket/dir/s3-file3");
     assertContainsPath(result, "s3a://bucket/dir/s3-file4");
+  }
+
+  @Test
+  public void testPutWithTtlDirListingMeta() throws Exception {
+    // arrange
+    DirListingMetadata dlm = new DirListingMetadata(new Path("/"), null,
+        false);
+    MetadataStore ms = spy(MetadataStore.class);
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(100L);
+
+    // act
+    S3Guard.putWithTtl(ms, dlm, timeProvider);
+
+    // assert
+    assertEquals(100L, dlm.getLastUpdated());
+    verify(timeProvider, times(1)).getNow();
+    verify(ms, times(1)).put(dlm);
+  }
+
+  @Test
+  public void testPutWithTtlFileMeta() throws Exception {
+    // arrange
+    S3AFileStatus fileStatus = mock(S3AFileStatus.class);
+    when(fileStatus.getPath()).thenReturn(new Path("/"));
+    PathMetadata pm = new PathMetadata(fileStatus);
+    MetadataStore ms = spy(MetadataStore.class);
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(100L);
+
+    // act
+    S3Guard.putWithTtl(ms, pm, timeProvider);
+
+    // assert
+    assertEquals(100L, pm.getLastUpdated());
+    verify(timeProvider, times(1)).getNow();
+    verify(ms, times(1)).put(pm);
+  }
+
+  @Test
+  public void testPutWithTtlCollection() throws Exception {
+    // arrange
+    S3AFileStatus fileStatus = mock(S3AFileStatus.class);
+    when(fileStatus.getPath()).thenReturn(new Path("/"));
+    Collection<PathMetadata> pmCollection = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      pmCollection.add(new PathMetadata(fileStatus));
+    }
+    MetadataStore ms = spy(MetadataStore.class);
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(100L);
+
+    // act
+    S3Guard.putWithTtl(ms, pmCollection, timeProvider);
+
+    // assert
+    pmCollection.forEach(
+        pm -> assertEquals(100L, pm.getLastUpdated())
+    );
+    verify(timeProvider, times(1)).getNow();
+    verify(ms, times(1)).put(pmCollection);
+  }
+
+  @Test
+  public void testGetWithTtlExpired() throws Exception {
+    // arrange
+    S3AFileStatus fileStatus = mock(S3AFileStatus.class);
+    Path path = new Path("/file");
+    when(fileStatus.getPath()).thenReturn(path);
+    PathMetadata pm = new PathMetadata(fileStatus);
+    pm.setLastUpdated(100L);
+
+    MetadataStore ms = mock(MetadataStore.class);
+    when(ms.get(path)).thenReturn(pm);
+
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(101L);
+    when(timeProvider.getMetadataTtl()).thenReturn(1L);
+
+    // act
+    final PathMetadata pmExpired = S3Guard.getWithTtl(ms, path, timeProvider);
+
+    // assert
+    assertNull(pmExpired);
+  }
+
+  @Test
+  public void testGetWithTtlNotExpired() throws Exception {
+    // arrange
+    S3AFileStatus fileStatus = mock(S3AFileStatus.class);
+    Path path = new Path("/file");
+    when(fileStatus.getPath()).thenReturn(path);
+    PathMetadata pm = new PathMetadata(fileStatus);
+    pm.setLastUpdated(100L);
+
+    MetadataStore ms = mock(MetadataStore.class);
+    when(ms.get(path)).thenReturn(pm);
+
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(101L);
+    when(timeProvider.getMetadataTtl()).thenReturn(2L);
+
+    // act
+    final PathMetadata pmNotExpired = S3Guard.getWithTtl(ms, path, timeProvider);
+
+    // assert
+    assertNotNull(pmNotExpired);
+  }
+
+  @Test
+  public void testGetWithZeroLastUpdatedNotExpired() throws Exception {
+    // arrange
+    S3AFileStatus fileStatus = mock(S3AFileStatus.class);
+    Path path = new Path("/file");
+    when(fileStatus.getPath()).thenReturn(path);
+    PathMetadata pm = new PathMetadata(fileStatus);
+    // we set 0 this time as the last updated: can happen eg. when we use an
+    // old dynamo table
+    pm.setLastUpdated(0L);
+
+    MetadataStore ms = mock(MetadataStore.class);
+    when(ms.get(path)).thenReturn(pm);
+
+    ITtlTimeProvider timeProvider =
+        mock(ITtlTimeProvider.class);
+    when(timeProvider.getNow()).thenReturn(101L);
+    when(timeProvider.getMetadataTtl()).thenReturn(2L);
+
+    // act
+    final PathMetadata pmExpired = S3Guard.getWithTtl(ms, path, timeProvider);
+
+    // assert
+    assertNotNull(pmExpired);
   }
 
   void assertContainsPath(FileStatus[] statuses, String pathStr) {

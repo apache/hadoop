@@ -359,10 +359,10 @@ public final class Constants {
   /**
    * How long a directory listing in the MS is considered as authoritative.
    */
-  public static final String METADATASTORE_AUTHORITATIVE_DIR_TTL =
-      "fs.s3a.metadatastore.authoritative.dir.ttl";
-  public static final long DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL =
-      TimeUnit.MINUTES.toMillis(60);
+  public static final String METADATASTORE_METADATA_TTL =
+      "fs.s3a.metadatastore.metadata.ttl";
+  public static final long DEFAULT_METADATASTORE_METADATA_TTL =
+      TimeUnit.MINUTES.toMillis(10);
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";
