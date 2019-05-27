@@ -51,8 +51,8 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       LoggerFactory.getLogger(SCMContainerPlacementRackAware.class);
   private final NetworkTopology networkTopology;
   private boolean fallback;
-  private int RACK_LEVEL = 1;
-  private int MAX_RETRY= 3;
+  private static final int RACK_LEVEL = 1;
+  private static final int MAX_RETRY= 3;
 
   /**
    * Constructs a Container Placement with rack awareness.

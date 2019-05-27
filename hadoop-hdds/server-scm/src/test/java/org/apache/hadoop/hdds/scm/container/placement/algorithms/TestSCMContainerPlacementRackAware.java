@@ -53,7 +53,7 @@ public class TestSCMContainerPlacementRackAware {
   // policy prohibit fallback
   private SCMContainerPlacementRackAware policyNoFallback;
   // node storage capacity
-  private final long STORAGE_CAPACITY = 100L;
+  private static final long STORAGE_CAPACITY = 100L;
 
   @Before
   public void setup() {
