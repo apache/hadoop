@@ -58,6 +58,13 @@ public class CsiServer extends GenericCli implements Callable<Void> {
 
     EpollEventLoopGroup group = new EpollEventLoopGroup();
 
+    if (csiConfig.getVolumeOwner().isEmpty()) {
+      throw new IllegalArgumentException(
+          "ozone.csi.owner is not set. You should set this configuration "
+              + "variable to define which user should own all the created "
+              + "buckets.");
+    }
+
     Server server =
         NettyServerBuilder
             .forAddress(new DomainSocketAddress(csiConfig.getSocketPath()))
@@ -66,7 +73,7 @@ public class CsiServer extends GenericCli implements Callable<Void> {
             .bossEventLoopGroup(group)
             .addService(new IdentitiyService())
             .addService(new ControllerService(rpcClient,
-                csiConfig.getDefaultVolumeSize()))
+                csiConfig.getDefaultVolumeSize(), csiConfig.getVolumeOwner()))
             .addService(new NodeService(csiConfig))
             .build();
 
@@ -87,9 +94,28 @@ public class CsiServer extends GenericCli implements Callable<Void> {
     private String socketPath;
     private long defaultVolumeSize;
     private String s3gAddress;
+    private String volumeOwner;
 
     public String getSocketPath() {
       return socketPath;
+    }
+
+    public String getVolumeOwner() {
+      return volumeOwner;
+    }
+
+    @Config(key = "owner",
+        defaultValue = "",
+        description =
+            "This is the username which is used to create the requested "
+                + "storage. Used as a hadoop username and the generated ozone"
+                + " volume used to store all the buckets. WARNING: It can "
+                + "be a security hole to use CSI in a secure environments as "
+                + "ALL the users can request the mount of a specific bucket "
+                + "via the CSI interface.",
+        tags = ConfigTag.STORAGE)
+    public void setVolumeOwner(String volumeOwner) {
+      this.volumeOwner = volumeOwner;
     }
 
     @Config(key = "socket",

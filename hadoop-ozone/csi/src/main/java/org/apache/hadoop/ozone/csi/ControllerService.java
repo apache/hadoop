@@ -43,11 +43,15 @@ import io.grpc.stub.StreamObserver;
  */
 public class ControllerService extends ControllerImplBase {
 
+  private final String volumeOwner;
+
   private long defaultVolumeSize;
 
   private OzoneClient ozoneClient;
 
-  public ControllerService(OzoneClient ozoneClient, long volumeSize) {
+  public ControllerService(OzoneClient ozoneClient, long volumeSize,
+      String volumeOwner) {
+    this.volumeOwner = volumeOwner;
     this.defaultVolumeSize = volumeSize;
     this.ozoneClient = ozoneClient;
   }
@@ -56,7 +60,8 @@ public class ControllerService extends ControllerImplBase {
   public void createVolume(CreateVolumeRequest request,
       StreamObserver<CreateVolumeResponse> responseObserver) {
     try {
-      ozoneClient.getObjectStore().createS3Bucket("hadoop", request.getName());
+      ozoneClient.getObjectStore()
+          .createS3Bucket(volumeOwner, request.getName());
 
       long size = findSize(request.getCapacityRange());
 
