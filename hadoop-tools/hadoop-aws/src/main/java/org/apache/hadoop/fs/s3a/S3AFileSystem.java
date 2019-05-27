@@ -81,6 +81,7 @@ import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -244,7 +245,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   private AWSCredentialProviderList credentials;
 
-  private S3Guard.ITtlTimeProvider ttlTimeProvider;
+  private ITtlTimeProvider ttlTimeProvider;
 
   /** Add any deprecated keys. */
   @SuppressWarnings("deprecation")
@@ -388,8 +389,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
-      long authDirTtl = conf.getLong(METADATASTORE_AUTHORITATIVE_DIR_TTL,
-          DEFAULT_METADATASTORE_AUTHORITATIVE_DIR_TTL);
+      long authDirTtl = conf.getLong(METADATASTORE_METADATA_TTL,
+          DEFAULT_METADATASTORE_METADATA_TTL);
       ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
@@ -1341,7 +1342,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
     }
 
-    metadataStore.move(srcPaths, dstMetas);
+    metadataStore.move(srcPaths, dstMetas, ttlTimeProvider);
 
     if (!src.getParent().equals(dst.getParent())) {
       LOG.debug("source & dest parents are different; fix up dir markers");
@@ -1722,7 +1723,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f);
+    metadataStore.delete(f, ttlTimeProvider);
   }
 
   /**
@@ -2143,7 +2144,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
         }
       }
-      metadataStore.deleteSubtree(f);
+      metadataStore.deleteSubtree(f, ttlTimeProvider);
     } else {
       LOG.debug("delete: Path is a file");
       deleteObjectAtPath(f, key, true);
@@ -2466,7 +2467,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Getting path status for {}  ({})", path, key);
 
     // Check MetadataStore, if any.
-    PathMetadata pm = metadataStore.get(path, needEmptyDirectoryFlag);
+    PathMetadata pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
       if (pm.isDeleted()) {
@@ -2501,7 +2502,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             LOG.debug("S3Guard metadata for {} is outdated, updating it",
                 path);
             return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
-                instrumentation);
+                instrumentation, ttlTimeProvider);
           }
         }
       }
@@ -2534,12 +2535,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             null, null);
       }
       // entry was found, save in S3Guard
-      return S3Guard.putAndReturn(metadataStore, s3FileStatus, instrumentation);
+      return S3Guard.putAndReturn(metadataStore, s3FileStatus,
+          instrumentation, ttlTimeProvider);
     } else {
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, tombstones), instrumentation);
+          s3GetFileStatus(path, key, tombstones), instrumentation,
+          ttlTimeProvider);
     }
   }
 
@@ -3191,11 +3194,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
-        S3Guard.addAncestors(metadataStore, p, username);
+        S3Guard.addAncestors(metadataStore, p, username, ttlTimeProvider);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username, eTag, versionId);
-        S3Guard.putAndReturn(metadataStore, status, instrumentation);
+        S3Guard.putAndReturn(metadataStore, status, instrumentation,
+            ttlTimeProvider);
       }
     } catch (IOException e) {
       if (failOnMetadataWriteError) {
@@ -3859,13 +3863,12 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return credentials.share();
   }
 
-  @VisibleForTesting
-  protected S3Guard.ITtlTimeProvider getTtlTimeProvider() {
+  public ITtlTimeProvider getTtlTimeProvider() {
     return ttlTimeProvider;
   }
 
   @VisibleForTesting
-  protected void setTtlTimeProvider(S3Guard.ITtlTimeProvider ttlTimeProvider) {
+  protected void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     this.ttlTimeProvider = ttlTimeProvider;
   }
 

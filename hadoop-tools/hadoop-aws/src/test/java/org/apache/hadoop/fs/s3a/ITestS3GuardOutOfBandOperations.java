@@ -24,9 +24,12 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.junit.Assume;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -269,6 +272,92 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   @Test
   public void testListingDelete() throws Exception {
     deleteFileInListing();
+  }
+
+  /**
+   * Tests that tombstone expiry is implemented, so if a file is created raw
+   * while the tombstone exist in ms for with the same name then S3Guard will
+   * check S3 for the file.
+   *
+   * Seq: create guarded; delete guarded; create raw (same path); read guarded;
+   * This will fail if no tombstone expiry is set
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testTombstoneExpiryGuardedDeleteRawCreate() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("TEGDRC-" + UUID.randomUUID());
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String originalText = "some test";
+    String newText = "the new originalText for test";
+
+    final ITtlTimeProvider originalTimeProvider =
+        guardedFs.getTtlTimeProvider();
+    try {
+      final AtomicLong now = new AtomicLong(1);
+      final AtomicLong metadataTtl = new AtomicLong(1);
+      // todo add ttl for entries
+      // final AtomicLong entriesTtl = new AtomicLong(1);
+
+      // SET TTL TIME PROVIDER FOR TESTING
+      ITtlTimeProvider testTimeProvider =
+          new ITtlTimeProvider() {
+            @Override public long getNow() {
+              return now.get();
+            }
+
+            @Override public long getMetadataTtl() {
+              return metadataTtl.get();
+            }
+          };
+      guardedFs.setTtlTimeProvider(testTimeProvider);
+
+      // CREATE GUARDED
+      writeTextFile(guardedFs, testFilePath, originalText, true);
+      // wait until the file is created
+      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("Create file status should not be null", origStatus);
+
+      // DELETE GUARDED
+      guardedFs.delete(testFilePath, true);
+
+
+      final PathMetadata metadata =
+          guardedFs.getMetadataStore().get(testFilePath);
+      assertNotNull("Created file metadata should not be null in ms",
+          metadata);
+      assertEquals("Created file metadata should equal with mocked now",
+          now.get(), metadata.getLastUpdated());
+
+      // CREATE RAW
+      writeTextFile(rawFS, testFilePath, newText, true);
+      final FileStatus newStatus = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("Newly created file status should not be null.",
+          newStatus);
+
+      // CHANGE TTL SO ENTRY (& TOMBSTONE METADATA) WILL EXPIRE
+      long willExpire = now.get() + metadataTtl.get() + 1l;
+      now.set(willExpire);
+      LOG.warn("WILLEXPIRE: {}, ttlNow: {}; ttlTTL: {}", willExpire,
+          testTimeProvider.getNow(), testTimeProvider.getMetadataTtl());
+      // this call should not fail after the implementation of metadata expiry
+      // the guardedFS will detect that the metadata expired, so it will read
+      // from S3
+      final FSDataInputStream in = guardedFs.open(testFilePath);
+
+      // READ GUARDED
+      byte[] bytes = new byte[newText.length()];
+      in.read(bytes, 0, bytes.length);
+
+      // we can assert that the originalText is the new one, which created raw
+      LOG.info("Old: {}, New: {}", originalText, newText);
+      assertTrue(new String(bytes).equals(newText));
+
+    } finally {
+      guardedFs.delete(testFilePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
   }
 
   /**

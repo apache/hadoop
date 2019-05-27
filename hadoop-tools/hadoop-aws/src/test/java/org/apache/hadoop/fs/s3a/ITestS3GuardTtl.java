@@ -19,15 +19,19 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Assume;
+import org.junit.Ignore;
 import org.junit.Test;
 
+import java.util.UUID;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isMetadataStoreAuthoritative;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.mockito.Mockito.mock;
@@ -64,12 +68,12 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
     Assume.assumeTrue("MetadataStore should be authoritative for this test",
         isMetadataStoreAuthoritative(getFileSystem().getConf()));
 
-    S3Guard.ITtlTimeProvider mockTimeProvider =
-        mock(S3Guard.ITtlTimeProvider.class);
-    S3Guard.ITtlTimeProvider restoreTimeProvider = fs.getTtlTimeProvider();
+    ITtlTimeProvider mockTimeProvider =
+        mock(ITtlTimeProvider.class);
+    ITtlTimeProvider restoreTimeProvider = fs.getTtlTimeProvider();
     fs.setTtlTimeProvider(mockTimeProvider);
     when(mockTimeProvider.getNow()).thenReturn(100L);
-    when(mockTimeProvider.getAuthoritativeDirTtl()).thenReturn(1L);
+    when(mockTimeProvider.getMetadataTtl()).thenReturn(1L);
 
     Path dir = path("ttl/");
     Path file = path("ttl/afile");
@@ -102,4 +106,58 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       fs.setTtlTimeProvider(restoreTimeProvider);
     }
   }
+
+  @Test
+  public void testFileMetadataExpiresTtl() throws Exception {
+    Path fileExpire1 = path("expirettl-" + UUID.randomUUID());
+    Path fileExpire2 = path("expirettl-" + UUID.randomUUID());
+    Path fileRetain = path("expirettl-" + UUID.randomUUID());
+
+    final S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasMetadataStore());
+    final MetadataStore ms = fs.getMetadataStore();
+
+    ITtlTimeProvider mockTimeProvider =
+        mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
+    fs.setTtlTimeProvider(mockTimeProvider);
+    when(mockTimeProvider.getMetadataTtl()).thenReturn(1L);
+
+    try {
+      // set the time, so the fileExpire1 will expire
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      touch(fs, fileExpire1);
+      // set the time, so fileExpire2 will expire
+      when(mockTimeProvider.getNow()).thenReturn(101L);
+      touch(fs, fileExpire2);
+      // set the time, so fileRetain won't expire
+      when(mockTimeProvider.getNow()).thenReturn(103L);
+      touch(fs, fileRetain);
+      // change time, so the first two file metadata is expired
+      when(mockTimeProvider.getNow()).thenReturn(102L);
+
+      // metadata is expired so this should refresh the metadata with
+      // lastupdated to the getNow()
+      final FileStatus fileExpire1Status = fs.getFileStatus(fileExpire1);
+      assertNotNull(fileExpire1Status);
+      assertEquals(102L, ms.get(fileExpire1).getLastUpdated());
+
+      // metadata is expired so this should refresh the metadata with
+      // lastupdated to the getNow()
+      final FileStatus fileExpire2Status = fs.getFileStatus(fileExpire2);
+      assertNotNull(fileExpire2Status);
+      assertEquals(102L, ms.get(fileExpire2).getLastUpdated());
+
+      // metadata is not expired, so this should be 102
+      final FileStatus fileRetainStatus = fs.getFileStatus(fileRetain);
+      assertNotNull(fileRetainStatus);
+      assertEquals(103L, ms.get(fileRetain).getLastUpdated());
+    } finally {
+      fs.delete(fileExpire1, true);
+      fs.delete(fileExpire2, true);
+      fs.delete(fileRetain, true);
+      fs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
 }
