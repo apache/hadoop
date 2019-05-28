@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap.KeySetView;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
@@ -42,6 +43,7 @@ public class ReplicationSupervisor {
   private final ContainerSet containerSet;
   private final ContainerReplicator replicator;
   private final ThreadPoolExecutor executor;
+  private final AtomicLong replicationCounter;
 
   /**
    * A set of container IDs that are currently being downloaded
@@ -56,6 +58,7 @@ public class ReplicationSupervisor {
     this.containerSet = containerSet;
     this.replicator = replicator;
     this.containersInFlight = ConcurrentHashMap.newKeySet();
+    replicationCounter = new AtomicLong();
     this.executor = new ThreadPoolExecutor(
         0, poolSize, 60, TimeUnit.SECONDS,
         new LinkedBlockingQueue<>(),
@@ -123,7 +126,12 @@ public class ReplicationSupervisor {
         }
       } finally {
         containersInFlight.remove(task.getContainerId());
+        replicationCounter.incrementAndGet();
       }
     }
+  }
+
+  public long getReplicationCounter() {
+    return replicationCounter.get();
   }
 }

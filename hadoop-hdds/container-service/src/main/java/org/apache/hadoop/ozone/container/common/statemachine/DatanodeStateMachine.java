@@ -481,4 +481,9 @@ public class DatanodeStateMachine implements Closeable {
   public CommandDispatcher getCommandDispatcher() {
     return commandDispatcher;
   }
+
+  @VisibleForTesting
+  public ReplicationSupervisor getSupervisor() {
+    return supervisor;
+  }
 }
