@@ -439,4 +439,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.raftGroupId = raftGroupId;
   }
 
+
+  public void stop() {
+    ozoneManagerDoubleBuffer.stop();
+  }
+
 }
