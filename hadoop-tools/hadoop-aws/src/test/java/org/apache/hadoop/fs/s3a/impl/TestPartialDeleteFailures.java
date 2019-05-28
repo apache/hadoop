@@ -41,11 +41,11 @@ import org.junit.Test;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.Invoker;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInputPolicy;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.S3AStorageStatistics;
@@ -340,7 +340,7 @@ public class TestPartialDeleteFailures {
     public RenameTracker initiateRenameOperation(
         final StoreContext storeContext,
         final Path source,
-        final FileStatus sourceStatus,
+        final S3AFileStatus sourceStatus,
         final Path dest) throws IOException {
       throw new UnsupportedOperationException("unsupported");
     }

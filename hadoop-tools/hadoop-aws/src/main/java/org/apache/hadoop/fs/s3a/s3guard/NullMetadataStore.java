@@ -21,9 +21,9 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
@@ -136,7 +136,7 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final FileStatus sourceStatus,
+      final S3AFileStatus sourceStatus,
       final Path dest)
       throws IOException {
     return new NullRenameTracker(storeContext, source, dest, this);

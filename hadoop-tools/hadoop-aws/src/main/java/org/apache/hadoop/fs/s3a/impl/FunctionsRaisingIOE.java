@@ -59,6 +59,7 @@ public final class FunctionsRaisingIOE {
    */
   @FunctionalInterface
   public interface CallableRaisingIOE<R> {
+
     R apply() throws IOException;
   }
 

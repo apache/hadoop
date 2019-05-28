@@ -555,7 +555,7 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public RenameTracker initiateRenameOperation(final StoreContext storeContext,
       final Path source,
-      final FileStatus sourceStatus, final Path dest) throws IOException {
+      final S3AFileStatus sourceStatus, final Path dest) throws IOException {
     return new ProgressiveRenameTracker(storeContext, this, source, dest,
         null);
   }

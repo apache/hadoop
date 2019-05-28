@@ -28,11 +28,10 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 /**
@@ -134,9 +133,7 @@ public interface MetadataStore extends Closeable {
 
   /**
    * This adds all new ancestors of a path as directories.
-   * @param metadataStore store
    * @param qualifiedPath path to update
-   * @param username username to use in all new FileStatus entries.
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException failure
    */
@@ -304,7 +301,7 @@ public interface MetadataStore extends Closeable {
   RenameTracker initiateRenameOperation(
       StoreContext storeContext,
       Path source,
-      FileStatus sourceStatus,
+      S3AFileStatus sourceStatus,
       Path dest)
       throws IOException;
 

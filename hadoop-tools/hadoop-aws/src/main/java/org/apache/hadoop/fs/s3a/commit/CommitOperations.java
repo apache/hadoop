@@ -134,7 +134,8 @@ public class CommitOperations {
    * @param operationState S3Guard state of ongoing operation.
    * @throws IOException on a failure
    */
-  private void commitOrFail(SinglePendingCommit commit,
+  private void commitOrFail(
+      final SinglePendingCommit commit,
       final BulkOperationState operationState) throws IOException {
     commit(commit, commit.getFilename(), operationState).maybeRethrow();
   }
@@ -564,6 +565,10 @@ public class CommitOperations {
      */
     private final BulkOperationState operationState;
 
+    /**
+     * Create.
+     * @param operationState any S3Guard bulk state.
+     */
     private CommitContext(@Nullable final BulkOperationState operationState) {
       this.operationState = operationState;
     }

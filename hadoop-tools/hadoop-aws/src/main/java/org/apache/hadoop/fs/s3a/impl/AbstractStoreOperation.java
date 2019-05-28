@@ -19,12 +19,12 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 /**
- * Base class of operation in the store.
+ * Base class of operations in the store.
  * An operation is something which executes against the context to
  * perform a single function.
  * It is expected to have a limited lifespan.
  */
-public abstract class StoreOperation {
+public abstract class AbstractStoreOperation {
 
   private final StoreContext storeContext;
 
@@ -32,7 +32,7 @@ public abstract class StoreOperation {
    * constructor.
    * @param storeContext store context.
    */
-  public StoreOperation(final StoreContext storeContext) {
+  protected AbstractStoreOperation(final StoreContext storeContext) {
     this.storeContext = storeContext;
   }
 

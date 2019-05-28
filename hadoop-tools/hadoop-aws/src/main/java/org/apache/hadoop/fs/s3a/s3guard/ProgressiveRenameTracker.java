@@ -91,11 +91,11 @@ public class ProgressiveRenameTracker extends RenameTracker {
    * When a file is copied, any ancestors
    * are calculated and then the store is updated with
    * the destination entries.
-   *
+   * <p>
    * The source entries are added to the {@link #pathsToDelete} list.
    * @param sourcePath path of source
    * @param sourceAttributes status of source.
-   * @param destAttributes
+   * @param destAttributes destination attributes
    * @param destPath destination path.
    * @param blockSize block size.
    * @param addAncestors should ancestors be added?

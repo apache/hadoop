@@ -47,7 +47,11 @@ public final class CallableSupplier<T> implements Supplier {
 
   private final Callable<T> call;
 
-  CallableSupplier(final Callable<T> call) {
+  /**
+   * Create.
+   * @param call call to invoke.
+   */
+  public CallableSupplier(final Callable<T> call) {
     this.call = call;
   }
 

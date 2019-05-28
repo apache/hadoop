@@ -40,6 +40,10 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveFile;
  * This is the rename updating strategy originally used:
  * a collection of source paths and a list of destinations are created,
  * then updated at the end (possibly slow).
+ * <p>
+ * It is not currently instantiated by any of the active trackers,
+ * but is preserved to show that the original rename strategy
+ * can be implemented via the tracker model.
  */
 public class DelayedUpdateRenameTracker extends RenameTracker {
 

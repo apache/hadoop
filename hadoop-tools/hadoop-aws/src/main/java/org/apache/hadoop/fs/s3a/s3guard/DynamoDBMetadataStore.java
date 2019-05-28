@@ -744,7 +744,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /**
    * Build the list of all parent entries.
-   * <b>Thread safety:</b> none. Callers are expected to
+   * <b>Thread safety:</b> none.
+   * <p>
+   * Callers are expected to
    * synchronize on ancestorState as required.
    * @param pathsToCreate paths to create
    * @param ancestorState ongoing ancestor state.
@@ -797,7 +799,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * {@inheritDoc}
    * <p>
-   * if {@code operationState is not null, when this method returns the
+   * if {@code operationState} is not null, when this method returns the
    * operation state will be updated with all new entries created.
    * This ensures that subsequent operations with the same store will not
    * trigger new updates.
@@ -810,7 +812,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void addAncestors(
-      Path qualifiedPath,
+      final Path qualifiedPath,
       @Nullable final BulkOperationState operationState) throws IOException {
 
     Collection<DDBPathMetadata> newDirs = new ArrayList<>();
@@ -914,6 +916,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     // sort all the new items topmost first.
     newItems.sort(PathOrderComparators.TOPMOST_PM_FIRST);
+
+    // now process the deletions.
     if (pathsToDelete != null) {
       List<DDBPathMetadata> tombstones = new ArrayList<>(pathsToDelete.size());
       for (Path meta : pathsToDelete) {
@@ -1980,8 +1984,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Initiate the rename operation by creating the tracker and the ongoing
-   * move state.
+   * Initiate the rename operation by creating the tracker and the associated
+   * {@link AncestorState}.
    * @param storeContext store context.
    * @param source source path
    * @param sourceStatus status of the source file/dir
@@ -1992,15 +1996,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public RenameTracker initiateRenameOperation(
       final StoreContext storeContext,
       final Path source,
-      final FileStatus sourceStatus,
+      final S3AFileStatus sourceStatus,
       final Path dest) {
     return new ProgressiveRenameTracker(storeContext, this, source, dest,
         new AncestorState(dest));
   }
 
   @Override
-  public AncestorState initiateBulkWrite(final Path dest)
-      throws IOException {
+  public AncestorState initiateBulkWrite(final Path dest) {
     return new AncestorState(dest);
   }
 
