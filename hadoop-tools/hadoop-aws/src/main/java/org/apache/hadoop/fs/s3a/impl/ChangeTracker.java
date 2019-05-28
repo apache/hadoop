@@ -41,7 +41,6 @@ import org.apache.hadoop.fs.s3a.RemoteFileChangedException;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.http.HttpStatus.SC_PRECONDITION_FAILED;
 
 /**
  * Change tracking for input streams: the version ID or etag of the object is
@@ -57,6 +56,8 @@ public class ChangeTracker {
   private static final Logger LOG =
       LoggerFactory.getLogger(ChangeTracker.class);
 
+  /** {@code 412 Precondition Failed} (HTTP/1.1 - RFC 2616) */
+  public static final int SC_PRECONDITION_FAILED = 412;
   public static final String CHANGE_REPORTED_BY_S3 = "Change reported by S3";
 
   /** Policy to use. */

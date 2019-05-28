@@ -36,7 +36,6 @@ import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeTracker;
 import org.apache.hadoop.test.HadoopTestBase;
-import org.apache.http.HttpStatus;
 
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.createPolicy;
@@ -250,7 +249,7 @@ public class TestStreamChangeTracker extends HadoopTestBase {
     // https://github.com/aws/aws-sdk-java/issues/1644
     AmazonServiceException awsException =
         new AmazonServiceException("aws exception");
-    awsException.setStatusCode(HttpStatus.SC_PRECONDITION_FAILED);
+    awsException.setStatusCode(ChangeTracker.SC_PRECONDITION_FAILED);
     expectChangeException(tracker, awsException, "copy",
         RemoteFileChangedException.PRECONDITIONS_FAILED);
 
