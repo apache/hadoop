@@ -161,7 +161,7 @@ public class OzoneContainer {
               HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
     } else {
       if (this.scrubber == null) {
-        this.scrubber = new ContainerScrubber(containerSet, config);
+        this.scrubber = new ContainerScrubber(config, controller);
       }
       scrubber.up();
     }
