@@ -213,13 +213,14 @@ public class Quota {
     if (manager != null) {
       Set<String> childrenPaths = manager.getPaths(path);
       for (String childPath : childrenPaths) {
-        locations.addAll(rpcServer.getLocationsForPath(childPath, true, false));
+        locations.addAll(
+            rpcServer.getLocationsForPath(childPath, false, false));
       }
     }
     if (locations.size() >= 1) {
       return locations;
     } else {
-      locations.addAll(rpcServer.getLocationsForPath(path, true, false));
+      locations.addAll(rpcServer.getLocationsForPath(path, false, false));
       return locations;
     }
   }

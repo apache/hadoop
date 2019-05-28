@@ -1450,7 +1450,8 @@ public class RouterRpcServer extends AbstractService
    * Get the possible locations of a path in the federated cluster.
    *
    * @param path Path to check.
-   * @param failIfLocked Fail the request if locked (top mount point).
+   * @param failIfLocked Fail the request if there is any mount point under
+   *                     the path.
    * @param needQuotaVerify If need to do the quota verification.
    * @return Prioritized list of locations in the federated cluster.
    * @throws IOException If the location for this path cannot be determined.
@@ -1458,6 +1459,27 @@ public class RouterRpcServer extends AbstractService
   protected List<RemoteLocation> getLocationsForPath(String path,
       boolean failIfLocked, boolean needQuotaVerify) throws IOException {
     try {
+      if (failIfLocked) {
+        // check if there is any mount point under the path
+        final List<String> mountPoints =
+            this.subclusterResolver.getMountPoints(path);
+        if (mountPoints != null) {
+          StringBuilder sb = new StringBuilder();
+          sb.append("The operation is not allowed because ");
+          if (mountPoints.isEmpty()) {
+            sb.append("the path: ")
+                .append(path)
+                .append(" is a mount point");
+          } else {
+            sb.append("there are mount points: ")
+                .append(String.join(",", mountPoints))
+                .append(" under the path: ")
+                .append(path);
+          }
+          throw new AccessControlException(sb.toString());
+        }
+      }
+
       // Check the location for this path
       final PathLocation location =
           this.subclusterResolver.getDestinationForPath(path);
