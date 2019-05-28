@@ -19,12 +19,14 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
@@ -141,29 +143,35 @@ public class TestRouterQuota {
     addMountTable(mountTable2);
 
     final FileSystem routerFs = routerContext.getFileSystem();
-    GenericTestUtils.waitFor(new Supplier<Boolean>() {
-
-      @Override
-      public Boolean get() {
-        boolean isNsQuotaViolated = false;
-        try {
-          // create new directory to trigger NSQuotaExceededException
-          routerFs.mkdirs(new Path("/nsquota/" + UUID.randomUUID()));
-          routerFs.mkdirs(new Path("/nsquota/subdir/" + UUID.randomUUID()));
-        } catch (NSQuotaExceededException e) {
-          isNsQuotaViolated = true;
-        } catch (IOException ignored) {
-        }
-        return isNsQuotaViolated;
+    final List<Path> created = new ArrayList<>();
+    GenericTestUtils.waitFor(() -> {
+      boolean isNsQuotaViolated = false;
+      try {
+        // create new directory to trigger NSQuotaExceededException
+        Path p = new Path("/nsquota/" + UUID.randomUUID());
+        routerFs.mkdirs(p);
+        created.add(p);
+        p = new Path("/nsquota/subdir/" + UUID.randomUUID());
+        routerFs.mkdirs(p);
+        created.add(p);
+      } catch (NSQuotaExceededException e) {
+        isNsQuotaViolated = true;
+      } catch (IOException ignored) {
       }
+      return isNsQuotaViolated;
     }, 5000, 60000);
+
     // mkdir in real FileSystem should be okay
     nnFs1.mkdirs(new Path("/testdir1/" + UUID.randomUUID()));
     nnFs2.mkdirs(new Path("/testdir2/" + UUID.randomUUID()));
 
-    // delete/rename call should be still okay
-    routerFs.delete(new Path("/nsquota"), true);
-    routerFs.rename(new Path("/nsquota/subdir"), new Path("/nsquota/subdir"));
+    // rename/delete call should be still okay
+    assertFalse(created.isEmpty());
+    for(Path src: created) {
+      final Path dst = new Path(src.toString()+"-renamed");
+      routerFs.rename(src, dst);
+      routerFs.delete(dst, true);
+    }
   }
 
   @Test
@@ -376,7 +384,7 @@ public class TestRouterQuota {
 
   /**
    * Remove a mount table entry to the mount table through the admin API.
-   * @param entry Mount table entry to remove.
+   * @param path Mount table entry to remove.
    * @return If it was successfully removed.
    * @throws IOException Problems removing entries.
    */
@@ -677,8 +685,8 @@ public class TestRouterQuota {
     assertEquals(BLOCK_SIZE, mountQuota2.getSpaceConsumed());
 
     FileSystem routerFs = routerContext.getFileSystem();
-    // Remove destination directory for the mount entry
-    routerFs.delete(new Path("/setdir1"), true);
+    // Remove file in setdir1. The target directory still exists.
+    routerFs.delete(new Path("/setdir1/file1"), true);
 
     // Create file
     routerClient.create("/setdir2/file3", true).close();
@@ -699,9 +707,9 @@ public class TestRouterQuota {
     updatedMountTable = getMountTable("/setdir2");
     mountQuota2 = updatedMountTable.getQuota();
 
-    // If destination is not present the quota usage should be reset to 0
-    assertEquals(0, cacheQuota1.getFileAndDirectoryCount());
-    assertEquals(0, mountQuota1.getFileAndDirectoryCount());
+    // The quota usage should be reset.
+    assertEquals(1, cacheQuota1.getFileAndDirectoryCount());
+    assertEquals(1, mountQuota1.getFileAndDirectoryCount());
     assertEquals(0, cacheQuota1.getSpaceConsumed());
     assertEquals(0, mountQuota1.getSpaceConsumed());
 
