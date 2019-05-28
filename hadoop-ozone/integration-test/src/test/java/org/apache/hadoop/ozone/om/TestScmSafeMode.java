@@ -223,6 +223,7 @@ public class TestScmSafeMode {
     assertTrue(cluster.getStorageContainerManager().isInSafeMode());
     cluster.startHddsDatanodes();
     cluster.waitForClusterToBeReady();
+    cluster.waitTobeOutOfSafeMode();
     assertFalse(cluster.getStorageContainerManager().isInSafeMode());
 
     // Test2: Test safe mode  when containers are there in system.
@@ -301,6 +302,7 @@ public class TestScmSafeMode {
 
     cluster.startHddsDatanodes();
     cluster.waitForClusterToBeReady();
+    cluster.waitTobeOutOfSafeMode();
     assertFalse(scm.isInSafeMode());
 
     TestStorageContainerManagerHelper helper =
