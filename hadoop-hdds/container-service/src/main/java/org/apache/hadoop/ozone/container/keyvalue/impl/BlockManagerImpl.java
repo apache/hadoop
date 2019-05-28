@@ -229,12 +229,13 @@ public class BlockManagerImpl implements BlockManager {
       // to delete a Block which might have just gotten inserted after
       // the get check.
       byte[] kKey = Longs.toByteArray(blockID.getLocalID());
-      try {
-        db.getStore().delete(kKey);
-      } catch (IOException e) {
+
+      byte[] kData = db.getStore().get(kKey);
+      if (kData == null) {
         throw new StorageContainerException("Unable to find the block.",
             NO_SUCH_BLOCK);
       }
+      db.getStore().delete(kKey);
       // Decrement blockcount here
       container.getContainerData().decrKeyCount();
     }
