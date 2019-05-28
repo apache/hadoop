@@ -53,16 +53,4 @@ public final class ScmUtils {
     }
   }
 
-  public static File getDBPath(Configuration conf, String dbDirectory) {
-    final File dbDirPath =
-        ServerUtils.getDirectoryFromConfig(conf, dbDirectory, "OM");
-    if (dbDirPath != null) {
-      return dbDirPath;
-    }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. "
-            + "Falling back to {} instead.", dbDirectory,
-        HddsConfigKeys.OZONE_METADATA_DIRS);
-    return ServerUtils.getOzoneMetaDirPath(conf);
-  }
 }
