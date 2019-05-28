@@ -41,11 +41,13 @@ import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
+import org.apache.hadoop.ozone.container.common.statemachine.DatanodeStateMachine;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueHandler;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer;
 import org.apache.hadoop.ozone.protocol.commands.ReplicateContainerCommand;
+import org.apache.hadoop.test.GenericTestUtils;
 
 import static org.apache.hadoop.ozone.container.ozoneimpl.TestOzoneContainer
     .writeChunkForContainer;
@@ -123,10 +125,16 @@ public class TestContainerReplication {
             new ReplicateContainerCommand(containerId,
                 sourcePipelines.getNodes()));
 
-    Thread.sleep(3000);
+    DatanodeStateMachine destinationDatanodeDatanodeStateMachine =
+        destinationDatanode.getDatanodeStateMachine();
+
+    //wait for the replication
+    GenericTestUtils.waitFor(()
+        -> destinationDatanodeDatanodeStateMachine.getSupervisor()
+        .getReplicationCounter() > 0, 1000, 20_000);
 
     OzoneContainer ozoneContainer =
-        destinationDatanode.getDatanodeStateMachine().getContainer();
+        destinationDatanodeDatanodeStateMachine.getContainer();
 
 
 
