@@ -28,11 +28,8 @@ import org.apache.hadoop.utils.MetadataStoreBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -67,22 +64,6 @@ public final class ContainerCache extends LRUMap {
       cache = new ContainerCache(cacheSize, LOAD_FACTOR, true);
     }
     return cache;
-  }
-
-  /**
-   * Closes a db instance.
-   *
-   * @param containerPath - path of the container db to be closed.
-   * @param db - db instance to close.
-   */
-  private void closeDB(String containerPath, MetadataStore db) {
-    if (db != null) {
-      try {
-        db.close();
-      } catch (Exception e) {
-        LOG.error("Error closing DB. Container: " + containerPath, e);
-      }
-    }
   }
 
   /**
@@ -181,75 +162,6 @@ public final class ContainerCache extends LRUMap {
       this.remove(containerDBPath);
     } finally {
       lock.unlock();
-    }
-  }
-
-
-  /**
-   * Class to implement reference counting over instances handed by Container
-   * Cache.
-   * Enable DEBUG log below will enable us quickly locate the leaked reference
-   * from caller stack. When JDK9 StackWalker is available, we can switch to
-   * StackWalker instead of new Exception().printStackTrace().
-   */
-  public class ReferenceCountedDB implements Closeable {
-    private final Logger LOG = LoggerFactory.getLogger(ReferenceCountedDB.class);
-    private final AtomicInteger referenceCount;
-    private final AtomicBoolean isEvicted;
-    private final MetadataStore store;
-    private final String containerDBPath;
-
-    public ReferenceCountedDB(MetadataStore store, String containerDBPath) {
-      this.referenceCount = new AtomicInteger(0);
-      this.isEvicted = new AtomicBoolean(false);
-      this.store = store;
-      this.containerDBPath = containerDBPath;
-    }
-
-    private void incrementReference() {
-      this.referenceCount.incrementAndGet();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("IncRef {} to refCnt {} \n", containerDBPath,
-            referenceCount.get());
-        new Exception().printStackTrace();
-      }
-    }
-
-    private void decrementReference() {
-      this.referenceCount.decrementAndGet();
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
-            referenceCount.get());
-        new Exception().printStackTrace();
-      }
-      cleanup();
-    }
-
-    private void setEvicted(boolean checkNoReferences) {
-      Preconditions.checkState(!checkNoReferences ||
-              (referenceCount.get() == 0),
-          "checkNoReferences:%b, referencount:%d, dbPath:%s",
-          checkNoReferences, referenceCount.get(), containerDBPath);
-      isEvicted.set(true);
-      cleanup();
-    }
-
-    private void cleanup() {
-      if (referenceCount.get() == 0 && isEvicted.get() && store != null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Close {} refCnt {}", containerDBPath,
-              referenceCount.get());
-        }
-        closeDB(containerDBPath, store);
-      }
-    }
-
-    public MetadataStore getStore() {
-      return store;
-    }
-
-    public void close() {
-      decrementReference();
     }
   }
 }
