@@ -83,12 +83,10 @@ public class ReferenceCountedDB implements Closeable {
         LOG.debug("Close {} refCnt {}", containerDBPath,
             referenceCount.get());
       }
-      if (store != null) {
-        try {
-          store.close();
-        } catch (Exception e) {
-          LOG.error("Error closing DB. Container: " + containerDBPath, e);
-        }
+      try {
+        store.close();
+      } catch (Exception e) {
+        LOG.error("Error closing DB. Container: " + containerDBPath, e);
       }
     }
   }
