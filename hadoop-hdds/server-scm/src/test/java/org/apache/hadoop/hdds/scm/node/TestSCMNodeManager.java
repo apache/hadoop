@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
@@ -408,11 +407,15 @@ public class TestSCMNodeManager {
       Thread.sleep(MILLISECONDS.convert(staleNodeInterval, SECONDS));
 
       // Step 2 : resume health check
+      assertTrue("Unexpected, already skipped heartbeat checks",
+          (nodeManager.getSkippedHealthChecks() == 0));
       schedFuture = nodeManager.unpauseHealthCheck();
 
       // Step 3 : wait for 1 iteration of health check
       try {
         schedFuture.get();
+        assertTrue("We did not skip any heartbeat checks",
+            nodeManager.getSkippedHealthChecks() > 0);
       } catch (ExecutionException e) {
         assertEquals("Unexpected exception waiting for Scheduled Health Check",
             0, 1);
@@ -421,8 +424,6 @@ public class TestSCMNodeManager {
       // Step 4 : all nodes should still be HEALTHY
       assertEquals(2, nodeManager.getAllNodes().size());
       assertEquals(2, nodeManager.getNodeCount(HEALTHY));
-      assertTrue("We did not skip any heartbeat checks",
-          nodeManager.getSkippedHealthChecks() > 0);
 
       // Step 5 : heartbeat for node1
       nodeManager.processHeartbeat(node1);

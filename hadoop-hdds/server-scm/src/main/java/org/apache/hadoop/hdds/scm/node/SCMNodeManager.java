@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
@@ -586,6 +587,7 @@ public class SCMNodeManager implements NodeManager {
    * Test utility to stop heartbeat check process.
    * @return ScheduledFuture of next scheduled check that got cancelled.
    */
+  @VisibleForTesting
   ScheduledFuture pauseHealthCheck() {
     return nodeStateManager.pause();
   }
@@ -594,6 +596,7 @@ public class SCMNodeManager implements NodeManager {
    * Test utility to resume the paused heartbeat check process.
    * @return ScheduledFuture of the next scheduled check
    */
+  @VisibleForTesting
   ScheduledFuture unpauseHealthCheck() {
     return nodeStateManager.unpause();
   }
@@ -602,6 +605,7 @@ public class SCMNodeManager implements NodeManager {
    * Test utility to get the count of skipped heartbeat check iterations.
    * @return count of skipped heartbeat check iterations
    */
+  @VisibleForTesting
   long getSkippedHealthChecks() {
     return nodeStateManager.getSkippedHealthChecks();
   }
