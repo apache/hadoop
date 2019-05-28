@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -51,6 +52,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntriesResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.After;
@@ -472,6 +474,88 @@ public class TestRouterMountTable {
     } finally {
       nnFs0.delete(new Path("/testlist/tmp0"), true);
       nnFs1.delete(new Path("/testlist/tmp1"), true);
+    }
+  }
+
+  /**
+   * Regression test for HDFS-13255.
+   * Verify that delete fails if the path is a mount point or
+   * there are any mount point under the path.
+   */
+  @Test
+  public void testDeleteMountPoint() throws Exception {
+    try {
+      MountTable addEntry = MountTable.newInstance("/testdelete/subdir",
+          Collections.singletonMap("ns0", "/testdelete/subdir"));
+      assertTrue(addMountTable(addEntry));
+      nnFs0.mkdirs(new Path("/testdelete/subdir"));
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because there are mount points: "
+              + "subdir under the path: /testdelete",
+          () -> routerFs.delete(new Path("/testdelete"), true));
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because there are mount points: "
+              + "subdir under the path: /testdelete",
+          () -> routerFs.delete(new Path("/testdelete"), false));
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because the path: "
+              + "/testdelete/subdir is a mount point",
+          () -> routerFs.delete(new Path("/testdelete/subdir"), true));
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because the path: "
+              + "/testdelete/subdir is a mount point",
+          () -> routerFs.delete(new Path("/testdelete/subdir"), false));
+    } finally {
+      nnFs0.delete(new Path("/testdelete"), true);
+    }
+  }
+
+  /**
+   * Regression test for HDFS-13255.
+   * Verify that rename fails if the src path is a mount point or
+   * there are any mount point under the path.
+   */
+  @Test
+  public void testRenameMountPoint() throws Exception {
+    try {
+      MountTable addEntry = MountTable.newInstance("/testrename1/sub",
+          Collections.singletonMap("ns0", "/testrename1/sub"));
+      assertTrue(addMountTable(addEntry));
+      addEntry = MountTable.newInstance("/testrename2/sub",
+          Collections.singletonMap("ns0", "/testrename2/sub"));
+      assertTrue(addMountTable(addEntry));
+      nnFs0.mkdirs(new Path("/testrename1/sub/sub"));
+      nnFs0.mkdirs(new Path("/testrename2"));
+
+      // Success: rename a directory to a mount point
+      assertTrue(nnFs0.exists(new Path("/testrename1/sub/sub")));
+      assertFalse(nnFs0.exists(new Path("/testrename2/sub")));
+      assertTrue(routerFs.rename(new Path("/testrename1/sub/sub"),
+          new Path("/testrename2")));
+      assertFalse(nnFs0.exists(new Path("/testrename1/sub/sub")));
+      assertTrue(nnFs0.exists(new Path("/testrename2/sub")));
+
+      // Fail: the target already exists
+      nnFs0.mkdirs(new Path("/testrename1/sub/sub"));
+      assertFalse(routerFs.rename(new Path("/testrename1/sub/sub"),
+              new Path("/testrename2")));
+
+      // Fail: The src is a mount point
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because the path: "
+              + "/testrename1/sub is a mount point",
+          () -> routerFs.rename(new Path("/testrename1/sub"),
+              new Path("/testrename2/sub")));
+
+      // Fail: There is a mount point under the src
+      LambdaTestUtils.intercept(AccessControlException.class,
+          "The operation is not allowed because there are mount points: "
+              + "sub under the path: /testrename1",
+          () -> routerFs.rename(new Path("/testrename1"),
+              new Path("/testrename2/sub")));
+    } finally {
+      nnFs0.delete(new Path("/testrename1"), true);
+      nnFs0.delete(new Path("/testrename2"), true);
     }
   }
 }

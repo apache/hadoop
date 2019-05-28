@@ -61,4 +61,14 @@ public class TestRouterHDFSContractRootDirectory extends
   public void testRecursiveRootListing() throws IOException {
     // It doesn't apply because we still have the mount points here
   }
+
+  @Override
+  public void testRmRootRecursive() {
+    // It doesn't apply because we still have the mount points here
+  }
+
+  @Override
+  public void testRmEmptyRootDirRecursive() {
+    // It doesn't apply because we still have the mount points here
+  }
 }
