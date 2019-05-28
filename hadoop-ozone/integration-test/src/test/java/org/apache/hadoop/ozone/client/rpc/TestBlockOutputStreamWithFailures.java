@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
+import org.apache.ratis.protocol.GroupMismatchException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.junit.After;
 import org.junit.Assert;
@@ -75,7 +76,8 @@ public class TestBlockOutputStreamWithFailures {
    *
    * @throws IOException
    */
-  @Before public void init() throws Exception {
+  @Before
+  public void init() throws Exception {
     chunkSize = 100;
     flushSize = 2 * chunkSize;
     maxFlushSize = 2 * flushSize;
@@ -110,13 +112,15 @@ public class TestBlockOutputStreamWithFailures {
   /**
    * Shutdown MiniDFSCluster.
    */
-  @After public void shutdown() {
+  @After
+  public void shutdown() {
     if (cluster != null) {
       cluster.shutdown();
     }
   }
 
-  @Test public void testWatchForCommitWithCloseContainerException()
+  @Test
+  public void testWatchForCommitWithCloseContainerException()
       throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
@@ -256,7 +260,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void testWatchForCommitDatanodeFailure() throws Exception {
+  @Test
+  public void testWatchForCommitDatanodeFailure() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -388,7 +393,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void test2DatanodesFailure() throws Exception {
+  @Test
+  public void test2DatanodesFailure() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -494,8 +500,15 @@ public class TestBlockOutputStreamWithFailures {
     // rewritten plus one partial chunk plus two putBlocks for flushSize
     // and one flush for partial chunk
     key.flush();
-    Assert.assertTrue(HddsClientUtils.checkForException(blockOutputStream
-        .getIoException()) instanceof RaftRetryFailureException);
+
+    // Since, 2 datanodes went down, if the pipeline gets destroyed quickly,
+    // it will hit GroupMismatchException else, it will fail with
+    // RaftRetryFailureException
+    Assert.assertTrue((HddsClientUtils.
+        checkForException(blockOutputStream
+            .getIoException()) instanceof RaftRetryFailureException)
+        || HddsClientUtils.checkForException(
+        blockOutputStream.getIoException()) instanceof GroupMismatchException);
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // now close the stream, It will update the ack length after watchForCommit
@@ -524,7 +537,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, data1);
   }
 
-  @Test public void testFailureWithPrimeSizedData() throws Exception {
+  @Test
+  public void testFailureWithPrimeSizedData() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -644,7 +658,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void testExceptionDuringClose() throws Exception {
+  @Test
+  public void testExceptionDuringClose() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -758,7 +773,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void testWatchForCommitWithSingleNodeRatis() throws Exception {
+  @Test
+  public void testWatchForCommitWithSingleNodeRatis() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -898,7 +914,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void testDatanodeFailureWithSingleNodeRatis() throws Exception {
+  @Test
+  public void testDatanodeFailureWithSingleNodeRatis() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =
@@ -1037,7 +1054,8 @@ public class TestBlockOutputStreamWithFailures {
     validateData(keyName, dataString.concat(dataString).getBytes());
   }
 
-  @Test public void testDatanodeFailureWithPreAllocation() throws Exception {
+  @Test
+  public void testDatanodeFailureWithPreAllocation() throws Exception {
     XceiverClientMetrics metrics =
         XceiverClientManager.getXceiverClientMetrics();
     long writeChunkCount =

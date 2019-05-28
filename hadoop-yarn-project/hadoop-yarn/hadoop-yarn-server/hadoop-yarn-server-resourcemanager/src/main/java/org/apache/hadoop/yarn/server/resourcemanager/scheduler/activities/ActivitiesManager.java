@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,7 +59,7 @@ public class ActivitiesManager extends AbstractService {
   // An empty node ID, we use this variable as a placeholder
   // in the activity records when recording multiple nodes assignments.
   public static final NodeId EMPTY_NODE_ID = NodeId.newInstance("", 0);
-  public static final String DIAGNOSTICS_DETAILS_SEPARATOR = "\n";
+  public static final char DIAGNOSTICS_DETAILS_SEPARATOR = '\n';
   public static final String EMPTY_DIAGNOSTICS = "";
   private ThreadLocal<Map<NodeId, List<NodeAllocation>>>
       recordingNodesAllocation;
@@ -119,7 +120,8 @@ public class ActivitiesManager extends AbstractService {
   }
 
   public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId,
-      Set<String> requestPriorities, Set<String> allocationRequestIds) {
+      Set<String> requestPriorities, Set<String> allocationRequestIds,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     RMApp app = rmContext.getRMApps().get(applicationId);
     if (app != null && app.getFinalApplicationStatus()
         == FinalApplicationStatus.UNDEFINED) {
@@ -138,7 +140,7 @@ public class ActivitiesManager extends AbstractService {
           allocations = new ArrayList(curAllocations);
         }
       }
-      return new AppActivitiesInfo(allocations, applicationId);
+      return new AppActivitiesInfo(allocations, applicationId, groupBy);
     } else {
       return new AppActivitiesInfo(
           "fail to get application activities after finished",
@@ -146,14 +148,15 @@ public class ActivitiesManager extends AbstractService {
     }
   }
 
-  public ActivitiesInfo getActivitiesInfo(String nodeId) {
+  public ActivitiesInfo getActivitiesInfo(String nodeId,
+      RMWSConsts.ActivitiesGroupBy groupBy) {
     List<NodeAllocation> allocations;
     if (nodeId == null) {
       allocations = lastAvailableNodeActivities;
     } else {
       allocations = completedNodeAllocations.get(NodeId.fromString(nodeId));
     }
-    return new ActivitiesInfo(allocations, nodeId);
+    return new ActivitiesInfo(allocations, nodeId, groupBy);
   }
 
   public void recordNextNodeUpdateActivities(String nodeId) {

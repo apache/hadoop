@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
@@ -37,6 +38,7 @@ import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.ratis.protocol.AlreadyClosedException;
 import org.apache.ratis.protocol.GroupMismatchException;
+import org.apache.ratis.protocol.NotReplicatedException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -259,15 +261,24 @@ public class KeyOutputStream extends OutputStream {
     if (!retryFailure) {
       closedContainerException = checkIfContainerIsClosed(t);
     }
-    PipelineID pipelineId = null;
+    Pipeline pipeline = streamEntry.getPipeline();
+    PipelineID pipelineId = pipeline.getId();
     long totalSuccessfulFlushedData = streamEntry.getTotalAckDataLength();
     //set the correct length for the current stream
     streamEntry.setCurrentPosition(totalSuccessfulFlushedData);
     long bufferedDataLen = blockOutputStreamEntryPool.computeBufferData();
-    LOG.debug(
-        "Encountered exception {}. The last committed block length is {}, "
-            + "uncommitted data length is {} retry count {}", exception,
-        totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    if (closedContainerException) {
+      LOG.debug(
+          "Encountered exception {}. The last committed block length is {}, "
+              + "uncommitted data length is {} retry count {}", exception,
+          totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    } else {
+      LOG.warn(
+          "Encountered exception {} on the pipeline {}. "
+              + "The last committed block length is {}, "
+              + "uncommitted data length is {} retry count {}", exception,
+          pipeline, totalSuccessfulFlushedData, bufferedDataLen, retryCount);
+    }
     Preconditions.checkArgument(
         bufferedDataLen <= blockOutputStreamEntryPool.getStreamBufferMaxSize());
     Preconditions.checkArgument(
@@ -282,8 +293,8 @@ public class KeyOutputStream extends OutputStream {
     if (closedContainerException) {
       excludeList.addConatinerId(ContainerID.valueof(containerId));
     } else if (retryFailure || t instanceof TimeoutException
-        || t instanceof GroupMismatchException) {
-      pipelineId = streamEntry.getPipeline().getId();
+        || t instanceof GroupMismatchException
+        || t instanceof NotReplicatedException) {
       excludeList.addPipeline(pipelineId);
     }
     // just clean up the current stream.

@@ -228,9 +228,18 @@ public final class RMWSConsts {
   public static final String QUEUE_ACL_TYPE = "queue-acl-type";
   public static final String REQUEST_PRIORITIES = "requestPriorities";
   public static final String ALLOCATION_REQUEST_IDS = "allocationRequestIds";
+  public static final String GROUP_BY = "groupBy";
 
   private RMWSConsts() {
     // not called
   }
 
+  /**
+   * Defines the groupBy types of activities, currently only support
+   * DIAGNOSTIC with which user can query aggregated activities
+   * grouped by allocation state and diagnostic.
+   */
+  public enum ActivitiesGroupBy {
+    DIAGNOSTIC
+  }
 }

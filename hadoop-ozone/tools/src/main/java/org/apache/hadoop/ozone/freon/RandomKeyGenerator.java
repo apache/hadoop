@@ -107,7 +107,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
       LoggerFactory.getLogger(RandomKeyGenerator.class);
 
   private boolean completed = false;
-  private boolean exception = false;
+  private Exception exception = null;
 
   @Option(names = "--numOfThreads",
       description = "number of threads to be launched for the run",
@@ -278,7 +278,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     processor.awaitTermination(Integer.MAX_VALUE, TimeUnit.MILLISECONDS);
     completed = true;
 
-    if (exception) {
+    if (exception != null) {
       progressbar.terminate();
     } else {
       progressbar.shutdown();
@@ -288,6 +288,9 @@ public final class RandomKeyGenerator implements Callable<Void> {
       validator.join();
     }
     ozoneClient.close();
+    if (exception != null) {
+      throw exception;
+    }
     return null;
   }
 
@@ -337,7 +340,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
     out.println();
     out.println("***************************************************");
-    out.println("Status: " + (exception ? "Failed" : "Success"));
+    out.println("Status: " + (exception != null ? "Failed" : "Success"));
     out.println("Git Base Revision: " + VersionInfo.getRevision());
     out.println("Number of Volumes created: " + numberOfVolumesCreated);
     out.println("Number of Buckets created: " + numberOfBucketsCreated);
@@ -577,7 +580,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
         numberOfVolumesCreated.getAndIncrement();
         volume = objectStore.getVolume(volumeName);
       } catch (IOException e) {
-        exception = true;
+        exception = e;
         LOG.error("Could not create volume", e);
         return;
       }
@@ -644,13 +647,13 @@ public final class RandomKeyGenerator implements Callable<Void> {
                 }
               }
             } catch (Exception e) {
-              exception = true;
+              exception = e;
               LOG.error("Exception while adding key: {} in bucket: {}" +
                   " of volume: {}.", key, bucket, volume, e);
             }
           }
         } catch (Exception e) {
-          exception = true;
+          exception = e;
           LOG.error("Exception while creating bucket: {}" +
               " in volume: {}.", bucketName, volume, e);
         }
@@ -696,7 +699,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     private String[] tenQuantileKeyWriteTime;
 
     private FreonJobInfo() {
-      this.status = exception ? "Failed" : "Success";
+      this.status = exception != null ? "Failed" : "Success";
       this.numOfVolumes = RandomKeyGenerator.this.numOfVolumes;
       this.numOfBuckets = RandomKeyGenerator.this.numOfBuckets;
       this.numOfKeys = RandomKeyGenerator.this.numOfKeys;

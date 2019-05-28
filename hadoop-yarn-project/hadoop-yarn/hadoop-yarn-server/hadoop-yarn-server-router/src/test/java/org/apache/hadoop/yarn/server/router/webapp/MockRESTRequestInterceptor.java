@@ -133,14 +133,15 @@ public class MockRESTRequestInterceptor extends AbstractRESTRequestInterceptor {
   }
 
   @Override
-  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId) {
+  public ActivitiesInfo getActivities(HttpServletRequest hsr, String nodeId,
+      String groupBy) {
     return new ActivitiesInfo();
   }
 
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
       String appId, String time, Set<String> requestPriorities,
-      Set<String> allocationRequestIds) {
+      Set<String> allocationRequestIds, String groupBy) {
     return new AppActivitiesInfo();
   }
 
