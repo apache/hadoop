@@ -70,7 +70,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Generic tests for overcommitting resources. This needs to be instantiated
- * with a scheduler ({@link YarnConfiguration.RM_SCHEDULER}).
+ * with a scheduler ({@link YarnConfiguration#RM_SCHEDULER}).
  *
  * If reducing the amount of resources leads to overcommitting (negative
  * available resources), the scheduler will select containers to make room.
@@ -142,7 +142,7 @@ public abstract class TestSchedulerOvercommit {
    * Get the configuration for the scheduler. This is used when setting up the
    * Resource Manager and should setup the scheduler (e.g., Capacity Scheduler
    * or Fair Scheduler). It needs to set the configuration with
-   * {@link YarnConfiguration.RM_SCHEDULER}.
+   * {@link YarnConfiguration#RM_SCHEDULER}.
    * @return Configuration for the scheduler.
    */
   protected Configuration getConfiguration() {
@@ -531,7 +531,7 @@ public abstract class TestSchedulerOvercommit {
 
   /**
    * Create a container with a particular size and make sure it succeeds.
-   * @param am Application Master to add the container to.
+   * @param app Application Master to add the container to.
    * @param memory Memory of the container.
    * @return Newly created container.
    * @throws Exception If there are issues creating the container.
