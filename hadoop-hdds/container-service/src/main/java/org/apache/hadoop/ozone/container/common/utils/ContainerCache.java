@@ -188,8 +188,12 @@ public final class ContainerCache extends LRUMap {
   /**
    * Class to implement reference counting over instances handed by Container
    * Cache.
+   * Enable DEBUG log below will enable us quickly locate the leaked reference
+   * from caller stack. When JDK9 StackWalker is available, we can switch to
+   * StackWalker instead of new Exception().printStackTrace().
    */
   public class ReferenceCountedDB implements Closeable {
+    private final Logger LOG = LoggerFactory.getLogger(ReferenceCountedDB.class);
     private final AtomicInteger referenceCount;
     private final AtomicBoolean isEvicted;
     private final MetadataStore store;
@@ -204,24 +208,38 @@ public final class ContainerCache extends LRUMap {
 
     private void incrementReference() {
       this.referenceCount.incrementAndGet();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("IncRef {} to refCnt {} \n", containerDBPath,
+            referenceCount.get());
+        new Exception().printStackTrace();
+      }
     }
 
     private void decrementReference() {
       this.referenceCount.decrementAndGet();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
+            referenceCount.get());
+        new Exception().printStackTrace();
+      }
       cleanup();
     }
 
     private void setEvicted(boolean checkNoReferences) {
       Preconditions.checkState(!checkNoReferences ||
               (referenceCount.get() == 0),
-          "checkNoReferences:%b, referencount:%d",
-          checkNoReferences, referenceCount.get());
+          "checkNoReferences:%b, referencount:%d, dbPath:%s",
+          checkNoReferences, referenceCount.get(), containerDBPath);
       isEvicted.set(true);
       cleanup();
     }
 
     private void cleanup() {
       if (referenceCount.get() == 0 && isEvicted.get() && store != null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Close {} refCnt {}", containerDBPath,
+              referenceCount.get());
+        }
         closeDB(containerDBPath, store);
       }
     }

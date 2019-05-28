@@ -237,24 +237,25 @@ public class ContainerReader implements Runnable {
 
   private void initializeUsedBytes(KeyValueContainer container)
       throws IOException {
-    KeyValueBlockIterator blockIter = new KeyValueBlockIterator(
+    try (KeyValueBlockIterator blockIter = new KeyValueBlockIterator(
         container.getContainerData().getContainerID(),
-        new File(container.getContainerData().getContainerPath()));
-    long usedBytes = 0;
+        new File(container.getContainerData().getContainerPath()))) {
+      long usedBytes = 0;
 
-    while (blockIter.hasNext()) {
-      BlockData block = blockIter.nextBlock();
-      long blockLen = 0;
+      while (blockIter.hasNext()) {
+        BlockData block = blockIter.nextBlock();
+        long blockLen = 0;
 
-      List<ContainerProtos.ChunkInfo> chunkInfoList = block.getChunks();
-      for (ContainerProtos.ChunkInfo chunk : chunkInfoList) {
-        ChunkInfo info = ChunkInfo.getFromProtoBuf(chunk);
-        blockLen += info.getLen();
+        List<ContainerProtos.ChunkInfo> chunkInfoList = block.getChunks();
+        for (ContainerProtos.ChunkInfo chunk : chunkInfoList) {
+          ChunkInfo info = ChunkInfo.getFromProtoBuf(chunk);
+          blockLen += info.getLen();
+        }
+
+        usedBytes += blockLen;
       }
 
-      usedBytes += blockLen;
+      container.getContainerData().setBytesUsed(usedBytes);
     }
-
-    container.getContainerData().setBytesUsed(usedBytes);
   }
 }
