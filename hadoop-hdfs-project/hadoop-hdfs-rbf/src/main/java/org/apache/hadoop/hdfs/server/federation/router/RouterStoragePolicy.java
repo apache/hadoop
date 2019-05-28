@@ -46,7 +46,7 @@ public class RouterStoragePolicy {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
 
     List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("setStoragePolicy",
         new Class<?>[] {String.class, String.class},
         new RemoteParam(),
@@ -69,7 +69,7 @@ public class RouterStoragePolicy {
     rpcServer.checkOperation(NameNode.OperationCategory.WRITE, true);
 
     List<RemoteLocation> locations =
-        rpcServer.getLocationsForPath(src, true, false);
+        rpcServer.getLocationsForPath(src, false, false);
     RemoteMethod method = new RemoteMethod("unsetStoragePolicy",
         new Class<?>[] {String.class},
         new RemoteParam());
