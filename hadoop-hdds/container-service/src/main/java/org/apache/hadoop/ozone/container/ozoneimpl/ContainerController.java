@@ -30,6 +30,7 @@ import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -132,7 +133,11 @@ public class ContainerController {
    * @param container Container
    * @return handler of the container
    */
-  private Handler getHandler(final Container container) {
+  Handler getHandler(final Container container) {
     return handlers.get(container.getContainerType());
+  }
+
+  Iterator<Container> getContainerSetIterator() {
+    return containerSet.getContainerIterator();
   }
 }
