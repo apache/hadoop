@@ -118,12 +118,9 @@ public class JspHelper {
       remoteUser = request.getRemoteUser();
       final String tokenString = request.getParameter(DELEGATION_PARAMETER_NAME);
       if (tokenString != null) {
-        // Token-based connections need only verify the effective user, and
-        // disallow proxying to different user.  Proxy authorization checks
-        // are not required since the checks apply to issuing a token.
+
+        // user.name, doas param is ignored in the token-based auth
         ugi = getTokenUGI(context, request, tokenString, conf);
-        checkUsername(ugi.getShortUserName(), usernameFromQuery);
-        checkUsername(ugi.getShortUserName(), doAsUserFromQuery);
       } else if (remoteUser == null) {
         throw new IOException(
             "Security enabled but user not authenticated by filter");
@@ -137,7 +134,6 @@ public class JspHelper {
 
     if (ugi == null) { // security is off, or there's no token
       ugi = UserGroupInformation.createRemoteUser(remoteUser);
-      checkUsername(ugi.getShortUserName(), usernameFromQuery);
       if (UserGroupInformation.isSecurityEnabled()) {
         // This is not necessarily true, could have been auth'ed by user-facing
         // filter

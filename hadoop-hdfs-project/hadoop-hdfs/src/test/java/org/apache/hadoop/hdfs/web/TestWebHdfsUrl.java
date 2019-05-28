@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.web;
 import static org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod.KERBEROS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -145,37 +146,47 @@ public class TestWebHdfsUrl {
     Path fsPath = new Path("/");
     String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
+    String userParam = new UserParam(ugi.getShortUserName()).toString();
+
     // send user
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        getTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString()
         },
         getTokenUrl);
+
+
 
     // send user
     URL renewTokenUrl = webhdfs.toUrl(PutOpParam.Op.RENEWDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        renewTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.RENEWDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
         },
         renewTokenUrl);
 
+
+
     // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        cancelTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
         },
         cancelTokenUrl);
-    
+
+
     // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
@@ -191,13 +202,15 @@ public class TestWebHdfsUrl {
     // send user
     cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        cancelTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
         },
         cancelTokenUrl);
+
 
     // send user
     fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
@@ -226,40 +239,50 @@ public class TestWebHdfsUrl {
     Path fsPath = new Path("/");
     String tokenString = webhdfs.getDelegationToken().encodeToUrlString();
 
+    String userParam = new UserParam(ugi.getRealUser().
+        getShortUserName()).toString();
+
     // send real+effective
     URL getTokenUrl = webhdfs.toUrl(GetOpParam.Op.GETDELEGATIONTOKEN, fsPath);
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        getTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             GetOpParam.Op.GETDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
             new DoAsParam(ugi.getShortUserName()).toString()
         },
         getTokenUrl);
 
+
+
     // send real+effective
     URL renewTokenUrl = webhdfs.toUrl(PutOpParam.Op.RENEWDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        renewTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.RENEWDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
             new DoAsParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
         },
         renewTokenUrl);
 
+
     // send token
     URL cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        cancelTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
             new DoAsParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString(),
         },
         cancelTokenUrl);
-    
+
+
     // send token
     URL fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(
@@ -275,15 +298,17 @@ public class TestWebHdfsUrl {
     // send real+effective
     cancelTokenUrl = webhdfs.toUrl(PutOpParam.Op.CANCELDELEGATIONTOKEN,
         fsPath, new TokenArgumentParam(tokenString));
+    assertTrue("secure webhdfs SHOULD NOT use user.name parameter",
+        cancelTokenUrl.toString().indexOf(userParam) == -1);
     checkQueryParams(
         new String[]{
             PutOpParam.Op.CANCELDELEGATIONTOKEN.toQueryString(),
-            new UserParam(ugi.getRealUser().getShortUserName()).toString(),
             new DoAsParam(ugi.getShortUserName()).toString(),
             new TokenArgumentParam(tokenString).toString()
         },
         cancelTokenUrl);
-    
+
+
     // send real+effective
     fileStatusUrl = webhdfs.toUrl(GetOpParam.Op.GETFILESTATUS, fsPath);
     checkQueryParams(

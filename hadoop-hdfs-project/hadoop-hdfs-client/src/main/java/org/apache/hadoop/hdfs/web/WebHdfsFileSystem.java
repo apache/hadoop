@@ -167,6 +167,7 @@ public class WebHdfsFileSystem extends FileSystem
   private InetSocketAddress nnAddrs[];
   private int currentNNAddrIndex;
   private boolean disallowFallbackToInsecureCluster;
+  private boolean isInsecureCluster;
   private String restCsrfCustomHeader;
   private Set<String> restCsrfMethodsToIgnore;
 
@@ -280,6 +281,7 @@ public class WebHdfsFileSystem extends FileSystem
 
     this.workingDir = makeQualified(new Path(getHomeDirectoryString(ugi)));
     this.canRefreshDelegationToken = UserGroupInformation.isSecurityEnabled();
+    this.isInsecureCluster = !this.canRefreshDelegationToken;
     this.disallowFallbackToInsecureCluster = !conf.getBoolean(
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_KEY,
         CommonConfigurationKeys.IPC_CLIENT_FALLBACK_TO_SIMPLE_AUTH_ALLOWED_DEFAULT);
@@ -365,6 +367,7 @@ public class WebHdfsFileSystem extends FileSystem
             LOG.debug("Fetched new token: {}", token);
           } else { // security is disabled
             canRefreshDelegationToken = false;
+            isInsecureCluster = true;
           }
         }
       }
@@ -411,8 +414,7 @@ public class WebHdfsFileSystem extends FileSystem
     if (cachedHomeDirectory == null) {
       final HttpOpParam.Op op = GetOpParam.Op.GETHOMEDIRECTORY;
       try {
-        String pathFromDelegatedFS = new FsPathResponseRunner<String>(op, null,
-            new UserParam(ugi)) {
+        String pathFromDelegatedFS = new FsPathResponseRunner<String>(op, null){
           @Override
           String decodeResponse(Map<?, ?> json) throws IOException {
             return JsonUtilClient.getPath(json);
@@ -574,7 +576,8 @@ public class WebHdfsFileSystem extends FileSystem
     return url;
   }
 
-  Param<?,?>[] getAuthParameters(final HttpOpParam.Op op) throws IOException {
+  private synchronized Param<?, ?>[] getAuthParameters(final HttpOpParam.Op op)
+      throws IOException {
     List<Param<?,?>> authParams = Lists.newArrayList();
     // Skip adding delegation token for token operations because these
     // operations require authentication.
@@ -591,7 +594,12 @@ public class WebHdfsFileSystem extends FileSystem
         authParams.add(new DoAsParam(userUgi.getShortUserName()));
         userUgi = realUgi;
       }
-      authParams.add(new UserParam(userUgi.getShortUserName()));
+      UserParam userParam = new UserParam((userUgi.getShortUserName()));
+
+      //in insecure, use user.name parameter, in secure, use spnego auth
+      if(isInsecureCluster) {
+        authParams.add(userParam);
+      }
     }
     return authParams.toArray(new Param<?,?>[0]);
   }
