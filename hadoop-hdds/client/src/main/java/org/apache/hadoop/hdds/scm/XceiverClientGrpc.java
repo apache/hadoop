@@ -31,14 +31,13 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServi
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.storage.CheckedFunction;
+import org.apache.hadoop.hdds.scm.storage.CheckedBiFunction;
 import org.apache.hadoop.hdds.security.exception.SCMSecurityException;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.tracing.GrpcClientInterceptor;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 
@@ -214,12 +213,12 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
   @Override
   public ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request, CheckedFunction function)
+      ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
     Preconditions.checkState(HddsUtils.isReadOnly(request));
     try {
       XceiverClientReply reply;
-      reply = sendCommandWithTraceIDAndRetry(request, function);
+      reply = sendCommandWithTraceIDAndRetry(request, validators);
       ContainerCommandResponseProto responseProto = reply.getResponse().get();
       return responseProto;
     } catch (ExecutionException | InterruptedException e) {
@@ -228,7 +227,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   }
 
   private XceiverClientReply sendCommandWithTraceIDAndRetry(
-      ContainerCommandRequestProto request, CheckedFunction function)
+      ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
     try (Scope scope = GlobalTracer.get()
         .buildSpan("XceiverClientGrpc." + request.getCmdType().name())
@@ -236,12 +235,12 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       ContainerCommandRequestProto finalPayload =
           ContainerCommandRequestProto.newBuilder(request)
               .setTraceID(TracingUtil.exportCurrentSpan()).build();
-      return sendCommandWithRetry(finalPayload, function);
+      return sendCommandWithRetry(finalPayload, validators);
     }
   }
 
   private XceiverClientReply sendCommandWithRetry(
-      ContainerCommandRequestProto request, CheckedFunction function)
+      ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
     ContainerCommandResponseProto responseProto = null;
     IOException ioException = null;
@@ -260,8 +259,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         // in case these don't exist for the specific datanode.
         reply.addDatanode(dn);
         responseProto = sendCommandAsync(request, dn).getResponse().get();
-        if (function != null) {
-          function.apply(responseProto);
+        if (validators != null && !validators.isEmpty()) {
+          for (CheckedBiFunction validator : validators)
+          validator.apply(request, responseProto);
         }
         break;
       } catch (ExecutionException | InterruptedException | IOException e) {

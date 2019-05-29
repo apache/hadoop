@@ -25,15 +25,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 import com.google.common.annotations.VisibleForTesting;
-import org.apache.hadoop.hdds.scm.storage.CheckedFunction;
-import org.apache.hadoop.hdds.scm.storage.CheckedFunction;
+import org.apache.hadoop.hdds.scm.storage.CheckedBiFunction;
 
 /**
  * A Client for the storageContainer protocol.
@@ -120,18 +118,20 @@ public abstract class XceiverClientSpi implements Closeable {
    * Sends a given command to server and gets the reply back along with
    * the server associated info.
    * @param request Request
-   * @param function function to validate the response
+   * @param validators functions to validate the response
    * @return Response to the command
    * @throws IOException
    */
   public ContainerCommandResponseProto sendCommand(
-      ContainerCommandRequestProto request, CheckedFunction function)
+      ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
     try {
       XceiverClientReply reply;
       reply = sendCommandAsync(request);
       ContainerCommandResponseProto responseProto = reply.getResponse().get();
-      function.apply(responseProto);
+      for (CheckedBiFunction function : validators) {
+        function.apply(request, responseProto);
+      }
       return responseProto;
     } catch (ExecutionException | InterruptedException e) {
       throw new IOException("Failed to command " + request, e);

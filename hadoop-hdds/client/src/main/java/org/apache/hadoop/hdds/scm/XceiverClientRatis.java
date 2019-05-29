@@ -22,7 +22,6 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.storage.CheckedFunction;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 
 import io.opentracing.Scope;

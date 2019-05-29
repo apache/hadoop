@@ -344,8 +344,11 @@ public class BlockInputStream extends InputStream implements Seekable {
       throws IOException {
     ReadChunkResponseProto readChunkResponse;
     try {
+      List<CheckedBiFunction> validators =
+          ContainerProtocolCalls.getValidatorList();
+      validators.add(validator);
       readChunkResponse = ContainerProtocolCalls
-          .readChunk(xceiverClient, chunkInfo, blockID, traceID, validator);
+          .readChunk(xceiverClient, chunkInfo, blockID, traceID, validators);
     } catch (IOException e) {
       if (e instanceof StorageContainerException) {
         throw e;
@@ -360,20 +363,12 @@ public class BlockInputStream extends InputStream implements Seekable {
     return xceiverClient.getPipeline().getNodes();
   }
 
-  private CheckedFunction<ContainerProtos.ContainerCommandResponseProto, IOException>
-      validator = (response) -> {
-    ReadChunkResponseProto readChunkResponse;
-    final ChunkInfo chunkInfo = chunks.get(chunkIndex);
+  private CheckedBiFunction<ContainerProtos.ContainerCommandRequestProto,
+      ContainerProtos.ContainerCommandResponseProto, IOException>
+      validator = (request, response) -> {
+    ReadChunkResponseProto readChunkResponse = response.getReadChunk();
+    final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
     ByteString byteString;
-    try {
-      ContainerProtocolCalls.validateContainerResponse(response);
-      readChunkResponse = response.getReadChunk();
-    } catch (IOException e) {
-      if (e instanceof StorageContainerException) {
-        throw e;
-      }
-      throw new IOException("Unexpected OzoneException: " + e.toString(), e);
-    }
     byteString = readChunkResponse.getData();
     if (byteString.size() != chunkInfo.getLen()) {
       // Bytes read from chunk should be equal to chunk size.

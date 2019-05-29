@@ -22,6 +22,6 @@ package org.apache.hadoop.hdds.scm.storage;
 import java.io.IOException;
 
 @FunctionalInterface
-public interface CheckedFunction<IN , THROWABLE extends IOException> {
-  void apply(IN input) throws THROWABLE;
+public interface CheckedBiFunction<LEFT, RIGHT , THROWABLE extends IOException> {
+  void apply(LEFT left, RIGHT right) throws THROWABLE;
 }
