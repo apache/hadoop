@@ -717,6 +717,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       queueUsagePerc =
           calc.divide(cluster, usedResourceClone, Resources.multiply(cluster,
               queue.getQueueInfo(false, false).getCapacity())) * 100;
+      if (Float.isNaN(queueUsagePerc) || Float.isInfinite(queueUsagePerc)) {
+        queueUsagePerc = 0.0f;
+      }
       clusterUsagePerc = calc.divide(cluster, usedResourceClone, cluster) * 100;
     }
     return ApplicationResourceUsageReport.newInstance(liveContainers.size(),
