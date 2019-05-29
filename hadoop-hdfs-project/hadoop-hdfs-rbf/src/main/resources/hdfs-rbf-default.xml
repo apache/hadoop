@@ -19,8 +19,8 @@
 -->
 
 <!-- Do not modify this file directly.  Instead, copy entries that you -->
-<!-- wish to modify from this file into hdfs-site.xml and change them -->
-<!-- there.  If hdfs-site.xml does not already exist, create it.      -->
+<!-- wish to modify from this file into hdfs-rbf-site.xml and change them -->
+<!-- there.  If hdfs-rbf-site.xml does not already exist, create it.      -->
 
 <configuration>
   <property>
