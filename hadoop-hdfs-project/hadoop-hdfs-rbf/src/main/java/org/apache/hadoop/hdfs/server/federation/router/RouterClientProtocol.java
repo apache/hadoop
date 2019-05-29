@@ -132,6 +132,8 @@ public class RouterClientProtocol implements ClientProtocol {
   private final String superGroup;
   /** Erasure coding calls. */
   private final ErasureCoding erasureCoding;
+  /** Cache Admin calls. */
+  private final RouterCacheAdmin routerCacheAdmin;
   /** StoragePolicy calls. **/
   private final RouterStoragePolicy storagePolicy;
   /** Router security manager to handle token operations. */
@@ -164,6 +166,7 @@ public class RouterClientProtocol implements ClientProtocol {
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
     this.erasureCoding = new ErasureCoding(rpcServer);
     this.storagePolicy = new RouterStoragePolicy(rpcServer);
+    this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
   }
 
@@ -1259,48 +1262,45 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public long addCacheDirective(CacheDirectiveInfo path,
       EnumSet<CacheFlag> flags) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
-    return 0;
+    return routerCacheAdmin.addCacheDirective(path, flags);
   }
 
   @Override
   public void modifyCacheDirective(CacheDirectiveInfo directive,
       EnumSet<CacheFlag> flags) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    routerCacheAdmin.modifyCacheDirective(directive, flags);
   }
 
   @Override
   public void removeCacheDirective(long id) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    routerCacheAdmin.removeCacheDirective(id);
   }
 
   @Override
-  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(
-      long prevId, CacheDirectiveInfo filter) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+  public BatchedEntries<CacheDirectiveEntry> listCacheDirectives(long prevId,
+      CacheDirectiveInfo filter) throws IOException {
+    return routerCacheAdmin.listCacheDirectives(prevId, filter);
   }
 
   @Override
   public void addCachePool(CachePoolInfo info) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    routerCacheAdmin.addCachePool(info);
   }
 
   @Override
   public void modifyCachePool(CachePoolInfo info) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    routerCacheAdmin.modifyCachePool(info);
   }
 
   @Override
   public void removeCachePool(String cachePoolName) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    routerCacheAdmin.removeCachePool(cachePoolName);
   }
 
   @Override
   public BatchedEntries<CachePoolEntry> listCachePools(String prevKey)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    return routerCacheAdmin.listCachePools(prevKey);
   }
 
   @Override
