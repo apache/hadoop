@@ -76,7 +76,7 @@ public class TestPartialDeleteFailures {
 
   @Before
   public void setUp() throws Exception {
-    context = craateMockStoreContext(true,
+    context = createMockStoreContext(true,
         new OperationTrackingStore());
   }
 
@@ -171,7 +171,7 @@ public class TestPartialDeleteFailures {
         deleteForbidden);
     OperationTrackingStore store
         = new OperationTrackingStore();
-    StoreContext storeContext = craateMockStoreContext(true, store);
+    StoreContext storeContext = createMockStoreContext(true, store);
     MultiObjectDeleteSupport deleteSupport
         = new MultiObjectDeleteSupport(storeContext);
     Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
@@ -192,7 +192,7 @@ public class TestPartialDeleteFailures {
   }
 
 
-  StoreContext craateMockStoreContext(boolean multiDelete,
+  private StoreContext createMockStoreContext(boolean multiDelete,
       OperationTrackingStore store) throws URISyntaxException, IOException {
     URI name = new URI("s3a://bucket");
     return new StoreContext(

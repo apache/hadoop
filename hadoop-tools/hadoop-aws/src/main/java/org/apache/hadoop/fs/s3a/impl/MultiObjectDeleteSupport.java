@@ -176,6 +176,8 @@ public final class MultiObjectDeleteSupport {
     List<Path> deleted = outcome.getRight();
     List<Path> undeleted = outcome.getLeft();
     // delete the paths but recover
+    // TODO: handle the case where a parent path is deleted but not a child.
+    // TODO: in a fake object delete, we don't actually want to delete metastore entries
     deleted.forEach(path -> {
       try {
         metadataStore.delete(path);

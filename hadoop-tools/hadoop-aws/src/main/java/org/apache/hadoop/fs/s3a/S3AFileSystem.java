@@ -2358,10 +2358,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Partial delete failure");
       // what to do if an IOE was raised? Given an exception was being
       // raised anyway, and the failures are logged, do nothing.
-      Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
-          new MultiObjectDeleteSupport(createStoreContext())
-              .processDeleteFailure(ex, keysToDelete);
-      undeletedObjectsOnFailure.addAll(results.getMiddle());
+      if (!deleteFakeDir) {
+        // when deleting fake directories we don't want to delete metastore
+        // entries so we only process these failures on "real" deletes.
+        Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
+            new MultiObjectDeleteSupport(createStoreContext())
+                .processDeleteFailure(ex, keysToDelete);
+        undeletedObjectsOnFailure.addAll(results.getMiddle());
+      }
       throw ex;
     } catch (AmazonClientException | IOException ex) {
       List<Path> paths = new MultiObjectDeleteSupport(
