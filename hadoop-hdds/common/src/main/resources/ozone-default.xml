@@ -2373,14 +2373,8 @@
     <name>hdds.tracing.enabled</name>
     <value>true</value>
     <tag>OZONE, HDDS</tag>
-    <description>If enabled, tracing information is sent to tracing server.</description>
-   </property>
-  <property>
-    <name>ozone.s3g.address</name>
-    <value/>
-    <tag>OZONE, MANAGEMENT</tag>
     <description>
-      The address of the Ozone S3G gateway.n.
+      If enabled, tracing information is sent to tracing server.
     </description>
   </property>
   <property>
