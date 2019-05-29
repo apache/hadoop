@@ -82,7 +82,7 @@ BIN=$(yetus_abs "${BASH_SOURCE-$0}")
 BINDIR=$(dirname "${BIN}")
 
 ## HADOOP_YETUS_VERSION >= 0.9.0 the tarball named with apache-yetus prefix
-if version_ge $HADOOP_YETUS_VERSION 0.9.0; then
+if version_ge "${HADOOP_YETUS_VERSION}" "0.9.0"; then
   YETUS_PREFIX=apache-yetus
 else
   YETUS_PREFIX=yetus
