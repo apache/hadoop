@@ -65,8 +65,8 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>hadoop-ozone-client</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-lang3</artifactId>
+      <groupId>commons-lang</groupId>
+      <artifactId>commons-lang</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
