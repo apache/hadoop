@@ -934,4 +934,18 @@ public class RouterWebServices implements RMWebServiceProtocol {
     this.response = response;
   }
 
+  @POST
+  @Path(RMWSConsts.SIGNAL_TO_CONTAINER)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  public Response signalToContainer(
+      @PathParam(RMWSConsts.CONTAINERID) String containerId,
+      @PathParam(RMWSConsts.COMMAND) String command,
+      @Context HttpServletRequest req)
+      throws AuthorizationException {
+    init();
+    RequestInterceptorChainWrapper pipeline = getInterceptorChain(req);
+    return pipeline.getRootInterceptor()
+        .signalToContainer(containerId, command, req);
+  }
 }

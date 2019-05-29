@@ -94,6 +94,7 @@ import org.apache.hadoop.yarn.api.protocolrecords.ReservationListResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationSubmissionResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.ReservationUpdateRequest;
+import org.apache.hadoop.yarn.api.protocolrecords.SignalContainerRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.UpdateApplicationPriorityRequest;
@@ -104,6 +105,7 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.ApplicationTimeoutType;
+import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -118,6 +120,7 @@ import org.apache.hadoop.yarn.api.records.ReservationRequestInterpreter;
 import org.apache.hadoop.yarn.api.records.ReservationRequests;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceOption;
+import org.apache.hadoop.yarn.api.records.SignalContainerCommand;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -2549,5 +2552,36 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
     }
 
     return new RMQueueAclInfo(true, user.getUserName(), "");
+  }
+
+  @POST
+  @Path(RMWSConsts.SIGNAL_TO_CONTAINER)
+  @Produces({ MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8,
+      MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
+  @Override
+  public Response signalToContainer(
+      @PathParam(RMWSConsts.CONTAINERID) String containerId,
+      @PathParam(RMWSConsts.COMMAND) String command,
+      @Context HttpServletRequest hsr)
+      throws AuthorizationException {
+    UserGroupInformation callerUGI = getCallerUserGroupInformation(hsr, true);
+    initForWritableEndpoints(callerUGI, true);
+    if (!EnumUtils.isValidEnum(
+        SignalContainerCommand.class, command.toUpperCase())) {
+      String errMsg =
+          "Invalid command: " + command.toUpperCase() + ", valid commands are: "
+              + Arrays.asList(SignalContainerCommand.values());
+      return Response.status(Status.BAD_REQUEST).entity(errMsg).build();
+    }
+    try {
+      ContainerId containerIdObj = ContainerId.fromString(containerId);
+      rm.getClientRMService().signalToContainer(SignalContainerRequest
+          .newInstance(containerIdObj,
+              SignalContainerCommand.valueOf(command.toUpperCase())));
+    } catch (Exception e) {
+      return Response.status(Status.INTERNAL_SERVER_ERROR)
+          .entity(e.getMessage()).build();
+    }
+    return Response.status(Status.OK).build();
   }
 }

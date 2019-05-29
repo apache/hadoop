@@ -1343,6 +1343,12 @@ public class FederationInterceptorREST extends AbstractRESTRequestInterceptor {
   }
 
   @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) {
+    throw new NotImplementedException("Code is not implemented");
+  }
+
+  @Override
   public void shutdown() {
     if (threadpool != null) {
       threadpool.shutdown();
