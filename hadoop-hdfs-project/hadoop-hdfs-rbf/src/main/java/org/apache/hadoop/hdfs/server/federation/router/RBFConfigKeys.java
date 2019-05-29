@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.server.federation.metrics.FederationRPCPerformanceMonitor;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -38,6 +39,12 @@ import java.util.concurrent.TimeUnit;
  */
 @InterfaceAudience.Private
 public class RBFConfigKeys extends CommonConfigurationKeysPublic {
+
+  public static final String HDFS_RBF_SITE_XML = "hdfs-rbf-site.xml";
+
+  static {
+    Configuration.addDefaultResource(HDFS_RBF_SITE_XML);
+  }
 
   // HDFS Router-based federation
   public static final String FEDERATION_ROUTER_PREFIX =
