@@ -37,7 +37,7 @@ import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.common.utils.ContainerCache;
-import org.apache.hadoop.ozone.container.common.utils.ContainerCache.ReferenceCountedDB;
+import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 
 import java.io.IOException;
 
