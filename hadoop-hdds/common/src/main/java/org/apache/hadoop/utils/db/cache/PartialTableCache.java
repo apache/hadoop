@@ -27,7 +27,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
@@ -63,12 +62,8 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
   }
 
   @Override
-  @SuppressFBWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that " +
-      "the same key will not be modified by other thread during cleanup"})
   public void put(CACHEKEY cacheKey, CACHEVALUE value) {
-    synchronized (cache) {
-      cache.put(cacheKey, value);
-    }
+    cache.put(cacheKey, value);
     epochEntries.add(new EpochEntry<>(value.getEpoch(), cacheKey));
   }
 
@@ -82,24 +77,21 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     return cache.size();
   }
 
-  @SuppressFBWarnings({"MT_CORRECTNESS", "Using Synchronized here, so that " +
-      "the same key will not be modified by other thread during put"})
   private void evictCache(long epoch) {
     EpochEntry<CACHEKEY> currentEntry = null;
     for (Iterator<EpochEntry<CACHEKEY>> iterator = epochEntries.iterator();
          iterator.hasNext();) {
       currentEntry = iterator.next();
       CACHEKEY cachekey = currentEntry.getCachekey();
-      synchronized (cache) {
-        CacheValue cacheValue = cache.get(cachekey);
-        if (cacheValue.getEpoch() <= epoch) {
-          cache.remove(cachekey);
+      CacheValue cacheValue = cache.computeIfPresent(cachekey, ((k, v) -> {
+        if (v.getEpoch() <= epoch) {
           iterator.remove();
-        } else {
-          // If currentEntry epoch is greater than epoch, we have deleted all
-          // entries less than specified epoch. So, we can break.
-          break;
+          return null;
         }
+        return v;
+      }));
+      if (cacheValue != null && cacheValue.getEpoch() >= epoch) {
+        break;
       }
     }
   }
