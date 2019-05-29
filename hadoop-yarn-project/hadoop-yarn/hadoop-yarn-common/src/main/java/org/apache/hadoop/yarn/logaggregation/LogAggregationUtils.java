@@ -26,7 +26,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 
 import com.google.common.annotations.VisibleForTesting;
 import java.io.IOException;
@@ -94,16 +93,6 @@ public class LogAggregationUtils {
     return new Path(remoteRootLogDir, user);
   }
 
-  /**
-   * Returns the suffix component of the log dir.
-   * @param conf the configuration
-   * @return the suffix which will be appended to the user log dir.
-   */
-  public static String getRemoteNodeLogDirSuffix(Configuration conf) {
-    return conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
-        YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR_SUFFIX);
-  }
-
   
   /**
    * Converts a nodeId to a form used in the app log file name.
@@ -120,24 +109,6 @@ public class LogAggregationUtils {
     return nodeId.toString().replace(":", "_");
   }
 
-  /**
-   * Return the remote application log directory.
-   * @param conf the configuration
-   * @param appId the application
-   * @param appOwner the application owner
-   * @return the remote application log directory path
-   * @throws IOException if we can not find remote application log directory
-   */
-  public static org.apache.hadoop.fs.Path getRemoteAppLogDir(
-      Configuration conf, ApplicationId appId, String appOwner)
-      throws IOException {
-    String suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
-    org.apache.hadoop.fs.Path remoteRootLogDir =
-        new org.apache.hadoop.fs.Path(conf.get(
-            YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
-            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
-    return getRemoteAppLogDir(conf, appId, appOwner, remoteRootLogDir, suffix);
-  }
 
   /**
    * Return the remote application log directory.
@@ -219,26 +190,6 @@ public class LogAggregationUtils {
         FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
     nodeFiles.addAll(Arrays.asList(FileContext.getFileContext(
         qualifiedLogDir.toUri(), conf).util().listStatus(remoteAppLogDir)));
-    return nodeFiles;
-  }
-
-  /**
-   * Get all available log files under remote app log directory.
-   * @param conf the configuration
-   * @param appId the applicationId
-   * @param appOwner the application owner
-   * @return the iterator of available log files
-   * @throws IOException if there is no log file available
-   */
-  public static RemoteIterator<FileStatus> getRemoteNodeFileDir(
-      Configuration conf, ApplicationId appId, String appOwner)
-      throws IOException {
-    Path remoteAppLogDir = getRemoteAppLogDir(conf, appId, appOwner);
-    RemoteIterator<FileStatus> nodeFiles = null;
-    Path qualifiedLogDir =
-        FileContext.getFileContext(conf).makeQualified(remoteAppLogDir);
-    nodeFiles = FileContext.getFileContext(qualifiedLogDir.toUri(),
-        conf).listStatus(remoteAppLogDir);
     return nodeFiles;
   }
 }

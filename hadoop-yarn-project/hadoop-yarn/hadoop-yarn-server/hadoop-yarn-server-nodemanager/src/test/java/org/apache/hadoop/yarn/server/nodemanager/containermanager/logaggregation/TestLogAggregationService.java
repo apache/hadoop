@@ -688,12 +688,14 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
 
   @Test
   public void testAppLogDirCreation() throws Exception {
-    final String logSuffix = "logs";
+    final String configuredSuffix = "logs";
+    final String actualSuffix = "logs-tfile";
     this.conf.set(YarnConfiguration.NM_LOG_DIRS,
         localLogDir.getAbsolutePath());
     this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
         this.remoteRootLogDir.getAbsolutePath());
-    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX, logSuffix);
+    this.conf.set(YarnConfiguration.NM_REMOTE_APP_LOG_DIR_SUFFIX,
+        configuredSuffix);
 
     InlineDispatcher dispatcher = new InlineDispatcher();
     dispatcher.init(this.conf);
@@ -726,7 +728,7 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
     ApplicationId appId = BuilderUtils.newApplicationId(1, 1);
     Path userDir = fs.makeQualified(new Path(
         remoteRootLogDir.getAbsolutePath(), this.user));
-    Path suffixDir = new Path(userDir, logSuffix);
+    Path suffixDir = new Path(userDir, actualSuffix);
     Path appDir = new Path(suffixDir, appId.toString());
     LogAggregationContext contextWithAllContainers =
         Records.newRecord(LogAggregationContext.class);
