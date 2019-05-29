@@ -203,15 +203,24 @@ public final class ServerUtils {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, path);
   }
 
-  public static File getDBPath(Configuration conf, String dbDirectory) {
+  /**
+   * Returns with the service specific metadata directory.
+   * <p>
+   * If the directory is missing the method tries to create it.
+   *
+   * @param conf the ozone configuration object
+   * @param key  The configuration key which specify the director.
+   * @return The path of the directory.
+   */
+  public static File getDBPath(Configuration conf, String key) {
     final File dbDirPath =
-        getDirectoryFromConfig(conf, dbDirectory, "OM");
+        getDirectoryFromConfig(conf, key, "OM");
     if (dbDirPath != null) {
       return dbDirPath;
     }
 
     LOG.warn("{} is not configured. We recommend adding this setting. "
-            + "Falling back to {} instead.", dbDirectory,
+            + "Falling back to {} instead.", key,
         HddsConfigKeys.OZONE_METADATA_DIRS);
     return ServerUtils.getOzoneMetaDirPath(conf);
   }
