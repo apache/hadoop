@@ -76,6 +76,8 @@ public class ContainerSafeModeRule extends
       maxContainer = containerMap.size();
     }
 
+    long cutOff = (long) Math.ceil(maxContainer * safeModeCutoff);
+    getSafeModeMetrics().setNumContainerWithOneReplicaReportedThreshold(cutOff);
   }
 
 
@@ -105,6 +107,8 @@ public class ContainerSafeModeRule extends
       if (containerMap.containsKey(c.getContainerID())) {
         if(containerMap.remove(c.getContainerID()) != null) {
           containerWithMinReplicas.getAndAdd(1);
+          getSafeModeMetrics()
+              .incCurrentContainersWithOneReplicaReportedCount();
         }
       }
     });

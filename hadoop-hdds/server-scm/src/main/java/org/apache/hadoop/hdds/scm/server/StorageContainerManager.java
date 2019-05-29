@@ -1017,6 +1017,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     } catch (Exception ex) {
       LOG.error("SCM Metadata store stop failed", ex);
     }
+
+    scmSafeModeManager.stop();
   }
 
   /**

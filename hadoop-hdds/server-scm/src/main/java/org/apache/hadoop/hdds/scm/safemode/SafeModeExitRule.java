@@ -107,4 +107,8 @@ public abstract class SafeModeExitRule<T> implements EventHandler<T> {
     return safeModeManager.getInSafeMode();
   }
 
+  protected SafeModeMetrics getSafeModeMetrics() {
+    return safeModeManager.getSafeModeMetrics();
+  }
+
 }
