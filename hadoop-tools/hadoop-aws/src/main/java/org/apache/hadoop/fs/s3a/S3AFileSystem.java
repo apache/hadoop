@@ -1392,14 +1392,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             completeActiveCopiesAndDeleteSources =
                 (String reason) -> {
                   completeActiveCopies.apply(reason);
-                  removeSourceObjects(renameTracker, keysToDelete, pathsToDelete);
+                  removeSourceObjects(renameTracker,
+                      keysToDelete,
+                      pathsToDelete);
                   // now reset the lists.
                   keysToDelete.clear();
                   pathsToDelete.clear();
                   return null;
                 };
 
-        if (dstStatus != null && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
+        if (dstStatus != null
+            && dstStatus.isEmptyDirectory() == Tristate.TRUE) {
           // delete unnecessary fake directory at the destination.
           // this MUST be done before anything else so that
           // rollback code doesn't get confused and insert a tombstone

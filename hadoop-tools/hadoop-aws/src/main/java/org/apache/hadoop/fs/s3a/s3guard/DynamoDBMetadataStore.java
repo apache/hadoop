@@ -1991,8 +1991,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
-   * Initiate the rename operation by creating the tracker and the associated
-   * {@link AncestorState}.
+   * Initiate the rename operation by creating the tracker for the filesystem
+   * to keep up to date with state changes in the S3A bucket.
    * @param storeContext store context.
    * @param source source path
    * @param sourceStatus status of the source file/dir

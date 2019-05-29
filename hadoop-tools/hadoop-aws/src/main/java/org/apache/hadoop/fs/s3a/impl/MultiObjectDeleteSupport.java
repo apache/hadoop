@@ -122,7 +122,8 @@ public final class MultiObjectDeleteSupport {
     // Take this is list of paths
     // extract all undeleted entries contained in the exception and
     // then removes them from the original list.
-    List<Path> undeleted = removeUndeletedPaths(deleteException, pathsBeingDeleted,
+    List<Path> undeleted = removeUndeletedPaths(deleteException,
+        pathsBeingDeleted,
         context.getKeyToPathQualifier());
     return Pair.of(undeleted, pathsBeingDeleted);
   }
