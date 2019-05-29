@@ -21,6 +21,8 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -198,9 +200,16 @@ public class RemoteMethod {
     for (int i = 0; i < this.params.length; i++) {
       Object currentObj = this.params[i];
       if (currentObj instanceof RemoteParam) {
-        // Map the parameter using the context
         RemoteParam paramGetter = (RemoteParam) currentObj;
-        objList[i] = paramGetter.getParameterForContext(context);
+        // Map the parameter using the context
+        if (this.types[i] == CacheDirectiveInfo.class) {
+          CacheDirectiveInfo path =
+              (CacheDirectiveInfo) paramGetter.getParameterForContext(context);
+          objList[i] = new CacheDirectiveInfo.Builder(path)
+              .setPath(new Path(context.getDest())).build();
+        } else {
+          objList[i] = paramGetter.getParameterForContext(context);
+        }
       } else {
         objList[i] = currentObj;
       }
