@@ -61,13 +61,18 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.CacheDirectiveInfo;
+import org.apache.hadoop.hdfs.protocol.CachePoolEntry;
+import org.apache.hadoop.hdfs.protocol.CachePoolInfo;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DirectoryListing;
@@ -1437,6 +1442,63 @@ public class TestRouterRpc {
     // Reset the registrations again
     cluster.registerNamenodes();
     cluster.waitNamenodeRegistration();
+  }
+
+  @Test
+  public void testCacheAdmin() throws Exception {
+    DistributedFileSystem routerDFS = (DistributedFileSystem) routerFS;
+    // Verify cache directive commands.
+    CachePoolInfo cpInfo = new CachePoolInfo("Check");
+    cpInfo.setOwnerName("Owner");
+
+    // Add a cache pool.
+    routerProtocol.addCachePool(cpInfo);
+    RemoteIterator<CachePoolEntry> iter = routerDFS.listCachePools();
+    assertTrue(iter.hasNext());
+
+    // Modify a cache pool.
+    CachePoolInfo info = iter.next().getInfo();
+    assertEquals("Owner", info.getOwnerName());
+    cpInfo.setOwnerName("new Owner");
+    routerProtocol.modifyCachePool(cpInfo);
+    iter = routerDFS.listCachePools();
+    assertTrue(iter.hasNext());
+    info = iter.next().getInfo();
+    assertEquals("new Owner", info.getOwnerName());
+
+    // Remove a cache pool.
+    routerProtocol.removeCachePool("Check");
+    iter = routerDFS.listCachePools();
+    assertFalse(iter.hasNext());
+
+    // Verify cache directive commands.
+    cpInfo.setOwnerName("Owner");
+    routerProtocol.addCachePool(cpInfo);
+    routerDFS.mkdirs(new Path("/ns1/dir"));
+
+    // Add a cache directive.
+    CacheDirectiveInfo cacheDir = new CacheDirectiveInfo.Builder()
+        .setPath(new Path("/ns1/dir"))
+        .setReplication((short) 1)
+        .setPool("Check")
+        .build();
+    long id = routerDFS.addCacheDirective(cacheDir);
+    CacheDirectiveInfo filter =
+        new CacheDirectiveInfo.Builder().setPath(new Path("/ns1/dir")).build();
+    assertTrue(routerDFS.listCacheDirectives(filter).hasNext());
+
+    // List cache directive.
+    assertEquals("Check",
+        routerDFS.listCacheDirectives(filter).next().getInfo().getPool());
+    cacheDir = new CacheDirectiveInfo.Builder().setReplication((short) 2)
+        .setId(id).setPath(new Path("/ns1/dir")).build();
+
+    // Modify cache directive.
+    routerDFS.modifyCacheDirective(cacheDir);
+    assertEquals((short) 2, (short) routerDFS.listCacheDirectives(filter).next()
+        .getInfo().getReplication());
+    routerDFS.removeCacheDirective(id);
+    assertFalse(routerDFS.listCacheDirectives(filter).hasNext());
   }
 
   /**
