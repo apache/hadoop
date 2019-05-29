@@ -363,4 +363,10 @@ public class PassThroughRESTRequestInterceptor
     return getNextInterceptor().updateApplicationTimeout(appTimeout, hsr,
         appId);
   }
+
+  @Override
+  public Response signalToContainer(String containerId,
+      String command, HttpServletRequest req) throws AuthorizationException {
+    return getNextInterceptor().signalToContainer(containerId, command, req);
+  }
 }

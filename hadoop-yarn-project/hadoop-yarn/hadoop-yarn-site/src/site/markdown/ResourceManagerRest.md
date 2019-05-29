@@ -5291,3 +5291,57 @@ Response Header:
       HTTP/1.1 200 OK
       Content-Type: application/xml
       Transfer-Encoding: chunked
+
+
+Cluster Container Signal API
+--------------------------------
+
+With the Container Signal API, you can send a signal to a specified container with one of the following commands: OUTPUT_THREAD_DUMP, GRACEFUL_SHUTDOWN and FORCEFUL_SHUTDOWN.
+
+### URI
+
+      http://rm-http-address:port/ws/v1/cluster/containers/{containerId}/signal/{command}
+
+### HTTP Operations Supported
+
+      POST
+
+### Query Parameters Supported
+
+      None
+
+### Response Examples
+
+**JSON response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/containers/container_1531404209605_0008_01_000001/signal/OUTPUT_THREAD_DUMP
+      Accept: application/json
+      Content-Type: application/json
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/json
+      Transfer-Encoding: chunked
+      Server: Jetty(6.1.26)
+
+No response body.
+
+**XML response**
+
+HTTP Request:
+
+      POST http://rm-http-address:port/ws/v1/cluster/containers/container_1531404209605_0008_01_000001/signal/OUTPUT_THREAD_DUMP
+      Accept: application/xml
+      Content-Type: application/xml
+
+Response Header:
+
+      HTTP/1.1 200 OK
+      Content-Type: application/xml
+      Content-Length: 552
+      Server: Jetty(6.1.26)
+
+No response body.

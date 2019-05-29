@@ -543,4 +543,13 @@ public class DefaultRequestInterceptorREST
         + "is correct");
   }
 
+  @Override
+  public Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException {
+    return RouterWebServiceUtil
+        .genericForward(webAppAddress, req, Response.class, HTTPMethods.POST,
+            RMWSConsts.RM_WEB_SERVICE_PATH + "/" + RMWSConsts.CONTAINERS + "/"
+                + containerId + "/" + RMWSConsts.SIGNAL + "/" + command, null,
+            null);
+  }
 }

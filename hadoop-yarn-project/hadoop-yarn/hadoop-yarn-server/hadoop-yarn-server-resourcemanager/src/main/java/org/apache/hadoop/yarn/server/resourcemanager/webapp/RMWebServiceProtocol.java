@@ -712,4 +712,17 @@ public interface RMWebServiceProtocol {
   RMQueueAclInfo checkUserAccessToQueue(String queue, String username,
       String queueAclType, HttpServletRequest hsr)
       throws AuthorizationException;
+
+  /**
+   * This method sends a signal to container.
+   * @param containerId containerId
+   * @param command signal command, it could be OUTPUT_THREAD_DUMP/
+   *                GRACEFUL_SHUTDOWN/FORCEFUL_SHUTDOWN
+   * @param req request
+   * @return Response containing the status code
+   * @throws AuthorizationException if the user is not authorized to invoke this
+   *                                method.
+   */
+  Response signalToContainer(String containerId, String command,
+      HttpServletRequest req) throws AuthorizationException;
 }
