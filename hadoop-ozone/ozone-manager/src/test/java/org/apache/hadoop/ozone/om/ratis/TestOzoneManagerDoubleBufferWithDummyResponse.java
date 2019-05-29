@@ -94,7 +94,8 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
     OzoneManagerDoubleBufferMetrics ozoneManagerDoubleBufferMetrics =
         doubleBuffer.getOzoneManagerDoubleBufferMetrics();
 
-    // As we have no transactions all metrics should have value zero.
+    // As we have not flushed/added any transactions, all metrics should have
+    // value zero.
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
         .getTotalNumOfFlushIterations() == 0);
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics

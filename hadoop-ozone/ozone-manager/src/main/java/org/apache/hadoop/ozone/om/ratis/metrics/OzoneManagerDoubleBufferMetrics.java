@@ -32,15 +32,16 @@ public class OzoneManagerDoubleBufferMetrics {
       OzoneManagerDoubleBufferMetrics.class.getSimpleName();
 
   @Metric(about = "Total Number of flush iterations happened in " +
-      "OzoneManagerDoubleBuffer")
+      "OzoneManagerDoubleBuffer.")
   private MutableCounterLong totalNumOfFlushIterations;
 
-  @Metric(about = "Total Number of flushed transactions count happened in " +
-      "OzoneManagerDoubleBuffer")
+  @Metric(about = "Total Number of flushed transactions happened in " +
+      "OzoneManagerDoubleBuffer.")
   private MutableCounterLong totalNumOfFlushedTransactions;
 
   @Metric(about = "Max Number of transactions flushed in a iteration in " +
-      "OzoneManagerDoubleBuffer")
+      "OzoneManagerDoubleBuffer. This will provide a value which is maximum " +
+      "number of transactions flushed in a single flush iteration till now.")
   private MutableCounterLong maxNumberOfTransactionsFlushedInOneIteration;
 
 
