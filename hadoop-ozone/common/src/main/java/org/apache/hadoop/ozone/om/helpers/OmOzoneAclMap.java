@@ -76,7 +76,7 @@ public class OmOzoneAclMap {
 
   // Add a new acl to the map
   public void addAcl(OzoneAcl acl) throws OMException {
-    Objects.nonNull(acl);
+    Objects.requireNonNull(acl, "Acl should not be null.");
     OzoneAclType aclType = OzoneAclType.valueOf(acl.getType().name());
     if (!getMap(aclType).containsKey(acl.getName())) {
       getMap(aclType).put(acl.getName(), acl.getAclBitSet());
@@ -88,7 +88,7 @@ public class OmOzoneAclMap {
 
   // Add a new acl to the map
   public void setAcls(List<OzoneAcl> acls) throws OMException {
-    Objects.nonNull(acls);
+    Objects.requireNonNull(acls, "Acls should not be null.");
     // Remove all Acls.
     for (OzoneAclType type : OzoneAclType.values()) {
       aclMaps.get(type.ordinal()).clear();
@@ -102,7 +102,7 @@ public class OmOzoneAclMap {
 
   // Add a new acl to the map
   public void removeAcl(OzoneAcl acl) throws OMException {
-    Objects.nonNull(acl);
+    Objects.requireNonNull(acl, "Acl should not be null.");
     OzoneAclType aclType = OzoneAclType.valueOf(acl.getType().name());
     if (getMap(aclType).containsKey(acl.getName())) {
       getMap(aclType).remove(acl.getName());
@@ -115,7 +115,7 @@ public class OmOzoneAclMap {
 
   // Add a new acl to the map
   public void addAcl(OzoneAclInfo acl) throws OMException {
-    Objects.nonNull(acl);
+    Objects.requireNonNull(acl, "Acl should not be null.");
     if (!getMap(acl.getType()).containsKey(acl.getName())) {
       BitSet acls = new BitSet(OzoneAclRights.values().length);
       acl.getRightsList().parallelStream().forEach(a -> acls.set(a.ordinal()));

@@ -3000,6 +3000,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
+    // TODO: Audit ACL operation.
     if(obj.getResourceType().equals(ResourceType.VOLUME)) {
       return volumeManager.addAcl(obj, acl);
     }
@@ -3058,7 +3059,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     if(isAclEnabled) {
-      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
+      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.READ_ACL,
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
     if(obj.getResourceType().equals(ResourceType.VOLUME)) {

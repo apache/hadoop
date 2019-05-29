@@ -471,7 +471,7 @@ message OzoneObj {
     S3 = 2;
   }
   required ObjectType resType = 1;
-  required StoreType storeType = 2;
+  required StoreType storeType = 2  [default = S3];
   required string path = 3;
 }
 
@@ -532,15 +532,6 @@ message SetAclRequest {
 }
 
 message SetAclResponse {
-  required bool response = 1;
-}
-
-message DeleteAclRequest {
-  required OzoneObj obj = 1;
-  required OzoneAclInfo acl = 2;
-}
-
-message DeleteAclResponse {
   required bool response = 1;
 }
 

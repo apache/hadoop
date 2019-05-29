@@ -58,7 +58,7 @@ public class OzoneAcl {
    */
   public OzoneAcl(ACLIdentityType type, String name, ACLType acl) {
     this.name = name;
-    this.aclBitSet = new BitSet(ACLType.values().length);
+    this.aclBitSet = new BitSet(ACLType.getNoOfAcls());
     aclBitSet.set(acl.ordinal(), true);
     this.type = type;
     if (type == ACLIdentityType.WORLD && name.length() != 0) {
@@ -87,7 +87,7 @@ public class OzoneAcl {
           + acls.toString());
     }
 
-    this.aclBitSet = new BitSet();
+    this.aclBitSet = (BitSet) acls.clone();
     acls.stream().forEach(a -> aclBitSet.set(a));
 
     this.name = name;

@@ -121,8 +121,8 @@ public final class OMPBHelper {
       throw new IllegalArgumentException("ACL type is not recognized");
     }
 
-    BitSet aclRights = new BitSet(aclInfo.getRightsList().size());
-    aclInfo.getRightsList().parallelStream().forEach(a ->
+    BitSet aclRights = new BitSet(ACLType.getNoOfAcls());
+    aclInfo.getRightsList().stream().forEach(a ->
         aclRights.set(ACLType.valueOf(a.name()).ordinal()));
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }

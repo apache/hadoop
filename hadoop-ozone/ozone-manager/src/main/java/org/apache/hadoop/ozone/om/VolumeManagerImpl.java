@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -521,8 +522,8 @@ public class VolumeManagerImpl implements VolumeManager {
    */
   @Override
   public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
-    Preconditions.checkNotNull(obj);
-    Preconditions.checkNotNull(acl);
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acl);
     if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
       throw new IllegalArgumentException("Unexpected argument passed to " +
           "VolumeManager. OzoneObj type:" + obj.getResourceType());
@@ -533,13 +534,13 @@ public class VolumeManagerImpl implements VolumeManager {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
           metadataManager.getVolumeTable().get(dbVolumeKey);
-      volumeArgs.addAcl(acl);
-      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
         throw new OMException("Volume " + volume + " is not found",
             ResultCodes.VOLUME_NOT_FOUND);
       }
+      volumeArgs.addAcl(acl);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
       //return volumeArgs.getAclMap().hasAccess(userAcl);
@@ -566,8 +567,8 @@ public class VolumeManagerImpl implements VolumeManager {
    */
   @Override
   public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
-    Preconditions.checkNotNull(obj);
-    Preconditions.checkNotNull(acl);
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acl);
     if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
       throw new IllegalArgumentException("Unexpected argument passed to " +
           "VolumeManager. OzoneObj type:" + obj.getResourceType());
@@ -578,13 +579,13 @@ public class VolumeManagerImpl implements VolumeManager {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
           metadataManager.getVolumeTable().get(dbVolumeKey);
-      volumeArgs.removeAcl(acl);
-      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
         throw new OMException("Volume " + volume + " is not found",
             ResultCodes.VOLUME_NOT_FOUND);
       }
+      volumeArgs.removeAcl(acl);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
       //return volumeArgs.getAclMap().hasAccess(userAcl);
@@ -611,8 +612,8 @@ public class VolumeManagerImpl implements VolumeManager {
    */
   @Override
   public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
-    Preconditions.checkNotNull(obj);
-    Preconditions.checkNotNull(acls);
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acls);
 
     if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
       throw new IllegalArgumentException("Unexpected argument passed to " +
@@ -624,13 +625,13 @@ public class VolumeManagerImpl implements VolumeManager {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
           metadataManager.getVolumeTable().get(dbVolumeKey);
-      volumeArgs.setAcls(acls);
-      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
         throw new OMException("Volume " + volume + " is not found",
             ResultCodes.VOLUME_NOT_FOUND);
       }
+      volumeArgs.setAcls(acls);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
       //return volumeArgs.getAclMap().hasAccess(userAcl);
@@ -655,7 +656,7 @@ public class VolumeManagerImpl implements VolumeManager {
    */
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
-    Preconditions.checkNotNull(obj);
+    Objects.requireNonNull(obj);
 
     if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
       throw new IllegalArgumentException("Unexpected argument passed to " +
@@ -667,7 +668,6 @@ public class VolumeManagerImpl implements VolumeManager {
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
           metadataManager.getVolumeTable().get(dbVolumeKey);
-
       if (volumeArgs == null) {
         LOG.debug("volume:{} does not exist", volume);
         throw new OMException("Volume " + volume + " is not found",

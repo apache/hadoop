@@ -88,13 +88,15 @@ public final class OzoneObjInfo extends OzoneObj {
       builder.setBucketName(tokenizer.nextToken());
     }
     // Set key name
-    StringBuffer sb = new StringBuffer();
-    while (tokenizer.hasMoreTokens()) {
-      sb.append(OzoneConsts.OZONE_URI_DELIMITER);
-      sb.append(tokenizer.nextToken());
-      sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+    if (tokenizer.hasMoreTokens()) {
+      StringBuffer sb = new StringBuffer();
+      while (tokenizer.hasMoreTokens()) {
+        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+        sb.append(tokenizer.nextToken());
+        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+      }
+      builder.setKeyName(sb.toString());
     }
-    builder.setKeyName(sb.toString());
     return builder.build();
   }
 
