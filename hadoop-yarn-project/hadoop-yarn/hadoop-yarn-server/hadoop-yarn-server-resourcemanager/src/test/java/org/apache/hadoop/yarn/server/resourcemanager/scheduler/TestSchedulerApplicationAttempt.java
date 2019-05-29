@@ -276,7 +276,7 @@ public class TestSchedulerApplicationAttempt {
     assertEquals(60.0f,
         app.getResourceUsageReport().getClusterUsagePercentage(), 0.01f);
 
-    queue = createQueue("test3", null, 0.0f);
+    queue = createQueue("test3", null, Float.MIN_VALUE);
     app = new SchedulerApplicationAttempt(appAttId, user, queue,
         queue.getAbstractUsersManager(), rmContext);
 
