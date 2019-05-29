@@ -135,7 +135,8 @@ public final class OzoneManagerRatisServer {
   /**
    * Create Write RaftClient request from OMRequest.
    * @param omRequest
-   * @return
+   * @return RaftClientRequest - Raft Client request which is submitted to
+   * ratis server.
    */
   private RaftClientRequest createWriteRaftClientRequest(OMRequest omRequest) {
     return new RaftClientRequest(clientId, server.getId(), raftGroupId,
@@ -148,7 +149,7 @@ public final class OzoneManagerRatisServer {
    * Process the raftClientReply and return OMResponse.
    * @param omRequest
    * @param reply
-   * @return
+   * @return OMResponse - response which is returned to client.
    * @throws ServiceException
    */
   private OMResponse processReply(OMRequest omRequest, RaftClientReply reply)
@@ -190,7 +191,7 @@ public final class OzoneManagerRatisServer {
    * Parse errorMessage received from the exception and convert to
    * {@link OzoneManagerProtocolProtos.Status}.
    * @param errorMessage
-   * @return
+   * @return OzoneManagerProtocolProtos.Status
    */
   private OzoneManagerProtocolProtos.Status parseErrorStatus(
       String errorMessage) {

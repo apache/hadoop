@@ -62,7 +62,7 @@ public final class OzoneManagerRatisUtils {
   /**
    * Convert exception result to {@link OzoneManagerProtocolProtos.Status}.
    * @param exception
-   * @return {@link OzoneManagerProtocolProtos.Status}
+   * @return OzoneManagerProtocolProtos.Status
    */
   public static Status exceptionToResponseStatus(IOException exception) {
     if (exception instanceof OMException) {
