@@ -78,9 +78,14 @@ public class RocksDBStoreMBean implements DynamicMBean, MetricsSource {
     RocksDBStoreMBean rocksDBStoreMBean = new RocksDBStoreMBean(
         statistics, contextName);
     MetricsSystem ms = DefaultMetricsSystem.instance();
-    return ms.register(rocksDBStoreMBean.contextName,
-        "RocksDB Metrics",
-        rocksDBStoreMBean);
+    MetricsSource metricsSource = ms.getSource(rocksDBStoreMBean.contextName);
+    if (metricsSource != null) {
+      return (RocksDBStoreMBean)metricsSource;
+    } else {
+      return ms.register(rocksDBStoreMBean.contextName,
+          "RocksDB Metrics",
+          rocksDBStoreMBean);
+    }
   }
 
   @Override
