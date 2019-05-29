@@ -3967,6 +3967,15 @@ public class TestLeafQueue {
         0.01f);
     assertEquals(15.0f,
         app.getResourceUsageReport().getClusterUsagePercentage(), 0.01f);
+
+    // test that queueUsagePercentage returns neither NaN nor Infinite
+    AbstractCSQueue zeroQueue = createQueue("test2.2", null,
+        Float.MIN_VALUE, Float.MIN_VALUE);
+    app = new FiCaSchedulerApp(appAttId, user, zeroQueue,
+        qChild.getAbstractUsersManager(), rmContext);
+    app.getAppAttemptResourceUsage().incUsed(requestedResource);
+    assertEquals(0.0f, app.getResourceUsageReport().getQueueUsagePercentage(),
+        0.01f);
   }
 
   private ApplicationAttemptId createAppAttemptId(int appId, int attemptId) {

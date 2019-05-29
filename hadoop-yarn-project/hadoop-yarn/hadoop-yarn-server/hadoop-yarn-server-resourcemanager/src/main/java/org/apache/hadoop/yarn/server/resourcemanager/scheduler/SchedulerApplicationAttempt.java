@@ -1046,9 +1046,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (!calc.isInvalidDivisor(cluster)) {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
-        if (queueCapacityPerc != 0) {
-          queueUsagePerc = calc.divide(cluster, usedResourceClone,
+        queueUsagePerc = calc.divide(cluster, usedResourceClone,
               Resources.multiply(cluster, queueCapacityPerc)) * 100;
+        if (Float.isNaN(queueUsagePerc) || Float.isInfinite(queueUsagePerc)) {
+          queueUsagePerc = 0.0f;
         }
         clusterUsagePerc = calc.divide(cluster, usedResourceClone, cluster)
             * 100;

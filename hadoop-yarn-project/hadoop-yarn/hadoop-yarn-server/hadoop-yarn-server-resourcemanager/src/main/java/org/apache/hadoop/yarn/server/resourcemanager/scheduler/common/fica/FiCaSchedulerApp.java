@@ -1021,7 +1021,9 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
               Resources.multiply(totalPartitionRes, queueAbsMaxCapPerPartition))
               * 100;
         }
-        report.setQueueUsagePercentage(queueUsagePerc);
+        if (!(Float.isNaN(queueUsagePerc) || Float.isInfinite(queueUsagePerc))) {
+          report.setQueueUsagePercentage(queueUsagePerc);
+        }
       }
       return report;
     } finally {
