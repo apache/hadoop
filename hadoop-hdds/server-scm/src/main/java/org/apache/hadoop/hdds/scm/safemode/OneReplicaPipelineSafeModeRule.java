@@ -85,6 +85,9 @@ public class OneReplicaPipelineSafeModeRule extends
         "datanode reported threshold count is {}", totalPipelineCount,
         thresholdCount);
 
+    getSafeModeMetrics().setNumPipelinesWithAtleastOneReplicaReportedThreshold(
+        thresholdCount);
+
   }
 
   @Override
@@ -120,6 +123,8 @@ public class OneReplicaPipelineSafeModeRule extends
       if (pipeline.getFactor() == HddsProtos.ReplicationFactor.THREE &&
           !reportedPipelineIDSet.contains(pipelineID)) {
         reportedPipelineIDSet.add(pipelineID);
+        getSafeModeMetrics()
+            .incCurrentHealthyPipelinesWithAtleastOneReplicaReportedCount();
       }
     }
 

@@ -89,6 +89,9 @@ public class HealthyPipelineSafeModeRule
 
     LOG.info(" Total pipeline count is {}, healthy pipeline " +
         "threshold count is {}", pipelineCount, healthyPipelineThresholdCount);
+
+    getSafeModeMetrics().setNumHealthyPipelinesThreshold(
+        healthyPipelineThresholdCount);
   }
 
   @Override
@@ -135,9 +138,9 @@ public class HealthyPipelineSafeModeRule
           // If the pipeline is open state mean, all 3 datanodes are reported
           // for this pipeline.
           currentHealthyPipelineCount++;
+          getSafeModeMetrics().incCurrentHealthyPipelinesCount();
         }
       }
-
       if (scmInSafeMode()) {
         SCMSafeModeManager.getLogger().info(
             "SCM in safe mode. Healthy pipelines reported count is {}, " +

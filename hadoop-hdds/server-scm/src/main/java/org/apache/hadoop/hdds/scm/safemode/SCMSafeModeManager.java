@@ -96,6 +96,8 @@ public class SCMSafeModeManager {
   private final EventQueue eventPublisher;
   private final PipelineManager pipelineManager;
 
+  private final SafeModeMetrics safeModeMetrics;
+
   public SCMSafeModeManager(Configuration conf,
       List<ContainerInfo> allContainers, PipelineManager pipelineManager,
       EventQueue eventQueue) {
@@ -106,7 +108,9 @@ public class SCMSafeModeManager {
         HddsConfigKeys.HDDS_SCM_SAFEMODE_ENABLED,
         HddsConfigKeys.HDDS_SCM_SAFEMODE_ENABLED_DEFAULT);
 
+
     if (isSafeModeEnabled) {
+      this.safeModeMetrics = SafeModeMetrics.create();
       ContainerSafeModeRule containerSafeModeRule =
           new ContainerSafeModeRule(CONT_EXIT_RULE, eventQueue, config,
               allContainers, this);
@@ -132,8 +136,19 @@ public class SCMSafeModeManager {
       }
       emitSafeModeStatus();
     } else {
+      this.safeModeMetrics = null;
       exitSafeMode(eventQueue);
     }
+  }
+
+  public void stop() {
+    if (isSafeModeEnabled) {
+      this.safeModeMetrics.unRegister();
+    }
+  }
+
+  public SafeModeMetrics getSafeModeMetrics() {
+    return safeModeMetrics;
   }
 
   /**
