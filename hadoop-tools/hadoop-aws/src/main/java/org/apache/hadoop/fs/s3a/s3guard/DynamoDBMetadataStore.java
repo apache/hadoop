@@ -744,7 +744,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   /**
    * Build the list of all parent entries.
-   * <b>Thread safety:</b> none.
+   * <p>
+   * <b>Thread safety:</b> none. Callers must synchronize access.
    * <p>
    * Callers are expected to
    * synchronize on ancestorState as required.
@@ -755,9 +756,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private Collection<DDBPathMetadata> completeAncestry(
       final Collection<DDBPathMetadata> pathsToCreate,
       final AncestorState ancestorState) {
-    // Key on path to allow fast lookup
-    Map<Path, DDBPathMetadata> ancestry = ancestorState.getAncestry();
     List<DDBPathMetadata> ancestorsToAdd = new ArrayList<>(0);
+    LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
     // we sort the inputs to guarantee that the topmost entries come first.
     // that way if the put request contains both parents and children
     // then the existing parents will not be re-created -they will just
@@ -767,28 +767,30 @@ public class DynamoDBMetadataStore implements MetadataStore,
     for (DDBPathMetadata meta : sortedPaths) {
       Preconditions.checkArgument(meta != null);
       Path path = meta.getFileStatus().getPath();
+      LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
         break;
       }
       // add the new entry
       DDBPathMetadata entry = new DDBPathMetadata(meta);
-      DDBPathMetadata oldEntry = ancestry.put(path, entry);
+      DDBPathMetadata oldEntry = ancestorState.put(path, entry);
       if (oldEntry != null) {
         // check for and warn if the existing bulk operation overwrote it.
         // this should never occur outside tests.
         LOG.warn("Overwriting a S3Guard entry created in the operation: {}",
             oldEntry);
+        LOG.warn("With new entry: {}", entry);
         continue;
       }
       ancestorsToAdd.add(entry);
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestry.containsKey(parent)) {
+      while (!parent.isRoot() && !ancestorState.contains(parent)) {
         LOG.debug("auto-create ancestor path {} for child path {}",
             parent, path);
         final S3AFileStatus status = makeDirStatus(parent, username);
         DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
             false);
-        ancestry.put(parent, md);
+        ancestorState.put(parent, md);
         ancestorsToAdd.add(md);
         parent = parent.getParent();
       }
@@ -817,7 +819,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     Collection<DDBPathMetadata> newDirs = new ArrayList<>();
     final AncestorState ancestorState = extractOrCreate(operationState);
-    Map<Path, DDBPathMetadata> ancestry = ancestorState.getAncestry();
     Path parent = qualifiedPath.getParent();
 
     // iterate up the parents.
@@ -831,7 +832,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // one extra PUT
     while (!parent.isRoot()) {
       synchronized (ancestorState) {
-        if (ancestry.containsKey(parent)) {
+        if (ancestorState.contains(parent)) {
           // the ancestry map contains the key, so no need to even look for it.
           break;
         }
@@ -839,16 +840,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
       PathMetadata directory = get(parent);
       if (directory == null || directory.isDeleted()) {
         S3AFileStatus status = makeDirStatus(username, parent);
+        LOG.debug("Adding new ancestor entry {}", status);
         DDBPathMetadata meta = new DDBPathMetadata(status, Tristate.FALSE,
             false);
         newDirs.add(meta);
-        synchronized (ancestorState) {
-          ancestry.put(parent, meta);
-        }
+        // there's no need to update ancestor state here, as it
+        // will happen in the innerPut() call. Were we to add it
+        // here that put operation would actually (mistakenly) skip
+        // creating the entry.
       } else {
         // the directory exists. Add it to the ancestor state for next time.
         synchronized (ancestorState) {
-          ancestry.put(parent, new DDBPathMetadata(directory));
+          ancestorState.put(parent, new DDBPathMetadata(directory));
         }
         break;
       }
@@ -945,6 +948,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
       Item[] itemsToPut) throws IOException {
     final int totalToDelete = (keysToDelete == null ? 0 : keysToDelete.length);
     final int totalToPut = (itemsToPut == null ? 0 : itemsToPut.length);
+    if (totalToPut == 0 && totalToDelete == 0) {
+      LOG.debug("Ignoring empty batch write request");
+      return 0;
+    }
     int count = 0;
     int batches = 0;
     while (count < totalToDelete + totalToPut) {
@@ -2081,10 +2088,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
       this.dest = dest;
     }
 
-    private Map<Path, DDBPathMetadata> getAncestry() {
-      return ancestry;
-    }
-
     int size() {
       return ancestry.size();
     }
@@ -2098,9 +2101,18 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final StringBuilder sb = new StringBuilder(
           "AncestorState{");
       sb.append("dest=").append(dest);
-      sb.append("size=").append(size());
+      sb.append("; size=").append(size());
       sb.append('}');
       return sb.toString();
     }
+
+    public boolean contains(Path p) {
+      return ancestry.containsKey(p);
+    }
+
+    public DDBPathMetadata put(Path p, DDBPathMetadata md) {
+      return ancestry.put(p, md);
+    }
+
   }
 }

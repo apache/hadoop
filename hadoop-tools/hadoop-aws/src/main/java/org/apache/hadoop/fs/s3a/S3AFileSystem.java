@@ -2399,7 +2399,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       return outcome;
     } catch (FileNotFoundException e) {
-      LOG.debug("Couldn't delete {} - does not exist", f);
+      LOG.debug("Couldn't delete {} - does not exist: {}", f, e.toString());
       instrumentation.errorIgnored();
       return false;
     } catch (AmazonClientException e) {
@@ -3557,7 +3557,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   void finishedWrite(String key, long length, String eTag, String versionId,
       @Nullable final BulkOperationState operationState)
       throws MetadataPersistenceException {
-    LOG.debug("Finished write to {}, len {}", key, length);
+    LOG.debug("Finished write to {}, len {}. etag {}, version {}",
+        key, length, eTag, versionId);
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
     deleteUnnecessaryFakeDirectories(p.getParent());

@@ -36,7 +36,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.addMoveDir;
 /**
  * This rename tracker progressively updates the metadata store
  * as it proceeds, during the parallelized copy operation.
- *
+ * <p>
  * Algorithm
  * <ol>
  *   <li>
@@ -70,11 +70,19 @@ public class ProgressiveRenameTracker extends RenameTracker {
   /**
    * The collection of paths to delete; this is added as individual files
    * are renamed.
+   * <p>
    * The metastore is only updated with these entries after the DELETE
-   * call succeeds.
+   * call containing these paths succeeds.
+   * <p>
+   * If the DELETE fails; the filesystem will use
+   * {@code MultiObjectDeleteSupport} to remove all successfully deleted
+   * entries from the metastore.
    */
   private final Collection<Path> pathsToDelete = new HashSet<>();
 
+  /**
+   * The list of new entries to add.
+   */
   private final List<PathMetadata> destMetas = new ArrayList<>();
 
   public ProgressiveRenameTracker(
@@ -144,8 +152,9 @@ public class ProgressiveRenameTracker extends RenameTracker {
       }
     }
 
-    // outside the lock, the entriesToAdd list has all new files to create.
+    // outside the lock, the entriesToAdd list has all new entries to create.
     // ...so update the store.
+    // no entries are deleted at this point.
     store.move(null, entriesToAdd, getOperationState());
   }
 
@@ -193,11 +202,18 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
   @Override
   public synchronized void moveSourceDirectory() throws IOException {
+    // this moves the source directory in the metastore if it has not
+    // already been processed.
     if (!pathsToDelete.contains(getSourceRoot())) {
-      addMoveDir(getMetadataStore(), pathsToDelete, destMetas,
+      final List<Path> toDelete = new ArrayList<>(1);
+      final List<PathMetadata> toAdd = new ArrayList<>(1);
+
+      addMoveDir(getMetadataStore(), pathsToDelete, toAdd,
           getSourceRoot(),
           getDest(),
           getOwner());
+      getMetadataStore().move(toDelete, toAdd, getOperationState());
+
     }
   }
 
@@ -219,7 +235,8 @@ public class ProgressiveRenameTracker extends RenameTracker {
 
   @Override
   public void completeRename() throws IOException {
-    // this should all have happened.
+    // and finish off; including deleting source directories.
+    // TODO: is this making too many calls?
     LOG.debug("Rename completed for {}", this);
     getMetadataStore().move(pathsToDelete, destMetas, getOperationState());
     super.completeRename();

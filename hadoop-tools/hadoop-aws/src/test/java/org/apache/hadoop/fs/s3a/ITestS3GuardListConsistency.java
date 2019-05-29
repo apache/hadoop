@@ -47,6 +47,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.FailureInjectionPolicy.*;
 import static org.apache.hadoop.fs.s3a.InconsistentAmazonS3Client.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test S3Guard list consistency feature by injecting delayed listObjects()
@@ -253,13 +254,11 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     assertFalse(list.contains(path("a3/b/dir3-" +
         DEFAULT_DELAY_KEY_SUBSTRING)));
 
-    try {
-      RemoteIterator<S3ALocatedFileStatus> old = fs.listFilesAndEmptyDirectories(
-          path("a"), true);
-      fail("Recently renamed dir should not be visible");
-    } catch(FileNotFoundException e) {
-      // expected
-    }
+    intercept(FileNotFoundException.class, "",
+        "Recently renamed dir should not be visible",
+        () -> S3AUtils.mapLocatedFiles(
+            fs.listFilesAndEmptyDirectories(path("a"), true),
+            FileStatus::getPath));
   }
 
   @Test

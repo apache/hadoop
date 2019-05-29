@@ -271,12 +271,16 @@ public class ITestCommitOperations extends AbstractCommitITest {
   public void testBaseRelativePath() throws Throwable {
     describe("Test creating file with a __base marker and verify that it ends" +
         " up in where expected");
+    S3AFileSystem fs = getFileSystem();
     Path destDir = methodPath("testBaseRelativePath");
+    fs.delete(destDir, true);
     Path pendingBaseDir = new Path(destDir, MAGIC + "/child/" + BASE);
     String child = "subdir/child.txt";
     Path pendingChildPath = new Path(pendingBaseDir, child);
     Path expectedDestPath = new Path(destDir, child);
-    createFile(getFileSystem(), pendingChildPath, true, DATASET);
+    assertPathDoesNotExist("dest file was found before upload", expectedDestPath);
+
+    createFile(fs, pendingChildPath, true, DATASET);
     commit("child.txt", pendingChildPath, expectedDestPath, 0, 0);
   }
 
@@ -284,7 +288,9 @@ public class ITestCommitOperations extends AbstractCommitITest {
       throws Exception {
     S3AFileSystem fs = getFileSystem();
     Path destFile = methodPath(filename);
+    fs.delete(destFile.getParent(), true);
     Path magicDest = makeMagic(destFile);
+    assertPathDoesNotExist("Magic file should not exist", magicDest);
     try(FSDataOutputStream stream = fs.create(magicDest, true)) {
       assertTrue(stream.hasCapability(STREAM_CAPABILITY_MAGIC_OUTPUT));
       if (data != null && data.length > 0) {
@@ -359,7 +365,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
   private void validateIntermediateAndFinalPaths(Path magicFilePath,
       Path destFile)
       throws IOException {
-    assertPathDoesNotExist("dest file was created", destFile);
+    assertPathDoesNotExist("dest file was found", destFile);
   }
 
   /**
@@ -465,14 +471,18 @@ public class ITestCommitOperations extends AbstractCommitITest {
     CommitOperations actions = newCommitOperations();
     Path dest = methodPath("testUploadSmallFile");
     S3AFileSystem fs = getFileSystem();
+    fs.delete(dest, true);
     fullThrottle();
+    assertPathDoesNotExist("test setup", dest);
     SinglePendingCommit pendingCommit =
         actions.uploadFileToPendingCommit(tempFile,
             dest, null,
             DEFAULT_MULTIPART_SIZE);
     resetFailures();
+    LOG.debug("Precommit validation");
     assertPathDoesNotExist("pending commit", dest);
     fullThrottle();
+    LOG.debug("Postcommit validation");
     commitOrFail(dest, pendingCommit, actions);
     resetFailures();
     String s = readUTF8(fs, dest, -1);

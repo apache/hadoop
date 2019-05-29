@@ -414,7 +414,7 @@ public class CommitOperations {
    * @throws IOException failure
    */
   public void revertCommit(SinglePendingCommit commit) throws IOException {
-    LOG.warn("Revert {}", commit);
+    LOG.info("Revert {}", commit);
     try {
       writeOperations.revertCommit(commit.getDestinationKey());
     } finally {

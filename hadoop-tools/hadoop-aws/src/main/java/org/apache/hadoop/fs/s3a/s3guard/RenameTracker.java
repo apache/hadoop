@@ -176,7 +176,6 @@ public abstract class RenameTracker extends AbstractStoreOperation {
       Path sourcePath,
       Path destPath,
       boolean addAncestors) throws IOException {
-
   }
 
   /**
@@ -200,10 +199,10 @@ public abstract class RenameTracker extends AbstractStoreOperation {
 
   /**
    * Top level directory move.
+   * This is invoked after all child entries have been copied
    * @throws IOException on failure
    */
   public void moveSourceDirectory() throws IOException {
-
   }
 
   /**
@@ -268,7 +267,7 @@ public abstract class RenameTracker extends AbstractStoreOperation {
           sourceRoot.toString(),
           (SdkBaseException) ex);
     } else {
-      // should never happen, but for strictness
+      // should never happen, but for completeness
       return new IOException(ex);
     }
   }

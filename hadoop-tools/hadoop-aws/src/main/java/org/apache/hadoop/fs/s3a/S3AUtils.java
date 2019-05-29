@@ -1351,7 +1351,7 @@ public final class S3AUtils {
    * @throws IOException anything in the closure, or iteration logic.
    */
   public static long applyLocatedFiles(
-      RemoteIterator<LocatedFileStatus> iterator,
+      RemoteIterator<? extends LocatedFileStatus> iterator,
       CallOnLocatedFileStatus eval) throws IOException {
     long count = 0;
     while (iterator.hasNext()) {
@@ -1371,7 +1371,7 @@ public final class S3AUtils {
    * @throws IOException anything in the closure, or iteration logic.
    */
   public static <T> List<T> mapLocatedFiles(
-      RemoteIterator<LocatedFileStatus> iterator,
+      RemoteIterator<? extends LocatedFileStatus> iterator,
       LocatedFileStatusMap<T> eval) throws IOException {
     final List<T> results = new ArrayList<>();
     applyLocatedFiles(iterator,
