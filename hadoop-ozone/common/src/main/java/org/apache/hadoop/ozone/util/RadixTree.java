@@ -36,7 +36,7 @@ public class RadixTree<T> {
    * create a empty radix tree with root only.
    */
   public RadixTree() {
-    root = new RadixNode<T>(ROOT_PATH.toString());
+    root = new RadixNode<T>(PATH_DELIMITER);
   }
 
   /**
@@ -90,7 +90,7 @@ public class RadixTree<T> {
   public RadixNode<T> getLastNodeInPrefixPath(String path) {
     List<RadixNode<T>> lpp = getLongestPrefixPath(path);
     Path p = Paths.get(path);
-    if (lpp.size() != p.getNameCount() + 1 ) {
+    if (lpp.size() != p.getNameCount() + 1) {
       return null;
     } else {
       return lpp.get(p.getNameCount());
@@ -98,7 +98,7 @@ public class RadixTree<T> {
   }
 
   /**
-   * Remove prefix path
+   * Remove prefix path.
    * @param path
    */
   public void removePrefixPath(String path) {
@@ -175,7 +175,7 @@ public class RadixTree<T> {
     StringBuilder sb = new StringBuilder();
     for (RadixNode n : path) {
       sb.append(n.getName());
-      sb.append(n.getName().equals("/") ? "" : "/");
+      sb.append(n.getName().equals(PATH_DELIMITER) ? "" : PATH_DELIMITER);
     }
     return sb.toString();
   }
@@ -203,10 +203,12 @@ public class RadixTree<T> {
       }
     }
     return level >= 1 ?
-        ROOT_PATH.resolve(p.subpath(0, level)).toString() :
-        ROOT_PATH.toString();
+        Paths.get(root.getName()).resolve(p.subpath(0, level)).toString() :
+        root.getName();
   }
 
+  // root of a radix tree has a name of "/" and may optionally has it value.
   private RadixNode root;
-  private static Path ROOT_PATH = Paths.get(OzoneConsts.OZONE_URI_DELIMITER);
+
+  private final static String PATH_DELIMITER = OzoneConsts.OZONE_URI_DELIMITER;
 }
