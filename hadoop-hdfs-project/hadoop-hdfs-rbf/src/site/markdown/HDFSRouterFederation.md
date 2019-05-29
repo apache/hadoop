@@ -349,7 +349,7 @@ This federated namespace can also be set as the default one at **core-site.xml**
 Router configuration
 --------------------
 
-One can add the configurations for Router-based federation to **hdfs-site.xml**.
+One can add the configurations for Router-based federation to **hdfs-rbf-site.xml**.
 The main options are documented in [hdfs-rbf-default.xml](../hadoop-hdfs-rbf/hdfs-rbf-default.xml).
 The configuration values are described in this section.
 
