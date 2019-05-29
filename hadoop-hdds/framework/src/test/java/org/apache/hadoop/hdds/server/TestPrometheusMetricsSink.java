@@ -82,6 +82,11 @@ public class TestPrometheusMetricsSink {
 
     Assert.assertEquals("rpc_time_small",
         sink.prometheusName("RpcTime", "small"));
+
+    //RocksDB metrics are handled differently.
+
+    Assert.assertEquals("rocksdb_om.db_num_open_connections",
+        sink.prometheusName("Rocksdb_om.db", "num_open_connections"));
   }
 
   /**

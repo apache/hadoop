@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdds.server;
 
+import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.HashMap;
@@ -24,6 +26,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricType;
 import org.apache.hadoop.metrics2.MetricsRecord;
@@ -90,6 +93,12 @@ public class PrometheusMetricsSink implements MetricsSink {
    */
   public String prometheusName(String recordName,
       String metricName) {
+
+    //RocksDB metric names already have underscores as delimiters.
+    if (StringUtils.isNotEmpty(recordName) &&
+        recordName.startsWith(ROCKSDB_CONTEXT_PREFIX)) {
+      return recordName.toLowerCase() + "_" + metricName.toLowerCase();
+    }
     String baseName = upperFirst(recordName) + upperFirst(metricName);
     Matcher m = UPPER_CASE_SEQ.matcher(baseName);
     StringBuffer sb = new StringBuffer();
