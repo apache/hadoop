@@ -119,7 +119,7 @@ public class CsiServer extends GenericCli implements Callable<Void> {
     }
 
     @Config(key = "socket",
-        defaultValue = "/tmp/csi.sock",
+        defaultValue = "/var/lib/csi.sock",
         description =
             "The socket where all the CSI services will listen (file name).",
         tags = ConfigTag.STORAGE)
