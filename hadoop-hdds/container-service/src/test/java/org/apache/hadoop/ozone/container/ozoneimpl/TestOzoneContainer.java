@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.BlockData;
 import org.apache.hadoop.ozone.container.common.helpers.ChunkInfo;
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
@@ -52,6 +53,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
+import static org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.Result.DISK_OUT_OF_SPACE;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -133,6 +135,39 @@ public class TestOzoneContainer {
     assertEquals(numTestContainers, containerset.containerCount());
 
     verifyCommittedSpace(ozoneContainer);
+  }
+
+  @Test
+  public void testContainerCreateDiskFull() throws Exception {
+    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
+    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
+    long containerSize = (long) StorageUnit.MB.toBytes(100);
+    boolean diskSpaceException = false;
+
+    // Format the volumes
+    for (HddsVolume volume : volumeSet.getVolumesList()) {
+      volume.format(UUID.randomUUID().toString());
+
+      // eat up all available space except size of 1 container
+      volume.incCommittedBytes(volume.getAvailable() - containerSize);
+      // eat up 10 bytes more, now available space is less than 1 container
+      volume.incCommittedBytes(10);
+    }
+    keyValueContainerData = new KeyValueContainerData(99, containerSize,
+        UUID.randomUUID().toString(), datanodeDetails.getUuidString());
+    keyValueContainer = new KeyValueContainer(keyValueContainerData, conf);
+
+    // we expect an out of space Exception
+    try {
+      keyValueContainer.create(volumeSet, volumeChoosingPolicy, scmId);
+    } catch (StorageContainerException e) {
+      if (e.getResult() == DISK_OUT_OF_SPACE) {
+        diskSpaceException = true;
+      }
+    }
+
+    // Test failed if there was no exception
+    assertEquals(true, diskSpaceException);
   }
 
   //verify committed space on each volume

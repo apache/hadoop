@@ -58,7 +58,9 @@ public class RoundRobinVolumeChoosingPolicy implements VolumeChoosingPolicy {
 
     while (true) {
       final HddsVolume volume = volumes.get(currentVolumeIndex);
-      long availableVolumeSize = volume.getAvailable();
+      // adjust for remaining capacity in Open containers
+      long availableVolumeSize = volume.getAvailable()
+          - volume.getCommittedBytes();
 
       currentVolumeIndex = (currentVolumeIndex + 1) % volumes.size();
 
