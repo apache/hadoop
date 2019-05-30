@@ -18,18 +18,26 @@
 
 package org.apache.hadoop.ozone.om.helpers;
 
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 
+import java.util.BitSet;
 import java.util.List;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Objects;
+
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights.ALL;
 
 /**
  * This helper class keeps a map of all user and their permissions.
@@ -37,7 +45,7 @@ import java.util.HashMap;
 @SuppressWarnings("ProtocolBufferOrdinal")
 public class OmOzoneAclMap {
   // per Acl Type user:rights map
-  private ArrayList<Map<String, List<OzoneAclRights>>> aclMaps;
+  private ArrayList<Map<String, BitSet>> aclMaps;
 
   OmOzoneAclMap() {
     aclMaps = new ArrayList<>();
@@ -46,18 +54,77 @@ public class OmOzoneAclMap {
     }
   }
 
-  private Map<String, List<OzoneAclRights>> getMap(OzoneAclType type) {
+  private Map<String, BitSet> getMap(OzoneAclType type) {
     return aclMaps.get(type.ordinal());
   }
 
   // For a given acl type and user, get the stored acl
-  private List<OzoneAclRights> getAcl(OzoneAclType type, String user) {
+  private BitSet getAcl(OzoneAclType type, String user) {
     return getMap(type).get(user);
   }
 
+  public List<OzoneAcl> getAcl() {
+    List<OzoneAcl> acls = new ArrayList<>();
+
+    for (OzoneAclType type : OzoneAclType.values()) {
+      aclMaps.get(type.ordinal()).entrySet().stream().
+          forEach(entry -> acls.add(new OzoneAcl(ACLIdentityType.
+              valueOf(type.name()), entry.getKey(), entry.getValue())));
+    }
+    return acls;
+  }
+
   // Add a new acl to the map
-  public void addAcl(OzoneAclInfo acl) {
-    getMap(acl.getType()).put(acl.getName(), acl.getRightsList());
+  public void addAcl(OzoneAcl acl) throws OMException {
+    Objects.requireNonNull(acl, "Acl should not be null.");
+    OzoneAclType aclType = OzoneAclType.valueOf(acl.getType().name());
+    if (!getMap(aclType).containsKey(acl.getName())) {
+      getMap(aclType).put(acl.getName(), acl.getAclBitSet());
+    } else {
+      // throw exception if acl is already added.
+      throw new OMException("Acl " + acl + " already exist.", INVALID_REQUEST);
+    }
+  }
+
+  // Add a new acl to the map
+  public void setAcls(List<OzoneAcl> acls) throws OMException {
+    Objects.requireNonNull(acls, "Acls should not be null.");
+    // Remove all Acls.
+    for (OzoneAclType type : OzoneAclType.values()) {
+      aclMaps.get(type.ordinal()).clear();
+    }
+
+    // Add acls.
+    for (OzoneAcl acl : acls) {
+      addAcl(acl);
+    }
+  }
+
+  // Add a new acl to the map
+  public void removeAcl(OzoneAcl acl) throws OMException {
+    Objects.requireNonNull(acl, "Acl should not be null.");
+    OzoneAclType aclType = OzoneAclType.valueOf(acl.getType().name());
+    if (getMap(aclType).containsKey(acl.getName())) {
+      getMap(aclType).remove(acl.getName());
+    } else {
+      // throw exception if acl is already added.
+      throw new OMException("Acl [" + acl + "] doesn't exist.",
+          INVALID_REQUEST);
+    }
+  }
+
+  // Add a new acl to the map
+  public void addAcl(OzoneAclInfo acl) throws OMException {
+    Objects.requireNonNull(acl, "Acl should not be null.");
+    if (!getMap(acl.getType()).containsKey(acl.getName())) {
+      BitSet acls = new BitSet(OzoneAclRights.values().length);
+      acl.getRightsList().parallelStream().forEach(a -> acls.set(a.ordinal()));
+      getMap(acl.getType()).put(acl.getName(), acls);
+    } else {
+      // throw exception if acl is already added.
+
+      throw new OMException("Acl " + acl + " already exist.", INVALID_REQUEST);
+    }
   }
 
   // for a given acl, check if the user has access rights
@@ -66,40 +133,14 @@ public class OmOzoneAclMap {
       return false;
     }
 
-    List<OzoneAclRights> storedRights = getAcl(acl.getType(), acl.getName());
-    if(storedRights == null) {
+    BitSet aclBitSet = getAcl(acl.getType(), acl.getName());
+    if (aclBitSet == null) {
       return false;
     }
 
-    for (OzoneAclRights right : storedRights) {
-      switch (right) {
-      case CREATE:
-        return (right == OzoneAclRights.CREATE)
-            || (right == OzoneAclRights.ALL);
-      case LIST:
-        return (right == OzoneAclRights.LIST)
-            || (right == OzoneAclRights.ALL);
-      case WRITE:
-        return (right == OzoneAclRights.WRITE)
-            || (right == OzoneAclRights.ALL);
-      case READ:
-        return (right == OzoneAclRights.READ)
-            || (right == OzoneAclRights.ALL);
-      case DELETE:
-        return (right == OzoneAclRights.DELETE)
-            || (right == OzoneAclRights.ALL);
-      case READ_ACL:
-        return (right == OzoneAclRights.READ_ACL)
-            || (right == OzoneAclRights.ALL);
-      case WRITE_ACL:
-        return (right == OzoneAclRights.WRITE_ACL)
-            || (right == OzoneAclRights.ALL);
-      case ALL:
-        return (right == OzoneAclRights.ALL);
-      case NONE:
-        return !(right == OzoneAclRights.NONE);
-      default:
-        return false;
+    for (OzoneAclRights right : acl.getRightsList()) {
+      if (aclBitSet.get(right.ordinal()) || aclBitSet.get(ALL.ordinal())) {
+        return true;
       }
     }
     return false;
@@ -108,15 +149,15 @@ public class OmOzoneAclMap {
   // Convert this map to OzoneAclInfo Protobuf List
   public List<OzoneAclInfo> ozoneAclGetProtobuf() {
     List<OzoneAclInfo> aclList = new LinkedList<>();
-    for (OzoneAclType type: OzoneAclType.values()) {
-      for (Map.Entry<String, List<OzoneAclRights>> entry :
+    for (OzoneAclType type : OzoneAclType.values()) {
+      for (Map.Entry<String, BitSet> entry :
           aclMaps.get(type.ordinal()).entrySet()) {
-        OzoneAclInfo aclInfo = OzoneAclInfo.newBuilder()
+        OzoneAclInfo.Builder builder = OzoneAclInfo.newBuilder()
             .setName(entry.getKey())
-            .setType(type)
-            .addAllRights(entry.getValue())
-            .build();
-        aclList.add(aclInfo);
+            .setType(type);
+        entry.getValue().stream().forEach(a ->
+            builder.addRights(OzoneAclRights.values()[a]));
+        aclList.add(builder.build());
       }
     }
 
@@ -125,7 +166,7 @@ public class OmOzoneAclMap {
 
   // Create map from list of OzoneAclInfos
   public static OmOzoneAclMap ozoneAclGetFromProtobuf(
-      List<OzoneAclInfo> aclList) {
+      List<OzoneAclInfo> aclList) throws OMException {
     OmOzoneAclMap aclMap = new OmOzoneAclMap();
     for (OzoneAclInfo acl : aclList) {
       aclMap.addAcl(acl);

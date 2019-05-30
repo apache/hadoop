@@ -19,15 +19,18 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 import com.google.common.base.Preconditions;
@@ -506,6 +509,180 @@ public class VolumeManagerImpl implements VolumeManager {
           userName, prefix, startKey, maxKeys);
     } finally {
       metadataManager.getLock().releaseUserLock(userName);
+    }
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   *
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acl);
+    if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
+      throw new IllegalArgumentException("Unexpected argument passed to " +
+          "VolumeManager. OzoneObj type:" + obj.getResourceType());
+    }
+    String volume = obj.getVolumeName();
+    metadataManager.getLock().acquireVolumeLock(volume);
+    try {
+      String dbVolumeKey = metadataManager.getVolumeKey(volume);
+      OmVolumeArgs volumeArgs =
+          metadataManager.getVolumeTable().get(dbVolumeKey);
+      if (volumeArgs == null) {
+        LOG.debug("volume:{} does not exist", volume);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
+      }
+      volumeArgs.addAcl(acl);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
+
+      Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
+      //return volumeArgs.getAclMap().hasAccess(userAcl);
+    } catch (IOException ex) {
+      if (!(ex instanceof OMException)) {
+        LOG.error("Add acl operation failed for volume:{} acl:{}",
+            volume, acl, ex);
+      }
+      throw ex;
+    } finally {
+      metadataManager.getLock().releaseVolumeLock(volume);
+    }
+
+    return true;
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acl);
+    if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
+      throw new IllegalArgumentException("Unexpected argument passed to " +
+          "VolumeManager. OzoneObj type:" + obj.getResourceType());
+    }
+    String volume = obj.getVolumeName();
+    metadataManager.getLock().acquireVolumeLock(volume);
+    try {
+      String dbVolumeKey = metadataManager.getVolumeKey(volume);
+      OmVolumeArgs volumeArgs =
+          metadataManager.getVolumeTable().get(dbVolumeKey);
+      if (volumeArgs == null) {
+        LOG.debug("volume:{} does not exist", volume);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
+      }
+      volumeArgs.removeAcl(acl);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
+
+      Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
+      //return volumeArgs.getAclMap().hasAccess(userAcl);
+    } catch (IOException ex) {
+      if (!(ex instanceof OMException)) {
+        LOG.error("Remove acl operation failed for volume:{} acl:{}",
+            volume, acl, ex);
+      }
+      throw ex;
+    } finally {
+      metadataManager.getLock().releaseVolumeLock(volume);
+    }
+
+    return true;
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    Objects.requireNonNull(obj);
+    Objects.requireNonNull(acls);
+
+    if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
+      throw new IllegalArgumentException("Unexpected argument passed to " +
+          "VolumeManager. OzoneObj type:" + obj.getResourceType());
+    }
+    String volume = obj.getVolumeName();
+    metadataManager.getLock().acquireVolumeLock(volume);
+    try {
+      String dbVolumeKey = metadataManager.getVolumeKey(volume);
+      OmVolumeArgs volumeArgs =
+          metadataManager.getVolumeTable().get(dbVolumeKey);
+      if (volumeArgs == null) {
+        LOG.debug("volume:{} does not exist", volume);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
+      }
+      volumeArgs.setAcls(acls);
+      metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
+
+      Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
+      //return volumeArgs.getAclMap().hasAccess(userAcl);
+    } catch (IOException ex) {
+      if (!(ex instanceof OMException)) {
+        LOG.error("Set acl operation failed for volume:{} acls:{}",
+            volume, acls, ex);
+      }
+      throw ex;
+    } finally {
+      metadataManager.getLock().releaseVolumeLock(volume);
+    }
+
+    return true;
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    Objects.requireNonNull(obj);
+
+    if (!obj.getResourceType().equals(OzoneObj.ResourceType.VOLUME)) {
+      throw new IllegalArgumentException("Unexpected argument passed to " +
+          "VolumeManager. OzoneObj type:" + obj.getResourceType());
+    }
+    String volume = obj.getVolumeName();
+    metadataManager.getLock().acquireVolumeLock(volume);
+    try {
+      String dbVolumeKey = metadataManager.getVolumeKey(volume);
+      OmVolumeArgs volumeArgs =
+          metadataManager.getVolumeTable().get(dbVolumeKey);
+      if (volumeArgs == null) {
+        LOG.debug("volume:{} does not exist", volume);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
+      }
+
+      Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
+      return volumeArgs.getAclMap().getAcl();
+    } catch (IOException ex) {
+      if (!(ex instanceof OMException)) {
+        LOG.error("Get acl operation failed for volume:{}", volume, ex);
+      }
+      throw ex;
+    } finally {
+      metadataManager.getLock().releaseVolumeLock(volume);
     }
   }
 }

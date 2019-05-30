@@ -195,6 +195,6 @@ public class OMException extends IOException {
 
     FILE_ALREADY_EXISTS,
 
-    NOT_A_FILE
+    NOT_A_FILE,
   }
 }

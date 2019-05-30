@@ -43,6 +43,7 @@ import java.util.Map;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.KerberosInfo;
 import org.apache.hadoop.security.token.Token;
 
@@ -621,4 +622,44 @@ public interface ClientProtocol {
   List<OzoneFileStatus> listStatus(String volumeName, String bucketName,
       String keyName, boolean recursive, String startKey, long numEntries)
       throws IOException;
+
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for
+   * given object to list of ACLs provided in argument.
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   *
+   * @throws IOException if there is error.
+   * */
+  boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException;
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   * @param obj Ozone object.
+   *
+   * @throws IOException if there is error.
+   * */
+  List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
+
 }

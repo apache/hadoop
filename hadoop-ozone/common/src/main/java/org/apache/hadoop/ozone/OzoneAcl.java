@@ -19,10 +19,15 @@
 
 package org.apache.hadoop.ozone;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -36,10 +41,11 @@ import java.util.Objects;
  * <li>world::rw
  * </ul>
  */
+@JsonIgnoreProperties(value = {"aclBitSet"})
 public class OzoneAcl {
   private ACLIdentityType type;
   private String name;
-  private List<ACLType> rights;
+  private BitSet aclBitSet;
 
   /**
    * Constructor for OzoneAcl.
@@ -56,8 +62,8 @@ public class OzoneAcl {
    */
   public OzoneAcl(ACLIdentityType type, String name, ACLType acl) {
     this.name = name;
-    this.rights = new ArrayList<>();
-    this.rights.add(acl);
+    this.aclBitSet = new BitSet(ACLType.getNoOfAcls());
+    aclBitSet.set(acl.ordinal(), true);
     this.type = type;
     if (type == ACLIdentityType.WORLD && name.length() != 0) {
       throw new IllegalArgumentException("Unexpected name part in world type");
@@ -75,9 +81,20 @@ public class OzoneAcl {
    * @param name - Name of user
    * @param acls - Rights
    */
-  public OzoneAcl(ACLIdentityType type, String name, List<ACLType> acls) {
+  public OzoneAcl(ACLIdentityType type, String name, BitSet acls) {
+    Objects.requireNonNull(type);
+    Objects.requireNonNull(acls);
+
+    if(acls.cardinality() > ACLType.getNoOfAcls()) {
+      throw new IllegalArgumentException("Acl bitset passed has unexpected " +
+          "size. bitset size:" + acls.cardinality() + ", bitset:"
+          + acls.toString());
+    }
+
+    this.aclBitSet = (BitSet) acls.clone();
+    acls.stream().forEach(a -> aclBitSet.set(a));
+
     this.name = name;
-    this.rights = acls;
     this.type = type;
     if (type == ACLIdentityType.WORLD && name.length() != 0) {
       throw new IllegalArgumentException("Unexpected name part in world type");
@@ -105,9 +122,10 @@ public class OzoneAcl {
     }
 
     ACLIdentityType aclType = ACLIdentityType.valueOf(parts[0].toUpperCase());
-    List<ACLType> acls = new ArrayList<>();
+    BitSet acls = new BitSet(ACLType.getNoOfAcls());
+
     for (char ch : parts[2].toCharArray()) {
-      acls.add(ACLType.getACLRight(String.valueOf(ch)));
+      acls.set(ACLType.getACLRight(String.valueOf(ch)).ordinal());
     }
 
     // TODO : Support sanitation of these user names by calling into
@@ -115,9 +133,27 @@ public class OzoneAcl {
     return new OzoneAcl(aclType, parts[1], acls);
   }
 
+  public static OzoneAclInfo toProtobuf(OzoneAcl acl) {
+    OzoneAclInfo.Builder builder = OzoneAclInfo.newBuilder()
+        .setName(acl.getName())
+        .setType(OzoneAclType.valueOf(acl.getType().name()));
+    acl.getAclBitSet().stream().forEach(a ->
+        builder.addRights(OzoneAclRights.valueOf(ACLType.values()[a].name())));
+    return builder.build();
+  }
+
+  public static OzoneAcl fromProtobuf(OzoneAclInfo protoAcl) {
+    BitSet aclRights = new BitSet(ACLType.getNoOfAcls());
+    protoAcl.getRightsList().parallelStream().forEach(a ->
+        aclRights.set(a.ordinal()));
+
+    return new OzoneAcl(ACLIdentityType.valueOf(protoAcl.getType().name()),
+        protoAcl.getName(), aclRights);
+  }
+
   @Override
   public String toString() {
-    return type + ":" + name + ":" + ACLType.getACLString(rights);
+    return type + ":" + name + ":" + ACLType.getACLString(aclBitSet);
   }
 
   /**
@@ -131,7 +167,7 @@ public class OzoneAcl {
    */
   @Override
   public int hashCode() {
-    return Objects.hash(this.getName(), this.getRights().toString(),
+    return Objects.hash(this.getName(), this.getAclBitSet(),
                         this.getType().toString());
   }
 
@@ -149,8 +185,16 @@ public class OzoneAcl {
    *
    * @return - Rights
    */
-  public List<ACLType> getRights() {
-    return rights;
+  public BitSet getAclBitSet() {
+    return aclBitSet;
+  }
+
+  public List<ACLType> getAclList() {
+    List<ACLType> acls = new ArrayList<>(ACLType.getNoOfAcls());
+    if(aclBitSet !=  null) {
+      aclBitSet.stream().forEach(a -> acls.add(ACLType.values()[a]));
+    }
+    return acls;
   }
 
   /**
@@ -179,29 +223,8 @@ public class OzoneAcl {
       return false;
     }
     OzoneAcl otherAcl = (OzoneAcl) obj;
-    return otherAcl.toString().equals(this.toString());
-  }
-
-  /**
-   * ACL types.
-   */
-  public enum OzoneACLType {
-    USER(OzoneConsts.OZONE_ACL_USER_TYPE),
-    GROUP(OzoneConsts.OZONE_ACL_GROUP_TYPE),
-    WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE);
-
-    /**
-     * String value for this Enum.
-     */
-    private final String value;
-
-    /**
-     * Init OzoneACLtypes enum.
-     *
-     * @param val String type for this enum.
-     */
-    OzoneACLType(String val) {
-      value = val;
-    }
+    return otherAcl.getName().equals(this.getName()) &&
+        otherAcl.getType().equals(this.getType()) &&
+        otherAcl.getAclBitSet().equals(this.getAclBitSet());
   }
 }

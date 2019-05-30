@@ -29,6 +29,7 @@ import java.security.PublicKey;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -69,6 +70,7 @@ import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.Server;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
@@ -2982,6 +2984,89 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             OMAction.LIST_STATUS, (args == null) ? null : args.toAuditMap()));
       }
     }
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   *
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
+          obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
+    }
+    // TODO: Audit ACL operation.
+    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+      return volumeManager.addAcl(obj, acl);
+    }
+
+    return false;
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
+          obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
+    }
+    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+      return volumeManager.removeAcl(obj, acl);
+    }
+
+    return false;
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
+          obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
+    }
+    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+      return volumeManager.setAcl(obj, acls);
+    }
+
+    return false;
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    if(isAclEnabled) {
+      checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.READ_ACL,
+          obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
+    }
+    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+      return volumeManager.getAcl(obj);
+    }
+
+    return Collections.emptyList();
   }
 
   /**

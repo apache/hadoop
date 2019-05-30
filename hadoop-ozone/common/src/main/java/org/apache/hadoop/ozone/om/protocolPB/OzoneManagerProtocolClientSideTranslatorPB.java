@@ -34,6 +34,7 @@ import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryProxy;
 import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -55,6 +56,9 @@ import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneFileStatusProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.LookupFileResponse;
@@ -62,6 +66,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateF
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateFileResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListStatusRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ListStatusResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CreateDirectoryRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
@@ -107,6 +113,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Multipa
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RemoveAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenameKeyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.RenewDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3BucketInfoRequest;
@@ -117,12 +125,14 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListB
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.S3ListBucketsResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServiceListResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetBucketPropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.proto.SecurityProtos.CancelDelegationTokenRequestProto;
 import org.apache.hadoop.security.proto.SecurityProtos.GetDelegationTokenRequestProto;
@@ -528,12 +538,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
 
     ListVolumeResponse resp =
         handleError(submitRequest(omRequest)).getListVolumeResponse();
-
-
-
-    return resp.getVolumeInfoList().stream()
-        .map(item -> OmVolumeArgs.getFromProtobuf(item))
-        .collect(Collectors.toList());
+    List<OmVolumeArgs> list = new ArrayList<>(resp.getVolumeInfoList().size());
+    for (VolumeInfo info : resp.getVolumeInfoList()) {
+      list.add(OmVolumeArgs.getFromProtobuf(info));
+    }
+    return list;
   }
 
   /**
@@ -1296,6 +1305,101 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     LookupFileResponse resp =
         handleError(submitRequest(omRequest)).getLookupFileResponse();
     return OmKeyInfo.getFromProtobuf(resp.getKeyInfo());
+  }
+
+  /**
+   * Add acl for Ozone object. Return true if acl is added successfully else
+   * false.
+   *
+   * @param obj Ozone object for which acl should be added.
+   * @param acl ozone acl top be added.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    AddAclRequest req = AddAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .setAcl(OzoneAcl.toProtobuf(acl))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.AddAcl)
+        .setAddAclRequest(req)
+        .build();
+    AddAclResponse addAclResponse =
+        handleError(submitRequest(omRequest)).getAddAclResponse();
+
+    return addAclResponse.getResponse();
+  }
+
+  /**
+   * Remove acl for Ozone object. Return true if acl is removed successfully
+   * else false.
+   *
+   * @param obj Ozone object.
+   * @param acl Ozone acl to be removed.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
+    RemoveAclRequest req = RemoveAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .setAcl(OzoneAcl.toProtobuf(acl))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.RemoveAcl)
+        .setRemoveAclRequest(req)
+        .build();
+    RemoveAclResponse response =
+        handleError(submitRequest(omRequest)).getRemoveAclResponse();
+
+    return response.getResponse();
+  }
+
+  /**
+   * Acls to be set for given Ozone object. This operations reset ACL for given
+   * object to list of ACLs provided in argument.
+   *
+   * @param obj Ozone object.
+   * @param acls List of acls.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
+    SetAclRequest.Builder builder = SetAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj));
+
+    acls.parallelStream().forEach(a -> builder.addAcl(OzoneAcl.toProtobuf(a)));
+
+    OMRequest omRequest = createOMRequest(Type.SetAcl)
+        .setSetAclRequest(builder.build())
+        .build();
+    OzoneManagerProtocolProtos.SetAclResponse response =
+        handleError(submitRequest(omRequest)).getSetAclResponse();
+
+    return response.getResponse();
+  }
+
+  /**
+   * Returns list of ACLs for given Ozone object.
+   *
+   * @param obj Ozone object.
+   * @throws IOException if there is error.
+   */
+  @Override
+  public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
+    GetAclRequest req = GetAclRequest.newBuilder()
+        .setObj(OzoneObj.toProtobuf(obj))
+        .build();
+
+    OMRequest omRequest = createOMRequest(Type.GetAcl)
+        .setGetAclRequest(req)
+        .build();
+    GetAclResponse response =
+        handleError(submitRequest(omRequest)).getGetAclResponse();
+    List<OzoneAcl> acls = new ArrayList<>();
+    response.getAclsList().stream().forEach(a ->
+        acls.add(OzoneAcl.fromProtobuf(a)));
+    return acls;
   }
 
   @Override
