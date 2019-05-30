@@ -459,11 +459,18 @@ message BucketArgs {
     repeated hadoop.hdds.KeyValue metadata = 7;
 }
 
+message PrefixInfo {
+    required string name = 1;
+    repeated OzoneAclInfo acls = 2;
+    repeated hadoop.hdds.KeyValue metadata = 3;
+}
+
 message OzoneObj {
   enum ObjectType {
     VOLUME = 1;
     BUCKET = 2;
     KEY = 3;
+    PREFIX = 4;
   }
 
   enum StoreType {

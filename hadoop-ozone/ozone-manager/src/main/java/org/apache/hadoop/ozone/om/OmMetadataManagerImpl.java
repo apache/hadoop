@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmMultipartKeyInfoCodec;
 import org.apache.hadoop.ozone.om.codec.OmVolumeArgsCodec;
+import org.apache.hadoop.ozone.om.codec.OmPrefixInfoCodec;
 import org.apache.hadoop.ozone.om.codec.S3SecretValueCodec;
 import org.apache.hadoop.ozone.om.codec.TokenIdentifierCodec;
 import org.apache.hadoop.ozone.om.codec.VolumeListCodec;
@@ -41,6 +42,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
@@ -98,6 +100,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
    * |-------------------------------------------------------------------|
    * | dTokenTable        | s3g_access_key_id -> s3Secret                |
    * |-------------------------------------------------------------------|
+   * | prefixInfoTable     | prefix -> PrefixInfo                       |
+   * |-------------------------------------------------------------------|
    */
 
   public static final String USER_TABLE = "userTable";
@@ -110,6 +114,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public static final String MULTIPARTINFO_TABLE = "multipartInfoTable";
   public static final String S3_SECRET_TABLE = "s3SecretTable";
   public static final String DELEGATION_TOKEN_TABLE = "dTokenTable";
+  public static final String PREFIX_TABLE = "prefixTable";
 
   private DBStore store;
 
@@ -126,6 +131,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table<String, OmMultipartKeyInfo> multipartInfoTable;
   private Table s3SecretTable;
   private Table dTokenTable;
+  private Table prefixTable;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
@@ -184,6 +190,11 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public Table<String, OmPrefixInfo> getPrefixTable() {
+    return prefixTable;
+  }
+
+  @Override
   public Table<String, OmMultipartKeyInfo> getMultipartInfoTable() {
     return multipartInfoTable;
   }
@@ -230,13 +241,15 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(MULTIPARTINFO_TABLE)
         .addTable(DELEGATION_TOKEN_TABLE)
         .addTable(S3_SECRET_TABLE)
+        .addTable(PREFIX_TABLE)
         .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
         .addCodec(OmVolumeArgs.class, new OmVolumeArgsCodec())
         .addCodec(VolumeList.class, new VolumeListCodec())
         .addCodec(OmMultipartKeyInfo.class, new OmMultipartKeyInfoCodec())
-        .addCodec(S3SecretValue.class, new S3SecretValueCodec());
+        .addCodec(S3SecretValue.class, new S3SecretValueCodec())
+        .addCodec(OmPrefixInfo.class, new OmPrefixInfoCodec());
   }
 
   /**
@@ -282,6 +295,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     s3SecretTable = this.store.getTable(S3_SECRET_TABLE, String.class,
         S3SecretValue.class);
     checkTableStatus(s3SecretTable, S3_SECRET_TABLE);
+
+    prefixTable = this.store.getTable(PREFIX_TABLE, String.class,
+        OmPrefixInfo.class);
+    checkTableStatus(prefixTable, PREFIX_TABLE);
   }
 
   /**
