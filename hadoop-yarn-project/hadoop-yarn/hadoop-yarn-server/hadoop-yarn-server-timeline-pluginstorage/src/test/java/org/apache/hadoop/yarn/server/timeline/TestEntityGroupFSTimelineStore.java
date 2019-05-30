@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.server.timeline.EntityGroupFSTimelineStore.AppStat
 import org.apache.hadoop.yarn.server.timeline.TimelineReader.Field;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -377,6 +378,16 @@ public class TestEntityGroupFSTimelineStore extends TimelineStoreTestUtils {
 
     store.cleanLogs(testDoneDirPath, 1000);
     assertFalse(fs.exists(clusterTimeStampDir1));
+  }
+
+  @Test
+  public void testNullCheckGetEntityTimelines() throws Exception {
+    try {
+      store.getEntityTimelines("YARN_APPLICATION", null, null, null, null,
+          null);
+    } catch (NullPointerException e) {
+      Assert.fail("NPE when getEntityTimelines called with Null EntityIds");
+    }
   }
 
   @Test
