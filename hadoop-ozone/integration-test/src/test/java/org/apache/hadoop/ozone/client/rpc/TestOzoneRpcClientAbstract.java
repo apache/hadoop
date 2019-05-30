@@ -2159,11 +2159,20 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // Add acl's and then call getAcl.
     for (OzoneAcl a : volAcls) {
+      // Try removing an acl which doesn't exist, it should return false.
       assertFalse(finalVolume.getAcls().contains(a));
-      store.addAcl(ozObj, a);
+      assertFalse(store.removeAcl(ozObj, a));
+
+      assertTrue(store.addAcl(ozObj, a));
       finalVolume = store.getVolume(volumeName);
       assertTrue(finalVolume.getAcls().contains(a));
+
+      // Call addAcl again, this time operation will fail as
+      // acl is already added.
+      assertFalse(store.addAcl(ozObj, a));
     }
+    assertTrue(finalVolume.getAcls().size() == volAcls.size());
+
 
     // Reset acl's.
     store.setAcl(ozObj, newAcls);
@@ -2196,7 +2205,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // Remove all acl's.
     for (OzoneAcl a : volAcls) {
-      store.removeAcl(ozObj, a);
+      assertTrue(store.removeAcl(ozObj, a));
     }
     List<OzoneAcl> newAcls = store.getAcl(ozObj);
     OzoneBucket finalBuck = volume.getBucket(bucketName);
@@ -2205,11 +2214,20 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // Add acl's and then call getAcl.
     for (OzoneAcl a : volAcls) {
+      // Try removing an acl which doesn't exist, it should return false.
       assertFalse(finalBuck.getAcls().contains(a));
-      store.addAcl(ozObj, a);
+      assertFalse(store.removeAcl(ozObj, a));
+
+      // Add acl should succeed.
+      assertTrue(store.addAcl(ozObj, a));
       finalBuck = volume.getBucket(bucketName);
       assertTrue(finalBuck.getAcls().contains(a));
+
+      // Call addAcl again, this time operation will return false as
+      // acl is already added.
+      assertFalse(store.addAcl(ozObj, a));
     }
+    assertTrue(finalBuck.getAcls().size() == volAcls.size());
 
     // Reset acl's.
     store.setAcl(ozObj, newAcls);

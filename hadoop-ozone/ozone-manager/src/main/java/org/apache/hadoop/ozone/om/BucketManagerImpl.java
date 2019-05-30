@@ -458,6 +458,12 @@ public class BucketManagerImpl implements BucketManager {
             BUCKET_NOT_FOUND);
       }
       List<OzoneAcl> list = bucketInfo.getAcls();
+      if(!IOzoneAcl.validateNewAcl(acl, list)) {
+        // New acl can't be added as it is not consistent with existing ACLs.
+        LOG.info("New acl:{} can't be added as it is not consistent with " +
+            "existing ACLs:{}.", acl, StringUtils.join(",", list));
+        return false;
+      }
       list.add(acl);
       OmBucketInfo updatedBucket = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
@@ -469,6 +475,7 @@ public class BucketManagerImpl implements BucketManager {
           .addAllMetadata(bucketInfo.getMetadata())
           .setAcls(list)
           .build();
+      // TODO:HDDS-1619 OM HA changes required for all acl operations.
 
       metadataManager.getBucketTable().put(dbBucketKey, updatedBucket);
     } catch (IOException ex) {
@@ -513,6 +520,12 @@ public class BucketManagerImpl implements BucketManager {
             BUCKET_NOT_FOUND);
       }
       List<OzoneAcl> list = bucketInfo.getAcls();
+      if (!list.contains(acl)) {
+        // Return false if acl doesn't exist in current ACLs.
+        LOG.info("Acl:{} not found in existing ACLs:{}.", acl,
+            StringUtils.join(",", list));
+        return false;
+      }
       list.remove(acl);
       OmBucketInfo updatedBucket = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
