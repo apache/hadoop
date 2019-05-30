@@ -273,11 +273,7 @@ public class NMTimelinePublisher extends CompositeService {
         TimelineEvent tEvent = new TimelineEvent();
         tEvent.setId(ContainerMetricsConstants.RESUMED_EVENT_TYPE);
         tEvent.setTimestamp(event.getTimestamp());
-
-        long containerStartTime = container.getContainerStartTime();
         entity.addEvent(tEvent);
-        entity
-            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
         dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
             containerId.getApplicationAttemptId().getApplicationId()));
       }
@@ -302,11 +298,7 @@ public class NMTimelinePublisher extends CompositeService {
         TimelineEvent tEvent = new TimelineEvent();
         tEvent.setId(ContainerMetricsConstants.PAUSED_EVENT_TYPE);
         tEvent.setTimestamp(event.getTimestamp());
-
-        long containerStartTime = container.getContainerStartTime();
         entity.addEvent(tEvent);
-        entity
-            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
         dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
             containerId.getApplicationAttemptId().getApplicationId()));
       }
@@ -333,11 +325,7 @@ public class NMTimelinePublisher extends CompositeService {
         TimelineEvent tEvent = new TimelineEvent();
         tEvent.setId(ContainerMetricsConstants.KILLED_EVENT_TYPE);
         tEvent.setTimestamp(event.getTimestamp());
-
-        long containerStartTime = container.getContainerStartTime();
         entity.addEvent(tEvent);
-        entity
-            .setIdPrefix(TimelineServiceHelper.invertLong(containerStartTime));
         dispatcher.getEventHandler().handle(new TimelinePublishEvent(entity,
             containerId.getApplicationAttemptId().getApplicationId()));
       }
