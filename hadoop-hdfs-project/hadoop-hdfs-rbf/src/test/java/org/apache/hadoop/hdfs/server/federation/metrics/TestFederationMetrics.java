@@ -21,6 +21,7 @@ import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.getBe
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -318,5 +319,6 @@ public class TestFederationMetrics extends TestMetricsBase {
     assertTrue(bean.getCompileInfo().length() > 0);
     assertTrue(bean.getRouterStarted().length() > 0);
     assertTrue(bean.getHostAndPort().length() > 0);
+    assertFalse(bean.isSecurityEnabled());
   }
 }
