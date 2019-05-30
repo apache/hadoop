@@ -70,7 +70,7 @@ public class TestViewFsTrash {
   }
   
   @Test
-  public void testTrash() throws IOException {
+  public void testTrash() throws Exception {
     TestTrash.trashShell(conf, fileSystemTestHelper.getTestRootPath(fsView),
         fsTarget, new Path(fsTarget.getHomeDirectory(), ".Trash/Current"));
   }

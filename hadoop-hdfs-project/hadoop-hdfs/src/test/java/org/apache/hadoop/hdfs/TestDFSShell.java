@@ -1302,9 +1302,6 @@ public class TestDFSShell {
       exitCode = shell.run(args);
       LOG.info("RUN: "+args[0]+" exit=" + exitCode);
       return exitCode;
-    } catch (IOException e) {
-      LOG.error("RUN: "+args[0]+" IOException="+e.getMessage());
-      throw e;
     } catch (RuntimeException e) {
       LOG.error("RUN: "+args[0]+" RuntimeException="+e.getMessage());
       throw e;

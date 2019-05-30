@@ -98,7 +98,7 @@ public class TestHDFSTrash {
   }
 
   @Test
-  public void testTrash() throws IOException {
+  public void testTrash() throws Exception {
     TestTrash.trashShell(cluster.getFileSystem(), new Path("/"));
   }
 

@@ -1155,8 +1155,6 @@ public class TestCheckpoint {
       String[] args = new String[]{"-saveNamespace"};
       try {
         admin.run(args);
-      } catch(IOException eIO) {
-        assertTrue(eIO.getLocalizedMessage().contains("Safe mode should be turned ON"));
       } catch(Exception e) {
         throw new IOException(e);
       }

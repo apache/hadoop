@@ -206,6 +206,12 @@ public abstract class FileSystem extends Configured
     CACHE.map.put(new Cache.Key(uri, conf), fs);
   }
 
+  @VisibleForTesting
+  static void removeFileSystemForTesting(URI uri, Configuration conf,
+      FileSystem fs) throws IOException {
+    CACHE.map.remove(new Cache.Key(uri, conf), fs);
+  }
+
   /**
    * Get a FileSystem instance based on the uri, the passed in
    * configuration and the user.
