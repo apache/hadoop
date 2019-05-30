@@ -66,5 +66,15 @@ public class OMVolumeCreateResponse extends OMClientResponse {
     return omVolumeArgs;
   }
 
+  @Override
+  public void addResponseToOMDB(OMMetadataManager omMetadataManager) throws IOException {
+    String dbVolumeKey =
+        omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+    String dbUserKey =
+        omMetadataManager.getUserKey(omVolumeArgs.getOwnerName());
+
+    omMetadataManager.getVolumeTable().put(dbVolumeKey, omVolumeArgs);
+    omMetadataManager.getUserTable().put(dbUserKey, volumeList);
+  }
 }
 

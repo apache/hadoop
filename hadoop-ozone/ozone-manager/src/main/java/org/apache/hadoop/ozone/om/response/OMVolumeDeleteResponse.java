@@ -59,5 +59,17 @@ public class OMVolumeDeleteResponse extends OMClientResponse {
         omMetadataManager.getVolumeKey(volume));
   }
 
+  @Override
+  public void addResponseToOMDB(OMMetadataManager omMetadataManager) throws IOException {
+    String dbUserKey = omMetadataManager.getUserKey(owner);
+    VolumeList volumeList = updatedVolumeList;
+    if (updatedVolumeList.getVolumeNamesList().size() == 0) {
+      omMetadataManager.getUserTable().delete(dbUserKey);
+    } else {
+      omMetadataManager.getUserTable().put(dbUserKey, volumeList);
+    }
+    omMetadataManager.getVolumeTable().delete(
+        omMetadataManager.getVolumeKey(volume));
+  }
 }
 

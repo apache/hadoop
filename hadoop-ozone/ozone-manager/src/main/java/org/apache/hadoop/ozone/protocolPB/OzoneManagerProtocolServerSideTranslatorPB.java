@@ -19,12 +19,14 @@ package org.apache.hadoop.ozone.protocolPB;
 
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -52,6 +54,10 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final RequestHandler handler;
   private final boolean isRatisEnabled;
   private final OzoneManager ozoneManager;
+  private final OMMetadataManager omMetadataManager;
+  // Used during Non-HA when calling validateAndUpdateCache methods in
+  // OMClientRequest. As in Non-HA with out ratis, we don't use this.
+  private final long index = 0L;
 
   /**
    * Constructs an instance of the server handler.
@@ -65,6 +71,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
     this.isRatisEnabled = enableRatis;
+    this.omMetadataManager = ozoneManager.getMetadataManager();
 
   }
 
@@ -99,7 +106,36 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           return submitRequestToRatis(request);
         }
       } else {
-        return submitRequestDirectlyToOM(request);
+        try {
+          OMClientRequest omClientRequest =
+              OzoneManagerRatisUtils.createClientRequest(request);
+          if (omClientRequest != null) {
+            request = omClientRequest.preExecute(ozoneManager);
+          } else {
+            // Still work is ongoing, so for some of the requests still
+            // following older approach.
+            return submitRequestDirectlyToOM(request);
+          }
+        } catch (IOException ex) {
+          // As some of the preExecute returns error. So handle here.
+          return createErrorResponse(request, ex);
+        }
+        OMClientRequest omClientRequest = OzoneManagerRatisUtils
+            .createClientRequest(request);
+
+        // During non-HA, no use of transactionLogIndex, so just passing a
+        // constant value.
+        OMClientResponse omClientResponse =
+            omClientRequest.validateAndUpdateCache(ozoneManager, index);
+        if (omClientResponse.getOMResponse().getStatus() ==
+            OzoneManagerProtocolProtos.Status.OK) {
+          try {
+            omClientResponse.addResponseToOMDB(omMetadataManager);
+          } catch (IOException ex) {
+            return createErrorResponse(request, ex);
+          }
+        }
+        return omClientResponse.getOMResponse();
       }
     } finally {
       scope.close();
