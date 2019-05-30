@@ -136,6 +136,8 @@ public class RouterClientProtocol implements ClientProtocol {
   private final RouterCacheAdmin routerCacheAdmin;
   /** StoragePolicy calls. **/
   private final RouterStoragePolicy storagePolicy;
+  /** Snapshot calls. */
+  private final RouterSnapshot snapshotProto;
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
 
@@ -166,6 +168,7 @@ public class RouterClientProtocol implements ClientProtocol {
         DFSConfigKeys.DFS_PERMISSIONS_SUPERUSERGROUP_DEFAULT);
     this.erasureCoding = new ErasureCoding(rpcServer);
     this.storagePolicy = new RouterStoragePolicy(rpcServer);
+    this.snapshotProto = new RouterSnapshot(rpcServer);
     this.routerCacheAdmin = new RouterCacheAdmin(rpcServer);
     this.securityManager = rpcServer.getRouterSecurityManager();
   }
@@ -1221,42 +1224,42 @@ public class RouterClientProtocol implements ClientProtocol {
     return rpcClient.invokeSequential(locations, method, String.class, null);
   }
 
-  @Override // Client Protocol
+  @Override
   public void allowSnapshot(String snapshotRoot) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    snapshotProto.allowSnapshot(snapshotRoot);
   }
 
-  @Override // Client Protocol
+  @Override
   public void disallowSnapshot(String snapshot) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    snapshotProto.disallowSnapshot(snapshot);
   }
 
   @Override
   public void renameSnapshot(String snapshotRoot, String snapshotOldName,
       String snapshotNewName) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    snapshotProto.renameSnapshot(
+        snapshotRoot, snapshotOldName, snapshotNewName);
   }
 
   @Override
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    return snapshotProto.getSnapshottableDirListing();
   }
 
   @Override
   public SnapshotDiffReport getSnapshotDiffReport(String snapshotRoot,
       String earlierSnapshotName, String laterSnapshotName) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    return snapshotProto.getSnapshotDiffReport(
+        snapshotRoot, earlierSnapshotName, laterSnapshotName);
   }
 
   @Override
   public SnapshotDiffReportListing getSnapshotDiffReportListing(
       String snapshotRoot, String earlierSnapshotName, String laterSnapshotName,
       byte[] startPath, int index) throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    return snapshotProto.getSnapshotDiffReportListing(
+        snapshotRoot, earlierSnapshotName, laterSnapshotName, startPath, index);
   }
 
   @Override
@@ -1558,14 +1561,13 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public String createSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE);
-    return null;
+    return snapshotProto.createSnapshot(snapshotRoot, snapshotName);
   }
 
   @Override
   public void deleteSnapshot(String snapshotRoot, String snapshotName)
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.WRITE, false);
+    snapshotProto.deleteSnapshot(snapshotRoot, snapshotName);
   }
 
   @Override
