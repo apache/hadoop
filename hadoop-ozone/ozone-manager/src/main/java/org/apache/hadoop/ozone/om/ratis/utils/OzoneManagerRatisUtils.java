@@ -18,9 +18,9 @@
 package org.apache.hadoop.ozone.om.ratis.utils;
 
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.request.OMBucketCreateRequest;
-import org.apache.hadoop.ozone.om.request.OMBucketDeleteRequest;
-import org.apache.hadoop.ozone.om.request.OMBucketSetPropertyRequest;
+import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
+import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
+import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos

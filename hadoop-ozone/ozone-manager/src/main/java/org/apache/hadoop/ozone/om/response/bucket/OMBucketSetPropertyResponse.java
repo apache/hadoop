@@ -15,12 +15,13 @@
  * the License.
  */
 
-package org.apache.hadoop.ozone.om.response;
+package org.apache.hadoop.ozone.om.response.bucket;
 
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;

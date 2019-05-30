@@ -90,6 +90,8 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
         }
         return v;
       }));
+      // If currentEntry epoch is greater than epoch, we have deleted all
+      // entries less than specified epoch. So, we can break.
       if (cacheValue != null && cacheValue.getEpoch() >= epoch) {
         break;
       }

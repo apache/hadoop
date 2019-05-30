@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.ozone.om.request;
+package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -16,12 +16,13 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.request;
+package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.io.IOException;
 import java.util.List;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.KeyValueUtil;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.response.OMBucketSetPropertyResponse;
+import org.apache.hadoop.ozone.om.response.bucket.OMBucketSetPropertyResponse;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos

@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.ozone.om.response;
+package org.apache.hadoop.ozone.om.response.bucket;
 
 import java.util.UUID;
 
@@ -32,26 +32,24 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.response.TestOMResponseUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * This class tests OMBucketDeleteResponse.
+ * This class tests OMBucketSetPropertyResponse.
  */
-public class TestOMBucketDeleteResponse {
+public class TestOMBucketSetPropertyResponse {
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
 
   private OMMetadataManager omMetadataManager;
   private BatchOperation batchOperation;
-
 
   @Before
   public void setup() throws Exception {
@@ -66,31 +64,25 @@ public class TestOMBucketDeleteResponse {
   public void testAddToDBBatch() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
+
     OmBucketInfo omBucketInfo = TestOMResponseUtils.createBucket(
         volumeName, bucketName);
-    OMBucketCreateResponse omBucketCreateResponse =
-        new OMBucketCreateResponse(omBucketInfo, OMResponse.newBuilder()
+    OMBucketSetPropertyResponse omBucketCreateResponse =
+        new OMBucketSetPropertyResponse(omBucketInfo, OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateBucketResponse(
                 CreateBucketResponse.newBuilder().build()).build());
 
-    OMBucketDeleteResponse omBucketDeleteResponse =
-        new OMBucketDeleteResponse(volumeName, bucketName,
-            OMResponse.newBuilder()
-                .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
-                .setStatus(OzoneManagerProtocolProtos.Status.OK)
-                .setDeleteBucketResponse(
-                    DeleteBucketResponse.getDefaultInstance()).build());
-
     omBucketCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
-    omBucketDeleteResponse.addToDBBatch(omMetadataManager, batchOperation);
 
     // Do manual commit and see whether addToBatch is successful or not.
     omMetadataManager.getStore().commitBatchOperation(batchOperation);
 
-    Assert.assertNull(omMetadataManager.getBucketTable().get(
+    Assert.assertEquals(omBucketInfo,
+        omMetadataManager.getBucketTable().get(
             omMetadataManager.getBucketKey(volumeName, bucketName)));
   }
+
 
 }

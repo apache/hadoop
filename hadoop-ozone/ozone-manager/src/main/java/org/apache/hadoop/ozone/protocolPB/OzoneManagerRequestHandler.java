@@ -1091,8 +1091,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .build();
   }
 
-
-
   private ListStatusResponse listStatus(
       ListStatusRequest request) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();

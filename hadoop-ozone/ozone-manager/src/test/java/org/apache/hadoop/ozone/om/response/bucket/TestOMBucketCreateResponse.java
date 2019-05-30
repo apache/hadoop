@@ -17,7 +17,7 @@
  *
  */
 
-package org.apache.hadoop.ozone.om.response;
+package org.apache.hadoop.ozone.om.response.bucket;
 
 import java.util.UUID;
 
@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.response.TestOMResponseUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CreateBucketResponse;
@@ -40,9 +41,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * This class tests OMBucketSetPropertyResponse.
+ * This class tests OMBucketCreateResponse.
  */
-public class TestOMBucketSetPropertyResponse {
+public class TestOMBucketCreateResponse {
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -63,11 +64,10 @@ public class TestOMBucketSetPropertyResponse {
   public void testAddToDBBatch() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-
     OmBucketInfo omBucketInfo = TestOMResponseUtils.createBucket(
         volumeName, bucketName);
-    OMBucketSetPropertyResponse omBucketCreateResponse =
-        new OMBucketSetPropertyResponse(omBucketInfo, OMResponse.newBuilder()
+    OMBucketCreateResponse omBucketCreateResponse =
+        new OMBucketCreateResponse(omBucketInfo, OMResponse.newBuilder()
             .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCreateBucketResponse(
