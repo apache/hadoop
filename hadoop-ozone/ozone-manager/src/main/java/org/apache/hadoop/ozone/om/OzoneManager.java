@@ -29,7 +29,6 @@ import java.security.PublicKey;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
