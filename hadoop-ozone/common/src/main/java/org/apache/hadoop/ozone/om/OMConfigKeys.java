@@ -184,6 +184,27 @@ public final class OMConfigKeys {
       OZONE_OM_RATIS_SERVER_ROLE_CHECK_INTERVAL_DEFAULT
       = TimeDuration.valueOf(15, TimeUnit.SECONDS);
 
+  // OM SnapshotProvider configurations
+  public static final String OZONE_OM_RATIS_SNAPSHOT_DIR =
+      "ozone.om.ratis.snapshot.dir";
+  public static final String OZONE_OM_SNAPSHOT_PROVIDER_SOCKET_TIMEOUT_KEY =
+      "ozone.om.snapshot.provider.socket.timeout";
+  public static final TimeDuration
+      OZONE_OM_SNAPSHOT_PROVIDER_SOCKET_TIMEOUT_DEFAULT =
+      TimeDuration.valueOf(5000, TimeUnit.MILLISECONDS);
+
+  public static final String OZONE_OM_SNAPSHOT_PROVIDER_CONNECTION_TIMEOUT_KEY =
+      "ozone.om.snapshot.provider.connection.timeout";
+  public static final TimeDuration
+      OZONE_OM_SNAPSHOT_PROVIDER_CONNECTION_TIMEOUT_DEFAULT =
+      TimeDuration.valueOf(5000, TimeUnit.MILLISECONDS);
+
+  public static final String OZONE_OM_SNAPSHOT_PROVIDER_REQUEST_TIMEOUT_KEY =
+      "ozone.om.snapshot.provider.request.timeout";
+  public static final TimeDuration
+      OZONE_OM_SNAPSHOT_PROVIDER_REQUEST_TIMEOUT_DEFAULT =
+      TimeDuration.valueOf(5000, TimeUnit.MILLISECONDS);
+
   public static final String OZONE_OM_KERBEROS_KEYTAB_FILE_KEY = "ozone.om."
       + "kerberos.keytab.file";
   public static final String OZONE_OM_KERBEROS_PRINCIPAL_KEY = "ozone.om"
