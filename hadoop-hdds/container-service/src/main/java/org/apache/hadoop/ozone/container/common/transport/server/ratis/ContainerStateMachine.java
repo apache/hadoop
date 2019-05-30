@@ -391,6 +391,8 @@ public class ContainerStateMachine extends BaseStateMachine {
     // Remove the future once it finishes execution from the
     // writeChunkFutureMap.
     writeChunkFuture.thenApply(r -> {
+      metrics.incNumBytesWrittenCount(
+          requestProto.getWriteChunk().getChunkData().getLen());
       writeChunkFutureMap.remove(entryIndex);
       LOG.debug("writeChunk writeStateMachineData  completed: blockId " + write
           .getBlockID() + " logIndex " + entryIndex + " chunkName " + write
@@ -438,12 +440,12 @@ public class ContainerStateMachine extends BaseStateMachine {
   @Override
   public CompletableFuture<Message> query(Message request) {
     try {
-      metrics.incNumReadStateMachineOps();
+      metrics.incNumQueryStateMachineOps();
       final ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(request.getContent());
       return CompletableFuture.completedFuture(runCommand(requestProto, null));
     } catch (IOException e) {
-      metrics.incNumReadStateMachineFails();
+      metrics.incNumQueryStateMachineFails();
       return completeExceptionally(e);
     }
   }
@@ -520,10 +522,14 @@ public class ContainerStateMachine extends BaseStateMachine {
   public CompletableFuture<ByteString> readStateMachineData(
       LogEntryProto entry) {
     StateMachineLogEntryProto smLogEntryProto = entry.getStateMachineLogEntry();
+    metrics.incNumReadStateMachineOps();
     if (!getStateMachineData(smLogEntryProto).isEmpty()) {
       return CompletableFuture.completedFuture(ByteString.EMPTY);
     }
     try {
+      // the stateMachine data is not present in the stateMachine cache,
+      // increment the stateMachine cache miss count
+      metrics.incNumReadStateMachineMissCount();
       final ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(
               entry.getStateMachineLogEntry().getLogData());
@@ -537,6 +543,7 @@ public class ContainerStateMachine extends BaseStateMachine {
                 getCachedStateMachineData(entry.getIndex(), entry.getTerm(),
                     requestProto));
           } catch (ExecutionException e) {
+            metrics.incNumReadStateMachineFails();
             future.completeExceptionally(e);
           }
           return future;
@@ -547,6 +554,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             + " cannot have state machine data");
       }
     } catch (Exception e) {
+      metrics.incNumReadStateMachineFails();
       LOG.error("unable to read stateMachineData:" + e);
       return completeExceptionally(e);
     }
@@ -618,6 +626,10 @@ public class ContainerStateMachine extends BaseStateMachine {
             applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
         Preconditions.checkState(previous == null);
+        if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
+          metrics.incNumBytesCommittedCount(
+              requestProto.getWriteChunk().getChunkData().getLen());
+        }
         updateLastApplied();
       });
       return future;
