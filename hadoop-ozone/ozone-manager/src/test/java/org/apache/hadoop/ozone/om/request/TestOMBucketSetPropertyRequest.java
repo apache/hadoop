@@ -104,7 +104,8 @@ public class TestOMBucketSetPropertyRequest {
         bucketName, true);
 
     // Create with default BucketInfo values
-    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
 
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);
