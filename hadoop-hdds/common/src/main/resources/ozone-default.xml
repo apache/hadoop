@@ -642,17 +642,18 @@
       exist then the OM will attempt to create it.
 
       If undefined, then the OM will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
     <name>ozone.metadata.dirs</name>
     <value/>
-    <tag>OZONE, OM, SCM, CONTAINER, STORAGE</tag>
+    <tag>OZONE, OM, SCM, CONTAINER, STORAGE, REQUIRED</tag>
     <description>
       This setting is the fallback location for SCM, OM and DataNodes
-      to store their metadata. This setting may be used in test/PoC clusters
-      to simplify configuration.
+      to store their metadata. This setting may be used only in test/PoC
+      clusters to simplify configuration.
 
       For production clusters or any time you care about performance, it is
       recommended that ozone.om.db.dirs, ozone.scm.db.dirs and
@@ -694,7 +695,8 @@
       does not exist then the SCM will attempt to create it.
 
       If undefined, then the SCM will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
@@ -2275,8 +2277,10 @@
       Directory where the Recon Server stores its metadata. This should
       be specified as a single directory. If the directory does not
       exist then the Recon will attempt to create it.
+
       If undefined, then the Recon will log a warning and fallback to
-      ozone.metadata.dirs.
+      ozone.metadata.dirs. This fallback approach is not recommended for
+      production environments.
     </description>
   </property>
   <property>
@@ -2306,8 +2310,10 @@
     Directory where the Recon Server stores its OM snapshot DB. This should
     be specified as a single directory. If the directory does not
     exist then the Recon will attempt to create it.
+
     If undefined, then the Recon will log a warning and fallback to
-    ozone.metadata.dirs.
+    ozone.metadata.dirs. This fallback approach is not recommended for
+    production environments.
   </description>
 </property>
   <property>
