@@ -68,23 +68,30 @@ usage:
                               memory-mb=2048,vcores=2,yarn.io/gpu=2
  -localization <arg>          Specify localization to remote/local
                               file/directory available to all container(Docker).
-                              Argument format is "RemoteUri:LocalFilePath[:rw]"
-                              (ro permission is not supported yet).
-                              The RemoteUri can be a file or directory in local
-                              or HDFS or s3 or abfs or http .etc.
-                              The LocalFilePath can be absolute or relative.
-                              If relative, it'll be under container's implied
-                              working directory.
+                              Argument format is "RemoteUri:LocalFileName"
+                              The LocalFilePath is the local file or folder name.
+                              You should access it with relative path to working directory.
                               This option can be set mutiple times.
                               Examples are
-                              -localization "hdfs:///user/yarn/mydir2:/opt/data"
-                              -localization "s3a:///a/b/myfile1:./"
-                              -localization "https:///a/b/myfile2:./myfile"
-                              -localization "/user/yarn/mydir3:/opt/mydir3"
-                              -localization "./mydir1:."
+                              -localization "hdfs:///user/yarn/mydir2:data"
+                              -localization "s3a:///a/b/myfile1:file1"
+                              -localization "https:///a/b/myfile2:myfile"
+                              -localization "/user/yarn/mydir3:mydir3"
+                              -localization "./mydir1:mydir1"
  -insecure                    Whether running in an insecure cluster
  -conf                        Override configurations via commandline
 ```
+
+> Note: all --localization files will be localized to working directory. You should access them use
+relative path. Alternatively, you could use `--conf tony.containers.resources
+=src_file::dest_file_name,src_file2::dest_file_name2`. It accepts a list of resources to be localized to all containers,
+delimited by comma. If a resource has no scheme like `hdfs://` or `s3://`, the file is considered a local file. You
+could add #archive annotation, if an entry has `#archive`, the file will be automatically unzipped when localized to the
+containers, folder name is the same as the file name. For example: `/user/khu/abc.zip#archive` would be inferred as a
+local file and will be unarchived in containers. You would anticipate an abc.zip/ folder in your container's working
+directory. Annotation `::` is added since TonY 0.3.3. If you use `PATH/TO/abc.txt::def.txt`, the `abc.txt` file
+would be localized as `def.txt` in the container working directory.
+Details: [tony configurations](https://github.com/linkedin/TonY/wiki/TonY-Configurations)
 
 ### Submarine Configuration
 
@@ -144,7 +151,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 ./hadoop-submarine-core/target/hadoop-submarine-core-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-yarnservice-runtime/target/hadoop-submarine-score-yarnservice-runtime-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-tony-runtime/target/hadoop-submarine-tony-runtime-0.2.0-SNAPSHOT.jar: \
-/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
+/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.11-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --framework tensorflow \
@@ -156,9 +163,10 @@ java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --ps_launch_cmd "venv.zip/venv/bin/python mnist_distributed.py --steps 1000 --data_dir /tmp/data --working_dir /tmp/mode" \
  --insecure
  --conf tony.containers.resources=PATH_TO_VENV_YOU_CREATED/venv.zip#archive,PATH_TO_MNIST_EXAMPLE/mnist_distributed.py, \
-PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar
+PATH_TO_TONY_CLI_JAR/tony-cli-0.3.11-all.jar
 
 ```
+
 You should then be able to see links and status of the jobs from command line:
 
 ```
@@ -181,7 +189,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 ./hadoop-submarine-core/target/hadoop-submarine-core-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-yarnservice-runtime/target/hadoop-submarine-score-yarnservice-runtime-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-tony-runtime/target/hadoop-submarine-tony-runtime-0.2.0-SNAPSHOT.jar: \
-/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
+/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.11-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --framework tensorflow \
@@ -197,7 +205,7 @@ java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --env HADOOP_COMMON_HOME=/hadoop-3.1.0 \
  --env HADOOP_HDFS_HOME=/hadoop-3.1.0 \
  --env HADOOP_CONF_DIR=/hadoop-3.1.0/etc/hadoop \
- --conf tony.containers.resources=--conf tony.containers.resources=/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar
+ --conf tony.containers.resources=/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.11-all.jar
 ```
 
 
@@ -244,7 +252,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 ./hadoop-submarine-core/target/hadoop-submarine-core-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-yarnservice-runtime/target/hadoop-submarine-score-yarnservice-runtime-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-tony-runtime/target/hadoop-submarine-tony-runtime-0.2.0-SNAPSHOT.jar: \
-/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
+/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.11-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --num_workers 2 \
@@ -255,7 +263,7 @@ java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --ps_launch_cmd "venv.zip/venv/bin/python mnist_distributed.py" \
  --insecure \
  --conf tony.containers.resources=PATH_TO_VENV_YOU_CREATED/venv.zip#archive,PATH_TO_MNIST_EXAMPLE/mnist_distributed.py, \
-PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar \
+PATH_TO_TONY_CLI_JAR/tony-cli-0.3.11-all.jar \
 --conf tony.application.framework=pytorch
 
 ```
@@ -281,7 +289,7 @@ CLASSPATH=$(hadoop classpath --glob): \
 ./hadoop-submarine-core/target/hadoop-submarine-core-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-yarnservice-runtime/target/hadoop-submarine-score-yarnservice-runtime-0.2.0-SNAPSHOT.jar: \
 ./hadoop-submarine-tony-runtime/target/hadoop-submarine-tony-runtime-0.2.0-SNAPSHOT.jar: \
-/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.2-all.jar \
+/home/pi/hadoop/TonY/tony-cli/build/libs/tony-cli-0.3.11-all.jar \
 
 java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --docker_image hadoopsubmarine/tf-1.8.0-cpu:0.0.3 \
@@ -296,6 +304,6 @@ java org.apache.hadoop.yarn.submarine.client.cli.Cli job run --name tf-job-001 \
  --env HADOOP_COMMON_HOME=/hadoop-3.1.0 \
  --env HADOOP_HDFS_HOME=/hadoop-3.1.0 \
  --env HADOOP_CONF_DIR=/hadoop-3.1.0/etc/hadoop \
- --conf tony.containers.resources=PATH_TO_TONY_CLI_JAR/tony-cli-0.3.2-all.jar \
+ --conf tony.containers.resources=PATH_TO_TONY_CLI_JAR/tony-cli-0.3.11-all.jar \
  --conf tony.application.framework=pytorch
 ```
