@@ -745,8 +745,8 @@ public class TestOzoneShell {
     OzoneAcl acl = bucket.getAcls().get(aclSize);
     assertTrue(acl.getName().equals("frodo")
         && acl.getType() == ACLIdentityType.USER
-        && acl.getRights().contains(ACLType.READ)
-        && acl.getRights().contains(ACLType.WRITE));
+        && acl.getAclBitSet().get(ACLType.READ.ordinal())
+        && acl.getAclBitSet().get(ACLType.WRITE.ordinal()));
 
     args = new String[] {"bucket", "update",
         url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
@@ -758,7 +758,7 @@ public class TestOzoneShell {
     assertEquals(1 + aclSize, bucket.getAcls().size());
     assertTrue(acl.getName().equals("samwise")
         && acl.getType() == ACLIdentityType.GROUP
-        && acl.getRights().contains(ACLType.READ));
+        && acl.getAclBitSet().get(ACLType.READ.ordinal()));
 
     // test update bucket for a non-exist bucket
     args = new String[] {"bucket", "update",

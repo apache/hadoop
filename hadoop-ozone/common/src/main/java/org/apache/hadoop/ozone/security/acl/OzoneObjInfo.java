@@ -17,6 +17,9 @@
 package org.apache.hadoop.ozone.security.acl;
 
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+
+import java.util.StringTokenizer;
 
 /**
  * Class representing an ozone object.
@@ -67,6 +70,34 @@ public final class OzoneObjInfo extends OzoneObj {
   @Override
   public String getKeyName() {
     return keyName;
+  }
+
+  public static OzoneObjInfo fromProtobuf(OzoneManagerProtocolProtos.OzoneObj
+      proto) {
+    Builder builder = new Builder()
+        .setResType(ResourceType.valueOf(proto.getResType().name()))
+        .setStoreType(StoreType.valueOf(proto.getStoreType().name()));
+    StringTokenizer tokenizer = new StringTokenizer(proto.getPath(),
+        OzoneConsts.OZONE_URI_DELIMITER);
+    // Set volume name.
+    if (tokenizer.hasMoreTokens()) {
+      builder.setVolumeName(tokenizer.nextToken());
+    }
+    // Set bucket name.
+    if (tokenizer.hasMoreTokens()) {
+      builder.setBucketName(tokenizer.nextToken());
+    }
+    // Set key name
+    if (tokenizer.hasMoreTokens()) {
+      StringBuffer sb = new StringBuffer();
+      while (tokenizer.hasMoreTokens()) {
+        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+        sb.append(tokenizer.nextToken());
+        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+      }
+      builder.setKeyName(sb.toString());
+    }
+    return builder.build();
   }
 
   /**

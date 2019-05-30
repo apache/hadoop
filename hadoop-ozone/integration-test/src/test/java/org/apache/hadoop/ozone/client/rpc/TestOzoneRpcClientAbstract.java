@@ -84,6 +84,8 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
@@ -97,9 +99,11 @@ import static org.hamcrest.CoreMatchers.either;
 import org.junit.Assert;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Ignore;
 import org.junit.Test;
@@ -2130,6 +2134,44 @@ public abstract class TestOzoneRpcClientAbstract {
         });
   }
 
+  @Test
+  public void testNativeAclsForVolume() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    OzoneObj ozObj = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(OzoneObj.ResourceType.VOLUME)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    // Get acls for volume.
+    List<OzoneAcl> volAcls = store.getAcl(ozObj);
+    volAcls.forEach(a -> assertTrue(volume.getAcls().contains(a)));
+
+    // Remove all acl's.
+    for (OzoneAcl a : volAcls) {
+      store.removeAcl(ozObj, a);
+    }
+    List<OzoneAcl> newAcls = store.getAcl(ozObj);
+    OzoneVolume finalVolume = store.getVolume(volumeName);
+    assertTrue(finalVolume.getAcls().size() == 0);
+    assertTrue(newAcls.size() == 0);
+
+    // Add acl's and then call getAcl.
+    for (OzoneAcl a : volAcls) {
+      assertFalse(finalVolume.getAcls().contains(a));
+      store.addAcl(ozObj, a);
+      finalVolume = store.getVolume(volumeName);
+      assertTrue(finalVolume.getAcls().contains(a));
+    }
+
+    // Reset acl's.
+    store.setAcl(ozObj, newAcls);
+    finalVolume = store.getVolume(volumeName);
+    newAcls = store.getAcl(ozObj);
+    assertTrue(newAcls.size() == 0);
+    assertTrue(finalVolume.getAcls().size() == 0);
+  }
 
   private byte[] generateData(int size, byte val) {
     byte[] chars = new byte[size];

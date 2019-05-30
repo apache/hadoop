@@ -86,6 +86,11 @@ enum Type {
   CreateFile = 72;
   LookupFile = 73;
   ListStatus = 74;
+  AddAcl = 75;
+  RemoveAcl = 76;
+  SetAcl = 77;
+  GetAcl = 78;
+
 }
 
 message OMRequest {
@@ -143,6 +148,10 @@ message OMRequest {
   optional CreateFileRequest                createFileRequest              = 72;
   optional LookupFileRequest                lookupFileRequest              = 73;
   optional ListStatusRequest                listStatusRequest              = 74;
+  optional AddAclRequest                    addAclRequest                  = 75;
+  optional RemoveAclRequest                 removeAclRequest               = 76;
+  optional SetAclRequest                    setAclRequest                  = 77;
+  optional GetAclRequest                    getAclRequest                  = 78;
 }
 
 message OMResponse {
@@ -203,6 +212,10 @@ message OMResponse {
   optional CreateFileResponse                 createFileResponse           = 72;
   optional LookupFileResponse                 lookupFileResponse           = 73;
   optional ListStatusResponse                 listStatusResponse           = 74;
+  optional AddAclResponse                    addAclResponse                = 75;
+  optional RemoveAclResponse                 removeAclResponse             = 76;
+  optional SetAclResponse                   setAclResponse                 = 77;
+  optional GetAclResponse                    getAclResponse                = 78;
 }
 
 enum Status {
@@ -446,6 +459,22 @@ message BucketArgs {
     repeated hadoop.hdds.KeyValue metadata = 7;
 }
 
+message OzoneObj {
+  enum ObjectType {
+    VOLUME = 1;
+    BUCKET = 2;
+    KEY = 3;
+  }
+
+  enum StoreType {
+    OZONE = 1;
+    S3 = 2;
+  }
+  required ObjectType resType = 1;
+  required StoreType storeType = 2  [default = S3];
+  required string path = 3;
+}
+
 message OzoneAclInfo {
     enum OzoneAclType {
         USER = 1;
@@ -471,12 +500,46 @@ message OzoneAclInfo {
     repeated OzoneAclRights rights = 3;
 }
 
+message GetAclRequest {
+  required OzoneObj obj = 1;
+}
+
+message GetAclResponse {
+  repeated OzoneAclInfo acls = 1;
+}
+
+message AddAclRequest {
+  required OzoneObj obj = 1;
+  required OzoneAclInfo acl = 2;
+}
+
+message AddAclResponse {
+  required bool response = 1;
+}
+
+message RemoveAclRequest {
+  required OzoneObj obj = 1;
+  required OzoneAclInfo acl = 2;
+}
+
+message RemoveAclResponse {
+  required bool response = 1;
+}
+
+message SetAclRequest {
+  required OzoneObj obj = 1;
+  repeated OzoneAclInfo acl = 2;
+}
+
+message SetAclResponse {
+  required bool response = 1;
+}
+
 message CreateBucketRequest {
     required BucketInfo bucketInfo = 1;
 }
 
 message CreateBucketResponse {
-
 }
 
 message InfoBucketRequest {

@@ -41,12 +41,12 @@ import org.apache.hadoop.ozone.protocol.proto
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
 
+import java.util.BitSet;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -84,15 +84,14 @@ public final class OMPBHelper {
     default:
       throw new IllegalArgumentException("ACL type is not recognized");
     }
-    List<OzoneAclRights> aclRights = new ArrayList<>();
-
-    for (ACLType right : acl.getRights()) {
-      aclRights.add(OzoneAclRights.valueOf(right.name()));
-    }
+    List<OzoneAclRights> ozAclRights =
+        new ArrayList<>(acl.getAclBitSet().cardinality());
+    acl.getAclBitSet().stream().forEach(a -> ozAclRights.add(
+        OzoneAclRights.valueOf(ACLType.values()[a].name())));
 
     return OzoneAclInfo.newBuilder().setType(aclType)
         .setName(acl.getName())
-        .addAllRights(aclRights)
+        .addAllRights(ozAclRights)
         .build();
   }
 
@@ -122,10 +121,9 @@ public final class OMPBHelper {
       throw new IllegalArgumentException("ACL type is not recognized");
     }
 
-    List<IAccessAuthorizer.ACLType> aclRights = new ArrayList<>();
-    for (OzoneAclRights acl : aclInfo.getRightsList()) {
-      aclRights.add(ACLType.valueOf(acl.name()));
-    }
+    BitSet aclRights = new BitSet(ACLType.getNoOfAcls());
+    aclInfo.getRightsList().stream().forEach(a ->
+        aclRights.set(ACLType.valueOf(a.name()).ordinal()));
     return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }
 

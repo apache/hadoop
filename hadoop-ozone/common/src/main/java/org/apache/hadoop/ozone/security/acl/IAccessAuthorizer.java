@@ -20,7 +20,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.OzoneConsts;
 
-import java.util.List;
+import java.util.BitSet;
 
 /**
  * Public API for Ozone ACLs. Security providers providing support for Ozone
@@ -54,6 +54,11 @@ public interface IAccessAuthorizer {
     WRITE_ACL,
     ALL,
     NONE;
+    private static int length = ACLType.values().length;
+
+    public static int getNoOfAcls() {
+      return length;
+    }
 
     /**
      * Returns the ACL rights based on passed in String.
@@ -86,7 +91,7 @@ public interface IAccessAuthorizer {
       case OzoneConsts.OZONE_ACL_NONE:
         return ACLType.NONE;
       default:
-        throw new IllegalArgumentException(type + " ACL right is not " +
+        throw new IllegalArgumentException("[" + type + "] ACL right is not " +
             "recognized");
       }
 
@@ -98,10 +103,10 @@ public interface IAccessAuthorizer {
      * @param acls ACLType
      * @return String representation of acl
      */
-    public static String getACLString(List<ACLType> acls) {
+    public static String getACLString(BitSet acls) {
       StringBuffer sb = new StringBuffer();
-      acls.forEach(acl -> {
-        sb.append(getAclString(acl));
+      acls.stream().forEach(acl -> {
+        sb.append(getAclString(ACLType.values()[acl]));
       });
       return sb.toString();
     }

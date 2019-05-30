@@ -274,8 +274,8 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
     BucketInfo.Builder bib =  BucketInfo.newBuilder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
-        .addAllAcls(acls.stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()))
+        .addAllAcls(acls.stream().map(OMPBHelper::convertOzoneAcl)
+            .collect(Collectors.toList()))
         .setIsVersionEnabled(isVersionEnabled)
         .setStorageType(storageType.toProto())
         .setCreationTime(creationTime)

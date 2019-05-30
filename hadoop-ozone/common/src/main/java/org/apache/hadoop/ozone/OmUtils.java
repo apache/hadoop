@@ -190,6 +190,7 @@ public final class OmUtils {
     case GetFileStatus:
     case LookupFile:
     case ListStatus:
+    case GetAcl:
       return true;
     case CreateVolume:
     case SetVolumeProperty:
@@ -216,6 +217,9 @@ public final class OmUtils {
     case ApplyInitiateMultiPartUpload:
     case CreateDirectory:
     case CreateFile:
+    case RemoveAcl:
+    case SetAcl:
+    case AddAcl:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
