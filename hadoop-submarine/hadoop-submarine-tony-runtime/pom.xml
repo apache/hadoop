@@ -34,11 +34,15 @@
         <dependency>
             <groupId>com.linkedin.tony</groupId>
             <artifactId>tony-core</artifactId>
-            <version>0.3.3</version>
+            <version>0.3.11</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.linkedin.tony</groupId>
                     <artifactId>tony-mini</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.linkedin.azkaban</groupId>
+                    <artifactId>azkaban-common</artifactId>
                 </exclusion>
                 <exclusion>
                     <groupId>com.linkedin.azkaban</groupId>
@@ -63,5 +67,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
 </project>
