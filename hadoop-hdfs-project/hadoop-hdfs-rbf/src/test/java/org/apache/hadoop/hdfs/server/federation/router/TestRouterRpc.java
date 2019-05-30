@@ -86,6 +86,10 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
+import org.apache.hadoop.hdfs.protocol.SnapshotDiffReportListing;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
+import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.security.token.block.ExportedBlockKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeContext;
@@ -94,6 +98,11 @@ import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
+import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+import org.apache.hadoop.hdfs.server.namenode.INodeDirectory;
+import org.apache.hadoop.hdfs.server.namenode.NameNode;
+import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.BlocksWithLocations.BlockWithLocations;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeStorageReport;
@@ -105,6 +114,7 @@ import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.service.Service.STATE;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.codehaus.jettison.json.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -741,6 +751,126 @@ public class TestRouterRpc {
     String badPath = "/unknownlocation/unknowndir";
     compareResponses(routerProtocol, nnProtocol, m,
         new Object[] {badPath, (long) 0, "testclient"});
+  }
+
+  @Test
+  public void testAllowDisallowSnapshots() throws Exception {
+
+    // Create a directory via the router at the root level
+    String dirPath = "/testdir";
+    String filePath1 = "/sample";
+    FsPermission permission = new FsPermission("705");
+    routerProtocol.mkdirs(dirPath, permission, false);
+    createFile(routerFS, filePath1, 32);
+
+    // Check that initially doesn't allow snapshots
+    NamenodeContext nnContext = cluster.getNamenodes().get(0);
+    NameNode nn = nnContext.getNamenode();
+    FSNamesystem fsn = NameNodeAdapter.getNamesystem(nn);
+    FSDirectory fsdir = fsn.getFSDirectory();
+    INodeDirectory dirNode = fsdir.getINode4Write(dirPath).asDirectory();
+    assertFalse(dirNode.isSnapshottable());
+
+    // Allow snapshots and verify the folder allows them
+    routerProtocol.allowSnapshot("/testdir");
+    dirNode = fsdir.getINode4Write(dirPath).asDirectory();
+    assertTrue(dirNode.isSnapshottable());
+
+    // Disallow snapshot on dir and verify does not allow snapshots anymore
+    routerProtocol.disallowSnapshot("/testdir");
+    dirNode = fsdir.getINode4Write(dirPath).asDirectory();
+    assertFalse(dirNode.isSnapshottable());
+
+    // Cleanup
+    routerProtocol.delete(dirPath, true);
+  }
+
+  @Test
+  public void testManageSnapshot() throws Exception {
+
+    final String mountPoint = "/mntsnapshot";
+    final String snapshotFolder = mountPoint + "/folder";
+    LOG.info("Setup a mount point for snapshots: {}", mountPoint);
+    Router r = router.getRouter();
+    MockResolver resolver = (MockResolver) r.getSubclusterResolver();
+    String ns0 = cluster.getNameservices().get(0);
+    resolver.addLocation(mountPoint, ns0, "/");
+
+    FsPermission permission = new FsPermission("777");
+    routerProtocol.mkdirs(mountPoint, permission, false);
+    routerProtocol.mkdirs(snapshotFolder, permission, false);
+    for (int i = 1; i <= 9; i++) {
+      String folderPath = snapshotFolder + "/subfolder" + i;
+      routerProtocol.mkdirs(folderPath, permission, false);
+    }
+
+    LOG.info("Create the snapshot: {}", snapshotFolder);
+    routerProtocol.allowSnapshot(snapshotFolder);
+    String snapshotName = routerProtocol.createSnapshot(
+        snapshotFolder, "snap");
+    assertEquals(snapshotFolder + "/.snapshot/snap", snapshotName);
+    assertTrue(verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+
+    LOG.info("Rename the snapshot and check it changed");
+    routerProtocol.renameSnapshot(snapshotFolder, "snap", "newsnap");
+    assertFalse(
+        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/snap"));
+    assertTrue(
+        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+    LambdaTestUtils.intercept(SnapshotException.class,
+        "Cannot delete snapshot snap from path " + snapshotFolder + ":",
+        () -> routerFS.deleteSnapshot(new Path(snapshotFolder), "snap"));
+
+    LOG.info("Delete the snapshot and check it is not there");
+    routerProtocol.deleteSnapshot(snapshotFolder, "newsnap");
+    assertFalse(
+        verifyFileExists(routerFS, snapshotFolder + "/.snapshot/newsnap"));
+
+    // Cleanup
+    routerProtocol.delete(mountPoint, true);
+  }
+
+  @Test
+  public void testGetSnapshotListing() throws IOException {
+
+    // Create a directory via the router and allow snapshots
+    final String snapshotPath = "/testGetSnapshotListing";
+    final String childDir = snapshotPath + "/subdir";
+    FsPermission permission = new FsPermission("705");
+    routerProtocol.mkdirs(snapshotPath, permission, false);
+    routerProtocol.allowSnapshot(snapshotPath);
+
+    // Create two snapshots
+    final String snapshot1 = "snap1";
+    final String snapshot2 = "snap2";
+    routerProtocol.createSnapshot(snapshotPath, snapshot1);
+    routerProtocol.mkdirs(childDir, permission, false);
+    routerProtocol.createSnapshot(snapshotPath, snapshot2);
+
+    // Check for listing through the Router
+    SnapshottableDirectoryStatus[] dirList =
+        routerProtocol.getSnapshottableDirListing();
+    assertEquals(1, dirList.length);
+    SnapshottableDirectoryStatus snapshotDir0 = dirList[0];
+    assertEquals(snapshotPath, snapshotDir0.getFullPath().toString());
+
+    // Check for difference report in two snapshot
+    SnapshotDiffReport diffReport = routerProtocol.getSnapshotDiffReport(
+        snapshotPath, snapshot1, snapshot2);
+    assertEquals(2, diffReport.getDiffList().size());
+
+    // Check for difference in two snapshot
+    byte[] startPath = {};
+    SnapshotDiffReportListing diffReportListing =
+        routerProtocol.getSnapshotDiffReportListing(
+            snapshotPath, snapshot1, snapshot2, startPath, -1);
+    assertEquals(1, diffReportListing.getModifyList().size());
+    assertEquals(1, diffReportListing.getCreateList().size());
+
+    // Cleanup
+    routerProtocol.deleteSnapshot(snapshotPath, snapshot1);
+    routerProtocol.deleteSnapshot(snapshotPath, snapshot2);
+    routerProtocol.disallowSnapshot(snapshotPath);
   }
 
   @Test

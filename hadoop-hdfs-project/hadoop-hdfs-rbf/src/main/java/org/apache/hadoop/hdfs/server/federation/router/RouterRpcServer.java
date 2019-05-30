@@ -1007,12 +1007,12 @@ public class RouterRpcServer extends AbstractService
     return clientProto.getLinkTarget(path);
   }
 
-  @Override // Client Protocol
+  @Override // ClientProtocol
   public void allowSnapshot(String snapshotRoot) throws IOException {
     clientProto.allowSnapshot(snapshotRoot);
   }
 
-  @Override // Client Protocol
+  @Override // ClientProtocol
   public void disallowSnapshot(String snapshot) throws IOException {
     clientProto.disallowSnapshot(snapshot);
   }
@@ -1023,7 +1023,7 @@ public class RouterRpcServer extends AbstractService
     clientProto.renameSnapshot(snapshotRoot, snapshotOldName, snapshotNewName);
   }
 
-  @Override // Client Protocol
+  @Override // ClientProtocol
   public SnapshottableDirectoryStatus[] getSnapshottableDirListing()
       throws IOException {
     return clientProto.getSnapshottableDirListing();
@@ -1584,14 +1584,16 @@ public class RouterRpcServer extends AbstractService
    * @param clazz Class of the values.
    * @return Array with the outputs.
    */
-  protected static <T> T[] merge(
+  static <T> T[] merge(
       Map<FederationNamespaceInfo, T[]> map, Class<T> clazz) {
 
     // Put all results into a set to avoid repeats
     Set<T> ret = new LinkedHashSet<>();
     for (T[] values : map.values()) {
-      for (T val : values) {
-        ret.add(val);
+      if (values != null) {
+        for (T val : values) {
+          ret.add(val);
+        }
       }
     }
 
@@ -1605,7 +1607,7 @@ public class RouterRpcServer extends AbstractService
    * @param clazz Class of the values.
    * @return Array with the values in set.
    */
-  private static <T> T[] toArray(Collection<T> set, Class<T> clazz) {
+  static <T> T[] toArray(Collection<T> set, Class<T> clazz) {
     @SuppressWarnings("unchecked")
     T[] combinedData = (T[]) Array.newInstance(clazz, set.size());
     combinedData = set.toArray(combinedData);
