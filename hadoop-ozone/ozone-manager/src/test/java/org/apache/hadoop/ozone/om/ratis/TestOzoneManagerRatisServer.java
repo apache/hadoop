@@ -124,7 +124,8 @@ public class TestOzoneManagerRatisServer {
           .setClientId(clientId)
           .build();
       OmUtils.isReadOnly(request);
-      assertFalse(cmdtype + "is not categorized in OmUtils#isReadyOnly",
+      assertFalse(cmdtype + " is not categorized in " +
+              "OmUtils#isReadyOnly",
           logCapturer.getOutput().contains("CmdType " + cmdtype +" is not " +
               "categorized as readOnly or not."));
       logCapturer.clearOutput();

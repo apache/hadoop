@@ -19,13 +19,16 @@
 
 package org.apache.hadoop.ozone;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 
+import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -38,6 +41,7 @@ import java.util.Objects;
  * <li>world::rw
  * </ul>
  */
+@JsonIgnoreProperties(value = {"aclBitSet"})
 public class OzoneAcl {
   private ACLIdentityType type;
   private String name;
@@ -183,6 +187,14 @@ public class OzoneAcl {
    */
   public BitSet getAclBitSet() {
     return aclBitSet;
+  }
+
+  public List<ACLType> getAclList() {
+    List<ACLType> acls = new ArrayList<>(ACLType.getNoOfAcls());
+    if(aclBitSet !=  null) {
+      aclBitSet.stream().forEach(a -> acls.add(ACLType.values()[a]));
+    }
+    return acls;
   }
 
   /**

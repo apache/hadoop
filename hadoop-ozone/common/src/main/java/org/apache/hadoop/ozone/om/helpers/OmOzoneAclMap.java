@@ -139,11 +139,11 @@ public class OmOzoneAclMap {
     }
 
     for (OzoneAclRights right : acl.getRightsList()) {
-      if (!(aclBitSet.get(right.ordinal()) && aclBitSet.get(ALL.ordinal()))) {
-        return false;
+      if (aclBitSet.get(right.ordinal()) || aclBitSet.get(ALL.ordinal())) {
+        return true;
       }
     }
-    return true;
+    return false;
   }
 
   // Convert this map to OzoneAclInfo Protobuf List
