@@ -2173,6 +2173,52 @@ public abstract class TestOzoneRpcClientAbstract {
     assertTrue(finalVolume.getAcls().size() == 0);
   }
 
+  @Test
+  public void testNativeAclsForBucket() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    assertNotNull("Bucket creation failed", bucket);
+
+    OzoneObj ozObj = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    // Get acls for volume.
+    List<OzoneAcl> volAcls = store.getAcl(ozObj);
+    volAcls.forEach(a -> assertTrue(bucket.getAcls().contains(a)));
+
+    // Remove all acl's.
+    for (OzoneAcl a : volAcls) {
+      store.removeAcl(ozObj, a);
+    }
+    List<OzoneAcl> newAcls = store.getAcl(ozObj);
+    OzoneBucket finalBuck = volume.getBucket(bucketName);
+    assertTrue(finalBuck.getAcls().size() == 0);
+    assertTrue(newAcls.size() == 0);
+
+    // Add acl's and then call getAcl.
+    for (OzoneAcl a : volAcls) {
+      assertFalse(finalBuck.getAcls().contains(a));
+      store.addAcl(ozObj, a);
+      finalBuck = volume.getBucket(bucketName);
+      assertTrue(finalBuck.getAcls().contains(a));
+    }
+
+    // Reset acl's.
+    store.setAcl(ozObj, newAcls);
+    finalBuck = volume.getBucket(bucketName);
+    newAcls = store.getAcl(ozObj);
+    assertTrue(newAcls.size() == 0);
+    assertTrue(finalBuck.getAcls().size() == 0);
+  }
+
   private byte[] generateData(int size, byte val) {
     byte[] chars = new byte[size];
     Arrays.fill(chars, val);

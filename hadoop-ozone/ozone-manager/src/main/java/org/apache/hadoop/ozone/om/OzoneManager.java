@@ -205,6 +205,7 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
 import static org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneManagerService
@@ -3001,11 +3002,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
     // TODO: Audit ACL operation.
-    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+    switch (obj.getResourceType()) {
+    case VOLUME:
       return volumeManager.addAcl(obj, acl);
-    }
 
-    return false;
+    case BUCKET:
+      return bucketManager.addAcl(obj, acl);
+    default:
+      throw new OMException("Unexpected resource type: " +
+          obj.getResourceType(), INVALID_REQUEST);
+    }
   }
 
   /**
@@ -3022,11 +3028,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
-    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+    // TODO: Audit ACL operation.
+    switch (obj.getResourceType()) {
+    case VOLUME:
       return volumeManager.removeAcl(obj, acl);
-    }
 
-    return false;
+    case BUCKET:
+      return bucketManager.removeAcl(obj, acl);
+    default:
+      throw new OMException("Unexpected resource type: " +
+          obj.getResourceType(), INVALID_REQUEST);
+    }
   }
 
   /**
@@ -3043,11 +3055,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.WRITE_ACL,
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
-    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+    // TODO: Audit ACL operation.
+    switch (obj.getResourceType()) {
+    case VOLUME:
       return volumeManager.setAcl(obj, acls);
-    }
 
-    return false;
+    case BUCKET:
+      return bucketManager.setAcl(obj, acls);
+    default:
+      throw new OMException("Unexpected resource type: " +
+          obj.getResourceType(), INVALID_REQUEST);
+    }
   }
 
   /**
@@ -3062,11 +3080,17 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       checkAcls(obj.getResourceType(), obj.getStoreType(), ACLType.READ_ACL,
           obj.getVolumeName(), obj.getBucketName(), obj.getKeyName());
     }
-    if(obj.getResourceType().equals(ResourceType.VOLUME)) {
+    // TODO: Audit ACL operation.
+    switch (obj.getResourceType()) {
+    case VOLUME:
       return volumeManager.getAcl(obj);
-    }
 
-    return Collections.emptyList();
+    case BUCKET:
+      return bucketManager.getAcl(obj);
+    default:
+      throw new OMException("Unexpected resource type: " +
+          obj.getResourceType(), INVALID_REQUEST);
+    }
   }
 
   /**
