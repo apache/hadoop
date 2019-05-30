@@ -208,8 +208,8 @@ public final class ServerUtils {
    * <p>
    * If the directory is missing the method tries to create it.
    *
-   * @param conf the ozone configuration object
-   * @param key  The configuration key which specify the director.
+   * @param conf The ozone configuration object
+   * @param key The configuration key which specify the directory.
    * @return The path of the directory.
    */
   public static File getDBPath(Configuration conf, String key) {
