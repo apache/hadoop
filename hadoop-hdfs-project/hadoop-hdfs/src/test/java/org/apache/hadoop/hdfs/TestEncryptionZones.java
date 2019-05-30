@@ -189,6 +189,8 @@ public class TestEncryptionZones {
     testRootDir = new File(testRoot).getAbsoluteFile();
     conf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH,
         getKeyProviderURI());
+    conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_SNAPSHOT_CAPTURE_OPENFILES,
+        true);
     conf.setBoolean(DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_ALWAYS_USE_KEY, true);
     // Lower the batch size for testing
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_LIST_ENCRYPTION_ZONES_NUM_RESPONSES,
@@ -1418,6 +1420,14 @@ public class TestEncryptionZones {
     assertEquals("Got unexpected ez path", zone.toString(),
         dfsAdmin.getEncryptionZoneForPath(snap1Zone).getPath().toString());
 
+    // Append the file
+    DFSTestUtil.appendFile(fs, zoneFile, len);
+    // Verify file content in the snapshot
+    final Path snapshottedZoneFile = new Path(
+        snap1.toString() + "/" + zone.getName() + "/" + zoneFile.getName());
+    assertEquals("Contents of snapshotted file have changed unexpectedly",
+        contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
+
     // Now delete the encryption zone, recreate the dir, and take another
     // snapshot
     fsWrapper.delete(zone, true);
@@ -1470,8 +1480,6 @@ public class TestEncryptionZones {
     assertEquals("Unexpected ez key", TEST_KEY2, listZone.getKeyName());
 
     // Verify contents of the snapshotted file
-    final Path snapshottedZoneFile = new Path(
-        snap1.toString() + "/" + zone.getName() + "/" + zoneFile.getName());
     assertEquals("Contents of snapshotted file have changed unexpectedly",
         contents, DFSTestUtil.readFile(fs, snapshottedZoneFile));
 

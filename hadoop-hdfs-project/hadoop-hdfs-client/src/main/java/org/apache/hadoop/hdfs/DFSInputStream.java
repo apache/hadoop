@@ -844,26 +844,18 @@ public class DFSInputStream extends FSInputStream
     @Override
     public int doRead(BlockReader blockReader, int off, int len)
         throws IOException {
-      int oldpos = buf.position();
-      int oldlimit = buf.limit();
-      boolean success = false;
-      try {
-        int ret = blockReader.read(buf);
-        success = true;
-        updateReadStatistics(readStatistics, ret, blockReader);
-        dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
-            ret);
-        if (ret == 0) {
-          DFSClient.LOG.warn("zero");
-        }
-        return ret;
-      } finally {
-        if (!success) {
-          // Reset to original state so that retries work correctly.
-          buf.position(oldpos);
-          buf.limit(oldlimit);
-        }
+      ByteBuffer tmpBuf = buf.duplicate();
+      tmpBuf.limit(tmpBuf.position() + len);
+      int nRead = blockReader.read(tmpBuf);
+      updateReadStatistics(readStatistics, nRead, blockReader);
+      dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
+          nRead);
+      if (nRead == 0) {
+        DFSClient.LOG.warn("zero");
+      } else if (nRead > 0) {
+        buf.position(buf.position() + nRead);
       }
+      return nRead;
     }
 
     @Override
