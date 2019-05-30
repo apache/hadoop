@@ -18,9 +18,8 @@
 """This module has apis to create and remove a blockade cluster"""
 
 from subprocess import call
-import subprocess
 import logging
-import random
+import util
 from clusterUtils.cluster_utils import ClusterUtils
 
 logger = logging.getLogger(__name__)
@@ -39,23 +38,13 @@ class Blockade(object):
 
     @classmethod
     def blockade_status(cls):
-        exit_code, output = ClusterUtils.run_cmd("blockade status")
+        exit_code, output = util.run_cmd("blockade status")
         return exit_code, output
 
     @classmethod
-    def make_flaky(cls, flaky_node, container_list):
-        # make the network flaky
-        om, scm, _, datanodes = \
-            ClusterUtils.find_om_scm_client_datanodes(container_list)
-        node_dict = {
-                "all": "--all",
-                "scm" : scm[0],
-                "om" : om[0],
-                "datanode": random.choice(datanodes)
-                }[flaky_node]
-        logger.info("flaky node: %s", node_dict)
-
-        output = call(["blockade", "flaky", node_dict])
+    def make_flaky(cls, flaky_node):
+        logger.info("flaky node: %s", flaky_node)
+        output = call(["blockade", "flaky", flaky_node])
         assert output == 0, "flaky command failed with exit code=[%s]" % output
 
     @classmethod
@@ -69,7 +58,7 @@ class Blockade(object):
         for node_list in args:
             nodes = nodes + ','.join(node_list) + " "
         exit_code, output = \
-            ClusterUtils.run_cmd("blockade partition %s" % nodes)
+            util.run_cmd("blockade partition %s" % nodes)
         assert exit_code == 0, \
             "blockade partition command failed with exit code=[%s]" % output
 
@@ -96,3 +85,8 @@ class Blockade(object):
             output = call(["blockade", "start", node])
         assert output == 0, "blockade start command failed with " \
                             "exit code=[%s]" % output
+
+    @classmethod
+    def blockade_add(cls, node):
+        output = call(["blockade", "add", node])
+        assert output == 0, "blockade add command failed"
