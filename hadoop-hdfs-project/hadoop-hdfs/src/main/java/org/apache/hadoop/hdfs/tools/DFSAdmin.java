@@ -2194,7 +2194,7 @@ public class DFSAdmin extends FsShell {
    * @return 0 on success, non zero on error.
    */
   @Override
-  public int run(String[] argv) throws Exception {
+  public int run(String[] argv) {
 
     if (argv.length < 1) {
       printUsage("");
@@ -2346,16 +2346,7 @@ public class DFSAdmin extends FsShell {
     }
     
     // initialize DFSAdmin
-    try {
-      init();
-    } catch (RPC.VersionMismatch v) {
-      System.err.println("Version Mismatch between client and server"
-                         + "... command aborted.");
-      return exitCode;
-    } catch (IOException e) {
-      System.err.println("Bad connection to DFS... command aborted.");
-      return exitCode;
-    }
+    init();
 
     Exception debugException = null;
     exitCode = 0;
