@@ -130,7 +130,7 @@ public class TestOMBucketCreateRequest {
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.VOLUME_NOT_FOUND,
         omResponse.getStatus());
 
-    // As request valid bucket table should not have entry.
+    // As request is invalid bucket table should not have entry.
     Assert.assertNull(omMetadataManager.getBucketTable().get(bucketKey));
   }
 
@@ -205,7 +205,7 @@ public class TestOMBucketCreateRequest {
 
 
   private void verifyRequest(OMRequest modifiedOmRequest,
-      OzoneManagerProtocolProtos.OMRequest originalRequest) {
+      OMRequest originalRequest) {
     OzoneManagerProtocolProtos.BucketInfo original =
         originalRequest.getCreateBucketRequest().getBucketInfo();
     OzoneManagerProtocolProtos.BucketInfo updated =

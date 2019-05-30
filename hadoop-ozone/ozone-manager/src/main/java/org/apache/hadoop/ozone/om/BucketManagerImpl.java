@@ -165,7 +165,7 @@ public class BucketManagerImpl implements BucketManager {
       }
 
       OmBucketInfo omBucketInfo = omBucketInfoBuilder.build();
-      commitCreateBucketInfoToDB(omBucketInfo);
+      commitBucketInfoToDB(omBucketInfo);
       LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
@@ -179,7 +179,7 @@ public class BucketManagerImpl implements BucketManager {
     }
   }
 
-  private void commitCreateBucketInfoToDB(OmBucketInfo omBucketInfo)
+  private void commitBucketInfoToDB(OmBucketInfo omBucketInfo)
       throws IOException {
     String dbBucketKey =
         metadataManager.getBucketKey(omBucketInfo.getVolumeName(),
@@ -281,7 +281,7 @@ public class BucketManagerImpl implements BucketManager {
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
       OmBucketInfo omBucketInfo = bucketInfoBuilder.build();
-      commitSetBucketPropertyInfoToDB(omBucketInfo);
+      commitBucketInfoToDB(omBucketInfo);
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
@@ -291,11 +291,6 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
-  }
-
-  private void commitSetBucketPropertyInfoToDB(OmBucketInfo omBucketInfo)
-      throws IOException {
-    commitCreateBucketInfoToDB(omBucketInfo);
   }
 
   /**

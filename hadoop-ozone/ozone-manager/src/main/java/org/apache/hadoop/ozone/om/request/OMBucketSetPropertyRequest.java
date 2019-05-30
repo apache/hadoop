@@ -72,6 +72,7 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     // This will never be null, on a real Ozone cluster. For tests this might
     // be null. using mockito, to set omMetrics object, but still getting
     // null. For now added this not null check.
+    //TODO: Removed not null check from here, once tests got fixed.
     if (omMetrics != null) {
       omMetrics.incNumBucketUpdates();
     }

@@ -17,5 +17,5 @@
  */
 
 /**
- * This package contains classes for handling OMRequest's.
+ * This package contains classes for handling OMRequests.
  */

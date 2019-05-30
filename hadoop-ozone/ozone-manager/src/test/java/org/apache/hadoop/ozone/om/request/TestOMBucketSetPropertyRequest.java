@@ -83,7 +83,7 @@ public class TestOMBucketSetPropertyRequest {
     String bucketName = UUID.randomUUID().toString();
 
 
-    OMRequest omRequest = createSeBucketPropertyRequest(volumeName,
+    OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true);
 
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
@@ -100,7 +100,7 @@ public class TestOMBucketSetPropertyRequest {
     String bucketName = UUID.randomUUID().toString();
 
 
-    OMRequest omRequest = createSeBucketPropertyRequest(volumeName,
+    OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true);
 
     // Create with default BucketInfo values
@@ -129,7 +129,7 @@ public class TestOMBucketSetPropertyRequest {
     String bucketName = UUID.randomUUID().toString();
 
 
-    OMRequest omRequest = createSeBucketPropertyRequest(volumeName,
+    OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
         bucketName, true);
 
 
@@ -147,7 +147,7 @@ public class TestOMBucketSetPropertyRequest {
 
   }
 
-  private OMRequest createSeBucketPropertyRequest(String volumeName,
+  private OMRequest createSetBucketPropertyRequest(String volumeName,
       String bucketName, boolean isVersionEnabled) {
     return OMRequest.newBuilder().setSetBucketPropertyRequest(
         SetBucketPropertyRequest.newBuilder().setBucketArgs(
