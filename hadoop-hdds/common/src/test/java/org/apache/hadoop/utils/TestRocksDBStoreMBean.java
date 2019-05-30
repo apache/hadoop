@@ -19,6 +19,14 @@ package org.apache.hadoop.utils;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.metrics2.AbstractMetric;
+import org.apache.hadoop.metrics2.MetricsCollector;
+import org.apache.hadoop.metrics2.MetricsInfo;
+import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+import org.apache.hadoop.metrics2.MetricsSource;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.MetricsTag;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
@@ -27,9 +35,14 @@ import org.junit.Test;
 
 import javax.management.MBeanServer;
 import java.io.File;
+import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.util.HashMap;
+import java.util.Map;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test the JMX interface for the rocksdb metastore implementation.
@@ -49,18 +62,8 @@ public class TestRocksDBStoreMBean {
 
   @Test
   public void testJmxBeans() throws Exception {
-    File testDir =
-        GenericTestUtils.getTestDir(getClass().getSimpleName() + "-withstat");
 
-    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS, "ALL");
-
-    RocksDBStore metadataStore =
-        (RocksDBStore) MetadataStoreBuilder.newBuilder().setConf(conf)
-            .setCreateIfMissing(true).setDbFile(testDir).build();
-
-    for (int i = 0; i < 10; i++) {
-      metadataStore.put("key".getBytes(UTF_8), "value".getBytes(UTF_8));
-    }
+    RocksDBStore metadataStore = getTestRocksDBStoreWithData();
 
     MBeanServer platformMBeanServer =
         ManagementFactory.getPlatformMBeanServer();
@@ -69,11 +72,11 @@ public class TestRocksDBStoreMBean {
     Object keysWritten = platformMBeanServer
         .getAttribute(metadataStore.getStatMBeanName(), "NUMBER_KEYS_WRITTEN");
 
-    Assert.assertEquals(10L, keysWritten);
+    assertEquals(10L, keysWritten);
 
     Object dbWriteAverage = platformMBeanServer
         .getAttribute(metadataStore.getStatMBeanName(), "DB_WRITE_AVERAGE");
-    Assert.assertTrue((double) dbWriteAverage > 0);
+    assertTrue((double) dbWriteAverage > 0);
 
     metadataStore.close();
 
@@ -92,5 +95,140 @@ public class TestRocksDBStoreMBean {
             .setCreateIfMissing(true).setDbFile(testDir).build();
 
     Assert.assertNull(metadataStore.getStatMBeanName());
+  }
+
+  @Test
+  public void testMetricsSystemIntegration() throws Exception {
+
+    RocksDBStore metadataStore = getTestRocksDBStoreWithData();
+    Thread.sleep(2000);
+
+    MetricsSystem ms = DefaultMetricsSystem.instance();
+    MetricsSource rdbSource =
+        ms.getSource("Rocksdb_TestRocksDBStoreMBean-withstat");
+
+    BufferedMetricsCollector metricsCollector = new BufferedMetricsCollector();
+    rdbSource.getMetrics(metricsCollector, true);
+
+    Map<String, Double> metrics = metricsCollector.getMetricsRecordBuilder()
+        .getMetrics();
+    assertTrue(10.0 == metrics.get("NUMBER_KEYS_WRITTEN"));
+    assertTrue(metrics.get("DB_WRITE_AVERAGE") > 0);
+    metadataStore.close();
+  }
+
+  private RocksDBStore getTestRocksDBStoreWithData() throws IOException {
+    File testDir =
+        GenericTestUtils.getTestDir(getClass().getSimpleName() + "-withstat");
+
+    conf.set(OzoneConfigKeys.OZONE_METADATA_STORE_ROCKSDB_STATISTICS, "ALL");
+
+    RocksDBStore metadataStore =
+        (RocksDBStore) MetadataStoreBuilder.newBuilder().setConf(conf)
+            .setCreateIfMissing(true).setDbFile(testDir).build();
+
+    for (int i = 0; i < 10; i++) {
+      metadataStore.put("key".getBytes(UTF_8), "value".getBytes(UTF_8));
+    }
+
+    return metadataStore;
+  }
+}
+
+/**
+ * Test class to buffer a single MetricsRecordBuilder instance.
+ */
+class BufferedMetricsCollector implements MetricsCollector {
+
+  private BufferedMetricsRecordBuilderImpl metricsRecordBuilder;
+
+  BufferedMetricsCollector() {
+    metricsRecordBuilder = new BufferedMetricsRecordBuilderImpl();
+  }
+
+  public BufferedMetricsRecordBuilderImpl getMetricsRecordBuilder() {
+    return metricsRecordBuilder;
+  }
+
+  @Override
+  public MetricsRecordBuilder addRecord(String s) {
+    metricsRecordBuilder.setContext(s);
+    return metricsRecordBuilder;
+  }
+
+  @Override
+  public MetricsRecordBuilder addRecord(MetricsInfo metricsInfo) {
+    return metricsRecordBuilder;
+  }
+
+  /**
+   * Test class to buffer a single snapshot of metrics.
+   */
+  class BufferedMetricsRecordBuilderImpl extends MetricsRecordBuilder {
+
+    private Map<String, Double> metrics = new HashMap<>();
+    private String contextName;
+
+    public Map<String, Double> getMetrics() {
+      return metrics;
+    }
+
+    @Override
+    public MetricsRecordBuilder tag(MetricsInfo metricsInfo, String s) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder add(MetricsTag metricsTag) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder add(AbstractMetric abstractMetric) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder setContext(String s) {
+      this.contextName = s;
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder addCounter(MetricsInfo metricsInfo, int i) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder addCounter(MetricsInfo metricsInfo, long l) {
+      metrics.put(metricsInfo.name(), (double)l);
+      return this;
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo metricsInfo, int i) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo metricsInfo, long l) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo metricsInfo, float v) {
+      return null;
+    }
+
+    @Override
+    public MetricsRecordBuilder addGauge(MetricsInfo metricsInfo, double v) {
+      metrics.put(metricsInfo.name(), v);
+      return this;
+    }
+
+    @Override
+    public MetricsCollector parent() {
+      return null;
+    }
   }
 }
