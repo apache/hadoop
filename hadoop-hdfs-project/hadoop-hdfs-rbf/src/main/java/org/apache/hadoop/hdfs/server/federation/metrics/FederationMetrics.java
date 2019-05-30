@@ -77,6 +77,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONObject;
@@ -613,6 +614,10 @@ public class FederationMetrics implements FederationMBean {
       return mgr.getSecretManager().getCurrentTokensSize();
     }
     return -1;
+  }
+
+  public boolean isSecurityEnabled() {
+    return UserGroupInformation.isSecurityEnabled();
   }
 
   /**
