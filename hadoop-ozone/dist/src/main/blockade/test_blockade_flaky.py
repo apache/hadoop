@@ -16,11 +16,11 @@
 # limitations under the License.
 
 import os
-import time
 import logging
+import random
 import pytest
 from blockadeUtils.blockade import Blockade
-from clusterUtils.cluster_utils import ClusterUtils
+from ozone.cluster import Cluster
 
 
 logger = logging.getLogger(__name__)
@@ -32,30 +32,36 @@ SCALE = 6
 CONTAINER_LIST = []
 
 
-def setup_module():
-    global CONTAINER_LIST
-    Blockade.blockade_destroy()
-    CONTAINER_LIST = ClusterUtils.cluster_setup(FILE, SCALE)
-    exit_code, output = Blockade.blockade_status()
-    assert exit_code == 0, "blockade status command failed with output=[%s]" % \
-                           output
+def setup_function(function):
+  global cluster
+  cluster = Cluster.create()
+  cluster.start()
 
 
-def teardown_module():
-    Blockade.blockade_destroy()
-    ClusterUtils.cluster_destroy(FILE)
+def teardown_function(function):
+  cluster.stop()
 
 
-def teardown():
-    logger.info("Inside teardown")
-    Blockade.blockade_fast_all()
-    time.sleep(5)
+@pytest.mark.parametrize("flaky_node", ["datanode", "scm", "om", "all"])
+def test_flaky(flaky_node):
+    """
+    In these tests, we make the network of the nodes as flaky using blockade.
+    There are 4 tests :
+    1) one of the datanodes selected randomly and network of the datanode is
+    made flaky.
+    2) scm network is made flaky.
+    3) om network is made flaky.
+    4) Network of all the nodes are made flaky.
 
+    """
+    flaky_container_name = {
+        "scm": cluster.scm,
+        "om": cluster.om,
+        "datanode": random.choice(cluster.datanodes),
+        "all": "--all"
+    }[flaky_node]
 
-@pytest.mark.parametrize("flaky_nodes", ["datanode", "scm", "om", "all"])
-def test_flaky(flaky_nodes):
-    Blockade.make_flaky(flaky_nodes, CONTAINER_LIST)
+    Blockade.make_flaky(flaky_container_name)
     Blockade.blockade_status()
-    exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS",
-                                               "THREE")
+    exit_code, output = cluster.run_freon(1, 1, 1, 10240)
     assert exit_code == 0, "freon run failed with output=[%s]" % output

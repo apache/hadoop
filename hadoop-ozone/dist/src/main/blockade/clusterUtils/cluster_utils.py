@@ -17,6 +17,7 @@
 
 
 from subprocess import call
+
 import subprocess
 import logging
 import time
@@ -292,9 +293,15 @@ class ClusterUtils(object):
     assert exit_code == 0, "Ozone get Key failed with output=[%s]" % output
 
   @classmethod
-  def find_checksum(cls, docker_compose_file, filepath):
+  def find_checksum(cls, docker_compose_file, filepath, client="ozone_client"):
+    """
+    This function finds the checksum of a file present in a docker container.
+    Before running any 'putKey' operation, this function is called to store
+    the original checksum of the file. The file is then uploaded as a key.
+    """
     command = "docker-compose -f %s " \
-              "exec ozone_client md5sum  %s" % (docker_compose_file, filepath)
+              "exec %s md5sum  %s" % \
+              (docker_compose_file, client, filepath)
     exit_code, output = cls.run_cmd(command)
     assert exit_code == 0, "Cant find checksum"
     myoutput = output.split("\n")
