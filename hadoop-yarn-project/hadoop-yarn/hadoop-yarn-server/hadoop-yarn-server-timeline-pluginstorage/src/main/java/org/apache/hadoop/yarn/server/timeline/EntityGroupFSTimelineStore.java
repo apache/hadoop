@@ -1115,6 +1115,11 @@ public class EntityGroupFSTimelineStore extends CompositeService
     LOG.debug("getEntityTimelines type={} ids={}", entityType, entityIds);
     TimelineEvents returnEvents = new TimelineEvents();
     List<EntityCacheItem> relatedCacheItems = new ArrayList<>();
+
+    if (entityIds == null || entityIds.isEmpty()) {
+      return returnEvents;
+    }
+
     for (String entityId : entityIds) {
       LOG.debug("getEntityTimeline type={} id={}", entityType, entityId);
       List<TimelineStore> stores
