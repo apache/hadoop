@@ -986,6 +986,8 @@ public class Client {
     }
     vargs.add("--appname " + appName);
 
+    vargs.add("--homedir " + fs.getHomeDirectory());
+
     vargs.addAll(containerRetryOptions);
 
     vargs.add("1>" + ApplicationConstants.LOG_DIR_EXPANSION_VAR + "/AppMaster.stdout");

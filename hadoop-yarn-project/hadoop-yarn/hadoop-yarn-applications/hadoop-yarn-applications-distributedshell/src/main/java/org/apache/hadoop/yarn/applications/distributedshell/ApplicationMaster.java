@@ -226,6 +226,8 @@ public class ApplicationMaster {
   @VisibleForTesting
   UserGroupInformation appSubmitterUgi;
 
+  private Path homeDirectory;
+
   // Handle to communicate with the Node Manager
   private NMClientAsync nmClientAsync;
   // Listen to process the response from the Node Manager
@@ -513,6 +515,7 @@ public class ApplicationMaster {
             + "retrieved by"
             + " the new application attempt ");
     opts.addOption("localized_files", true, "List of localized files");
+    opts.addOption("homedir", true, "Home Directory of Job Owner");
 
     opts.addOption("help", false, "Print usage");
     CommandLine cliParser = new GnuParser().parse(opts, args);
@@ -543,6 +546,11 @@ public class ApplicationMaster {
     if (cliParser.hasOption("debug")) {
       dumpOutDebugInfo();
     }
+
+    homeDirectory = cliParser.hasOption("homedir") ?
+        new Path(cliParser.getOptionValue("homedir")) :
+        new Path("/user/" + System.getenv(ApplicationConstants.
+        Environment.USER.name()));
 
     if (cliParser.hasOption("placement_spec")) {
       String placementSpec = cliParser.getOptionValue("placement_spec");
@@ -779,7 +787,7 @@ public class ApplicationMaster {
         @Override
         public Void run() throws IOException {
           FileSystem fs = FileSystem.get(conf);
-          Path dst = new Path(getAppSubmitterHomeDir(),
+          Path dst = new Path(homeDirectory,
               getRelativePath(appName, appId.toString(), ""));
           fs.delete(dst, true);
           return null;
@@ -788,11 +796,6 @@ public class ApplicationMaster {
     } catch(Exception e) {
       LOG.warn("Failed to remove application staging directory", e);
     }
-  }
-
-  private Path getAppSubmitterHomeDir() {
-    return new Path("/user/" +
-        System.getenv(ApplicationConstants.Environment.USER.name()));
   }
 
   /**
@@ -1495,7 +1498,7 @@ public class ApplicationMaster {
             String relativePath =
                 getRelativePath(appName, appId.toString(), fileName);
             Path dst =
-                new Path(getAppSubmitterHomeDir(), relativePath);
+                new Path(homeDirectory, relativePath);
             FileStatus fileStatus = fs.getFileStatus(dst);
             LocalResource localRes = LocalResource.newInstance(
                 URL.fromURI(dst.toUri()),
