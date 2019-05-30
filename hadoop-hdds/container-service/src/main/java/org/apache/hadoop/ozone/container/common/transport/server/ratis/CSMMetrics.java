@@ -37,13 +37,18 @@ public class CSMMetrics {
 
   // ratis op metrics metrics
   private @Metric MutableCounterLong numWriteStateMachineOps;
-  private @Metric MutableCounterLong numReadStateMachineOps;
+  private @Metric MutableCounterLong numQueryStateMachineOps;
   private @Metric MutableCounterLong numApplyTransactionOps;
+  private @Metric MutableCounterLong numReadStateMachineOps;
+  private @Metric MutableCounterLong numBytesWrittenCount;
+  private @Metric MutableCounterLong numBytesCommittedCount;
 
   // Failure Metrics
   private @Metric MutableCounterLong numWriteStateMachineFails;
-  private @Metric MutableCounterLong numReadStateMachineFails;
+  private @Metric MutableCounterLong numQueryStateMachineFails;
   private @Metric MutableCounterLong numApplyTransactionFails;
+  private @Metric MutableCounterLong numReadStateMachineFails;
+  private @Metric MutableCounterLong numReadStateMachineMissCount;
 
   public CSMMetrics() {
   }
@@ -59,6 +64,10 @@ public class CSMMetrics {
     numWriteStateMachineOps.incr();
   }
 
+  public void incNumQueryStateMachineOps() {
+    numQueryStateMachineOps.incr();
+  }
+
   public void incNumReadStateMachineOps() {
     numReadStateMachineOps.incr();
   }
@@ -71,8 +80,24 @@ public class CSMMetrics {
     numWriteStateMachineFails.incr();
   }
 
+  public void incNumQueryStateMachineFails() {
+    numQueryStateMachineFails.incr();
+  }
+
+  public void incNumBytesWrittenCount(long value) {
+    numBytesWrittenCount.incr(value);
+  }
+
+  public void incNumBytesCommittedCount(long value) {
+    numBytesCommittedCount.incr(value);
+  }
+
   public void incNumReadStateMachineFails() {
     numReadStateMachineFails.incr();
+  }
+
+  public void incNumReadStateMachineMissCount() {
+    numReadStateMachineMissCount.incr();
   }
 
   public void incNumApplyTransactionsFails() {
@@ -85,8 +110,8 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumReadStateMachineOps() {
-    return numReadStateMachineOps.value();
+  public long getNumQueryStateMachineOps() {
+    return numQueryStateMachineOps.value();
   }
 
   @VisibleForTesting
@@ -100,14 +125,35 @@ public class CSMMetrics {
   }
 
   @VisibleForTesting
-  public long getNumReadStateMachineFails() {
-    return numReadStateMachineFails.value();
+  public long getNumQueryStateMachineFails() {
+    return numQueryStateMachineFails.value();
   }
 
   @VisibleForTesting
   public long getNumApplyTransactionsFails() {
     return numApplyTransactionFails.value();
   }
+
+  @VisibleForTesting
+  public long getNumReadStateMachineFails() {
+    return numReadStateMachineFails.value();
+  }
+
+  @VisibleForTesting
+  public long getNumReadStateMachineMissCount() {
+    return numReadStateMachineMissCount.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesWrittenCount() {
+    return numBytesWrittenCount.value();
+  }
+
+  @VisibleForTesting
+  public long getNumBytesCommittedCount() {
+    return numBytesCommittedCount.value();
+  }
+
 
   public void unRegister() {
     MetricsSystem ms = DefaultMetricsSystem.instance();
