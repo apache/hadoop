@@ -241,6 +241,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         .addTable(MULTIPARTINFO_TABLE)
         .addTable(DELEGATION_TOKEN_TABLE)
         .addTable(S3_SECRET_TABLE)
+        .addTable(PREFIX_TABLE)
         .addCodec(OzoneTokenIdentifier.class, new TokenIdentifierCodec())
         .addCodec(OmKeyInfo.class, new OmKeyInfoCodec())
         .addCodec(OmBucketInfo.class, new OmBucketInfoCodec())
