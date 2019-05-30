@@ -56,6 +56,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.NameNodeProxiesClient.ProxyAndInfo;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeContext;
 import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamenodeServiceState;
@@ -878,6 +879,14 @@ public class RouterRpcClient {
       String newMsg = processExceptionMsg(
           ioe.getMessage(), loc.getDest(), loc.getSrc());
       FileNotFoundException newException = new FileNotFoundException(newMsg);
+      newException.setStackTrace(ioe.getStackTrace());
+      return newException;
+    }
+
+    if (ioe instanceof SnapshotException) {
+      String newMsg = processExceptionMsg(
+          ioe.getMessage(), loc.getDest(), loc.getSrc());
+      SnapshotException newException = new SnapshotException(newMsg);
       newException.setStackTrace(ioe.getStackTrace());
       return newException;
     }
