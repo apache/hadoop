@@ -16,13 +16,16 @@
  */
 package org.apache.hadoop.ozone.protocolPB;
 
+
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
-import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisClient;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 
@@ -33,6 +36,7 @@ import org.apache.ratis.protocol.RaftPeerId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Optional;
 
 /**
@@ -45,9 +49,9 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private static final Logger LOG = LoggerFactory
       .getLogger(OzoneManagerProtocolServerSideTranslatorPB.class);
   private final OzoneManagerRatisServer omRatisServer;
-  private final OzoneManagerRatisClient omRatisClient;
   private final RequestHandler handler;
   private final boolean isRatisEnabled;
+  private final OzoneManager ozoneManager;
 
   /**
    * Constructs an instance of the server handler.
@@ -55,12 +59,13 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    * @param impl OzoneManagerProtocolPB
    */
   public OzoneManagerProtocolServerSideTranslatorPB(
-      OzoneManagerServerProtocol impl, OzoneManagerRatisServer ratisServer,
-      OzoneManagerRatisClient ratisClient, boolean enableRatis) {
+      OzoneManager impl, OzoneManagerRatisServer ratisServer,
+      boolean enableRatis) {
+    this.ozoneManager = impl;
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
-    this.omRatisClient = ratisClient;
     this.isRatisEnabled = enableRatis;
+
   }
 
   /**
@@ -80,6 +85,17 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         if (OmUtils.isReadOnly(request)) {
           return submitReadRequestToOM(request);
         } else {
+          // PreExecute if needed.
+          try {
+            OMClientRequest omClientRequest =
+                OzoneManagerRatisUtils.createClientRequest(request);
+            if (omClientRequest != null) {
+              request = omClientRequest.preExecute(ozoneManager);
+            }
+          } catch (IOException ex) {
+            // As some of the preExecute returns error. So handle here.
+            return createErrorResponse(request, ex);
+          }
           return submitRequestToRatis(request);
         }
       } else {
@@ -89,12 +105,46 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
       scope.close();
     }
   }
+
+  /**
+   * Create OMResponse from the specified OMRequest and exception.
+   * @param omRequest
+   * @param exception
+   * @return OMResponse
+   */
+  private OMResponse createErrorResponse(
+      OMRequest omRequest, IOException exception) {
+    OzoneManagerProtocolProtos.Type cmdType = omRequest.getCmdType();
+    switch (cmdType) {
+    case CreateBucket:
+      OMResponse.Builder omResponse = OMResponse.newBuilder()
+          .setStatus(
+              OzoneManagerRatisUtils.exceptionToResponseStatus(exception))
+          .setCmdType(cmdType)
+          .setSuccess(false);
+      if (exception.getMessage() != null) {
+        omResponse.setMessage(exception.getMessage());
+      }
+      return omResponse.build();
+    case DeleteBucket:
+    case SetBucketProperty:
+      // In these cases, we can return null. As this method is called when
+      // some error occurred in preExecute. For these request types
+      // preExecute is do nothing.
+      return null;
+    default:
+      // We shall never come here.
+      return null;
+    }
+  }
   /**
    * Submits request to OM's Ratis server.
    */
   private OMResponse submitRequestToRatis(OMRequest request)
       throws ServiceException {
-    return omRatisClient.sendCommand(request);
+    //TODO: Need to remove OzoneManagerRatisClient, as now we are using
+    // RatisServer Api's.
+    return omRatisServer.submitRequest(request);
   }
 
   private OMResponse submitReadRequestToOM(OMRequest request)

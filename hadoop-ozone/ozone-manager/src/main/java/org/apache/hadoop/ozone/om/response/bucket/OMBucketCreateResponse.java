@@ -16,42 +16,43 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.response;
+package org.apache.hadoop.ozone.om.response.bucket;
 
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * Response for DeleteBucket request.
+ * Response for CreateBucket request.
  */
-public final class OMBucketDeleteResponse implements OMClientResponse {
+public final class OMBucketCreateResponse extends OMClientResponse {
 
-  private String volumeName;
-  private String bucketName;
+  private final OmBucketInfo omBucketInfo;
 
-  public OMBucketDeleteResponse(
-      String volumeName, String bucketName) {
-    this.volumeName = volumeName;
-    this.bucketName = bucketName;
+  public OMBucketCreateResponse(OmBucketInfo omBucketInfo,
+      OMResponse omResponse) {
+    super(omResponse);
+    this.omBucketInfo = omBucketInfo;
   }
 
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
     String dbBucketKey =
-        omMetadataManager.getBucketKey(volumeName, bucketName);
-    omMetadataManager.getBucketTable().deleteWithBatch(batchOperation,
-        dbBucketKey);
+        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+            omBucketInfo.getBucketName());
+    omMetadataManager.getBucketTable().putWithBatch(batchOperation, dbBucketKey,
+        omBucketInfo);
   }
 
-  public String getVolumeName() {
-    return volumeName;
+  public OmBucketInfo getOmBucketInfo() {
+    return omBucketInfo;
   }
 
-  public String getBucketName() {
-    return bucketName;
-  }
 }
 

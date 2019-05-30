@@ -83,13 +83,16 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
          iterator.hasNext();) {
       currentEntry = iterator.next();
       CACHEKEY cachekey = currentEntry.getCachekey();
-      CacheValue cacheValue = cache.get(cachekey);
-      if (cacheValue.getEpoch() <= epoch) {
-        cache.remove(cachekey);
-        iterator.remove();
-      } else {
-        // If currentEntry epoch is greater than epoch, we have deleted all
-        // entries less than specified epoch. So, we can break.
+      CacheValue cacheValue = cache.computeIfPresent(cachekey, ((k, v) -> {
+        if (v.getEpoch() <= epoch) {
+          iterator.remove();
+          return null;
+        }
+        return v;
+      }));
+      // If currentEntry epoch is greater than epoch, we have deleted all
+      // entries less than specified epoch. So, we can break.
+      if (cacheValue != null && cacheValue.getEpoch() >= epoch) {
         break;
       }
     }

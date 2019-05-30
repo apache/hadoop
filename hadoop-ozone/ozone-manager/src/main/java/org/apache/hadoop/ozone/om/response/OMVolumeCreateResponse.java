@@ -22,19 +22,24 @@ import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
+
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
  * Response for CreateBucket request.
  */
-public class OMVolumeCreateResponse implements OMClientResponse {
+public class OMVolumeCreateResponse extends OMClientResponse {
 
-  private OzoneManagerProtocolProtos.VolumeList volumeList;
+  private VolumeList volumeList;
   private OmVolumeArgs omVolumeArgs;
 
   public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
-      OzoneManagerProtocolProtos.VolumeList volumeList) {
+      VolumeList volumeList, OMResponse omResponse) {
+    super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
     this.volumeList = volumeList;
   }
@@ -53,12 +58,13 @@ public class OMVolumeCreateResponse implements OMClientResponse {
         volumeList);
   }
 
-  public OzoneManagerProtocolProtos.VolumeList getVolumeList() {
+  public VolumeList getVolumeList() {
     return volumeList;
   }
 
   public OmVolumeArgs getOmVolumeArgs() {
     return omVolumeArgs;
   }
+
 }
 

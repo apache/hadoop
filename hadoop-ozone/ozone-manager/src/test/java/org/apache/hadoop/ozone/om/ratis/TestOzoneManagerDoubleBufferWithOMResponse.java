@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,9 +38,18 @@ import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMVolumeCreateResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
-import org.apache.hadoop.ozone.om.response.OMBucketCreateResponse;
-import org.apache.hadoop.ozone.om.response.OMBucketDeleteResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateVolumeResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
+import org.apache.hadoop.ozone.om.response.bucket.OMBucketCreateResponse;
+import org.apache.hadoop.ozone.om.response.bucket.OMBucketDeleteResponse;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.Time;
@@ -376,7 +386,12 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
 
     VolumeList volumeList = VolumeList.newBuilder()
         .addVolumeNames(volumeName).build();
-    return new OMVolumeCreateResponse(omVolumeArgs, volumeList);
+    return new OMVolumeCreateResponse(omVolumeArgs, volumeList,
+        OMResponse.newBuilder()
+            .setCmdType(OzoneManagerProtocolProtos.Type.CreateVolume)
+            .setStatus(OzoneManagerProtocolProtos.Status.OK)
+            .setCreateVolumeResponse(CreateVolumeResponse.newBuilder().build())
+            .build());
   }
 
   /**
@@ -390,7 +405,11 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
     OmBucketInfo omBucketInfo =
         OmBucketInfo.newBuilder().setVolumeName(volumeName)
             .setBucketName(bucketName).setCreationTime(Time.now()).build();
-    return new OMBucketCreateResponse(omBucketInfo);
+    return new OMBucketCreateResponse(omBucketInfo, OMResponse.newBuilder()
+        .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
+        .setStatus(OzoneManagerProtocolProtos.Status.OK)
+        .setCreateBucketResponse(CreateBucketResponse.newBuilder().build())
+        .build());
   }
 
   /**
@@ -401,7 +420,12 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
    */
   private OMBucketDeleteResponse deleteBucket(String volumeName,
       String bucketName) {
-    return new OMBucketDeleteResponse(volumeName, bucketName);
+    return new OMBucketDeleteResponse(volumeName, bucketName,
+        OMResponse.newBuilder()
+            .setCmdType(OzoneManagerProtocolProtos.Type.DeleteBucket)
+            .setStatus(OzoneManagerProtocolProtos.Status.OK)
+            .setDeleteBucketResponse(DeleteBucketResponse.newBuilder().build())
+            .build());
   }
 
 

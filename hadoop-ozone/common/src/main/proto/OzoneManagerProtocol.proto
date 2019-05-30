@@ -383,7 +383,7 @@ message BucketInfo {
     repeated OzoneAclInfo acls = 3;
     required bool isVersionEnabled = 4 [default = false];
     required StorageTypeProto storageType = 5 [default = DISK];
-    required uint64 creationTime = 6;
+    optional uint64 creationTime = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
     optional BucketEncryptionInfoProto beinfo = 8;
 }
@@ -553,11 +553,7 @@ message InfoBucketResponse {
 }
 
 message SetBucketPropertyRequest {
-    //TODO: See if we can merge bucketArgs and bucketInfo
     optional BucketArgs bucketArgs = 1;
-    // This will be set during startTransaction, and used to apply to OM DB
-    // during applyTransaction.
-    optional BucketInfo bucketInfo = 2;
 }
 
 message SetBucketPropertyResponse {
