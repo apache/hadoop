@@ -13,11 +13,10 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License.
-      = GenericTestUtils.getTestDir("dfs").getAbsolutePath() + File.separator;
-
+ * limitations under the License
  */
-     package org.apache.hadoop.ozone.container.common.transport.server.ratis;
+
+package org.apache.hadoop.ozone.container.common.transport.server.ratis;
 
 import static org.apache.hadoop.test.MetricsAsserts.assertCounter;
 import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
@@ -63,7 +62,9 @@ import org.junit.Assert;
    * This class tests the metrics of ContainerStateMachine.
    */
   public class TestCSMMetrics {
-    static final String TEST_DIR
+    static final String TEST_DIR =
+        GenericTestUtils.getTestDir("dfs").getAbsolutePath()
+            + File.separator;
   @FunctionalInterface
   interface CheckedBiFunction<LEFT, RIGHT, OUT, THROWABLE extends Throwable> {
     OUT apply(LEFT left, RIGHT right) throws THROWABLE;
