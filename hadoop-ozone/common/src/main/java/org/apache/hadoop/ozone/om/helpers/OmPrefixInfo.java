@@ -101,7 +101,8 @@ public final class OmPrefixInfo extends WithMetadata {
       return this;
     }
 
-    public OmPrefixInfo.Builder addAllMetadata(Map<String, String> additionalMetadata) {
+    public OmPrefixInfo.Builder addAllMetadata(
+        Map<String, String> additionalMetadata) {
       if (additionalMetadata != null) {
         metadata.putAll(additionalMetadata);
       }
@@ -165,5 +166,5 @@ public final class OmPrefixInfo extends WithMetadata {
   public int hashCode() {
     return Objects.hash(name);
   }
+}
 
-  }
