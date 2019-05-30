@@ -1106,7 +1106,7 @@ public class LeafQueue extends AbstractCSQueue {
           node, SystemClock.getInstance().getTime(), application);
 
       // Check queue max-capacity limit
-      Resource appReserved = application.getCurrentReservation();
+      Resource appReserved = application.getCurrentReservation(node.getPartition());
       if (needAssignToQueueCheck) {
         if (!super.canAssignToThisQueue(clusterResource,
             candidates.getPartition(), currentResourceLimits, appReserved,
@@ -1552,8 +1552,7 @@ public class LeafQueue extends AbstractCSQueue {
           user.getUsed(nodePartition), limit)) {
         // if enabled, check to see if could we potentially use this node instead
         // of a reserved node if the application has reserved containers
-        if (this.reservationsContinueLooking && nodePartition.equals(
-            CommonNodeLabelsManager.NO_LABEL)) {
+        if (this.reservationsContinueLooking) {
           if (Resources.lessThanOrEqual(resourceCalculator, clusterResource,
               Resources.subtract(user.getUsed(),
                   application.getCurrentReservation()), limit)) {

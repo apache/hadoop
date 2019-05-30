@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -829,7 +830,8 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   @VisibleForTesting
   public NodeId getNodeIdToUnreserve(SchedulerRequestKey schedulerKey,
-      Resource resourceNeedUnreserve, ResourceCalculator resourceCalculator) {
+      Resource resourceNeedUnreserve, ResourceCalculator resourceCalculator,
+      FiCaSchedulerNode node, SchedulingMode schedulingMode) {
     // first go around make this algorithm simple and just grab first
     // reservation that has enough resources
     Map<NodeId, RMContainer> reservedContainers = this.reservedContainers.get(
@@ -840,20 +842,42 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
           .entrySet()) {
         NodeId nodeId = entry.getKey();
         RMContainer reservedContainer = entry.getValue();
-        Resource reservedResource = reservedContainer.getReservedResource();
 
-        // make sure we unreserve one with at least the same amount of
-        // resources, otherwise could affect capacity limits
-        if (Resources.fitsIn(resourceCalculator, resourceNeedUnreserve,
-            reservedResource)) {
+        if (canContainerBeUnreserved(reservedContainer, resourceNeedUnreserve,
+            resourceCalculator, node, schedulingMode)) {
           LOG.debug("unreserving node with reservation size: {} in order to"
-              + " allocate container with size: {}", reservedResource,
-              resourceNeedUnreserve);
+              + " allocate container with size: {}",
+              reservedContainer.getReservedResource(), resourceNeedUnreserve);
           return nodeId;
         }
       }
     }
     return null;
+  }
+
+  @VisibleForTesting
+  public boolean canContainerBeUnreserved(RMContainer reservedContainer,
+      Resource resourceNeedUnreserve, ResourceCalculator resourceCalculator,
+      FiCaSchedulerNode node, SchedulingMode schedulingMode) {
+    if (schedulingMode == SchedulingMode.RESPECT_PARTITION_EXCLUSIVITY
+        && !reservedContainer.getNodeLabelExpression().equals(node.getPartition())) {
+      // Container and scheduled node must be in same partition. Since application requests
+      // resources on this node's partition, the container to unreverse must be from the
+      // same partition.
+      return false;
+    }
+
+    if (schedulingMode == SchedulingMode.IGNORE_PARTITION_EXCLUSIVITY
+        && !reservedContainer.getNodeLabelExpression().equals(RMNodeLabelsManager.NO_LABEL)) {
+      // Container must be from default partition. Since application requests resources on
+      // the default partition, the container to unreserve must also be from the default partition.
+      return false;
+    }
+
+    // make sure we unreserve one with at least the same amount of
+    // resources, otherwise could affect capacity limits
+    Resource reservedResource = reservedContainer.getReservedResource();
+    return Resources.fitsIn(resourceCalculator, resourceNeedUnreserve, reservedResource);
   }
 
   public void setHeadroomProvider(
@@ -910,12 +934,13 @@ public class FiCaSchedulerApp extends SchedulerApplicationAttempt {
 
   @VisibleForTesting
   public RMContainer findNodeToUnreserve(FiCaSchedulerNode node,
-      SchedulerRequestKey schedulerKey, Resource minimumUnreservedResource) {
+      SchedulerRequestKey schedulerKey, Resource minimumUnreservedResource,
+      SchedulingMode schedulingMode) {
     readLock.lock();
     try {
       // need to unreserve some other container first
       NodeId idToUnreserve = getNodeIdToUnreserve(schedulerKey,
-          minimumUnreservedResource, rc);
+          minimumUnreservedResource, rc, node, schedulingMode);
       if (idToUnreserve == null) {
         LOG.debug("checked to see if could unreserve for app but nothing "
             + "reserved that matches for this app");

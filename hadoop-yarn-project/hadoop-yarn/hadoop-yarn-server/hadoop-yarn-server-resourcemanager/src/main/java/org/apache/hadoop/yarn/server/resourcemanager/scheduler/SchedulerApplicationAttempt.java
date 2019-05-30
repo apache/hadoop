@@ -439,6 +439,10 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   public Resource getCurrentReservation() {
     return attemptResourceUsage.getReserved();
   }
+
+  public Resource getCurrentReservation(String partition) {
+    return attemptResourceUsage.getReserved(partition);
+  }
   
   public Queue getQueue() {
     return queue;

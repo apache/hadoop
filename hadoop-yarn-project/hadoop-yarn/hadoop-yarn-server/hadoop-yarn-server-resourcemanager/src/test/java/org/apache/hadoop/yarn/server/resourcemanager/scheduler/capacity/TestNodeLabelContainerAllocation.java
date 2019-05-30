@@ -850,7 +850,106 @@ public class TestNodeLabelContainerAllocation {
     
     rm1.close();
   }
-  
+
+  private Configuration getEmptyDefaultPartitionConfiguration(Configuration conf) {
+    CapacitySchedulerConfiguration csconf = new CapacitySchedulerConfiguration(conf);
+    csconf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a"});
+    csconf.setAccessibleNodeLabels(CapacitySchedulerConfiguration.ROOT, toSet("*"));
+    csconf.setCapacityByLabel(CapacitySchedulerConfiguration.ROOT, "x", 100);
+
+    final String A = CapacitySchedulerConfiguration.ROOT + ".a";
+    csconf.setDefaultNodeLabelExpression(A, "x");
+    csconf.setCapacity(A, 100);
+    csconf.setAccessibleNodeLabels(A, toSet("*"));
+    csconf.setMaximumCapacity(A, 100);
+    csconf.setCapacityByLabel(A, "x", 100);
+
+    return csconf;
+  }
+
+  @Test (timeout = 300000)
+  public void testAllocationWithReservedContainersOnDefaultPartition()
+      throws Exception {
+    /**
+     * Test case: Submit one application with the application master utilizing the majority of
+     * the resources on a node. When h1 is scheduled, scheduler will reserve a container on default
+     * partition. After reservation, container will be unreserved from h1 and allocated on h2.
+     */
+    mgr.addToCluserNodeLabels(ImmutableSet.of(NodeLabel.newInstance("x", false)));
+    mgr.addLabelsToNode(ImmutableMap.of( NodeId.newInstance("h1", 1234), toSet("x"),
+        NodeId.newInstance("h2", 1234), toSet("x")));
+
+    MockRM rm = new MockRM(getEmptyDefaultPartitionConfiguration(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 9 * GB); // label = x
+    MockNM nm2 = rm.registerNode("h2:1234", 9 * GB); // label = x
+
+    // launch an app to default queue with empty node label.
+    RMApp app = rm.submitApp(8 * GB, "app", "user", null, "a");
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
+
+    am.allocate("*", 8 * GB, 2, new ArrayList<ContainerId>(),
+        RMNodeLabelsManager.NO_LABEL);
+    // Try allocating a container on non-AM node first.
+    doNMHeartbeat(rm, nm2.getNodeId(), 1);
+    checkLaunchedContainerNumOnNode(rm, nm2.getNodeId(), 0);
+
+    // Reserve a container on AM node (resource deprived).
+    doNMHeartbeat(rm, nm1.getNodeId(), 1);
+    checkLaunchedContainerNumOnNode(rm, nm1.getNodeId(), 1);
+
+    // Try allocating a container on non-AM node again.
+    doNMHeartbeat(rm, nm2.getNodeId(), 1);
+    checkLaunchedContainerNumOnNode(rm, nm2.getNodeId(), 1);
+
+    rm.close();
+  }
+
+  @Test (timeout = 300000)
+  public void testAllocationWithReservedContainersOnNonDefaultPartition() throws Exception {
+    /**
+     * Test case: Submit one application with the application master utilizing the majority of
+     * the resources on a node. When h1 is scheduled, scheduler will reserve a container on non-default
+     * partition. After reservation, container will be unreserved from h1 and allocated on h2.
+     */
+    mgr.addToCluserNodeLabels(ImmutableSet.of(NodeLabel.newInstance("x", false)));
+    mgr.addLabelsToNode(ImmutableMap.of( NodeId.newInstance("h1", 1234), toSet("x"),
+        NodeId.newInstance("h2", 1234), toSet("x")));
+
+    MockRM rm = new MockRM(getEmptyDefaultPartitionConfiguration(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    MockNM nm1 = rm.registerNode("h1:1234", 9 * GB); // label = x
+    MockNM nm2 = rm.registerNode("h2:1234", 9 * GB); // label = x
+
+    RMApp app = rm.submitApp(8 * GB, "app", "user", null, "a");
+    MockAM am = MockRM.launchAndRegisterAM(app, rm, nm1);
+
+    am.allocate("*", 8 * GB, 2, new ArrayList<ContainerId>());
+    // Try to allocate a container on AM node (resource deprived).
+    doNMHeartbeat(rm, nm1.getNodeId(), 1);
+    checkLaunchedContainerNumOnNode(rm, nm1.getNodeId(), 1);
+
+    // Try to allocate a container on non-AM node.
+    doNMHeartbeat(rm, nm2.getNodeId(), 1);
+    checkLaunchedContainerNumOnNode(rm, nm2.getNodeId(), 1);
+
+    rm.close();
+  }
+
   @Test
   public void testNonLabeledResourceRequestGetPreferrenceToNonLabeledNode()
       throws Exception {
