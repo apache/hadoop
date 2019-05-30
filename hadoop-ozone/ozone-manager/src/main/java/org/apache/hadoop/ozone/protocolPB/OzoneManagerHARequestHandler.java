@@ -41,8 +41,10 @@ public interface OzoneManagerHARequestHandler extends RequestHandler {
   /**
    * Handle Apply Transaction Requests from OzoneManager StateMachine.
    * @param omRequest
+   * @param transactionLogIndex - ratis transaction log index
    * @return OMResponse
    */
-  OMResponse handleApplyTransaction(OMRequest omRequest);
+  OMResponse handleApplyTransaction(OMRequest omRequest,
+      long transactionLogIndex);
 
 }

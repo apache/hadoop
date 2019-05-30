@@ -21,19 +21,23 @@ package org.apache.hadoop.ozone.om.response;
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
  * Response for CreateVolume request.
  */
-public class OMVolumeDeleteResponse implements OMClientResponse {
+public class OMVolumeDeleteResponse extends OMClientResponse {
   private String volume;
   private String owner;
-  private OzoneManagerProtocolProtos.VolumeList updatedVolumeList;
+  private VolumeList updatedVolumeList;
 
   public OMVolumeDeleteResponse(String volume, String owner,
-      OzoneManagerProtocolProtos.VolumeList updatedVolumeList) {
+      VolumeList updatedVolumeList, OMResponse omResponse) {
+    super(omResponse);
     this.volume = volume;
     this.owner = owner;
     this.updatedVolumeList = updatedVolumeList;
@@ -43,8 +47,7 @@ public class OMVolumeDeleteResponse implements OMClientResponse {
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
     String dbUserKey = omMetadataManager.getUserKey(owner);
-    OzoneManagerProtocolProtos.VolumeList volumeList =
-        updatedVolumeList;
+    VolumeList volumeList = updatedVolumeList;
     if (updatedVolumeList.getVolumeNamesList().size() == 0) {
       omMetadataManager.getUserTable().deleteWithBatch(batchOperation,
           dbUserKey);
@@ -55,5 +58,6 @@ public class OMVolumeDeleteResponse implements OMClientResponse {
     omMetadataManager.getVolumeTable().deleteWithBatch(batchOperation,
         omMetadataManager.getVolumeKey(volume));
   }
+
 }
 

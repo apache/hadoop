@@ -27,6 +27,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
@@ -43,7 +44,6 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
@@ -138,9 +138,9 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
 public class OzoneManagerRequestHandler implements RequestHandler {
   static final Logger LOG =
       LoggerFactory.getLogger(OzoneManagerRequestHandler.class);
-  private final OzoneManagerServerProtocol impl;
+  private final OzoneManager impl;
 
-  public OzoneManagerRequestHandler(OzoneManagerServerProtocol om) {
+  public OzoneManagerRequestHandler(OzoneManager om) {
     this.impl = om;
   }
 
@@ -1089,10 +1089,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .build();
   }
 
-  protected OzoneManagerServerProtocol getOzoneManagerServerProtocol() {
-    return impl;
-  }
-
   private ListStatusResponse listStatus(
       ListStatusRequest request) throws IOException {
     KeyArgs keyArgs = request.getKeyArgs();
@@ -1111,5 +1107,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       listStatusResponseBuilder.addStatuses(status.getProtobuf());
     }
     return listStatusResponseBuilder.build();
+  }
+
+  protected OzoneManager getOzoneManager() {
+    return impl;
   }
 }

@@ -29,7 +29,6 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoApplyInitiateRequest;
@@ -67,15 +66,19 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private final SimpleStateMachineStorage storage =
       new SimpleStateMachineStorage();
   private final OzoneManagerRatisServer omRatisServer;
-  private final OzoneManagerServerProtocol ozoneManager;
+  private final OzoneManager ozoneManager;
   private OzoneManagerHARequestHandler handler;
   private RaftGroupId raftGroupId;
   private long lastAppliedIndex = 0;
+  private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
 
   public OzoneManagerStateMachine(OzoneManagerRatisServer ratisServer) {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
-    this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager);
+    this.ozoneManagerDoubleBuffer =
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager());
+    this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
+        ozoneManagerDoubleBuffer);
   }
 
   /**
@@ -192,9 +195,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       case CreateVolume:
       case SetVolumeProperty:
       case DeleteVolume:
-      case CreateBucket:
-      case SetBucketProperty:
-      case DeleteBucket:
         newOmRequest = handler.handleStartTransaction(omRequest);
         break;
       case AllocateBlock:
@@ -403,7 +403,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
    * @throws ServiceException
    */
   private Message runCommand(OMRequest request, long trxLogIndex) {
-    OMResponse response = handler.handleApplyTransaction(request);
+    OMResponse response = handler.handleApplyTransaction(request, trxLogIndex);
     lastAppliedIndex = trxLogIndex;
     return OMRatisHelper.convertResponseToMessage(response);
   }
@@ -437,6 +437,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   @VisibleForTesting
   public void setRaftGroupId(RaftGroupId raftGroupId) {
     this.raftGroupId = raftGroupId;
+  }
+
+
+  public void stop() {
+    ozoneManagerDoubleBuffer.stop();
   }
 
 }

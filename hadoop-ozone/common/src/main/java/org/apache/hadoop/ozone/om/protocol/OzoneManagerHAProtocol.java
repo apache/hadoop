@@ -18,8 +18,6 @@
 
 package org.apache.hadoop.ozone.om.protocol;
 
-import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -168,54 +166,4 @@ public interface OzoneManagerHAProtocol {
    */
   void applyDeleteVolume(String volume, String owner,
       VolumeList newVolumeList) throws IOException;
-
-  /**
-   * Start Create Bucket Transaction.
-   * @param omBucketInfo
-   * @return OmBucketInfo
-   * @throws IOException
-   */
-  OmBucketInfo startCreateBucket(OmBucketInfo omBucketInfo) throws IOException;
-
-  /**
-   * Apply Create Bucket Changes to OM DB.
-   * @param omBucketInfo
-   * @throws IOException
-   */
-  void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException;
-
-  /**
-   * Start Delete Bucket Transaction.
-   * @param volumeName
-   * @param bucketName
-   * @throws IOException
-   */
-  void startDeleteBucket(String volumeName, String bucketName)
-      throws IOException;
-
-  /**
-   * Apply Delete Bucket changes to OM DB.
-   * @param volumeName
-   * @param bucketName
-   * @throws IOException
-   */
-  void applyDeleteBucket(String volumeName, String bucketName)
-      throws IOException;
-
-  /**
-   * Start SetBucket Property Transaction.
-   * @param omBucketArgs
-   * @return OmBucketInfo
-   * @throws IOException
-   */
-  OmBucketInfo startSetBucketProperty(OmBucketArgs omBucketArgs)
-      throws IOException;
-
-  /**
-   * Apply SetBucket Property changes to OM DB.
-   * @param omBucketInfo
-   * @throws IOException
-   */
-  void applySetBucketProperty(OmBucketInfo omBucketInfo) throws IOException;
-
 }

@@ -18,16 +18,23 @@
 
 package org.apache.hadoop.ozone.om.response;
 
-import org.apache.commons.lang.NotImplementedException;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.utils.db.BatchOperation;
-
 import java.io.IOException;
+
+import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
  * Interface for OM Responses, each OM response should implement this interface.
  */
-public interface OMClientResponse {
+public abstract class OMClientResponse {
+
+  private OMResponse omResponse;
+
+  public OMClientResponse(OMResponse omResponse) {
+    this.omResponse = omResponse;
+  }
 
   /**
    * Implement logic to add the response to batch.
@@ -35,10 +42,15 @@ public interface OMClientResponse {
    * @param batchOperation
    * @throws IOException
    */
-  default void addToDBBatch(OMMetadataManager omMetadataManager,
-      BatchOperation batchOperation) throws IOException {
-    throw new NotImplementedException("Not implemented, Each OM Response " +
-        "should implement this method");
+  public abstract void addToDBBatch(OMMetadataManager omMetadataManager,
+      BatchOperation batchOperation) throws IOException;
+
+  /**
+   * Return OMResponse.
+   * @return OMResponse
+   */
+  public OMResponse getOMResponse() {
+    return omResponse;
   }
 
 }

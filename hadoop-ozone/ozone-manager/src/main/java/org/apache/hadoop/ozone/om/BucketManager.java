@@ -30,14 +30,7 @@ public interface BucketManager {
    * Creates a bucket.
    * @param bucketInfo - OmBucketInfo for creating bucket.
    */
-  OmBucketInfo createBucket(OmBucketInfo bucketInfo) throws IOException;
-
-  /**
-   * Apply Create Bucket changes to OM DB.
-   * @param omBucketInfo
-   * @throws IOException
-   */
-  void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException;
+  void createBucket(OmBucketInfo bucketInfo) throws IOException;
 
 
   /**
@@ -53,14 +46,7 @@ public interface BucketManager {
    * @param args - BucketArgs.
    * @throws IOException
    */
-  OmBucketInfo setBucketProperty(OmBucketArgs args) throws IOException;
-
-  /**
-   * Apply SetBucket Property changes to OM DB.
-   * @param omBucketInfo
-   * @throws IOException
-   */
-  void applySetBucketProperty(OmBucketInfo omBucketInfo) throws IOException;
+  void setBucketProperty(OmBucketArgs args) throws IOException;
 
   /**
    * Deletes an existing empty bucket from volume.
@@ -69,15 +55,6 @@ public interface BucketManager {
    * @throws IOException
    */
   void deleteBucket(String volumeName, String bucketName) throws IOException;
-
-  /**
-   * Apply Delete Bucket changes to OM DB.
-   * @param volumeName
-   * @param bucketName
-   * @throws IOException
-   */
-  void applyDeleteBucket(String volumeName, String bucketName)
-      throws IOException;
 
   /**
    * Returns a list of buckets represented by {@link OmBucketInfo}

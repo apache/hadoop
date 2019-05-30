@@ -171,11 +171,11 @@ public class TestOmMetrics {
     Mockito.doNothing().when(mockS3Bm).deleteS3Bucket("random");
     Mockito.doReturn(true).when(mockS3Bm).createOzoneVolumeIfNeeded(null);
 
-    Mockito.doReturn(null).when(mockBm).createBucket(null);
-    Mockito.doReturn(null).when(mockBm).createBucket(null);
+    Mockito.doNothing().when(mockBm).createBucket(null);
+    Mockito.doNothing().when(mockBm).createBucket(null);
     Mockito.doNothing().when(mockBm).deleteBucket(null, null);
     Mockito.doReturn(null).when(mockBm).getBucketInfo(null, null);
-    Mockito.doReturn(null).when(mockBm).setBucketProperty(null);
+    Mockito.doNothing().when(mockBm).setBucketProperty(null);
     Mockito.doReturn(null).when(mockBm).listBuckets(null, null, null, 0);
 
     HddsWhiteboxTestUtils.setInternalState(

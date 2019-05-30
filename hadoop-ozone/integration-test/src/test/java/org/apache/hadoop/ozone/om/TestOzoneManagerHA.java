@@ -405,7 +405,7 @@ public class TestOzoneManagerHA {
         // last running OM as it would fail to get a quorum.
         if (e instanceof RemoteException) {
           GenericTestUtils.assertExceptionContains(
-              "RaftRetryFailureException", e);
+              "NotLeaderException", e);
         }
       } else {
         throw e;
@@ -446,7 +446,7 @@ public class TestOzoneManagerHA {
         // last running OM as it would fail to get a quorum.
         if (e instanceof RemoteException) {
           GenericTestUtils.assertExceptionContains(
-              "RaftRetryFailureException", e);
+              "NotLeaderException", e);
         }
       } else {
         throw e;

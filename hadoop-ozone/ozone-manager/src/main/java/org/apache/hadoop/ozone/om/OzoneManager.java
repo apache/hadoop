@@ -316,6 +316,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
 
+    metadataManager = new OmMetadataManagerImpl(configuration);
     startRatisServer();
     startRatisClient();
 
@@ -328,7 +329,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     secConfig = new SecurityConfig(configuration);
 
-    metadataManager = new OmMetadataManagerImpl(configuration);
     volumeManager = new VolumeManagerImpl(metadataManager, configuration);
 
     // Create the KMS Key Provider
@@ -1273,7 +1273,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     BlockingService omService = newReflectiveBlockingService(
         new OzoneManagerProtocolServerSideTranslatorPB(this, omRatisServer,
-            omRatisClient, isRatisEnabled));
+            isRatisEnabled));
     return startRpcServer(configuration, omNodeRpcAddr,
         OzoneManagerProtocolPB.class, omService,
         handlerCount);
@@ -1722,67 +1722,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       VolumeList newVolumeList) throws IOException {
     // TODO: Need to add metrics and Audit log for HA requests
     volumeManager.applyDeleteVolume(volume, owner, newVolumeList);
-  }
-
-
-  @Override
-  public OmBucketInfo startCreateBucket(OmBucketInfo omBucketInfo)
-      throws IOException {
-    Preconditions.checkNotNull(omBucketInfo);
-    if(isAclEnabled) {
-      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
-          omBucketInfo.getVolumeName(), omBucketInfo.getBucketName(), null);
-    }
-
-    return bucketManager.createBucket(omBucketInfo);
-  }
-
-  @Override
-  public void applyCreateBucket(OmBucketInfo omBucketInfo) throws IOException {
-    // TODO: Need to add metrics and Audit log for HA requests
-    bucketManager.applyCreateBucket(omBucketInfo);
-  }
-
-
-  @Override
-  public void startDeleteBucket(String volumeName, String bucketName)
-      throws IOException {
-    // TODO: Need to add metrics and Audit log for HA requests
-    if(isAclEnabled) {
-      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
-          volumeName, bucketName, null);
-    }
-
-    bucketManager.deleteBucket(volumeName, bucketName);
-  }
-
-
-  @Override
-  public void applyDeleteBucket(String volumeName, String bucketName)
-      throws IOException {
-    // TODO: Need to add metrics and Audit log for HA requests
-    bucketManager.applyDeleteBucket(volumeName, bucketName);
-  }
-
-
-  @Override
-  public OmBucketInfo startSetBucketProperty(OmBucketArgs omBucketArgs)
-      throws IOException {
-    Preconditions.checkNotNull(omBucketArgs);
-    // TODO: Need to add metrics and Audit log for HA requests
-    if(isAclEnabled) {
-      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.CREATE,
-          omBucketArgs.getVolumeName(), omBucketArgs.getBucketName(), null);
-    }
-    return bucketManager.setBucketProperty(omBucketArgs);
-  }
-
-
-  @Override
-  public void applySetBucketProperty(OmBucketInfo omBucketInfo)
-      throws IOException {
-    // TODO: Need to add metrics and Audit log for HA requests
-    bucketManager.applySetBucketProperty(omBucketInfo);
   }
 
   /**
@@ -3134,5 +3073,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   @Override
   public OMFailoverProxyProvider getOMFailoverProxyProvider() {
     return null;
+  }
+
+  public OMMetrics getOmMetrics() {
+    return metrics;
   }
 }
