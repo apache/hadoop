@@ -240,7 +240,6 @@ public interface FederationMBean {
 
   /**
    * Get the current state of the router.
-   *
    * @return String label for the current router state.
    */
   String getRouterStatus();
@@ -250,4 +249,10 @@ public interface FederationMBean {
    * @return number of DTs
    */
   long getCurrentTokensCount();
+
+  /**
+   * Get the security status of the router.
+   * @return Security status.
+   */
+  boolean isSecurityEnabled();
 }
