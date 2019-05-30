@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
@@ -261,6 +262,12 @@ public interface OMMetadataManager {
    */
 
   Table<String, String> getS3Table();
+
+  /**
+   * Gets the Ozone prefix path to its acl mapping table.
+   * @return Table.
+   */
+  Table<String, OmPrefixInfo> getPrefixTable();
 
   /**
    * Returns the DB key name of a multipart upload key in OM metadata store.
