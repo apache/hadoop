@@ -100,7 +100,7 @@ public class TestOMBucketDeleteRequest {
         new OMBucketDeleteRequest(omRequest);
 
     // Create Volume and bucket entries in DB.
-    TestOMRequestUtils.addEntryToDB(volumeName, bucketName, omMetadataManager);
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
 
     omBucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1);
 
@@ -130,7 +130,7 @@ public class TestOMBucketDeleteRequest {
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
 
-    TestOMRequestUtils.addEntryToDB(volumeName, bucketName, omMetadataManager);
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName, omMetadataManager);
   }
 
 

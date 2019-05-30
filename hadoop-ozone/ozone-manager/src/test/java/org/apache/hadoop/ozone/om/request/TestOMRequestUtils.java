@@ -34,11 +34,18 @@ public final class TestOMRequestUtils {
   private TestOMRequestUtils() {
     //Do nothing
   }
-  public static void addEntryToDB(String volumeName, String bucketName,
-      OMMetadataManager omMetadataManager)
-      throws Exception {
 
-    createVolumeEntryToDDB(volumeName, omMetadataManager);
+  /**
+   * Add's volume and bucket creation entries to OM DB.
+   * @param volumeName
+   * @param bucketName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addVolumeAndBucketToDB(String volumeName,
+      String bucketName, OMMetadataManager omMetadataManager) throws Exception {
+
+    addVolumeToDB(volumeName, omMetadataManager);
 
     OmBucketInfo omBucketInfo =
         OmBucketInfo.newBuilder().setVolumeName(volumeName)
@@ -48,7 +55,13 @@ public final class TestOMRequestUtils {
         omMetadataManager.getBucketKey(volumeName, bucketName), omBucketInfo);
   }
 
-  public static void createVolumeEntryToDDB(String volumeName,
+  /**
+   * Add's volume creation entry to OM DB.
+   * @param volumeName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addVolumeToDB(String volumeName,
       OMMetadataManager omMetadataManager) throws Exception {
     OmVolumeArgs omVolumeArgs =
         OmVolumeArgs.newBuilder().setCreationTime(Time.now())
