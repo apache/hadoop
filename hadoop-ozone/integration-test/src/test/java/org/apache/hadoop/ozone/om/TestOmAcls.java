@@ -45,6 +45,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRE
 import org.junit.AfterClass;
 import static org.junit.Assert.assertTrue;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -111,6 +112,7 @@ public class TestOmAcls {
    * Tests the OM Initialization.
    */
   @Test
+  @Ignore("Fix me after HDDS-1600")
   public void testOMAclsPermissionDenied() throws Exception {
     String user0 = "testListVolumes-user-0";
     String adminUser = "testListVolumes-admin";

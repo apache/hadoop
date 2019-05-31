@@ -67,7 +67,8 @@ public class OMVolumeCreateResponse extends OMClientResponse {
   }
 
   @Override
-  public void addResponseToOMDB(OMMetadataManager omMetadataManager) throws IOException {
+  public void addResponseToOMDB(OMMetadataManager omMetadataManager)
+      throws IOException {
     String dbVolumeKey =
         omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
     String dbUserKey =
