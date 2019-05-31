@@ -68,6 +68,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.jvm.hotspot.utilities.Assert;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -302,12 +303,12 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
             containerState == State.OPEN || containerState == State.CLOSING);
         // mark and persist the container state to be unhealthy
         try {
-          container.markContainerUnhealthy();
-        } catch (StorageContainerException sce) {
+          handler.markContainerUhealthy(container);
+        } catch (IOException ioe) {
           // just log the error here in case marking the container fails,
           // Return the actual failure response to the client
           LOG.error("Failed to mark container " + containerID + " UNHEALTHY. ",
-              sce);
+              ioe);
         }
         // in any case, the in memory state of the container should be unhealthy
         Preconditions.checkArgument(

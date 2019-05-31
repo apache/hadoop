@@ -893,6 +893,14 @@ public class KeyValueHandler extends Handler {
   }
 
   @Override
+  public void markContainerUhealthy(Container container)
+      throws IOException {
+    // this will mark the container unhealthy and a close container action will
+    // be sent from the dispatcher ton SCM to close down this container.
+    container.markContainerUnhealthy();
+  }
+
+  @Override
   public void quasiCloseContainer(Container container)
       throws IOException {
     final State state = container.getContainerState();
