@@ -891,12 +891,13 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       ms.put(pathMetadata);
     }
 
-    String bucket = getTestBucketName(getContract().getFileSystem().getConf());
     final Map<String, String> diagnostics = ms.getDiagnostics();
     if(diagnostics.get("name").startsWith("local")){
       ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
           "/dir2");
     } else {
+      String bucket =
+          getTestBucketName(getContract().getFileSystem().getConf());
       ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
           "/" + bucket + "/dir2");
     }
