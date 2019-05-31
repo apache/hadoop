@@ -29,6 +29,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -156,6 +157,18 @@ public class HBaseTimelineReaderImpl
     checkHBaseDown();
     EntityTypeReader reader = new EntityTypeReader(context);
     return reader.readEntityTypes(hbaseConf, conn);
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    if (!this.isHBaseDown()) {
+      return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+          "");
+    } else {
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          "HBase connection is down");
+    }
   }
 
   protected static final TimelineEntityFilters MONITOR_FILTERS =
