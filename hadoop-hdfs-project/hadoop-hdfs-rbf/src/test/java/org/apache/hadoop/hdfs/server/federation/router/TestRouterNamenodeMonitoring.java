@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.federation.router;
 import static java.util.Arrays.asList;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.getStateStoreConfiguration;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,6 +33,7 @@ import java.util.TreeSet;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
+import org.apache.hadoop.hdfs.LogVerificationAppender;
 import org.apache.hadoop.hdfs.server.federation.MockNamenode;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
@@ -40,8 +42,10 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.NamenodeStatusReport;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.log4j.Level;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -263,5 +267,51 @@ public class TestRouterNamenodeMonitoring {
         expected.containsAll(actualSet));
     assertTrue(actualSet + " does not contain all " + expected,
         actualSet.containsAll(expected));
+  }
+
+  @Test
+  public void testJmxUrlHTTP() {
+    verifyUrlSchemes(HttpConfig.Policy.HTTP_ONLY.name());
+  }
+
+  @Test
+  public void testJmxUrlHTTPs() {
+    verifyUrlSchemes(HttpConfig.Policy.HTTPS_ONLY.name());
+  }
+
+  private void verifyUrlSchemes(String scheme) {
+
+    // Attach our own log appender so we can verify output
+    final LogVerificationAppender appender =
+        new LogVerificationAppender();
+    final org.apache.log4j.Logger logger =
+        org.apache.log4j.Logger.getRootLogger();
+    logger.addAppender(appender);
+    logger.setLevel(Level.DEBUG);
+
+    // Setup and start the Router
+    Configuration conf = getNamenodesConfig();
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, scheme);
+    Configuration routerConf = new RouterConfigBuilder(conf)
+        .heartbeat(true)
+        .build();
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY, "0.0.0.0:0");
+    routerConf.set(RBFConfigKeys.DFS_ROUTER_MONITOR_NAMENODE, "ns1.nn0");
+    router = new Router();
+    router.init(routerConf);
+
+    // Test the heartbeat services of the Router
+    Collection<NamenodeHeartbeatService> heartbeatServices =
+        router.getNamenodeHeartbeatServices();
+    for (NamenodeHeartbeatService heartbeatService : heartbeatServices) {
+      heartbeatService.getNamenodeStatusReport();
+    }
+    if (HttpConfig.Policy.HTTPS_ONLY.name().equals(scheme)) {
+      assertEquals(1, appender.countLinesWithMessage("JMX URL: https://"));
+      assertEquals(0, appender.countLinesWithMessage("JMX URL: http://"));
+    } else {
+      assertEquals(1, appender.countLinesWithMessage("JMX URL: http://"));
+      assertEquals(0, appender.countLinesWithMessage("JMX URL: https://"));
+    }
   }
 }
