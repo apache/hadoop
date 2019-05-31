@@ -22,9 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.common.base.Optional;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -59,10 +63,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
   public OMBucketSetPropertyRequest(OMRequest omRequest) {
     super(omRequest);
   }
-  @Override
-  public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
-    return getOmRequest();
-  }
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
@@ -87,8 +87,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     String volumeName = bucketArgs.getVolumeName();
     String bucketName = bucketArgs.getBucketName();
 
-    // acquire lock
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
     OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
         OzoneManagerProtocolProtos.Type.CreateBucket).setStatus(
@@ -96,6 +94,16 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     OmBucketInfo omBucketInfo = null;
 
     try {
+      // check Acl
+      if (ozoneManager.getAclsEnabled()) {
+        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+            volumeName, bucketName, null);
+      }
+
+      // acquire lock
+      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
           omMetadataManager.getBucketTable().get(bucketKey);
@@ -151,7 +159,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
-      // TODO: check acls.
     } catch (IOException ex) {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();

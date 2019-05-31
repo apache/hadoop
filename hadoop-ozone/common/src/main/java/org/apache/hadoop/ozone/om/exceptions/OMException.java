@@ -196,5 +196,9 @@ public class OMException extends IOException {
     FILE_ALREADY_EXISTS,
 
     NOT_A_FILE,
+
+    PERMISSION_DENIED, // Error codes used during acl validation
+
+    TIMEOUT // Error codes used during acl validation
   }
 }
