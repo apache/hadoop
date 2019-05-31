@@ -56,8 +56,8 @@
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
-          {{#link-to 'yarn-flow-activity' tagName="li"}}
-            {{#link-to 'yarn-flow-activity' class="navigation-link"}}Flow Activity
+          {{#link-to 'yarn-flow-activity' tagName="li" disabled=isTimelineUnHealthy}}
+            {{#link-to 'yarn-flow-activity' class="navigation-link" disabled=isTimelineUnHealthy}}Flow Activity
               <span class="sr-only">(current)</span>
             {{/link-to}}
           {{/link-to}}
