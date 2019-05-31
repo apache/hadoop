@@ -59,6 +59,15 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
   boolean isEmpty() throws IOException;
 
   /**
+   * Check if a given key exists in Metadata store.
+   * (Optimization to save on data deserialization)
+   * @param key metadata key
+   * @return true if the metadata store contains a key.
+   * @throws IOException on Failure
+   */
+  boolean isExist(KEY key) throws IOException;
+
+  /**
    * Returns the value mapped to the given key in byte array or returns null
    * if the key is not found.
    *

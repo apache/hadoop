@@ -55,7 +55,7 @@ public class TestTypedRDBTableStore {
       Arrays.asList(DFSUtil.bytes2String(RocksDB.DEFAULT_COLUMN_FAMILY),
           "First", "Second", "Third",
           "Fourth", "Fifth",
-          "Sixth", "Seven");
+          "Sixth", "Seven", "Eighth");
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
   private RDBStore rdbStore = null;
@@ -314,6 +314,24 @@ public class TestTypedRDBTableStore {
       }
 
 
+    }
+  }
+
+  @Test
+  public void testIsExist() throws Exception {
+    try (Table<String, String> testTable = createTypedTable(
+        "Eighth")) {
+      String key =
+          RandomStringUtils.random(10);
+      String value = RandomStringUtils.random(10);
+      testTable.put(key, value);
+      Assert.assertTrue(testTable.isExist(key));
+
+      String invalidKey = key + RandomStringUtils.random(1);
+      Assert.assertFalse(testTable.isExist(invalidKey));
+
+      testTable.delete(key);
+      Assert.assertFalse(testTable.isExist(key));
     }
   }
 }

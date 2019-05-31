@@ -79,6 +79,12 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     return rawTable.isEmpty();
   }
 
+  @Override
+  public boolean isExist(KEY key) throws IOException {
+    return cache.get(new CacheKey<>(key)) != null ||
+        rawTable.isExist(codecRegistry.asRawData(key));
+  }
+
   /**
    * Returns the value mapped to the given key in byte array or returns null
    * if the key is not found.
