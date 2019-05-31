@@ -39,7 +39,6 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileEncryptionInfo;
-import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -483,7 +482,8 @@ public class KeyManagerImpl implements KeyManager {
     }
   }
 
-  private OmKeyInfo prepareKeyInfo(OmKeyArgs keyArgs, String dbKeyName, long size,
+  private OmKeyInfo prepareKeyInfo(
+      OmKeyArgs keyArgs, String dbKeyName, long size,
       List<OmKeyLocationInfo> locations, FileEncryptionInfo encInfo)
       throws IOException {
     OmKeyInfo keyInfo = null;

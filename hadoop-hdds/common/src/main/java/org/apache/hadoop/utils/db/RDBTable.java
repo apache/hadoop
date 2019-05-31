@@ -124,8 +124,8 @@ class RDBTable implements Table<byte[], byte[]> {
     try {
       return db.get(handle, key) != null;
     } catch (RocksDBException e) {
-    throw toIOException(
-        "Failed to check if given key exists", e);
+      throw toIOException(
+          "Failed to check if given key exists", e);
     }
   }
 
