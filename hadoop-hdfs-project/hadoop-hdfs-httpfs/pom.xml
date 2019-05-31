@@ -304,7 +304,6 @@
         <configuration>
           <excludes>
             <exclude>src/test/resources/classutils.txt</exclude>
-            <exclude>src/main/conf/httpfs-signature.secret</exclude>
           </excludes>
         </configuration>
       </plugin>

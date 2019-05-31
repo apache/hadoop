@@ -157,6 +157,9 @@
 
       If multiple HttpFS servers are used in a load-balancer/round-robin fashion,
       they should share the secret file.
+
+      If the secret file specified here does not exist, random secret is
+      generated at startup time.
     </description>
   </property>
 
