@@ -31,6 +31,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
+import org.apache.hadoop.hdfs.web.URLConnectionFactory;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -55,9 +57,12 @@ public final class FederationUtil {
    *
    * @param beanQuery JMX bean.
    * @param webAddress Web address of the JMX endpoint.
+   * @param connectionFactory to open http/https connection.
+   * @param scheme to use for URL connection.
    * @return JSON with the JMX data
    */
-  public static JSONArray getJmx(String beanQuery, String webAddress) {
+  public static JSONArray getJmx(String beanQuery, String webAddress,
+      URLConnectionFactory connectionFactory, String scheme) {
     JSONArray ret = null;
     BufferedReader reader = null;
     try {
@@ -68,8 +73,11 @@ public final class FederationUtil {
         host = webAddressSplit[0];
         port = Integer.parseInt(webAddressSplit[1]);
       }
-      URL jmxURL = new URL("http", host, port, "/jmx?qry=" + beanQuery);
-      URLConnection conn = jmxURL.openConnection();
+      URL jmxURL = new URL(scheme, host, port, "/jmx?qry=" + beanQuery);
+      LOG.debug("JMX URL: {}", jmxURL);
+      // Create a URL connection
+      URLConnection conn = connectionFactory.openConnection(
+          jmxURL, UserGroupInformation.isSecurityEnabled());
       conn.setConnectTimeout(5 * 1000);
       conn.setReadTimeout(5 * 1000);
       InputStream in = conn.getInputStream();
