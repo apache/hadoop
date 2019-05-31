@@ -466,9 +466,7 @@ public final class ContainerProtocolCalls  {
     if(encodedToken != null) {
       request.setEncodedToken(encodedToken);
     }
-    ContainerCommandResponseProto response =
-        client.sendCommand(request.build());
-    validateContainerResponse(response);
+    client.sendCommand(request.build(), getValidatorList());
   }
 
   /**

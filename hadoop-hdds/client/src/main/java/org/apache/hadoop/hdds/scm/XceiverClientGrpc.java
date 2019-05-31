@@ -23,7 +23,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServiceGrpc;
@@ -63,7 +62,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 /**
  * A Client for the storageContainer protocol.
@@ -103,7 +101,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   /**
    * To be used when grpc token is not enabled.
    */
-  @Override public void connect() throws Exception {
+  @Override
+  public void connect() throws Exception {
     // leader by default is the 1st datanode in the datanode list of pipleline
     DatanodeDetails dn = this.pipeline.getFirstNode();
     // just make a connection to the 1st datanode at the beginning
@@ -113,7 +112,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   /**
    * Passed encoded token to GRPC header when security is enabled.
    */
-  @Override public void connect(String encodedToken) throws Exception {
+  @Override
+  public void connect(String encodedToken) throws Exception {
     // leader by default is the 1st datanode in the datanode list of pipleline
     DatanodeDetails dn = this.pipeline.getFirstNode();
     // just make a connection to the 1st datanode at the beginning
@@ -172,7 +172,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    *
    * @return True if the connection is alive, false otherwise.
    */
-  @VisibleForTesting public boolean isConnected(DatanodeDetails details) {
+  @VisibleForTesting
+  public boolean isConnected(DatanodeDetails details) {
     return isConnected(channels.get(details.getUuid()));
   }
 
@@ -180,7 +181,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     return channel != null && !channel.isTerminated() && !channel.isShutdown();
   }
 
-  @Override public void close() {
+  @Override
+  public void close() {
     closed = true;
     for (ManagedChannel channel : channels.values()) {
       channel.shutdownNow();
@@ -215,7 +217,6 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   public ContainerCommandResponseProto sendCommand(
       ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
-    Preconditions.checkState(HddsUtils.isReadOnly(request));
     try {
       XceiverClientReply reply;
       reply = sendCommandWithTraceIDAndRetry(request, validators);
@@ -260,8 +261,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         reply.addDatanode(dn);
         responseProto = sendCommandAsync(request, dn).getResponse().get();
         if (validators != null && !validators.isEmpty()) {
-          for (CheckedBiFunction validator : validators)
-          validator.apply(request, responseProto);
+          for (CheckedBiFunction validator : validators) {
+            validator.apply(request, responseProto);
+          }
         }
         break;
       } catch (ExecutionException | InterruptedException | IOException e) {
