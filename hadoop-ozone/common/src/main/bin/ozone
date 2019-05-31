@@ -46,6 +46,7 @@ function hadoop_usage
   hadoop_add_subcommand "om" daemon "Ozone Manager"
   hadoop_add_subcommand "scm" daemon "run the Storage Container Manager service"
   hadoop_add_subcommand "s3g" daemon "run the S3 compatible REST gateway"
+  hadoop_add_subcommand "csi" daemon "run the standalone CSI daemon"
   hadoop_add_subcommand "recon" daemon "run the Recon service"
   hadoop_add_subcommand "scmcli" client "run the CLI of the Storage Container Manager"
   hadoop_add_subcommand "sh" client "command line interface for object store operations"
@@ -153,6 +154,11 @@ function ozonecmd_case
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
       HADOOP_CLASSNAME='org.apache.hadoop.ozone.s3.Gateway'
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-s3gateway"
+    ;;
+    csi)
+      HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
+      HADOOP_CLASSNAME='org.apache.hadoop.ozone.csi.CsiServer'
+      OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-csi"
     ;;
     recon)
       HADOOP_SUBCMD_SUPPORTDAEMONIZATION="true"
