@@ -77,7 +77,7 @@ public final class ContainerCache extends LRUMap {
       while (iterator.hasNext()) {
         iterator.next();
         ReferenceCountedDB db = (ReferenceCountedDB) iterator.getValue();
-        Preconditions.checkArgument(db.cleanup(), "referencount:%d",
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
             db.getReferenceCount());
       }
       // reset the cache
@@ -152,7 +152,7 @@ public final class ContainerCache extends LRUMap {
     try {
       ReferenceCountedDB db = (ReferenceCountedDB)this.get(containerDBPath);
       if (db != null) {
-        Preconditions.checkArgument(db.cleanup(), "referencount:%d",
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
             db.getReferenceCount());
       }
       this.remove(containerDBPath);

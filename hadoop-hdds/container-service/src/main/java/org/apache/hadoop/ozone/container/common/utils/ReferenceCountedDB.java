@@ -61,7 +61,7 @@ public class ReferenceCountedDB implements Closeable {
 
   public void decrementReference() {
     int refCount = this.referenceCount.decrementAndGet();
-    Preconditions.checkArgument(refCount >= 0);
+    Preconditions.checkArgument(refCount >= 0,"refCount:", refCount);
     if (LOG.isDebugEnabled()) {
       LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
           referenceCount.get());
