@@ -651,14 +651,13 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   @Override
-  public void notifySlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
-    ratisServer.handleNodeSlowness(group, roleInfoProto);
+  public void notifySlowness(RoleInfoProto roleInfoProto) {
+    ratisServer.handleNodeSlowness(gid, roleInfoProto);
   }
 
   @Override
-  public void notifyExtendedNoLeader(RaftGroup group,
-      RoleInfoProto roleInfoProto) {
-    ratisServer.handleNoLeader(group, roleInfoProto);
+  public void notifyExtendedNoLeader(RoleInfoProto roleInfoProto) {
+    ratisServer.handleNoLeader(gid, roleInfoProto);
   }
 
   @Override
@@ -669,9 +668,8 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   @Override
   public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
-      RaftGroup group, RoleInfoProto roleInfoProto,
-      TermIndex firstTermIndexInLog) {
-    ratisServer.handleInstallSnapshotFromLeader(group, roleInfoProto,
+      RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+    ratisServer.handleInstallSnapshotFromLeader(gid, roleInfoProto,
         firstTermIndexInLog);
     final CompletableFuture<TermIndex> future = new CompletableFuture<>();
     future.complete(firstTermIndexInLog);

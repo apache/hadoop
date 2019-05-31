@@ -241,8 +241,7 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT_DEFAULT,
         StorageUnit.BYTES);
-    RaftServerConfigKeys.Log.setQueueElementLimit(
-        properties, logQueueNumElements);
+    RaftServerConfigKeys.Log.setQueueElementLimit(properties, logQueueNumElements);
     RaftServerConfigKeys.Log.setQueueByteLimit(properties, logQueueByteLimit);
 
     int numSyncRetries = conf.getInt(
@@ -253,8 +252,8 @@ public final class XceiverServerRatis extends XceiverServer {
         numSyncRetries);
 
     // Enable the StateMachineCaching
-    RaftServerConfigKeys.Log.StateMachineData
-        .setCachingEnabled(properties, true);
+    RaftServerConfigKeys.Log.StateMachineData.setCachingEnabled(
+        properties, true);
 
     RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
         false);
@@ -596,19 +595,31 @@ public final class XceiverServerRatis extends XceiverServer {
     return pipelineIDs;
   }
 
-  void handleNodeSlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
-    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+  void handleNodeSlowness(RaftGroupId groupId, RoleInfoProto roleInfoProto) {
+    handlePipelineFailure(groupId, roleInfoProto);
   }
 
-  void handleNoLeader(RaftGroup group, RoleInfoProto roleInfoProto) {
-    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+  void handleNoLeader(RaftGroupId groupId, RoleInfoProto roleInfoProto) {
+    handlePipelineFailure(groupId, roleInfoProto);
   }
 
-  void handleInstallSnapshotFromLeader(RaftGroup group,
-      RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+  /**
+   * The fact that the snapshot contents cannot be used to actually catch up
+   * the follower, it is the reason to initiate close pipeline and
+   * not install the snapshot. The follower will basically never be able to
+   * catch up.
+   *
+   * @param groupId raft group information
+   * @param roleInfoProto information about the current node role and rpc delay information
+   * @param firstTermIndexInLog After the snapshot installation is complete,
+   * return the last included term index in the snapshot.
+   */
+  void handleInstallSnapshotFromLeader(RaftGroupId groupId,
+                                       RoleInfoProto roleInfoProto,
+                                       TermIndex firstTermIndexInLog) {
     LOG.warn("Install snapshot notification received from Leader with " +
         "termIndex : " + firstTermIndexInLog +
-        ", terminating pipeline " + group.getGroupId());
-    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+        ", terminating pipeline " + groupId);
+    handlePipelineFailure(groupId, roleInfoProto);
   }
 }
