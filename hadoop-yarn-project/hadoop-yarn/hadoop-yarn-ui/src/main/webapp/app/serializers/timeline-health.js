@@ -16,17 +16,16 @@
  * limitations under the License.
  */
 
-import Ember from 'ember';
+import DS from 'ember-data';
 
-export default Ember.Route.extend({
-  model() {
-    return {};
-  },
-  afterModel(model/*, transition*/) {
-    model.error_id = "error";
-    model.isValidErrorCode = false;
-    if (model.errorCode && model.errorCode !== "0") {
-      model.isValidErrorCode = true;
-    }
+export default DS.JSONAPISerializer.extend({
+  normalizeSingleResponse(store, primaryModelClass, payload) {
+    var fixedPayload = {
+      id: Date.now(),
+      type: primaryModelClass.modelName,
+      attributes: payload
+    };
+
+    return { data: fixedPayload };
   }
 });
