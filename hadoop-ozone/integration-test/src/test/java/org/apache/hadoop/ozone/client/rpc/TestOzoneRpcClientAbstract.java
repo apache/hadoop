@@ -2159,11 +2159,20 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // Add acl's and then call getAcl.
     for (OzoneAcl a : volAcls) {
+      // Try removing an acl which doesn't exist, it should return false.
       assertFalse(finalVolume.getAcls().contains(a));
-      store.addAcl(ozObj, a);
+      assertFalse(store.removeAcl(ozObj, a));
+
+      assertTrue(store.addAcl(ozObj, a));
       finalVolume = store.getVolume(volumeName);
       assertTrue(finalVolume.getAcls().contains(a));
+
+      // Call addAcl again, this time operation will fail as
+      // acl is already added.
+      assertFalse(store.addAcl(ozObj, a));
     }
+    assertTrue(finalVolume.getAcls().size() == volAcls.size());
+
 
     // Reset acl's.
     store.setAcl(ozObj, newAcls);
@@ -2171,6 +2180,61 @@ public abstract class TestOzoneRpcClientAbstract {
     newAcls = store.getAcl(ozObj);
     assertTrue(newAcls.size() == 0);
     assertTrue(finalVolume.getAcls().size() == 0);
+  }
+
+  @Test
+  public void testNativeAclsForBucket() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    assertNotNull("Bucket creation failed", bucket);
+
+    OzoneObj ozObj = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    // Get acls for volume.
+    List<OzoneAcl> volAcls = store.getAcl(ozObj);
+    volAcls.forEach(a -> assertTrue(bucket.getAcls().contains(a)));
+
+    // Remove all acl's.
+    for (OzoneAcl a : volAcls) {
+      assertTrue(store.removeAcl(ozObj, a));
+    }
+    List<OzoneAcl> newAcls = store.getAcl(ozObj);
+    OzoneBucket finalBuck = volume.getBucket(bucketName);
+    assertTrue(finalBuck.getAcls().size() == 0);
+    assertTrue(newAcls.size() == 0);
+
+    // Add acl's and then call getAcl.
+    for (OzoneAcl a : volAcls) {
+      // Try removing an acl which doesn't exist, it should return false.
+      assertFalse(finalBuck.getAcls().contains(a));
+      assertFalse(store.removeAcl(ozObj, a));
+
+      // Add acl should succeed.
+      assertTrue(store.addAcl(ozObj, a));
+      finalBuck = volume.getBucket(bucketName);
+      assertTrue(finalBuck.getAcls().contains(a));
+
+      // Call addAcl again, this time operation will return false as
+      // acl is already added.
+      assertFalse(store.addAcl(ozObj, a));
+    }
+    assertTrue(finalBuck.getAcls().size() == volAcls.size());
+
+    // Reset acl's.
+    store.setAcl(ozObj, newAcls);
+    finalBuck = volume.getBucket(bucketName);
+    newAcls = store.getAcl(ozObj);
+    assertTrue(newAcls.size() == 0);
+    assertTrue(finalBuck.getAcls().size() == 0);
   }
 
   private byte[] generateData(int size, byte val) {
