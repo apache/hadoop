@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LevelDB implementation of {@link KeyValueBasedTimelineStore}. This
@@ -63,6 +64,8 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
   private String dbId;
   private DB entityDb;
   private Configuration configuration;
+  private static final AtomicInteger DB_COUNTER = new AtomicInteger(0);
+  private static final String CACHED_LDB_FILENAME = "db";
 
   public LevelDBCacheTimelineStore(String id, String name) {
     super(name);
@@ -74,6 +77,11 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
 
   public LevelDBCacheTimelineStore(String id) {
     this(id, LevelDBCacheTimelineStore.class.getName());
+  }
+
+  public LevelDBCacheTimelineStore() {
+    this(CACHED_LDB_FILENAME + String.valueOf(DB_COUNTER.getAndIncrement()),
+        LevelDBCacheTimelineStore.class.getName());
   }
 
   @Override
