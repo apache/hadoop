@@ -37,6 +37,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -773,6 +774,24 @@ public class TestTimelineReaderWebServices {
 
       assertEquals(entities1, entities2);
 
+    } finally {
+      client.destroy();
+    }
+  }
+
+  @Test
+  public void testHealthCheck() throws Exception {
+    Client client = createClient();
+    try {
+      URI uri = URI.create("http://localhost:" + serverPort + "/ws/v2/"
+      + "timeline/health");
+      ClientResponse resp = getResponse(client, uri);
+      TimelineHealth timelineHealth =
+          resp.getEntity(new GenericType<TimelineHealth>() {
+          });
+      assertEquals(200, resp.getStatus());
+      assertEquals(TimelineHealth.TimelineHealthStatus.RUNNING,
+          timelineHealth.getHealthStatus());
     } finally {
       client.destroy();
     }
