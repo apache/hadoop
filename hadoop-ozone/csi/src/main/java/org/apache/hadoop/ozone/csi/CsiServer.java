@@ -89,6 +89,9 @@ public class CsiServer extends GenericCli implements Callable<Void> {
     new CsiServer().run(args);
   }
 
+  /**
+   * Configuration settings specific to the CSI server.
+   */
   @ConfigGroup(prefix = "ozone.csi")
   public static class CsiConfig {
     private String socketPath;

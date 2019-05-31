@@ -24,7 +24,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.csi.CsiServer.CsiConfig;
 
 import csi.v1.Csi.NodeGetCapabilitiesRequest;
