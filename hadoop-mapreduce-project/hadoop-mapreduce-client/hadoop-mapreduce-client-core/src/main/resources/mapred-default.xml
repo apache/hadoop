@@ -1314,9 +1314,9 @@
 </property>
 
 <property>
- <name>mapreduce.job.counters.limit</name>
+ <name>mapreduce.job.counters.max</name>
   <value>120</value>
-  <description>Limit on the number of user counters allowed per job.
+  <description>The max number of user counters allowed per job.
   </description>
 </property>
 
