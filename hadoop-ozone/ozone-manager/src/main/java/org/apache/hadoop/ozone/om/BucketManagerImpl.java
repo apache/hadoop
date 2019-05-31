@@ -458,7 +458,7 @@ public class BucketManagerImpl implements BucketManager {
             BUCKET_NOT_FOUND);
       }
       List<OzoneAcl> list = bucketInfo.getAcls();
-      if(!IOzoneAcl.validateNewAcl(acl, list)) {
+      if(!validateAddAcl(acl, list)) {
         // New acl can't be added as it is not consistent with existing ACLs.
         LOG.info("New acl:{} can't be added as it is not consistent with " +
             "existing ACLs:{}.", acl, StringUtils.join(",", list));
@@ -600,6 +600,23 @@ public class BucketManagerImpl implements BucketManager {
       throw ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volume, bucket);
+    }
+
+    return true;
+  }
+
+  /**
+   * Validates if a new acl addition is consistent with current ACL list.
+   * @param newAcl new acl to be added.
+   * @param currentAcls list of acls.
+   *
+   * @return true if newAcl addition to existing acls is valid, else false.
+   * */
+  private boolean validateAddAcl(OzoneAcl newAcl, List<OzoneAcl> currentAcls) {
+
+    // Check 1: Check for duplicate.
+    if(currentAcls.contains(newAcl)) {
+      return false;
     }
 
     return true;

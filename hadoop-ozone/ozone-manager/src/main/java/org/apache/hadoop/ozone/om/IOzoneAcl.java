@@ -64,21 +64,4 @@ public interface IOzoneAcl {
    * @throws IOException if there is error.
    * */
   List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
-
-  /**
-   * Returns list of ACLs for given Ozone object.
-   * @param newAcl new acl to be added.
-   * @param currentAcls list of acls.
-   *
-   * @return true if newAcl addition to existing acls is valid, else false.
-   * */
-  static boolean validateNewAcl(OzoneAcl newAcl, List<OzoneAcl> currentAcls) {
-
-    // Check 1: Check for duplicate.
-    if(currentAcls.contains(newAcl)) {
-      return false;
-    }
-
-    return true;
-  }
 }
