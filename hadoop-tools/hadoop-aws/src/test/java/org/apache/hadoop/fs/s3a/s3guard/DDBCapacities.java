@@ -25,6 +25,9 @@ import org.junit.Assert;
 
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.READ_CAPACITY;
 
+/**
+ * Tuple of read and write capacity of a DDB table.
+ */
 class DDBCapacities {
   private final long read, write;
 
@@ -47,12 +50,6 @@ class DDBCapacities {
 
   String getWriteStr() {
     return Long.toString(write);
-  }
-
-  void checkEquals(String text, DDBCapacities that) throws Exception {
-    if (!this.equals(that)) {
-      throw new Exception(text + " expected = " + this +"; actual = "+ that);
-    }
   }
 
   @Override
@@ -82,7 +79,7 @@ class DDBCapacities {
   }
 
   /**
-   * Is the the capacity that of a pay-on-demand table?
+   * Is the the capacity that of a pay-per-request table?
    * @return true if the capacities are both 0.
    */
   public boolean isOnDemandTable() {
