@@ -177,7 +177,7 @@ public class OzoneManagerDoubleBuffer {
   private void setOzoneManagerDoubleBufferMetrics(
       long flushedTransactionsSize) {
     ozoneManagerDoubleBufferMetrics.incTotalNumOfFlushIterations();
-    ozoneManagerDoubleBufferMetrics.setTotalNumOfFlushedTransactions(
+    ozoneManagerDoubleBufferMetrics.setTotalSizeOfFlushedTransactions(
         flushedTransactionsSize);
     if (maxFlushedTransactionsInOneIteration < flushedTransactionsSize) {
       maxFlushedTransactionsInOneIteration = flushedTransactionsSize;

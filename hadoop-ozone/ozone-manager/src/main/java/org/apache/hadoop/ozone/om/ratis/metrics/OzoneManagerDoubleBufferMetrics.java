@@ -56,9 +56,9 @@ public class OzoneManagerDoubleBufferMetrics {
     this.totalNumOfFlushIterations.incr();
   }
 
-  public void setTotalNumOfFlushedTransactions(
-      long totalNumOfFlushedTransactions) {
-    this.totalNumOfFlushedTransactions.incr(totalNumOfFlushedTransactions);
+  public void setTotalSizeOfFlushedTransactions(
+      long flushedTransactions) {
+    this.totalNumOfFlushedTransactions.incr(flushedTransactions);
   }
 
   public void setMaxNumberOfTransactionsFlushedInOneIteration(
