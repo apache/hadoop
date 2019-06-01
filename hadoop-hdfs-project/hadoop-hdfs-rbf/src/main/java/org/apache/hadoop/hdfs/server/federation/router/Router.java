@@ -205,9 +205,13 @@ public class Router extends CompositeService implements
       addService(this.httpServer);
     }
 
-    if (conf.getBoolean(
+    boolean isRouterHeartbeatEnabled = conf.getBoolean(
         RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
-        RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT)) {
+        RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT);
+    boolean isNamenodeHeartbeatEnable = conf.getBoolean(
+        RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
+        isRouterHeartbeatEnabled);
+    if (isNamenodeHeartbeatEnable) {
 
       // Create status updater for each monitored Namenode
       this.namenodeHeartbeatServices = createNamenodeHeartbeatServices();
@@ -219,7 +223,8 @@ public class Router extends CompositeService implements
       if (this.namenodeHeartbeatServices.isEmpty()) {
         LOG.error("Heartbeat is enabled but there are no namenodes to monitor");
       }
-
+    }
+    if (isRouterHeartbeatEnabled) {
       // Periodically update the router state
       this.routerHeartbeatService = new RouterHeartbeatService(this);
       addService(this.routerHeartbeatService);
@@ -748,6 +753,14 @@ public class Router extends CompositeService implements
   @VisibleForTesting
   Collection<NamenodeHeartbeatService> getNamenodeHeartbeatServices() {
     return this.namenodeHeartbeatServices;
+  }
+
+  /**
+   * Get this router heartbeat service.
+   */
+  @VisibleForTesting
+  RouterHeartbeatService getRouterHeartbeatService() {
+    return this.routerHeartbeatService;
   }
 
   /**

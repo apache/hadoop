@@ -372,6 +372,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.namenode.heartbeat.enable</name>
+    <value>true</value>
+    <description>
+      If true, get namenode heartbeats and send into the State Store.
+      If not explicitly specified takes the same value as for
+       dfs.federation.router.heartbeat.enable.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.store.router.expiration</name>
     <value>5m</value>
     <description>

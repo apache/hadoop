@@ -45,6 +45,7 @@ This approach has the same architecture as [YARN federation](../../hadoop-yarn/h
 
 ### Example flow
 The simplest configuration deploys a Router on each NameNode machine.
+The Router monitors the local NameNode and its state and heartbeats to the State Store.
 The Router monitors the local NameNode and heartbeats the state to the State Store.
 When a regular DFS client contacts any of the Routers to access a file in the federated filesystem, the Router checks the Mount Table in the State Store (i.e., the local cache) to find out which subcluster contains the file.
 Then it checks the Membership table in the State Store (i.e., the local cache) for the NameNode responsible for the subcluster.
@@ -68,6 +69,9 @@ To make sure that changes have been propagated to all Routers, each Router heart
 
 The communications between the Routers and the State Store are cached (with timed expiration for freshness).
 This improves the performance of the system.
+
+#### Router heartbeat
+The Router periodically heartbeats its state to the State Store.
 
 #### NameNode heartbeat
 For this role, the Router periodically checks the state of a NameNode (usually on the same server) and reports their high availability (HA) state and load/space status to the State Store.
@@ -433,7 +437,8 @@ Monitor the namenodes in the subclusters for forwarding the client requests.
 
 | Property | Default | Description|
 |:---- |:---- |:---- |
-| dfs.federation.router.heartbeat.enable | `true` | If `true`, the Router heartbeats into the State Store. |
+| dfs.federation.router.heartbeat.enable | `true` | If `true`, the Router periodically heartbeats its state to the State Store. |
+| dfs.federation.router.namenode.heartbeat.enable | | If `true`, the Router gets namenode heartbeats and send to the State Store. If not explicitly specified takes the same value as for `dfs.federation.router.heartbeat.enable`. |
 | dfs.federation.router.heartbeat.interval | 5000 | How often the Router should heartbeat into the State Store in milliseconds. |
 | dfs.federation.router.monitor.namenode | | The identifier of the namenodes to monitor and heartbeat. |
 | dfs.federation.router.monitor.localnamenode.enable | `true` | If `true`, the Router should monitor the namenode in the local machine. |
