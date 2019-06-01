@@ -20,7 +20,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.hadoop.hdds.client.BlockID;
@@ -62,6 +64,9 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRE
 import static org.apache.hadoop.ozone.OzoneConsts.OM_DB_NAME;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 
+import org.apache.hadoop.utils.db.TypedTable;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.eclipse.jetty.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -451,6 +456,21 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isVolumeEmpty(String volume) throws IOException {
     String volumePrefix = getVolumeKey(volume + OM_KEY_PREFIX);
 
+    if (bucketTable instanceof TypedTable) {
+      // First check in bucket table cache.
+      Iterator<Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>>> iterator =
+          ((TypedTable< String, OmBucketInfo>) bucketTable).cacheIterator();
+      while (iterator.hasNext()) {
+        Map.Entry< CacheKey< String >, CacheValue< OmBucketInfo > > entry =
+            iterator.next();
+        String key = entry.getKey().getKey();
+        OmBucketInfo omBucketInfo = entry.getValue().getValue();
+        if (key.startsWith(volumePrefix) && omBucketInfo != null) {
+          return false;
+        }
+      }
+    }
+
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
         bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
@@ -473,6 +493,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
     String keyPrefix = getBucketKey(volume, bucket);
+    //TODO: When Key ops are converted in to HA model, use cache also to
+    // determine bucket is empty or not.
     try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
         keyTable.iterator()) {
       KeyValue<String, OmKeyInfo> kv = keyIter.seek(keyPrefix);

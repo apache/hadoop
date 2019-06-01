@@ -97,8 +97,10 @@ public class OMBucketCreateRequest extends OMClientRequest {
     }
 
     newCreateBucketRequest.setBucketInfo(newBucketInfo.build());
-    return getOmRequest().toBuilder().setUserInfo(getUserInfo())
-        .setCreateBucketRequest(newCreateBucketRequest.build()).build();
+
+    setUpdatedOmRequest(getOmRequest().toBuilder().setUserInfo(getUserInfo())
+        .setCreateBucketRequest(newCreateBucketRequest.build()).build());
+    return getOmRequest();
   }
 
   @Override

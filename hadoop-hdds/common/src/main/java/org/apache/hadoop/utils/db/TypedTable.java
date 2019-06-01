@@ -19,6 +19,8 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.utils.db.cache.CacheKey;
@@ -156,6 +158,9 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     cache.put(cacheKey, cacheValue);
   }
 
+  public Iterator<Map.Entry<CacheKey<KEY>, CacheValue<VALUE>>> cacheIterator() {
+    return cache.iterator();
+  }
 
   @Override
   public void cleanupCache(long epoch) {

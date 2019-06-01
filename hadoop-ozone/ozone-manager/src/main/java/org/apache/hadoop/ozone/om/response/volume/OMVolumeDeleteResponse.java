@@ -16,29 +16,33 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.response.bucket;
+package org.apache.hadoop.ozone.om.response.volume;
 
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * Response for CreateBucket request.
+ * Response for CreateVolume request.
  */
-public final class OMBucketCreateResponse extends OMClientResponse {
+public class OMVolumeDeleteResponse extends OMClientResponse {
+  private String volume;
+  private String owner;
+  private VolumeList updatedVolumeList;
 
-  private final OmBucketInfo omBucketInfo;
-
-  public OMBucketCreateResponse(OmBucketInfo omBucketInfo,
-      OMResponse omResponse) {
+  public OMVolumeDeleteResponse(String volume, String owner,
+      VolumeList updatedVolumeList, OMResponse omResponse) {
     super(omResponse);
-    this.omBucketInfo = omBucketInfo;
+    this.volume = volume;
+    this.owner = owner;
+    this.updatedVolumeList = updatedVolumeList;
   }
 
   @Override
@@ -48,16 +52,18 @@ public final class OMBucketCreateResponse extends OMClientResponse {
     // For OmResponse with failure, this should do nothing. This method is
     // not called in failure scenario in OM code.
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
-      String dbBucketKey =
-          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
-              omBucketInfo.getBucketName());
-      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
-          dbBucketKey, omBucketInfo);
+      String dbUserKey = omMetadataManager.getUserKey(owner);
+      VolumeList volumeList = updatedVolumeList;
+      if (updatedVolumeList.getVolumeNamesList().size() == 0) {
+        omMetadataManager.getUserTable().deleteWithBatch(batchOperation,
+            dbUserKey);
+      } else {
+        omMetadataManager.getUserTable().putWithBatch(batchOperation, dbUserKey,
+            volumeList);
+      }
+      omMetadataManager.getVolumeTable().deleteWithBatch(batchOperation,
+          omMetadataManager.getVolumeKey(volume));
     }
-  }
-
-  public OmBucketInfo getOmBucketInfo() {
-    return omBucketInfo;
   }
 
 }

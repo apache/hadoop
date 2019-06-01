@@ -16,47 +16,60 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.response;
+package org.apache.hadoop.ozone.om.response.volume;
 
 import java.io.IOException;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
+
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
- * Response for CreateVolume request.
+ * Response for CreateBucket request.
  */
-public class OMVolumeDeleteResponse extends OMClientResponse {
-  private String volume;
-  private String owner;
-  private VolumeList updatedVolumeList;
+public class OMVolumeCreateResponse extends OMClientResponse {
 
-  public OMVolumeDeleteResponse(String volume, String owner,
-      VolumeList updatedVolumeList, OMResponse omResponse) {
+  private VolumeList volumeList;
+  private OmVolumeArgs omVolumeArgs;
+
+  public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
+      VolumeList volumeList, OMResponse omResponse) {
     super(omResponse);
-    this.volume = volume;
-    this.owner = owner;
-    this.updatedVolumeList = updatedVolumeList;
+    this.omVolumeArgs = omVolumeArgs;
+    this.volumeList = volumeList;
   }
-
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
-    String dbUserKey = omMetadataManager.getUserKey(owner);
-    VolumeList volumeList = updatedVolumeList;
-    if (updatedVolumeList.getVolumeNamesList().size() == 0) {
-      omMetadataManager.getUserTable().deleteWithBatch(batchOperation,
-          dbUserKey);
-    } else {
+
+    // For OmResponse with failure, this should do nothing. This method is
+    // not called in failure scenario in OM code.
+    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+      String dbVolumeKey =
+          omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+      String dbUserKey =
+          omMetadataManager.getUserKey(omVolumeArgs.getOwnerName());
+
+      omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
+          dbVolumeKey, omVolumeArgs);
       omMetadataManager.getUserTable().putWithBatch(batchOperation, dbUserKey,
           volumeList);
     }
-    omMetadataManager.getVolumeTable().deleteWithBatch(batchOperation,
-        omMetadataManager.getVolumeKey(volume));
+  }
+
+  public VolumeList getVolumeList() {
+    return volumeList;
+  }
+
+  public OmVolumeArgs getOmVolumeArgs() {
+    return omVolumeArgs;
   }
 
 }

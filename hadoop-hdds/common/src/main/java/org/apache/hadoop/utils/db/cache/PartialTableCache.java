@@ -20,6 +20,7 @@
 package org.apache.hadoop.utils.db.cache;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -75,6 +76,11 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
   @Override
   public int size() {
     return cache.size();
+  }
+
+  @Override
+  public Iterator<Map.Entry<CACHEKEY, CACHEVALUE>> iterator() {
+    return cache.entrySet().iterator();
   }
 
   private void evictCache(long epoch) {
