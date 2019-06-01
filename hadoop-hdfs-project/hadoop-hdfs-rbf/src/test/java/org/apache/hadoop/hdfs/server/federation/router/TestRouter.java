@@ -21,11 +21,13 @@ import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -217,4 +219,45 @@ public class TestRouter {
     router.stop();
     router.close();
   }
+
+  @Test
+  public void testSwitchRouter() throws IOException {
+    assertRouterHeartbeater(true, true);
+    assertRouterHeartbeater(true, false);
+    assertRouterHeartbeater(false, true);
+    assertRouterHeartbeater(false, false);
+  }
+
+  /**
+   * Execute the test by specify the routerHeartbeat and nnHeartbeat switch.
+   *
+   * @param expectedRouterHeartbeat expect the routerHeartbeat enable state.
+   * @param expectedNNHeartbeat expect the nnHeartbeat enable state.
+   */
+  private void assertRouterHeartbeater(boolean expectedRouterHeartbeat,
+      boolean expectedNNHeartbeat) throws IOException {
+    final Router router = new Router();
+    Configuration baseCfg = new RouterConfigBuilder(conf).rpc().build();
+    baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE,
+        expectedRouterHeartbeat);
+    baseCfg.setBoolean(RBFConfigKeys.DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE,
+        expectedNNHeartbeat);
+    router.init(baseCfg);
+    RouterHeartbeatService routerHeartbeatService =
+        router.getRouterHeartbeatService();
+    if (expectedRouterHeartbeat) {
+      assertNotNull(routerHeartbeatService);
+    } else {
+      assertNull(routerHeartbeatService);
+    }
+    Collection<NamenodeHeartbeatService> namenodeHeartbeatServices =
+        router.getNamenodeHeartbeatServices();
+    if (expectedNNHeartbeat) {
+      assertNotNull(namenodeHeartbeatServices);
+    } else {
+      assertNull(namenodeHeartbeatServices);
+    }
+    router.close();
+  }
+
 }
