@@ -91,6 +91,8 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
   public static final String DFS_ROUTER_HEARTBEAT_ENABLE =
       FEDERATION_ROUTER_PREFIX + "heartbeat.enable";
   public static final boolean DFS_ROUTER_HEARTBEAT_ENABLE_DEFAULT = true;
+  public static final String DFS_ROUTER_NAMENODE_HEARTBEAT_ENABLE =
+      FEDERATION_ROUTER_PREFIX + "namenode.heartbeat.enable";
   public static final String DFS_ROUTER_HEARTBEAT_INTERVAL_MS =
       FEDERATION_ROUTER_PREFIX + "heartbeat.interval";
   public static final long DFS_ROUTER_HEARTBEAT_INTERVAL_MS_DEFAULT =
