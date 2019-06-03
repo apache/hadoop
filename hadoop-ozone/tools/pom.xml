@@ -37,11 +37,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-common</artifactId>
     </dependency>
-    <!-- Genesis requires server side components -->
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-hdds-server-scm</artifactId>
-    </dependency>
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-ozone-client</artifactId>

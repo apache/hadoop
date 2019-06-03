@@ -39,7 +39,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hdds.scm.ScmUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -164,7 +164,7 @@ public final class OmUtils {
    * @return File path, after creating all the required Directories.
    */
   public static File getOmDbDir(Configuration conf) {
-    return ServerUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
+    return ScmUtils.getDBPath(conf, OMConfigKeys.OZONE_OM_DB_DIRS);
   }
 
   /**
