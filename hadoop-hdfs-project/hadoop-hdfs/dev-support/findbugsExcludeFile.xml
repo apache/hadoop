@@ -195,6 +195,14 @@
 
      <!-- guava 27.0 update: @Nullable is not detected, however it's there -->
      <Match>
+       <Class name="org.apache.hadoop.hdfs.qjournal.server.Journal" />
+       <Method name="getPersistedPaxosData" />
+       <Bug pattern="NP_NULL_PARAM_DEREF" />
+     </Match>
+
+
+     <!-- guava 27.0 update: @Nullable is not detected, however it's there -->
+     <Match>
        <Class name="org.apache.hadoop.hdfs.qjournal.server.JournalNode" />
        <Method name="getLogDir" />
        <Bug pattern="NP_NULL_PARAM_DEREF" />

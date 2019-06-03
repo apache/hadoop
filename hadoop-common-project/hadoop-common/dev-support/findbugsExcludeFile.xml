@@ -409,6 +409,13 @@
     <Bug pattern="NP_NULL_PARAM_DEREF"/>
   </Match>
 
+  <!-- propertyName is checked with isNullOrEmpty (fix after guava 27) -->
+  <Match>
+    <Class name="org.apache.hadoop.conf.Configuration"/>
+    <Method name="asXmlDocument"/>
+    <Bug pattern="NP_PARAMETER_MUST_BE_NONNULL_BUT_MARKED_AS_NULLABLE"/>
+  </Match>
+
   <Match>
     <Class name="org.apache.hadoop.ipc.ExternalCall"/>
     <Filed name="done"/>

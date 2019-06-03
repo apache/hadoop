@@ -555,7 +555,7 @@ public class KMS {
       throws Exception {
     LOG.trace("Entering reencryptEncryptedKeys method.");
     try {
-      final Stopwatch sw = new Stopwatch().start();
+      final Stopwatch sw = Stopwatch.createStarted();
       checkNotEmpty(name, "name");
       checkNotNull(jsonPayload, "jsonPayload");
       final UserGroupInformation user = HttpUserGroupInformation.get();

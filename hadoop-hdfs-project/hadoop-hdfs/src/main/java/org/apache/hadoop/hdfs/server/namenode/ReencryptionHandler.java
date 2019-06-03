@@ -541,7 +541,7 @@ public class ReencryptionHandler implements Runnable {
       if (batch.isEmpty()) {
         return new ReencryptionTask(zoneNodeId, 0, batch);
       }
-      final Stopwatch kmsSW = new Stopwatch().start();
+      final Stopwatch kmsSW = Stopwatch.createStarted();
 
       int numFailures = 0;
       String result = "Completed";
