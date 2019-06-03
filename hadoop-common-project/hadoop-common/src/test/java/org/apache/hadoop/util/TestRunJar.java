@@ -37,6 +37,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Random;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 
@@ -84,7 +85,7 @@ public class TestRunJar {
   private void makeTestJar() throws IOException {
     File jarFile = new File(TEST_ROOT_DIR, TEST_JAR_NAME);
     JarOutputStream jstream =
-        new JarOutputStream(new FileOutputStream(jarFile));
+        new JarOutputStream(new FileOutputStream(jarFile), new Manifest());
     ZipEntry zipEntry1 = new ZipEntry(FOOBAR_TXT);
     zipEntry1.setTime(MOCKED_NOW);
     jstream.putNextEntry(zipEntry1);
@@ -295,6 +296,22 @@ public class TestRunJar {
     } catch (IOException e) {
       GenericTestUtils.assertExceptionContains(
           "would create file outside of", e);
+    }
+  }
+
+  @Test
+  public void testUnJarStream() throws IOException {
+    File unjarDir = getUnjarDir("unjar-stream");
+
+    try (InputStream is = new FileInputStream(new File(TEST_ROOT_DIR, TEST_JAR_NAME))) {
+      RunJar.unJar(is, unjarDir, MATCH_ANY);
+
+      assertTrue("foobar unpacked",
+                 new File(unjarDir, TestRunJar.FOOBAR_TXT).exists());
+      assertTrue("foobaz unpacked",
+                 new File(unjarDir, FOOBAZ_TXT).exists());
+
+      assertTrue("MANIFEST.MF exists", new File(new File(unjarDir, "META-INF"), "MANIFEST.MF").exists());
     }
   }
 }

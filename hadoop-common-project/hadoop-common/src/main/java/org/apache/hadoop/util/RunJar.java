@@ -34,9 +34,10 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 import org.apache.commons.io.input.TeeInputStream;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -115,12 +116,12 @@ public class RunJar {
   public static void unJar(InputStream inputStream, File toDir,
                            Pattern unpackRegex)
       throws IOException {
-    try (JarInputStream jar = new JarInputStream(inputStream)) {
+    try (ZipInputStream zip = new ZipInputStream(inputStream)) {
       int numOfFailedLastModifiedSet = 0;
       String targetDirPath = toDir.getCanonicalPath() + File.separator;
-      for (JarEntry entry = jar.getNextJarEntry();
+      for (ZipEntry entry = zip.getNextEntry();
            entry != null;
-           entry = jar.getNextJarEntry()) {
+           entry = zip.getNextEntry()) {
         if (!entry.isDirectory() &&
             unpackRegex.matcher(entry.getName()).matches()) {
           File file = new File(toDir, entry.getName());
@@ -130,7 +131,7 @@ public class RunJar {
           }
           ensureDirectory(file.getParentFile());
           try (OutputStream out = Files.newOutputStream(file.toPath())) {
-            IOUtils.copyBytes(jar, out, BUFFER_SIZE);
+            IOUtils.copyBytes(zip, out, BUFFER_SIZE);
           }
           if (!file.setLastModified(entry.getTime())) {
             numOfFailedLastModifiedSet++;
