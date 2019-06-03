@@ -20,7 +20,7 @@
   <parent>
     <artifactId>hadoop-submarine</artifactId>
     <groupId>org.apache.hadoop</groupId>
-    <version>0.2.0-SNAPSHOT</version>
+    <version>0.3.0-SNAPSHOT</version>
   </parent>
   <artifactId>${project.artifactId}</artifactId>
   <version>${project.version}</version>
@@ -31,7 +31,7 @@
     <!-- Needed for generating FindBugs warnings using parent pom -->
     <yarn.basedir>${project.parent.parent.basedir}</yarn.basedir>
     <project.artifactId>hadoop-submarine-dist</project.artifactId>
-    <project.version>0.2.0-SNAPSHOT</project.version>
+    <project.version>0.3.0-SNAPSHOT</project.version>
   </properties>
 
   <dependencies>

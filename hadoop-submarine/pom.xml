@@ -24,7 +24,7 @@
     <relativePath/>
   </parent>
   <artifactId>hadoop-submarine</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <name>Hadoop Submarine</name>
   <packaging>pom</packaging>
 
