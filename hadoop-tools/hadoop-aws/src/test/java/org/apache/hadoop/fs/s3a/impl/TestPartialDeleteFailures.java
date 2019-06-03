@@ -218,7 +218,8 @@ public class TestPartialDeleteFailures {
         TestPartialDeleteFailures::qualify,
         false,
         false,
-        null);
+        null,
+        () -> "us-west-1");
   }
 
   /**

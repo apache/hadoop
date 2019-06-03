@@ -85,12 +85,20 @@ import static org.apache.hadoop.test.LambdaTestUtils.eval;
  * All these test have a unique path for each run, with a roleFS having
  * full RW access to part of it, and R/O access to a restricted subdirectory
  *
- * The tests are parameterized to single/multi delete, which control which
- * of the two delete mechanisms are used.
- * In multi delete, in a scale test run, a significantly larger set of files
- * is created and then deleted.
- * This isn't done in the single delete as it is much slower and it is not
- * the situation we are trying to create.
+ * <ol>
+ *   <li>
+ *     The tests are parameterized to single/multi delete, which control which
+ *     of the two delete mechanisms are used.
+ *   </li>
+ *   <li>
+ *     In multi delete, in a scale test run, a significantly larger set of files
+ *     is created and then deleted.
+ *   </li>
+ *   <li>
+ *     This isn't done in the single delete as it is much slower and it is not
+ *     the situation we are trying to create.
+ *   </li>
+ * </ol>
  *
  * This test manages to create lots of load on the s3guard prune command
  * when that is tested in a separate test suite;
@@ -123,6 +131,12 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
           30, TimeUnit.SECONDS,
           "test-operations");
 
+
+  /**
+   * The number of files in a non-scaled test.
+   * <p>
+   * Value: {@value}.
+   */
   public static final int FILE_COUNT_NON_SCALED = 2;
 
   /**
@@ -133,6 +147,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    * Then, when a partial delete occurs, we can make assertions
    * knowing that all R/W files should have been deleted and all
    * R/O files rejected.
+   * <p>
+   * Value: {@value}.
    */
   public static final int FILE_COUNT_SCALED = 10;
 
@@ -148,15 +164,28 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   /**
    * Base path for this test run.
+   * This is generated uniquely for each test.
    */
   private Path basePath;
 
+  /**
+   * A directory which restricted roles have full write access to.
+   */
   private Path writableDir;
 
-  private Path readOnlyChild;
-
+  /**
+   * A directory to which restricted roles have only read access.
+   */
   private Path readOnlyDir;
 
+  /**
+   * A file under {@link #readOnlyDir} which cannot be written or deleted.
+   */
+  private Path readOnlyChild;
+
+  /**
+   * A directory to which restricted roles have no read access.
+   */
   private Path noReadDir;
 
   /** delete policy: single or multi? */
@@ -171,6 +200,9 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   private int dirCount;
   private int dirDepth;
 
+  /**
+   * Was the -Dscale switch passed in to the test run?
+   */
   private boolean scaleTest;
 
   /**
@@ -561,6 +593,32 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
   /**
    * Have a directory with full R/W permissions, but then remove
    * write access underneath, and try to delete it.
+   * This verifies that failures in the delete fake dir stage.
+   * are not visible.
+   */
+  @Test
+  public void testPartialEmptyDirDelete() throws Throwable {
+    describe("delete an empty directory with parent dir r/o"
+        + " multidelete=%s", multiDelete);
+
+    // the full FS
+    S3AFileSystem fs = getFileSystem();
+
+    final Path deletableChild = new Path(writableDir, "deletableChild");
+    // deletable child is created.
+    roleFS.mkdirs(deletableChild);
+    assertPathExists("parent dir after create", writableDir);
+    assertPathExists("grandparent dir after create", writableDir.getParent());
+    // now delete it.
+    roleFS.delete(deletableChild, true);
+    assertPathExists("parent dir after deletion", writableDir);
+    assertPathExists("grandparent dir after deletion", writableDir.getParent());
+    assertPathDoesNotExist("deletable dir after deletion", deletableChild);
+  }
+
+  /**
+   * Have a directory with full R/W permissions, but then remove
+   * write access underneath, and try to delete it.
    */
   @Test
   public void testPartialDirDelete() throws Throwable {
@@ -636,6 +694,10 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     Assertions.assertThat(readOnlyListing)
         .as("ReadOnly directory " + directoryList)
         .containsAll(readOnlyFiles);
+
+    // do this prune in the test as well as teardown, so that the test reporting includes
+    // it in the runtime of a successful run.
+    prune(basePath);
   }
 
   /**

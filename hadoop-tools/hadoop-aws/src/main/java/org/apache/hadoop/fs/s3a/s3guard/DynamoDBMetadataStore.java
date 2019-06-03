@@ -266,8 +266,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
       new ValueMap().withBoolean(":false", false);
 
   /**
-   * The maximum number of oustanding operations to submit at a time
-   * in any operation whch submits work through the executors.
+   * The maximum number of outstanding operations to submit
+   * before blocking to await completion of all the executors.
+   * Paging work like this is less efficient, but it ensures that
+   * failure (auth, network, etc) are picked up before many more
+   * operations are submitted.
+   *
+   * Arbitrary Choice.
    * Value: {@value}.
    */
   private static final int S3GUARD_DDB_SUBMITTED_TASK_LIMIT = 50;
@@ -321,6 +326,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private AtomicInteger throttleEventCount = new AtomicInteger(0);
 
+  /**
+   * Executor for submitting operations.
+   */
   private ListeningExecutorService executor;
 
   /**
@@ -542,14 +550,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
           "Put tombstone",
           path.toString(),
           idempotent,
-          () -> table.putItem(item));
+          () -> {
+            recordsWritten(1);
+            table.putItem(item);
+          });
     } else {
       PrimaryKey key = pathToKey(path);
       writeOp.retry(
           "Delete key",
           path.toString(),
           idempotent,
-          () -> table.deleteItem(key));
+          () -> {
+            // record the attempt so even on retry the counter goes up.
+            recordsDeleted(1);
+            table.deleteItem(key);
+          });
     }
   }
 
@@ -581,6 +596,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         futures.clear();
       }
     }
+    // now wait for the final set.
     waitForCompletion(futures);
   }
 
@@ -747,8 +763,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * <p>
    * <b>Thread safety:</b> none. Callers must synchronize access.
    * <p>
-   * Callers are expected to
-   * synchronize on ancestorState as required.
+   * Callers are required to synchronize on ancestorState.
    * @param pathsToCreate paths to create
    * @param ancestorState ongoing ancestor state.
    * @return the full ancestry paths
@@ -821,7 +836,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final AncestorState ancestorState = extractOrCreate(operationState);
     Path parent = qualifiedPath.getParent();
 
-    // iterate up the parents.
+    // Iterate up the parents.
     // note that only ancestorState get/set operations are synchronized;
     // the DDB read between them is not. As a result, more than one
     // thread may probe the state, find the entry missing, do the database
@@ -829,7 +844,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // This is done to avoid making the remote dynamo query part of the synchronized
     // block.
     // If a race does occur, the cost is simply one extra GET and potentially
-    // one extra PUT
+    // one extra PUT.
     while (!parent.isRoot()) {
       synchronized (ancestorState) {
         if (ancestorState.contains(parent)) {
@@ -844,7 +859,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         DDBPathMetadata meta = new DDBPathMetadata(status, Tristate.FALSE,
             false);
         newDirs.add(meta);
-        // there's no need to update ancestor state here, as it
+        // Do not update ancestor state here, as it
         // will happen in the innerPut() call. Were we to add it
         // here that put operation would actually (mistakenly) skip
         // creating the entry.
@@ -1101,6 +1116,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
           new Exception("source"));
       return;
     }
+    // always create or retrieve an ancestor state instance, so it can
+    // always be used for synchronization.
     final AncestorState ancestorState = extractOrCreate(operationState);
 
     Item[] items;
@@ -1987,6 +2004,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private void recordsRead(final int count) {
     if (instrumentation != null) {
       instrumentation.recordsRead(count);
+    }
+  }
+  /**
+   * Record the number of records deleted.
+   * @param count count of records.
+   */
+  private void recordsDeleted(final int count) {
+    if (instrumentation != null) {
+      instrumentation.recordsDeleted(count);
     }
   }
 

@@ -363,6 +363,7 @@ public class ITestDynamoDBMetadataStoreScale
         base.toString(),
         true,
         () -> ddbms.put(pms, bulkUpdate));
+    bulkUpdate.close();
     try {
       DDBPathMetadata dirData = ddbms.get(child, true);
       execute("list",

@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -51,8 +52,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 
+import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,6 +68,8 @@ import org.apache.hadoop.security.UserGroupInformation;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_TEST_TIMEOUT;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
@@ -113,6 +118,25 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private static DynamoDBMetadataStore ddbmsStatic;
 
   private static String testDynamoDBTableName;
+
+
+  /**
+   * Test timeout.
+   * Uses the scale timeout option as some thing (including teardown) can be slow.
+   */
+  @Rule
+  public Timeout timeout = new Timeout(getTestTimeoutSeconds(), TimeUnit.SECONDS);
+
+  /**
+   * Get the test timeout in seconds.
+   * @return the test timeout as set in system properties or the default.
+   */
+  protected int getTestTimeoutSeconds() {
+    return getTestPropertyInt(new Configuration(),
+        KEY_TEST_TIMEOUT,
+        SCALE_TEST_TIMEOUT_SECONDS);
+  }
+
 
   /**
    * Create a path under the test path provided by
@@ -473,6 +497,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             .isGreaterThan(newMetas.size());
       }
     }
+    //
   }
 
   @Test

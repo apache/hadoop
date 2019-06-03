@@ -114,6 +114,9 @@ public class StoreContext {
   private final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long, File>
       tempFileFactory;
 
+  private final FunctionsRaisingIOE.CallableRaisingIOE<String>
+      getBucketLocation;
+
   /**
    * Instantiate.
    * No attempt to use a builder here as outside tests
@@ -138,7 +141,8 @@ public class StoreContext {
       final boolean useListV1,
       final boolean versioned,
       final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long, File>
-          tempFileFactory) {
+          tempFileFactory,
+      final FunctionsRaisingIOE.CallableRaisingIOE<String> getBucketLocation) {
     this.fsURI = fsURI;
     this.bucket = bucket;
     this.configuration = configuration;
@@ -157,6 +161,7 @@ public class StoreContext {
     this.useListV1 = useListV1;
     this.versioned = versioned;
     this.tempFileFactory = tempFileFactory;
+    this.getBucketLocation = getBucketLocation;
   }
 
   @Override

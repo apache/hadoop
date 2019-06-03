@@ -735,6 +735,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the region in which a bucket is located
    * @throws IOException on any failure.
    */
+  @VisibleForTesting
   @Retries.RetryTranslated
   public String getBucketLocation(String bucketName) throws IOException {
     return invoker.retry("getBucketLocation()", bucketName, true,
@@ -779,7 +780,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Demand create the directory allocator, then create a temporary file.
-   * This does not mark the file for deletion when a process is exits.
+   * This does not mark the file for deletion when a process exits.
    * {@link LocalDirAllocator#createTmpFileForWrite(String, long, Configuration)}.
    * @param pathStr prefix for the temporary file
    * @param size the size of the file that is going to be written
@@ -2368,8 +2369,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       throw ex;
     } catch (AmazonClientException | IOException ex) {
-      List<Path> paths = new MultiObjectDeleteSupport(
-          createStoreContext())
+      List<Path> paths = new MultiObjectDeleteSupport(createStoreContext())
           .processDeleteFailureGenericException(ex, keysToDelete);
       // other failures. Assume nothing was deleted
       undeletedObjectsOnFailure.addAll(paths);
@@ -2731,7 +2731,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         this::keyToQualifiedPath,
         useListV1,
         false,
-        (prefix, len) -> createTmpFileForWrite(prefix, len, getConf()));
+        (prefix, len) -> createTmpFileForWrite(prefix, len, getConf()),
+        this::getBucketLocation);
   }
 
   /**

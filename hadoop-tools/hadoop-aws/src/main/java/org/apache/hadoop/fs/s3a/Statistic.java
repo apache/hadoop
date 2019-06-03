@@ -209,6 +209,9 @@ public enum Statistic {
       "S3Guard metadata store put one metadata path latency"),
   S3GUARD_METADATASTORE_INITIALIZATION("s3guard_metadatastore_initialization",
       "S3Guard metadata store initialization times"),
+  S3GUARD_METADATASTORE_RECORD_DELETES(
+      "s3guard_metadatastore_record_deletes",
+      "S3Guard metadata store records deleted"),
   S3GUARD_METADATASTORE_RECORD_READS(
       "s3guard_metadatastore_record_reads",
       "S3Guard metadata store records read"),

@@ -183,6 +183,7 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
       COMMITTER_MAGIC_FILES_CREATED,
       S3GUARD_METADATASTORE_PUT_PATH_REQUEST,
       S3GUARD_METADATASTORE_INITIALIZATION,
+      S3GUARD_METADATASTORE_RECORD_DELETES,
       S3GUARD_METADATASTORE_RECORD_READS,
       S3GUARD_METADATASTORE_RECORD_WRITES,
       S3GUARD_METADATASTORE_RETRY,
@@ -1063,6 +1064,14 @@ public class S3AInstrumentation implements Closeable, MetricsSource {
      */
     public void retrying() {
       // counters are incremented by owner.
+    }
+
+    /**
+     * Records have been read.
+     * @param count the number of records read
+     */
+    public void recordsDeleted(int count) {
+      incrementCounter(S3GUARD_METADATASTORE_RECORD_DELETES, count);
     }
 
     /**

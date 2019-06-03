@@ -87,7 +87,8 @@ public final class CallableSupplier<T> implements Supplier {
   }
 
   /**
-   * Wait for a list of futures to complete.
+   * Wait for a list of futures to complete. If the list is empty,
+   * return immediately.
    * @param futures list of futures.
    * @throws IOException if one of the called futures raised an IOE.
    * @throws RuntimeException if one of the futures raised one.
