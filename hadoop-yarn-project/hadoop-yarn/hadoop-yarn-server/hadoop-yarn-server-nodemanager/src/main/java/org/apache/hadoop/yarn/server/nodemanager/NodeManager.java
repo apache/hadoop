@@ -526,9 +526,11 @@ public class NodeManager extends CompositeService
       DefaultMetricsSystem.shutdown();
 
       // Cleanup ResourcePluginManager
-      ResourcePluginManager rpm = context.getResourcePluginManager();
-      if (rpm != null) {
-        rpm.cleanup();
+      if (null != context) {
+        ResourcePluginManager rpm = context.getResourcePluginManager();
+        if (rpm != null) {
+          rpm.cleanup();
+        }
       }
     } finally {
       // YARN-3641: NM's services stop get failed shouldn't block the
