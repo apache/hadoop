@@ -31,6 +31,7 @@ ENV PATH $PATH:/opt/hadoop/bin
 
 RUN groupadd --gid 1000 hadoop
 RUN useradd --uid 1000 hadoop --gid 100 --home /opt/hadoop
+RUN chmod 755 /opt/hadoop
 RUN echo "hadoop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown hadoop /opt
 ADD scripts /opt/

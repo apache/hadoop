@@ -96,9 +96,6 @@ if [ -n "$KERBEROS_ENABLED" ]; then
     sed "s/SERVER/$KERBEROS_SERVER/g" "$DIR"/krb5.conf | sudo tee /etc/krb5.conf
 fi
 
-#To avoid docker volume permission problems
-sudo chmod o+rwx /data
-
 "$DIR"/envtoconf.py --destination "${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
 
 if [ -n "$ENSURE_NAMENODE_DIR" ]; then
@@ -139,7 +136,7 @@ if [ -n "$BYTEMAN_SCRIPT" ] || [ -n "$BYTEMAN_SCRIPT_URL" ]; then
   export PATH=$PATH:$BYTEMAN_DIR/bin
 
   if [ ! -z "$BYTEMAN_SCRIPT_URL" ]; then
-    sudo wget $BYTEMAN_SCRIPT_URL -O /tmp/byteman.btm
+    wget $BYTEMAN_SCRIPT_URL -O /tmp/byteman.btm
     export BYTEMAN_SCRIPT=/tmp/byteman.btm
   fi
 
