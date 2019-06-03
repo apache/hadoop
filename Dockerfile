@@ -31,6 +31,7 @@ ENV PATH $PATH:/opt/hadoop/bin
 
 RUN groupadd --gid 1000 hadoop
 RUN useradd --uid 1000 hadoop --gid 100 --home /opt/hadoop
+RUN chmod 755 /opt/hadoop
 RUN echo "hadoop ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 RUN chown hadoop /opt
 ADD scripts /opt/
@@ -40,7 +41,6 @@ RUN mkdir -p /etc/hadoop && mkdir -p /var/log/hadoop && chmod 1777 /etc/hadoop &
 ENV HADOOP_LOG_DIR=/var/log/hadoop
 ENV HADOOP_CONF_DIR=/etc/hadoop
 WORKDIR /opt/hadoop
-
-VOLUME /data
+RUN mkdir /data && chmod 1777 /data
 USER hadoop
 ENTRYPOINT ["/usr/local/bin/dumb-init", "--", "/opt/starter.sh"]
