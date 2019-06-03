@@ -122,7 +122,7 @@ public class TestOmAcls {
     createVolumeArgs.setAdminName(adminUser);
     createVolumeArgs.setQuota(new OzoneQuota(i, OzoneQuota.Units.GB));
     logCapturer.clearOutput();
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createVolume(createVolumeArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
         "permission to access volume"));
@@ -131,7 +131,7 @@ public class TestOmAcls {
     bucketArgs.setAddAcls(new LinkedList<>());
     bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createBucket(bucketArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
         "permission to access bucket"));
@@ -155,7 +155,7 @@ public class TestOmAcls {
     // write a key without specifying size at all
     String keyName = "testKey";
     KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
-    OzoneTestUtils.expectOmException(ResultCodes.INTERNAL_ERROR,
+    OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.newKeyWriter(keyArgs));
     assertTrue(logCapturer.getOutput().contains("doesn't have READ permission" +
         " to access key"));

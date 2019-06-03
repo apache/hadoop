@@ -48,8 +48,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-
-import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetBucketPropertyResponse;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
@@ -100,9 +100,20 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
             volumeName, bucketName, null);
       }
+    } catch (IOException ex) {
+      if (omMetrics != null) {
+        omMetrics.incNumBucketUpdateFails();
+      }
+      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
+          bucketName, volumeName, ex);
+      return new OMBucketSetPropertyResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
+    }
 
-      // acquire lock
-      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    // acquire lock
+    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
+    try {
 
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
@@ -159,18 +170,22 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
+      // return response.
+      omResponse.setSetBucketPropertyResponse(
+          SetBucketPropertyResponse.newBuilder().build());
+      return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
+
     } catch (IOException ex) {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();
       }
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
-      omResponse.setSuccess(false).setMessage(ex.getMessage())
-          .setStatus(OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
+      return new OMBucketSetPropertyResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
-    return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
   }
 
   /**

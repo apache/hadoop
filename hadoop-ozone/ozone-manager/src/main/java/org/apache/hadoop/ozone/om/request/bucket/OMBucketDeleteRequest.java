@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.om.request.bucket;
 import java.io.IOException;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,8 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.response.bucket.OMBucketDeleteResponse;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -77,9 +79,17 @@ public class OMBucketDeleteRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
             volumeName, bucketName, null);
       }
+    } catch (IOException ex) {
+      omMetrics.incNumBucketDeleteFails();
+      LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
+          volumeName, ex);
+      return new OMBucketDeleteResponse(volumeName, bucketName,
+          createErrorOMResponse(omResponse, ex));
+    }
 
-      // acquire lock
-      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    // acquire lock
+    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    try {
       // No need to check volume exists here, as bucket cannot be created
       // with out volume creation.
       //Check if bucket exists
@@ -104,16 +114,20 @@ public class OMBucketDeleteRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
+      // return response.
+      omResponse.setDeleteBucketResponse(
+          DeleteBucketResponse.newBuilder().build());
+      return new OMBucketDeleteResponse(volumeName, bucketName,
+          omResponse.build());
+
     } catch (IOException ex) {
       omMetrics.incNumBucketDeleteFails();
       LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
           volumeName, ex);
-      omResponse.setSuccess(false).setMessage(ex.getMessage())
-          .setStatus(OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
+      return new OMBucketDeleteResponse(volumeName, bucketName,
+          createErrorOMResponse(omResponse, ex));
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
-    return new OMBucketDeleteResponse(volumeName, bucketName,
-        omResponse.build());
   }
 }

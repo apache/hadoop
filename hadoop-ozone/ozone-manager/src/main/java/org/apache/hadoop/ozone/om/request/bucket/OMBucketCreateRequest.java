@@ -118,7 +118,6 @@ public class OMBucketCreateRequest extends OMClientRequest {
         OzoneManagerProtocolProtos.Status.OK);
     OmBucketInfo omBucketInfo = OmBucketInfo.getFromProtobuf(bucketInfo);
 
-
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -126,11 +125,20 @@ public class OMBucketCreateRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.CREATE,
             volumeName, bucketName, null);
       }
+    } catch (IOException ex) {
+      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
+          bucketName, volumeName, ex);
+      omMetrics.incNumBucketCreateFails();
+      return new OMBucketCreateResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
+    }
 
-      metadataManager.getLock().acquireVolumeLock(volumeName);
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-      String volumeKey = metadataManager.getVolumeKey(volumeName);
-      String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+    String volumeKey = metadataManager.getVolumeKey(volumeName);
+    String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+
+    metadataManager.getLock().acquireVolumeLock(volumeName);
+    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    try {
 
       //Check if the volume exists
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
@@ -152,21 +160,21 @@ public class OMBucketCreateRequest extends OMClientRequest {
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
+      // return response.
+      omResponse.setCreateBucketResponse(
+          CreateBucketResponse.newBuilder().build());
+      return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
+
     } catch (IOException ex) {
       omMetrics.incNumBucketCreateFails();
       LOG.error("Bucket creation failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
-      omResponse.setStatus(
-          OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
-      omResponse.setMessage(ex.getMessage());
-      omResponse.setSuccess(false);
+      return new OMBucketCreateResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
     }
-    omResponse.setCreateBucketResponse(
-        CreateBucketResponse.newBuilder().build());
-    return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
   }
 
 

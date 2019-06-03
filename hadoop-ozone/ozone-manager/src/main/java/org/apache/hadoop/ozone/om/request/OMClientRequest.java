@@ -26,10 +26,13 @@ import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -140,7 +143,7 @@ public abstract class OMClientRequest {
   /**
    * Return InetAddress created from OMRequest userInfo. If userInfo is not
    * set, returns null.
-   * @return
+   * @return InetAddress
    * @throws IOException
    */
   @VisibleForTesting
@@ -151,6 +154,23 @@ public abstract class OMClientRequest {
     } else {
       return null;
     }
+  }
+
+  /**
+   * Set parameters needed for return error response to client.
+   * @param omResponse
+   * @param ex - IOException
+   * @return error response need to be returned to client - OMResponse.
+   */
+  protected OMResponse createErrorOMResponse(OMResponse.Builder omResponse,
+      IOException ex) {
+
+    omResponse.setSuccess(false);
+    if (ex.getMessage() != null) {
+      omResponse.setMessage(ex.getMessage());
+    }
+    omResponse.setStatus(OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
+    return omResponse.build();
   }
 
 }
