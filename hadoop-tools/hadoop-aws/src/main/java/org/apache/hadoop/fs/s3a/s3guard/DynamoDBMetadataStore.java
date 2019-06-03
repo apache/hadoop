@@ -480,7 +480,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
             DEFAULT_KEEPALIVE_TIME, 0),
         TimeUnit.SECONDS,
         "s3a-ddb-" + tableName);
-
     initDataAccessRetries(conf);
 
     initTable();
@@ -517,6 +516,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void forgetMetadata(Path path) throws IOException {
+    LOG.debug("Forget metadata for {}", path);
     innerDelete(path, false);
   }
 
@@ -551,6 +551,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           path.toString(),
           idempotent,
           () -> {
+            LOG.debug("Adding tombstone to {}", path);
             recordsWritten(1);
             table.putItem(item);
           });
@@ -562,6 +563,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           idempotent,
           () -> {
             // record the attempt so even on retry the counter goes up.
+            LOG.debug("Delete key {}", path);
             recordsDeleted(1);
             table.deleteItem(key);
           });
@@ -615,8 +617,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
     Item item = readOp.retry("get",
         path.toString(),
         true,
-        () -> table.getItem(spec));
-    recordsRead(1);
+        () -> {
+          recordsRead(1);
+          return table.getItem(spec);
+        });
     return item;
   }
 
@@ -972,7 +976,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
     while (count < totalToDelete + totalToPut) {
       final TableWriteItems writeItems = new TableWriteItems(tableName);
       int numToDelete = 0;
-      int batchSize = 0;
       if (keysToDelete != null
           && count < totalToDelete) {
         numToDelete = Math.min(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT,
@@ -980,7 +983,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
         writeItems.withPrimaryKeysToDelete(
             Arrays.copyOfRange(keysToDelete, count, count + numToDelete));
         count += numToDelete;
-        batchSize = numToDelete;
       }
 
       if (numToDelete < S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT
@@ -993,7 +995,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
         writeItems.withItemsToPut(
             Arrays.copyOfRange(itemsToPut, index, index + numToPut));
         count += numToPut;
-        batchSize += numToPut;
       }
 
       // if there's a retry and another process updates things then it's not
@@ -1006,12 +1007,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
           () -> dynamoDB.batchWriteItem(writeItems));
       // Check for unprocessed keys in case of exceeding provisioned throughput
       Map<String, List<WriteRequest>> unprocessed = res.getUnprocessedItems();
-      recordsWritten(batchSize - unprocessed.size());
       int retryCount = 0;
       while (!unprocessed.isEmpty()) {
         batchWriteCapacityExceededEvents.incrementAndGet();
         batches++;
-        batchSize = unprocessed.size();
         retryBackoffOnBatchWrite(retryCount++);
         // use a different reference to keep the compiler quiet
         final Map<String, List<WriteRequest>> upx = unprocessed;
@@ -1021,8 +1020,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
             true,
             () -> dynamoDB.batchWriteItemUnprocessed(upx));
         unprocessed = res.getUnprocessedItems();
-        recordsWritten(batchSize - unprocessed.size());
       }
+    }
+    if (itemsToPut != null) {
+      recordsWritten(itemsToPut.length);
+    }
+    if (keysToDelete != null) {
+      recordsDeleted(keysToDelete.length);
     }
     return batches;
   }
@@ -1134,10 +1138,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * Get full path of ancestors that are nonexistent in table.
    *
    * This queries DDB.
+   * @param meta metadata to put
+   * @param operationState ongoing bulk state
+   * @return a possibly empty list of entries to put.
+   * @throws IOException
    */
+  @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @VisibleForTesting
   @Retries.RetryTranslated
-  List<DDBPathMetadata> fullPathsToPut(DDBPathMetadata meta)
+  List<DDBPathMetadata> fullPathsToPut(DDBPathMetadata meta,
+      @Nullable BulkOperationState operationState)
       throws IOException {
     checkPathMetadata(meta);
     final List<DDBPathMetadata> metasToPut = new ArrayList<>();
@@ -1148,8 +1158,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     // put all its ancestors if not present; as an optimization we return at its
     // first existent ancestor
+    final AncestorState ancestorState = extractOrCreate(operationState);
     Path path = meta.getFileStatus().getPath().getParent();
     while (path != null && !path.isRoot()) {
+      synchronized (ancestorState) {
+        if (ancestorState.contains(path)) {
+          // the ancestor state has the entry.
+          break;
+        }
+      }
+
       final Item item = getConsistentItem(path);
       if (!itemExists(item)) {
         final S3AFileStatus status = makeDirStatus(path, username);
@@ -1157,6 +1175,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
             meta.isAuthoritativeDir(), meta.getLastUpdated()));
         path = path.getParent();
       } else {
+        // found the entry in the table, so add it to the ancestor state
+        synchronized (ancestorState) {
+          ancestorState.put(path, itemToPathMetadata(item, username));
+        }
+        // then break out of the loop.
         break;
       }
     }
@@ -1185,11 +1208,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * the call to {@link #processBatchWriteRequest(PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
+   * @param operationState operational state for a bulk update
    * @throws IOException IO problem
    */
   @Override
   @Retries.RetryTranslated
-  public void put(DirListingMetadata meta) throws IOException {
+  public void put(
+      final DirListingMetadata meta,
+      @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
     // directory path
@@ -1199,7 +1225,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
             false, meta.isAuthoritative(), meta.getLastUpdated());
 
     // First add any missing ancestors...
-    final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta);
+    final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
+        operationState);
 
     // next add all children of the directory
     metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));

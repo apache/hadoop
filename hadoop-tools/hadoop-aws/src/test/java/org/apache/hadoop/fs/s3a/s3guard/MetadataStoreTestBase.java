@@ -532,7 +532,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
     dirMeta.setAuthoritative(true);
     dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
-    ms.put(dirMeta);
+    ms.put(dirMeta, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
     assertListingsEqual(dirMeta.getListing(), "/a1/b1/file1", "/a1/b1/file2",
@@ -733,7 +733,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing()) {
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd);
+      ms.put(parentDirMd, null);
     }
 
     ms.prune(time);
@@ -772,7 +772,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       // set parent dir as authoritative
       DirListingMetadata parentDirMd = ms.listChildren(strToPath(parentDir));
       parentDirMd.setAuthoritative(true);
-      ms.put(parentDirMd);
+      ms.put(parentDirMd, null);
 
       // prune the ms
       ms.prune(time);
@@ -804,7 +804,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta);
+    ms.put(dirMeta, null);
 
     if (!allowMissing()) {
       assertDirectorySize(dirPath, filenames.length);
@@ -890,7 +890,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     DirListingMetadata dirMeta =
         new DirListingMetadata(strToPath(dirPath), metas, authoritative);
-    ms.put(dirMeta);
+    ms.put(dirMeta, null);
   }
 
   private void createNewDirs(String... dirs)

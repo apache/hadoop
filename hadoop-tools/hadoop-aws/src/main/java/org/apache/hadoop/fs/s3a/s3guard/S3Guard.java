@@ -594,7 +594,7 @@ public final class S3Guard {
       ITtlTimeProvider timeProvider)
       throws IOException {
     dirMeta.setLastUpdated(timeProvider.getNow());
-    ms.put(dirMeta);
+    ms.put(dirMeta, null);
   }
 
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,

@@ -2302,10 +2302,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Invoke {@link #removeKeysS3(List, boolean)} with handling of
-   * {@code MultiObjectDeleteException} in which S3Guard is updated with all
-   * deleted entries, before the exception is rethrown.
+   * {@code MultiObjectDeleteException}.
    *
-   * If an exception is not raised. the metastore is not updated.
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
@@ -2328,12 +2326,17 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
   /**
    * Invoke {@link #removeKeysS3(List, boolean)} with handling of
-   * {@code MultiObjectDeleteException} in which S3Guard is updated with all
-   * deleted entries, before the exception is rethrown.
-   *
+   * {@code MultiObjectDeleteException} before the exception is rethrown.
+   * Specifically:
+   * <ol>
+   *   <li>Failure and !deleteFakeDir: S3Guard is updated with all
+   *    deleted entries</li>
+   *   <li>Failure where deleteFakeDir == true: do nothing with S3Guard</li>
+   *   <li>Success: do nothing with S3Guard</li>
+   * </ol>
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
-   * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @param deleteFakeDir indicates whether this is for deleting fake dirs.
    * @param undeletedObjectsOnFailure List which will be built up of all
    * files that were not deleted. This happens even as an exception
    * is raised.

@@ -100,7 +100,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void put(DirListingMetadata meta) throws IOException {
+  public void put(DirListingMetadata meta,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override

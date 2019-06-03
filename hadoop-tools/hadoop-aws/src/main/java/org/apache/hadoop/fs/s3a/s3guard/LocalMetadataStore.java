@@ -318,7 +318,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public synchronized void put(DirListingMetadata meta) throws IOException {
+  public synchronized void put(DirListingMetadata meta,
+      final BulkOperationState operationState) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("put dirMeta {}", meta.prettyPrint());
     }
