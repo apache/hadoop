@@ -755,3 +755,21 @@ div.loggedin-user {
     border-radius: 2px;
   }
 }
+
+/**
+ * Active User Info table styles
+ */
+.active-user-panel {
+  margin-top: 10px;
+}
+
+table.active-user-table {
+  border: 1px solid #ddd;
+  > thead > tr > th {
+    background-color: #f7f7f7;
+  }
+  &.table-bordered > thead > tr > th,
+  &.table-bordered > tbody > tr > td {
+    border: 1px solid #dcdcdc !important;
+  }
+}
