@@ -29,6 +29,7 @@
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
     <docker.image>apache/hadoop:${project.version}</docker.image>
+    <docker.hadoop-runner.version>jdk11</docker.hadoop-runner.version>
   </properties>
 
   <build>
