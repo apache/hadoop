@@ -77,7 +77,8 @@ public final class ContainerCache extends LRUMap {
       while (iterator.hasNext()) {
         iterator.next();
         ReferenceCountedDB db = (ReferenceCountedDB) iterator.getValue();
-        db.setEvicted(true);
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
+            db.getReferenceCount());
       }
       // reset the cache
       cache.clear();
@@ -92,14 +93,9 @@ public final class ContainerCache extends LRUMap {
   @Override
   protected boolean removeLRU(LinkEntry entry) {
     ReferenceCountedDB db = (ReferenceCountedDB) entry.getValue();
-    String dbFile = (String)entry.getKey();
     lock.lock();
     try {
-      db.setEvicted(false);
-      return true;
-    } catch (Exception e) {
-      LOG.error("Eviction for db:{} failed", dbFile, e);
-      return false;
+      return db.cleanup();
     } finally {
       lock.unlock();
     }
@@ -156,8 +152,8 @@ public final class ContainerCache extends LRUMap {
     try {
       ReferenceCountedDB db = (ReferenceCountedDB)this.get(containerDBPath);
       if (db != null) {
-        // marking it as evicted will close the db as well.
-        db.setEvicted(true);
+        Preconditions.checkArgument(db.cleanup(), "refCount:",
+            db.getReferenceCount());
       }
       this.remove(containerDBPath);
     } finally {
