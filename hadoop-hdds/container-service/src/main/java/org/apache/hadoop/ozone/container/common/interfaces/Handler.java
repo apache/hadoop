@@ -130,6 +130,15 @@ public abstract class Handler {
       throws IOException;
 
   /**
+   * Marks the container Unhealthy. Moves the container to UHEALTHY state.
+   *
+   * @param container container to update
+   * @throws IOException in case of exception
+   */
+  public abstract void markContainerUhealthy(Container container)
+      throws IOException;
+
+  /**
    * Moves the Container to QUASI_CLOSED state.
    *
    * @param container container to be quasi closed
