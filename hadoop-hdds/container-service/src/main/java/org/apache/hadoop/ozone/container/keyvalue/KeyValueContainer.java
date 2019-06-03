@@ -339,8 +339,10 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
       updateContainerFile(containerFile);
 
     } catch (StorageContainerException ex) {
-      if (oldState != null) {
-        // Failed to update .container file. Reset the state to CLOSING
+      if (oldState != null
+          && containerData.getState() != ContainerDataProto.State.UNHEALTHY) {
+        // Failed to update .container file. Reset the state to old state only
+        // if the current state is not unhealthy.
         containerData.setState(oldState);
       }
       throw ex;

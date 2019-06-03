@@ -893,6 +893,14 @@ public class KeyValueHandler extends Handler {
   }
 
   @Override
+  public void markContainerUhealthy(Container container)
+      throws IOException {
+    // this will mark the container unhealthy and a close container action will
+    // be sent from the dispatcher ton SCM to close down this container.
+    container.markContainerUnhealthy();
+  }
+
+  @Override
   public void quasiCloseContainer(Container container)
       throws IOException {
     final State state = container.getContainerState();
@@ -919,6 +927,12 @@ public class KeyValueHandler extends Handler {
     // Close call is idempotent.
     if (state == State.CLOSED) {
       return;
+    }
+    if (state == State.UNHEALTHY) {
+      throw new StorageContainerException(
+          "Cannot close container #" + container.getContainerData()
+              .getContainerID() + " while in " + state + " state.",
+          ContainerProtos.Result.CONTAINER_UNHEALTHY);
     }
     // The container has to be either in CLOSING or in QUASI_CLOSED state.
     if (state != State.CLOSING && state != State.QUASI_CLOSED) {
