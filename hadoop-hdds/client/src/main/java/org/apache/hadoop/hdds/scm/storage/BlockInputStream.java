@@ -21,7 +21,6 @@ package org.apache.hadoop.hdds.scm.storage;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -34,8 +33,11 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.client.BlockID;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -360,8 +362,8 @@ public class BlockInputStream extends InputStream implements Seekable {
     return xceiverClient.getPipeline().getNodes();
   }
 
-  private CheckedBiFunction<ContainerProtos.ContainerCommandRequestProto,
-      ContainerProtos.ContainerCommandResponseProto, IOException>
+  private CheckedBiFunction<ContainerCommandRequestProto,
+      ContainerCommandResponseProto, IOException>
       validator = (request, response) -> {
     ReadChunkResponseProto readChunkResponse = response.getReadChunk();
     final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
