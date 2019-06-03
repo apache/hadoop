@@ -23,5 +23,6 @@ REPLACEMENT="$DIR/../compose/test-all.sh"
 echo "THIS SCRIPT IS DEPRECATED. Please use $REPLACEMENT instead."
 
 ${REPLACEMENT}
-
+RESULT=$?
 cp -r "$DIR/../compose/result" "$DIR"
+exit $RESULT
