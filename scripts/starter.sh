@@ -96,7 +96,19 @@ if [ -n "$KERBEROS_ENABLED" ]; then
     sed "s/SERVER/$KERBEROS_SERVER/g" "$DIR"/krb5.conf | sudo tee /etc/krb5.conf
 fi
 
-"$DIR"/envtoconf.py --destination "${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
+
+CONF_DESTINATION_DIR="${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
+
+#Try to copy the defaults
+set +e
+if [[ -d "/opt/ozone/etc/hadoop" ]]; then
+   cp /opt/hadoop/etc/hadoop/* "$CONF_DESTINATION_DIR/"
+elif [[ -d "/opt/hadoop/etc/hadoop" ]]; then
+   cp /opt/hadoop/etc/hadoop/* "$CONF_DESTINATION_DIR/"
+fi
+set -e
+
+"$DIR"/envtoconf.py --destination "$CONF_DESTINATION_DIR"
 
 if [ -n "$ENSURE_NAMENODE_DIR" ]; then
   CLUSTERID_OPTS=""
