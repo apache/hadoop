@@ -250,7 +250,6 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void deleteSubtree(final Path path) {
-
     }
 
     @Override
@@ -274,11 +273,10 @@ public class TestPartialDeleteFailures {
         @Nullable final Collection<Path> pathsToDelete,
         @Nullable final Collection<PathMetadata> pathsToCreate,
         @Nullable final BulkOperationState moveState) {
-
     }
 
     @Override
-    public void put(final PathMetadata meta) throws IOException {
+    public void put(final PathMetadata meta) {
       put(meta, null);
     }
 
@@ -301,18 +299,14 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void destroy() {
-
     }
 
     @Override
-    public void prune(final long modTime)
-        throws IOException, UnsupportedOperationException {
-
+    public void prune(final long modTime) {
     }
 
     @Override
-    public void prune(final long modTime, final String keyPrefix)
-        throws IOException, UnsupportedOperationException {
+    public void prune(final long modTime, final String keyPrefix) {
     }
 
     @Override
@@ -341,13 +335,13 @@ public class TestPartialDeleteFailures {
         final StoreContext storeContext,
         final Path source,
         final S3AFileStatus sourceStatus,
-        final Path dest) throws IOException {
+        final Path dest) {
       throw new UnsupportedOperationException("unsupported");
     }
 
     @Override
     public void addAncestors(final Path qualifiedPath,
-        @Nullable final BulkOperationState operationState) throws IOException {
+        @Nullable final BulkOperationState operationState) {
 
     }
   }

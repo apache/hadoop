@@ -71,6 +71,9 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
     Path outputPath = path(getMethodName());
+    // create and delete to force in a tombstone marker -see HADOOP-16207
+    fs.mkdirs(outputPath);
+    fs.delete(outputPath, true);
 
     String commitUUID = UUID.randomUUID().toString();
     String suffix = isUniqueFilenames() ? ("-" + commitUUID) : "";
