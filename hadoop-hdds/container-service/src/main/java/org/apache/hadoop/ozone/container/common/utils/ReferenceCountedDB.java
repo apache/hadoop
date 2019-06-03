@@ -24,7 +24,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -38,15 +37,17 @@ public class ReferenceCountedDB implements Closeable {
   private static final Logger LOG =
       LoggerFactory.getLogger(ReferenceCountedDB.class);
   private final AtomicInteger referenceCount;
-  private final AtomicBoolean isEvicted;
   private final MetadataStore store;
   private final String containerDBPath;
 
   public ReferenceCountedDB(MetadataStore store, String containerDBPath) {
     this.referenceCount = new AtomicInteger(0);
-    this.isEvicted = new AtomicBoolean(false);
     this.store = store;
     this.containerDBPath = containerDBPath;
+  }
+
+  public long getReferenceCount() {
+    return referenceCount.get();
   }
 
   public void incrementReference() {
@@ -59,35 +60,30 @@ public class ReferenceCountedDB implements Closeable {
   }
 
   public void decrementReference() {
-    this.referenceCount.decrementAndGet();
+    int refCount = this.referenceCount.decrementAndGet();
+    Preconditions.checkArgument(refCount >= 0, "refCount:", refCount);
     if (LOG.isDebugEnabled()) {
       LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
           referenceCount.get());
       new Exception().printStackTrace();
     }
-    cleanup();
   }
 
-  public void setEvicted(boolean checkNoReferences) {
-    Preconditions.checkState(!checkNoReferences ||
-            (referenceCount.get() == 0),
-        "checkNoReferences:%b, referencount:%d, dbPath:%s",
-        checkNoReferences, referenceCount.get(), containerDBPath);
-    isEvicted.set(true);
-    cleanup();
-  }
-
-  private void cleanup() {
-    if (referenceCount.get() == 0 && isEvicted.get() && store != null) {
+  public boolean cleanup() {
+    if (referenceCount.get() == 0 && store != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Close {} refCnt {}", containerDBPath,
             referenceCount.get());
       }
       try {
         store.close();
+        return true;
       } catch (Exception e) {
         LOG.error("Error closing DB. Container: " + containerDBPath, e);
+        return false;
       }
+    } else {
+      return false;
     }
   }
 
