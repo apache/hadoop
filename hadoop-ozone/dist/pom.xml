@@ -225,24 +225,6 @@
               </arguments>
             </configuration>
           </execution>
-          <execution>
-            <id>tar-ozone</id>
-            <phase>package</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-            <configuration>
-              <executable>${shell-executable}</executable>
-              <workingDirectory>${project.build.directory}
-              </workingDirectory>
-              <arguments>
-                <argument>${basedir}/dev-support/bin/dist-tar-stitching
-                </argument>
-                <argument>${hdds.version}</argument>
-                <argument>${project.build.directory}</argument>
-              </arguments>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
       <!-- there is no problem to have multiple versions of the jar files from
@@ -368,6 +350,37 @@
                   <goal>push</goal>
                 </goals>
                 <phase>package</phase>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>dist</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>tar-ozone</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+                <configuration>
+                  <executable>${shell-executable}</executable>
+                  <workingDirectory>${project.build.directory}
+                  </workingDirectory>
+                  <arguments>
+                    <argument>${basedir}/dev-support/bin/dist-tar-stitching
+                    </argument>
+                    <argument>${hdds.version}</argument>
+                    <argument>${project.build.directory}</argument>
+                  </arguments>
+                </configuration>
               </execution>
             </executions>
           </plugin>
