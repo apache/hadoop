@@ -14,23 +14,23 @@
 
 # How to Install Dependencies
 
-Submarine project uses YARN Service, Docker container, and GPU (when GPU hardware available and properly configured).
+Submarine project uses YARN Service, Docker container and GPU.
+GPU could only be used if a GPU hardware is available and properly configured.
 
-That means as an admin, you have to properly setup YARN Service related dependencies, including:
+As an administrator, you have to properly setup YARN Service related dependencies, including:
 - YARN Registry DNS
+- Docker related dependencies, including:
+  - Docker binary with expected versions
+  - Docker network that allows Docker containers to talk to each other across different nodes
 
-Docker related dependencies, including:
-- Docker binary with expected versions.
-- Docker network which allows Docker container can talk to each other across different nodes.
+If you would like to use GPU, you need to set up:
+- GPU Driver
+- Nvidia-docker
 
-And when GPU wanna to be used:
-- GPU Driver.
-- Nvidia-docker.
-
-For your convenience, we provided installation documents to help you to setup your environment. You can always choose to have them installed in your own way.
+For your convenience, we provided some installation documents to help you setup your environment. You can always choose to have them installed in your own way.
 
 Use Submarine installer to install dependencies: [EN](https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem/tree/master/submarine-installer) [CN](https://github.com/hadoopsubmarine/hadoop-submarine-ecosystem/blob/master/submarine-installer/README-CN.md)
 
-Alternatively, you can follow manual install dependencies: [EN](InstallationGuide.html) [CN](InstallationGuideChineseVersion.html)
+Alternatively, you can follow this guide to manually install dependencies: [EN](InstallationGuide.html) [CN](InstallationGuideChineseVersion.html)
 
-Once you have installed dependencies, please follow following guide to [TestAndTroubleshooting](TestAndTroubleshooting.html).  
+Once you have installed all the dependencies, please follow this guide: [TestAndTroubleshooting](TestAndTroubleshooting.html).
