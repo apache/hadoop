@@ -288,6 +288,39 @@ public class TestFpgaDiscoverer {
     }
   }
 
+  @Test
+  public void testCurrentFpgaInfoWhenAllDevicesAreAllowed()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "acl0/243:0,acl1/244:1");
+
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+    List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
+
+    assertEquals("Devices", devices, currentFpgaInfo);
+  }
+
+  @Test
+  public void testCurrentFpgaInfoWhenAllowedDevicesDefined()
+      throws YarnException {
+    conf.set(YarnConfiguration.NM_FPGA_AVAILABLE_DEVICES,
+        "acl0/243:0,acl1/244:1");
+    conf.set(YarnConfiguration.NM_FPGA_ALLOWED_DEVICES, "0");
+
+    fpgaDiscoverer.initialize(conf);
+    List<FpgaDevice> devices = fpgaDiscoverer.discover();
+    List<FpgaDevice> currentFpgaInfo = fpgaDiscoverer.getCurrentFpgaInfo();
+
+    assertEquals("Devices", devices, currentFpgaInfo);
+    assertEquals("List of devices", 1, currentFpgaInfo.size());
+
+    FpgaDevice device = currentFpgaInfo.get(0);
+    assertEquals("Device id", "acl0", device.getAliasDevName());
+    assertEquals("Minor number", 0, device.getMinor());
+    assertEquals("Major", 243, device.getMajor());
+  }
+
   private IntelFpgaOpenclPlugin.InnerShellExecutor mockPuginShell() {
     IntelFpgaOpenclPlugin.InnerShellExecutor shell = mock(IntelFpgaOpenclPlugin.InnerShellExecutor.class);
     when(shell.runDiagnose(anyString(),anyInt())).thenReturn("");
