@@ -81,7 +81,6 @@ import com.amazonaws.event.ProgressListener;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -127,6 +126,7 @@ import org.apache.hadoop.fs.s3a.s3guard.MetadataStoreListFilesIterator;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.fs.store.EtagChecksum;
@@ -389,9 +389,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
-      long authDirTtl = conf.getLong(METADATASTORE_METADATA_TTL,
-          DEFAULT_METADATASTORE_METADATA_TTL);
-      ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
+      if(hasMetadataStore()) {
+        long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+            DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+        ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
+      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -2467,7 +2469,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Getting path status for {}  ({})", path, key);
 
     // Check MetadataStore, if any.
-    PathMetadata pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
+    PathMetadata pm = null;
+    if(hasMetadataStore()) {
+      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
+    }
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
       if (pm.isDeleted()) {
@@ -3863,6 +3868,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     return credentials.share();
   }
 
+  @VisibleForTesting
   public ITtlTimeProvider getTtlTimeProvider() {
     return ttlTimeProvider;
   }

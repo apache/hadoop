@@ -26,6 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -45,6 +46,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import javax.annotation.Nullable;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
@@ -149,7 +152,8 @@ public final class S3Guard {
    */
   @RetryTranslated
   public static S3AFileStatus putAndReturn(MetadataStore ms,
-      S3AFileStatus status, S3AInstrumentation instrumentation,
+      S3AFileStatus status,
+      S3AInstrumentation instrumentation,
       ITtlTimeProvider timeProvider) throws IOException {
     long startTimeNano = System.nanoTime();
     S3Guard.putWithTtl(ms, new PathMetadata(status), timeProvider);
@@ -527,8 +531,9 @@ public final class S3Guard {
     }
 
     public TtlTimeProvider(Configuration conf) {
-      this.authoritativeDirTtl = conf.getLong(METADATASTORE_METADATA_TTL,
-          DEFAULT_METADATASTORE_METADATA_TTL);
+      this.authoritativeDirTtl =
+          conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+          DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -549,35 +554,51 @@ public final class S3Guard {
   }
 
   public static void putWithTtl(MetadataStore ms, PathMetadata fileMeta,
-      ITtlTimeProvider timeProvider) throws IOException {
-    fileMeta.setLastUpdated(timeProvider.getNow());
+      @Nullable ITtlTimeProvider timeProvider) throws IOException {
+    if (timeProvider != null) {
+      fileMeta.setLastUpdated(timeProvider.getNow());
+    } else {
+      LOG.debug("timeProvider is null, put {} without setting last_updated",
+          fileMeta);
+    }
     ms.put(fileMeta);
   }
 
   public static void putWithTtl(MetadataStore ms,
-      Collection<PathMetadata> fileMetas, ITtlTimeProvider timeProvider)
+      Collection<PathMetadata> fileMetas,
+      @Nullable ITtlTimeProvider timeProvider)
       throws IOException {
-    final long now = timeProvider.getNow();
-    fileMetas.forEach(fileMeta -> fileMeta.setLastUpdated(now));
+    if (timeProvider != null) {
+      final long now = timeProvider.getNow();
+      fileMetas.forEach(fileMeta -> fileMeta.setLastUpdated(now));
+    } else {
+      LOG.debug("timeProvider is null, put {} without setting last_updated",
+          fileMetas);
+    }
     ms.put(fileMetas);
   }
 
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
-      ITtlTimeProvider timeProvider) throws IOException {
+      @Nullable ITtlTimeProvider timeProvider) throws IOException {
+    final PathMetadata pathMetadata = ms.get(path);
+    // if timeProvider is null let's return with what the ms has
+    if (timeProvider == null) {
+      LOG.debug("timeProvider is null, returning pathMetadata as is");
+      return pathMetadata;
+    }
+
     long ttl = timeProvider.getMetadataTtl();
 
-    final PathMetadata pathMetadata = ms.get(path);
-
-    if(pathMetadata != null) {
+    if (pathMetadata != null) {
       // Special case: the pathmetadata's last updated is 0. This can happen
       // eg. with an old db using this implementation
-      if(pathMetadata.getLastUpdated() == 0) {
-        LOG.debug("PathMeatadata TTL for {} is 0, so it will be returned as "
+      if (pathMetadata.getLastUpdated() == 0) {
+        LOG.debug("PathMetadata TTL for {} is 0, so it will be returned as "
             + "not expired.");
         return pathMetadata;
       }
 
-      if(!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
+      if (!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
         return pathMetadata;
       } else {
         LOG.debug("PathMetadata TTl for {} is expired in metadata store.",
@@ -590,13 +611,20 @@ public final class S3Guard {
   }
 
   public static DirListingMetadata listChildrenWithTtl(MetadataStore ms,
-      Path path, ITtlTimeProvider timeProvider)
+      Path path, @Nullable ITtlTimeProvider timeProvider)
       throws IOException {
-    long ttl = timeProvider.getMetadataTtl();
-
     DirListingMetadata dlm = ms.listChildren(path);
 
-    if(dlm != null && dlm.isAuthoritative()
+    if (timeProvider == null) {
+      LOG.debug("timeProvider is null, returning DirListingMetadata as is");
+      return dlm;
+    }
+
+    long ttl = timeProvider.getMetadataTtl();
+
+
+
+    if (dlm != null && dlm.isAuthoritative()
         && dlm.isExpired(ttl, timeProvider.getNow())) {
       dlm.setAuthoritative(false);
     }

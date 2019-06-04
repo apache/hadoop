@@ -26,12 +26,16 @@ import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Assume;
-import org.junit.Ignore;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.UUID;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.isMetadataStoreAuthoritative;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.mockito.Mockito.mock;
@@ -40,7 +44,36 @@ import static org.mockito.Mockito.when;
 /**
  * These tests are testing the S3Guard TTL (time to live) features.
  */
+@RunWith(Parameterized.class)
 public class ITestS3GuardTtl extends AbstractS3ATestBase {
+
+  private final boolean authoritative;
+
+  /**
+   * Test array for parameterized test runs.
+   * @return a list of parameter tuples.
+   */
+  @Parameterized.Parameters
+  public static Collection<Object[]> params() {
+    return Arrays.asList(new Object[][]{
+        {true}, {false}
+    });
+  }
+
+  /**
+   * By changing the method name, the thread name is changed and
+   * so you can see in the logs which mode is being tested.
+   * @return a string to use for the thread namer.
+   */
+  @Override
+  protected String getMethodName() {
+    return super.getMethodName() +
+        (authoritative ? "-auth" : "-nonauth");
+  }
+
+  public ITestS3GuardTtl(boolean authoritative) {
+    this.authoritative = authoritative;
+  }
 
   /**
    * Patch the configuration - this test needs disabled filesystem caching.
@@ -51,11 +84,15 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration configuration = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(configuration);
-    return S3ATestUtils.prepareTestConfiguration(configuration);
+    configuration =
+        S3ATestUtils.prepareTestConfiguration(configuration);
+    configuration.setBoolean(METADATASTORE_AUTHORITATIVE, authoritative);
+    return configuration;
   }
 
   @Test
   public void testDirectoryListingAuthoritativeTtl() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
 
     final S3AFileSystem fs = getFileSystem();
     Assume.assumeTrue(fs.hasMetadataStore());
@@ -109,6 +146,8 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
 
   @Test
   public void testFileMetadataExpiresTtl() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
     Path fileExpire1 = path("expirettl-" + UUID.randomUUID());
     Path fileExpire2 = path("expirettl-" + UUID.randomUUID());
     Path fileRetain = path("expirettl-" + UUID.randomUUID());
@@ -121,7 +160,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
         mock(ITtlTimeProvider.class);
     ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
     fs.setTtlTimeProvider(mockTimeProvider);
-    when(mockTimeProvider.getMetadataTtl()).thenReturn(1L);
+    when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
 
     try {
       // set the time, so the fileExpire1 will expire
@@ -131,27 +170,26 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       when(mockTimeProvider.getNow()).thenReturn(101L);
       touch(fs, fileExpire2);
       // set the time, so fileRetain won't expire
-      when(mockTimeProvider.getNow()).thenReturn(103L);
+      when(mockTimeProvider.getNow()).thenReturn(109L);
       touch(fs, fileRetain);
       // change time, so the first two file metadata is expired
-      when(mockTimeProvider.getNow()).thenReturn(102L);
+      when(mockTimeProvider.getNow()).thenReturn(110L);
 
       // metadata is expired so this should refresh the metadata with
-      // lastupdated to the getNow()
+      // last_updated to the getNow()
       final FileStatus fileExpire1Status = fs.getFileStatus(fileExpire1);
       assertNotNull(fileExpire1Status);
-      assertEquals(102L, ms.get(fileExpire1).getLastUpdated());
+      assertEquals(110L, ms.get(fileExpire1).getLastUpdated());
 
       // metadata is expired so this should refresh the metadata with
-      // lastupdated to the getNow()
+      // last_updated to the getNow()
       final FileStatus fileExpire2Status = fs.getFileStatus(fileExpire2);
       assertNotNull(fileExpire2Status);
-      assertEquals(102L, ms.get(fileExpire2).getLastUpdated());
+      assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
 
-      // metadata is not expired, so this should be 102
       final FileStatus fileRetainStatus = fs.getFileStatus(fileRetain);
       assertNotNull(fileRetainStatus);
-      assertEquals(103L, ms.get(fileRetain).getLastUpdated());
+      assertEquals(109L, ms.get(fileRetain).getLastUpdated());
     } finally {
       fs.delete(fileExpire1, true);
       fs.delete(fileExpire2, true);
