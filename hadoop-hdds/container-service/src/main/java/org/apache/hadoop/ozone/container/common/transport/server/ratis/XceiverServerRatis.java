@@ -57,7 +57,6 @@ import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.NotLeaderException;
 import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.protocol.RaftPeerId;
-import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -241,7 +240,8 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT_DEFAULT,
         StorageUnit.BYTES);
-    RaftServerConfigKeys.Log.setQueueElementLimit(properties, logQueueNumElements);
+    RaftServerConfigKeys.Log.setQueueElementLimit(
+        properties, logQueueNumElements);
     RaftServerConfigKeys.Log.setQueueByteLimit(properties, logQueueByteLimit);
 
     int numSyncRetries = conf.getInt(
@@ -610,7 +610,8 @@ public final class XceiverServerRatis extends XceiverServer {
    * catch up.
    *
    * @param groupId raft group information
-   * @param roleInfoProto information about the current node role and rpc delay information
+   * @param roleInfoProto information about the current node role and
+   *                      rpc delay information.
    * @param firstTermIndexInLog After the snapshot installation is complete,
    * return the last included term index in the snapshot.
    */
