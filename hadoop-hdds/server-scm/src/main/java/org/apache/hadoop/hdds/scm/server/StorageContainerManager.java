@@ -140,19 +140,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
 
   private static final Logger LOG = LoggerFactory
       .getLogger(StorageContainerManager.class);
-  private static final String USAGE =
-      "Usage: \n ozone scm [genericOptions] "
-          + "[ "
-          + StartupOption.INIT.getName()
-          + " [ "
-          + StartupOption.CLUSTERID.getName()
-          + " <cid> ] ]\n "
-          + "ozone scm [genericOptions] [ "
-          + StartupOption.GENCLUSTERID.getName()
-          + " ]\n "
-          + "ozone scm [ "
-          + StartupOption.HELP.getName()
-          + " ]\n";
+
   /**
    * SCM metrics.
    */
@@ -586,115 +574,23 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   }
 
   /**
-   * Main entry point for starting StorageContainerManager.
+   * Create an SCM instance based on the supplied configuration.
    *
-   * @param argv arguments
-   * @throws IOException if startup fails due to I/O error
-   */
-  public static void main(String[] argv) throws IOException {
-    if (DFSUtil.parseHelpArgument(argv, USAGE, System.out, true)) {
-      System.exit(0);
-    }
-    try {
-      TracingUtil.initTracing("StorageContainerManager");
-      OzoneConfiguration conf = new OzoneConfiguration();
-      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
-      if (!hParser.isParseSuccessful()) {
-        System.err.println("USAGE: " + USAGE + "\n");
-        hParser.printGenericCommandUsage(System.err);
-        System.exit(1);
-      }
-      StorageContainerManager scm = createSCM(
-          hParser.getRemainingArgs(), conf, true);
-      if (scm != null) {
-        scm.start();
-        scm.join();
-      }
-    } catch (Throwable t) {
-      LOG.error("Failed to start the StorageContainerManager.", t);
-      terminate(1, t);
-    }
-  }
-
-  private static void printUsage(PrintStream out) {
-    out.println(USAGE + "\n");
-  }
-
-  /**
-   * Create an SCM instance based on the supplied command-line arguments.
-   * <p>
-   * This method is intended for unit tests only. It suppresses the
-   * startup/shutdown message and skips registering Unix signal
-   * handlers.
-   *
-   * @param args command line arguments.
-   * @param conf HDDS configuration
-   * @return SCM instance
-   * @throws IOException, AuthenticationException
-   */
-  @VisibleForTesting
-  public static StorageContainerManager createSCM(
-      String[] args, OzoneConfiguration conf)
-      throws IOException, AuthenticationException {
-    return createSCM(args, conf, false);
-  }
-
-  /**
-   * Create an SCM instance based on the supplied command-line arguments.
-   *
-   * @param args        command-line arguments.
    * @param conf        HDDS configuration
-   * @param printBanner if true, then log a verbose startup message.
    * @return SCM instance
    * @throws IOException, AuthenticationException
    */
-  private static StorageContainerManager createSCM(
-      String[] args,
-      OzoneConfiguration conf,
-      boolean printBanner)
+  public static StorageContainerManager createSCM(
+      OzoneConfiguration conf)
       throws IOException, AuthenticationException {
-    String[] argv = (args == null) ? new String[0] : args;
     if (!HddsUtils.isHddsEnabled(conf)) {
       System.err.println(
           "SCM cannot be started in secure mode or when " + OZONE_ENABLED + "" +
               " is set to false");
       System.exit(1);
     }
-    StartupOption startOpt = parseArguments(argv);
-    if (startOpt == null) {
-      printUsage(System.err);
-      terminate(1);
-      return null;
+    return new StorageContainerManager(conf);
     }
-    switch (startOpt) {
-    case INIT:
-      if (printBanner) {
-        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-            LOG);
-      }
-      terminate(scmInit(conf) ? 0 : 1);
-      return null;
-    case GENCLUSTERID:
-      if (printBanner) {
-        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-            LOG);
-      }
-      System.out.println("Generating new cluster id:");
-      System.out.println(StorageInfo.newClusterID());
-      terminate(0);
-      return null;
-    case HELP:
-      printUsage(System.err);
-      terminate(0);
-      return null;
-    default:
-      if (printBanner) {
-        StringUtils.startupShutdownMessage(StorageContainerManager.class, argv,
-            LOG);
-      }
-      return new StorageContainerManager(conf);
-    }
-  }
 
   /**
    * Routine to set up the Version info for StorageContainerManager.
@@ -703,12 +599,12 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    * @return true if SCM initialization is successful, false otherwise.
    * @throws IOException if init fails due to I/O error
    */
-  public static boolean scmInit(OzoneConfiguration conf) throws IOException {
+  public static boolean scmInit(OzoneConfiguration conf,
+      String clusterId) throws IOException {
     SCMStorageConfig scmStorageConfig = new SCMStorageConfig(conf);
     StorageState state = scmStorageConfig.getState();
     if (state != StorageState.INITIALIZED) {
       try {
-        String clusterId = StartupOption.INIT.getClusterId();
         if (clusterId != null && !clusterId.isEmpty()) {
           scmStorageConfig.setClusterId(clusterId);
         }
@@ -733,48 +629,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
               + scmStorageConfig.getClusterID());
       return true;
     }
-  }
-
-  private static StartupOption parseArguments(String[] args) {
-    int argsLen = (args == null) ? 0 : args.length;
-    StartupOption startOpt = null;
-    if (argsLen == 0) {
-      startOpt = StartupOption.REGULAR;
-    }
-    for (int i = 0; i < argsLen; i++) {
-      String cmd = args[i];
-      if (StartupOption.INIT.getName().equalsIgnoreCase(cmd)) {
-        startOpt = StartupOption.INIT;
-        if (argsLen > 3) {
-          return null;
-        }
-        for (i = i + 1; i < argsLen; i++) {
-          if (args[i].equalsIgnoreCase(StartupOption.CLUSTERID.getName())) {
-            i++;
-            if (i < argsLen && !args[i].isEmpty()) {
-              startOpt.setClusterId(args[i]);
-            } else {
-              // if no cluster id specified or is empty string, return null
-              LOG.error(
-                  "Must specify a valid cluster ID after the "
-                      + StartupOption.CLUSTERID.getName()
-                      + " flag");
-              return null;
-            }
-          } else {
-            return null;
-          }
-        }
-      } else {
-        if (StartupOption.GENCLUSTERID.getName().equalsIgnoreCase(cmd)) {
-          if (argsLen > 1) {
-            return null;
-          }
-          startOpt = StartupOption.GENCLUSTERID;
-        }
-      }
-    }
-    return startOpt;
   }
 
   /**
@@ -1218,36 +1072,5 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    */
   public SCMMetadataStore getScmMetadataStore() {
     return scmMetadataStore;
-  }
-  /**
-   * Startup options.
-   */
-  public enum StartupOption {
-    INIT("--init"),
-    CLUSTERID("--clusterid"),
-    GENCLUSTERID("--genclusterid"),
-    REGULAR("--regular"),
-    HELP("-help");
-
-    private final String name;
-    private String clusterId = null;
-
-    StartupOption(String arg) {
-      this.name = arg;
-    }
-
-    public String getClusterId() {
-      return clusterId;
-    }
-
-    public void setClusterId(String cid) {
-      if (cid != null && !cid.isEmpty()) {
-        clusterId = cid;
-      }
-    }
-
-    public String getName() {
-      return name;
-    }
   }
 }
