@@ -22,7 +22,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 if [ -n "$SLEEP_SECONDS" ]; then
    echo "Sleeping for $SLEEP_SECONDS seconds"
-   sleep $SLEEP_SECONDS
+   sleep "$SLEEP_SECONDS"
 fi
 
 #
@@ -35,11 +35,11 @@ fi
 # With an optional parameter, you can also set the maximum
 # time of waiting with (in seconds) with WAITFOR_TIMEOUT.
 # (The default is 300 seconds / 5 minutes.)
-if [ ! -z "$WAITFOR" ]; then
+if [ -n "$WAITFOR" ]; then
   echo "Waiting for the service $WAITFOR"
   WAITFOR_HOST=$(printf "%s\n" "$WAITFOR"| cut -d : -f 1)
   WAITFOR_PORT=$(printf "%s\n" "$WAITFOR"| cut -d : -f 2)
-  for i in `seq ${WAITFOR_TIMEOUT:-300} -1 0` ; do
+  for i in $(seq "${WAITFOR_TIMEOUT:-300}" -1 0) ; do
     set +e
     nc -z "$WAITFOR_HOST" "$WAITFOR_PORT" > /dev/null 2>&1
     result=$?
@@ -120,14 +120,14 @@ if [ -n "$BYTEMAN_SCRIPT" ] || [ -n "$BYTEMAN_SCRIPT_URL" ]; then
 
   export PATH=$PATH:$BYTEMAN_DIR/bin
 
-  if [ ! -z "$BYTEMAN_SCRIPT_URL" ]; then
-    wget $BYTEMAN_SCRIPT_URL -O /tmp/byteman.btm
+  if [ -n "$BYTEMAN_SCRIPT_URL" ]; then
+    wget "$BYTEMAN_SCRIPT_URL" -O /tmp/byteman.btm
     export BYTEMAN_SCRIPT=/tmp/byteman.btm
   fi
 
   if [ ! -f "$BYTEMAN_SCRIPT" ]; then
     echo "ERROR: The defined $BYTEMAN_SCRIPT does not exist!!!"
-    exit -1
+    exit 255
   fi
 
   AGENT_STRING="-javaagent:/opt/byteman.jar=script:$BYTEMAN_SCRIPT"
