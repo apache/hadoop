@@ -28,6 +28,7 @@ import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.ApplicationResourceUsageReport;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
 import org.apache.hadoop.yarn.util.Times;
@@ -64,6 +65,8 @@ public class AppInfo {
   protected boolean unmanagedApplication;
   private String appNodeLabelExpression;
   private String amNodeLabelExpression;
+  private String aggregateResourceAllocation;
+  private String aggregatePreemptedResourceAllocation;
 
   public AppInfo() {
     // JAXB needs this
@@ -93,15 +96,21 @@ public class AppInfo {
     if (app.getPriority() != null) {
       priority = app.getPriority().getPriority();
     }
-    if (app.getApplicationResourceUsageReport() != null) {
-      runningContainers = app.getApplicationResourceUsageReport()
-          .getNumUsedContainers();
-      if (app.getApplicationResourceUsageReport().getUsedResources() != null) {
-        allocatedCpuVcores = app.getApplicationResourceUsageReport()
-            .getUsedResources().getVirtualCores();
-        allocatedMemoryMB = app.getApplicationResourceUsageReport()
-            .getUsedResources().getMemorySize();
+    ApplicationResourceUsageReport usageReport =
+        app.getApplicationResourceUsageReport();
+
+    if (usageReport != null) {
+      runningContainers = usageReport.getNumUsedContainers();
+      if (usageReport.getUsedResources() != null) {
+        allocatedCpuVcores = usageReport.getUsedResources().getVirtualCores();
+        allocatedMemoryMB = usageReport.getUsedResources().getMemorySize();
       }
+      aggregateResourceAllocation = usageReport.getMemorySeconds()
+          + " MB-seconds, " + usageReport.getVcoreSeconds()
+          + " vcore-seconds";
+      aggregatePreemptedResourceAllocation = usageReport.
+          getPreemptedMemorySeconds() + " MB-seconds, " +
+          usageReport.getPreemptedVcoreSeconds() + " vcore-seconds";
     }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
@@ -214,5 +223,13 @@ public class AppInfo {
 
   public String getAmNodeLabelExpression() {
     return amNodeLabelExpression;
+  }
+
+  public String getAggregateResourceAllocation() {
+    return aggregateResourceAllocation;
+  }
+
+  public String getAggregatePreemptedResourceAllocation() {
+    return aggregatePreemptedResourceAllocation;
   }
 }
