@@ -320,10 +320,32 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
               <goal>build-classpath</goal>
             </goals>
             <configuration>
-              <attach>true</attach>
+              <outputFile>${project.build.directory}/classpath</outputFile>
               <prefix>$HDDS_LIB_JARS_DIR</prefix>
               <outputFilterFile>true</outputFilterFile>
               <includeScope>runtime</includeScope>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>attach-classpath-artifact</id>
+            <phase>package</phase>
+            <goals>
+              <goal>attach-artifact</goal>
+            </goals>
+            <configuration>
+              <artifacts>
+                <artifact>
+                  <file>${project.build.directory}/classpath</file>
+                  <type>cp</type>
+                  <classifier>classpath</classifier>
+                </artifact>
+              </artifacts>
             </configuration>
           </execution>
         </executions>
