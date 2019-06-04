@@ -26,7 +26,7 @@ start_docker_env
 #Due to the limitation of the current auditparser test, it should be the
 #first test in a clean cluster.
 
-execute_robot_test scm auditparser
+execute_robot_test om auditparser
 
 execute_robot_test scm basic/basic.robot
 
