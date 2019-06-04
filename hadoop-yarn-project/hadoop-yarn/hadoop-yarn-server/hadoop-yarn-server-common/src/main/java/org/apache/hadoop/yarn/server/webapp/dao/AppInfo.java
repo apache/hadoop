@@ -57,6 +57,7 @@ public class AppInfo {
   protected long finishedTime;
   protected long elapsedTime;
   protected String applicationTags;
+  private String aggregateResourceAllocation;
 
   public AppInfo() {
     // JAXB needs this
@@ -82,6 +83,15 @@ public class AppInfo {
     finishedTime = app.getFinishTime();
     elapsedTime = Times.elapsed(startedTime, finishedTime);
     finalAppStatus = app.getFinalApplicationStatus();
+
+    if (app.getApplicationResourceUsageReport() != null) {
+      Long memorySeconds = app.getApplicationResourceUsageReport().
+          getMemorySeconds();
+      Long vcoreSeconds = app.getApplicationResourceUsageReport().
+          getVcoreSeconds();
+      aggregateResourceAllocation = memorySeconds + " MB-seconds, "
+          + vcoreSeconds + " vcore-seconds";
+    }
     progress = app.getProgress() * 100; // in percent
     if (app.getApplicationTags() != null && !app.getApplicationTags().isEmpty()) {
       this.applicationTags = CSV_JOINER.join(app.getApplicationTags());
@@ -163,4 +173,9 @@ public class AppInfo {
   public String getApplicationTags() {
     return applicationTags;
   }
+
+  public String getAggregateResourceAllocation() {
+    return aggregateResourceAllocation;
+  }
+
 }

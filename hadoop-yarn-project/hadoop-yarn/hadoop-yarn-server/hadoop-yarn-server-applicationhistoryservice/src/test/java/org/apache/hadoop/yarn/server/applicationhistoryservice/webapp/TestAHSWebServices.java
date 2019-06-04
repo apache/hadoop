@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.util.Arrays;
@@ -320,6 +321,8 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals(FinalApplicationStatus.UNDEFINED.toString(),
       app.get("finalAppStatus"));
     assertEquals(YarnApplicationState.FINISHED.toString(), app.get("appState"));
+    assertNotNull("Aggregate resource allocation is null",
+        app.get("aggregateResourceAllocation"));
   }
 
   @Test
