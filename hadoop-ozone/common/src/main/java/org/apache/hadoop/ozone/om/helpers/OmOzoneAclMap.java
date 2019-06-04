@@ -120,13 +120,15 @@ public class OmOzoneAclMap {
       bits.and(aclRights);
 
       if (bits.equals(ZERO_BITSET)) {
-        // throw exception if acl is already added.
+        // throw exception if acl doesn't exist.
         throw new OMException("Acl [" + acl + "] doesn't exist.",
             INVALID_REQUEST);
       }
 
       acl.getAclBitSet().and(aclRights);
       aclRights.xor(acl.getAclBitSet());
+
+      // Remove the acl as all rights are already set to 0.
       if (aclRights.equals(ZERO_BITSET)) {
         getMap(aclType).remove(acl.getName());
       }

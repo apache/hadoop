@@ -505,6 +505,8 @@ public class BucketManagerImpl implements BucketManager {
             bucketInfo.getAcls().remove(a);
           }
           break;
+        } else {
+          return false;
         }
       }
 
