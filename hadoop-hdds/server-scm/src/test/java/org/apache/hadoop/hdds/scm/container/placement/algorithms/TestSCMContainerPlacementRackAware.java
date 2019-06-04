@@ -16,6 +16,7 @@
  */
 package org.apache.hadoop.hdds.scm.container.placement.algorithms;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
@@ -23,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState;
 import org.apache.hadoop.hdds.scm.TestUtils;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.net.NodeSchema;
@@ -47,6 +49,8 @@ import static org.mockito.Mockito.when;
  */
 public class TestSCMContainerPlacementRackAware {
   private NetworkTopology cluster;
+  private Configuration conf;
+  private NodeManager nodeManager;
   private List<DatanodeDetails> datanodes = new ArrayList<>();
   // policy with fallback capability
   private SCMContainerPlacementRackAware policy;
@@ -58,7 +62,7 @@ public class TestSCMContainerPlacementRackAware {
   @Before
   public void setup() {
     //initialize network topology instance
-    Configuration conf = new OzoneConfiguration();
+    conf = new OzoneConfiguration();
     NodeSchema[] schemas = new NodeSchema[]
         {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
     NodeSchemaManager.getInstance().init(schemas, true);
@@ -76,7 +80,7 @@ public class TestSCMContainerPlacementRackAware {
     }
 
     // create mock node manager
-    NodeManager nodeManager = Mockito.mock(NodeManager.class);
+    nodeManager = Mockito.mock(NodeManager.class);
     when(nodeManager.getNodes(NodeState.HEALTHY))
         .thenReturn(new ArrayList<>(datanodes));
     when(nodeManager.getNodeStat(anyObject()))
@@ -253,5 +257,36 @@ public class TestSCMContainerPlacementRackAware {
     int nodeNum = 1;
     // request storage space larger than node capability
     policy.chooseDatanodes(null, null, nodeNum, STORAGE_CAPACITY + 15);
+  }
+
+  @Test
+  public void testDatanodeWithDefaultNetworkLocation() throws SCMException {
+    String hostname = "node";
+    List<DatanodeDetails> dataList = new ArrayList<>();
+    NetworkTopology clusterMap =
+        new NetworkTopologyImpl(NodeSchemaManager.getInstance());
+    for (int i = 0; i < 15; i++) {
+      // Totally 3 racks, each has 5 datanodes
+      DatanodeDetails node = TestUtils.createDatanodeDetails(
+          hostname + i, null);
+      dataList.add(node);
+      clusterMap.add(node);
+    }
+    Assert.assertEquals(dataList.size(), StringUtils.countMatches(
+        clusterMap.toString(), NetConstants.DEFAULT_RACK));
+
+    // choose nodes to host 3 replica
+    int nodeNum = 3;
+    SCMContainerPlacementRackAware newPolicy =
+        new SCMContainerPlacementRackAware(nodeManager, conf, clusterMap, true);
+    List<DatanodeDetails> datanodeDetails =
+        newPolicy.chooseDatanodes(null, null, nodeNum, 15);
+    Assert.assertEquals(nodeNum, datanodeDetails.size());
+    Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
+        datanodeDetails.get(1)));
+    Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
+        datanodeDetails.get(2)));
+    Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(1),
+        datanodeDetails.get(2)));
   }
 }

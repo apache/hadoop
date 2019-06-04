@@ -79,7 +79,7 @@ public class TestNodeSchemaManager {
       manager.init(conf);
       fail("should fail");
     } catch (Throwable e) {
-      assertTrue(e.getMessage().contains("Fail to load schema file:" +
+      assertTrue(e.getMessage().contains("Failed to load schema file:" +
           filePath));
     }
   }

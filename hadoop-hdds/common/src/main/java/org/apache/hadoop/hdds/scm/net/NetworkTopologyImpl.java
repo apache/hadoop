@@ -732,7 +732,7 @@ public class NetworkTopologyImpl implements NetworkTopology{
     try {
       // print the number of leaves
       int numOfLeaves = clusterTree.getNumOfLeaves();
-      tree.append("Expected number of leaves:");
+      tree.append("Number of leaves:");
       tree.append(numOfLeaves);
       tree.append("\n");
       // print all nodes
