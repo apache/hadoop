@@ -75,8 +75,8 @@
 
 <!-- Overview -->
 <script type="text/x-dust-template" id="tmpl-federationhealth">
-<div class="page-header"><h1>Router {#federation}<small>'{HostAndPort}'</small>{/federation}</h1></div>
-{#federation}
+<div class="page-header"><h1>Router {#router}<small>'{HostAndPort}'</small>{/router}</h1></div>
+{#router}
 <table class="table table-bordered table-striped">
   <tr><th>Started:</th><td>{RouterStarted}</td></tr>
   <tr><th>Version:</th><td>{Version}</td></tr>
@@ -85,12 +85,12 @@
   <tr><th>Block Pool ID:</th><td>{BlockPoolId}</td></tr>
   <tr><th>Status:</th><td>{RouterStatus}</td></tr>
 </table>
-{/federation}
+{/router}
 
 <div class="page-header"><h1>Summary</h1></div>
 {#federation}
 <p>
-  Security is {#federation}{#SecurityEnabled}on{:else}off{/SecurityEnabled}{/federation}.</p>
+  Security is {#router}{#SecurityEnabled}on{:else}off{/SecurityEnabled}{/router}.</p>
 <p>{#router}{#Safemode}{.}{:else}Safemode is off.{/Safemode}{/router}</p>
 
 <p>

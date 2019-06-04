@@ -19,7 +19,7 @@
 package org.apache.hadoop.fs.contract.router;
 
 import static org.apache.hadoop.fs.contract.router.SecurityConfUtil.initSecurity;
-import static org.apache.hadoop.hdfs.server.federation.metrics.TestFederationMetrics.FEDERATION_BEAN;
+import static org.apache.hadoop.hdfs.server.federation.metrics.TestRBFMetrics.ROUTER_BEAN;
 
 import java.io.IOException;
 
@@ -29,7 +29,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.contract.AbstractFSContractTestBase;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.FederationTestUtils;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMBean;
+import org.apache.hadoop.hdfs.server.federation.metrics.RouterMBean;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.junit.AfterClass;
@@ -64,8 +64,8 @@ public class TestRouterHDFSContractDelegationToken
 
   @Test
   public void testRouterDelegationToken() throws Exception {
-    FederationMBean bean = FederationTestUtils.getBean(
-        FEDERATION_BEAN, FederationMBean.class);
+    RouterMBean bean = FederationTestUtils.getBean(
+        ROUTER_BEAN, RouterMBean.class);
     // Initially there is no token in memory
     assertEquals(0, bean.getCurrentTokensCount());
     // Generate delegation token

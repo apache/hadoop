@@ -40,7 +40,7 @@ import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.NamenodeCon
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.MembershipNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -205,7 +205,7 @@ public class TestDisableNameservices {
     int numActive = 0;
     int numDisabled = 0;
     Router router = routerContext.getRouter();
-    FederationMetrics metrics = router.getMetrics();
+    RBFMetrics metrics = router.getMetrics();
     String jsonString = metrics.getNameservices();
     JSONObject jsonObject = new JSONObject(jsonString);
     Iterator<?> keys = jsonObject.keys();

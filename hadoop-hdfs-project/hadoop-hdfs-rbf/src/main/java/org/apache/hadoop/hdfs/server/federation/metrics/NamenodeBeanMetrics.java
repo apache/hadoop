@@ -45,7 +45,6 @@ import org.apache.hadoop.hdfs.server.federation.resolver.FederationNamespaceInfo
 import org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.router.Router;
 import org.apache.hadoop.hdfs.server.federation.router.RouterRpcServer;
-import org.apache.hadoop.hdfs.server.federation.router.RouterServiceState;
 import org.apache.hadoop.hdfs.server.federation.router.SubClusterTimeoutException;
 import org.apache.hadoop.hdfs.server.federation.store.MembershipStore;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
@@ -169,8 +168,8 @@ public class NamenodeBeanMetrics
     }
   }
 
-  private FederationMetrics getFederationMetrics() throws IOException {
-    FederationMetrics metrics = getRouter().getMetrics();
+  private RBFMetrics getRBFMetrics() throws IOException {
+    RBFMetrics metrics = getRouter().getMetrics();
     if (metrics == null) {
       throw new IOException("Federated metrics is not initialized");
     }
@@ -194,7 +193,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getUsed() {
     try {
-      return getFederationMetrics().getUsedCapacity();
+      return getRBFMetrics().getUsedCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to get the used capacity", e.getMessage());
     }
@@ -204,7 +203,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getFree() {
     try {
-      return getFederationMetrics().getRemainingCapacity();
+      return getRBFMetrics().getRemainingCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to get remaining capacity", e.getMessage());
     }
@@ -214,7 +213,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getTotal() {
     try {
-      return getFederationMetrics().getTotalCapacity();
+      return getRBFMetrics().getTotalCapacity();
     } catch (IOException e) {
       LOG.debug("Failed to Get total capacity", e.getMessage());
     }
@@ -224,7 +223,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getProvidedCapacity() {
     try {
-      return getFederationMetrics().getProvidedSpace();
+      return getRBFMetrics().getProvidedSpace();
     } catch (IOException e) {
       LOG.debug("Failed to get provided capacity", e.getMessage());
     }
@@ -234,29 +233,11 @@ public class NamenodeBeanMetrics
   @Override
   public String getSafemode() {
     try {
-      if (getRouter().isRouterState(RouterServiceState.SAFEMODE)) {
-        return "Safe mode is ON. " + this.getSafeModeTip();
-      }
+      return getRBFMetrics().getSafemode();
     } catch (IOException e) {
       return "Failed to get safemode status. Please check router"
           + "log for more detail.";
     }
-    return "";
-  }
-
-  private String getSafeModeTip() throws IOException {
-    Router rt = getRouter();
-    String cmd = "Use \"hdfs dfsrouteradmin -safemode leave\" "
-        + "to turn safe mode off.";
-    if (rt.isRouterState(RouterServiceState.INITIALIZING)
-        || rt.isRouterState(RouterServiceState.UNINITIALIZED)) {
-      return "Router is in" + rt.getRouterState()
-          + "mode, the router will immediately return to "
-          + "normal mode after some time. " + cmd;
-    } else if (rt.isRouterState(RouterServiceState.SAFEMODE)) {
-      return "It was turned on manually. " + cmd;
-    }
-    return "";
   }
 
   @Override
@@ -309,7 +290,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getTotalBlocks() {
     try {
-      return getFederationMetrics().getNumBlocks();
+      return getRBFMetrics().getNumBlocks();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks", e.getMessage());
     }
@@ -319,7 +300,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getNumberOfMissingBlocks() {
     try {
-      return getFederationMetrics().getNumOfMissingBlocks();
+      return getRBFMetrics().getNumOfMissingBlocks();
     } catch (IOException e) {
       LOG.debug("Failed to get number of missing blocks", e.getMessage());
     }
@@ -330,7 +311,7 @@ public class NamenodeBeanMetrics
   @Deprecated
   public long getPendingReplicationBlocks() {
     try {
-      return getFederationMetrics().getNumOfBlocksPendingReplication();
+      return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks pending replica",
           e.getMessage());
@@ -341,7 +322,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getPendingReconstructionBlocks() {
     try {
-      return getFederationMetrics().getNumOfBlocksPendingReplication();
+      return getRBFMetrics().getNumOfBlocksPendingReplication();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks pending replica",
           e.getMessage());
@@ -353,7 +334,7 @@ public class NamenodeBeanMetrics
   @Deprecated
   public long getUnderReplicatedBlocks() {
     try {
-      return getFederationMetrics().getNumOfBlocksUnderReplicated();
+      return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks under replicated",
           e.getMessage());
@@ -364,7 +345,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getLowRedundancyBlocks() {
     try {
-      return getFederationMetrics().getNumOfBlocksUnderReplicated();
+      return getRBFMetrics().getNumOfBlocksUnderReplicated();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks under replicated",
           e.getMessage());
@@ -375,7 +356,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getPendingDeletionBlocks() {
     try {
-      return getFederationMetrics().getNumOfBlocksPendingDeletion();
+      return getRBFMetrics().getNumOfBlocksPendingDeletion();
     } catch (IOException e) {
       LOG.debug("Failed to get number of blocks pending deletion",
           e.getMessage());
@@ -620,7 +601,7 @@ public class NamenodeBeanMetrics
   @Override
   public long getFilesTotal() {
     try {
-      return getFederationMetrics().getNumFiles();
+      return getRBFMetrics().getNumFiles();
     } catch (IOException e) {
       LOG.debug("Failed to get number of files", e.getMessage());
     }
@@ -635,7 +616,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumLiveDataNodes() {
     try {
-      return getFederationMetrics().getNumLiveNodes();
+      return getRBFMetrics().getNumLiveNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of live nodes", e.getMessage());
     }
@@ -645,7 +626,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumDeadDataNodes() {
     try {
-      return getFederationMetrics().getNumDeadNodes();
+      return getRBFMetrics().getNumDeadNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of dead nodes", e.getMessage());
     }
@@ -655,7 +636,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumStaleDataNodes() {
     try {
-      return getFederationMetrics().getNumStaleNodes();
+      return getRBFMetrics().getNumStaleNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of stale nodes", e.getMessage());
     }
@@ -665,7 +646,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumDecomLiveDataNodes() {
     try {
-      return getFederationMetrics().getNumDecomLiveNodes();
+      return getRBFMetrics().getNumDecomLiveNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get the number of live decommissioned datanodes",
           e.getMessage());
@@ -676,7 +657,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumDecomDeadDataNodes() {
     try {
-      return getFederationMetrics().getNumDecomDeadNodes();
+      return getRBFMetrics().getNumDecomDeadNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get the number of dead decommissioned datanodes",
           e.getMessage());
@@ -687,7 +668,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumDecommissioningDataNodes() {
     try {
-      return getFederationMetrics().getNumDecommissioningNodes();
+      return getRBFMetrics().getNumDecommissioningNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of decommissioning nodes",
           e.getMessage());
@@ -698,7 +679,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumInMaintenanceLiveDataNodes() {
     try {
-      return getFederationMetrics().getNumInMaintenanceLiveDataNodes();
+      return getRBFMetrics().getNumInMaintenanceLiveDataNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of live in maintenance nodes",
           e.getMessage());
@@ -709,7 +690,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumInMaintenanceDeadDataNodes() {
     try {
-      return getFederationMetrics().getNumInMaintenanceDeadDataNodes();
+      return getRBFMetrics().getNumInMaintenanceDeadDataNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of dead in maintenance nodes",
           e.getMessage());
@@ -720,7 +701,7 @@ public class NamenodeBeanMetrics
   @Override
   public int getNumEnteringMaintenanceDataNodes() {
     try {
-      return getFederationMetrics().getNumEnteringMaintenanceDataNodes();
+      return getRBFMetrics().getNumEnteringMaintenanceDataNodes();
     } catch (IOException e) {
       LOG.debug("Failed to get number of entering maintenance nodes",
           e.getMessage());
@@ -803,6 +784,12 @@ public class NamenodeBeanMetrics
 
   @Override
   public boolean isSecurityEnabled() {
+    try {
+      return getRBFMetrics().isSecurityEnabled();
+    } catch (IOException e) {
+      LOG.debug("Failed to get security status.",
+          e.getMessage());
+    }
     return false;
   }
 

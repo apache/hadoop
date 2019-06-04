@@ -38,7 +38,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster.RouterContext;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.federation.StateStoreDFSCluster;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableManager;
 import org.apache.hadoop.hdfs.server.federation.resolver.MountTableResolver;
@@ -761,13 +761,13 @@ public class TestRouterAdminCLI {
     assertEquals(0,
         ToolRunner.run(admin, new String[] {"-safemode", "enter" }));
 
-    FederationMetrics metrics = router.getMetrics();
+    RBFMetrics metrics = router.getMetrics();
     String jsonString = metrics.getRouterStatus();
     String result = router.getNamenodeMetrics().getSafemode();
     assertTrue("Wrong safe mode message: " + result,
         result.startsWith("Safe mode is ON."));
 
-    // verify state using FederationMetrics
+    // verify state using RBFMetrics
     assertEquals(RouterServiceState.SAFEMODE.toString(), jsonString);
     assertTrue(routerContext.getRouter().getSafemodeService().isInSafeMode());
 
