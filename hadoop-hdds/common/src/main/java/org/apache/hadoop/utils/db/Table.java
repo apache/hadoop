@@ -61,6 +61,7 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
   /**
    * Check if a given key exists in Metadata store.
    * (Optimization to save on data deserialization)
+   * A lock on the key / bucket needs to be acquired before invoking this API.
    * @param key metadata key
    * @return true if the metadata store contains a key.
    * @throws IOException on Failure

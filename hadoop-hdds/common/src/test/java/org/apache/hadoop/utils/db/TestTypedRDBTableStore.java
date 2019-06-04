@@ -334,4 +334,21 @@ public class TestTypedRDBTableStore {
       Assert.assertFalse(testTable.isExist(key));
     }
   }
+
+  @Test
+  public void testIsExistCache() throws Exception {
+    try (Table<String, String> testTable = createTypedTable(
+        "Eighth")) {
+      String key =
+          RandomStringUtils.random(10);
+      String value = RandomStringUtils.random(10);
+      testTable.addCacheEntry(new CacheKey<>(key),
+          new CacheValue<>(Optional.of(value), 1L));
+      Assert.assertTrue(testTable.isExist(key));
+
+      testTable.addCacheEntry(new CacheKey<>(key),
+          new CacheValue<>(Optional.absent(), 1L));
+      Assert.assertFalse(testTable.isExist(key));
+    }
+  }
 }
