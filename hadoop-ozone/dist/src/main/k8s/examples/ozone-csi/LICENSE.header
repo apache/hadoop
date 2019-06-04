@@ -13,16 +13,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: scm
-spec:
-  ports:
-  - port: 9876
-    name: ui
-  clusterIP: None
-  selector:
-    app: ozone
-    component: scm
