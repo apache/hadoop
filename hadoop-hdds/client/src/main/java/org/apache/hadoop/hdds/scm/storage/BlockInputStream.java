@@ -19,47 +19,27 @@
 package org.apache.hadoop.hdds.scm.storage;
 
 import com.google.common.annotations.VisibleForTesting;
-<<<<<<< HEAD
-import com.google.common.base.Preconditions;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.scm.container.common.helpers
-    .StorageContainerException;
-import org.apache.hadoop.ozone.common.Checksum;
-import org.apache.hadoop.ozone.common.ChecksumData;
-import org.apache.hadoop.ozone.common.OzoneChecksumException;
-import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
-=======
+
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
->>>>>>> Partial Chunk reads
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
-<<<<<<< HEAD
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
-    .ReadChunkResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
-    ContainerCommandResponseProto;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
-    ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.client.BlockID;
-=======
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.DatanodeBlockID;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.GetBlockResponseProto;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
->>>>>>> Partial Chunk reads
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -103,18 +83,6 @@ public class BlockInputStream extends InputStream implements Seekable {
   // Index of the chunkStream corresponding to the current position of the
   // BlockInputStream i.e offset of the data to be read next from this block
   private int chunkIndex;
-<<<<<<< HEAD
-  // ChunkIndexOfCurrentBuffer points to the index of chunk read into the
-  // buffers or index of the last chunk in the buffers. It is updated only
-  // when a new chunk is read from container into the buffers.
-  private int chunkIndexOfCurrentBuffer;
-  private long[] chunkOffset;
-  private List<ByteBuffer> buffers;
-  private int bufferIndex;
-  private long bufferPosition;
-  private boolean verifyChecksum;
-=======
->>>>>>> Partial Chunk reads
 
   // Position of the BlockInputStream is maintainted by this variable till
   // the stream is initialized. This position is w.r.t to the block only and
@@ -241,29 +209,6 @@ public class BlockInputStream extends InputStream implements Seekable {
     if (off < 0 || len < 0 || len > b.length - off) {
       throw new IndexOutOfBoundsException();
     }
-<<<<<<< HEAD
-    // ChunkIndex is the last chunk in the stream. Check if this chunk has
-    // been read from container or not. Return true if chunkIndex has not
-    // been read yet and false otherwise.
-    return chunkIndexOfCurrentBuffer != chunkIndex;
-  }
-
-  /**
-   * Attempts to read the chunk at the specified offset in the chunk list.  If
-   * successful, then the data of the read chunk is saved so that its bytes can
-   * be returned from subsequent read calls.
-   *
-   * @throws IOException if there is an I/O error while performing the call
-   */
-  private synchronized void readChunkFromContainer() throws IOException {
-    // Read the chunk at chunkIndex
-    final ChunkInfo chunkInfo = chunks.get(chunkIndex);
-    ByteString byteString;
-    byteString = readChunk(chunkInfo);
-    buffers = byteString.asReadOnlyByteBufferList();
-    bufferIndex = 0;
-    chunkIndexOfCurrentBuffer = chunkIndex;
-=======
     if (len == 0) {
       return 0;
     }
@@ -271,7 +216,6 @@ public class BlockInputStream extends InputStream implements Seekable {
     if (!initialized) {
       initialize();
     }
->>>>>>> Partial Chunk reads
 
     checkOpen();
     int totalReadLen = 0;
@@ -284,26 +228,6 @@ public class BlockInputStream extends InputStream implements Seekable {
         return totalReadLen == 0 ? EOF : totalReadLen;
       }
 
-<<<<<<< HEAD
-  /**
-   * Send RPC call to get the chunk from the container.
-   */
-  @VisibleForTesting
-  protected ByteString readChunk(final ChunkInfo chunkInfo)
-      throws IOException {
-    ReadChunkResponseProto readChunkResponse;
-    try {
-      List<CheckedBiFunction> validators =
-          ContainerProtocolCalls.getValidatorList();
-      validators.add(validator);
-      readChunkResponse = ContainerProtocolCalls
-          .readChunk(xceiverClient, chunkInfo, blockID, traceID, validators);
-    } catch (IOException e) {
-      if (e instanceof StorageContainerException) {
-        throw e;
-      }
-      throw new IOException("Unexpected OzoneException: " + e.toString(), e);
-=======
       // Get the current chunkStream and read data from it
       ChunkInputStream current = chunkStreams.get(chunkIndex);
       int numBytesToRead = Math.min(len, (int)current.getRemaining());
@@ -323,33 +247,10 @@ public class BlockInputStream extends InputStream implements Seekable {
           ((chunkIndex + 1) < chunkStreams.size())) {
         chunkIndex += 1;
       }
->>>>>>> Partial Chunk reads
     }
     return totalReadLen;
   }
 
-<<<<<<< HEAD
-  private CheckedBiFunction<ContainerCommandRequestProto,
-      ContainerCommandResponseProto, IOException> validator =
-          (request, response) -> {
-            ReadChunkResponseProto readChunkResponse = response.getReadChunk();
-            final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
-            ByteString byteString = readChunkResponse.getData();
-            if (byteString.size() != chunkInfo.getLen()) {
-              // Bytes read from chunk should be equal to chunk size.
-              throw new OzoneChecksumException(String
-                  .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
-                      chunkInfo.getChunkName(), chunkInfo.getLen(),
-                      byteString.size()));
-            }
-            ChecksumData checksumData =
-                ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
-            if (verifyChecksum) {
-              Checksum.verifyChecksum(byteString, checksumData);
-            }
-          };
-
-=======
   /**
    * Seeks the BlockInputStream to the specified position. If the stream is
    * not initialized, save the seeked position via blockPosition. Otherwise,
@@ -366,7 +267,6 @@ public class BlockInputStream extends InputStream implements Seekable {
    *    2. chunkStream[2] will be seeked to position 10
    *       (= 90 - chunkOffset[2] (= 80)).
    */
->>>>>>> Partial Chunk reads
   @Override
   public synchronized void seek(long pos) throws IOException {
     if (!initialized) {
@@ -386,7 +286,7 @@ public class BlockInputStream extends InputStream implements Seekable {
       throw new EOFException(
           "EOF encountered at pos: " + pos + " for block: " + blockID);
     }
-    Preconditions.assertTrue(chunkIndex >= 0);
+
     if (chunkIndex >= chunkStreams.size()) {
       chunkIndex = Arrays.binarySearch(chunkOffsets, pos);
     } else if (pos < chunkOffsets[chunkIndex]) {

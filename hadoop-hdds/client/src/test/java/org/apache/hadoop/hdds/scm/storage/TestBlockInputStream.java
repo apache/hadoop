@@ -120,14 +120,8 @@ public class TestBlockInputStream {
     }
 
     @Override
-<<<<<<< HEAD
-    protected ByteString readChunk(final ChunkInfo chunkInfo)
-        throws IOException {
-      return getByteString(chunkInfo.getChunkName(), (int) chunkInfo.getLen());
-=======
     protected List<ChunkInfo> getChunkInfos() {
       return chunks;
->>>>>>> Partial Chunk reads
     }
 
     @Override

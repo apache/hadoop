@@ -103,20 +103,12 @@ public class TestChunkInputStream {
     }
 
     @Override
-    protected ByteString readChunk(ChunkInfo readChunkInfo,
-        List<DatanodeDetails> excludeDns,
-        List<DatanodeDetails> dnListFromReply) {
+    protected ByteString readChunk(ChunkInfo readChunkInfo) {
       ByteString byteString = ByteString.copyFrom(chunkData,
           (int) readChunkInfo.getOffset(),
           (int) readChunkInfo.getLen());
       readByteBuffers.add(byteString);
       return byteString;
-    }
-
-    @Override
-    protected List<DatanodeDetails> getDatanodeList() {
-      // return an empty dummy list of size 5
-      return new ArrayList<>(5);
     }
 
     @Override
