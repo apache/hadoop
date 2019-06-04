@@ -1,5 +1,4 @@
 <!---
-<!---
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
   You may obtain a copy of the License at
@@ -183,7 +182,7 @@ removed on `S3AFileSystem` level.
 ```xml
 <property>
     <name>fs.s3a.metadatastore.metadata.ttl</name>
-    <value>3600000</value>
+    <value>15m</value>
 </property>
 ```
 

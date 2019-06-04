@@ -68,10 +68,12 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of the record has to be updated to <pre>now</pre>.
    *
    * @param path the path to delete
-   * @param ttlTimeProvider
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
-  void delete(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException;
+  void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
@@ -98,7 +100,8 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of all records have to be updated to <pre>now</pre>.
    *
    * @param path the root of the sub-tree to delete
-   * @param ttlTimeProvider
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
   void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
@@ -162,7 +165,8 @@ public interface MetadataStore extends Closeable {
    * @param pathsToCreate Collection of all PathMetadata for the new paths
    *                      that were created at the destination of the rename
    *                      ().
-   * @param ttlTimeProvider
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
   void move(Collection<Path> pathsToDelete,
@@ -235,7 +239,7 @@ public interface MetadataStore extends Closeable {
    *    Implementations MUST clear file metadata, and MAY clear directory
    *    metadata (s3a itself does not track modification time for directories).
    *    Implementations may also choose to throw UnsupportedOperationException
-   *    instead. Note that modification times should be in UTC, as returned by
+   *    instead. Note that modification times must be in UTC, as returned by
    *    System.currentTimeMillis at the time of modification.
    *   </li>
    * </ul>
@@ -249,13 +253,13 @@ public interface MetadataStore extends Closeable {
    *    Implementations MUST clear file metadata, and MAY clear directory
    *    metadata (s3a itself does not track modification time for directories).
    *    Implementations may also choose to throw UnsupportedOperationException
-   *    instead. Note that last_updated times should be in UTC, as returned by
+   *    instead. Note that last_updated must be in UTC, as returned by
    *    System.currentTimeMillis at the time of modification.
    *   </li>
    * </ul>
    *
    * @param pruneMode
-   * @param cutoff Oldest time to allow
+   * @param cutoff Oldest time to allow (UTC)
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
    */
@@ -267,7 +271,7 @@ public interface MetadataStore extends Closeable {
    * keyPrefix parameter to filter the pruned keys with a prefix.
    *
    * @param pruneMode
-   * @param cutoff Oldest time to allow
+   * @param cutoff Oldest time to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
@@ -291,7 +295,10 @@ public interface MetadataStore extends Closeable {
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
 
-
+  /**
+   * Modes of operation for prune.
+   * For details see {@link MetadataStore#prune(PruneMode, long)}
+   */
   enum PruneMode {
     ALL_BY_MODTIME,
     TOMBSTONES_BY_LASTUPDATED

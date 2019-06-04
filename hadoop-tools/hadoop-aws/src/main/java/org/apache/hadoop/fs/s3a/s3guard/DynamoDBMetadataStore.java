@@ -189,8 +189,10 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * directory helps prevent unnecessary queries during traversal of an entire
  * sub-tree.
  *
- * Some mutating operations, notably {@link MetadataStore#deleteSubtree(Path, ITtlTimeProvider)} and
- * {@link MetadataStore#move(Collection, Collection, ITtlTimeProvider)}, are less efficient with this schema.
+ * Some mutating operations, notably
+ * {@link MetadataStore#deleteSubtree(Path, ITtlTimeProvider)} and
+ * {@link MetadataStore#move(Collection, Collection, ITtlTimeProvider)},
+ * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
  *
  * By default, DynamoDB access is performed within the same AWS region as
@@ -471,7 +473,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void delete(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     innerDelete(path, true, ttlTimeProvider);
   }
 
@@ -487,7 +490,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * There is no check as to whether the entry exists in the table first.
    * @param path path to delete
    * @param tombstone flag to create a tombstone marker
-   * @param ttlTimeProvider
+   * @param ttlTimeProvider The time provider to set last_updated. Must not
+   *                        be null if tombstone is true.
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated
@@ -507,6 +511,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // on that of S3A itself
     boolean idempotent = S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT;
     if (tombstone) {
+      Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider "
+          + "must not be null" );
       final PathMetadata pmTombstone = PathMetadata.tombstone(path);
       // update the last updated field of record when putting a tombstone
       pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
@@ -736,7 +742,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate, ITtlTimeProvider ttlTimeProvider) throws IOException {
+      Collection<PathMetadata> pathsToCreate, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     if (pathsToDelete == null && pathsToCreate == null) {
       return;
     }
@@ -759,6 +766,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     if (pathsToDelete != null) {
       for (Path meta : pathsToDelete) {
+        Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider"
+            + " must not be null");
         final PathMetadata pmTombstone = PathMetadata.tombstone(meta);
         pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
         newItems.add(new DDBPathMetadata(pmTombstone));

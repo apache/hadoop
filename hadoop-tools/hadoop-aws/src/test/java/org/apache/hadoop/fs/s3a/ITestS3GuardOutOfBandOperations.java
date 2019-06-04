@@ -27,7 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.junit.Assume;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.junit.Before;
@@ -45,10 +44,12 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.junit.Assume.assumeTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
@@ -297,8 +298,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     try {
       final AtomicLong now = new AtomicLong(1);
       final AtomicLong metadataTtl = new AtomicLong(1);
-      // todo add ttl for entries
-      // final AtomicLong entriesTtl = new AtomicLong(1);
 
       // SET TTL TIME PROVIDER FOR TESTING
       ITtlTimeProvider testTimeProvider =
@@ -337,23 +336,22 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
           newStatus);
 
       // CHANGE TTL SO ENTRY (& TOMBSTONE METADATA) WILL EXPIRE
-      long willExpire = now.get() + metadataTtl.get() + 1l;
+      long willExpire = now.get() + metadataTtl.get() + 1L;
       now.set(willExpire);
-      LOG.warn("WILLEXPIRE: {}, ttlNow: {}; ttlTTL: {}", willExpire,
+      LOG.info("willExpire: {}, ttlNow: {}; ttlTTL: {}", willExpire,
           testTimeProvider.getNow(), testTimeProvider.getMetadataTtl());
       // this call should not fail after the implementation of metadata expiry
       // the guardedFS will detect that the metadata expired, so it will read
       // from S3
-      final FSDataInputStream in = guardedFs.open(testFilePath);
 
       // READ GUARDED
-      byte[] bytes = new byte[newText.length()];
-      in.read(bytes, 0, bytes.length);
+      String newRead = readBytesToString(guardedFs, testFilePath,
+          newText.length());
 
       // we can assert that the originalText is the new one, which created raw
-      LOG.info("Old: {}, New: {}", originalText, newText);
-      assertTrue(new String(bytes).equals(newText));
-
+      LOG.info("Old: {}, New: {}, Read: {}", originalText, newText, newRead);
+      assertEquals("The text should be modified with a new.", newText,
+          newRead);
     } finally {
       guardedFs.delete(testFilePath, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);

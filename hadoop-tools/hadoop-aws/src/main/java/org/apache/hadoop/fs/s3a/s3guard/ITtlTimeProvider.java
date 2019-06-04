@@ -23,7 +23,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
  *
  * TTL can be tested by implementing this interface and setting is as
  * {@code S3Guard.ttlTimeProvider}. By doing this, getNow() can return any
- * value preferred and flaky tests could be avoided.
+ * value preferred and flaky tests could be avoided. By default getNow()
+ * returns the EPOCH in runtime.
  */
 public interface ITtlTimeProvider {
   long getNow();
