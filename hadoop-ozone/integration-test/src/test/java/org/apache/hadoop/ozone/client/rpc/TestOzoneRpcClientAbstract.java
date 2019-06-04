@@ -871,7 +871,7 @@ public abstract class TestOzoneRpcClientAbstract {
         fail("Reading corrupted data should fail, as verify checksum is " +
             "enabled");
       }
-    } catch (OzoneChecksumException e) {
+    } catch (IOException e) {
       if (!verifyChecksum) {
         fail("Reading corrupted data should not fail, as verify checksum is " +
             "disabled");
@@ -1022,7 +1022,7 @@ public abstract class TestOzoneRpcClientAbstract {
       OzoneInputStream is = bucket.readKey(keyName);
       is.read(new byte[100]);
       fail("Reading corrupted data should fail.");
-    } catch (OzoneChecksumException e) {
+    } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Checksum mismatch", e);
     }
   }
@@ -1103,7 +1103,7 @@ public abstract class TestOzoneRpcClientAbstract {
       byte[] b = new byte[data.length];
       is.read(b);
       fail("Reading corrupted data should fail.");
-    } catch (OzoneChecksumException e) {
+    } catch (IOException e) {
       GenericTestUtils.assertExceptionContains("Checksum mismatch", e);
     }
   }

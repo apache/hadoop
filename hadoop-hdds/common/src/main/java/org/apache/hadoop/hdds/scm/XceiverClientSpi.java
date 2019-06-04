@@ -25,13 +25,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.hadoop.hdds.scm.storage.CheckedBiFunction;
 
 /**
  * A Client for the storageContainer protocol.
@@ -118,18 +118,21 @@ public abstract class XceiverClientSpi implements Closeable {
    * Sends a given command to server and gets the reply back along with
    * the server associated info.
    * @param request Request
-   * @param excludeDns list of servers on which the command won't be sent to.
+   * @param validators functions to validate the response
    * @return Response to the command
    * @throws IOException
    */
-  public XceiverClientReply sendCommand(
-      ContainerCommandRequestProto request, List<DatanodeDetails> excludeDns)
+  public ContainerCommandResponseProto sendCommand(
+      ContainerCommandRequestProto request, List<CheckedBiFunction> validators)
       throws IOException {
     try {
       XceiverClientReply reply;
       reply = sendCommandAsync(request);
-      reply.getResponse().get();
-      return reply;
+      ContainerCommandResponseProto responseProto = reply.getResponse().get();
+      for (CheckedBiFunction function : validators) {
+        function.apply(request, responseProto);
+      }
+      return responseProto;
     } catch (ExecutionException | InterruptedException e) {
       throw new IOException("Failed to command " + request, e);
     }
@@ -156,7 +159,7 @@ public abstract class XceiverClientSpi implements Closeable {
   /**
    * Check if an specfic commitIndex is replicated to majority/all servers.
    * @param index index to watch for
-   * @param timeout timeout provided for the watch ipeartion to complete
+   * @param timeout timeout provided for the watch operation to complete
    * @return reply containing the min commit index replicated to all or majority
    *         servers in case of a failure
    * @throws InterruptedException
