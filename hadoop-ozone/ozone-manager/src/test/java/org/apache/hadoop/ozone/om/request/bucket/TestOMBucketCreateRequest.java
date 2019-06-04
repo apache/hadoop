@@ -19,8 +19,6 @@
 
 package org.apache.hadoop.ozone.om.request.bucket;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
 import org.junit.After;
@@ -43,9 +41,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .StorageTypeProto;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
@@ -109,8 +107,8 @@ public class TestOMBucketCreateRequest {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
-    OMRequest originalRequest = createBucketRequest(bucketName, volumeName,
-            false, StorageTypeProto.SSD);
+    OMRequest originalRequest = TestOMRequestUtils.createBucketRequest(
+        bucketName, volumeName, false, StorageTypeProto.SSD);
 
     OMBucketCreateRequest omBucketCreateRequest =
         new OMBucketCreateRequest(originalRequest);
@@ -161,8 +159,9 @@ public class TestOMBucketCreateRequest {
   private OMBucketCreateRequest doPreExecute(String volumeName,
       String bucketName) throws Exception {
     addCreateVolumeToTable(volumeName, omMetadataManager);
-    OMRequest originalRequest = createBucketRequest(bucketName, volumeName,
-            false, StorageTypeProto.SSD);
+    OMRequest originalRequest =
+        TestOMRequestUtils.createBucketRequest(bucketName, volumeName, false,
+            StorageTypeProto.SSD);
 
     OMBucketCreateRequest omBucketCreateRequest =
         new OMBucketCreateRequest(originalRequest);
@@ -237,34 +236,6 @@ public class TestOMBucketCreateRequest {
             .setOwnerName(UUID.randomUUID().toString()).build();
     omMetadataManager.getVolumeTable().put(
         omMetadataManager.getVolumeKey(volumeName), omVolumeArgs);
-  }
-
-
-  public static OMRequest createBucketRequest(String bucketName,
-      String volumeName, boolean isVersionEnabled,
-      StorageTypeProto storageTypeProto) {
-    OzoneManagerProtocolProtos.BucketInfo bucketInfo =
-        OzoneManagerProtocolProtos.BucketInfo.newBuilder()
-            .setBucketName(bucketName)
-            .setVolumeName(volumeName)
-            .setIsVersionEnabled(isVersionEnabled)
-            .setStorageType(storageTypeProto)
-            .addAllMetadata(getMetadataList()).build();
-    OzoneManagerProtocolProtos.CreateBucketRequest.Builder req =
-        OzoneManagerProtocolProtos.CreateBucketRequest.newBuilder();
-    req.setBucketInfo(bucketInfo);
-    return OMRequest.newBuilder().setCreateBucketRequest(req)
-        .setCmdType(OzoneManagerProtocolProtos.Type.CreateBucket)
-        .setClientId(UUID.randomUUID().toString()).build();
-  }
-
-  public static List< HddsProtos.KeyValue> getMetadataList() {
-    List<HddsProtos.KeyValue> metadataList = new ArrayList<>();
-    metadataList.add(HddsProtos.KeyValue.newBuilder().setKey("key1").setValue(
-        "value1").build());
-    metadataList.add(HddsProtos.KeyValue.newBuilder().setKey("key2").setValue(
-        "value2").build());
-    return metadataList;
   }
 
 }

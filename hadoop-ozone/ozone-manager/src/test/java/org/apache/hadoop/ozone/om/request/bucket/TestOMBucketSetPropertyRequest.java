@@ -90,7 +90,8 @@ public class TestOMBucketSetPropertyRequest {
     OMBucketSetPropertyRequest omBucketSetPropertyRequest =
         new OMBucketSetPropertyRequest(omRequest);
 
-    Assert.assertEquals(omRequest,
+    // As user info gets added.
+    Assert.assertNotEquals(omRequest,
         omBucketSetPropertyRequest.preExecute(ozoneManager));
   }
 

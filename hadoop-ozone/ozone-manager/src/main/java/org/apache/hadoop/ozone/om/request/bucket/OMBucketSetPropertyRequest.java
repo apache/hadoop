@@ -22,9 +22,13 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.common.base.Optional;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
@@ -44,8 +48,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-
-import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetBucketPropertyResponse;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
@@ -58,10 +62,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
   public OMBucketSetPropertyRequest(OMRequest omRequest) {
     super(omRequest);
-  }
-  @Override
-  public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
-    return getOmRequest();
   }
 
   @Override
@@ -87,8 +87,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     String volumeName = bucketArgs.getVolumeName();
     String bucketName = bucketArgs.getBucketName();
 
-    // acquire lock
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
 
     OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
         OzoneManagerProtocolProtos.Type.CreateBucket).setStatus(
@@ -96,6 +94,27 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     OmBucketInfo omBucketInfo = null;
 
     try {
+      // check Acl
+      if (ozoneManager.getAclsEnabled()) {
+        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+            OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
+            volumeName, bucketName, null);
+      }
+    } catch (IOException ex) {
+      if (omMetrics != null) {
+        omMetrics.incNumBucketUpdateFails();
+      }
+      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
+          bucketName, volumeName, ex);
+      return new OMBucketSetPropertyResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
+    }
+
+    // acquire lock
+    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+
+    try {
+
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
           omMetadataManager.getBucketTable().get(bucketKey);
@@ -151,19 +170,22 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
-      // TODO: check acls.
+      // return response.
+      omResponse.setSetBucketPropertyResponse(
+          SetBucketPropertyResponse.newBuilder().build());
+      return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
+
     } catch (IOException ex) {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();
       }
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
-      omResponse.setSuccess(false).setMessage(ex.getMessage())
-          .setStatus(OzoneManagerRatisUtils.exceptionToResponseStatus(ex));
+      return new OMBucketSetPropertyResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, ex));
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
     }
-    return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
   }
 
   /**

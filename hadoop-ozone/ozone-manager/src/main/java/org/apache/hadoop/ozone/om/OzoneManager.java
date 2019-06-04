@@ -24,6 +24,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.BlockingService;
 
+import java.net.InetAddress;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.KeyPair;
@@ -126,8 +127,6 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer;
-import org.apache.hadoop.ozone.security.acl.OzoneAclException;
-import org.apache.hadoop.ozone.security.acl.OzoneAclException.ErrorCode;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
@@ -1733,18 +1732,36 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @param vol     - name of volume
    * @param bucket  - bucket name
    * @param key     - key
-   * @throws OzoneAclException
+   * @throws OMException
    */
   private void checkAcls(ResourceType resType, StoreType store,
       ACLType acl, String vol, String bucket, String key)
-      throws OzoneAclException {
-    if(!isAclEnabled) {
-      return;
-    }
+      throws OMException {
+    checkAcls(resType, store, acl, vol, bucket, key,
+        ProtobufRpcEngine.Server.getRemoteUser(),
+        ProtobufRpcEngine.Server.getRemoteIp());
+  }
 
+  /**
+   * CheckAcls for the ozone object.
+   * @param resType
+   * @param storeType
+   * @param aclType
+   * @param vol
+   * @param bucket
+   * @param key
+   * @param ugi
+   * @param remoteAddress
+   * @throws OMException
+   */
+  @SuppressWarnings("parameternumber")
+  public void checkAcls(ResourceType resType, StoreType storeType,
+      ACLType aclType, String vol, String bucket, String key,
+      UserGroupInformation ugi, InetAddress remoteAddress)
+      throws OMException {
     OzoneObj obj = OzoneObjInfo.Builder.newBuilder()
         .setResType(resType)
-        .setStoreType(store)
+        .setStoreType(storeType)
         .setVolumeName(vol)
         .setBucketName(bucket)
         .setKeyName(key).build();
@@ -1753,15 +1770,24 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setClientUgi(user)
         .setIp(ProtobufRpcEngine.Server.getRemoteIp())
         .setAclType(ACLIdentityType.USER)
-        .setAclRights(acl)
+        .setAclRights(aclType)
         .build();
     if (!accessAuthorizer.checkAccess(obj, context)) {
       LOG.warn("User {} doesn't have {} permission to access {}",
-          user.getUserName(), acl, resType);
-      throw new OzoneAclException("User " + user.getUserName() + " doesn't " +
-          "have " + acl + " permission to access " + resType,
-          ErrorCode.PERMISSION_DENIED);
+          user.getUserName(), aclType, resType);
+      throw new OMException("User " + user.getUserName() + " doesn't " +
+          "have " + aclType + " permission to access " + resType,
+          ResultCodes.PERMISSION_DENIED);
     }
+  }
+
+  /**
+   *
+   * Return true if Ozone acl's are enabled, else false.
+   * @return boolean
+   */
+  public boolean getAclsEnabled() {
+    return isAclEnabled;
   }
 
   /**
@@ -2406,8 +2432,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public void deleteBucket(String volume, String bucket) throws IOException {
-    checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.WRITE, volume,
-        bucket, null);
+    if (isAclEnabled) {
+      checkAcls(ResourceType.BUCKET, StoreType.OZONE, ACLType.WRITE, volume,
+          bucket, null);
+    }
     Map<String, String> auditMap = buildAuditMap(volume);
     auditMap.put(OzoneConsts.BUCKET, bucket);
     try {

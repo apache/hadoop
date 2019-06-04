@@ -102,6 +102,9 @@ message OMRequest {
 
   required string clientId = 3;
 
+  optional UserInfo userInfo = 4;
+
+
   optional CreateVolumeRequest              createVolumeRequest            = 11;
   optional SetVolumePropertyRequest         setVolumePropertyRequest       = 12;
   optional CheckVolumeAccessRequest         checkVolumeAccessRequest       = 13;
@@ -271,6 +274,8 @@ enum Status {
     DIRECTORY_NOT_FOUND = 45;
     FILE_ALREADY_EXISTS = 46;
     NOT_A_FILE = 47;
+    PERMISSION_DENIED = 48;
+    TIMEOUT = 49;
 }
 
 
@@ -283,6 +288,16 @@ message VolumeInfo {
     repeated OzoneAclInfo volumeAcls = 6;
     required uint64 creationTime = 7;
 }
+
+/**
+    User information which will be extracted during RPC context and used
+    during validating Acl.
+*/
+message UserInfo {
+    optional string userName = 1;
+    optional string remoteAddress = 3;
+}
+
 
 /**
     Creates a volume

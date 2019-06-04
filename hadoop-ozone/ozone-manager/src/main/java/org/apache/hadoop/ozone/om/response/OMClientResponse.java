@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.response;
 
 import java.io.IOException;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
@@ -33,6 +34,7 @@ public abstract class OMClientResponse {
   private OMResponse omResponse;
 
   public OMClientResponse(OMResponse omResponse) {
+    Preconditions.checkNotNull(omResponse);
     this.omResponse = omResponse;
   }
 
