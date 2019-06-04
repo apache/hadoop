@@ -204,9 +204,8 @@ public class TestReadRetries {
       readKey(bucket, keyName, value);
       fail("Expected exception not thrown");
     } catch (IOException e) {
-      Assert.assertTrue(e.getMessage().contains("Failed to execute command"));
-      Assert.assertTrue(
-          e.getMessage().contains("on the pipeline " + pipeline.getId()));
+      // it should throw an ioException as none of the servers
+      // are available
     }
     manager.releaseClient(clientSpi, false);
   }

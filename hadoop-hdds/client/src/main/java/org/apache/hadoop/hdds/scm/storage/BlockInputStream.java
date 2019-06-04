@@ -21,12 +21,11 @@ package org.apache.hadoop.hdds.scm.storage;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
-import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
-import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.container.common.helpers
     .StorageContainerException;
 import org.apache.hadoop.ozone.common.Checksum;
 import org.apache.hadoop.ozone.common.ChecksumData;
+import org.apache.hadoop.ozone.common.OzoneChecksumException;
 import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
@@ -34,16 +33,17 @@ import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ReadChunkResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerCommandResponseProto;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.
+    ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.client.BlockID;
-
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 /**
  * An {@link InputStream} used by the REST service in combination with the
@@ -74,7 +74,7 @@ public class BlockInputStream extends InputStream implements Seekable {
   private List<ByteBuffer> buffers;
   private int bufferIndex;
   private long bufferPosition;
-  private final boolean verifyChecksum;
+  private boolean verifyChecksum;
 
   /**
    * Creates a new BlockInputStream.
@@ -323,41 +323,8 @@ public class BlockInputStream extends InputStream implements Seekable {
   private synchronized void readChunkFromContainer() throws IOException {
     // Read the chunk at chunkIndex
     final ChunkInfo chunkInfo = chunks.get(chunkIndex);
-    List<DatanodeDetails> excludeDns = null;
     ByteString byteString;
-    List<DatanodeDetails> dnList = getDatanodeList();
-    while (true) {
-      List<DatanodeDetails> dnListFromReadChunkCall = new ArrayList<>();
-      byteString = readChunk(chunkInfo, excludeDns, dnListFromReadChunkCall);
-      try {
-        if (byteString.size() != chunkInfo.getLen()) {
-          // Bytes read from chunk should be equal to chunk size.
-          throw new IOException(String
-              .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
-                  chunkInfo.getChunkName(), chunkInfo.getLen(),
-                  byteString.size()));
-        }
-        ChecksumData checksumData =
-            ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
-        if (verifyChecksum) {
-          Checksum.verifyChecksum(byteString, checksumData);
-        }
-        break;
-      } catch (IOException ioe) {
-        // we will end up in this situation only if the checksum mismatch
-        // happens or the length of the chunk mismatches.
-        // In this case, read should be retried on a different replica.
-        // TODO: Inform SCM of a possible corrupt container replica here
-        if (excludeDns == null) {
-          excludeDns = new ArrayList<>();
-        }
-        excludeDns.addAll(dnListFromReadChunkCall);
-        if (excludeDns.size() == dnList.size()) {
-          throw ioe;
-        }
-      }
-    }
-
+    byteString = readChunk(chunkInfo);
     buffers = byteString.asReadOnlyByteBufferList();
     bufferIndex = 0;
     chunkIndexOfCurrentBuffer = chunkIndex;
@@ -372,28 +339,20 @@ public class BlockInputStream extends InputStream implements Seekable {
    * Send RPC call to get the chunk from the container.
    */
   @VisibleForTesting
-  protected ByteString readChunk(final ChunkInfo chunkInfo,
-      List<DatanodeDetails> excludeDns, List<DatanodeDetails> dnListFromReply)
+  protected ByteString readChunk(final ChunkInfo chunkInfo)
       throws IOException {
-    XceiverClientReply reply;
-    ReadChunkResponseProto readChunkResponse = null;
+    ReadChunkResponseProto readChunkResponse;
     try {
-      reply = ContainerProtocolCalls
-          .readChunk(xceiverClient, chunkInfo, blockID, traceID, excludeDns);
-      ContainerProtos.ContainerCommandResponseProto response;
-      response = reply.getResponse().get();
-      ContainerProtocolCalls.validateContainerResponse(response);
-      readChunkResponse = response.getReadChunk();
-      dnListFromReply.addAll(reply.getDatanodes());
+      List<CheckedBiFunction> validators =
+          ContainerProtocolCalls.getValidatorList();
+      validators.add(validator);
+      readChunkResponse = ContainerProtocolCalls
+          .readChunk(xceiverClient, chunkInfo, blockID, traceID, validators);
     } catch (IOException e) {
       if (e instanceof StorageContainerException) {
         throw e;
       }
       throw new IOException("Unexpected OzoneException: " + e.toString(), e);
-    } catch (ExecutionException | InterruptedException e) {
-      throw new IOException(
-          "Failed to execute ReadChunk command for chunk  " + chunkInfo
-              .getChunkName(), e);
     }
     return readChunkResponse.getData();
   }
@@ -402,6 +361,26 @@ public class BlockInputStream extends InputStream implements Seekable {
   protected List<DatanodeDetails> getDatanodeList() {
     return xceiverClient.getPipeline().getNodes();
   }
+
+  private CheckedBiFunction<ContainerCommandRequestProto,
+      ContainerCommandResponseProto, IOException> validator =
+          (request, response) -> {
+            ReadChunkResponseProto readChunkResponse = response.getReadChunk();
+            final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
+            ByteString byteString = readChunkResponse.getData();
+            if (byteString.size() != chunkInfo.getLen()) {
+              // Bytes read from chunk should be equal to chunk size.
+              throw new OzoneChecksumException(String
+                  .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
+                      chunkInfo.getChunkName(), chunkInfo.getLen(),
+                      byteString.size()));
+            }
+            ChecksumData checksumData =
+                ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
+            if (verifyChecksum) {
+              Checksum.verifyChecksum(byteString, checksumData);
+            }
+          };
 
   @Override
   public synchronized void seek(long pos) throws IOException {
