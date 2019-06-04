@@ -49,8 +49,8 @@ public final class OMBucketCreateResponse extends OMClientResponse {
       String dbBucketKey =
           omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
               omBucketInfo.getBucketName());
-      omMetadataManager.getBucketTable().putWithBatch(batchOperation, dbBucketKey,
-          omBucketInfo);
+      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
+          dbBucketKey, omBucketInfo);
     }
   }
 
