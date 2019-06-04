@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 import javax.management.ObjectName;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
@@ -46,6 +45,7 @@ import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.utils.UniqueId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -354,47 +354,4 @@ public class BlockManagerImpl implements BlockManager, BlockmanagerMXBean {
   /**
    * This class uses system current time milliseconds to generate unique id.
    */
-  public static final class UniqueId {
-    /*
-     * When we represent time in milliseconds using 'long' data type,
-     * the LSB bits are used. Currently we are only using 44 bits (LSB),
-     * 20 bits (MSB) are not used.
-     * We will exhaust this 44 bits only when we are in year 2525,
-     * until then we can safely use this 20 bits (MSB) for offset to generate
-     * unique id within millisecond.
-     *
-     * Year        : Mon Dec 31 18:49:04 IST 2525
-     * TimeInMillis: 17545641544247
-     * Binary Representation:
-     *   MSB (20 bits): 0000 0000 0000 0000 0000
-     *   LSB (44 bits): 1111 1111 0101 0010 1001 1011 1011 0100 1010 0011 0111
-     *
-     * We have 20 bits to run counter, we should exclude the first bit (MSB)
-     * as we don't want to deal with negative values.
-     * To be on safer side we will use 'short' data type which is of length
-     * 16 bits and will give us 65,536 values for offset.
-     *
-     */
-
-    private static volatile short offset = 0;
-
-    /**
-     * Private constructor so that no one can instantiate this class.
-     */
-    private UniqueId() {}
-
-    /**
-     * Calculate and returns next unique id based on System#currentTimeMillis.
-     *
-     * @return unique long value
-     */
-    public static synchronized long next() {
-      long utcTime = HddsUtils.getUtcTime();
-      if ((utcTime & 0xFFFF000000000000L) == 0) {
-        return utcTime << Short.SIZE | (offset++ & 0x0000FFFF);
-      }
-      throw new RuntimeException("Got invalid UTC time," +
-          " cannot generate unique Id. UTC Time: " + utcTime);
-    }
-  }
 }
