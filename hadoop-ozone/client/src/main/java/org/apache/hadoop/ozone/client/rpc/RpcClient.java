@@ -405,15 +405,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
           .setKeyName(bucketArgs.getEncryptionKey()).build();
     }
 
-    List<OzoneAcl> listOfAcls = new ArrayList<>();
-    //User ACL
-    listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
-        ugi.getUserName(), userRights));
-    //Group ACLs of the User
-    List<String> userGroups = Arrays.asList(UserGroupInformation
-        .createRemoteUser(ugi.getUserName()).getGroupNames());
-    userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
+    List<OzoneAcl> listOfAcls = getAclList();
     //ACLs from BucketArgs
     if(bucketArgs.getAcls() != null) {
       listOfAcls.addAll(bucketArgs.getAcls());
@@ -435,6 +427,23 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
             "Storage Type set to {} and Encryption set to {} ",
         volumeName, bucketName, isVersionEnabled, storageType, bek != null);
     ozoneManagerClient.createBucket(builder.build());
+  }
+
+  /**
+   * Helper function to get deafult acl list for current user.
+   *
+   * @return listOfAcls
+   * */
+  private List<OzoneAcl> getAclList() {
+    List<OzoneAcl> listOfAcls = new ArrayList<>();
+    // User ACL
+    listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
+        ugi.getUserName(), userRights));
+    // Group ACLs of the User
+    List<String> userGroups = Arrays.asList(ugi.getGroupNames());
+    userGroups.stream().forEach((group) -> listOfAcls.add(
+        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
+    return listOfAcls;
   }
 
   @Override
@@ -629,6 +638,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setType(HddsProtos.ReplicationType.valueOf(type.toString()))
         .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
         .addAllMetadata(metadata)
+        .setAcls(getAclList())
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
@@ -819,6 +829,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setKeyName(keyName)
         .setType(HddsProtos.ReplicationType.valueOf(type.toString()))
         .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
+        .setAcls(getAclList())
         .build();
     OmMultipartInfo multipartInfo = ozoneManagerClient
         .initiateMultipartUpload(keyArgs);
@@ -848,6 +859,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setIsMultipartKey(true)
         .setMultipartUploadID(uploadID)
         .setMultipartUploadPartNumber(partNumber)
+        .setAcls(getAclList())
         .build();
 
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
@@ -963,7 +975,10 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   public void createDirectory(String volumeName, String bucketName,
       String keyName) throws IOException {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder().setVolumeName(volumeName)
-        .setBucketName(bucketName).setKeyName(keyName).build();
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setAcls(getAclList())
+        .build();
     ozoneManagerClient.createDirectory(keyArgs);
   }
 
@@ -990,6 +1005,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setDataSize(size)
         .setType(HddsProtos.ReplicationType.valueOf(type.name()))
         .setFactor(HddsProtos.ReplicationFactor.valueOf(factor.getValue()))
+        .setAcls(getAclList())
         .build();
     OpenKeySession keySession =
         ozoneManagerClient.createFile(keyArgs, overWrite, recursive);

@@ -49,6 +49,7 @@ import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
@@ -60,6 +61,7 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
 
 /**
  * Test class for @{@link KeyManagerImpl}.
@@ -178,6 +180,8 @@ public class TestKeyManagerImpl {
     OmKeyArgs keyArgs = createBuilder()
         .setKeyName(KEY_NAME)
         .setDataSize(1000)
+        .setAcls(IOzoneAcl.getAclList(UserGroupInformation.getCurrentUser(),
+            ALL, ALL))
         .build();
     LambdaTestUtils.intercept(OMException.class,
         "SafeModePrecheck failed for allocateBlock", () -> {
@@ -355,7 +359,7 @@ public class TestKeyManagerImpl {
     }
   }
 
-  private OmKeyArgs createKeyArgs(String toKeyName) {
+  private OmKeyArgs createKeyArgs(String toKeyName) throws IOException {
     return createBuilder().setKeyName(toKeyName).build();
   }
 
@@ -542,12 +546,14 @@ public class TestKeyManagerImpl {
     return keyNames;
   }
 
-  private OmKeyArgs.Builder createBuilder() {
+  private OmKeyArgs.Builder createBuilder() throws IOException {
     return new OmKeyArgs.Builder()
         .setBucketName(BUCKET_NAME)
         .setFactor(ReplicationFactor.ONE)
         .setDataSize(0)
         .setType(ReplicationType.STAND_ALONE)
+        .setAcls(IOzoneAcl.getAclList(UserGroupInformation.getCurrentUser(),
+            ALL, ALL))
         .setVolumeName(VOLUME_NAME);
   }
 }

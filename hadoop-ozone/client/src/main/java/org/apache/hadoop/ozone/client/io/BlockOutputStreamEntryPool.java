@@ -79,7 +79,8 @@ public class BlockOutputStreamEntryPool {
         .setBucketName(info.getBucketName()).setKeyName(info.getKeyName())
         .setType(type).setFactor(factor).setDataSize(info.getDataSize())
         .setIsMultipartKey(isMultipart).setMultipartUploadID(uploadID)
-        .setMultipartUploadPartNumber(partNumber).build();
+        .setMultipartUploadPartNumber(partNumber)
+        .build();
     this.xceiverClientManager = xceiverClientManager;
     this.chunkSize = chunkSize;
     this.requestID = requestId;

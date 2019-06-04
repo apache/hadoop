@@ -46,9 +46,10 @@ public class OzoneAcl {
   private ACLIdentityType type;
   private String name;
   private BitSet aclBitSet;
+  public static final BitSet ZERO_BITSET = new BitSet(0);
 
   /**
-   * Constructor for OzoneAcl.
+   * Default constructor.
    */
   public OzoneAcl() {
   }

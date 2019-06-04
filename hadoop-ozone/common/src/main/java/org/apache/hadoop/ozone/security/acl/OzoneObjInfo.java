@@ -16,10 +16,10 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
-import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
-import java.util.StringTokenizer;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
 /**
  * Class representing an ozone object.
@@ -45,16 +45,14 @@ public final class OzoneObjInfo extends OzoneObj {
     case VOLUME:
       return getVolumeName();
     case BUCKET:
-      return getVolumeName() + OzoneConsts.OZONE_URI_DELIMITER
-          + getBucketName();
+      return getVolumeName() + OZONE_URI_DELIMITER + getBucketName();
     case KEY:
-      return getVolumeName() + OzoneConsts.OZONE_URI_DELIMITER
-          + getBucketName() + OzoneConsts.OZONE_URI_DELIMITER + getKeyName();
+      return getVolumeName() + OZONE_URI_DELIMITER + getBucketName()
+          + OZONE_URI_DELIMITER + getKeyName();
     default:
       throw new IllegalArgumentException("Unknown resource " +
         "type" + getResourceType());
     }
-
   }
 
   @Override
@@ -77,25 +75,36 @@ public final class OzoneObjInfo extends OzoneObj {
     Builder builder = new Builder()
         .setResType(ResourceType.valueOf(proto.getResType().name()))
         .setStoreType(StoreType.valueOf(proto.getStoreType().name()));
-    StringTokenizer tokenizer = new StringTokenizer(proto.getPath(),
-        OzoneConsts.OZONE_URI_DELIMITER);
+    String[] tokens = StringUtils.splitPreserveAllTokens(proto.getPath(),
+        OZONE_URI_DELIMITER);
+    if(tokens == null) {
+      throw new IllegalArgumentException("Unexpected path:" + proto.getPath());
+    }
     // Set volume name.
-    if (tokenizer.hasMoreTokens()) {
-      builder.setVolumeName(tokenizer.nextToken());
-    }
-    // Set bucket name.
-    if (tokenizer.hasMoreTokens()) {
-      builder.setBucketName(tokenizer.nextToken());
-    }
-    // Set key name
-    if (tokenizer.hasMoreTokens()) {
-      StringBuffer sb = new StringBuffer();
-      while (tokenizer.hasMoreTokens()) {
-        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
-        sb.append(tokenizer.nextToken());
-        sb.append(OzoneConsts.OZONE_URI_DELIMITER);
+    switch (proto.getResType()) {
+    case VOLUME:
+      builder.setVolumeName(tokens[0]);
+      break;
+    case BUCKET:
+      if (tokens.length < 2) {
+        throw new IllegalArgumentException("Unexpected argument for " +
+            "Ozone key. Path:" + proto.getPath());
       }
-      builder.setKeyName(sb.toString());
+      builder.setVolumeName(tokens[0]);
+      builder.setBucketName(tokens[1]);
+      break;
+    case KEY:
+      if (tokens.length != 3) {
+        throw new IllegalArgumentException("Unexpected argument for " +
+            "Ozone key. Path:" + proto.getPath());
+      }
+      builder.setVolumeName(tokens[0]);
+      builder.setBucketName(tokens[1]);
+      builder.setKeyName(tokens[2]);
+      break;
+    default:
+      throw new IllegalArgumentException("Unexpected type for " +
+          "Ozone key. Type:" + proto.getResType());
     }
     return builder.build();
   }

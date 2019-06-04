@@ -67,6 +67,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -444,6 +445,8 @@ public final class DistributedStorageHandler implements StorageHandler {
   @Override
   public OutputStream newKeyWriter(KeyArgs args) throws IOException,
       OzoneException {
+    Objects.requireNonNull(args.getUserName(),
+        "Username should not be null");
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
@@ -451,6 +454,7 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setDataSize(args.getSize())
         .setType(xceiverClientManager.getType())
         .setFactor(xceiverClientManager.getFactor())
+        .setAcls(getAclList(args))
         .build();
     // contact OM to allocate a block for key.
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
@@ -476,6 +480,28 @@ public final class DistributedStorageHandler implements StorageHandler {
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
     return new OzoneOutputStream(keyOutputStream);
+  }
+
+  /**
+   * Helper function to get default acl list for current user.
+   *
+   * @return listOfAcls
+   * */
+  private List<OzoneAcl> getAclList(KeyArgs args) {
+    List<OzoneAcl> listOfAcls = new ArrayList<>();
+    OzoneAcl userAcl =
+        new OzoneAcl(ACLIdentityType.USER, args.getUserName(), userRights);
+    listOfAcls.add(userAcl);
+
+    if (args.getGroups() != null) {
+      for (String group : args.getGroups()) {
+        OzoneAcl groupAcl =
+            new OzoneAcl(ACLIdentityType.GROUP, group, groupRights);
+        listOfAcls.add(groupAcl);
+      }
+    }
+
+    return listOfAcls;
   }
 
   @Override
