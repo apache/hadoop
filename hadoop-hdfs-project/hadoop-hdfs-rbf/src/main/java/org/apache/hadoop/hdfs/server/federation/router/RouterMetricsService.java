@@ -18,7 +18,7 @@
 package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.service.AbstractService;
@@ -34,7 +34,7 @@ public class RouterMetricsService extends AbstractService {
   /** Router metrics. */
   private RouterMetrics routerMetrics;
   /** Federation metrics. */
-  private FederationMetrics federationMetrics;
+  private RBFMetrics rbfMetrics;
   /** Namenode mock metrics. */
   private NamenodeBeanMetrics nnMetrics;
 
@@ -55,14 +55,14 @@ public class RouterMetricsService extends AbstractService {
     this.nnMetrics = new NamenodeBeanMetrics(this.router);
 
     // Federation MBean JMX interface
-    this.federationMetrics = new FederationMetrics(this.router);
+    this.rbfMetrics = new RBFMetrics(this.router);
   }
 
   @Override
   protected void serviceStop() throws Exception {
     // Remove JMX interfaces
-    if (this.federationMetrics != null) {
-      this.federationMetrics.close();
+    if (this.rbfMetrics != null) {
+      this.rbfMetrics.close();
     }
 
     // Remove Namenode JMX interfaces
@@ -90,8 +90,8 @@ public class RouterMetricsService extends AbstractService {
    *
    * @return Federation metrics.
    */
-  public FederationMetrics getFederationMetrics() {
-    return this.federationMetrics;
+  public RBFMetrics getRBFMetrics() {
+    return this.rbfMetrics;
   }
 
   /**

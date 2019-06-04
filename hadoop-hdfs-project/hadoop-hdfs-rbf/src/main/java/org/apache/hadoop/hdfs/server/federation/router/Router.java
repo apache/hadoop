@@ -39,7 +39,7 @@ import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.common.TokenVerifier;
-import org.apache.hadoop.hdfs.server.federation.metrics.FederationMetrics;
+import org.apache.hadoop.hdfs.server.federation.metrics.RBFMetrics;
 import org.apache.hadoop.hdfs.server.federation.metrics.NamenodeBeanMetrics;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
@@ -634,9 +634,9 @@ public class Router extends CompositeService implements
    *
    * @return Federation metrics.
    */
-  public FederationMetrics getMetrics() {
+  public RBFMetrics getMetrics() {
     if (this.metrics != null) {
-      return this.metrics.getFederationMetrics();
+      return this.metrics.getRBFMetrics();
     }
     return null;
   }
