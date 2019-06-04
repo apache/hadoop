@@ -46,6 +46,16 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-config</artifactId>
+      <exclusions>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-hdfs</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -65,6 +75,11 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-transport-native-epoll</artifactId>
+      <version>4.1.30.Final</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-unix-common</artifactId>
       <version>4.1.30.Final</version>
     </dependency>
     <dependency>
@@ -98,6 +113,10 @@ http://maven.apache.org/xsd/maven-4.0.0.xsd">
         <exclusion>
           <groupId>io.netty</groupId>
           <artifactId>netty-all</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>io.netty</groupId>
+          <artifactId>netty</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
