@@ -49,6 +49,7 @@ import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
@@ -175,12 +176,13 @@ public class TestKeyManagerImpl {
 
   @Test
   public void openKeyFailureInSafeMode() throws Exception {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     KeyManager keyManager1 = new KeyManagerImpl(mockScmBlockLocationProtocol,
         metadataManager, conf, "om1", null);
     OmKeyArgs keyArgs = createBuilder()
         .setKeyName(KEY_NAME)
         .setDataSize(1000)
-        .setAcls(IOzoneAcl.getAclList(UserGroupInformation.getCurrentUser(),
+        .setAcls(OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
             ALL, ALL))
         .build();
     LambdaTestUtils.intercept(OMException.class,
@@ -547,12 +549,13 @@ public class TestKeyManagerImpl {
   }
 
   private OmKeyArgs.Builder createBuilder() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     return new OmKeyArgs.Builder()
         .setBucketName(BUCKET_NAME)
         .setFactor(ReplicationFactor.ONE)
         .setDataSize(0)
         .setType(ReplicationType.STAND_ALONE)
-        .setAcls(IOzoneAcl.getAclList(UserGroupInformation.getCurrentUser(),
+        .setAcls(OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
             ALL, ALL))
         .setVolumeName(VOLUME_NAME);
   }

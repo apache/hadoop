@@ -133,7 +133,7 @@ public class OmOzoneAclMap {
         getMap(aclType).remove(acl.getName());
       }
     } else {
-      // throw exception if acl is already added.
+      // throw exception if acl doesn't exist.
       throw new OMException("Acl [" + acl + "] doesn't exist.",
           INVALID_REQUEST);
     }

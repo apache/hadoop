@@ -430,20 +430,13 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   }
 
   /**
-   * Helper function to get deafult acl list for current user.
+   * Helper function to get default acl list for current user.
    *
    * @return listOfAcls
    * */
   private List<OzoneAcl> getAclList() {
-    List<OzoneAcl> listOfAcls = new ArrayList<>();
-    // User ACL
-    listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
-        ugi.getUserName(), userRights));
-    // Group ACLs of the User
-    List<String> userGroups = Arrays.asList(ugi.getGroupNames());
-    userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
-    return listOfAcls;
+    return OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
+        userRights, groupRights);
   }
 
   @Override

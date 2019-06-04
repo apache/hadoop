@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -454,7 +455,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setDataSize(args.getSize())
         .setType(xceiverClientManager.getType())
         .setFactor(xceiverClientManager.getFactor())
-        .setAcls(getAclList(args))
+        .setAcls(OzoneUtils.getAclList(args.getUserName(),
+            Arrays.asList(args.getGroups()), ACLType.ALL, ACLType.ALL))
         .build();
     // contact OM to allocate a block for key.
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
@@ -480,28 +482,6 @@ public final class DistributedStorageHandler implements StorageHandler {
         openKey.getKeyInfo().getLatestVersionLocations(),
         openKey.getOpenVersion());
     return new OzoneOutputStream(keyOutputStream);
-  }
-
-  /**
-   * Helper function to get default acl list for current user.
-   *
-   * @return listOfAcls
-   * */
-  private List<OzoneAcl> getAclList(KeyArgs args) {
-    List<OzoneAcl> listOfAcls = new ArrayList<>();
-    OzoneAcl userAcl =
-        new OzoneAcl(ACLIdentityType.USER, args.getUserName(), userRights);
-    listOfAcls.add(userAcl);
-
-    if (args.getGroups() != null) {
-      for (String group : args.getGroups()) {
-        OzoneAcl groupAcl =
-            new OzoneAcl(ACLIdentityType.GROUP, group, groupRights);
-        listOfAcls.add(groupAcl);
-      }
-    }
-
-    return listOfAcls;
   }
 
   @Override
