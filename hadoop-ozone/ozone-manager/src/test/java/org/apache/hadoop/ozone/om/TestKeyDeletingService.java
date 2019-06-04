@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -192,6 +193,7 @@ public class TestKeyDeletingService {
               .setVolumeName(volumeName)
               .setBucketName(bucketName)
               .setKeyName(keyName)
+              .setAcls(Collections.emptyList())
               .setLocationInfoList(new ArrayList<>())
               .build();
       //Open, Commit and Delete the Keys in the Key Manager.
