@@ -398,7 +398,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
     List<OzoneAcl> aclList =
         impl.getAcl(OzoneObjInfo.fromProtobuf(req.getObj()));
-    aclList.parallelStream().forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
+    aclList.forEach(a -> acls.add(OzoneAcl.toProtobuf(a)));
     return GetAclResponse.newBuilder().addAllAcls(acls).build();
   }
 

@@ -22,5 +22,14 @@ export default DS.Model.extend({
   name: DS.attr('string'),
   queueName: DS.attr('string'),
   usedMemoryMB: DS.attr('number'),
-  usedVCore: DS.attr('number')
+  usedVCore: DS.attr('number'),
+  maxMemoryMB: DS.attr('number'),
+  maxVCore: DS.attr('number'),
+  amUsedMemoryMB: DS.attr('number'),
+  amUsedVCore: DS.attr('number'),
+  maxAMMemoryMB: DS.attr('number'),
+  maxAMVCore: DS.attr('number'),
+  userWeight: DS.attr('string'),
+  activeApps: DS.attr('number'),
+  pendingApps: DS.attr('number')
 });

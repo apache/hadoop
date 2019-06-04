@@ -631,6 +631,10 @@ public class ParentQueue extends AbstractCSQueue {
           assignedToChild.getRequestLocalityType());
       assignment.setExcessReservation(assignedToChild.getExcessReservation());
       assignment.setContainersToKill(assignedToChild.getContainersToKill());
+      assignment.setFulfilledReservation(
+          assignedToChild.isFulfilledReservation());
+      assignment.setFulfilledReservedContainer(
+          assignedToChild.getFulfilledReservedContainer());
 
       // Done if no child-queue assigned anything
       if (Resources.greaterThan(resourceCalculator, clusterResource,

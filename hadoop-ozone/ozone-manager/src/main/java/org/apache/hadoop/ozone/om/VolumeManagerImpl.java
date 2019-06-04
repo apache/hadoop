@@ -539,7 +539,12 @@ public class VolumeManagerImpl implements VolumeManager {
         throw new OMException("Volume " + volume + " is not found",
             ResultCodes.VOLUME_NOT_FOUND);
       }
-      volumeArgs.addAcl(acl);
+      try {
+        volumeArgs.addAcl(acl);
+      } catch (OMException ex) {
+        LOG.info("Add acl failed.", ex);
+        return false;
+      }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
@@ -584,7 +589,12 @@ public class VolumeManagerImpl implements VolumeManager {
         throw new OMException("Volume " + volume + " is not found",
             ResultCodes.VOLUME_NOT_FOUND);
       }
-      volumeArgs.removeAcl(acl);
+      try {
+        volumeArgs.removeAcl(acl);
+      } catch (OMException ex) {
+        LOG.info("Remove acl failed.", ex);
+        return false;
+      }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
 
       Preconditions.checkState(volume.equals(volumeArgs.getVolume()));

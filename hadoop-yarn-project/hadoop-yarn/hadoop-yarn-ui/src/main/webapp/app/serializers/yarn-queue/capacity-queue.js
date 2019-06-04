@@ -36,6 +36,8 @@ export default DS.JSONAPISerializer.extend({
       // update user models
       if (payload.users && payload.users.user) {
         payload.users.user.forEach(function(u) {
+          var defaultPartitionResource = u.resources.resourceUsagesByPartition[0];
+          var maxAMResource = defaultPartitionResource.amLimit;
           includedData.push({
             type: "YarnUser",
             id: u.username + "_" + payload.queueName,
@@ -44,6 +46,15 @@ export default DS.JSONAPISerializer.extend({
               queueName: payload.queueName,
               usedMemoryMB: u.resourcesUsed.memory || 0,
               usedVCore: u.resourcesUsed.vCores || 0,
+              maxMemoryMB: u.userResourceLimit.memory || 0,
+              maxVCore: u.userResourceLimit.vCores || 0,
+              amUsedMemoryMB: u.AMResourceUsed.memory || 0,
+              amUsedVCore: u.AMResourceUsed.vCores || 0,
+              maxAMMemoryMB: maxAMResource.memory || 0,
+              maxAMVCore: maxAMResource.vCores || 0,
+              userWeight: u.userWeight || '',
+              activeApps: u.numActiveApplications || 0,
+              pendingApps: u.numPendingApplications || 0
             }
           });
 
