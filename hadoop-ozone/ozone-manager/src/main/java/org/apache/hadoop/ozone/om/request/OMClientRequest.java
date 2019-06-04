@@ -84,7 +84,7 @@ public abstract class OMClientRequest {
 
   /**
    * Get User information from the OMRequest.
-   * @return
+   * @return User Info.
    */
   public OzoneManagerProtocolProtos.UserInfo getUserInfo() {
     UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
