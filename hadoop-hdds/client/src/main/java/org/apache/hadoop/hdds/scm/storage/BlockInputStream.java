@@ -364,23 +364,23 @@ public class BlockInputStream extends InputStream implements Seekable {
 
   private CheckedBiFunction<ContainerCommandRequestProto,
       ContainerCommandResponseProto, IOException> validator =
-      (request, response) -> {
-        ReadChunkResponseProto readChunkResponse = response.getReadChunk();
-        final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
-        ByteString byteString;
-        byteString = readChunkResponse.getData();
-        if (byteString.size() != chunkInfo.getLen()) {
-          // Bytes read from chunk should be equal to chunk size.
-          throw new OzoneChecksumException(String
-              .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
-                  chunkInfo.getChunkName(), chunkInfo.getLen(), byteString.size()));
-        }
-        ChecksumData checksumData =
-            ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
-        if (verifyChecksum) {
-          Checksum.verifyChecksum(byteString, checksumData);
-        }
-  };
+          (request, response) -> {
+            ReadChunkResponseProto readChunkResponse = response.getReadChunk();
+            final ChunkInfo chunkInfo = readChunkResponse.getChunkData();
+            ByteString byteString = readChunkResponse.getData();
+            if (byteString.size() != chunkInfo.getLen()) {
+              // Bytes read from chunk should be equal to chunk size.
+              throw new OzoneChecksumException(String
+                  .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
+                      chunkInfo.getChunkName(), chunkInfo.getLen(),
+                      byteString.size()));
+            }
+            ChecksumData checksumData =
+                ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
+            if (verifyChecksum) {
+              Checksum.verifyChecksum(byteString, checksumData);
+            }
+          };
 
   @Override
   public synchronized void seek(long pos) throws IOException {
