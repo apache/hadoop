@@ -23,6 +23,7 @@ import java.io.IOException;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;
@@ -43,11 +44,14 @@ public final class OMBucketCreateResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
-    String dbBucketKey =
-        omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
-            omBucketInfo.getBucketName());
-    omMetadataManager.getBucketTable().putWithBatch(batchOperation, dbBucketKey,
-        omBucketInfo);
+
+    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+      String dbBucketKey =
+          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
+              omBucketInfo.getBucketName());
+      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
+          dbBucketKey, omBucketInfo);
+    }
   }
 
   public OmBucketInfo getOmBucketInfo() {

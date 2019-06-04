@@ -44,10 +44,12 @@ public final class OMBucketDeleteResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
-    String dbBucketKey =
-        omMetadataManager.getBucketKey(volumeName, bucketName);
-    omMetadataManager.getBucketTable().deleteWithBatch(batchOperation,
-        dbBucketKey);
+    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+      String dbBucketKey =
+          omMetadataManager.getBucketKey(volumeName, bucketName);
+      omMetadataManager.getBucketTable().deleteWithBatch(batchOperation,
+          dbBucketKey);
+    }
   }
 
   public String getVolumeName() {

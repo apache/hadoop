@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.security.acl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 
 import java.util.BitSet;
 
@@ -35,11 +36,11 @@ public interface IAccessAuthorizer {
    *
    * @param ozoneObject object for which access needs to be checked.
    * @param context Context object encapsulating all user related information.
-   * @throws OzoneAclException
+   * @throws org.apache.hadoop.ozone.om.exceptions.OMException
    * @return true if user has access else false.
    */
   boolean checkAccess(IOzoneObj ozoneObject, RequestContext context)
-      throws OzoneAclException;
+      throws OMException;
 
   /**
    * ACL rights.

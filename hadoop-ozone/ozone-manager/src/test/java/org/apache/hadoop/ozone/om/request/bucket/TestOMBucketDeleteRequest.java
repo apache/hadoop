@@ -84,9 +84,8 @@ public class TestOMBucketDeleteRequest {
     OMBucketDeleteRequest omBucketDeleteRequest =
         new OMBucketDeleteRequest(omRequest);
 
-    // As preExecute of DeleteBucket request is do nothing, requests should
-    // be same.
-    Assert.assertEquals(omRequest,
+    // As user info gets added.
+    Assert.assertNotEquals(omRequest,
         omBucketDeleteRequest.preExecute(ozoneManager));
   }
 
