@@ -82,7 +82,7 @@ public class TestSCMContainerPlacementRackAware {
     when(nodeManager.getNodeStat(anyObject()))
         .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 0L, 100L));
     when(nodeManager.getNodeStat(datanodes.get(2)))
-        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 90L, 10L));
+        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 90L, 20L));
     when(nodeManager.getNodeStat(datanodes.get(3)))
         .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 80L, 20L));
     when(nodeManager.getNodeStat(datanodes.get(4)))
