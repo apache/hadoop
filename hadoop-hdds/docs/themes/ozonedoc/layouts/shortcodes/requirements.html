@@ -14,25 +14,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-{{ partial "header.html" . }}
-
-  <body>
-
-{{ partial "navbar.html" . }}
-
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-9 col-sm-offset-3 col-md-9 col-md-offset-3 main">
-            <h1>{{ .Title }}</h1>
-            <div class="col-md-9">
-              {{ .Content }}
-            </div>
-        </div>
-      </div>
+<div class="panel panel-default">
+    <div class="panel-heading">Requirements</div>
+    <div class="panel-body">
+        {{ .Inner | markdownify}}
     </div>
-
-{{ partial "footer.html" . }}
-
-  </body>
-</html>
+</div>

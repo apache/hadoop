@@ -1,9 +1,10 @@
 ---
-title: "Dozone & Dev Tools"
+title: "Docker-compose usage"
 date: 2017-08-10
 menu:
    main:
-      parent: Tools
+      parent: Next
+      weight: 10
 ---
 
 <!---
@@ -23,43 +24,23 @@ menu:
   limitations under the License.
 -->
 
-Dozone stands for docker for ozone. Ozone supports docker to make it easy to develop and test ozone.  Starting a docker-based ozone container is simple.
 
-In the `compose/ozone` directory there are two files that define the docker and ozone settings.
+In the `compose` directory of the ozone distribution there are multiple pseudo-cluster setup which can be used to run Ozone in different way (for example with secure cluster, with tracing enabled, with prometheus etc.).
 
-Developers can
+If the usage is not document in a specific directory the default usage is the following:
 
-{{< highlight bash >}}
+```bash
 cd compose/ozone
-{{< /highlight >}}
-
-and simply run
-
-{{< highlight bash >}}
 docker-compose up -d
-{{< /highlight >}}
+```
 
-to run a ozone cluster on docker.
+The data of the container is ephemeral and deleted together with the docker volumes. To force the deletion of existing data you can always delete all the temporary data:
 
-This command will launch OM, SCM and a data node.
-
-To access the OM UI, one can view http://localhost:9874.
-
-_Please note_: dozone does not map the data node ports to the 9864. Instead, it maps to the ephemeral port range. So many examples in the command shell will not work if you run those commands from the host machine. To find out where the data node port is listening, you can run the `docker ps` command or always ssh into a container before running ozone commands.
-
-To shutdown a running docker-based ozone cluster, please run
-
-{{< highlight bash >}}
+```bash
 docker-compose down
-{{< /highlight >}}
+```
 
-
-Adding more config settings
----------------------------
-The file called `docker-config` contains all ozone specific config settings. This file is processed to create the ozone-site.xml.
-
-Useful Docker & Ozone Commands
-------------------------------
+## Useful Docker & Ozone Commands
 
 If you make any modifications to ozone, the simplest way to test it is to run freon and unit tests.
 

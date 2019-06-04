@@ -1,9 +1,8 @@
 ---
-title: Alpha Cluster
-weight: 1
+title: Local pseudo-cluster
 menu:
    main:
-      parent: Starting
+      parent: Release
       weight: 1
 ---
 <!---
@@ -23,21 +22,11 @@ menu:
   limitations under the License.
 -->
 
+{{< requirements >}}
+ * docker and docker-compose
+{{< /requirements >}}
 
-***This is an alpha release of Ozone. Please don't use this release in
-production.*** Please check the road map page for features under
-development.
-
-The easiest way to run ozone is to download the release tarball and launch
-ozone via Docker. Docker will create a small ozone cluster on your machine,
-including the data nodes and ozone services.
-
-## Running Ozone via Docker
-
-
-**This assumes that you have Docker installed on the machine.**
-
-* Download the Ozone tarball and untar it.
+* Download the Ozone binary tarball and untar it.
 
 * Go to the directory where the docker compose files exist and tell
 `docker-compose` to start Ozone in the background. This will start a small

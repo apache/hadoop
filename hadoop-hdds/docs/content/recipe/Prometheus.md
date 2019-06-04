@@ -23,12 +23,12 @@ menu:
 
 [Prometheus](https://prometheus.io/) is an open-source monitoring server developed under under the [Cloud Native Computing Foundation](https://www.cncf.io/).
 
-Ozone supports Prometheus out of the box. The servers start a prometheus 
+Ozone supports Prometheus out of the box. The servers start a prometheus
 compatible metrics endpoint where all the available hadoop metrics are published in prometheus exporter format.
 
 ## Prerequisites
 
- 1. [Install the and start]({{< ref "RunningViaDocker.md" >}}) an Ozone cluster.
+ 1. [Install the and start]({{< ref "start/RunningViaDocker.md" >}}) an Ozone cluster.
  2. [Download](https://prometheus.io/download/#prometheus) the prometheus binary.
 
 ## Monitoring with prometheus

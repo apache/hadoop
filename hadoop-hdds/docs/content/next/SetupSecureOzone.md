@@ -3,8 +3,8 @@ title: "Setup secure ozone cluster"
 date: "2019-April-03"
 menu:
    main:
-       parent: Architecture
-weight: 11
+       parent: Next
+       weight: 1
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -22,7 +22,9 @@ weight: 11
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-# Setup secure ozone cluster #
+
+The following section describes how to configure a secure cluster.
+
 To enable security in ozone cluster **ozone.security.enabled** should be set to true.
 
 Property|Value

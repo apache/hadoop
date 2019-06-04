@@ -1,9 +1,9 @@
 ---
-title: Building from Sources
+title: From Source
 weight: 1
 menu:
    main:
-      parent: Starting
+      parent: Source
       weight: 6
 ---
 <!---
@@ -23,11 +23,17 @@ menu:
   limitations under the License.
 -->
 
-***This is a guide on how to build the ozone sources.  If you are <font
-color="red">not</font>
-planning to build sources yourself, you can safely skip this page.***
+{{< requirements >}}
+ * Java 1.8
+ * Maven
+ * Protoc (2.5)
+{{< /requirements >}}
 
-If you are a Hadoop ninja, and wise in the ways of Apache,  you already know
+<div class="alert alert-info" role="alert">This is a guide on how to build the ozone sources.  If you are <font
+color="red">not</font>
+planning to build sources yourself, you can safely skip this page.</div>
+
+If you are a Hadoop ninja, and wise in the ways of Apache, you already know
 that a real Apache release is a source release.
 
 If you want to build from sources, Please untar the source tarball and run
@@ -45,9 +51,10 @@ You can copy this tarball and use this instead of binary artifacts that are
 provided along with the official release.
 
 ## How to test the build
+
 You can run the acceptance tests in the hadoop-ozone directory to make sure
 that  your build is functional. To launch the acceptance tests, please follow
- the instructions in the **README.md** in the `smoketest` directory. 
+ the instructions in the **README.md** in the `smoketest` directory.
 
 ```bash
 cd smoketest
@@ -61,6 +68,5 @@ cd smoketest
 ./test.sh --env ozone basic
 ```
 
-Acceptance tests
- will start a small ozone cluster and verify that ozone shell and ozone file
+Acceptance tests will start a small ozone cluster and verify that ozone shell and ozone file
  system is fully functional.

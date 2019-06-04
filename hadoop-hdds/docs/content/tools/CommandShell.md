@@ -2,7 +2,7 @@
 title: Ozone CLI
 menu:
    main:
-      parent: Client
+      parent: Tools
       weight: 1
       identifier: OzoneShell
 ---
@@ -73,7 +73,7 @@ _\[scheme\]\[server:port\]/volume/bucket/key_
 
 Where,
 
-1. Scheme - This should be `o3` which is the native RPC protocol to access 
+1. Scheme - This should be `o3` which is the native RPC protocol to access
   Ozone API. The usage of the schema is optional.
 
 2. Server:Port - This is the address of the Ozone Manager. This can be server

@@ -25,8 +25,8 @@ menu:
 Introduction
 -------------
 
-Ozone ships with its own client library that supports RPC. For generic use cases the S3 
-compatible REST interface also can be used instead of the Ozone client. 
+Ozone ships with its own client library that supports RPC. For generic use cases the S3
+compatible REST interface also can be used instead of the Ozone client.
 
 
 ## Creating an Ozone client

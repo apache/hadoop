@@ -23,7 +23,6 @@ weight: 11
   limitations under the License.
 -->
 
-# Security in Ozone #
 Starting with badlands release (ozone-0.4.0-alpha) ozone cluster can be secured against external threats. Specifically it can be configured for following security features:
 
 1. Authentication

@@ -22,10 +22,14 @@ weight: -10
 
 # Apache Hadoop Ozone
 
-Ozone is a scalable, distributed object store for Hadoop.  Applications like
+<img src="ozone-usage.png" style="max-width: 100%;"/>
+
+<div class="alert alert-success" style="font-size: 140%" role="alert">Ozone is a scalable, distributed object store for Hadoop.</div>
+
+Applications like
 Apache Spark, Hive and YARN, can run against Ozone without any
 modifications. Ozone comes with a [Java client library]({{< ref "JavaApi.md"
->}}), a [S3]({{< ref "S3.md" >}}) and a  [command line interface] 
+>}}), a [S3]({{< ref "S3.md" >}}) and a  [command line interface]
 ({{< ref "CommandShell.md#shell" >}})  which makes it easy to use Ozone.
 
 Ozone consists of volumes, buckets, and Keys:
@@ -34,6 +38,4 @@ Ozone consists of volumes, buckets, and Keys:
 * Buckets are similar to directories. A bucket can contain any number of keys,  but buckets cannot contain other buckets.
 * Keys are similar to files. A bucket can contain any number of keys.
 
-
-
-<a href="{{< ref "RunningViaDocker.md" >}}"><button class="btn btn-danger btn-lg">Getting started</button></a>
+</div>

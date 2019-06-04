@@ -1,10 +1,8 @@
 ---
-title: Configuration
-weight: 1
+title: On-prem install
 menu:
    main:
-      parent: Starting
-      weight: 2
+      parent: Release
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -24,8 +22,6 @@ menu:
 -->
 
 
-
-
 If you are feeling adventurous, you can setup ozone in a real cluster.
 Setting up a real cluster requires us to understand the components of Ozone.
 Ozone is designed to work concurrently with HDFS. However, Ozone is also
@@ -37,9 +33,6 @@ capable of running independently. The components of ozone are the same in both a
 2. Storage Container Manager - Acts as the block manager. Ozone Manager
 requests blocks from SCM, to which clients can write data.
 3. Datanodes - Ozone data node code runs inside the HDFS datanode or in the independent deployment case runs an ozone datanode daemon.
-
-
-
 
 ## Setting up an Ozone only cluster
 
@@ -129,7 +122,7 @@ Here is an  example,
 {{< /highlight >}}
 
 
-### Ozone Settings Summary
+## Ozone Settings Summary
 
 | Setting                        | Value                        | Comment |
 |--------------------------------|------------------------------|------------------------------------------------------------------|
@@ -140,3 +133,58 @@ Here is an  example,
 | ozone.scm.client.address       | SCM server name and port     | Used by client-side                                              |
 | ozone.scm.datanode.address     | SCM server name and port     | Used by datanode to talk to SCM                                  |
 | ozone.om.address               | OM server name               | Used by Ozone handler and Ozone file system.                     |
+
+
+## Startup the cluster
+
+Before we boot up the Ozone cluster, we need to initialize both SCM and Ozone Manager.
+
+{{< highlight bash >}}
+ozone scm --init
+{{< /highlight >}}
+This allows SCM to create the cluster Identity and initialize its state.
+The ```init``` command is similar to Namenode format. Init command is executed only once, that allows SCM to create all the required on-disk structures to work correctly.
+{{< highlight bash >}}
+ozone --daemon start scm
+{{< /highlight >}}
+
+Once we know SCM is up and running, we can create an Object Store for our use. This is done by running the following command.
+
+{{< highlight bash >}}
+ozone om --init
+{{< /highlight >}}
+
+
+Once Ozone manager has created the Object Store, we are ready to run the name
+services.
+
+{{< highlight bash >}}
+ozone --daemon start om
+{{< /highlight >}}
+
+At this point Ozone's name services, the Ozone manager, and the block service  SCM is both running.
+**Please note**: If SCM is not running
+```om --init``` command will fail. SCM start will fail if on-disk data structures are missing. So please make sure you have done both ```scm --init``` and ```om --init``` commands.
+
+Now we need to start the data nodes. Please run the following command on each datanode.
+{{< highlight bash >}}
+ozone --daemon start datanode
+{{< /highlight >}}
+
+At this point SCM, Ozone Manager and data nodes are up and running.
+
+***Congratulations!, You have set up a functional ozone cluster.***
+
+## Shortcut
+
+If you want to make your life simpler, you can just run
+{{< highlight bash >}}
+ozone scm --init
+ozone om --init
+start-ozone.sh
+{{< /highlight >}}
+
+This assumes that you have set up the slaves file correctly and ssh
+configuration that allows ssh-ing to all data nodes. This is the same as the
+HDFS configuration, so please refer to HDFS documentation on how to set this
+up.

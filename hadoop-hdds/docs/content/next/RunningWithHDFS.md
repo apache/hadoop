@@ -3,7 +3,7 @@ title: Running concurrently with HDFS
 weight: 1
 menu:
    main:
-      parent: Starting
+      parent: Next
       weight: 5
 ---
 <!---
@@ -26,15 +26,10 @@ menu:
 Ozone is designed to work with HDFS. So it is easy to deploy ozone in an
 existing HDFS cluster.
 
-Ozone does *not* support security today. It is a work in progress and tracked
- in
-[HDDS-4](https://issues.apache.org/jira/browse/HDDS-4). If you enable ozone
-in a secure HDFS cluster, for your own protection Ozone will refuse to work.
+The container manager part of Ozone can run inside DataNodes as a pluggable module
+or as a standalone component. This document describe how can it be started as
+a HDFS datanode plugin.
 
-In other words, till Ozone security work is done, Ozone will not work in any
-secure clusters.
-
-The container manager part of Ozone runs inside DataNodes as a pluggable module.
 To activate ozone you should define the service plugin implementation class.
 
 <div class="alert alert-warning" role="alert">

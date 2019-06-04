@@ -21,9 +21,6 @@ menu:
   limitations under the License.
 -->
 
-Using Ozone from Apache Spark
-===
-
 This recipe shows how Ozone object store can be used from Spark using:
 
  - OzoneFS (Hadoop compatible file system)
@@ -34,7 +31,7 @@ This recipe shows how Ozone object store can be used from Spark using:
 
 ## Requirements
 
-Download latest Spark and Ozone distribution and extract them. This method is 
+Download latest Spark and Ozone distribution and extract them. This method is
 tested with the `spark-2.4.0-bin-hadoop2.7` distribution.
 
 You also need the following:
@@ -47,7 +44,7 @@ You also need the following:
 
 ### Create the base Spark driver/executor image
 
-First of all create a docker image with the Spark image creator. 
+First of all create a docker image with the Spark image creator.
 Execute the following from the Spark distribution
 
 ```

@@ -1,12 +1,9 @@
 ---
 title: Ozone File System
-weight: 1
 date: 2017-09-14
-menu: main
 menu:
    main:
-      parent: Starting
-      weight: 4
+      parent: Client
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -102,21 +99,21 @@ The second one contains all the dependency in an internal, separated directory,
 
 With this method the hadoop-ozone-filesystem-lib-legacy.jar can be used from
  any older hadoop version (eg. hadoop 3.1, hadoop 2.7 or spark+hadoop 2.7)
- 
+
 Similar to the dependency jar, there are two OzoneFileSystem implementation.
- 
-For hadoop 3.0 and newer, you can use `org.apache.hadoop.fs.ozone.OzoneFileSystem` 
+
+For hadoop 3.0 and newer, you can use `org.apache.hadoop.fs.ozone.OzoneFileSystem`
  which is a full implementation of the Hadoop compatible File System API.
- 
+
 For Hadoop 2.x you should use the Basic version: `org.apache.hadoop.fs.ozone.BasicOzoneFileSystem`.
- 
-This is the same implementation but doesn't include the features/dependencies which are added with 
+
+This is the same implementation but doesn't include the features/dependencies which are added with
  Hadoop 3.0. (eg. FS statistics, encryption zones).
- 
+
 ### Summary
- 
+
 The following table summarize which jar files and implementation should be used:
- 
+
 Hadoop version | Required jar            | OzoneFileSystem implementation
 ---------------|-------------------------|----------------------------------------------------
 3.2            | filesystem-lib-current  | org.apache.hadoop.fs.ozone.OzoneFileSystem

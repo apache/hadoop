@@ -51,19 +51,19 @@ manager.
 Ozone Overview
 --------------
 
- The following diagram is a high-level overview of the core components of Ozone.  
+ The following diagram is a high-level overview of the core components of Ozone.
 
 ![Architecture diagram](../../OzoneOverview.svg)
 
 The main elements of Ozone are :
 
-### Ozone Manager 
+### Ozone Manager
 
 [Ozone Manager]({{< ref "OzoneManager.md" >}}) (OM) takes care of the Ozone's namespace.
 All ozone objects like volumes, buckets, and keys are managed by OM. In Short, OM is the metadata manager for Ozone.
 OM talks to blockManager(SCM) to get blocks and passes it on to the Ozone
 client.  Ozone client writes data to these blocks.
-OM will eventually be replicated via Apache Ratis for High Availability. 
+OM will eventually be replicated via Apache Ratis for High Availability.
 
 ### Storage Container Manager
 
@@ -71,7 +71,7 @@ OM will eventually be replicated via Apache Ratis for High Availability. 
 SCM along with data nodes offer a service called 'storage containers'.
 A storage container is a group unrelated of blocks that are managed together as a single entity.
 
-SCM offers the following abstractions.  
+SCM offers the following abstractions.
 
 ![SCM Abstractions](../../SCMBlockDiagram.png)
 
@@ -94,7 +94,7 @@ we define a pool as a set of machines. This makes management of data nodes easie
 The data node where data is stored. SCM monitors these nodes via heartbeat.
 
 ### Clients
-Ozone ships with a set of clients. Ozone [CLI]({{< ref "CommandShell.md#shell" >}}) is the command line interface like 'hdfs' command.  [Freon] ({{< ref "Freon.md" >}}) is a  load generation tool for Ozone. 
+Ozone ships with a set of clients. Ozone [CLI]({{< ref "CommandShell.md#shell" >}}) is the command line interface like 'hdfs' command.  [Freon] ({{< ref "Freon.md" >}}) is a  load generation tool for Ozone.
 
 ## S3 gateway
 
