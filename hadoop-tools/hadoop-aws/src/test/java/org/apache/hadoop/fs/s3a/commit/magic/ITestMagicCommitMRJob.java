@@ -24,12 +24,16 @@ import java.io.IOException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapred.JobConf;
 
+import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -99,10 +103,15 @@ public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
     Path magicDir = new Path(destPath, MAGIC);
 
     // if an FNFE isn't raised on getFileStatus, list out the directory
-    // contents
+    // tree
+    S3AFileSystem fs = getFileSystem();
     intercept(FileNotFoundException.class, () -> {
-      getFileSystem().getFileStatus(magicDir);
-      return ContractTestUtils.ls(getFileSystem(), magicDir);
+      final FileStatus st = fs.getFileStatus(magicDir);
+      StringBuilder result = new StringBuilder("Found magic dir which should"
+          + " have been deleted at ").append(st).append('\n');
+      applyLocatedFiles(fs.listFiles(magicDir, true),
+          (status) -> result.append(status.getPath()).append('\n'));
+      return result.toString();
     });
   }
 }

@@ -86,6 +86,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.AWSCredentialProviderList;
 import org.apache.hadoop.fs.s3a.AWSServiceThrottledException;
@@ -261,6 +262,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   public static final String E_ON_DEMAND_NO_SET_CAPACITY
       = "Neither ReadCapacityUnits nor WriteCapacityUnits can be specified when BillingMode is PAY_PER_REQUEST";
+
+  @VisibleForTesting
+  static final String E_INCONSISTENT_UPDATE
+      = "Duplicate and inconsistent entry in update operation";
 
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
@@ -774,7 +779,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   private Collection<DDBPathMetadata> completeAncestry(
       final Collection<DDBPathMetadata> pathsToCreate,
-      final AncestorState ancestorState) {
+      final AncestorState ancestorState) throws PathIOException {
     List<DDBPathMetadata> ancestorsToAdd = new ArrayList<>(0);
     LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
     // we sort the inputs to guarantee that the topmost entries come first.
@@ -794,16 +799,28 @@ public class DynamoDBMetadataStore implements MetadataStore,
       DDBPathMetadata entry = new DDBPathMetadata(meta);
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
       if (oldEntry != null) {
-        // check for and warn if the existing bulk operation overwrote it.
-        // this should never occur outside tests.
-        LOG.warn("Overwriting a S3Guard entry created in the operation: {}",
-            oldEntry);
-        LOG.warn("With new entry: {}", entry);
-        continue;
+        if (!oldEntry.getFileStatus().isDirectory()
+            || !entry.getFileStatus().isDirectory()) {
+          // check for and warn if the existing bulk operation overwrote it.
+          // this should never occur outside tests explicitly crating it
+          LOG.warn("Overwriting a S3Guard entry created in the operation: {}",
+              oldEntry);
+          LOG.warn("With new entry: {}", entry);
+          // restore the old state
+          ancestorState.put(path, oldEntry);
+          // then raise an exception
+          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
+        } else {
+          // directory is already present, so skip adding it and any parents.
+          continue;
+        }
       }
       ancestorsToAdd.add(entry);
       Path parent = path.getParent();
-      while (!parent.isRoot() && !ancestorState.contains(parent)) {
+      while (!parent.isRoot()) {
+        if (ancestorState.findDirectory(parent)) {
+          break;
+        }
         LOG.debug("auto-create ancestor path {} for child path {}",
             parent, path);
         final S3AFileStatus status = makeDirStatus(parent, username);
@@ -1114,10 +1131,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final Collection<DDBPathMetadata> metas,
       @Nullable final BulkOperationState operationState) throws IOException {
     if (metas.isEmpty()) {
-      // this sometimes to appear in the logs, so log the full stack to
-      // identify it.
-      LOG.debug("Ignoring empty list of entries to put",
-          new Exception("source"));
+      // Happens when someone calls put() with an empty list.
+      LOG.debug("Ignoring empty list of entries to put");
       return;
     }
     // always create or retrieve an ancestor state instance, so it can
@@ -1137,11 +1152,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * Get full path of ancestors that are nonexistent in table.
    *
-   * This queries DDB.
+   * This queries DDB when looking for parents which are not in
+   * any supplied ongoing operation state.
+   * Updates the operation state with found entries to reduce further checks.
+   *
    * @param meta metadata to put
    * @param operationState ongoing bulk state
    * @return a possibly empty list of entries to put.
-   * @throws IOException
+   * @throws IOException failure
    */
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @VisibleForTesting
@@ -1162,8 +1180,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     Path path = meta.getFileStatus().getPath().getParent();
     while (path != null && !path.isRoot()) {
       synchronized (ancestorState) {
-        if (ancestorState.contains(path)) {
-          // the ancestor state has the entry.
+        if (ancestorState.findDirectory(path)) {
           break;
         }
       }
@@ -1223,10 +1240,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
     DDBPathMetadata ddbPathMeta =
         new DDBPathMetadata(makeDirStatus(path, username), meta.isEmpty(),
             false, meta.isAuthoritative(), meta.getLastUpdated());
-
+    // put all its ancestors if not present; as an optimization we return at its
+    // first existent ancestor
+    final AncestorState ancestorState = extractOrCreate(operationState);
     // First add any missing ancestors...
     final List<DDBPathMetadata> metasToPut = fullPathsToPut(ddbPathMeta,
-        operationState);
+        ancestorState);
 
     // next add all children of the directory
     metasToPut.addAll(pathMetaToDDBPathMeta(meta.getListing()));
@@ -1235,6 +1254,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // if a sequence fails, no orphan entries will have been written.
     metasToPut.sort(PathOrderComparators.TOPMOST_PM_FIRST);
     processBatchWriteRequest(null, pathMetadataToItem(metasToPut));
+    // and add the ancestors
+    synchronized (ancestorState) {
+      metasToPut.forEach(ancestorState::put);
+    }
   }
 
   @Override
@@ -2159,6 +2182,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return sb.toString();
     }
 
+    /**
+     * Does the ancestor state contain a path.
+     * @param p path to check
+     * @return true if the state has an entry
+     */
     public boolean contains(Path p) {
       return ancestry.containsKey(p);
     }
@@ -2167,5 +2195,36 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return ancestry.put(p, md);
     }
 
+    public DDBPathMetadata put(DDBPathMetadata md) {
+      return ancestry.put(md.getFileStatus().getPath(), md);
+    }
+
+    public DDBPathMetadata get(Path p) {
+      return ancestry.get(p);
+    }
+
+    /**
+     * Find a directory entry, raising an exception if there is a file
+     * at the path.
+     * @param path path to look up
+     * @return true iff a directory was found in the ancestor state.
+     * @throws PathIOException if there was a file at the path.
+     */
+    public boolean findDirectory(Path path) throws PathIOException {
+      final DDBPathMetadata ancestor = get(path);
+      if (ancestor != null) {
+        // there's an entry in the ancestor state
+        if (!ancestor.getFileStatus().isDirectory()) {
+          // but: its a file, which means this update is now inconsistent.
+          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
+        } else {
+          // the ancestor is a directory, so break out the ancestor creation
+          // loop.
+          return true;
+        }
+      } else {
+        return false;
+      }
+    }
   }
 }

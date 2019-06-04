@@ -27,7 +27,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Item;
@@ -42,6 +41,7 @@ import org.assertj.core.api.Assertions;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
@@ -52,10 +52,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-
-import org.junit.rules.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,8 +66,6 @@ import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.KEY_TEST_TIMEOUT;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.SCALE_TEST_TIMEOUT_SECONDS;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.*;
@@ -213,7 +208,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @AfterClass
   public static void afterClassTeardown() {
     LOG.debug("Destroying static DynamoDBMetadataStore.");
-    shutdown(ddbmsStatic);
+    destroy(ddbmsStatic);
     ddbmsStatic = null;
   }
 
@@ -222,7 +217,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * Exceptions are caught and logged at debug.
    * @param ddbms store -may be null.
    */
-  private static void shutdown(final DynamoDBMetadataStore ddbms) {
+  private static void destroy(final DynamoDBMetadataStore ddbms) {
     if (ddbms != null) {
       try {
         ddbms.destroy();
@@ -239,14 +234,12 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             Constants.S3GUARD_METASTORE_DYNAMO));
   }
 
-
   /**
    * This teardown does not call super.teardown() so as to avoid the DDMBS table
    * from being destroyed.
    * <p>
    * This is potentially quite slow, depending on DDB IO Capacity and number
    * of entries to forget.
-   * @throws Exception
    */
   @Override
   public void tearDown() throws Exception {
@@ -264,19 +257,36 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   /**
    * Forget all metadata in the store.
    * This originally did an iterate and forget, but using prune() hands off the
-   * bulk IO into the metastore itself.
-   * @throws IOException
+   * bulk IO into the metastore itself; the forgetting is used
+   * to purge anything which wasn't pruned.
    */
   private void deleteAllMetadata() throws IOException {
     // The following is a way to be sure the table will be cleared and there
     // will be no leftovers after the test.
     ThrottleTracker throttleTracker = new ThrottleTracker(ddbmsStatic);
-    try (DurationInfo ignored = new DurationInfo(LOG, true, "cleanup")) {
+    final Path root = strToPath("/");
+    try (DurationInfo ignored = new DurationInfo(LOG, true, "prune")) {
       ddbmsStatic.prune(System.currentTimeMillis(),
-          PathMetadataDynamoDBTranslation.pathToParentKey(strToPath("/")));
+          PathMetadataDynamoDBTranslation.pathToParentKey(root));
       LOG.info("Throttle statistics: {}", throttleTracker);
     }
+    // and after the pruning, make sure all other metadata is gone
+    int forgotten = 0;
+    try (DurationInfo ignored = new DurationInfo(LOG, true, "forget")) {
+      PathMetadata meta = ddbmsStatic.get(root);
+      if (meta != null) {
+        for (DescendantsIterator desc = new DescendantsIterator(ddbmsStatic,
+            meta);
+            desc.hasNext(); ) {
+          forgotten++;
+          ddbmsStatic.forgetMetadata(desc.next().getPath());
+        }
+        LOG.info("Forgot {} entries", forgotten);
+      }
+    }
+    LOG.info("Throttle statistics: {}", throttleTracker);
   }
+
   /**
    * Each contract has its own S3AFileSystem and DynamoDBMetadataStore objects.
    */
@@ -385,7 +395,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           expectedRegion,
           ddbms.getRegion());
     } finally {
-      shutdown(ddbms);
+      destroy(ddbms);
     }
   }
 
@@ -426,7 +436,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           keySchema(),
           ddbms.getTable().describe().getKeySchema());
     } finally {
-      shutdown(ddbms);
+      destroy(ddbms);
     }
   }
 
@@ -616,7 +626,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
       conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
     } finally {
-      shutdown(ddbms);
+      destroy(ddbms);
     }
   }
 
@@ -642,7 +652,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       intercept(IOException.class, E_INCOMPATIBLE_VERSION,
           () -> ddbms.initTable());
     } finally {
-      shutdown(ddbms);
+      destroy(ddbms);
     }
   }
 
@@ -685,7 +695,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     ddbms.put(new PathMetadata(new S3AFileStatus(true,
         new Path(rootPath, "foo"),
-        UserGroupInformation.getCurrentUser().getShortUserName())), null);
+        UserGroupInformation.getCurrentUser().getShortUserName())),
+        null);
     verifyRootDirectory(ddbms.get(rootPath), false);
   }
 
@@ -735,8 +746,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String srcRoot = testRoot + "/a/b/src";
     final String destRoot = testRoot + "/c/d/e/dest";
 
-    AncestorState bulkWrite = ddbms.initiateBulkWrite(null);
     final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(nestedPath1);
     ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)),
         bulkWrite);
     final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
@@ -752,6 +763,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         strToPath(srcRoot + "/dir1"),
         strToPath(srcRoot + "/dir1/dir2"),
         strToPath(srcRoot + "/file1.txt"));
+    final String finalFile = destRoot + "/file1.txt";
     final Collection<PathMetadata> pathsToCreate = Lists.newArrayList(
         new PathMetadata(basicFileStatus(strToPath(destRoot),
             0, true)),
@@ -759,7 +771,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             0, true)),
         new PathMetadata(basicFileStatus(strToPath(destRoot + "/dir1/dir2"),
             0, true)),
-        new PathMetadata(basicFileStatus(strToPath(destRoot + "/file1.txt"),
+        new PathMetadata(basicFileStatus(strToPath(finalFile),
             1024, false))
     );
 
@@ -767,20 +779,92 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     bulkWrite.close();
     // assert that all the ancestors should have been populated automatically
-    // Also check moved files while we're at it
     List<String> paths = Lists.newArrayList(
         testRoot + "/c", testRoot + "/c/d", testRoot + "/c/d/e", destRoot,
-        destRoot + "/dir1", destRoot + "/dir1/dir2",destRoot + "/file1.txt");
+        destRoot + "/dir1", destRoot + "/dir1/dir2");
     for (String p : paths) {
       assertCached(p);
-      assertInAncestor(bulkWrite, p);
+      verifyInAncestor(bulkWrite, p, true);
     }
+    // Also check moved files while we're at it
+    assertCached(finalFile);
+    verifyInAncestor(bulkWrite, finalFile, false);
   }
 
-  private void assertInAncestor(AncestorState state, String path)
+  @Test
+  public void testAncestorOverwriteConflict() throws Throwable {
+    final DynamoDBMetadataStore ddbms = getDynamoMetadataStore();
+    String testRoot = "/" + getMethodName();
+    String parent = testRoot + "/parent";
+    Path parentPath = strToPath(parent);
+    String child = parent + "/child";
+    Path childPath = strToPath(child);
+    String grandchild = child + "/grandchild";
+    Path grandchildPath = strToPath(grandchild);
+    String child2 = parent + "/child2";
+    String grandchild2 = child2 + "/grandchild2";
+    Path grandchild2Path = strToPath(grandchild2);
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(parentPath);
+
+    // writing a child creates ancestors
+    ddbms.put(
+        new PathMetadata(basicFileStatus(childPath, 1024, false)),
+        bulkWrite);
+    verifyInAncestor(bulkWrite, child, false);
+    verifyInAncestor(bulkWrite, parent, true);
+
+    // overwrite an ancestor with a file entry in the same operation
+    // is an error.
+    intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
+        () -> ddbms.put(
+            new PathMetadata(basicFileStatus(parentPath, 1024, false)),
+            bulkWrite));
+
+    // now put a file under the child and expect the put operation
+    // to fail fast, because the ancestor state includes a file at a parent.
+
+    intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
+        () -> ddbms.put(
+            new PathMetadata(basicFileStatus(grandchildPath, 1024, false)),
+            bulkWrite));
+
+    // and expect a failure for directory update under the child
+    DirListingMetadata grandchildListing = new DirListingMetadata(
+        grandchildPath,
+        new ArrayList<>(), false);
+    intercept(PathIOException.class, E_INCONSISTENT_UPDATE,
+        () -> ddbms.put(grandchildListing, bulkWrite));
+
+    // but a directory update under another path is fine
+    DirListingMetadata grandchild2Listing = new DirListingMetadata(
+        grandchild2Path,
+        new ArrayList<>(), false);
+    ddbms.put(grandchild2Listing, bulkWrite);
+    // and it creates a new entry for its parent
+    verifyInAncestor(bulkWrite, child2, true);
+  }
+
+  /**
+   * Assert that a path has an entry in the ancestor state.
+   * @param state ancestor state
+   * @param path path to look for
+   * @param isDirectory is it a directory
+   * @return the value
+   * @throws IOException IO failure
+   * @throws AssertionError assertion failure.
+   */
+  private DDBPathMetadata verifyInAncestor(AncestorState state,
+      String path,
+      final boolean isDirectory)
       throws IOException {
     final Path p = strToPath(path);
     assertTrue("Path " + p + " not found in ancestor state", state.contains(p));
+    final DDBPathMetadata md = state.get(p);
+    assertTrue("Ancestor value for "+  path,
+        isDirectory
+            ? md.getFileStatus().isDirectory()
+            : md.getFileStatus().isFile());
+    return md;
   }
 
   @Test
@@ -846,7 +930,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           () -> ddbms.listChildren(testPath));
       ddbms.destroy();
     } finally {
-      shutdown(ddbms);
+      destroy(ddbms);
     }
   }
 

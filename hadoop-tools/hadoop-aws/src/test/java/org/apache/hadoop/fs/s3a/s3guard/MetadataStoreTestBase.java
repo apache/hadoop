@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.collect.Sets;
+import org.assertj.core.api.Assertions;
 import org.junit.After;
 import org.junit.Assume;
 import org.junit.Before;
@@ -174,7 +174,9 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     LOG.info("We got {} by iterating DescendantsIterator", actual);
 
     if (!allowMissing()) {
-      assertEquals(Sets.newHashSet(checkNodes), actual);
+      Assertions.assertThat(actual)
+          .as("files listed through DescendantsIterator")
+          .containsExactlyInAnyOrder(checkNodes);
     }
   }
 
@@ -300,10 +302,12 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing() || dir != null) {
       assertNotNull("Root dir cached", dir);
       assertFalse("Root not fully cached", dir.isAuthoritative());
-      assertNotNull("have root dir file listing", dir.getListing());
-      assertEquals("One file in root dir", 1, dir.getListing().size());
-      assertEquals("file1 in root dir", strToPath("/file1"),
-          dir.getListing().iterator().next().getFileStatus().getPath());
+      final Collection<PathMetadata> listing = dir.getListing();
+      Assertions.assertThat(listing)
+          .describedAs("Root dir listing")
+          .isNotNull()
+          .extracting(p -> p.getFileStatus().getPath())
+          .containsExactly(strToPath("/file1"));
     }
   }
 
@@ -879,7 +883,9 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     for (String ps : pathStrs) {
       b.add(strToPath(ps));
     }
-    assertEquals("Same set of files", b, a);
+    Assertions.assertThat(a)
+        .as("Directory Listing")
+        .containsExactlyInAnyOrderElementsOf(b);
   }
 
   private void putListStatusFiles(String dirPath, boolean authoritative,
@@ -908,8 +914,9 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     if (!allowMissing() || dirMeta != null) {
       dirMeta = dirMeta.withoutTombstones();
-      assertEquals("Number of entries in dir " + pathStr, size,
-          nonDeleted(dirMeta.getListing()).size());
+      Assertions.assertThat(nonDeleted(dirMeta.getListing()))
+          .as("files in directory %s", pathStr)
+          .hasSize(size);
     }
   }
 

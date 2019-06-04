@@ -119,6 +119,7 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
       String sysprops = String.format("-Xmx256m -Dlog4j.configuration=%s",
           log4j);
       jobConf.set(JobConf.MAPRED_MAP_TASK_JAVA_OPTS, sysprops);
+      jobConf.set(JobConf.MAPRED_REDUCE_TASK_JAVA_OPTS, sysprops);
       jobConf.set("yarn.app.mapreduce.am.command-opts", sysprops);
     }
 
