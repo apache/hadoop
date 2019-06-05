@@ -170,11 +170,11 @@ public class OMBucketCreateRequest extends OMClientRequest {
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
-
-      // Performing audit logging outside of the lock.
-      auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_BUCKET,
-          omBucketInfo.toAuditMap(), exception, userInfo));
     }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_BUCKET,
+        omBucketInfo.toAuditMap(), exception, userInfo));
 
     // return response.
     if (exception == null) {

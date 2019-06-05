@@ -190,11 +190,11 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       exception = ex;
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-
-      // Performing audit logging outside of the lock.
-      auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
-              omBucketArgs.toAuditMap(), exception, userInfo));
     }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
+        omBucketArgs.toAuditMap(), exception, userInfo));
 
     // return response.
     if (exception == null) {

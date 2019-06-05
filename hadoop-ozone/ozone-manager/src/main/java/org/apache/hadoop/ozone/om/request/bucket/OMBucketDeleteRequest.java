@@ -132,11 +132,11 @@ public class OMBucketDeleteRequest extends OMClientRequest {
       exception = ex;
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-
-      // Performing audit logging outside of the lock.
-      auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_BUCKET,
-          auditMap, exception, userInfo));
     }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_BUCKET,
+        auditMap, exception, userInfo));
 
     // return response.
     if (exception == null) {
