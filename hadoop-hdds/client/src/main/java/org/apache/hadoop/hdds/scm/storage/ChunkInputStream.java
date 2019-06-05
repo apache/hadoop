@@ -377,7 +377,8 @@ public class ChunkInputStream extends InputStream implements Seekable {
 
               int checkumStartIndex = (int) (reqChunkInfo.getOffset() /
                   checksumData.getBytesPerChecksum());
-              Checksum.verifyChecksum(byteString, checksumData, checkumStartIndex);
+              Checksum.verifyChecksum(
+                  byteString, checksumData, checkumStartIndex);
             }
           };
 
