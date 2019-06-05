@@ -34,7 +34,7 @@ for test in $(find $SCRIPT_DIR -name test.sh); do
 
   #required to read the .env file from the right location
   cd "$(dirname "$test")" || continue
-  $test
+  ./test.sh
   ret=$?
   if [[ $ret -ne 0 ]]; then
       RESULT=-1

@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export HADOOP_VERSION=3
-hadoop-ozone/dist/target/ozone-*-SNAPSHOT/smoketest/test.sh
+"$DIR/../../../hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/test-all.sh"
 exit $?
