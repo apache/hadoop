@@ -100,6 +100,48 @@ public class NativeIO {
        write.  */
     public static int SYNC_FILE_RANGE_WAIT_AFTER = 4;
 
+    /**
+     * Keeps the support state of PMDK.
+     */
+    public enum SupportState {
+      UNSUPPORTED(-1),
+      PMDK_LIB_NOT_FOUND(1),
+      SUPPORTED(0);
+
+      private byte stateCode;
+      SupportState(int stateCode) {
+        this.stateCode = (byte) stateCode;
+      }
+
+      public int getStateCode() {
+        return stateCode;
+      }
+
+      public String getMessage() {
+        String msg;
+        switch (stateCode) {
+        case -1:
+          msg = "The native code is built without PMDK support.";
+          break;
+        case 1:
+          msg = "The native code is built with PMDK support, but PMDK libs " +
+              "are NOT found in execution environment or failed to be loaded.";
+          break;
+        case 0:
+          msg = "The native code is built with PMDK support, and PMDK libs " +
+              "are loaded successfully.";
+          break;
+        default:
+          msg = "The state code: " + stateCode + " is unrecognized!";
+        }
+        return msg;
+      }
+    }
+
+    // Denotes the state of supporting PMDK. The value is set by JNI.
+    private static SupportState pmdkSupportState =
+        SupportState.PMDK_LIB_NOT_FOUND;
+
     private static final Logger LOG = LoggerFactory.getLogger(NativeIO.class);
 
     // Set to true via JNI if possible
@@ -124,6 +166,93 @@ public class NativeIO {
       POSIX.cacheManipulator = cacheManipulator;
     }
 
+    // This method is invoked by JNI.
+    public static void setPmdkSupportState(int stateCode) {
+      for (SupportState state : SupportState.values()) {
+        if (state.getStateCode() == stateCode) {
+          pmdkSupportState = state;
+          return;
+        }
+      }
+      LOG.error("The state code: " + stateCode + " is unrecognized!");
+    }
+
+    public static boolean isPmdkAvailable() {
+      LOG.info(pmdkSupportState.getMessage());
+      return pmdkSupportState == SupportState.SUPPORTED;
+    }
+
+    /**
+     * Denote memory region for a file mapped.
+     */
+    public static class PmemMappedRegion {
+      private long address;
+      private long length;
+      private boolean isPmem;
+
+      public PmemMappedRegion(long address, long length, boolean isPmem) {
+        this.address = address;
+        this.length = length;
+        this.isPmem = isPmem;
+      }
+
+      public boolean isPmem() {
+        return this.isPmem;
+      }
+
+      public long getAddress() {
+        return this.address;
+      }
+
+      public long getLength() {
+        return this.length;
+      }
+    }
+
+    /**
+     * JNI wrapper of persist memory operations.
+     */
+    public static class Pmem {
+      // check whether the address is a Pmem address or DIMM address
+      public static boolean isPmem(long address, long length) {
+        return NativeIO.POSIX.isPmemCheck(address, length);
+      }
+
+      // create a pmem file and memory map it
+      public static PmemMappedRegion mapBlock(String path, long length) {
+        return NativeIO.POSIX.pmemCreateMapFile(path, length);
+      }
+
+      // unmap a pmem file
+      public static boolean unmapBlock(long address, long length) {
+        return NativeIO.POSIX.pmemUnMap(address, length);
+      }
+
+      // copy data from disk file(src) to pmem file(dest), without flush
+      public static void memCopy(byte[] src, long dest, boolean isPmem,
+          long length) {
+        NativeIO.POSIX.pmemCopy(src, dest, isPmem, length);
+      }
+
+      // flush the memory content to persistent storage
+      public static void memSync(PmemMappedRegion region) {
+        if (region.isPmem()) {
+          NativeIO.POSIX.pmemDrain();
+        } else {
+          NativeIO.POSIX.pmemSync(region.getAddress(), region.getLength());
+        }
+      }
+    }
+
+    private static native boolean isPmemCheck(long address, long length);
+    private static native PmemMappedRegion pmemCreateMapFile(String path,
+        long length);
+    private static native boolean pmemUnMap(long address, long length);
+    private static native void pmemCopy(byte[] src, long dest, boolean isPmem,
+        long length);
+    private static native void pmemDrain();
+    private static native void pmemSync(long address, long length);
+
     /**
      * Used to manipulate the operating system cache.
      */
@@ -143,8 +272,8 @@ public class NativeIO {
       }
 
       public void posixFadviseIfPossible(String identifier,
-        FileDescriptor fd, long offset, long len, int flags)
-            throws NativeIOException {
+          FileDescriptor fd, long offset, long len, int flags)
+          throws NativeIOException {
         NativeIO.POSIX.posixFadviseIfPossible(identifier, fd, offset,
             len, flags);
       }
@@ -748,7 +877,7 @@ public class NativeIO {
    * user account name, of the format DOMAIN\UserName. This method
    * will remove the domain part of the full logon name.
    *
-   * @param Fthe full principal name containing the domain
+   * @param name the full principal name containing the domain
    * @return name with domain removed
    */
   private static String stripDomain(String name) {

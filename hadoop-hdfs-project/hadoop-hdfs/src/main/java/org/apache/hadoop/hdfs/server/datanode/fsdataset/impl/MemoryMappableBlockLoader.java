@@ -66,8 +66,7 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
    */
   @Override
   MappableBlock load(long length, FileInputStream blockIn,
-                            FileInputStream metaIn, String blockFileName,
-                            ExtendedBlockId key)
+      FileInputStream metaIn, String blockFileName, ExtendedBlockId key)
       throws IOException {
     MemoryMappedBlock mappableBlock = null;
     MappedByteBuffer mmap = null;
@@ -115,5 +114,10 @@ public class MemoryMappableBlockLoader extends MappableBlockLoader {
   @Override
   public boolean isTransientCache() {
     return true;
+  }
+
+  @Override
+  public boolean isNativeLoader() {
+    return false;
   }
 }
