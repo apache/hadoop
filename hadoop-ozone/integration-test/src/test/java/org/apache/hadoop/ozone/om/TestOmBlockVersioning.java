@@ -44,6 +44,7 @@ import org.junit.rules.ExpectedException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -116,6 +117,7 @@ public class TestOmBlockVersioning {
         .setKeyName(keyName)
         .setDataSize(1000)
         .setRefreshPipeline(true)
+        .setAcls(new ArrayList<>())
         .build();
 
     // 1st update, version 0
@@ -220,6 +222,7 @@ public class TestOmBlockVersioning {
 
     String dataString = RandomStringUtils.randomAlphabetic(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs.setUserName(userName);
     // this write will create 1st version with one block
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());

@@ -112,6 +112,7 @@ public class TestMultipleContainerReadWrite {
     String dataString = RandomStringUtils.randomAscii(3 * (int)OzoneConsts.MB);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(3 * (int)OzoneConsts.MB);
+    keyArgs.setUserName(userName);
 
     try (OutputStream outputStream = storageHandler.newKeyWriter(keyArgs)) {
       outputStream.write(dataString.getBytes());
@@ -190,6 +191,7 @@ public class TestMultipleContainerReadWrite {
     String dataString = RandomStringUtils.randomAscii(500);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(500);
+    keyArgs.setUserName(userName);
 
     try (OutputStream outputStream = storageHandler.newKeyWriter(keyArgs)) {
       outputStream.write(dataString.getBytes());

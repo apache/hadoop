@@ -542,7 +542,7 @@ public class VolumeManagerImpl implements VolumeManager {
       try {
         volumeArgs.addAcl(acl);
       } catch (OMException ex) {
-        LOG.info("Add acl failed.", ex);
+        LOG.debug("Add acl failed.", ex);
         return false;
       }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);
@@ -592,7 +592,7 @@ public class VolumeManagerImpl implements VolumeManager {
       try {
         volumeArgs.removeAcl(acl);
       } catch (OMException ex) {
-        LOG.info("Remove acl failed.", ex);
+        LOG.debug("Remove acl failed.", ex);
         return false;
       }
       metadataManager.getVolumeTable().put(dbVolumeKey, volumeArgs);

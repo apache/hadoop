@@ -668,6 +668,11 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName());
 
+    if(args.getAcls() != null) {
+      keyArgs.addAllAcls(args.getAcls().stream().distinct().map(a ->
+          OzoneAcl.toProtobuf(a)).collect(Collectors.toList()));
+    }
+
     if (args.getFactor() != null) {
       keyArgs.setFactor(args.getFactor());
     }
@@ -991,6 +996,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setBucketName(omKeyArgs.getBucketName())
         .setKeyName(omKeyArgs.getKeyName())
         .setFactor(omKeyArgs.getFactor())
+        .addAllAcls(omKeyArgs.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
         .setType(omKeyArgs.getType());
     multipartInfoInitiateRequest.setKeyArgs(keyArgs.build());
 
@@ -1276,6 +1283,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .addAllAcls(args.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
         .build();
     CreateDirectoryRequest request = CreateDirectoryRequest.newBuilder()
         .setKeyArgs(keyArgs)
@@ -1412,6 +1421,8 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setDataSize(args.getDataSize())
         .setType(args.getType())
         .setFactor(args.getFactor())
+        .addAllAcls(args.getAcls().stream().map(a ->
+            OzoneAcl.toProtobuf(a)).collect(Collectors.toList()))
         .build();
     CreateFileRequest createFileRequest = CreateFileRequest.newBuilder()
             .setKeyArgs(keyArgs)

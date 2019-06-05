@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -134,6 +135,7 @@ public class TestScmSafeMode {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setDataSize(1000)
+        .setAcls(Collections.emptyList())
         .build();
     OmVolumeArgs volArgs = new OmVolumeArgs.Builder()
         .setAdminName(adminName)

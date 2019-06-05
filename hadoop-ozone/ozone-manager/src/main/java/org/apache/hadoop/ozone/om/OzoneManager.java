@@ -2971,9 +2971,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     switch (obj.getResourceType()) {
     case VOLUME:
       return volumeManager.addAcl(obj, acl);
-
     case BUCKET:
       return bucketManager.addAcl(obj, acl);
+    case KEY:
+      return keyManager.addAcl(obj, acl);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3001,6 +3002,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     case BUCKET:
       return bucketManager.removeAcl(obj, acl);
+    case KEY:
+      return keyManager.removeAcl(obj, acl);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3025,9 +3028,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     switch (obj.getResourceType()) {
     case VOLUME:
       return volumeManager.setAcl(obj, acls);
-
     case BUCKET:
       return bucketManager.setAcl(obj, acls);
+    case KEY:
+      return keyManager.setAcl(obj, acls);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3050,9 +3054,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     switch (obj.getResourceType()) {
     case VOLUME:
       return volumeManager.getAcl(obj);
-
     case BUCKET:
       return bucketManager.getAcl(obj);
+    case KEY:
+      return keyManager.getAcl(obj);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);

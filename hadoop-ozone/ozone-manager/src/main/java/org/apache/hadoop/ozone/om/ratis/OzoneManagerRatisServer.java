@@ -170,6 +170,8 @@ public final class OzoneManagerRatisServer {
       omResponse.setMessage(stateMachineException.getCause().getMessage());
       omResponse.setStatus(parseErrorStatus(
           stateMachineException.getCause().getMessage()));
+      LOG.debug("Error while executing ratis request. " +
+          "stateMachineException: ", stateMachineException);
       return omResponse.build();
     }
 

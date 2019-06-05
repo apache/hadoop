@@ -615,6 +615,7 @@ message KeyArgs {
     optional string multipartUploadID = 9;
     optional uint32 multipartNumber = 10;
     repeated hadoop.hdds.KeyValue metadata = 11;
+    repeated OzoneAclInfo acls = 12;
 }
 
 message KeyLocation {
@@ -652,6 +653,7 @@ message KeyInfo {
     optional uint64 latestVersion = 10;
     repeated hadoop.hdds.KeyValue metadata = 11;
     optional FileEncryptionInfoProto fileEncryptionInfo = 12;
+    repeated OzoneAclInfo acls = 13;
 }
 
 message OzoneFileStatusProto {

@@ -576,6 +576,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setIsMultipartKey(keyArgs.getIsMultipartKey())
         .setMultipartUploadID(keyArgs.getMultipartUploadID())
         .setMultipartUploadPartNumber(keyArgs.getMultipartNumber())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .build();
     if (keyArgs.hasDataSize()) {
       omKeyArgs.setDataSize(keyArgs.getDataSize());
@@ -825,6 +827,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setType(keyArgs.getType())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
@@ -847,6 +851,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
         .setType(keyArgs.getType())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo =
@@ -905,6 +911,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .setMultipartUploadID(keyArgs.getMultipartUploadID())
         .build();
     OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo = impl
@@ -1050,6 +1058,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
         .setKeyName(keyArgs.getKeyName())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .build();
     impl.createDirectory(omKeyArgs);
   }
@@ -1064,6 +1074,8 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setDataSize(keyArgs.getDataSize())
         .setType(keyArgs.getType())
         .setFactor(keyArgs.getFactor())
+        .setAcls(keyArgs.getAclsList().stream().map(a ->
+            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
         .build();
     OpenKeySession keySession =
         impl.createFile(omKeyArgs, request.getIsOverwrite(),
