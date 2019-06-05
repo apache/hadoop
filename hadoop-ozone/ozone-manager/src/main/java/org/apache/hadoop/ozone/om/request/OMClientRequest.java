@@ -75,7 +75,8 @@ public abstract class OMClientRequest {
    * @return the response that will be returned to the client.
    */
   public abstract OMClientResponse validateAndUpdateCache(
-      OzoneManager ozoneManager, long transactionLogIndex);
+      OzoneManager ozoneManager, long transactionLogIndex,
+      boolean ratisEnabled);
 
   @VisibleForTesting
   public OMRequest getOmRequest() {

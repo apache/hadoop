@@ -98,7 +98,21 @@ public class TestOMBucketCreateRequest {
         bucketName);
 
     doValidateAndUpdateCache(volumeName, bucketName,
-        omBucketCreateRequest.getOmRequest());
+        omBucketCreateRequest.getOmRequest(), true);
+
+  }
+
+
+  @Test
+  public void testValidateAndUpdateCacheWithRatisDisabled() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    OMBucketCreateRequest omBucketCreateRequest = doPreExecute(volumeName,
+        bucketName);
+
+    doValidateAndUpdateCache(volumeName, bucketName,
+        omBucketCreateRequest.getOmRequest(), false);
 
   }
 
@@ -121,7 +135,7 @@ public class TestOMBucketCreateRequest {
     Assert.assertNull(omMetadataManager.getBucketTable().get(bucketKey));
 
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1, true);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -143,11 +157,11 @@ public class TestOMBucketCreateRequest {
         doPreExecute(volumeName, bucketName);
 
     doValidateAndUpdateCache(volumeName, bucketName,
-        omBucketCreateRequest.getOmRequest());
+        omBucketCreateRequest.getOmRequest(), true);
 
     // Try create same bucket again
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 2);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 2, true);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -172,7 +186,7 @@ public class TestOMBucketCreateRequest {
   }
 
   private void doValidateAndUpdateCache(String volumeName, String bucketName,
-      OMRequest modifiedRequest) throws Exception {
+      OMRequest modifiedRequest, boolean ratisEnabled) throws Exception {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
 
     // As we have not still called validateAndUpdateCache, get() should
@@ -184,7 +198,7 @@ public class TestOMBucketCreateRequest {
 
 
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1, ratisEnabled);
 
     // As now after validateAndUpdateCache it should add entry to cache, get
     // should return non null value.

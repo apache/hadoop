@@ -66,7 +66,7 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex, boolean ratisEnabled) {
 
     OMMetrics omMetrics = ozoneManager.getOmMetrics();
 
@@ -173,7 +173,14 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       // return response.
       omResponse.setSetBucketPropertyResponse(
           SetBucketPropertyResponse.newBuilder().build());
-      return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
+      OMBucketSetPropertyResponse omBucketSetPropertyResponse =
+          new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
+
+      if (!ratisEnabled) {
+        omBucketSetPropertyResponse.addResponseToOMDB(omMetadataManager);
+      }
+
+      return omBucketSetPropertyResponse;
 
     } catch (IOException ex) {
       if (omMetrics != null) {

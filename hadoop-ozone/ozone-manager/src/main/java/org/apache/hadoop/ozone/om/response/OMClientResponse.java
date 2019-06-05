@@ -57,11 +57,16 @@ public abstract class OMClientResponse {
 
 
   /**
-   * For Non-HA add response to OM DB. As for Non-HA we cannot use double
-   * buffer and add response to cache and then return response to the client,
-   * as when flush is missed in HA, ratis has provided guaranty to apply the
-   * transactions again. In Non-HA, we cannot use the same model, so we need
-   * to apply response to OM DB and then return response.
+   * For Non-HA we cannot use double buffer and add response to cache and
+   * then return response to the client. This method helps the response to be
+   * persisted to OM DB in Non-HA.
+   *
+   * Why in Non-HA current double buffer cannot be used is, we return
+   * response to the client once the response is added to double buffer. And
+   * if flush to disk is missed from double buffer, Ratis provides guaranty
+   * to replay transactions from last Applied transaction Index. We don't
+   * have similar thing in Non-HA, so current implementation of double buffer
+   * cannot be used.
    */
   public abstract void addResponseToOMDB(OMMetadataManager omMetadataManager)
       throws IOException;

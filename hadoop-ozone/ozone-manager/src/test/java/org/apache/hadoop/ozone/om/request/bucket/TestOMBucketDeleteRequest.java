@@ -94,20 +94,15 @@ public class TestOMBucketDeleteRequest {
   public void testValidateAndUpdateCache() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-    OMRequest omRequest =
-        createDeleteBucketRequest(volumeName, bucketName);
+    doValidateAndUpdateCache(bucketName, volumeName, true);
+  }
 
-    OMBucketDeleteRequest omBucketDeleteRequest =
-        new OMBucketDeleteRequest(omRequest);
 
-    // Create Volume and bucket entries in DB.
-    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
-        omMetadataManager);
-
-    omBucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1);
-
-    Assert.assertNull(omMetadataManager.getBucketTable().get(
-        omMetadataManager.getBucketKey(volumeName, bucketName)));
+  @Test
+  public void testValidateAndUpdateCacheRatisDisabled() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    doValidateAndUpdateCache(bucketName, volumeName, false);
   }
 
 
@@ -124,7 +119,7 @@ public class TestOMBucketDeleteRequest {
 
 
     OMClientResponse omClientResponse =
-        omBucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1, true);
 
     Assert.assertNull(omMetadataManager.getBucketTable().get(
         omMetadataManager.getBucketKey(volumeName, bucketName)));
@@ -136,6 +131,23 @@ public class TestOMBucketDeleteRequest {
         omMetadataManager);
   }
 
+  private void doValidateAndUpdateCache(String bucketName, String volumeName,
+   boolean ratisEnabled) throws Exception {
+    OMRequest omRequest =
+        createDeleteBucketRequest(volumeName, bucketName);
+
+    OMBucketDeleteRequest omBucketDeleteRequest =
+        new OMBucketDeleteRequest(omRequest);
+
+    // Create Volume and bucket entries in DB.
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
+
+    omBucketDeleteRequest.validateAndUpdateCache(ozoneManager, 1, false);
+
+    Assert.assertNull(omMetadataManager.getBucketTable().get(
+        omMetadataManager.getBucketKey(volumeName, bucketName)));
+  }
 
 
 

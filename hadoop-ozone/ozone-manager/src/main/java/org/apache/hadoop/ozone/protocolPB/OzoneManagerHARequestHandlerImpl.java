@@ -123,9 +123,11 @@ public class OzoneManagerHARequestHandlerImpl
         // paths.
         OMClientRequest omClientRequest =
             OzoneManagerRatisUtils.createClientRequest(omRequest);
+
+        // As this is called from apply transaction means ratis is enabled.
         OMClientResponse omClientResponse =
             omClientRequest.validateAndUpdateCache(getOzoneManager(),
-                transactionLogIndex);
+                transactionLogIndex, true);
 
         // If any error we have got when validateAndUpdateCache, OMResponse
         // Status is set with Error Code other than OK, in that case don't

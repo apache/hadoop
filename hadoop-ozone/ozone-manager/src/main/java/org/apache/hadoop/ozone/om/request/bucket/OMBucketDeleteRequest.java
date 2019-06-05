@@ -57,7 +57,7 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex, boolean ratisEnabled) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumBucketDeletes();
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
@@ -116,8 +116,14 @@ public class OMBucketDeleteRequest extends OMClientRequest {
       // return response.
       omResponse.setDeleteBucketResponse(
           DeleteBucketResponse.newBuilder().build());
-      return new OMBucketDeleteResponse(volumeName, bucketName,
-          omResponse.build());
+      OMBucketDeleteResponse omBucketDeleteResponse =
+          new OMBucketDeleteResponse(volumeName, bucketName,
+              omResponse.build());
+
+      if (!ratisEnabled) {
+        omBucketDeleteResponse.addResponseToOMDB(omMetadataManager);
+      }
+      return omBucketDeleteResponse;
 
     } catch (IOException ex) {
       omMetrics.incNumBucketDeleteFails();

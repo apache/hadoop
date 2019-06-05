@@ -101,7 +101,7 @@ public class OMBucketCreateRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex, boolean ratisEnabled) {
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumBucketCreates();
 
@@ -162,7 +162,15 @@ public class OMBucketCreateRequest extends OMClientRequest {
       // return response.
       omResponse.setCreateBucketResponse(
           CreateBucketResponse.newBuilder().build());
-      return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
+
+      OMClientResponse omBucketCreateResponse =
+          new OMBucketCreateResponse(omBucketInfo, omResponse.build());
+
+      if (!ratisEnabled) {
+        omBucketCreateResponse.addResponseToOMDB(metadataManager);
+      }
+
+      return omBucketCreateResponse;
 
     } catch (IOException ex) {
       omMetrics.incNumBucketCreateFails();

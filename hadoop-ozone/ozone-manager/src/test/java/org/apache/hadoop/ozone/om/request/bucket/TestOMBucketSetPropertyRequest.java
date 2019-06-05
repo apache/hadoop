@@ -97,33 +97,18 @@ public class TestOMBucketSetPropertyRequest {
 
   @Test
   public void testValidateAndUpdateCache() throws Exception {
-
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
-
-
-    OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
-        bucketName, true);
-
-    // Create with default BucketInfo values
-    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
-        omMetadataManager);
-
-    OMBucketSetPropertyRequest omBucketSetPropertyRequest =
-        new OMBucketSetPropertyRequest(omRequest);
-
-    OMClientResponse omClientResponse =
-        omBucketSetPropertyRequest.validateAndUpdateCache(ozoneManager, 1);
-
-    Assert.assertEquals(true,
-        omMetadataManager.getBucketTable().get(
-            omMetadataManager.getBucketKey(volumeName, bucketName))
-            .getIsVersionEnabled());
-
-    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
-        omClientResponse.getOMResponse().getStatus());
-
+    doValidateAndUpdateCache(bucketName, volumeName, true);
   }
+
+  @Test
+  public void testValidateAndUpdateCacheRatisDisabled() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    doValidateAndUpdateCache(bucketName, volumeName, false);
+  }
+
 
   @Test
   public void testValidateAndUpdateCacheFails() throws Exception {
@@ -140,7 +125,7 @@ public class TestOMBucketSetPropertyRequest {
         new OMBucketSetPropertyRequest(omRequest);
 
     OMClientResponse omClientResponse =
-        omBucketSetPropertyRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketSetPropertyRequest.validateAndUpdateCache(ozoneManager, 1, true);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.BUCKET_NOT_FOUND,
         omClientResponse.getOMResponse().getStatus());
@@ -148,6 +133,30 @@ public class TestOMBucketSetPropertyRequest {
     Assert.assertNull(omMetadataManager.getBucketTable().get(
         omMetadataManager.getBucketKey(volumeName, bucketName)));
 
+  }
+
+  private void doValidateAndUpdateCache(String bucketName, String volumeName,
+   boolean ratisEnabled) throws Exception {
+    OMRequest omRequest = createSetBucketPropertyRequest(volumeName,
+        bucketName, true);
+
+    // Create with default BucketInfo values
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
+
+    OMBucketSetPropertyRequest omBucketSetPropertyRequest =
+        new OMBucketSetPropertyRequest(omRequest);
+
+    OMClientResponse omClientResponse =
+        omBucketSetPropertyRequest.validateAndUpdateCache(ozoneManager, 1, ratisEnabled);
+
+    Assert.assertEquals(true,
+        omMetadataManager.getBucketTable().get(
+            omMetadataManager.getBucketKey(volumeName, bucketName))
+            .getIsVersionEnabled());
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omClientResponse.getOMResponse().getStatus());
   }
 
   private OMRequest createSetBucketPropertyRequest(String volumeName,

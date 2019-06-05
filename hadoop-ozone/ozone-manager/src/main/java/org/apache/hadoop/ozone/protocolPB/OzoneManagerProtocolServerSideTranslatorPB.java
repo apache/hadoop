@@ -56,7 +56,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final OzoneManager ozoneManager;
   private final OMMetadataManager omMetadataManager;
   // Used during Non-HA when calling validateAndUpdateCache methods in
-  // OMClientRequest. As in Non-HA with out ratis, we don't use this.
+  // OMClientRequest. As in Non-HA with out ratis, there is no ratis
+  // transactionLogIndex.
   private final long index = 0L;
 
   /**
@@ -126,7 +127,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         // During non-HA, no use of transactionLogIndex, so just passing a
         // constant value.
         OMClientResponse omClientResponse =
-            omClientRequest.validateAndUpdateCache(ozoneManager, index);
+            omClientRequest.validateAndUpdateCache(ozoneManager, index,
+                isRatisEnabled);
         if (omClientResponse.getOMResponse().getStatus() ==
             OzoneManagerProtocolProtos.Status.OK) {
           try {
