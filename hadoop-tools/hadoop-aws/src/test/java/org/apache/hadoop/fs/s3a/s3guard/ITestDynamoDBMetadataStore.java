@@ -131,7 +131,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Assume.assumeTrue("Test DynamoDB table name should be set to run "
             + "integration tests.", testDynamoDBTableName != null);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
-
+    enableOnDemand(conf);
     s3AContract = new S3AContract(conf);
     s3AContract.init();
 
@@ -300,7 +300,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         getTestTableName("testInitialize");
     final Configuration conf = s3afs.getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs);
@@ -332,7 +331,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     String savedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
         getFileSystem().getBucketLocation());
     conf.unset(S3GUARD_DDB_REGION_KEY);
-    enableOnDemand(conf);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(conf);
       fail("Should have failed because the table name is not set!");
@@ -473,7 +471,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         S3GUARD_DDB_MAX_RETRIES_DEFAULT);
     conf.setInt(S3GUARD_DDB_MAX_RETRIES, 3);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    enableOnDemand(conf);
 
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
@@ -500,7 +497,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testTableVersionMismatch() throws Exception {
     String tableName = getTestTableName("testTableVersionMismatch");
     Configuration conf = getFileSystem().getConf();
-    enableOnDemand(conf);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
 
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
@@ -696,7 +692,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs);
@@ -731,7 +726,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         getTestTableName("testTableTagging-" + UUID.randomUUID());
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, "true");
-    enableOnDemand(conf);
 
     Map<String, String> tagMap = new HashMap<>();
     tagMap.put("hello", "dynamo");

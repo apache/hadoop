@@ -79,7 +79,7 @@ class DDBCapacities {
   }
 
   /**
-   * Is the the capacity that of a pay-per-request table?
+   * Is the the capacity that of an On-Demand table?
    * @return true if the capacities are both 0.
    */
   public boolean isOnDemandTable() {

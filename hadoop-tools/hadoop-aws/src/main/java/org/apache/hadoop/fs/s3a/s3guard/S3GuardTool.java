@@ -435,7 +435,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "  URLs for Amazon DynamoDB are of the form dynamodb://TABLE_NAME.\n" +
         "  Specifying both the -" + REGION_FLAG + " option and an S3A path\n" +
         "  is not supported.\n"
-        + "To create a table with per-request billing, set the read and write capaciies to 0";
+        + "To create a table with per-request billing, set the read and write\n"
+        + "capacities to 0";
 
     Init(Configuration conf) {
       super(conf);
