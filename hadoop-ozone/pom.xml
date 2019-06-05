@@ -342,6 +342,12 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>**/node_modules/*</exclude>
+            <exclude>**/ozone-recon-web/**</exclude>
+          </excludes>
+        </configuration>
         <executions>
           <execution>
             <goals>
