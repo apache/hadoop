@@ -77,6 +77,7 @@ import org.apache.hadoop.hdfs.server.federation.store.records.MembershipStats;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.hdfs.server.federation.store.records.RouterState;
 import org.apache.hadoop.hdfs.server.federation.store.records.StateStoreVersion;
+import org.apache.hadoop.metrics2.annotation.Metrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.StringUtils;
@@ -91,6 +92,7 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * Implementation of the Router metrics collector.
  */
+@Metrics(name="RBFActivity", about="RBF metrics", context="dfs")
 public class RBFMetrics implements RouterMBean, FederationMBean {
 
   private static final Logger LOG =

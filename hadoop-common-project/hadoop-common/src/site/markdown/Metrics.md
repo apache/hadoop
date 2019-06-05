@@ -478,6 +478,40 @@ contains tags such as Hostname as additional information along with metrics.
 | `FileIoErrorRateNumOps` | The number of file io error operations within an interval time of metric |
 | `FileIoErrorRateAvgTime` | It measures the mean time in milliseconds from the start of an operation to hitting a failure |
 
+RBFMetrics
+----------------
+RBFMetrics shows the metrics which are the aggregated values of sub-clusters' information in the Router-based federation.
+
+| Name | Description |
+|:---- |:---- |
+| `NumFiles` | Current number of files and directories |
+| `NumBlocks` | Current number of allocated blocks |
+| `NumOfBlocksPendingReplication` | Current number of blocks pending to be replicated |
+| `NumOfBlocksUnderReplicated` | Current number of blocks under replicated |
+| `NumOfBlocksPendingDeletion` | Current number of blocks pending deletion |
+| `ProvidedSpace` | The total remote storage capacity mounted in the federated cluster |
+| `NumInMaintenanceLiveDataNodes` | Number of live Datanodes which are in maintenance state |
+| `NumInMaintenanceDeadDataNodes` | Number of dead Datanodes which are in maintenance state |
+| `NumEnteringMaintenanceDataNodes` | Number of Datanodes that are entering the maintenance state |
+| `TotalCapacity` | Current raw capacity of DataNodes in bytes |
+| `UsedCapacity` | Current used capacity across all DataNodes in bytes |
+| `RemainingCapacity` | Current remaining capacity in bytes |
+| `NumOfMissingBlocks` | Current number of missing blocks |
+| `NumLiveNodes` | Number of datanodes which are currently live |
+| `NumDeadNodes` | Number of datanodes which are currently dead |
+| `NumStaleNodes` | Current number of DataNodes marked stale due to delayed heartbeat |
+| `NumDecomLiveNodes` | Number of datanodes which have been decommissioned and are now live |
+| `NumDecomDeadNodes` | Number of datanodes which have been decommissioned and are now dead |
+| `NumDecommissioningNodes` | Number of datanodes in decommissioning state |
+| `Namenodes` | Current information about all the namenodes |
+| `Nameservices` | Current information for each registered nameservice |
+| `MountTable` | The mount table for the federated filesystem |
+| `Routers` | Current information about all routers |
+| `NumNameservices` | Number of nameservices |
+| `NumNamenodes` | Number of namenodes |
+| `NumExpiredNamenodes` | Number of expired namenodes |
+| `NodeUsage` | Max, Median, Min and Standard Deviation of DataNodes usage |
+
 RouterRPCMetrics
 ----------------
 RouterRPCMetrics shows the statistics of the Router component in Router-based federation.
