@@ -93,6 +93,9 @@ public class ChunkInputStream extends InputStream implements Seekable {
     return length - getPos();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read() throws IOException {
     checkOpen();

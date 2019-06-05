@@ -130,6 +130,9 @@ public class KeyInputStream extends InputStream implements Seekable {
     blockStreams.add(blockInputStream);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read() throws IOException {
     byte[] buf = new byte[1];
@@ -139,6 +142,9 @@ public class KeyInputStream extends InputStream implements Seekable {
     return Byte.toUnsignedInt(buf[0]);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     checkNotClosed();

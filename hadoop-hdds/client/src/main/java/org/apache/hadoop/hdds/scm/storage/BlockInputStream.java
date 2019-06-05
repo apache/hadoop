@@ -198,6 +198,9 @@ public class BlockInputStream extends InputStream implements Seekable {
     return length - getPos();
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read() throws IOException {
     byte[] buf = new byte[1];
@@ -207,6 +210,9 @@ public class BlockInputStream extends InputStream implements Seekable {
     return Byte.toUnsignedInt(buf[0]);
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     if (b == null) {
