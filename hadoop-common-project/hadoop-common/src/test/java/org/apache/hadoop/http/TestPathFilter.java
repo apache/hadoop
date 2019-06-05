@@ -35,7 +35,6 @@ import javax.servlet.http.HttpServletRequest;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.NetUtils;
-import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +101,6 @@ public class TestPathFilter extends HttpServerFunctionalTest {
     }
   }
 
-  @Test
   public void testPathSpecFilters() throws Exception {
     Configuration conf = new Configuration();
     

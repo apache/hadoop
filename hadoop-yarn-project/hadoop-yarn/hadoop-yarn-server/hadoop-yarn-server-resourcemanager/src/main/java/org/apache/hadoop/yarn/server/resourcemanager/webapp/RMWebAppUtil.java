@@ -28,6 +28,7 @@ import java.util.Map;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.codec.binary.Base64;
+import org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -145,6 +146,9 @@ public final class RMWebAppUtil {
           }
           target.add(filterInitializer.getName());
         }
+
+        target.remove(ProxyUserAuthenticationFilterInitializer.class.getName());
+
         actualInitializers = StringUtils.join(",", target);
 
         LOG.info("Using RM authentication filter(kerberos/delegation-token)"

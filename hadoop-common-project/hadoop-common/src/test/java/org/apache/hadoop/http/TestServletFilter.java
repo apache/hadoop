@@ -100,7 +100,6 @@ public class TestServletFilter extends HttpServerFunctionalTest {
     }
   }
 
-  @Test
   public void testServletFilter() throws Exception {
     Configuration conf = new Configuration();
     

@@ -63,12 +63,14 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.web.resources.*;
 import org.apache.hadoop.http.HttpConfig;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.security.authentication.util.KerberosName;
+import org.apache.hadoop.security.AuthenticationFilterInitializer;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -80,6 +82,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class TestWebHdfsTokens {
+  private static final String PREFIX = "hadoop.http.authentication.";
   private static Configuration conf;
   URI uri = null;
 
@@ -142,6 +145,11 @@ public class TestWebHdfsTokens {
     kdc.createPrincipal(keytabFile, username, username + "/" + krbInstance,
         "HTTP/" + krbInstance);
 
+    secureConf.set(HttpServer2.FILTER_INITIALIZER_PROPERTY,
+        AuthenticationFilterInitializer.class.getName());
+    secureConf.set(PREFIX + "type", "kerberos");
+    secureConf.set(PREFIX + "kerberos.keytab", keytab);
+    secureConf.set(PREFIX + "kerberos.principal", spnegoPrincipal);
     secureConf.set(DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, principal);
     secureConf.set(DFS_NAMENODE_KEYTAB_FILE_KEY, keytab);
     secureConf.set(DFS_DATANODE_KERBEROS_PRINCIPAL_KEY, principal);

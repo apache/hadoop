@@ -95,6 +95,15 @@ public class Dispatcher extends HttpServlet {
     if (uri.equals("/")) {
       String redirectPath = webApp.getRedirectPath();
       if (redirectPath != null && !redirectPath.isEmpty()) {
+        if (req.getQueryString()!=null) {
+          StringBuilder query = new StringBuilder();
+          query.append(redirectPath);
+          query.append("?");
+          // Prevent HTTP response splitting vulnerability
+          query.append(req.getQueryString().replaceAll("\r", "")
+              .replaceAll("\n", ""));
+          redirectPath = query.toString();
+        }
         res.sendRedirect(redirectPath);
         return;
       }
