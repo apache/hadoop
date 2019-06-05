@@ -34,6 +34,7 @@ message DatanodeDetailsProto {
     required string hostName = 3;      // hostname
     repeated Port ports = 4;
     optional string certSerialId = 5;   // Certificate serial id.
+    optional string networkLocation = 6; // Network topology location
 }
 
 /**
