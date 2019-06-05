@@ -194,7 +194,7 @@
     <dependency>
       <groupId>org.wildfly.openssl</groupId>
       <artifactId>wildfly-openssl</artifactId>
-      <scope>runtime</scope>
+      <scope>compile</scope>
     </dependency>
 
     <!--com.fasterxml.jackson is used by WASB, not ABFS-->

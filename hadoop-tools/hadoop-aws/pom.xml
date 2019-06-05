@@ -418,11 +418,6 @@
       <scope>compile</scope>
     </dependency>
     <dependency>
-      <groupId>org.wildfly.openssl</groupId>
-      <artifactId>wildfly-openssl</artifactId>
-      <scope>runtime</scope>
-    </dependency>
-    <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <scope>test</scope>
