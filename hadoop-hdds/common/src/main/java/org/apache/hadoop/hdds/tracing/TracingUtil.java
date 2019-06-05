@@ -26,8 +26,6 @@ import io.opentracing.Span;
 import io.opentracing.SpanContext;
 import io.opentracing.Tracer;
 import io.opentracing.util.GlobalTracer;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 
@@ -35,8 +33,6 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
  * Utility class to collect all the tracing helper methods.
  */
 public final class TracingUtil {
-
-  private static final Logger LOG = LoggerFactory.getLogger(TracingUtil.class);
 
   private static final String NULL_SPAN_AS_STRING = "";
 
@@ -103,16 +99,7 @@ public final class TracingUtil {
     if (encodedParent != null && encodedParent.length() > 0) {
       StringBuilder builder = new StringBuilder();
       builder.append(encodedParent);
-      try {
-        parentSpan = tracer.extract(StringCodec.FORMAT, builder);
-      } catch (Exception ex) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Can't extract tracing from the message.", ex);
-        } else {
-          LOG.warn(
-              "Can't extract tracing from the message: " + ex.getMessage());
-        }
-      }
+      parentSpan = tracer.extract(StringCodec.FORMAT, builder);
 
     }
 
