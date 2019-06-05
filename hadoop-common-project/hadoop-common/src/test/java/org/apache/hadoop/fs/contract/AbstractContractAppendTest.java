@@ -137,7 +137,7 @@ public abstract class AbstractContractAppendTest extends AbstractFSContractTestB
       // Some filesystems like WebHDFS doesn't assure sequential consistency.
       // In such a case, delay is needed. Given that we can not check the lease
       // because here is closed in client side package, simply add a sleep.
-      Thread.sleep(10);
+      Thread.sleep(100);
     }
     outputStream.write(dataset);
     Path renamed = new Path(testPath, "renamed");
