@@ -17,6 +17,8 @@
 package org.apache.hadoop.ozone.om;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Objects;
 
@@ -40,6 +42,7 @@ import org.iq80.leveldb.DBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 
 /**
@@ -404,27 +407,44 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket " + bucket + " is not found",
             BUCKET_NOT_FOUND);
       }
-      List<OzoneAcl> list = bucketInfo.getAcls();
-      if(!validateAddAcl(acl, list)) {
-        // New acl can't be added as it is not consistent with existing ACLs.
-        LOG.info("New acl:{} can't be added as it is not consistent with " +
-            "existing ACLs:{}.", acl, StringUtils.join(",", list));
-        return false;
-      }
-      list.add(acl);
-      OmBucketInfo updatedBucket = OmBucketInfo.newBuilder()
-          .setVolumeName(bucketInfo.getVolumeName())
-          .setBucketName(bucketInfo.getBucketName())
-          .setStorageType(bucketInfo.getStorageType())
-          .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
-          .setCreationTime(bucketInfo.getCreationTime())
-          .setBucketEncryptionKey(bucketInfo.getEncryptionKeyInfo())
-          .addAllMetadata(bucketInfo.getMetadata())
-          .setAcls(list)
-          .build();
-      // TODO:HDDS-1619 OM HA changes required for all acl operations.
 
-      metadataManager.getBucketTable().put(dbBucketKey, updatedBucket);
+      // Case 1: When we are adding more rights to existing user/group.
+      boolean addToExistingAcl = false;
+      for(OzoneAcl a: bucketInfo.getAcls()) {
+        if(a.getName().equals(acl.getName()) &&
+            a.getType().equals(acl.getType())) {
+          BitSet bits = (BitSet) acl.getAclBitSet().clone();
+          bits.or(a.getAclBitSet());
+
+          if (bits.equals(a.getAclBitSet())) {
+            return false;
+          }
+          a.getAclBitSet().or(acl.getAclBitSet());
+          addToExistingAcl = true;
+          break;
+        }
+      }
+
+      // Case 2: When a completely new acl is added.
+      if(!addToExistingAcl) {
+        List<OzoneAcl> newAcls = bucketInfo.getAcls();
+        if(newAcls == null) {
+          newAcls = new ArrayList<>();
+        }
+        newAcls.add(acl);
+        bucketInfo = OmBucketInfo.newBuilder()
+            .setVolumeName(bucketInfo.getVolumeName())
+            .setBucketName(bucketInfo.getBucketName())
+            .setStorageType(bucketInfo.getStorageType())
+            .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
+            .setCreationTime(bucketInfo.getCreationTime())
+            .setBucketEncryptionKey(bucketInfo.getEncryptionKeyInfo())
+            .addAllMetadata(bucketInfo.getMetadata())
+            .setAcls(newAcls)
+            .build();
+      }
+
+      metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Add acl operation failed for bucket:{}/{} acl:{}",
@@ -466,26 +486,31 @@ public class BucketManagerImpl implements BucketManager {
         throw new OMException("Bucket " + bucket + " is not found",
             BUCKET_NOT_FOUND);
       }
-      List<OzoneAcl> list = bucketInfo.getAcls();
-      if (!list.contains(acl)) {
-        // Return false if acl doesn't exist in current ACLs.
-        LOG.info("Acl:{} not found in existing ACLs:{}.", acl,
-            StringUtils.join(",", list));
-        return false;
-      }
-      list.remove(acl);
-      OmBucketInfo updatedBucket = OmBucketInfo.newBuilder()
-          .setVolumeName(bucketInfo.getVolumeName())
-          .setBucketName(bucketInfo.getBucketName())
-          .setStorageType(bucketInfo.getStorageType())
-          .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
-          .setCreationTime(bucketInfo.getCreationTime())
-          .setBucketEncryptionKey(bucketInfo.getEncryptionKeyInfo())
-          .addAllMetadata(bucketInfo.getMetadata())
-          .setAcls(list)
-          .build();
 
-      metadataManager.getBucketTable().put(dbBucketKey, updatedBucket);
+      // When we are removing subset of rights from existing acl.
+      for(OzoneAcl a: bucketInfo.getAcls()) {
+        if(a.getName().equals(acl.getName()) &&
+            a.getType().equals(acl.getType())) {
+          BitSet bits = (BitSet) acl.getAclBitSet().clone();
+          bits.and(a.getAclBitSet());
+
+          if (bits.equals(ZERO_BITSET)) {
+            return false;
+          }
+          bits = (BitSet) acl.getAclBitSet().clone();
+          bits.and(a.getAclBitSet());
+          a.getAclBitSet().xor(bits);
+
+          if(a.getAclBitSet().equals(ZERO_BITSET)) {
+            bucketInfo.getAcls().remove(a);
+          }
+          break;
+        } else {
+          return false;
+        }
+      }
+
+      metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Remove acl operation failed for bucket:{}/{} acl:{}",
@@ -547,23 +572,6 @@ public class BucketManagerImpl implements BucketManager {
       throw ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volume, bucket);
-    }
-
-    return true;
-  }
-
-  /**
-   * Validates if a new acl addition is consistent with current ACL list.
-   * @param newAcl new acl to be added.
-   * @param currentAcls list of acls.
-   *
-   * @return true if newAcl addition to existing acls is valid, else false.
-   * */
-  private boolean validateAddAcl(OzoneAcl newAcl, List<OzoneAcl> currentAcls) {
-
-    // Check 1: Check for duplicate.
-    if(currentAcls.contains(newAcl)) {
-      return false;
     }
 
     return true;

@@ -486,6 +486,7 @@ public class TestOzoneManager {
     String dataString = RandomStringUtils.randomAscii(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
@@ -525,6 +526,7 @@ public class TestOzoneManager {
     String dataString = RandomStringUtils.randomAscii(100);
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
     }
@@ -567,6 +569,7 @@ public class TestOzoneManager {
 
     KeyArgs keyArgs = new KeyArgs(volumeName, bucketName, keyName, userArgs);
     keyArgs.setSize(100);
+    keyArgs.setUserName(userName);
     String dataString = RandomStringUtils.randomAscii(100);
     try (OutputStream stream = storageHandler.newKeyWriter(keyArgs)) {
       stream.write(dataString.getBytes());
@@ -577,6 +580,7 @@ public class TestOzoneManager {
     // That is this overwrite only overwrites the keys on OM. We need to
     // garbage collect those blocks from datanode.
     KeyArgs keyArgs2 = new KeyArgs(volumeName, bucketName, keyName, userArgs);
+    keyArgs2.setUserName(userName);
     storageHandler.newKeyWriter(keyArgs2);
     Assert
         .assertEquals(numKeyAllocateFails, omMetrics.getNumKeyAllocateFails());

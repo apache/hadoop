@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Objects;
 
+import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights.ALL;
 
@@ -81,8 +82,17 @@ public class OmOzoneAclMap {
     if (!getMap(aclType).containsKey(acl.getName())) {
       getMap(aclType).put(acl.getName(), acl.getAclBitSet());
     } else {
-      // throw exception if acl is already added.
-      throw new OMException("Acl " + acl + " already exist.", INVALID_REQUEST);
+      // Check if we are adding new rights to existing acl.
+      BitSet temp = (BitSet) acl.getAclBitSet().clone();
+      BitSet curRights = (BitSet) getMap(aclType).get(acl.getName()).clone();
+      temp.or(curRights);
+
+      if (temp.equals(curRights)) {
+        // throw exception if acl is already added.
+        throw new OMException("Acl " + acl + " already exist.",
+            INVALID_REQUEST);
+      }
+      getMap(aclType).get(acl.getName()).or(acl.getAclBitSet());
     }
   }
 
@@ -105,9 +115,25 @@ public class OmOzoneAclMap {
     Objects.requireNonNull(acl, "Acl should not be null.");
     OzoneAclType aclType = OzoneAclType.valueOf(acl.getType().name());
     if (getMap(aclType).containsKey(acl.getName())) {
-      getMap(aclType).remove(acl.getName());
+      BitSet aclRights = getMap(aclType).get(acl.getName());
+      BitSet bits = (BitSet) acl.getAclBitSet().clone();
+      bits.and(aclRights);
+
+      if (bits.equals(ZERO_BITSET)) {
+        // throw exception if acl doesn't exist.
+        throw new OMException("Acl [" + acl + "] doesn't exist.",
+            INVALID_REQUEST);
+      }
+
+      acl.getAclBitSet().and(aclRights);
+      aclRights.xor(acl.getAclBitSet());
+
+      // Remove the acl as all rights are already set to 0.
+      if (aclRights.equals(ZERO_BITSET)) {
+        getMap(aclType).remove(acl.getName());
+      }
     } else {
-      // throw exception if acl is already added.
+      // throw exception if acl doesn't exist.
       throw new OMException("Acl [" + acl + "] doesn't exist.",
           INVALID_REQUEST);
     }

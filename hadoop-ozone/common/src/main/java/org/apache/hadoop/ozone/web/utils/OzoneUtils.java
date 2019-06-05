@@ -23,6 +23,8 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
@@ -31,10 +33,15 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.ratis.util.TimeDuration;
+
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.GROUP;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
 
 /**
  * Set of Utility functions used in ozone.
@@ -235,5 +242,27 @@ public final class OzoneUtils {
       TimeDuration defaultValue) {
     return getTimeDuration(conf, key, defaultValue)
         .toLong(TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Helper function to get deafult acl list for current user.
+   *
+   * @param userName
+   * @param userGroups
+   * @return listOfAcls
+   * */
+  public static List<OzoneAcl> getAclList(String userName,
+      List<String> userGroups, ACLType userRights, ACLType groupRights) {
+
+    List<OzoneAcl> listOfAcls = new ArrayList<>();
+
+    // User ACL.
+    listOfAcls.add(new OzoneAcl(USER, userName, userRights));
+    if(userGroups != null) {
+      // Group ACLs of the User.
+      userGroups.stream().forEach((group) -> listOfAcls.add(
+          new OzoneAcl(GROUP, group, groupRights)));
+    }
+    return listOfAcls;
   }
 }
