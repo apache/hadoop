@@ -422,6 +422,10 @@ public class ZookeeperFederationStateStore implements FederationStateStore {
     try {
       for (String child : zkManager.getChildren(policiesZNode)) {
         SubClusterPolicyConfiguration policy = getPolicy(child);
+        if (policy == null) {
+          LOG.warn("Policy for queue: {} does not exist.", child);
+          continue;
+        }
         result.add(policy);
       }
     } catch (Exception e) {
