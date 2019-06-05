@@ -156,13 +156,13 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
     Assume.assumeTrue(fs.hasMetadataStore());
     final MetadataStore ms = fs.getMetadataStore();
 
-    ITtlTimeProvider mockTimeProvider =
-        mock(ITtlTimeProvider.class);
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
     ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
-    fs.setTtlTimeProvider(mockTimeProvider);
-    when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
 
     try {
+      fs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
+
       // set the time, so the fileExpire1 will expire
       when(mockTimeProvider.getNow()).thenReturn(100L);
       touch(fs, fileExpire1);
@@ -198,6 +198,89 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       fs.delete(fileExpire1, true);
       fs.delete(fileExpire2, true);
       fs.delete(fileRetain, true);
+      fs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * create(tombstone file) must succeed irrespective of overwrite flag.
+   */
+  @Test
+  public void createOnTombstonedFileSucceeds() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+    final S3AFileSystem fs = getFileSystem();
+
+    String fileToTry = methodName + UUID.randomUUID().toString();
+
+    final Path filePath = path(fileToTry);
+
+    // Create a directory with
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
+
+    try {
+      fs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
+
+      // CREATE A FILE
+      touch(fs, filePath);
+
+      // DELETE THE FILE - TOMBSTONE
+      fs.delete(filePath, true);
+
+      // CREATE THE SAME FILE WITHOUT ERROR DESPITE THE TOMBSTONE
+      touch(fs, filePath);
+
+    } finally {
+      fs.delete(filePath, true);
+      fs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * create("parent has tombstone") must always succeed (We dont check the
+   * parent), but after the file has been written, all entries up the tree
+   * must be valid. That is: the putAncestor code will correct everything
+   */
+  @Test
+  public void createParentHasTombstone() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+    final S3AFileSystem fs = getFileSystem();
+
+    String dirToDelete = methodName + UUID.randomUUID().toString();
+    String fileToTry = dirToDelete + "/theFileToTry";
+
+    final Path dirPath = path(dirToDelete);
+    final Path filePath = path(fileToTry);
+
+    // Create a directory with
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = fs.getTtlTimeProvider();
+
+    try {
+      fs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
+
+      // CREATE DIRECTORY
+      fs.mkdirs(dirPath);
+
+      // DELETE DIRECTORY
+      fs.delete(dirPath, true);
+
+      // WRITE TO DELETED DIRECTORY - SUCCESS
+      touch(fs, filePath);
+
+      // SET TIME SO METADATA EXPIRES
+      when(mockTimeProvider.getNow()).thenReturn(110L);
+
+      // WRITE TO DELETED DIRECTORY - SUCCESS
+      touch(fs, filePath);
+
+    } finally {
+      fs.delete(filePath, true);
+      fs.delete(dirPath, true);
       fs.setTtlTimeProvider(originalTimeProvider);
     }
   }
