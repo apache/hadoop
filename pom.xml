@@ -641,6 +641,63 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>submarine-src</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-assembly-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>single</goal>
+                </goals>
+                <configuration>
+                  <appendAssemblyId>false</appendAssemblyId>
+                  <attach>false</attach>
+                  <finalName>hadoop-submarine-${project.version}-src</finalName>
+                  <outputDirectory>hadoop-dist/target</outputDirectory>
+                  <!-- Not using descriptorRef and hadoop-assembly dependency -->
+                  <!-- to avoid making hadoop-main to depend on a module      -->
+                  <descriptors>
+                    <descriptor>hadoop-assemblies/src/main/resources/assemblies/hadoop-src-submarine.xml</descriptor>
+                  </descriptors>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <inherited>false</inherited>
+            <executions>
+              <execution>
+                <id>src-dist-msg</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>run</goal>
+                </goals>
+                <configuration>
+                  <target>
+                    <echo/>
+                    <echo>Hadoop source tar with Submarine source is available at: ${basedir}/hadoop-dist/target/hadoop-${project.version}-src-with-submarine.tar.gz</echo>
+                    <echo/>
+                  </target>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
 
     <profile>
       <id>sign</id>
