@@ -21,25 +21,29 @@ package org.apache.hadoop.hdfs.server.datanode.fsdataset.impl;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
+import org.apache.hadoop.io.nativeio.NativeIO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 /**
- * Represents an HDFS block that is mapped to persistent memory by DataNode
- * with mapped byte buffer. PMDK is NOT involved in this implementation.
+ * Represents an HDFS block that is mapped to persistent memory by the DataNode.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class PmemMappedBlock implements MappableBlock {
+public class NativePmemMappedBlock implements MappableBlock {
   private static final Logger LOG =
-      LoggerFactory.getLogger(PmemMappedBlock.class);
+      LoggerFactory.getLogger(NativePmemMappedBlock.class);
+
+  private long pmemMappedAddress = -1L;
   private long length;
   private ExtendedBlockId key;
 
-  PmemMappedBlock(long length, ExtendedBlockId key) {
+  NativePmemMappedBlock(long pmemMappedAddress, long length,
+      ExtendedBlockId key) {
     assert length > 0;
+    this.pmemMappedAddress = pmemMappedAddress;
     this.length = length;
     this.key = key;
   }
@@ -51,19 +55,31 @@ public class PmemMappedBlock implements MappableBlock {
 
   @Override
   public long getAddress() {
-    return -1L;
+    return pmemMappedAddress;
   }
 
   @Override
   public void close() {
-    String cacheFilePath =
-        PmemVolumeManager.getInstance().getCachePath(key);
-    try {
-      FsDatasetUtil.deleteMappedFile(cacheFilePath);
-      LOG.info("Successfully uncached one replica:{} from persistent memory"
-          + ", [cached path={}, length={}]", key, cacheFilePath, length);
-    } catch (IOException e) {
-      LOG.warn("Failed to delete the mapped File: {}!", cacheFilePath, e);
+    if (pmemMappedAddress != -1L) {
+      String cacheFilePath =
+          PmemVolumeManager.getInstance().getCachePath(key);
+      try {
+        // Current libpmem will report error when pmem_unmap is called with
+        // length not aligned with page size, although the length is returned
+        // by pmem_map_file.
+        boolean success =
+            NativeIO.POSIX.Pmem.unmapBlock(pmemMappedAddress, length);
+        if (!success) {
+          throw new IOException("Failed to unmap the mapped file from " +
+              "pmem address: " + pmemMappedAddress);
+        }
+        pmemMappedAddress = -1L;
+        FsDatasetUtil.deleteMappedFile(cacheFilePath);
+        LOG.info("Successfully uncached one replica:{} from persistent memory"
+            + ", [cached path={}, length={}]", key, cacheFilePath, length);
+      } catch (IOException e) {
+        LOG.warn("IOException occurred for block {}!", key, e);
+      }
     }
   }
 }

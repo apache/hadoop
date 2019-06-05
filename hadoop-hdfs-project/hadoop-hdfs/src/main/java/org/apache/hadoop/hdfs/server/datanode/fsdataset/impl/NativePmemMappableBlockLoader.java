@@ -24,7 +24,11 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.io.nativeio.NativeIO;
+import org.apache.hadoop.io.nativeio.NativeIO.POSIX;
 import org.apache.hadoop.util.DataChecksum;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -34,21 +38,26 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 
 /**
- * Maps block to DataNode cache region.
+ * Map block to persistent memory with native PMDK libs.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public abstract class MappableBlockLoader {
+public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(NativePmemMappableBlockLoader.class);
 
-  /**
-   * Initialize a specific MappableBlockLoader.
-   */
-  abstract void initialize(FsDatasetCache cacheManager) throws IOException;
+  @Override
+  void initialize(FsDatasetCache cacheManager) throws IOException {
+    super.initialize(cacheManager);
+  }
 
   /**
    * Load the block.
    *
-   * Map the block, and then verify its checksum.
+   * Map the block and verify its checksum.
+   *
+   * The block will be mapped to PmemDir/BlockPoolId-BlockId, in which PmemDir
+   * is a persistent memory volume chosen by PmemVolumeManager.
    *
    * @param length         The current length of the block.
    * @param blockIn        The block input stream. Should be positioned at the
@@ -58,70 +67,62 @@ public abstract class MappableBlockLoader {
    * @param blockFileName  The block file name, for logging purposes.
    * @param key            The extended block ID.
    *
-   * @throws IOException   If mapping block to cache region fails or checksum
-   *                       fails.
+   * @throws IOException   If mapping block to persistent memory fails or
+   *                       checksum fails.
    *
    * @return               The Mappable block.
    */
-  abstract MappableBlock load(long length, FileInputStream blockIn,
-      FileInputStream metaIn, String blockFileName, ExtendedBlockId key)
-      throws IOException;
+  @Override
+  public MappableBlock load(long length, FileInputStream blockIn,
+      FileInputStream metaIn, String blockFileName,
+      ExtendedBlockId key)
+      throws IOException {
+    NativePmemMappedBlock mappableBlock = null;
+    POSIX.PmemMappedRegion region = null;
+    String filePath = null;
 
-  /**
-   * Try to reserve some given bytes.
-   *
-   * @param key           The ExtendedBlockId for a block.
-   *
-   * @param bytesCount    The number of bytes to add.
-   *
-   * @return              The new number of usedBytes if we succeeded;
-   *                      -1 if we failed.
-   */
-  abstract long reserve(ExtendedBlockId key, long bytesCount);
+    FileChannel blockChannel = null;
+    try {
+      blockChannel = blockIn.getChannel();
+      if (blockChannel == null) {
+        throw new IOException("Block InputStream has no FileChannel.");
+      }
 
-  /**
-   * Release some bytes that we're using.
-   *
-   * @param key           The ExtendedBlockId for a block.
-   *
-   * @param bytesCount    The number of bytes to release.
-   *
-   * @return              The new number of usedBytes.
-   */
-  abstract long release(ExtendedBlockId key, long bytesCount);
-
-  /**
-   * Get the approximate amount of cache space used.
-   */
-  abstract long getCacheUsed();
-
-  /**
-   * Get the maximum amount of cache bytes.
-   */
-  abstract long getCacheCapacity();
-
-  /**
-   * Check whether the cache is non-volatile.
-   */
-  abstract boolean isTransientCache();
-
-  /**
-   * Check whether this is a native pmem cache loader.
-   */
-  abstract boolean isNativeLoader();
-
-  /**
-   * Clean up cache, can be used during DataNode shutdown.
-   */
-  void shutdown() {
-    // Do nothing.
+      assert NativeIO.isAvailable();
+      filePath = PmemVolumeManager.getInstance().getCachePath(key);
+      region = POSIX.Pmem.mapBlock(filePath, length);
+      if (region == null) {
+        throw new IOException("Failed to map the block " + blockFileName +
+            " to persistent storage.");
+      }
+      verifyChecksumAndMapBlock(region, length, metaIn, blockChannel,
+          blockFileName);
+      mappableBlock = new NativePmemMappedBlock(region.getAddress(),
+          region.getLength(), key);
+      LOG.info("Successfully cached one replica:{} into persistent memory"
+          + ", [cached path={}, address={}, length={}]", key, filePath,
+          region.getAddress(), length);
+    } finally {
+      IOUtils.closeQuietly(blockChannel);
+      if (mappableBlock == null) {
+        if (region != null) {
+          // unmap content from persistent memory
+          POSIX.Pmem.unmapBlock(region.getAddress(),
+              region.getLength());
+          FsDatasetUtil.deleteMappedFile(filePath);
+        }
+      }
+    }
+    return mappableBlock;
   }
 
   /**
-   * Verifies the block's checksum. This is an I/O intensive operation.
+   * Verifies the block's checksum meanwhile map block to persistent memory.
+   * This is an I/O intensive operation.
    */
-  protected void verifyChecksum(long length, FileInputStream metaIn,
-      FileChannel blockChannel, String blockFileName) throws IOException {
+  private void verifyChecksumAndMapBlock(POSIX.PmemMappedRegion region,
+      long length, FileInputStream metaIn, FileChannel blockChannel,
+      String blockFileName) throws IOException {
     // Verify the checksum from the block's meta file
     // Get the DataChecksum from the meta file header
     BlockMetadataHeader header =
@@ -132,8 +133,8 @@ public abstract class MappableBlockLoader {
     try {
       metaChannel = metaIn.getChannel();
       if (metaChannel == null) {
-        throw new IOException(
-            "Block InputStream meta file has no FileChannel.");
+        throw new IOException("Cannot get FileChannel" +
+            " from Block InputStream meta file.");
       }
       DataChecksum checksum = header.getChecksum();
       final int bytesPerChecksum = checksum.getBytesPerChecksum();
@@ -143,13 +144,19 @@ public abstract class MappableBlockLoader {
       ByteBuffer checksumBuf = ByteBuffer.allocate(numChunks * checksumSize);
       // Verify the checksum
       int bytesVerified = 0;
+      long mappedAddress = -1L;
+      if (region != null) {
+        mappedAddress = region.getAddress();
+      }
       while (bytesVerified < length) {
         Preconditions.checkState(bytesVerified % bytesPerChecksum == 0,
-            "Unexpected partial chunk before EOF");
+            "Unexpected partial chunk before EOF.");
         assert bytesVerified % bytesPerChecksum == 0;
         int bytesRead = fillBuffer(blockChannel, blockBuf);
         if (bytesRead == -1) {
-          throw new IOException("checksum verification failed: premature EOF");
+          throw new IOException(
+              "Checksum verification failed for the block " + blockFileName +
+                  ": premature EOF");
         }
         blockBuf.flip();
         // Number of read chunks, including partial chunk at end
@@ -161,32 +168,24 @@ public abstract class MappableBlockLoader {
             bytesVerified);
         // Success
         bytesVerified += bytesRead;
+        // Copy data to persistent file
+        POSIX.Pmem.memCopy(blockBuf.array(), mappedAddress,
+            region.isPmem(), bytesRead);
+        mappedAddress += bytesRead;
+        // Clear buffer
         blockBuf.clear();
         checksumBuf.clear();
+      }
+      if (region != null) {
+        POSIX.Pmem.memSync(region);
       }
     } finally {
       IOUtils.closeQuietly(metaChannel);
     }
   }
 
-  /**
-   * Reads bytes into a buffer until EOF or the buffer's limit is reached.
-   */
-  protected int fillBuffer(FileChannel channel, ByteBuffer buf)
-      throws IOException {
-    int bytesRead = channel.read(buf);
-    if (bytesRead < 0) {
-      //EOF
-      return bytesRead;
-    }
-    while (buf.remaining() > 0) {
-      int n = channel.read(buf);
-      if (n < 0) {
-        //EOF
-        return bytesRead;
-      }
-      bytesRead += n;
-    }
-    return bytesRead;
+  @Override
+  public boolean isNativeLoader() {
+    return true;
   }
 }
