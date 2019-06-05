@@ -129,9 +129,6 @@ public class OMBucketDeleteRequest extends OMClientRequest {
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
     } catch (IOException ex) {
-      omMetrics.incNumBucketDeleteFails();
-      LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
-          volumeName, ex);
       exception = ex;
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
@@ -143,11 +140,15 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
     // return response.
     if (exception == null) {
+      LOG.debug("Deleted bucket:{} in volume:{}", bucketName, volumeName);
       omResponse.setDeleteBucketResponse(
           DeleteBucketResponse.newBuilder().build());
       return new OMBucketDeleteResponse(volumeName, bucketName,
           omResponse.build());
     } else {
+      omMetrics.incNumBucketDeleteFails();
+      LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
+          volumeName, exception);
       return new OMBucketDeleteResponse(volumeName, bucketName,
           createErrorOMResponse(omResponse, exception));
     }

@@ -187,11 +187,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
     } catch (IOException ex) {
-      if (omMetrics != null) {
-        omMetrics.incNumBucketUpdateFails();
-      }
-      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
       exception = ex;
     } finally {
       omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
@@ -203,10 +198,17 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
     // return response.
     if (exception == null) {
+      LOG.debug("Setting bucket property for bucket:{} in volume:{}",
+          bucketName, volumeName);
       omResponse.setSetBucketPropertyResponse(
           SetBucketPropertyResponse.newBuilder().build());
       return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
     } else {
+      if (omMetrics != null) {
+        omMetrics.incNumBucketUpdateFails();
+      }
+      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
+          bucketName, volumeName, exception);
       return new OMBucketSetPropertyResponse(omBucketInfo,
           createErrorOMResponse(omResponse, exception));
     }

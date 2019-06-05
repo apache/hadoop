@@ -160,18 +160,12 @@ public class OMBucketCreateRequest extends OMClientRequest {
             OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
 
-      LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
-      omMetrics.incNumBuckets();
-
       // Update table cache.
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
 
     } catch (IOException ex) {
-      omMetrics.incNumBucketCreateFails();
-      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
       exception = ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
@@ -184,10 +178,15 @@ public class OMBucketCreateRequest extends OMClientRequest {
 
     // return response.
     if (exception == null) {
+      LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
+      omMetrics.incNumBuckets();
       omResponse.setCreateBucketResponse(
           CreateBucketResponse.newBuilder().build());
       return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
     } else {
+      omMetrics.incNumBucketCreateFails();
+      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
+          bucketName, volumeName, exception);
       return new OMBucketCreateResponse(omBucketInfo,
           createErrorOMResponse(omResponse, exception));
     }
