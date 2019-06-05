@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_S3GUARD_IMPLEMENTATION_DYNAMO;
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_S3GUARD_IMPLEMENTATION_LOCAL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
@@ -892,10 +894,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
 
     final Map<String, String> diagnostics = ms.getDiagnostics();
-    if(diagnostics.get("name").startsWith("local")){
+    if (ms instanceof LocalMetadataStore){
       ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
           "/dir2");
-    } else {
+    } else if (ms instanceof DynamoDBMetadataStore){
       String bucket =
           getTestBucketName(getContract().getFileSystem().getConf());
       ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,

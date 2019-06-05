@@ -41,6 +41,8 @@ import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
@@ -57,6 +59,8 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  *
@@ -367,11 +371,63 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     assertEquals("Created file metadata last_updated should equal with "
             + "mocked now", now.get(), metadata.getLastUpdated());
 
-    intercept(FileNotFoundException.class, () -> {
-      guardedFs.getFileStatus(testFilePath);
-      fail("This file should throw FNFE when reading through "
-              + "the guarded fs, and the metadatastore tombstoned the file.");
-    });
+    intercept(FileNotFoundException.class, testFilePath.toString(),
+        "This file should throw FNFE when reading through "
+            + "the guarded fs, and the metadatastore tombstoned the file.",
+        () -> guardedFs.getFileStatus(testFilePath));
+  }
+
+  /**
+   * createNonRecursive must fail if the parent directory has been deleted,
+   * and succeed if the tombstone has expired and the directory has been
+   * created out of band.
+   */
+  @Test
+  public void createNonRecursiveFailsIfParentDeleted() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String dirToDelete = methodName + UUID.randomUUID().toString();
+    String fileToTry = dirToDelete + "/theFileToTry";
+
+    final Path dirPath = path(dirToDelete);
+    final Path filePath = path(fileToTry);
+
+    // Create a directory with
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
+
+      // CREATE DIRECTORY
+      guardedFs.mkdirs(dirPath);
+
+      // DELETE DIRECTORY
+      guardedFs.delete(dirPath, true);
+
+      // WRITE TO DELETED DIRECTORY - FAIL
+      intercept(FileNotFoundException.class,
+          dirToDelete,
+          "createNonRecursive must fail if the parent directory has been deleted.",
+          () -> createNonRecursive(guardedFs, filePath));
+
+      // CREATE THE DIRECTORY RAW
+      rawFS.mkdirs(dirPath);
+      awaitFileStatus(rawFS, dirPath);
+
+      // SET TIME SO METADATA EXPIRES
+      when(mockTimeProvider.getNow()).thenReturn(110L);
+
+      // WRITE TO DELETED DIRECTORY - SUCCESS
+      createNonRecursive(guardedFs, filePath);
+
+    } finally {
+      guardedFs.delete(filePath, true);
+      guardedFs.delete(dirPath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
   }
 
   private void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
@@ -787,6 +843,12 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     return eventually(
         STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
         () -> fs.getFileStatus(testFilePath));
+  }
+
+  private FSDataOutputStream createNonRecursive(FileSystem fs, Path path)
+      throws Exception {
+    return fs
+        .createNonRecursive(path, false, 4096, (short) 3, (short) 4096, null);
   }
 
 }
