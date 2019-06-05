@@ -183,7 +183,8 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getMetadataTtl()).thenReturn(2L);
 
     // act
-    final PathMetadata pmNotExpired = S3Guard.getWithTtl(ms, path, timeProvider);
+    final PathMetadata pmNotExpired =
+        S3Guard.getWithTtl(ms, path, timeProvider);
 
     // assert
     assertNotNull(pmNotExpired);

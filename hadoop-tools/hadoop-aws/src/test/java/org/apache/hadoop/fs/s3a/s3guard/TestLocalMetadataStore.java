@@ -184,7 +184,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
       String prefixStr, String pathStr, int leftoverSize) throws IOException {
     populateMap(cache, prefixStr);
     LocalMetadataStore.deleteEntryByAncestor(new Path(prefixStr + pathStr),
-        cache, true, ttlTimeProvider);
+        cache, true, getTtlTimeProvider());
     assertEquals(String.format("Cache should have %d entries", leftoverSize),
         leftoverSize, sizeOfMap(cache));
     cache.invalidateAll();

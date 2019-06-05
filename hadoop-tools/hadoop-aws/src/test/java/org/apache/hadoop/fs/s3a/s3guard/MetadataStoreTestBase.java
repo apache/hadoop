@@ -71,7 +71,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   static final FsPermission PERMISSION = null;
   static final String GROUP = null;
   private final long accessTime = 0;
-  static ITtlTimeProvider ttlTimeProvider;
+  private static ITtlTimeProvider ttlTimeProvider;
 
   /**
    * Each test should override this.  Will use a new Configuration instance.
@@ -1102,6 +1102,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   protected static long getTime() {
     return System.currentTimeMillis();
+  }
+
+  protected static ITtlTimeProvider getTtlTimeProvider() {
+    return ttlTimeProvider;
   }
 
 }

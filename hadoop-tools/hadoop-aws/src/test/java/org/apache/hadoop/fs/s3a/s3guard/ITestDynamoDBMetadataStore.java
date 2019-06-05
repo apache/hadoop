@@ -389,7 +389,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // move the old paths to new paths and verify
-    ms.move(pathsToDelete, newMetas, ttlTimeProvider);
+    ms.move(pathsToDelete, newMetas, getTtlTimeProvider());
     assertEquals(0, ms.listChildren(oldDir).withoutTombstones().numEntries());
     if (newMetas != null) {
       assertTrue(CollectionUtils
@@ -588,7 +588,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             1024, false))
     );
 
-    ddbms.move(fullSourcePaths, pathsToCreate, ttlTimeProvider);
+    ddbms.move(fullSourcePaths, pathsToCreate, getTtlTimeProvider());
 
     // assert that all the ancestors should have been populated automatically
     assertCached(testRoot + "/c");
