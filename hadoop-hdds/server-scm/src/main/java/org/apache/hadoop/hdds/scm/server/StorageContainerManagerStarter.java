@@ -31,6 +31,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
+
+import java.io.IOException;
+
 import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
@@ -45,17 +48,19 @@ import static org.apache.hadoop.util.ExitUtil.terminate;
 public class StorageContainerManagerStarter extends GenericCli {
 
   private OzoneConfiguration conf;
-
+  private SCMStarterInterface receiver;
   private static final Logger LOG =
       LoggerFactory.getLogger(StorageContainerManagerStarter.class);
 
   public static void main(String[] args) throws Exception {
     TracingUtil.initTracing("StorageContainerManager");
-    new StorageContainerManagerStarter().run(args);
+    new StorageContainerManagerStarter(
+        new StorageContainerManagerStarter.SCMStarterHelper()).run(args);
   }
 
-  public StorageContainerManagerStarter() {
+  public StorageContainerManagerStarter(SCMStarterInterface receiverObj) {
     super();
+    receiver = receiverObj;
   }
 
   @Override
@@ -78,8 +83,7 @@ public class StorageContainerManagerStarter extends GenericCli {
   public void generateClusterId() {
     commonInit();
     System.out.println("Generating new cluster id:");
-    System.out.println(StorageInfo.newClusterID());
-    terminate(0);
+    System.out.println(receiver.generateClusterId());
   }
 
   /**
@@ -100,16 +104,17 @@ public class StorageContainerManagerStarter extends GenericCli {
       paramLabel = "id") String clusterId)
       throws Exception {
     commonInit();
-    terminate(StorageContainerManager.scmInit(conf, clusterId) ? 0 : 1);
+    boolean result = receiver.init(conf, clusterId);
+    if (!result) {
+      throw new IOException("SCM Init failed. Check the log for more details");
+    }
   }
 
   /**
    * This function is used by the command line to start the SCM.
    */
   private void startScm() throws Exception {
-    StorageContainerManager stm = StorageContainerManager.createSCM(conf);
-    stm.start();
-    stm.join();
+    receiver.start(conf);
   }
 
   /**
@@ -123,5 +128,28 @@ public class StorageContainerManagerStarter extends GenericCli {
         .toArray(new String[0]);
     StringUtils.startupShutdownMessage(StorageContainerManager.class,
         originalArgs, LOG);
+  }
+
+  /**
+   * This static class wraps the external dependencies needed for this command
+   * to execute its tasks. This allows the dependency to be injected for unit
+   * testing.
+   */
+  static class SCMStarterHelper implements SCMStarterInterface {
+
+    public void start(OzoneConfiguration conf) throws Exception {
+      StorageContainerManager stm = StorageContainerManager.createSCM(conf);
+      stm.start();
+      stm.join();
+    }
+
+    public boolean init(OzoneConfiguration conf, String clusterId)
+        throws IOException{
+      return StorageContainerManager.scmInit(conf, clusterId);
+    }
+
+    public String generateClusterId() {
+      return StorageInfo.newClusterID();
+    }
   }
 }
