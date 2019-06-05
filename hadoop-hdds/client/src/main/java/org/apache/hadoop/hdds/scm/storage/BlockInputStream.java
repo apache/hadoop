@@ -20,6 +20,7 @@ package org.apache.hadoop.hdds.scm.storage;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
@@ -115,8 +116,13 @@ public class BlockInputStream extends InputStream implements Seekable {
    */
   public synchronized void initialize() throws IOException {
 
-    List<ChunkInfo> chunks = getChunkInfos();
+    // Pre-check that the stream has not been intialized already
+    if (initialized) {
+      return;
+    }
+    Preconditions.checkArgument(chunkOffsets == null);
 
+    List<ChunkInfo> chunks = getChunkInfos();
     if (chunks != null && !chunks.isEmpty()) {
       // For each chunk in the block, create a ChunkInputStream and compute
       // its chunkOffset

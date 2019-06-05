@@ -22,12 +22,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.fs.Seekable;
 import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ChunkInfo;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ReadChunkResponseProto;
-import org.apache.hadoop.hdds.scm.XceiverClientReply;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.common.Checksum;
@@ -51,7 +49,7 @@ import java.util.List;
  */
 public class ChunkInputStream extends InputStream implements Seekable {
 
-  private final ChunkInfo chunkInfo;
+  private ChunkInfo chunkInfo;
   private final long length;
   private final BlockID blockID;
   private final String traceID;
@@ -73,8 +71,10 @@ public class ChunkInputStream extends InputStream implements Seekable {
   private long bufferLength;
 
   // Position of the ChunkInputStream is maintained by this variable (if a
-  // seek is performed) and till the buffers are allocated. This position is
-  // w.r.t to the chunk only and not the block or key.
+  // seek is performed. This position is w.r.t to the chunk only and not the
+  // block or key. This variable is set only if either the buffers are not
+  // yet allocated or the if the allocated buffers do not cover the seeked
+  // position. Once the chunk is read, this variable is reset.
   private long chunkPosition = -1;
 
   private static final int EOF = -1;
@@ -116,6 +116,9 @@ public class ChunkInputStream extends InputStream implements Seekable {
     return dataout;
   }
 
+  /**
+   * {@inheritDoc}
+   */
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
     // According to the JavaDocs for InputStream, it is recommended that
@@ -346,28 +349,34 @@ public class ChunkInputStream extends InputStream implements Seekable {
 
   private CheckedBiFunction<ContainerCommandRequestProto,
       ContainerCommandResponseProto, IOException> validator =
-      (request, response) -> {
-        final ChunkInfo chunkInfo = request.getReadChunk().getChunkData();
+          (request, response) -> {
+            final ChunkInfo reqChunkInfo =
+                request.getReadChunk().getChunkData();
 
-        ReadChunkResponseProto readChunkResponse = response.getReadChunk();
-        ByteString byteString = readChunkResponse.getData();
+            ReadChunkResponseProto readChunkResponse = response.getReadChunk();
+            ByteString byteString = readChunkResponse.getData();
 
-        if (byteString.size() != chunkInfo.getLen()) {
-          // Bytes read from chunk should be equal to chunk size.
-          throw new OzoneChecksumException(String
-              .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
-                  chunkInfo.getChunkName(), chunkInfo.getLen(),
-                  byteString.size()));
-        }
+            if (byteString.size() != reqChunkInfo.getLen()) {
+              // Bytes read from chunk should be equal to chunk size.
+              throw new OzoneChecksumException(String
+                  .format("Inconsistent read for chunk=%s len=%d bytesRead=%d",
+                      reqChunkInfo.getChunkName(), reqChunkInfo.getLen(),
+                      byteString.size()));
+            }
 
-        if (verifyChecksum) {
-          ChecksumData checksumData =
-              ChecksumData.getFromProtoBuf(chunkInfo.getChecksumData());
-          int checkumStartIndex =
-              (int) (bufferOffset / checksumData.getBytesPerChecksum());
-          Checksum.verifyChecksum(byteString, checksumData, checkumStartIndex);
-        }
-      };
+            if (verifyChecksum) {
+              ChecksumData checksumData = ChecksumData.getFromProtoBuf(
+                  chunkInfo.getChecksumData());
+
+              // ChecksumData stores checksum for each 'numBytesPerChceksum'
+              // number of bytes in a list. Compute the index of the first
+              // checksum to match with the read data
+
+              int checkumStartIndex = (int) (reqChunkInfo.getOffset() /
+                  checksumData.getBytesPerChecksum());
+              Checksum.verifyChecksum(byteString, checksumData, checkumStartIndex);
+            }
+          };
 
   /**
    * Return the offset and length of bytes that need to be read from the
@@ -506,11 +515,17 @@ public class ChunkInputStream extends InputStream implements Seekable {
     }
   }
 
+  /**
+   * If EOF is reached, release the buffers.
+   */
   private void releaseBuffers() {
     buffers = null;
     bufferIndex = 0;
   }
 
+  /**
+   * Reset the chunkPosition once the buffers are allocated.
+   */
   void resetPosition() {
     this.chunkPosition = -1;
   }
