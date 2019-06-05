@@ -15,5 +15,5 @@
 # limitations under the License.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export HADOOP_VERSION=3
-$DIR/../../../hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/test-all.sh
+"$DIR/../../../hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/test-all.sh"
 exit $?
