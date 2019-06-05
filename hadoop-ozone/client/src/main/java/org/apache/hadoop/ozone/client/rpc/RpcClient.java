@@ -145,9 +145,9 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     this.conf = new OzoneConfiguration(conf);
     this.ugi = UserGroupInformation.getCurrentUser();
     // Get default acl rights for user and group.
-    OzoneAclConfig aclConfig = this.conf.getObject(OzoneAclConfig.class);
-    this.userRights = aclConfig.getUserDefaultRights();
-    this.groupRights = aclConfig.getGroupDefaultRights();
+//    OzoneAclConfig aclConfig = this.conf.getObject(OzoneAclConfig.class);
+    this.userRights = ACLType.ALL; //aclConfig.getUserDefaultRights();
+    this.groupRights = ACLType.ALL; //aclConfig.getGroupDefaultRights();
 
     this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
         this.conf, clientId.toString(), ugi);
