@@ -91,19 +91,7 @@ public class NameNodeHttpServer {
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_KEY,
         HdfsClientConfigKeys.DFS_WEBHDFS_ACL_PERMISSION_PATTERN_DEFAULT));
 
-    // add authentication filter for webhdfs
-    final String className = conf.get(
-        DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_FILTER_KEY,
-        DFSConfigKeys.DFS_WEBHDFS_AUTHENTICATION_FILTER_DEFAULT);
-    final String name = className;
-
     final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
-    Map<String, String> params = getAuthFilterParams(conf, hostname,
-        httpKeytab);
-    HttpServer2.defineFilter(httpServer2.getWebAppContext(), name, className,
-        params, new String[] { pathSpec });
-    HttpServer2.LOG.info("Added filter '" + name + "' (class=" + className
-        + ")");
 
     // add REST CSRF prevention filter
     if (conf.getBoolean(DFS_WEBHDFS_REST_CSRF_ENABLED_KEY,

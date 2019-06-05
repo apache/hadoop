@@ -71,4 +71,6 @@ Trusted Proxy
 Trusted Proxy adds support to perform operations using end user instead of proxy user. It fetches the end user from
 doAs query parameter. To enable Trusted Proxy, please set the following configuration parameter:
 
-Add org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer to hadoop.http.filter.initializers at the end in core-site.xml.
+Add org.apache.hadoop.security.authentication.server.ProxyUserAuthenticationFilterInitializer to hadoop.http.filter.initializers in core-site.xml
+instead of org.apache.hadoop.security.AuthenticationFilterInitializer.
+
