@@ -146,7 +146,7 @@ public final class ScmConfigKeys {
 
   public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
       "dfs.ratis.snapshot.threshold";
-  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 10000;
+  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 100000;
 
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       "dfs.ratis.server.failure.duration";

@@ -57,7 +57,6 @@ import org.apache.ratis.protocol.ClientId;
 import org.apache.ratis.protocol.NotLeaderException;
 import org.apache.ratis.protocol.StateMachineException;
 import org.apache.ratis.protocol.RaftPeerId;
-import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.rpc.RpcType;
 import org.apache.ratis.rpc.SupportedRpcType;
@@ -66,6 +65,7 @@ import org.apache.ratis.server.RaftServerConfigKeys;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.proto.RaftProtos.RoleInfoProto;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
+import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -251,8 +251,12 @@ public final class XceiverServerRatis extends XceiverServer {
         numSyncRetries);
 
     // Enable the StateMachineCaching
-    RaftServerConfigKeys.Log.StateMachineData
-        .setCachingEnabled(properties, true);
+    RaftServerConfigKeys.Log.StateMachineData.setCachingEnabled(
+        properties, true);
+
+    RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
+        false);
+
     return properties;
   }
 
@@ -590,11 +594,32 @@ public final class XceiverServerRatis extends XceiverServer {
     return pipelineIDs;
   }
 
-  void handleNodeSlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
-    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+  void handleNodeSlowness(RaftGroupId groupId, RoleInfoProto roleInfoProto) {
+    handlePipelineFailure(groupId, roleInfoProto);
   }
 
-  void handleNoLeader(RaftGroup group, RoleInfoProto roleInfoProto) {
-    handlePipelineFailure(group.getGroupId(), roleInfoProto);
+  void handleNoLeader(RaftGroupId groupId, RoleInfoProto roleInfoProto) {
+    handlePipelineFailure(groupId, roleInfoProto);
+  }
+
+  /**
+   * The fact that the snapshot contents cannot be used to actually catch up
+   * the follower, it is the reason to initiate close pipeline and
+   * not install the snapshot. The follower will basically never be able to
+   * catch up.
+   *
+   * @param groupId raft group information
+   * @param roleInfoProto information about the current node role and
+   *                      rpc delay information.
+   * @param firstTermIndexInLog After the snapshot installation is complete,
+   * return the last included term index in the snapshot.
+   */
+  void handleInstallSnapshotFromLeader(RaftGroupId groupId,
+                                       RoleInfoProto roleInfoProto,
+                                       TermIndex firstTermIndexInLog) {
+    LOG.warn("Install snapshot notification received from Leader with " +
+        "termIndex : " + firstTermIndexInLog +
+        ", terminating pipeline " + groupId);
+    handlePipelineFailure(groupId, roleInfoProto);
   }
 }

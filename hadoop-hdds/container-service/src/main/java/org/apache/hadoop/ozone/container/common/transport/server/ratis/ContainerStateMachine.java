@@ -28,7 +28,6 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
-import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.impl.RaftServerConstants;
@@ -651,20 +650,29 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   @Override
-  public void notifySlowness(RaftGroup group, RoleInfoProto roleInfoProto) {
-    ratisServer.handleNodeSlowness(group, roleInfoProto);
+  public void notifySlowness(RoleInfoProto roleInfoProto) {
+    ratisServer.handleNodeSlowness(gid, roleInfoProto);
   }
 
   @Override
-  public void notifyExtendedNoLeader(RaftGroup group,
-      RoleInfoProto roleInfoProto) {
-    ratisServer.handleNoLeader(group, roleInfoProto);
+  public void notifyExtendedNoLeader(RoleInfoProto roleInfoProto) {
+    ratisServer.handleNoLeader(gid, roleInfoProto);
   }
 
   @Override
   public void notifyNotLeader(Collection<TransactionContext> pendingEntries)
       throws IOException {
     evictStateMachineCache();
+  }
+
+  @Override
+  public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
+      RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
+    ratisServer.handleInstallSnapshotFromLeader(gid, roleInfoProto,
+        firstTermIndexInLog);
+    final CompletableFuture<TermIndex> future = new CompletableFuture<>();
+    future.complete(firstTermIndexInLog);
+    return future;
   }
 
   @Override
