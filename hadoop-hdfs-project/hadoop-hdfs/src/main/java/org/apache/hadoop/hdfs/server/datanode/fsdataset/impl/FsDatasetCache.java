@@ -215,6 +215,28 @@ public class FsDatasetCache {
   }
 
   /**
+   * Get cache address on persistent memory for read operation.
+   * The cache address comes from PMDK lib function when mapping
+   * block to persistent memory.
+   *
+   * @param bpid    blockPoolId
+   * @param blockId blockId
+   * @return address
+   */
+  long getCacheAddress(String bpid, long blockId) {
+    if (cacheLoader.isTransientCache() ||
+        !isCached(bpid, blockId)) {
+      return -1;
+    }
+    if (!(cacheLoader.isNativeLoader())) {
+      return -1;
+    }
+    ExtendedBlockId key = new ExtendedBlockId(blockId, bpid);
+    MappableBlock mappableBlock = mappableBlockMap.get(key).mappableBlock;
+    return mappableBlock.getAddress();
+  }
+
+  /**
    * @return List of cached blocks suitable for translation into a
    * {@link BlockListAsLongs} for a cache report.
    */

@@ -45,6 +45,11 @@ public class MemoryMappedBlock implements MappableBlock {
   }
 
   @Override
+  public long getAddress() {
+    return -1L;
+  }
+
+  @Override
   public void close() {
     if (mmap != null) {
       NativeIO.POSIX.munmap(mmap);
