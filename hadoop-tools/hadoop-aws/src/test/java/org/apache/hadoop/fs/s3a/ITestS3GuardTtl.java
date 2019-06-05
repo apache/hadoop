@@ -172,6 +172,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       // set the time, so fileRetain won't expire
       when(mockTimeProvider.getNow()).thenReturn(109L);
       touch(fs, fileRetain);
+      final FileStatus origFileRetainStatus = fs.getFileStatus(fileRetain);
       // change time, so the first two file metadata is expired
       when(mockTimeProvider.getNow()).thenReturn(110L);
 
@@ -188,6 +189,9 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
       assertEquals(110L, ms.get(fileExpire2).getLastUpdated());
 
       final FileStatus fileRetainStatus = fs.getFileStatus(fileRetain);
+      assertEquals("Modification time of these files should be equal.",
+          origFileRetainStatus.getModificationTime(),
+          fileRetainStatus.getModificationTime());
       assertNotNull(fileRetainStatus);
       assertEquals(109L, ms.get(fileRetain).getLastUpdated());
     } finally {

@@ -112,7 +112,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path p, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void delete(Path p, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     doDelete(p, false, true, ttlTimeProvider);
   }
 
@@ -122,7 +123,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     doDelete(path, true, true, ttlTimeProvider);
   }
 
@@ -338,7 +340,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public synchronized void prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
+  public synchronized void prune(PruneMode pruneMode, long cutoff,
+      String keyPrefix) {
     // prune files
     // filter path_metadata (files), filter expired, remove expired
     localCache.asMap().entrySet().stream()

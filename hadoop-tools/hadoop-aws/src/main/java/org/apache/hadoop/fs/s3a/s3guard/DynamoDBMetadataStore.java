@@ -512,7 +512,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     boolean idempotent = S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT;
     if (tombstone) {
       Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider "
-          + "must not be null" );
+          + "must not be null");
       final PathMetadata pmTombstone = PathMetadata.tombstone(path);
       // update the last updated field of record when putting a tombstone
       pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
@@ -535,7 +535,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
         tableName, region, path);
@@ -1066,9 +1067,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
           .withString(":parent", keyPrefix)
           .withBoolean(":is_deleted", true);
       break;
-      default:
-        throw new UnsupportedOperationException("Unsupported prune mode: "
-            + pruneMode);
+    default:
+      throw new UnsupportedOperationException("Unsupported prune mode: "
+          + pruneMode);
     }
 
     return readOp.retry(
@@ -1095,7 +1096,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
    */
   @Override
   @Retries.RetryTranslated
-  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix) throws IOException {
+  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+      throws IOException {
     final ItemCollection<ScanOutcome> items =
         expiredFiles(pruneMode, cutoff, keyPrefix);
     innerPrune(items);

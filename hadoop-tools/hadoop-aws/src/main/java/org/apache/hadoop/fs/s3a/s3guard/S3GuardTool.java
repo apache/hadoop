@@ -1075,7 +1075,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
 
       try {
-        getStore().prune(MetadataStore.PruneMode.ALL_BY_MODTIME, divide, keyPrefix);
+        getStore().prune(MetadataStore.PruneMode.ALL_BY_MODTIME, divide,
+            keyPrefix);
       } catch (UnsupportedOperationException e){
         errorln("Prune operation not supported in metadata store.");
       }

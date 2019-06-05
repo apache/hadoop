@@ -58,7 +58,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   static final long ACCESS_TIME = System.currentTimeMillis();
 
   static final Path BUCKET_ROOT = new Path("s3a://fake-bucket/");
-  public ITtlTimeProvider ttlTimeProvider;
+  private ITtlTimeProvider ttlTimeProvider;
 
   @Before
   public void initialize() {

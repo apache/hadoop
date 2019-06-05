@@ -243,7 +243,8 @@ public class ITestDynamoDBMetadataStoreScale
 
               if (pruneItems == BATCH_SIZE) {
                 describe("pruning files");
-                ddbms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, Long.MAX_VALUE /* all files */);
+                ddbms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+                    Long.MAX_VALUE /* all files */);
                 pruneItems = 0;
               }
               if (tracker.probe()) {

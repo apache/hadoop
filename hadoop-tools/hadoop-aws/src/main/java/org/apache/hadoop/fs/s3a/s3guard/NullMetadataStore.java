@@ -47,7 +47,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override
@@ -55,7 +56,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider) throws IOException {
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override

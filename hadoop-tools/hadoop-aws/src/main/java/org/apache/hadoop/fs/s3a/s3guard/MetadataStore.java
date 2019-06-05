@@ -77,9 +77,9 @@ public interface MetadataStore extends Closeable {
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path, ITtlTimeProvider)}. It is currently intended for testing
-   * only, and a need to use it as part of normal FileSystem usage is not
-   * anticipated.
+   * {@link MetadataStore#delete(Path, ITtlTimeProvider)}. It is currently
+   * intended for testing only, and a need to use it as part of normal
+   * FileSystem usage is not anticipated.
    *
    * @param path the path to delete
    * @throws IOException if there is an error
@@ -267,8 +267,8 @@ public interface MetadataStore extends Closeable {
       UnsupportedOperationException;
 
   /**
-   * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an additional
-   * keyPrefix parameter to filter the pruned keys with a prefix.
+   * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an
+   * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
    * @param pruneMode
    * @param cutoff Oldest time to allow (UTC)
