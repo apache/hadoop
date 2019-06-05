@@ -35,10 +35,7 @@ public class TestOpenSSLSocketFactory {
 
   @Test
   public void testOpenSSL() throws IOException {
-    assumeTrue("Unable to load native libraries",
-            NativeCodeLoader.isNativeCodeLoaded());
-    assumeTrue("Build was not compiled with support for OpenSSL",
-            NativeCodeLoader.buildSupportsOpenssl());
+    assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
     OpenSSLSocketFactory.initializeDefaultFactory(
             OpenSSLSocketFactory.SSLChannelMode.OpenSSL);
     assertThat(OpenSSLSocketFactory.getDefaultFactory()
@@ -47,8 +44,7 @@ public class TestOpenSSLSocketFactory {
 
   @Test
   public void testJSEEJava8() throws IOException {
-    assumeTrue("Not running on Java 8",
-            System.getProperty("java.version").startsWith("1.8"));
+    assumeTrue(System.getProperty("java.version").startsWith("1.8"));
     OpenSSLSocketFactory.initializeDefaultFactory(
             OpenSSLSocketFactory.SSLChannelMode.Default_JSSE);
     assertThat(Arrays.stream(OpenSSLSocketFactory.getDefaultFactory()

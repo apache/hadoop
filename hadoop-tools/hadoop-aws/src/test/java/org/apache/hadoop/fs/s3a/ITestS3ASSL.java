@@ -40,10 +40,7 @@ public class ITestS3ASSL extends AbstractS3ATestBase {
 
   @Test
   public void testOpenSSL() throws IOException {
-    assumeTrue("Unable to load native libraries",
-            NativeCodeLoader.isNativeCodeLoaded());
-    assumeTrue("Build was not compiled with support for OpenSSL",
-            NativeCodeLoader.buildSupportsOpenssl());
+    assumeTrue(NativeCodeLoader.buildSupportsOpenssl());
     Configuration conf = new Configuration(getConfiguration());
     conf.setEnum(Constants.SSL_CHANNEL_MODE,
             OpenSSLSocketFactory.SSLChannelMode.OpenSSL);
