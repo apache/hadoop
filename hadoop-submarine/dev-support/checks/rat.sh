@@ -17,7 +17,7 @@
 mkdir -p target
 rm target/rat-aggregated.txt
 mvn apache-rat:check
-grep -r --include=rat.txt "\!\?\?\?\?" ./* | tee ./target/rat-aggregated.txt
+grep -r --include=rat.txt -E "\!\?\?\?\?" ./* | tee ./target/rat-aggregated.txt
 if [ "$(cat target/rat-aggregated.txt)" ]; then
    echo "Failed to pass apache rat check!"
    exit -1
