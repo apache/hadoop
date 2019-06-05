@@ -202,7 +202,7 @@ public final class S3Guard {
    * @param backingStatuses Directory listing from the backing store.
    * @param dirMeta  Directory listing from MetadataStore.  May be null.
    * @param isAuthoritative State of authoritative mode
-   * @param timeProvider Time provider for testing.
+   * @param timeProvider Time provider to use when updating entries
    * @return Final result of directory listing.
    * @throws IOException if metadata store update failed
    */
