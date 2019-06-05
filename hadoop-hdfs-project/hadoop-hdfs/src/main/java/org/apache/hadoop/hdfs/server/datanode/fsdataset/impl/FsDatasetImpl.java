@@ -815,6 +815,14 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     String cachePath = cacheManager.getReplicaCachePath(
         b.getBlockPoolId(), b.getBlockId());
     if (cachePath != null) {
+      long addr = cacheManager.getCacheAddress(
+          b.getBlockPoolId(), b.getBlockId());
+      if (addr != -1) {
+        LOG.debug("Get InputStream by cache address.");
+        return FsDatasetUtil.getDirectInputStream(
+            addr, info.getBlockDataLength());
+      }
+      LOG.debug("Get InputStream by cache file path.");
       return FsDatasetUtil.getInputStreamAndSeek(
           new File(cachePath), seekOffset);
     }

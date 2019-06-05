@@ -43,7 +43,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
 
   @Override
   void initialize(FsDatasetCache cacheManager) throws IOException {
-    LOG.info("Initializing cache loader: PmemMappableBlockLoader.");
+    LOG.info("Initializing cache loader: " + this.getClass().getName());
     DNConf dnConf = cacheManager.getDnConf();
     PmemVolumeManager.init(dnConf.getPmemVolumes());
     pmemVolumeManager = PmemVolumeManager.getInstance();
@@ -71,8 +71,7 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
    */
   @Override
   MappableBlock load(long length, FileInputStream blockIn,
-                     FileInputStream metaIn, String blockFileName,
-                     ExtendedBlockId key)
+      FileInputStream metaIn, String blockFileName, ExtendedBlockId key)
       throws IOException {
     PmemMappedBlock mappableBlock = null;
     String cachePath = null;
@@ -129,6 +128,11 @@ public class PmemMappableBlockLoader extends MappableBlockLoader {
 
   @Override
   public boolean isTransientCache() {
+    return false;
+  }
+
+  @Override
+  public boolean isNativeLoader() {
     return false;
   }
 
