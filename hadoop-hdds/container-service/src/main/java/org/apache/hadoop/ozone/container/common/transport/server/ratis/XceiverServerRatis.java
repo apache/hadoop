@@ -240,8 +240,8 @@ public final class XceiverServerRatis extends XceiverServer {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_QUEUE_BYTE_LIMIT_DEFAULT,
         StorageUnit.BYTES);
-    RaftServerConfigKeys.Log.setElementLimit(properties, logQueueNumElements);
-    RaftServerConfigKeys.Log.setByteLimit(properties, logQueueByteLimit);
+    RaftServerConfigKeys.Log.setQueueElementLimit(properties, logQueueNumElements);
+    RaftServerConfigKeys.Log.setQueueByteLimit(properties, logQueueByteLimit);
 
     int numSyncRetries = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES,
