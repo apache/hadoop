@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.security.ssl.OpenSSLSocketFactory;
 
 import java.util.concurrent.TimeUnit;
 
@@ -147,11 +146,6 @@ public final class Constants {
   public static final String SECURE_CONNECTIONS =
       "fs.s3a.connection.ssl.enabled";
   public static final boolean DEFAULT_SECURE_CONNECTIONS = true;
-
-  // use OpenSSL or JSEE for secure connections
-  public static final String SSL_CHANNEL_MODE =  "fs.s3a.ssl.channel.mode";
-  public static final OpenSSLSocketFactory.SSLChannelMode
-      DEFAULT_SSL_CHANNEL_MODE = OpenSSLSocketFactory.SSLChannelMode.Default;
 
   //use a custom endpoint?
   public static final String ENDPOINT = "fs.s3a.endpoint";

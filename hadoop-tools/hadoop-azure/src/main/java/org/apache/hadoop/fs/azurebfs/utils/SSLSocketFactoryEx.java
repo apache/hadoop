@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.security.ssl;
+package org.apache.hadoop.fs.azurebfs.utils;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -42,11 +42,11 @@ import org.wildfly.openssl.SSL;
  * performance.
  *
  */
-public final class OpenSSLSocketFactory extends SSLSocketFactory {
+public final class SSLSocketFactoryEx extends SSLSocketFactory {
 
   /**
    * Default indicates Ordered, preferred OpenSSL, if failed to load then fall
-   * back to Default_JSSE.
+   * back to Default_JSSE
    */
   public enum SSLChannelMode {
     OpenSSL,
@@ -54,9 +54,9 @@ public final class OpenSSLSocketFactory extends SSLSocketFactory {
     Default_JSSE
   }
 
-  private static OpenSSLSocketFactory instance = null;
+  private static SSLSocketFactoryEx instance = null;
   private static final Logger LOG = LoggerFactory.getLogger(
-      OpenSSLSocketFactory.class);
+      SSLSocketFactoryEx.class);
   private String providerName;
   private SSLContext ctx;
   private String[] ciphers;
@@ -71,7 +71,7 @@ public final class OpenSSLSocketFactory extends SSLSocketFactory {
   public static synchronized void initializeDefaultFactory(
       SSLChannelMode preferredMode) throws IOException {
     if (instance == null) {
-      instance = new OpenSSLSocketFactory(preferredMode);
+      instance = new SSLSocketFactoryEx(preferredMode);
     }
   }
 
@@ -84,7 +84,7 @@ public final class OpenSSLSocketFactory extends SSLSocketFactory {
    * @return instance of the SSLSocketFactory, instance must be initialized by
    * initializeDefaultFactory.
    */
-  public static OpenSSLSocketFactory getDefaultFactory() {
+  public static SSLSocketFactoryEx getDefaultFactory() {
     return instance;
   }
 
@@ -92,7 +92,7 @@ public final class OpenSSLSocketFactory extends SSLSocketFactory {
     OpenSSLProvider.register();
   }
 
-  private OpenSSLSocketFactory(SSLChannelMode preferredChannelMode)
+  private SSLSocketFactoryEx(SSLChannelMode preferredChannelMode)
       throws IOException {
     try {
       initializeSSLContext(preferredChannelMode);
@@ -118,35 +118,33 @@ public final class OpenSSLSocketFactory extends SSLSocketFactory {
   private void initializeSSLContext(SSLChannelMode preferredChannelMode)
       throws NoSuchAlgorithmException, KeyManagementException {
     switch (preferredChannelMode) {
-    case Default:
-      try {
-        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
-                SSL.class.getName());
-        logger.setLevel(Level.WARNING);
+      case Default:
+        try {
+          java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SSL.class.getName());
+          logger.setLevel(Level.WARNING);
+          ctx = SSLContext.getInstance("openssl.TLS");
+          ctx.init(null, null, null);
+          // Strong reference needs to be kept to logger until initialization of SSLContext finished (see HADOOP-16174):
+          logger.setLevel(Level.INFO);
+          channelMode = SSLChannelMode.OpenSSL;
+        } catch (NoSuchAlgorithmException e) {
+          LOG.warn("Failed to load OpenSSL. Falling back to the JSSE default.");
+          ctx = SSLContext.getDefault();
+          channelMode = SSLChannelMode.Default_JSSE;
+        }
+        break;
+      case OpenSSL:
         ctx = SSLContext.getInstance("openssl.TLS");
         ctx.init(null, null, null);
-        // Strong reference needs to be kept to logger until initialization of
-        // SSLContext finished (see HADOOP-16174):
-        logger.setLevel(Level.INFO);
         channelMode = SSLChannelMode.OpenSSL;
-      } catch (NoSuchAlgorithmException e) {
-        LOG.warn("Failed to load OpenSSL. Falling back to the JSSE default.");
+        break;
+      case Default_JSSE:
         ctx = SSLContext.getDefault();
         channelMode = SSLChannelMode.Default_JSSE;
-      }
-      break;
-    case OpenSSL:
-      ctx = SSLContext.getInstance("openssl.TLS");
-      ctx.init(null, null, null);
-      channelMode = SSLChannelMode.OpenSSL;
-      break;
-    case Default_JSSE:
-      ctx = SSLContext.getDefault();
-      channelMode = SSLChannelMode.Default_JSSE;
-      break;
-    default:
-      throw new AssertionError("Unknown channel mode: "
-          + preferredChannelMode);
+        break;
+      default:
+        throw new AssertionError("Unknown channel mode: "
+            + preferredChannelMode);
     }
   }
 
