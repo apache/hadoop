@@ -27,6 +27,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Assume;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.junit.Before;
@@ -313,40 +315,29 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       guardedFs.setTtlTimeProvider(testTimeProvider);
 
       // CREATE GUARDED
-      writeTextFile(guardedFs, testFilePath, originalText, true);
-      // wait until the file is created
-      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
-      assertNotNull("Create file status should not be null", origStatus);
+      createAndAwaitFs(guardedFs, testFilePath, originalText);
 
       // DELETE GUARDED
-      guardedFs.delete(testFilePath, true);
-
-
-      final PathMetadata metadata =
-          guardedFs.getMetadataStore().get(testFilePath);
-      assertNotNull("Created file metadata should not be null in ms",
-          metadata);
-      assertEquals("Created file metadata should equal with mocked now",
-          now.get(), metadata.getLastUpdated());
+      deleteGuardedTombstoned(guardedFs, testFilePath, now);
 
       // CREATE RAW
-      writeTextFile(rawFS, testFilePath, newText, true);
-      final FileStatus newStatus = awaitFileStatus(rawFS, testFilePath);
-      assertNotNull("Newly created file status should not be null.",
-          newStatus);
+      createAndAwaitFs(rawFS, testFilePath, newText);
+
+      // CHECK LISTING - THE FILE SHOULD NOT BE THERE, EVEN IF IT'S CREATED RAW
+      checkListingDoesNotContainPath(guardedFs, testFilePath);
 
       // CHANGE TTL SO ENTRY (& TOMBSTONE METADATA) WILL EXPIRE
       long willExpire = now.get() + metadataTtl.get() + 1L;
       now.set(willExpire);
       LOG.info("willExpire: {}, ttlNow: {}; ttlTTL: {}", willExpire,
           testTimeProvider.getNow(), testTimeProvider.getMetadataTtl());
-      // this call should not fail after the implementation of metadata expiry
-      // the guardedFS will detect that the metadata expired, so it will read
-      // from S3
 
       // READ GUARDED
       String newRead = readBytesToString(guardedFs, testFilePath,
           newText.length());
+
+      // CHECK LISTING - THE FILE SHOULD BE THERE, TOMBSTONE EXPIRED
+      checkListingContainsPath(guardedFs, testFilePath);
 
       // we can assert that the originalText is the new one, which created raw
       LOG.info("Old: {}, New: {}, Read: {}", originalText, newText, newRead);
@@ -356,6 +347,78 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       guardedFs.delete(testFilePath, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
     }
+  }
+
+  private void createAndAwaitFs(S3AFileSystem fs, Path testFilePath,
+      String text) throws Exception {
+    writeTextFile(fs, testFilePath, text, true);
+    final FileStatus newStatus = awaitFileStatus(fs, testFilePath);
+    assertNotNull("Newly created file status should not be null.", newStatus);
+  }
+
+  private void deleteGuardedTombstoned(S3AFileSystem guardedFs,
+      Path testFilePath, AtomicLong now) throws Exception {
+    guardedFs.delete(testFilePath, true);
+
+    final PathMetadata metadata =
+        guardedFs.getMetadataStore().get(testFilePath);
+    assertNotNull("Created file metadata should not be null in ms",
+        metadata);
+    assertEquals("Created file metadata last_updated should equal with "
+            + "mocked now", now.get(), metadata.getLastUpdated());
+
+    intercept(FileNotFoundException.class, () -> {
+      guardedFs.getFileStatus(testFilePath);
+      fail("This file should throw FNFE when reading through "
+              + "the guarded fs, and the metadatastore tombstoned the file.");
+    });
+  }
+
+  private void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertNotEquals("The tombstone has not been expired, so must not be"
+          + " listed.", filePath, lfs.getPath());
+    }
+    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      assertNotEquals("The tombstone has not been expired, so must not be"
+          + " listed.", filePath, fileStatus.getPath());
+    }
+    LOG.info("{}; file omitted from listStatus as expected.", filePath);
+  }
+
+  private void checkListingContainsPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+
+    boolean lfsHit = false;
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      if (lfs.getPath().equals(filePath)) {
+        lfsHit = true;
+        LOG.info("{}; file found in listFiles as expected.", filePath);
+        break;
+      }
+    }
+    assertTrue("The file should be listed in fs.listFiles: ", lfsHit);
+
+    boolean lsHit = false;
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      if (fileStatus.getPath().equals(filePath)) {
+        lsHit = true;
+        LOG.info("{}; file found in listStatus as expected.", filePath);
+        break;
+      }
+    }
+    assertTrue("The file should be listed in fs.listStatus: ", lsHit);
   }
 
   /**
