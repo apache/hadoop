@@ -155,7 +155,8 @@ public class AppAttemptBlock extends HtmlBlock {
 
     // Container Table
     TBODY<TABLE<Hamlet>> tbody =
-        html.table("#containers").thead().tr().th(".id", "Container ID")
+        html.table("#containers").$style("width:100%")
+          .thead().tr().th(".id", "Container ID")
           .th(".node", "Node").th(".exitstatus", "Container Exit Status")
           .th(".logs", "Logs").__().__().tbody();
 
