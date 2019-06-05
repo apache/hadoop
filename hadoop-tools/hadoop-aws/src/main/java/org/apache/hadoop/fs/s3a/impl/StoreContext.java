@@ -316,4 +316,13 @@ public class StoreContext {
     return tempFileFactory.apply(prefix, size);
   }
 
+  /**
+   * Get the location of the bucket.
+   * @return the bucket location.
+   * @throws IOException failure.
+   */
+  public String getBucketLocation() throws IOException {
+    return getBucketLocation.apply();
+  }
+
 }

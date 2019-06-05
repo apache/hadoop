@@ -229,6 +229,8 @@ public class ITestDynamoDBMetadataStoreScale
     try {
       describe("Running %d iterations of batched put, size %d", iterations,
           BATCH_SIZE);
+      Path base = path(getMethodName());
+      final String pathKey = base.toUri().getPath();
 
       ThrottleTracker result = execute("prune",
           1,
@@ -237,7 +239,8 @@ public class ITestDynamoDBMetadataStoreScale
             ThrottleTracker tracker = new ThrottleTracker(ddbms);
             long pruneItems = 0;
             for (long i = 0; i < iterations; i++) {
-              Path longPath = pathOfDepth(BATCH_SIZE, String.valueOf(i));
+              Path longPath = pathOfDepth(BATCH_SIZE,
+                  pathKey, String.valueOf(i));
               S3AFileStatus status = basicFileStatus(longPath, 0, false,
                   12345);
               PathMetadata pm = new PathMetadata(status);
@@ -251,7 +254,7 @@ public class ITestDynamoDBMetadataStoreScale
 
               if (pruneItems == BATCH_SIZE) {
                 describe("pruning files");
-                ddbms.prune(Long.MAX_VALUE /* all files */);
+                ddbms.prune(Long.MAX_VALUE, pathKey);
                 pruneItems = 0;
               }
               if (tracker.probe()) {
@@ -365,23 +368,28 @@ public class ITestDynamoDBMetadataStoreScale
     Path base = new Path("s3a://example.org/test_080_fullPathsToPut");
     Path child = new Path(base, "child");
     List<PathMetadata> pms = new ArrayList<>();
-    try(BulkOperationState bulkUpdate
-            = ddbms.initiateBulkWrite(child)) {
-      ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
-      ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
-      ddbms.getInvoker().retry("set up directory tree",
-          base.toString(),
-          true,
-          () -> ddbms.put(pms, bulkUpdate));
-    }
-    try(BulkOperationState bulkUpdate
-            = ddbms.initiateBulkWrite(child)) {
-      DDBPathMetadata dirData = ddbms.get(child, true);
-      execute("put",
-          OPERATIONS_PER_THREAD,
-          expectThrottling(),
-          () -> ddbms.fullPathsToPut(dirData, bulkUpdate)
-      );
+    try {
+      try (BulkOperationState bulkUpdate
+              = ddbms.initiateBulkWrite(child)) {
+        ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
+        ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
+        ddbms.getInvoker().retry("set up directory tree",
+            base.toString(),
+            true,
+            () -> ddbms.put(pms, bulkUpdate));
+      }
+      try (BulkOperationState bulkUpdate
+              = ddbms.initiateBulkWrite(child)) {
+        DDBPathMetadata dirData = ddbms.get(child, true);
+        execute("put",
+            OPERATIONS_PER_THREAD,
+            expectThrottling(),
+            () -> ddbms.fullPathsToPut(dirData, bulkUpdate)
+        );
+      }
+    } finally {
+      ddbms.forgetMetadata(child);
+      ddbms.forgetMetadata(base);
     }
   }
 
@@ -533,22 +541,21 @@ public class ITestDynamoDBMetadataStoreScale
    * @param ms store
    * @param pm path to clean up
    */
-  private void cleanupMetadata(MetadataStore ms, PathMetadata pm) {
+  private void cleanupMetadata(DynamoDBMetadataStore ms, PathMetadata pm) {
     Path path = pm.getFileStatus().getPath();
     try {
-      ddbms.getInvoker().retry("clean up", path.toString(), true,
-          () -> ms.forgetMetadata(path));
+      ITestDynamoDBMetadataStore.deleteMetadataUnderPath(ms, path, true);
     } catch (IOException ioe) {
       // Ignore.
       LOG.info("Ignoring error while cleaning up {} in database", path, ioe);
     }
   }
 
-  private Path pathOfDepth(long n, @Nullable String fileSuffix) {
+  private Path pathOfDepth(long n,
+      String name, @Nullable String fileSuffix) {
     StringBuilder sb = new StringBuilder();
     for (long i = 0; i < n; i++) {
-      sb.append(i == 0 ? "/" + this.getClass().getSimpleName() : "lvl");
-      sb.append(i);
+      sb.append(i == 0 ? "/" + name : String.format("level-%03d", i));
       if (i == n - 1 && fileSuffix != null) {
         sb.append(fileSuffix);
       }

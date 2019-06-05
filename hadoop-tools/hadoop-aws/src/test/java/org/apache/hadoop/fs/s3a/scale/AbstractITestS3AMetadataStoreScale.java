@@ -111,8 +111,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     long count = 1; // Some value in case we throw an exception below
     try (MetadataStore ms = createMetadataStore()) {
 
-      try (BulkOperationState bulkUpdate
-              = ms.initiateBulkWrite(null)) {
+      try {
         // Setup
         count = populateMetadataStore(origMetas, ms);
 
@@ -131,13 +130,15 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate, bulkUpdate);
+          ms.move(toDelete, toCreate, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
       } finally {
         // Cleanup
         clearMetadataStore(ms, count);
+        ms.move(origPaths, null, null);
+        ms.move(movedPaths, null, null);
       }
     }
   }

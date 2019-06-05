@@ -264,12 +264,13 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       String...args) throws Exception {
     Path keepParent = path("prune-cli-keep");
     StopWatch timer = new StopWatch();
+    final S3AFileSystem fs = getFileSystem();
     try {
       S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
       cmd.setMetadataStore(ms);
 
-      getFileSystem().mkdirs(parent);
-      getFileSystem().mkdirs(keepParent);
+      fs.mkdirs(parent);
+      fs.mkdirs(keepParent);
       createFile(new Path(parent, "stale"), true, true);
       createFile(new Path(keepParent, "stale-to-keep"), true, true);
 
@@ -291,8 +292,10 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       assertMetastoreListingCount(keepParent,
           "This child should have been kept (prefix restriction).", 1);
     } finally {
-      getFileSystem().delete(parent, true);
-      ms.prune(Long.MAX_VALUE);
+      fs.delete(parent, true);
+      fs.delete(keepParent, true);
+      ms.prune(Long.MAX_VALUE, fs.pathToKey(parent));
+      ms.prune(Long.MAX_VALUE, fs.pathToKey(keepParent));
     }
   }
 

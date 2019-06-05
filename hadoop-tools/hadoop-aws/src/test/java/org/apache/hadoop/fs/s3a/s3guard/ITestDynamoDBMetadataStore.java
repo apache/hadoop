@@ -263,25 +263,48 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private void deleteAllMetadata() throws IOException {
     // The following is a way to be sure the table will be cleared and there
     // will be no leftovers after the test.
-    ThrottleTracker throttleTracker = new ThrottleTracker(ddbmsStatic);
-    final Path root = strToPath("/");
+    deleteMetadataUnderPath(ddbmsStatic, strToPath("/"), true);
+  }
+
+  /**
+   * Delete all metadata under a path.
+   * Attempt to use prune first as it scales slightly better.
+   * @param ms store
+   * @param path path to prune under
+   * @param suppressErrors should errors be suppressed?
+   * @throws IOException if there is a failure and suppressErrors == false
+   */
+  public static void deleteMetadataUnderPath(final DynamoDBMetadataStore ms,
+      final Path path, final boolean suppressErrors) throws IOException {
+    ThrottleTracker throttleTracker = new ThrottleTracker(ms);
     try (DurationInfo ignored = new DurationInfo(LOG, true, "prune")) {
-      ddbmsStatic.prune(System.currentTimeMillis(),
-          PathMetadataDynamoDBTranslation.pathToParentKey(root));
+      ms.prune(System.currentTimeMillis(),
+          PathMetadataDynamoDBTranslation.pathToParentKey(path));
       LOG.info("Throttle statistics: {}", throttleTracker);
+    } catch (IOException ioe) {
+      // prune failed. warn and then fall back to forget.
+      LOG.warn("Failed to prune {}", path, ioe);
+      if (!suppressErrors) {
+        throw ioe;
+      }
     }
     // and after the pruning, make sure all other metadata is gone
     int forgotten = 0;
     try (DurationInfo ignored = new DurationInfo(LOG, true, "forget")) {
-      PathMetadata meta = ddbmsStatic.get(root);
+      PathMetadata meta = ms.get(path);
       if (meta != null) {
-        for (DescendantsIterator desc = new DescendantsIterator(ddbmsStatic,
+        for (DescendantsIterator desc = new DescendantsIterator(ms,
             meta);
             desc.hasNext(); ) {
           forgotten++;
-          ddbmsStatic.forgetMetadata(desc.next().getPath());
+          ms.forgetMetadata(desc.next().getPath());
         }
         LOG.info("Forgot {} entries", forgotten);
+      }
+    } catch (IOException ioe) {
+      LOG.warn("Failed to forget entries under {}", path, ioe);
+      if (!suppressErrors) {
+        throw ioe;
       }
     }
     LOG.info("Throttle statistics: {}", throttleTracker);
@@ -491,7 +514,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           numNewMetas,
           getDynamoMetadataStore());
     }
-    deleteAllMetadata();
+    // The following is a way to be sure the table will be cleared and there
+    // will be no leftovers after the test.
+    deleteMetadataUnderPath(ddbmsStatic, strToPath("/"), false);
   }
 
   /**

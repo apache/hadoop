@@ -818,7 +818,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       ancestorsToAdd.add(entry);
       Path parent = path.getParent();
       while (!parent.isRoot()) {
-        if (ancestorState.findDirectory(parent)) {
+        if (ancestorState.findEntry(parent, true)) {
           break;
         }
         LOG.debug("auto-create ancestor path {} for child path {}",
@@ -1180,7 +1180,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     Path path = meta.getFileStatus().getPath().getParent();
     while (path != null && !path.isRoot()) {
       synchronized (ancestorState) {
-        if (ancestorState.findDirectory(path)) {
+        if (ancestorState.findEntry(path, true)) {
           break;
         }
       }
@@ -1336,6 +1336,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void prune(long modTime, String keyPrefix) throws IOException {
+    LOG.debug("Prune files under {} with oldes time {}", keyPrefix, modTime);
     int itemCount = 0;
     try {
       Collection<Path> deletionBatch =
@@ -2187,41 +2188,47 @@ public class DynamoDBMetadataStore implements MetadataStore,
      * @param p path to check
      * @return true if the state has an entry
      */
-    public boolean contains(Path p) {
+    boolean contains(Path p) {
       return ancestry.containsKey(p);
     }
 
-    public DDBPathMetadata put(Path p, DDBPathMetadata md) {
+    DDBPathMetadata put(Path p, DDBPathMetadata md) {
       return ancestry.put(p, md);
     }
 
-    public DDBPathMetadata put(DDBPathMetadata md) {
+    DDBPathMetadata put(DDBPathMetadata md) {
       return ancestry.put(md.getFileStatus().getPath(), md);
     }
 
-    public DDBPathMetadata get(Path p) {
+    DDBPathMetadata get(Path p) {
       return ancestry.get(p);
     }
 
     /**
-     * Find a directory entry, raising an exception if there is a file
-     * at the path.
+     * Find an entry in the ancestor state, warning and optionally
+     * raising an exception if there is a file at the path.
      * @param path path to look up
+     * @param failOnFile fail if a file was found.
      * @return true iff a directory was found in the ancestor state.
      * @throws PathIOException if there was a file at the path.
      */
-    public boolean findDirectory(Path path) throws PathIOException {
+    boolean findEntry(
+        final Path path,
+        final boolean failOnFile) throws PathIOException {
       final DDBPathMetadata ancestor = get(path);
       if (ancestor != null) {
         // there's an entry in the ancestor state
         if (!ancestor.getFileStatus().isDirectory()) {
           // but: its a file, which means this update is now inconsistent.
-          throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
-        } else {
-          // the ancestor is a directory, so break out the ancestor creation
-          // loop.
-          return true;
+          final String message = E_INCONSISTENT_UPDATE + " entry is " + ancestor
+              .getFileStatus();
+          LOG.error(message);
+          if (failOnFile) {
+            // errors trigger failure
+            throw new PathIOException(path.toString(), message);
+          }
         }
+        return true;
       } else {
         return false;
       }
