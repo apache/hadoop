@@ -237,6 +237,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       long sizeRequired) throws SCMException {
     int ancestorGen = RACK_LEVEL;
     int maxRetry = MAX_RETRY;
+    List<Node> excludedNodesForCapacity = null;
     while(true) {
       Node node = networkTopology.chooseRandom(NetConstants.ROOT, null,
           excludedNodes, affinityNode, ancestorGen);
@@ -265,6 +266,9 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {
         LOG.debug("Datanode {} is chosen. Required size is {}",
             node.toString(), sizeRequired);
+        if (excludedNodes != null && excludedNodesForCapacity != null) {
+          excludedNodes.removeAll(excludedNodesForCapacity);
+        }
         return node;
       } else {
         maxRetry--;
@@ -274,6 +278,15 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
               + " sizeRequired: " + sizeRequired;
           LOG.info(errMsg);
           throw new SCMException(errMsg, null);
+        }
+        if (excludedNodesForCapacity == null) {
+          excludedNodesForCapacity = new ArrayList<>();
+        }
+        excludedNodesForCapacity.add(node);
+        if (excludedNodes == null) {
+          excludedNodes = excludedNodesForCapacity;
+        } else {
+          excludedNodes.add(node);
         }
       }
     }
