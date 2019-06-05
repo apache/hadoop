@@ -135,7 +135,7 @@ public abstract class Handler {
    * @param container container to update
    * @throws IOException in case of exception
    */
-  public abstract void markContainerUhealthy(Container container)
+  public abstract void markContainerUnhealthy(Container container)
       throws IOException;
 
   /**
