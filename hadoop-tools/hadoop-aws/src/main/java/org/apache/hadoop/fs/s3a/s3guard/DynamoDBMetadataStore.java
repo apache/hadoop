@@ -1472,13 +1472,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * Provision the table with given read and write capacity units.
    * Call will fail if the table is busy, or the new values match the current
    * ones.
-   * @param readCapacity read units
-   * @param writeCapacity write units
+   * <p>
+   * Until the AWS SDK lets us switch a table to on-demand, an attempt to
+   * set the I/O capacity to zero will fail.
+   * @param readCapacity read units: must be greater than zero
+   * @param writeCapacity write units: must be greater than zero
    * @throws IOException on a failure
    */
   @Retries.RetryTranslated
   void provisionTable(Long readCapacity, Long writeCapacity)
       throws IOException {
+
+    if (readCapacity == 0 || writeCapacity == 0) {
+      // table is pay on demand
+      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
+    }
     final ProvisionedThroughput toProvision = new ProvisionedThroughput()
         .withReadCapacityUnits(readCapacity)
         .withWriteCapacityUnits(writeCapacity);

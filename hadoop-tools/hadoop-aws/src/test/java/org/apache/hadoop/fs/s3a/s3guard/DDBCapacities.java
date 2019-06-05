@@ -21,9 +21,11 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.util.Map;
 import java.util.Objects;
 
+import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import org.junit.Assert;
 
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.READ_CAPACITY;
+import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.WRITE_CAPACITY;
 
 /**
  * Tuple of read and write capacity of a DDB table.
@@ -99,7 +101,19 @@ class DDBCapacities {
         read);
     return new DDBCapacities(
         Long.parseLong(read),
-        Long.parseLong(diagnostics.get(DynamoDBMetadataStore.WRITE_CAPACITY)));
+        Long.parseLong(diagnostics.get(WRITE_CAPACITY)));
+  }
+
+  /**
+   * Given a throughput information from table.describe(), build
+   * a DDBCapacities object.
+   * @param throughput throughput description.
+   * @return the capacities
+   */
+  public static DDBCapacities extractCapacities(
+      ProvisionedThroughputDescription throughput) {
+    return new DDBCapacities(throughput.getReadCapacityUnits(),
+        throughput.getWriteCapacityUnits());
   }
 
 }

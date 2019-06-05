@@ -33,7 +33,6 @@ import com.amazonaws.services.dynamodbv2.document.Item;
 import com.amazonaws.services.dynamodbv2.document.PrimaryKey;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
-import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.TableDescription;
 
@@ -86,7 +85,7 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * Important: Any new test which creates a table must do the following
  * <ol>
  *   <li>Enable on-demand pricing.</li>
- *   <li>Always destroy the table, even if an assertion fails</li>
+ *   <li>Always destroy the table, even if an assertion fails.</li>
  * </ol>
  * This is needed to avoid "leaking" DDB tables and running up bills.
  */
@@ -284,9 +283,22 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * even if a test bucket isn't cleaned up, the cost is $0.
    * @param conf configuration to patch.
    */
-  protected static void enableOnDemand(Configuration conf) {
+  public static void enableOnDemand(Configuration conf) {
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 0);
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 0);
+  }
+
+  /**
+   * Get the configuration needed to create a table; extracts
+   * it from the filesystem then always patches it to be on demand.
+   * Why the patch? It means even if a cached FS has brought in
+   * some provisioned values, they get reset.
+   * @return a new configuration
+   */
+  private Configuration getTableCreationConfig() {
+    Configuration conf = new Configuration(getFileSystem().getConf());
+    enableOnDemand(conf);
+    return conf;
   }
 
   /**
@@ -298,7 +310,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final S3AFileSystem s3afs = this.fileSystem;
     final String tableName =
         getTestTableName("testInitialize");
-    final Configuration conf = s3afs.getConf();
+    Configuration conf = getFileSystem().getConf();
+    enableOnDemand(conf);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
@@ -326,7 +339,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testInitializeWithConfiguration() throws IOException {
     final String tableName =
         getTestTableName("testInitializeWithConfiguration");
-    final Configuration conf = getFileSystem().getConf();
+    final Configuration conf = getTableCreationConfig();
     conf.unset(S3GUARD_DDB_TABLE_NAME_KEY);
     String savedRegion = conf.get(S3GUARD_DDB_REGION_KEY,
         getFileSystem().getBucketLocation());
@@ -466,7 +479,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testTableVersionRequired() throws Exception {
     String tableName = getTestTableName("testTableVersionRequired");
-    Configuration conf = getFileSystem().getConf();
+    Configuration conf = getTableCreationConfig();
     int maxRetries = conf.getInt(S3GUARD_DDB_MAX_RETRIES,
         S3GUARD_DDB_MAX_RETRIES_DEFAULT);
     conf.setInt(S3GUARD_DDB_MAX_RETRIES, 3);
@@ -496,7 +509,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testTableVersionMismatch() throws Exception {
     String tableName = getTestTableName("testTableVersionMismatch");
-    Configuration conf = getFileSystem().getConf();
+    Configuration conf = getTableCreationConfig();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
 
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
@@ -529,6 +542,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         getTestTableName("testFailNonexistentTable");
     final S3AFileSystem s3afs = getFileSystem();
     final Configuration conf = s3afs.getConf();
+    enableOnDemand(conf);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     String bucket = fsUri.getHost();
     clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_CREATE_KEY);
@@ -651,7 +665,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testProvisionTable() throws Exception {
     final String tableName
         = getTestTableName("testProvisionTable-" + UUID.randomUUID());
-    Configuration conf = getFileSystem().getConf();
+    final Configuration conf = getTableCreationConfig();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 2);
     conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 2);
@@ -659,26 +673,25 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     try {
       ddbms.initialize(conf);
       DynamoDB dynamoDB = ddbms.getDynamoDB();
-      final ProvisionedThroughputDescription oldProvision =
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput();
-      long desiredReadCapacity = oldProvision.getReadCapacityUnits() - 1;
-      long desiredWriteCapacity = oldProvision.getWriteCapacityUnits() - 1;
+      final DDBCapacities oldProvision = DDBCapacities.extractCapacities(
+          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
+      Assume.assumeFalse("Table is on-demand", oldProvision.isOnDemandTable());
+      long desiredReadCapacity = oldProvision.getRead() - 1;
+      long desiredWriteCapacity = oldProvision.getWrite() - 1;
       ddbms.provisionTable(desiredReadCapacity,
           desiredWriteCapacity);
       ddbms.initTable();
       // we have to wait until the provisioning settings are applied,
       // so until the table is ACTIVE again and not in UPDATING
       ddbms.getTable().waitForActive();
-      final ProvisionedThroughputDescription newProvision =
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput();
-      LOG.info("Old provision = {}, new provision = {}", oldProvision,
-          newProvision);
+      final DDBCapacities newProvision = DDBCapacities.extractCapacities(
+          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
       assertEquals("Check newly provisioned table read capacity units.",
           desiredReadCapacity,
-          newProvision.getReadCapacityUnits().longValue());
+          newProvision.getRead());
       assertEquals("Check newly provisioned table write capacity units.",
           desiredWriteCapacity,
-          newProvision.getWriteCapacityUnits().longValue());
+          newProvision.getWrite());
     } finally {
       ddbms.destroy();
       ddbms.close();
@@ -690,8 +703,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
     final S3AFileSystem s3afs = getFileSystem();
-    final Configuration conf = s3afs.getConf();
+    final Configuration conf = getTableCreationConfig();
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
+    enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(s3afs);
@@ -715,8 +729,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testTableTagging() throws IOException {
-    final Configuration conf = getFileSystem().getConf();
-
+    final Configuration conf = getTableCreationConfig();
     // clear all table tagging config before this test
     conf.getPropsWithPrefix(S3GUARD_DDB_TABLE_TAG).keySet().forEach(
         propKey -> conf.unset(S3GUARD_DDB_TABLE_TAG + propKey)
