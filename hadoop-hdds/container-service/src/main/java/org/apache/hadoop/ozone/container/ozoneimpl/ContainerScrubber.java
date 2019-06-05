@@ -134,13 +134,9 @@ public class ContainerScrubber implements Runnable {
     Iterator<Container> containerIt = controller.getContainers();
     long count = 0;
 
-    while (containerIt.hasNext()) {
+    while (containerIt.hasNext() && !halt) {
       TimeStamp startTime = new TimeStamp(System.currentTimeMillis());
       Container container = containerIt.next();
-
-      if (this.halt) {
-        break; // stop if requested
-      }
 
       try {
         container.check();
