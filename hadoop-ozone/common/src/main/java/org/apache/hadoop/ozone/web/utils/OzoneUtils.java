@@ -258,9 +258,11 @@ public final class OzoneUtils {
 
     // User ACL.
     listOfAcls.add(new OzoneAcl(USER, userName, userRights));
-    // Group ACLs of the User.
-    userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(GROUP, group, groupRights)));
+    if(userGroups != null) {
+      // Group ACLs of the User.
+      userGroups.stream().forEach((group) -> listOfAcls.add(
+          new OzoneAcl(GROUP, group, groupRights)));
+    }
     return listOfAcls;
   }
 }

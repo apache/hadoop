@@ -456,7 +456,8 @@ public final class DistributedStorageHandler implements StorageHandler {
         .setType(xceiverClientManager.getType())
         .setFactor(xceiverClientManager.getFactor())
         .setAcls(OzoneUtils.getAclList(args.getUserName(),
-            Arrays.asList(args.getGroups()), ACLType.ALL, ACLType.ALL))
+            args.getGroups() != null ? Arrays.asList(args.getGroups()) : null,
+            ACLType.ALL, ACLType.ALL))
         .build();
     // contact OM to allocate a block for key.
     OpenKeySession openKey = ozoneManagerClient.openKey(keyArgs);
