@@ -114,8 +114,6 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
 
   @Override
   public void shutdown() {
-    // Shutdown the volumes
-    volumeSet.shutdown();
   }
 
   /**
