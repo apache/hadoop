@@ -884,20 +884,20 @@ public class KeyValueHandler extends Handler {
   @Override
   public void markContainerForClose(Container container)
       throws IOException {
-    State currentState = container.getContainerState();
     // Move the container to CLOSING state only if it's OPEN
-    if (currentState == State.OPEN) {
+    if (container.getContainerState() == State.OPEN) {
       container.markContainerForClose();
       sendICR(container);
     }
   }
 
   @Override
-  public void markContainerUhealthy(Container container)
+  public void markContainerUnhealthy(Container container)
       throws IOException {
-    // this will mark the container unhealthy and a close container action will
-    // be sent from the dispatcher ton SCM to close down this container.
-    container.markContainerUnhealthy();
+    if (container.getContainerState() != State.UNHEALTHY) {
+      container.markContainerUnhealthy();
+      sendICR(container);
+    }
   }
 
   @Override

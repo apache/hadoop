@@ -302,7 +302,7 @@ public class HddsDispatcher implements ContainerDispatcher, Auditor {
             containerState == State.OPEN || containerState == State.CLOSING);
         // mark and persist the container state to be unhealthy
         try {
-          handler.markContainerUhealthy(container);
+          handler.markContainerUnhealthy(container);
         } catch (IOException ioe) {
           // just log the error here in case marking the container fails,
           // Return the actual failure response to the client

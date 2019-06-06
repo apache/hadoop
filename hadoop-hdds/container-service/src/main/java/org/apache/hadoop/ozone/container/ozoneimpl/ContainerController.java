@@ -133,11 +133,11 @@ public class ContainerController {
    * @param container Container
    * @return handler of the container
    */
-  Handler getHandler(final Container container) {
+  private Handler getHandler(final Container container) {
     return handlers.get(container.getContainerType());
   }
 
-  Iterator<Container> getContainerSetIterator() {
+  public Iterator<Container> getContainers() {
     return containerSet.getContainerIterator();
   }
 }

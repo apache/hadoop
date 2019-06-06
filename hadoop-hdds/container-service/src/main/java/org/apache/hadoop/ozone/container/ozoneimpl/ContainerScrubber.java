@@ -22,7 +22,6 @@ import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,11 @@ public class ContainerScrubber implements Runnable {
     LOG.info("Background ContainerScrubber starting up");
     while (true) {
 
-      scrub();
+      try {
+        scrub();
+      } catch (StorageContainerException e) {
+        LOG.error("Scrubber encountered StorageContainerException.");
+      }
 
       if (this.halt) {
         break; // stop and exit if requested
@@ -126,25 +129,20 @@ public class ContainerScrubber implements Runnable {
     }
   }
 
-  private void scrub() {
-
-    Iterator<Container> containerIt = controller.getContainerSetIterator();
+  private void scrub() throws StorageContainerException {
+    Iterator<Container> containerIt = controller.getContainers();
     long count = 0;
 
-    while (containerIt.hasNext()) {
+    while (containerIt.hasNext() && !halt) {
       TimeStamp startTime = new TimeStamp(System.currentTimeMillis());
       Container container = containerIt.next();
-      Handler containerHandler = controller.getHandler(container);
-
-      if (this.halt) {
-        break; // stop if requested
-      }
 
       try {
         container.check();
       } catch (StorageContainerException e) {
         LOG.error("Error unexpected exception {} for Container {}", e,
             container.getContainerData().getContainerID());
+        container.markContainerUnhealthy();
         // XXX Action required here
       }
       count++;
