@@ -1188,6 +1188,9 @@ public class LeafQueue extends AbstractCSQueue {
         application.updateNodeInfoForAMDiagnostics(node);
       } else if (assignment.getSkippedType()
           == CSAssignment.SkippedType.QUEUE_LIMIT) {
+        ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
+            getParent().getQueueName(), getQueueName(), ActivityState.SKIPPED,
+            ActivityDiagnosticConstant.QUEUE_SKIPPED_HEADROOM);
         return assignment;
       } else{
         // If we don't allocate anything, and it is not skipped by application,
