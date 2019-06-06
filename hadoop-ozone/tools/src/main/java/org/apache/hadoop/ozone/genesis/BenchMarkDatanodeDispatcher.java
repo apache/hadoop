@@ -87,6 +87,7 @@ public class BenchMarkDatanodeDispatcher {
   private List<Long> containers;
   private List<Long> keys;
   private List<String> chunks;
+  private VolumeSet volumeSet;
 
   @Setup(Level.Trial)
   public void initialize() throws IOException {
@@ -103,7 +104,7 @@ public class BenchMarkDatanodeDispatcher {
     conf.set("dfs.datanode.data.dir", baseDir + File.separator + "data");
 
     ContainerSet containerSet = new ContainerSet();
-    VolumeSet volumeSet = new VolumeSet(datanodeUuid, conf);
+    volumeSet = new VolumeSet(datanodeUuid, conf);
     StateContext context = new StateContext(
         conf, DatanodeStates.RUNNING, null);
     ContainerMetrics metrics = ContainerMetrics.create(conf);
@@ -161,7 +162,7 @@ public class BenchMarkDatanodeDispatcher {
 
   @TearDown(Level.Trial)
   public void cleanup() throws IOException {
-    dispatcher.shutdown();
+    volumeSet.shutdown();
     FileUtils.deleteDirectory(new File(baseDir));
   }
 
