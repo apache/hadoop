@@ -22,7 +22,6 @@ import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
-import org.apache.hadoop.ozone.container.common.interfaces.Handler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
