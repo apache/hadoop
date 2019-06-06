@@ -20,10 +20,12 @@ package org.apache.hadoop.ozone;
 
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Test;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.*;
@@ -200,6 +202,46 @@ public class TestOzoneAcls {
 
     LambdaTestUtils.intercept(IllegalArgumentException.class, "ACL right" +
             " is not", () -> OzoneAcl.parseAcl("world::rwdlncxncxdfsfgbny"));
+  }
+
+  @Test
+  public void testBitSetToListConversion() throws Exception {
+    OzoneAcl acl = OzoneAcl.parseAcl("user:bilbo:rw");
+
+    List<ACLType> rights = acl.getAclList();
+    assertTrue(rights.size() == 2);
+    assertTrue(rights.contains(READ));
+    assertTrue(rights.contains(WRITE));
+    assertFalse(rights.contains(CREATE));
+
+    acl = OzoneAcl.parseAcl("user:bilbo:a");
+
+    rights = acl.getAclList();
+    assertTrue(rights.size() == 1);
+    assertTrue(rights.contains(ALL));
+    assertFalse(rights.contains(WRITE));
+    assertFalse(rights.contains(CREATE));
+
+    acl = OzoneAcl.parseAcl("user:bilbo:cxy");
+    rights = acl.getAclList();
+    assertTrue(rights.size() == 3);
+    assertTrue(rights.contains(CREATE));
+    assertTrue(rights.contains(READ_ACL));
+    assertTrue(rights.contains(WRITE_ACL));
+    assertFalse(rights.contains(WRITE));
+    assertFalse(rights.contains(READ));
+
+    List<OzoneAcl> acls = OzoneAcl.parseAcls("user:bilbo:cxy,group:hadoop:a");
+    assertTrue(acls.size() == 2);
+    rights = acls.get(0).getAclList();
+    assertTrue(rights.size() == 3);
+    assertTrue(rights.contains(CREATE));
+    assertTrue(rights.contains(READ_ACL));
+    assertTrue(rights.contains(WRITE_ACL));
+    assertFalse(rights.contains(WRITE));
+    assertFalse(rights.contains(READ));
+    rights = acls.get(1).getAclList();
+    assertTrue(rights.contains(ALL));
   }
 
 }
