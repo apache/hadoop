@@ -19,6 +19,8 @@
 package org.apache.hadoop.hdds.scm;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
@@ -30,6 +32,7 @@ import org.apache.hadoop.util.Time;
 import org.apache.ratis.grpc.GrpcTlsConfig;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.GroupMismatchException;
+import org.apache.ratis.protocol.RaftException;
 import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.retry.RetryPolicy;
 import org.apache.ratis.thirdparty.com.google.protobuf
@@ -309,10 +312,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               Time.monotonicNowNanos() - requestTime);
         }).thenApply(reply -> {
           try {
-            // we need to handle RaftRetryFailure Exception
-            RaftRetryFailureException raftRetryFailureException =
-                reply.getRetryFailureException();
-            if (raftRetryFailureException != null) {
+            if (!reply.isSuccess()) {
               // in case of raft retry failure, the raft client is
               // not able to connect to the leader hence the pipeline
               // can not be used but this instance of RaftClient will close
@@ -324,7 +324,10 @@ public final class XceiverClientRatis extends XceiverClientSpi {
               // to SCM as in this case, it is the raft client which is not
               // able to connect to leader in the pipeline, though the
               // pipeline can still be functional.
-              throw new CompletionException(raftRetryFailureException);
+              RaftException exception = reply.getException();
+              Preconditions.checkNotNull(exception, "Raft reply failure but " +
+                  "no exception propagated.");
+              throw new CompletionException(exception);
             }
             ContainerCommandResponseProto response =
                 ContainerCommandResponseProto
