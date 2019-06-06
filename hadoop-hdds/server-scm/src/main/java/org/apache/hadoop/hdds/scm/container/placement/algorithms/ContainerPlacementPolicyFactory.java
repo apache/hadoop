@@ -30,9 +30,12 @@ import java.lang.reflect.Constructor;
  * A factory to create container placement instance based on configuration
  * property ozone.scm.container.placement.classname.
  */
-public class ContainerPlacementPolicyFactory {
+public final class ContainerPlacementPolicyFactory {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerPlacementPolicyFactory.class);
+
+  private ContainerPlacementPolicyFactory() {
+  }
 
   public static ContainerPlacementPolicy getPolicy(Configuration conf,
       final NodeManager nodeManager, NetworkTopology clusterMap,

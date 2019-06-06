@@ -53,7 +53,7 @@ public class TestContainerPlacementFactory {
   // datanodes array list
   private List<DatanodeDetails> datanodes = new ArrayList<>();
   // node storage capacity
-  private final long STORAGE_CAPACITY = 100L;
+  private final long storageCapacity = 100L;
   // configuration
   private Configuration conf;
   // node manager
@@ -84,13 +84,13 @@ public class TestContainerPlacementFactory {
     when(nodeManager.getNodes(NodeState.HEALTHY))
         .thenReturn(new ArrayList<>(datanodes));
     when(nodeManager.getNodeStat(anyObject()))
-        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 0L, 100L));
+        .thenReturn(new SCMNodeMetric(storageCapacity, 0L, 100L));
     when(nodeManager.getNodeStat(datanodes.get(2)))
-        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 90L, 10L));
+        .thenReturn(new SCMNodeMetric(storageCapacity, 90L, 10L));
     when(nodeManager.getNodeStat(datanodes.get(3)))
-        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 80L, 20L));
+        .thenReturn(new SCMNodeMetric(storageCapacity, 80L, 20L));
     when(nodeManager.getNodeStat(datanodes.get(4)))
-        .thenReturn(new SCMNodeMetric(STORAGE_CAPACITY, 70L, 30L));
+        .thenReturn(new SCMNodeMetric(storageCapacity, 70L, 30L));
   }
 
 
@@ -127,7 +127,8 @@ public class TestContainerPlacementFactory {
   public void testConstuctorNotFound() throws SCMException {
     // set a placement class which does't have the right constructor implemented
     conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        "org.apache.hadoop.hdds.scm.container.placement.algorithms.TestContainerPlacementFactory$DummyImpl");
+        "org.apache.hadoop.hdds.scm.container.placement.algorithms." +
+            "TestContainerPlacementFactory$DummyImpl");
     ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true);
   }
 

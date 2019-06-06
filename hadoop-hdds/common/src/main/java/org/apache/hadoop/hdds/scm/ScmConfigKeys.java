@@ -313,7 +313,8 @@ public final class ScmConfigKeys {
       "ozone.scm.container.placement.impl";
 
   public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
-      "org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware";
+      "org.apache.hadoop.hdds.scm.container.placement.algorithms." +
+          "SCMContainerPlacementRackAware";
 
   public static final String OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT =
       "ozone.scm.pipeline.owner.container.count";
