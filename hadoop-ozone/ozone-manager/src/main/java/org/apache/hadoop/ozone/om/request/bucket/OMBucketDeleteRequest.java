@@ -19,14 +19,16 @@
 package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.google.common.base.Optional;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
@@ -35,6 +37,8 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.response.bucket.OMBucketDeleteResponse;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .DeleteBucketResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -71,6 +75,14 @@ public class OMBucketDeleteRequest extends OMClientRequest {
         .setStatus(OzoneManagerProtocolProtos.Status.OK)
         .setCmdType(omRequest.getCmdType());
 
+
+    AuditLogger auditLogger = ozoneManager.getAuditLogger();
+    Map<String, String> auditMap = buildVolumeAuditMap(volumeName);
+    auditMap.put(OzoneConsts.BUCKET, bucketName);
+
+    OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
+
+
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -82,10 +94,13 @@ public class OMBucketDeleteRequest extends OMClientRequest {
       omMetrics.incNumBucketDeleteFails();
       LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
           volumeName, ex);
+      auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_BUCKET,
+          auditMap, ex, userInfo));
       return new OMBucketDeleteResponse(volumeName, bucketName,
           createErrorOMResponse(omResponse, ex));
     }
 
+    IOException exception = null;
     // acquire lock
     omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
@@ -113,20 +128,29 @@ public class OMBucketDeleteRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
-      // return response.
+    } catch (IOException ex) {
+      exception = ex;
+    } finally {
+      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_BUCKET,
+        auditMap, exception, userInfo));
+
+    // return response.
+    if (exception == null) {
+      LOG.debug("Deleted bucket:{} in volume:{}", bucketName, volumeName);
       omResponse.setDeleteBucketResponse(
           DeleteBucketResponse.newBuilder().build());
       return new OMBucketDeleteResponse(volumeName, bucketName,
           omResponse.build());
-
-    } catch (IOException ex) {
+    } else {
       omMetrics.incNumBucketDeleteFails();
       LOG.error("Delete bucket failed for bucket:{} in volume:{}", bucketName,
-          volumeName, ex);
+          volumeName, exception);
       return new OMBucketDeleteResponse(volumeName, bucketName,
-          createErrorOMResponse(omResponse, ex));
-    } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+          createErrorOMResponse(omResponse, exception));
     }
   }
 }

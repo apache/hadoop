@@ -2458,6 +2458,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return auditMap;
   }
 
+  public AuditLogger getAuditLogger() {
+    return AUDIT;
+  }
+
   @Override
   public AuditMessage buildAuditMessageForSuccess(AuditAction op,
       Map<String, String> auditMap) {
