@@ -631,7 +631,8 @@ public class TestOzoneShell {
     err.reset();
     args = new String[] {"volume", "list", url + "/", "--user",
         user2, "--length", "invalid-length"};
-    executeWithError(shell, args, "For input string: \"invalid-length\"");
+    executeWithError(shell, args, "Invalid value for option " +
+        "'--length': 'invalid-length' is not an int");
   }
 
   @Test
