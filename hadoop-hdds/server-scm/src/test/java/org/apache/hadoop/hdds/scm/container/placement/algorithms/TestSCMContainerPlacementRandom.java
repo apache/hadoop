@@ -59,7 +59,7 @@ public class TestSCMContainerPlacementRandom {
         .thenReturn(new SCMNodeMetric(100L, 90L, 10L));
 
     SCMContainerPlacementRandom scmContainerPlacementRandom =
-        new SCMContainerPlacementRandom(mockNodeManager, conf);
+        new SCMContainerPlacementRandom(mockNodeManager, conf, null, true);
 
     List<DatanodeDetails> existingNodes = new ArrayList<>();
     existingNodes.add(datanodes.get(0));
