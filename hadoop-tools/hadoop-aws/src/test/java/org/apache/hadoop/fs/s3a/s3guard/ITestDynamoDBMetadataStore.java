@@ -164,17 +164,19 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // We should assert that the table name is configured, so the test should
     // fail if it's not configured.
-    assertTrue("Test DynamoDB table name '"
-        + S3ATestConstants.S3GUARD_DDB_TEST_TABLE_NAME_KEY + "' should be set to run "
-        + "integration tests.", testDynamoDBTableName != null);
+    assertNotNull("Test DynamoDB table name '"
+        + S3ATestConstants.S3GUARD_DDB_TEST_TABLE_NAME_KEY + "'"
+        + " should be set to run integration tests.",
+        testDynamoDBTableName);
 
     // We should assert that the test table is not the same as the production
     // table, as the test table could be modified and destroyed multiple
     // times during the test.
-    assertTrue("Test DynamoDB table name: '"
-        + S3ATestConstants.S3GUARD_DDB_TEST_TABLE_NAME_KEY + "' and production table name: '"
-        + S3GUARD_DDB_TABLE_NAME_KEY + "' can not be the same.",
-        !conf.get(S3GUARD_DDB_TABLE_NAME_KEY).equals(testDynamoDBTableName));
+    assertNotEquals("Test DynamoDB table name: "
+            + "'" + S3ATestConstants.S3GUARD_DDB_TEST_TABLE_NAME_KEY + "'"
+            + " and production table name: "
+            + "'" + S3GUARD_DDB_TABLE_NAME_KEY + "' can not be the same.",
+        testDynamoDBTableName, conf.get(S3GUARD_DDB_TABLE_NAME_KEY));
 
     // We can use that table in the test if these assertions are valid
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, testDynamoDBTableName);
@@ -216,8 +218,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         // will be no leftovers after the test.
         PathMetadata meta = ddbmsStatic.get(strToPath("/"));
         if (meta != null){
-          for (DescendantsIterator desc = new DescendantsIterator(ddbmsStatic, meta);
-               desc.hasNext();) {
+          for (DescendantsIterator desc =
+              new DescendantsIterator(ddbmsStatic, meta);
+              desc.hasNext();) {
             ddbmsStatic.forgetMetadata(desc.next().getPath());
           }
         }
@@ -544,10 +547,10 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final Configuration conf = s3afs.getConf();
     enableOnDemand(conf);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    String bucket = fsUri.getHost();
-    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_CREATE_KEY);
-    clearBucketOption(conf, bucket, S3_METADATA_STORE_IMPL);
-    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_NAME_KEY);
+    String b = fsUri.getHost();
+    clearBucketOption(conf, b, S3GUARD_DDB_TABLE_CREATE_KEY);
+    clearBucketOption(conf, b, S3_METADATA_STORE_IMPL);
+    clearBucketOption(conf, b, S3GUARD_DDB_TABLE_NAME_KEY);
     conf.unset(S3GUARD_DDB_TABLE_CREATE_KEY);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
       ddbms.initialize(s3afs);
@@ -715,7 +718,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       ddbms.destroy();
       verifyTableNotExist(tableName, dynamoDB);
 
-      // delete table once more; the ResourceNotFoundException swallowed silently
+      // delete table once more; the ResourceNotFoundException swallowed
+      // silently
       ddbms.destroy();
       verifyTableNotExist(tableName, dynamoDB);
       intercept(IOException.class, "",

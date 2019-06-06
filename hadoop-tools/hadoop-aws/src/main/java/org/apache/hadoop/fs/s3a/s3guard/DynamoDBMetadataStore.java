@@ -1262,7 +1262,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
         if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
           long readCapacity = conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
               S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT);
-          long writeCapacity = conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
+          long writeCapacity = conf.getLong(
+              S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
               S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT);
           ProvisionedThroughput capacity;
           if (readCapacity > 0 && writeCapacity > 0) {
