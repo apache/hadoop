@@ -206,7 +206,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
    * create(tombstone file) must succeed irrespective of overwrite flag.
    */
   @Test
-  public void createOnTombstonedFileSucceeds() throws Exception {
+  public void testCreateOnTombstonedFileSucceeds() throws Exception {
     LOG.info("Authoritative mode: {}", authoritative);
     final S3AFileSystem fs = getFileSystem();
 
@@ -244,7 +244,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
    * must be valid. That is: the putAncestor code will correct everything
    */
   @Test
-  public void createParentHasTombstone() throws Exception {
+  public void testCreateParentHasTombstone() throws Exception {
     LOG.info("Authoritative mode: {}", authoritative);
     final S3AFileSystem fs = getFileSystem();
 

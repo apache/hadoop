@@ -550,6 +550,8 @@ public final class S3Guard {
       ITtlTimeProvider timeProvider)
       throws IOException {
     dirMeta.setLastUpdated(timeProvider.getNow());
+    dirMeta.getListing()
+        .forEach(pm -> pm.setLastUpdated(timeProvider.getNow()));
     ms.put(dirMeta);
   }
 
@@ -621,8 +623,6 @@ public final class S3Guard {
     }
 
     long ttl = timeProvider.getMetadataTtl();
-
-
 
     if (dlm != null && dlm.isAuthoritative()
         && dlm.isExpired(ttl, timeProvider.getNow())) {
