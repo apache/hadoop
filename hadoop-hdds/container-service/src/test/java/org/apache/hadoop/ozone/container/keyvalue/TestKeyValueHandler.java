@@ -229,14 +229,14 @@ public class TestKeyValueHandler {
   @Test
   public void testVolumeSetInKeyValueHandler() throws Exception{
     File path = GenericTestUtils.getRandomizedTestDir();
+    Configuration conf = new OzoneConfiguration();
+    conf.set(HDDS_DATANODE_DIR_KEY, path.getAbsolutePath());
+    VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
     try {
-      Configuration conf = new OzoneConfiguration();
-      conf.set(HDDS_DATANODE_DIR_KEY, path.getAbsolutePath());
       ContainerSet cset = new ContainerSet();
       int[] interval = new int[1];
       interval[0] = 2;
       ContainerMetrics metrics = new ContainerMetrics(interval);
-      VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
       DatanodeDetails datanodeDetails = Mockito.mock(DatanodeDetails.class);
       DatanodeStateMachine stateMachine = Mockito.mock(
           DatanodeStateMachine.class);
@@ -263,6 +263,7 @@ public class TestKeyValueHandler {
             ex);
       }
     } finally {
+      volumeSet.shutdown();
       FileUtil.fullyDelete(path);
     }
   }
