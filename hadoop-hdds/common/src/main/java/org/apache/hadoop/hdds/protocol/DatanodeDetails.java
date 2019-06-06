@@ -212,6 +212,8 @@ public class DatanodeDetails extends NodeImpl implements
     if (certSerialId != null) {
       builder.setCertSerialId(certSerialId);
     }
+    builder.setNetworkLocation(getNetworkLocation());
+
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()
           .setName(port.getName().toString())
