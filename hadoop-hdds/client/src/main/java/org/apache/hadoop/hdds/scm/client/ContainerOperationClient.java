@@ -305,7 +305,6 @@ public class ContainerOperationClient implements ScmClient {
     XceiverClientSpi client = null;
     try {
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
       ReadContainerResponseProto response =
           ContainerProtocolCalls.readContainer(client, containerID, null);
       if (LOG.isDebugEnabled()) {
@@ -390,7 +389,6 @@ public class ContainerOperationClient implements ScmClient {
        */
       // Actually close the container on Datanode
       client = xceiverClientManager.acquireClient(pipeline);
-      String traceID = UUID.randomUUID().toString();
 
       storageContainerLocationClient.notifyObjectStageChange(
           ObjectStageChangeRequestProto.Type.container,
