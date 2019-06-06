@@ -1334,6 +1334,7 @@ bin/hadoop fs -mv $BUCKET/file $BUCKET/file2
 # expect "No such file or directory"
 bin/hadoop fs -stat $BUCKET/file
 bin/hadoop fs -stat $BUCKET/file2
+bin/hadoop fs -mkdir $BUCKET/dir-no-trailing
 bin/hadoop fs -mv $BUCKET/file2 $BUCKET/dir-no-trailing
 bin/hadoop fs -stat $BUCKET/dir-no-trailing/file2
 # treated the same as the file stat
@@ -1348,6 +1349,9 @@ bin/hadoop fs -test -d  $BUCKET/dir-no-trailing/file2 ; echo $?
 bin/hadoop fs -checksum $BUCKET/dir-no-trailing/file2
 # expect "etag" + a long string
 bin/hadoop fs -D fs.s3a.etag.checksum.enabled=true -checksum $BUCKET/dir-no-trailing/file2
+bin/hadoop fs -expunge -immediate -fs $BUCKET
+bin/hdfs fetchdt --webservice $BUCKET secrets.bin
+bin/hdfs fetchdt -D fs.s3a.delegation.token.binding=org.apache.hadoop.fs.s3a.auth.delegation.SessionTokenBinding --webservice $BUCKET secrets.bin
 ```
 
 ### Other tests
