@@ -815,11 +815,13 @@
   <property>
     <name>ozone.scm.container.placement.impl</name>
     <value>
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
     </value>
     <tag>OZONE, MANAGEMENT</tag>
-    <description>Placement policy class for containers.
-      Defaults to SCMContainerPlacementRandom.class
+    <description>
+      The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
+      The class decides which datanode will be used to host the container replica. If not set,
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware will be used as default value.
     </description>
   </property>
   <property>

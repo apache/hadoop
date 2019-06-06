@@ -124,5 +124,13 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         </executions>
       </plugin>
     </plugins>
+    <testResources>
+      <testResource>
+        <directory>${basedir}/../../hadoop-hdds/common/src/main/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>${basedir}/src/test/resources</directory>
+      </testResource>
+    </testResources>
   </build>
 </project>

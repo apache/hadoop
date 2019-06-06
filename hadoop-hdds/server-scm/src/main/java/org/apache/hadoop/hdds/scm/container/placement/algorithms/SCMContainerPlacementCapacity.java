@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.node.NodeManager;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -77,7 +78,8 @@ public final class SCMContainerPlacementCapacity extends SCMCommonPolicy {
    * @param conf Configuration
    */
   public SCMContainerPlacementCapacity(final NodeManager nodeManager,
-      final Configuration conf) {
+      final Configuration conf, final NetworkTopology networkTopology,
+      final boolean fallback) {
     super(nodeManager, conf);
   }
 

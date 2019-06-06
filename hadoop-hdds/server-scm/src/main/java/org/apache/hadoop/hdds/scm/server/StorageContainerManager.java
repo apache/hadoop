@@ -41,6 +41,9 @@ import org.apache.hadoop.hdds.scm.block.BlockManagerImpl;
 import org.apache.hadoop.hdds.scm.block.DeletedBlockLogImpl;
 import org.apache.hadoop.hdds.scm.block.PendingDeleteHandler;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager.ReplicationManagerConfiguration;
+import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicyFactory;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.net.NetworkTopologyImpl;
 import org.apache.hadoop.hdds.scm.safemode.SafeModeHandler;
 import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.command.CommandStatusReportHandler;
@@ -53,7 +56,6 @@ import org.apache.hadoop.hdds.scm.container.ContainerReportHandler;
 import org.apache.hadoop.hdds.scm.container.IncrementalContainerReportHandler;
 import org.apache.hadoop.hdds.scm.container.SCMContainerManager;
 import org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy;
-import org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementCapacity;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.ContainerStat;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMMetrics;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
@@ -207,6 +209,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private SCMContainerMetrics scmContainerMetrics;
 
   /**
+   *  Network topology Map.
+   */
+  private NetworkTopology clusterMap;
+
+  /**
    * Creates a new StorageContainerManager. Configuration will be
    * updated with information on the actual listening addresses used
    * for RPC servers.
@@ -277,14 +284,13 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       securityProtocolServer = null;
     }
 
-
     eventQueue = new EventQueue();
     long watcherTimeout =
         conf.getTimeDuration(ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT,
             HDDS_SCM_WATCHER_TIMEOUT_DEFAULT, TimeUnit.MILLISECONDS);
     commandWatcherLeaseManager = new LeaseManager<>("CommandWatcher",
         watcherTimeout);
-    initalizeSystemManagers(conf, configurator);
+    initializeSystemManagers(conf, configurator);
 
     CloseContainerEventHandler closeContainerHandler =
         new CloseContainerEventHandler(pipelineManager, containerManager);
@@ -381,7 +387,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
    *                    used if needed.
    * @throws IOException - on Failure.
    */
-  private void initalizeSystemManagers(OzoneConfiguration conf,
+  private void initializeSystemManagers(OzoneConfiguration conf,
                                        SCMConfigurator configurator)
       throws IOException {
     if(configurator.getScmNodeManager() != null) {
@@ -391,9 +397,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
           conf, scmStorageConfig.getClusterID(), this, eventQueue);
     }
 
-    //TODO: support configurable containerPlacement policy
+    clusterMap = new NetworkTopologyImpl(conf);
     ContainerPlacementPolicy containerPlacementPolicy =
-        new SCMContainerPlacementCapacity(scmNodeManager, conf);
+        ContainerPlacementPolicyFactory.getPolicy(conf, scmNodeManager,
+            clusterMap, true);
 
     if (configurator.getPipelineManager() != null) {
       pipelineManager = configurator.getPipelineManager();
@@ -1204,7 +1211,6 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
     }
     return nodeStateCount;
   }
-
 
   /**
    * Returns the SCM metadata Store.

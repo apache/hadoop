@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdds.scm.net;
 
+import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -31,7 +32,10 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -93,23 +97,50 @@ public final class NodeSchemaLoader {
   }
 
   /**
-   * Load user defined network layer schemas from a XML configuration file.
+   * Load user defined network layer schemas from a XML/YAML configuration file.
    * @param schemaFilePath path of schema file
    * @return all valid node schemas defined in schema file
    */
-  public NodeSchemaLoadResult loadSchemaFromXml(String schemaFilePath)
-      throws IllegalArgumentException {
+  public NodeSchemaLoadResult loadSchemaFromFile(String schemaFilePath)
+      throws IllegalArgumentException, FileNotFoundException {
     try {
       File schemaFile = new File(schemaFilePath);
       if (!schemaFile.exists()) {
-        String msg = "Network topology layer schema file " + schemaFilePath +
-            " is not found.";
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
+        // try to load with classloader
+        ClassLoader classloader =
+            Thread.currentThread().getContextClassLoader();
+        if (classloader == null) {
+          classloader = NodeSchemaLoader.class.getClassLoader();
+        }
+        if (classloader != null) {
+          URL url = classloader.getResource(schemaFilePath);
+          if (url != null) {
+            schemaFile = new File(url.toURI());
+          }
+        }
       }
-      return loadSchema(schemaFile);
-    } catch (ParserConfigurationException | IOException | SAXException e) {
-      throw new IllegalArgumentException("Fail to load network topology node"
+
+      if (!schemaFile.exists()) {
+        String msg = "Network topology layer schema file " +
+            schemaFilePath + "[" + schemaFile.getAbsolutePath() +
+            "] is not found.";
+        LOG.warn(msg);
+        throw new FileNotFoundException(msg);
+      }
+
+      LOG.info("Load network topology schema file " +
+          schemaFile.getCanonicalPath());
+      if (FilenameUtils.getExtension(schemaFilePath).toLowerCase()
+          .compareTo("yaml") == 0) {
+        return loadSchemaFromYaml(schemaFile);
+      } else {
+        return loadSchema(schemaFile);
+      }
+    } catch (FileNotFoundException e) {
+      throw e;
+    } catch (ParserConfigurationException | IOException | SAXException |
+        URISyntaxException e) {
+      throw new IllegalArgumentException("Failed to load network topology node"
           + " schema file: " + schemaFilePath + " , error:" + e.getMessage());
     }
   }
@@ -165,29 +196,6 @@ public final class NodeSchemaLoader {
           "> elements");
     }
     return schemaList;
-  }
-
-  /**
-   * Load user defined network layer schemas from a YAML configuration file.
-   * @param schemaFilePath path of schema file
-   * @return all valid node schemas defined in schema file
-   */
-  public NodeSchemaLoadResult loadSchemaFromYaml(String schemaFilePath)
-          throws IllegalArgumentException {
-    try {
-      File schemaFile = new File(schemaFilePath);
-      if (!schemaFile.exists()) {
-        String msg = "Network topology layer schema file " + schemaFilePath +
-                " is not found.";
-        LOG.warn(msg);
-        throw new IllegalArgumentException(msg);
-      }
-      return loadSchemaFromYaml(schemaFile);
-    } catch (Exception e) {
-      throw new IllegalArgumentException("Fail to load network topology node"
-              + " schema file: " + schemaFilePath + " , error:"
-              + e.getMessage());
-    }
   }
 
   /**
