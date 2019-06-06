@@ -34,8 +34,6 @@ import picocli.CommandLine.Command;
 
 import java.io.IOException;
 
-import static org.apache.hadoop.util.ExitUtil.terminate;
-
 /**
  * This class provides a command line interface to start the SCM
  * using Picocli.

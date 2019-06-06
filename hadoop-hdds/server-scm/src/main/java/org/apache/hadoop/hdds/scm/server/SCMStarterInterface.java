@@ -26,12 +26,12 @@ import java.io.IOException;
 
 /**
  * This interface is used by the StorageContainerManager to allow the
- * dependencies to be injected to the CLI class
+ * dependencies to be injected to the CLI class.
  */
 public interface SCMStarterInterface {
 
-  public void start(OzoneConfiguration conf) throws Exception;
-  public boolean init(OzoneConfiguration conf, String clusterId)
+  void start(OzoneConfiguration conf) throws Exception;
+  boolean init(OzoneConfiguration conf, String clusterId)
       throws IOException;
-  public String generateClusterId();
+  String generateClusterId();
 }

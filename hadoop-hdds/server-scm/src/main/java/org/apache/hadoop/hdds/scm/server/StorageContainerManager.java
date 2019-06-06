@@ -81,7 +81,6 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServe
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
-import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
@@ -90,7 +89,6 @@ import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
-import org.apache.hadoop.ozone.common.StorageInfo;
 import org.apache.hadoop.ozone.lease.LeaseManager;
 import org.apache.hadoop.ozone.lock.LockManager;
 import org.apache.hadoop.ozone.protocol.commands.RetriableDatanodeEventWatcher;
@@ -98,16 +96,13 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.utils.HddsVersionInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.management.ObjectName;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -120,7 +115,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_KEYTAB_
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
-import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
  * StorageContainerManager is the main entry point for the service that
@@ -590,7 +584,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       System.exit(1);
     }
     return new StorageContainerManager(conf);
-    }
+  }
 
   /**
    * Routine to set up the Version info for StorageContainerManager.

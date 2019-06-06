@@ -11,6 +11,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import static org.junit.Assert.*;
 
+
+/**
+ * This class is used to test the StorageContainerManagerStarter using a mock
+ * class to avoid starting any services and hence just test the CLI component.
+ */
 public class TestStorageContainerManagerStarter {
 
   private final ByteArrayOutputStream outContent = new ByteArrayOutputStream();
@@ -34,13 +39,13 @@ public class TestStorageContainerManagerStarter {
   }
 
   @Test
-  public void TestCallsStartWhenServerStarted() throws Exception {
+  public void testCallsStartWhenServerStarted() throws Exception {
     executeCommand();
     assertTrue(mock.startCalled);
   }
 
   @Test
-  public void TestExceptionThrownWhenStartFails() throws Exception {
+  public void testExceptionThrownWhenStartFails() throws Exception {
     mock.throwOnStart = true;
     try {
       executeCommand();
@@ -51,34 +56,34 @@ public class TestStorageContainerManagerStarter {
   }
 
   @Test
-  public void TestStartNotCalledWithInvalidParam() throws Exception {
+  public void testStartNotCalledWithInvalidParam() throws Exception {
     executeCommand("--invalid");
     assertFalse(mock.startCalled);
   }
 
   @Test
-  public void TestPassingInitSwitchCallsInit() {
+  public void testPassingInitSwitchCallsInit() {
     executeCommand("--init");
     assertTrue(mock.initCalled);
   }
 
   @Test
-  public void TestInitSwitchAcceptsClusterIdSSwitch() {
+  public void testInitSwitchAcceptsClusterIdSSwitch() {
     executeCommand("--init", "--clusterid=abcdefg");
     assertEquals("abcdefg", mock.clusterId);
   }
 
   @Test
-  public void TestInitSwitchWithInvalidParamDoesNotRun() {
-    executeCommand("--init", "--clusterid=abcdefg", "--invalid" );
+  public void testInitSwitchWithInvalidParamDoesNotRun() {
+    executeCommand("--init", "--clusterid=abcdefg", "--invalid");
     assertFalse(mock.initCalled);
   }
 
   @Test
-  public void TestUnSuccessfulInitThrowsException() {
+  public void testUnSuccessfulInitThrowsException() {
     mock.throwOnInit = true;
-      try {
-        executeCommand("--init");
+    try {
+      executeCommand("--init");
       fail("Exception show have been thrown");
     } catch (Exception e) {
       assertTrue(true);
@@ -86,38 +91,38 @@ public class TestStorageContainerManagerStarter {
   }
 
   @Test
-  public void TestGenClusterIdRunsGenerate() {
+  public void testGenClusterIdRunsGenerate() {
     executeCommand("--genclusterid");
     assertTrue(mock.generateCalled);
   }
 
   @Test
-  public void TestGenClusterIdWithInvalidParamDoesNotRun() {
+  public void testGenClusterIdWithInvalidParamDoesNotRun() {
     executeCommand("--genclusterid", "--invalid");
     assertFalse(mock.generateCalled);
   }
 
   @Test
-  public void TestUsagePrintedOnInvalidInput() {
+  public void testUsagePrintedOnInvalidInput() {
     executeCommand("--invalid");
     Pattern p = Pattern.compile("^Unknown option:.*--invalid.*\nUsage");
     Matcher m = p.matcher(errContent.toString());
     assertTrue(m.find());
   }
 
-  private void executeCommand(String ... args) {
+  private void executeCommand(String... args) {
     new StorageContainerManagerStarter(mock).execute(args);
   }
 
   static class MockSCMStarter implements SCMStarterInterface {
 
-    public boolean initStatus = true;
-    public boolean throwOnStart = false;
-    public boolean throwOnInit  = false;
-    public boolean startCalled = false;
-    public boolean initCalled = false;
-    public boolean generateCalled = false;
-    public String clusterId = null;
+    private boolean initStatus = true;
+    private boolean throwOnStart = false;
+    private boolean throwOnInit  = false;
+    private boolean startCalled = false;
+    private boolean initCalled = false;
+    private boolean generateCalled = false;
+    private String clusterId = null;
 
     public void start(OzoneConfiguration conf) throws Exception {
       if (throwOnStart) {
