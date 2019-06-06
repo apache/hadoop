@@ -628,6 +628,12 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           }
         }
 
+        ActivitiesLogger.APP.recordAppActivityWithoutAllocation(
+            activitiesManager, node, application, schedulerKey,
+            ActivityDiagnosticConstant.NOT_SUFFICIENT_RESOURCE
+                + getResourceDiagnostics(capability, availableForDC),
+            rmContainer == null ?
+                ActivityState.RESERVED : ActivityState.RE_RESERVED);
         ContainerAllocation result = new ContainerAllocation(null,
             pendingAsk.getPerAllocationResource(), AllocationState.RESERVED);
         result.containerNodeType = type;
@@ -824,7 +830,7 @@ public class RegularContainerAllocator extends AbstractContainerAllocator {
           ActivityDiagnosticConstant.
               APPLICATION_PRIORITY_DO_NOT_NEED_RESOURCE);
       return new ContainerAllocation(reservedContainer, null,
-          AllocationState.QUEUE_SKIPPED);
+          AllocationState.PRIORITY_SKIPPED);
     }
 
     result = ContainerAllocation.PRIORITY_SKIPPED;

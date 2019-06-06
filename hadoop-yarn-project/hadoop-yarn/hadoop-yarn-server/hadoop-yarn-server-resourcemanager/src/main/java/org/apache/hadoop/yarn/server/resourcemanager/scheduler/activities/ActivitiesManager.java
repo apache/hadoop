@@ -339,8 +339,10 @@ public class ActivitiesManager extends AbstractService {
           appAllocations = curAppAllocations;
         }
       }
-      if (appAllocations.size() == appActivitiesMaxQueueLength) {
+      int curQueueLength = appAllocations.size();
+      while (curQueueLength >= appActivitiesMaxQueueLength) {
         appAllocations.poll();
+        --curQueueLength;
       }
       appAllocations.add(appAllocation);
       Long stopTime =

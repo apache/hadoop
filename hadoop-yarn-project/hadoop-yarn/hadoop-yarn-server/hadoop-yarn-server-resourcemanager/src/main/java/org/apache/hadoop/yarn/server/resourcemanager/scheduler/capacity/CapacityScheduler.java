@@ -1597,7 +1597,7 @@ public class CapacityScheduler extends
     } else{
       ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, node,
           queue.getParent().getQueueName(), queue.getQueueName(),
-          ActivityState.ACCEPTED, ActivityDiagnosticConstant.EMPTY);
+          ActivityState.SKIPPED, ActivityDiagnosticConstant.EMPTY);
       ActivitiesLogger.NODE.finishAllocatedNodeAllocation(activitiesManager,
           node, reservedContainer.getContainerId(), AllocationState.SKIPPED);
     }
@@ -1687,6 +1687,10 @@ public class CapacityScheduler extends
       }
       LOG.debug("This node or this node partition doesn't have available or "
           + "killable resource");
+      ActivitiesLogger.QUEUE.recordQueueActivity(activitiesManager, null,
+          "", getRootQueue().getQueueName(), ActivityState.REJECTED,
+          ActivityDiagnosticConstant.NOT_ABLE_TO_ACCESS_PARTITION + " "
+              + candidates.getPartition());
       return null;
     }
 
