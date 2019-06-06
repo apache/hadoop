@@ -40,12 +40,9 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 /**
- * An {@link InputStream} used by the REST service in combination with the
- * SCMClient to read the value of a key from a sequence of container chunks.
- * All bytes of the key value are stored in container chunks. Each chunk may
- * contain multiple underlying {@link ByteBuffer} instances.  This class
- * encapsulates all state management for iterating through the sequence of
- * buffers within each chunk.
+ * An {@link InputStream} called from BlockInputStream to read a chunk from the
+ * container. Each chunk may contain multiple underlying {@link ByteBuffer}
+ * instances.
  */
 public class ChunkInputStream extends InputStream implements Seekable {
 
@@ -371,7 +368,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
               ChecksumData checksumData = ChecksumData.getFromProtoBuf(
                   chunkInfo.getChecksumData());
 
-              // ChecksumData stores checksum for each 'numBytesPerChceksum'
+              // ChecksumData stores checksum for each 'numBytesPerChecksum'
               // number of bytes in a list. Compute the index of the first
               // checksum to match with the read data
 

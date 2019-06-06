@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.storage.BlockInputStream;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.ratis.util.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +52,7 @@ public class KeyInputStream extends InputStream implements Seekable {
   private final List<BlockInputStream> blockStreams;
 
   // blockOffsets[i] stores the index of the first data byte in
-  // blockStream i w.r.t the key data.
+  // blockStream w.r.t the key data.
   // For example, let’s say the block size is 200 bytes and block[0] stores
   // data from indices 0 - 199, block[1] from indices 200 - 399 and so on.
   // Then, blockOffset[0] = 0 (the offset of the first byte of data in
@@ -146,7 +145,7 @@ public class KeyInputStream extends InputStream implements Seekable {
    */
   @Override
   public synchronized int read(byte[] b, int off, int len) throws IOException {
-    checkNotClosed();
+    checkOpen();
     if (b == null) {
       throw new NullPointerException();
     }
@@ -204,7 +203,7 @@ public class KeyInputStream extends InputStream implements Seekable {
    */
   @Override
   public synchronized void seek(long pos) throws IOException {
-    checkNotClosed();
+    checkOpen();
     if (pos < 0 || pos >= length) {
       if (pos == 0) {
         // It is possible for length and pos to be zero in which case
@@ -214,7 +213,6 @@ public class KeyInputStream extends InputStream implements Seekable {
       throw new EOFException(
           "EOF encountered at pos: " + pos + " for key: " + key);
     }
-    Preconditions.assertTrue(blockIndex >= 0);
 
     // 1. Update the blockIndex
     if (blockIndex >= blockStreams.size()) {
@@ -257,7 +255,7 @@ public class KeyInputStream extends InputStream implements Seekable {
 
   @Override
   public int available() throws IOException {
-    checkNotClosed();
+    checkOpen();
     long remaining = length - getPos();
     return remaining <= Integer.MAX_VALUE ? (int) remaining : Integer.MAX_VALUE;
   }
@@ -275,7 +273,7 @@ public class KeyInputStream extends InputStream implements Seekable {
    * the last state of the volatile {@link #closed} field.
    * @throws IOException if the connection is closed.
    */
-  private void checkNotClosed() throws IOException {
+  private void checkOpen() throws IOException {
     if (closed) {
       throw new IOException(
           ": " + FSExceptionMessages.STREAM_IS_CLOSED + " Key: " + key);

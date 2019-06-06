@@ -45,11 +45,9 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * An {@link InputStream} used by the REST service in combination with the
- * SCMClient to read the value of a key from a sequence
- * of container chunks.  All bytes of the key value are stored in container
- * chunks. Each chunk may contain multiple underlying {@link ByteBuffer}
- * instances.  This class encapsulates all state management for iterating
+ * An {@link InputStream} called from KeyInputStream to read a block from the
+ * container.
+ * This class encapsulates all state management for iterating
  * through the sequence of chunks through {@link ChunkInputStream}.
  */
 public class BlockInputStream extends InputStream implements Seekable {
@@ -120,7 +118,6 @@ public class BlockInputStream extends InputStream implements Seekable {
     if (initialized) {
       return;
     }
-    Preconditions.checkArgument(chunkOffsets == null);
 
     List<ChunkInfo> chunks = getChunkInfos();
     if (chunks != null && !chunks.isEmpty()) {
