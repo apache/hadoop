@@ -24,6 +24,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.util.DiskChecker.DiskOutOfSpaceException;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,10 +41,12 @@ public class TestRoundRobinVolumeChoosingPolicy {
 
   private RoundRobinVolumeChoosingPolicy policy;
   private List<HddsVolume> volumes;
+  private VolumeSet volumeSet;
 
   private final String baseDir = MiniDFSCluster.getBaseDirectory();
   private final String volume1 = baseDir + "disk1";
   private final String volume2 = baseDir + "disk2";
+
   private static final String DUMMY_IP_ADDR = "0.0.0.0";
 
   @Before
@@ -53,8 +56,16 @@ public class TestRoundRobinVolumeChoosingPolicy {
     conf.set(DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY, dataDirKey);
     policy = ReflectionUtils.newInstance(
         RoundRobinVolumeChoosingPolicy.class, null);
-    VolumeSet volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
+    volumeSet = new VolumeSet(UUID.randomUUID().toString(), conf);
     volumes = volumeSet.getVolumesList();
+  }
+
+  @After
+  public void cleanUp() {
+    if (volumeSet != null) {
+      volumeSet.shutdown();
+      volumeSet = null;
+    }
   }
 
   @Test

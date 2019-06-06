@@ -237,6 +237,7 @@ public class TestVolumeSet {
     //Set back to writable
     try {
       readOnlyVolumePath.setWritable(true);
+      volSet.shutdown();
     } finally {
       FileUtil.fullyDelete(volumePath);
     }

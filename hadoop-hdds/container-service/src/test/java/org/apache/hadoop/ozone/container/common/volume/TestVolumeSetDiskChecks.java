@@ -100,6 +100,7 @@ public class TestVolumeSetDiskChecks {
     for (String d : dirs) {
       assertTrue(new File(d).isDirectory());
     }
+    volumeSet.shutdown();
   }
 
   /**
@@ -124,6 +125,7 @@ public class TestVolumeSetDiskChecks {
     assertThat(volumeSet.getFailedVolumesList().size(), is(numBadVolumes));
     assertThat(volumeSet.getVolumesList().size(),
         is(numVolumes - numBadVolumes));
+    volumeSet.shutdown();
   }
 
   /**
@@ -146,6 +148,7 @@ public class TestVolumeSetDiskChecks {
 
     assertEquals(volumeSet.getFailedVolumesList().size(), numVolumes);
     assertEquals(volumeSet.getVolumesList().size(), 0);
+    volumeSet.shutdown();
   }
 
   /**
