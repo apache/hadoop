@@ -94,7 +94,7 @@ public class StorageContainerManagerStarter extends GenericCli {
   @CommandLine.Command(name = "--init",
       customSynopsis = "ozone scm [global options] --init [options]",
       hidden = false,
-      description = "Initialize / format the SCM",
+      description = "Initialize the SCM if not already initialized",
       mixinStandardHelpOptions = true,
       versionProvider = HddsVersionProvider.class)
   public void initScm(@CommandLine.Option(names = { "--clusterid" },
@@ -104,7 +104,7 @@ public class StorageContainerManagerStarter extends GenericCli {
     commonInit();
     boolean result = receiver.init(conf, clusterId);
     if (!result) {
-      throw new IOException("SCM Init failed. Check the log for more details");
+      throw new IOException("scm init failed");
     }
   }
 
