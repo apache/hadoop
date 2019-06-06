@@ -21,13 +21,14 @@ package org.apache.hadoop.yarn.client.cli;
 import com.google.common.annotations.VisibleForTesting;
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.WebResource.Builder;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.MissingArgumentException;
 import org.apache.commons.cli.Options;
 import org.apache.hadoop.classification.InterfaceAudience.Public;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -131,18 +132,22 @@ public class SchedConfCLI extends Configured implements Tool {
       return -1;
     }
 
-    Client webServiceClient = Client.create();
-    WebResource webResource = webServiceClient
-        .resource(WebAppUtils.getRMWebAppURLWithScheme(getConf()));
-    ClientResponse response = null;
+    Configuration conf = getConf();
+    return WebAppUtils.execOnActiveRM(conf,
+        this::updateSchedulerConfOnRMNode, updateInfo);
+  }
 
+  private int updateSchedulerConfOnRMNode(String webAppAddress,
+      SchedConfUpdateInfo updateInfo) throws Exception {
+    Client webServiceClient = Client.create();
+    ClientResponse response = null;
     try {
-      response =
-          webResource.path("ws").path("v1").path("cluster")
-              .path("scheduler-conf").accept(MediaType.APPLICATION_JSON)
-              .entity(YarnWebServiceUtils.toJson(updateInfo,
-                  SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON)
-              .put(ClientResponse.class);
+      Builder builder = webServiceClient.resource(webAppAddress)
+          .path("ws").path("v1").path("cluster")
+          .path("scheduler-conf").accept(MediaType.APPLICATION_JSON);
+      builder.entity(YarnWebServiceUtils.toJson(updateInfo,
+          SchedConfUpdateInfo.class), MediaType.APPLICATION_JSON);
+      response = builder.put(ClientResponse.class);
       if (response != null) {
         if (response.getStatus() == Status.OK.getStatusCode()) {
           System.out.println("Configuration changed successfully.");
@@ -162,6 +167,7 @@ public class SchedConfCLI extends Configured implements Tool {
       webServiceClient.destroy();
     }
   }
+
 
   @VisibleForTesting
   void addQueues(String args, SchedConfUpdateInfo updateInfo) {

@@ -56,6 +56,12 @@ public class TestYarnConfiguration {
     conf2.set("yarn.resourcemanager.hostname.rm2", "40.40.40.40");
     String rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2);
     Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+
+    rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 0);
+    Assert.assertEquals("http://30.30.30.30:8088", rmWebUrlinHA2);
+
+    rmWebUrlinHA2 = WebAppUtils.getRMWebAppURLWithScheme(conf2, 1);
+    Assert.assertEquals("http://40.40.40.40:8088", rmWebUrlinHA2);
   }
 
   @Test
