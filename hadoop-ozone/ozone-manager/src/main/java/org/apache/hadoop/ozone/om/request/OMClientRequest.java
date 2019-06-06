@@ -20,11 +20,18 @@ package org.apache.hadoop.ozone.om.request;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.audit.AuditAction;
+import org.apache.hadoop.ozone.audit.AuditEventStatus;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -41,7 +48,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  * OMClientRequest provides methods which every write OM request should
  * implement.
  */
-public abstract class OMClientRequest {
+public abstract class OMClientRequest implements RequestAuditor {
 
   private final OMRequest omRequest;
 
@@ -173,4 +180,34 @@ public abstract class OMClientRequest {
     return omResponse.build();
   }
 
+  /**
+   * Log the auditMessage.
+   * @param auditLogger
+   * @param auditMessage
+   */
+  protected void auditLog(AuditLogger auditLogger, AuditMessage auditMessage) {
+    auditLogger.logWrite(auditMessage);
+  }
+
+  @Override
+  public AuditMessage buildAuditMessage(AuditAction op,
+      Map< String, String > auditMap, Throwable throwable,
+      OzoneManagerProtocolProtos.UserInfo userInfo) {
+    return new AuditMessage.Builder()
+        .setUser(userInfo != null ? userInfo.getUserName() : null)
+        .atIp(userInfo != null ? userInfo.getRemoteAddress() : null)
+        .forOperation(op.getAction())
+        .withParams(auditMap)
+        .withResult(throwable != null ? AuditEventStatus.FAILURE.toString() :
+            AuditEventStatus.SUCCESS.toString())
+        .withException(throwable)
+        .build();
+  }
+
+  @Override
+  public Map<String, String> buildVolumeAuditMap(String volume) {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.VOLUME, volume);
+    return auditMap;
+  }
 }

@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.util.List;
 
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,6 +52,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetBucketPropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetBucketPropertyResponse;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
@@ -68,6 +73,11 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex) {
 
+    SetBucketPropertyRequest setBucketPropertyRequest =
+        getOmRequest().getSetBucketPropertyRequest();
+
+    Preconditions.checkNotNull(setBucketPropertyRequest);
+
     OMMetrics omMetrics = ozoneManager.getOmMetrics();
 
     // This will never be null, on a real Ozone cluster. For tests this might
@@ -80,8 +90,7 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
-    BucketArgs bucketArgs =
-        getOmRequest().getSetBucketPropertyRequest().getBucketArgs();
+    BucketArgs bucketArgs = setBucketPropertyRequest.getBucketArgs();
     OmBucketArgs omBucketArgs = OmBucketArgs.getFromProtobuf(bucketArgs);
 
     String volumeName = bucketArgs.getVolumeName();
@@ -92,6 +101,9 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
         OzoneManagerProtocolProtos.Type.CreateBucket).setStatus(
         OzoneManagerProtocolProtos.Status.OK);
     OmBucketInfo omBucketInfo = null;
+
+    AuditLogger auditLogger = ozoneManager.getAuditLogger();
+    OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
 
     try {
       // check Acl
@@ -104,11 +116,15 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();
       }
+      auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
+              omBucketArgs.toAuditMap(), ex, userInfo));
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
       return new OMBucketSetPropertyResponse(omBucketInfo,
           createErrorOMResponse(omResponse, ex));
     }
+
+    IOException exception = null;
 
     // acquire lock
     omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
@@ -170,21 +186,31 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
-      // return response.
+    } catch (IOException ex) {
+      exception = ex;
+    } finally {
+      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+    }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
+        omBucketArgs.toAuditMap(), exception, userInfo));
+
+    // return response.
+    if (exception == null) {
+      LOG.debug("Setting bucket property for bucket:{} in volume:{}",
+          bucketName, volumeName);
       omResponse.setSetBucketPropertyResponse(
           SetBucketPropertyResponse.newBuilder().build());
       return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
-
-    } catch (IOException ex) {
+    } else {
       if (omMetrics != null) {
         omMetrics.incNumBucketUpdateFails();
       }
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
+          bucketName, volumeName, exception);
       return new OMBucketSetPropertyResponse(omBucketInfo,
-          createErrorOMResponse(omResponse, ex));
-    } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+          createErrorOMResponse(omResponse, exception));
     }
   }
 

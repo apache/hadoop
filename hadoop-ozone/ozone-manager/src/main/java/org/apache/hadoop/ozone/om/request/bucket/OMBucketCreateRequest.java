@@ -28,6 +28,8 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.ozone.audit.AuditLogger;
+import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -117,6 +119,9 @@ public class OMBucketCreateRequest extends OMClientRequest {
         OzoneManagerProtocolProtos.Status.OK);
     OmBucketInfo omBucketInfo = OmBucketInfo.getFromProtobuf(bucketInfo);
 
+    AuditLogger auditLogger = ozoneManager.getAuditLogger();
+    OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
+
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -128,6 +133,8 @@ public class OMBucketCreateRequest extends OMClientRequest {
       LOG.error("Bucket creation failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
       omMetrics.incNumBucketCreateFails();
+      auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_BUCKET,
+              omBucketInfo.toAuditMap(), ex, userInfo));
       return new OMBucketCreateResponse(omBucketInfo,
           createErrorOMResponse(omResponse, ex));
     }
@@ -135,6 +142,7 @@ public class OMBucketCreateRequest extends OMClientRequest {
     String volumeKey = metadataManager.getVolumeKey(volumeName);
     String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
+    IOException exception = null;
     metadataManager.getLock().acquireVolumeLock(volumeName);
     metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
@@ -152,27 +160,35 @@ public class OMBucketCreateRequest extends OMClientRequest {
             OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
 
-      LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
-      omMetrics.incNumBuckets();
-
       // Update table cache.
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
-      // return response.
-      omResponse.setCreateBucketResponse(
-          CreateBucketResponse.newBuilder().build());
-      return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
 
     } catch (IOException ex) {
-      omMetrics.incNumBucketCreateFails();
-      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
-      return new OMBucketCreateResponse(omBucketInfo,
-          createErrorOMResponse(omResponse, ex));
+      exception = ex;
     } finally {
       metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
       metadataManager.getLock().releaseVolumeLock(volumeName);
+    }
+
+    // Performing audit logging outside of the lock.
+    auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_BUCKET,
+        omBucketInfo.toAuditMap(), exception, userInfo));
+
+    // return response.
+    if (exception == null) {
+      LOG.debug("created bucket: {} in volume: {}", bucketName, volumeName);
+      omMetrics.incNumBuckets();
+      omResponse.setCreateBucketResponse(
+          CreateBucketResponse.newBuilder().build());
+      return new OMBucketCreateResponse(omBucketInfo, omResponse.build());
+    } else {
+      omMetrics.incNumBucketCreateFails();
+      LOG.error("Bucket creation failed for bucket:{} in volume:{}",
+          bucketName, volumeName, exception);
+      return new OMBucketCreateResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, exception));
     }
   }
 

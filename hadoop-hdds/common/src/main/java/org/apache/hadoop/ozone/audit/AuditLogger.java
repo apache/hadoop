@@ -73,4 +73,14 @@ public class AuditLogger {
         msg.getThrowable());
   }
 
+  public void logWrite(AuditMessage auditMessage) {
+    if (auditMessage.getThrowable() == null) {
+      this.logger.logIfEnabled(FQCN, Level.INFO, WRITE_MARKER, auditMessage,
+          auditMessage.getThrowable());
+    } else {
+      this.logger.logIfEnabled(FQCN, Level.ERROR, WRITE_MARKER, auditMessage,
+          auditMessage.getThrowable());
+    }
+  }
+
 }
