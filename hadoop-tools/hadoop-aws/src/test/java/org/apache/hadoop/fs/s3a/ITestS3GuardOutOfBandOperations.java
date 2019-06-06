@@ -27,10 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.junit.Assume;
-import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,7 +46,11 @@ import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.junit.Assume.assumeTrue;
@@ -383,7 +384,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * created out of band.
    */
   @Test
-  public void createNonRecursiveFailsIfParentDeleted() throws Exception {
+  public void testCreateNonRecursiveFailsIfParentDeleted() throws Exception {
     LOG.info("Authoritative mode: {}", authoritative);
 
     String dirToDelete = methodName + UUID.randomUUID().toString();
@@ -426,6 +427,54 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     } finally {
       guardedFs.delete(filePath, true);
       guardedFs.delete(dirPath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * When lastUpdated = 0 the entry should not expire. This is a special case
+   * eg. for old metadata entries
+   */
+  @Test
+  public void testLastUpdatedZeroWontExpire() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String testFile = methodName + UUID.randomUUID().toString() +
+        "/theFileToTry";
+
+    long ttl = 10L;
+    final Path filePath = path(testFile);
+
+    // Create a directory with
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // create a file while the NOW is 0, so it will set 0 as the last_upadted
+      when(mockTimeProvider.getNow()).thenReturn(0L);
+      touch(guardedFs, filePath);
+      deleteFile(guardedFs, filePath);
+
+      final PathMetadata pathMetadata =
+          guardedFs.getMetadataStore().get(filePath);
+      assertNotNull("pathMetadata should not be null after deleting with "
+          + "tombstones", pathMetadata);
+      assertEquals("pathMetadata lastUpdated field should be 0", 0,
+          pathMetadata.getLastUpdated());
+
+      // set the time, so the metadata would expire
+      when(mockTimeProvider.getNow()).thenReturn(2*ttl);
+      intercept(FileNotFoundException.class, filePath.toString(),
+          "This file should throw FNFE when reading through "
+              + "the guarded fs, and the metadatastore tombstoned the file. "
+              + "The tombstone won't expire if lastUpdated is set to 0.",
+          () -> guardedFs.getFileStatus(filePath));
+
+    } finally {
+      guardedFs.delete(filePath, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
     }
   }
