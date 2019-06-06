@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doReturn;
@@ -36,6 +37,7 @@ import com.google.common.collect.Lists;
 
 import org.junit.Assert;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -161,5 +163,15 @@ public class TestDatanodeRegister {
       Assert.assertEquals("DN shut down before block pool registered",
           e.getMessage());
     }
+  }
+
+  @Test
+  public void testInvalidConfigurationValue() throws Exception {
+    Configuration conf = new HdfsConfiguration();
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, -2);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.failed.volumes.tolerated"
+            + " - -2 should be greater than or equal to -1",
+        () -> new DataNode(conf, new ArrayList<>(), null, null));
   }
 }
