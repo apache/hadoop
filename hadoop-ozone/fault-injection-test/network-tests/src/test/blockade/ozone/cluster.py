@@ -21,6 +21,7 @@ import re
 import subprocess
 import yaml
 import util
+from os import environ
 from subprocess import call
 from blockadeUtils.blockade import Blockade
 
@@ -44,11 +45,18 @@ class Configuration:
   """
 
   def __init__(self):
-    __parent_dir__ = os.path.dirname(os.path.dirname(
-      os.path.dirname(os.path.realpath(__file__))))
-    self.docker_compose_file = os.path.join(__parent_dir__,
-                                            "compose", "ozoneblockade",
-                                            "docker-compose.yaml")
+    if "MAVEN_TEST" in os.environ:
+      compose_dir = environ.get("MAVEN_TEST")
+      self.docker_compose_file = os.path.join(compose_dir, "docker-compose.yaml")
+    elif "OZONE_HOME" in os.environ:
+      compose_dir = os.path.join(environ.get("OZONE_HOME"), "compose", "ozoneblockade")
+      self.docker_compose_file = os.path.join(compose_dir, "docker-compose.yaml")
+    else:
+      __parent_dir__ = os.path.dirname(os.path.dirname(os.path.dirname(
+        os.path.dirname(os.path.realpath(__file__)))))
+      self.docker_compose_file = os.path.join(__parent_dir__,
+                                              "compose", "ozoneblockade",
+                                              "docker-compose.yaml")
     self._datanode_count = 3
     os.environ["DOCKER_COMPOSE_FILE"] = self.docker_compose_file
 

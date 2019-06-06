@@ -19,14 +19,24 @@ import os
 import re
 import time
 import logging
+from os import environ
 from blockadeUtils.blockade import Blockade
 from clusterUtils.cluster_utils import ClusterUtils
 
 
 logger = logging.getLogger(__name__)
-parent_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-FILE = os.path.join(parent_dir, "compose", "ozoneblockade",
-                    "docker-compose.yaml")
+if "MAVEN_TEST" in os.environ:
+  compose_dir = environ.get("MAVEN_TEST")
+  FILE = os.path.join(compose_dir, "docker-compose.yaml")
+elif "OZONE_HOME" in os.environ:
+  compose_dir = environ.get("OZONE_HOME")
+  FILE = os.path.join(compose_dir, "compose", "ozoneblockade", \
+         "docker-compose.yaml")
+else:
+  parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+  FILE = os.path.join(parent_dir, "compose", "ozoneblockade", \
+         "docker-compose.yaml")
+
 os.environ["DOCKER_COMPOSE_FILE"] = FILE
 SCALE = 3
 CONTAINER_LIST = []

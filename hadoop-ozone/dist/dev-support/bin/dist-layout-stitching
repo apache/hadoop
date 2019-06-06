@@ -83,6 +83,7 @@ run mkdir -p ./bin
 run mkdir -p ./sbin
 run mkdir -p ./etc
 run mkdir -p ./libexec
+run mkdir -p ./tests
 
 run cp -r "${ROOT}/hadoop-common-project/hadoop-common/src/main/conf" "etc/hadoop"
 run cp "${ROOT}/hadoop-ozone/dist/src/main/conf/om-audit-log4j2.properties" "etc/hadoop"
@@ -108,6 +109,9 @@ run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/workers.sh" "sb
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/start-ozone.sh" "sbin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/stop-ozone.sh" "sbin/"
 
+# fault injection tests
+run cp  -r "${ROOT}/hadoop-ozone/fault-injection-test/network-tests/src/test/blockade" tests
+
 #shaded datanode service
 run mkdir -p "./share/hadoop/ozoneplugin"
 run cp "${ROOT}/hadoop-ozone/objectstore-service/target/hadoop-ozone-objectstore-service-${HDDS_VERSION}-plugin.jar" "./share/hadoop/ozoneplugin/hadoop-ozone-datanode-plugin-${HDDS_VERSION}.jar"
@@ -119,7 +123,6 @@ cp -r "${ROOT}/hadoop-hdds/docs/target/classes/docs" ./
 #compose files are preprocessed: properties (eg. project.version) are replaced first by maven.
 run cp -p -R "${ROOT}/hadoop-ozone/dist/target/compose" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/smoketest" .
-run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/blockade" .
 run cp -p -r "${ROOT}/hadoop-ozone/dist/target/k8s" kubernetes
 run cp -p -r "${ROOT}/hadoop-ozone/dist/src/main/Dockerfile" .
 
