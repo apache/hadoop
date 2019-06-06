@@ -239,7 +239,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <dependency>
       <groupId>info.picocli</groupId>
       <artifactId>picocli</artifactId>
-      <version>3.5.2</version>
+      <version>3.9.6</version>
     </dependency>
     <dependency>
       <groupId>com.google.protobuf</groupId>
