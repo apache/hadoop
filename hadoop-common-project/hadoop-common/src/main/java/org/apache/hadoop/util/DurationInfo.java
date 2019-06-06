@@ -29,8 +29,8 @@ import org.apache.hadoop.classification.InterfaceStability;
  * This allows it to be used in a try-with-resources clause, and have the
  * duration automatically logged.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@Public
+@Unstable
 public class DurationInfo extends OperationDuration
     implements AutoCloseable {
   private final String text;
