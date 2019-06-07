@@ -64,6 +64,8 @@ public final class OzoneConfigKeys {
       "dfs.container.ratis.ipc";
   public static final int DFS_CONTAINER_RATIS_IPC_PORT_DEFAULT = 9858;
 
+  public static final String OZONE_HTTP_POLICY = "ozone.http.policy";
+
   /**
    * When set to true, allocate a random free port for ozone container, so that
    * a mini cluster is able to launch multiple containers on a node.

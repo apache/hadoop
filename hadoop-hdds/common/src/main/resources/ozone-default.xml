@@ -2487,4 +2487,14 @@
       The number of Recon Tasks that are waiting on updates from OM.
     </description>
   </property>
+  <property>
+  <name>ozone.http.policy</name>
+  <value>HTTP_ONLY</value>
+  <description>This configures the HTTP endpoint for Ozone daemons:
+    The following values are supported:
+    - HTTP_ONLY : Service is provided only on http
+    - HTTPS_ONLY : Service is provided only on https
+    - HTTP_AND_HTTPS : Service is provided both on http and https
+  </description>
+</property>
 </configuration>
