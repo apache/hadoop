@@ -260,7 +260,7 @@ public final class TestSecureOzoneCluster {
   public void testSecureScmStartupSuccess() throws Exception {
 
     initSCM();
-    scm = StorageContainerManager.createSCM(null, conf);
+    scm = StorageContainerManager.createSCM(conf);
     //Reads the SCM Info from SCM instance
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     Assert.assertEquals(clusterId, scmInfo.getClusterId());
@@ -271,7 +271,7 @@ public final class TestSecureOzoneCluster {
   public void testSCMSecurityProtocol() throws Exception {
 
     initSCM();
-    scm = StorageContainerManager.createSCM(null, conf);
+    scm = StorageContainerManager.createSCM(conf);
     //Reads the SCM Info from SCM instance
     try {
       scm.start();
@@ -340,7 +340,7 @@ public final class TestSecureOzoneCluster {
     LambdaTestUtils.intercept(IOException.class,
         "Running in secure mode, but config doesn't have a keytab",
         () -> {
-          StorageContainerManager.createSCM(null, conf);
+          StorageContainerManager.createSCM(conf);
         });
 
     conf.set(ScmConfigKeys.HDDS_SCM_KERBEROS_PRINCIPAL_KEY,
@@ -349,7 +349,7 @@ public final class TestSecureOzoneCluster {
         "/etc/security/keytabs/scm.keytab");
 
     testCommonKerberosFailures(
-        () -> StorageContainerManager.createSCM(null, conf));
+        () -> StorageContainerManager.createSCM(conf));
 
   }
 
@@ -379,7 +379,7 @@ public final class TestSecureOzoneCluster {
   public void testSecureOMInitializationFailure() throws Exception {
     initSCM();
     // Create a secure SCM instance as om client will connect to it
-    scm = StorageContainerManager.createSCM(null, conf);
+    scm = StorageContainerManager.createSCM(conf);
     setupOm(conf);
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "non-existent-user@EXAMPLE.com");
@@ -395,7 +395,7 @@ public final class TestSecureOzoneCluster {
   public void testSecureOmInitializationSuccess() throws Exception {
     initSCM();
     // Create a secure SCM instance as om client will connect to it
-    scm = StorageContainerManager.createSCM(null, conf);
+    scm = StorageContainerManager.createSCM(conf);
     LogCapturer logs = LogCapturer.captureLogs(OzoneManager.LOG);
     GenericTestUtils.setLogLevel(OzoneManager.LOG, INFO);
 
@@ -719,7 +719,7 @@ public final class TestSecureOzoneCluster {
     omLogs.clearOutput();
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(null, conf);
+      scm = StorageContainerManager.createSCM(conf);
       scm.start();
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, false);
       OMStorage omStore = new OMStorage(conf);
@@ -765,7 +765,7 @@ public final class TestSecureOzoneCluster {
     omLogs.clearOutput();
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(null, conf);
+      scm = StorageContainerManager.createSCM(conf);
       scm.start();
 
       OMStorage omStore = new OMStorage(conf);
