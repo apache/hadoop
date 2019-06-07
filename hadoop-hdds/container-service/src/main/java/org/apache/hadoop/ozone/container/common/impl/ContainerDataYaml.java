@@ -96,6 +96,7 @@ public final class ContainerDataYaml {
     } finally {
       try {
         if (writer != null) {
+          writer.flush();
           // make sure the container metadata is synced to disk.
           out.getFD().sync();
           writer.close();
