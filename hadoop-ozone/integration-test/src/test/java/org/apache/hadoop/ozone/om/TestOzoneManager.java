@@ -1326,7 +1326,7 @@ public class TestOzoneManager {
         conf.get(ScmConfigKeys.OZONE_SCM_BLOCK_CLIENT_ADDRESS_KEY));
 
     OzoneTestUtils.expectOmException(ResultCodes.OM_NOT_INITIALIZED, () -> {
-      OzoneManager.createOm(null, config);
+      OzoneManager.createOm(config);
     });
 
     OzoneTestUtils
@@ -1336,7 +1336,7 @@ public class TestOzoneManager {
           omStore.setScmId("testScmId");
           // writes the version file properties
           omStore.initialize();
-          OzoneManager.createOm(null, config);
+          OzoneManager.createOm(config);
         });
   }
 

@@ -383,7 +383,7 @@ public final class TestSecureOzoneCluster {
     setupOm(conf);
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "non-existent-user@EXAMPLE.com");
-    testCommonKerberosFailures(() -> OzoneManager.createOm(null, conf));
+    testCommonKerberosFailures(() -> OzoneManager.createOm(conf));
   }
 
   /**
@@ -662,7 +662,7 @@ public final class TestSecureOzoneCluster {
     // writes the version file properties
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);
-    om = OzoneManager.createOm(null, config);
+    om = OzoneManager.createOm(config);
   }
 
   @Test
@@ -725,7 +725,7 @@ public final class TestSecureOzoneCluster {
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
       OzoneManager.setTestSecureOmFlag(true);
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       assertNull(om.getCertificateClient());
       assertFalse(omLogs.getOutput().contains("Init response: GETCERT"));
@@ -735,7 +735,7 @@ public final class TestSecureOzoneCluster {
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
       OzoneManager.omInit(conf);
       om.stop();
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       Assert.assertNotNull(om.getCertificateClient());
       Assert.assertNotNull(om.getCertificateClient().getPublicKey());
@@ -771,7 +771,7 @@ public final class TestSecureOzoneCluster {
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
       OzoneManager.setTestSecureOmFlag(true);
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       Assert.assertNotNull(om.getCertificateClient());
       Assert.assertNotNull(om.getCertificateClient().getPublicKey());
