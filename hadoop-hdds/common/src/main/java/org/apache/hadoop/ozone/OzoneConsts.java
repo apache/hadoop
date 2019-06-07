@@ -76,6 +76,12 @@ public final class OzoneConsts {
   public static final String OZONE_USER = "user";
   public static final String OZONE_REQUEST = "request";
 
+  // OM Http server endpoints
+  public static final String OZONE_OM_SERVICE_LIST_HTTP_ENDPOINT =
+      "/serviceList";
+  public static final String OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT =
+      "/dbCheckpoint";
+
   // Ozone File System scheme
   public static final String OZONE_URI_SCHEME = "o3fs";
 
@@ -286,4 +292,9 @@ public final class OzoneConsts {
 
   // OM Ratis snapshot file to store the last applied index
   public static final String OM_RATIS_SNAPSHOT_INDEX = "ratisSnapshotIndex";
+
+  // OM Http request parameter to be used while downloading DB checkpoint
+  // from OM leader to follower
+  public static final String OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT =
+      "snapshotBeforeCheckpoint";
 }

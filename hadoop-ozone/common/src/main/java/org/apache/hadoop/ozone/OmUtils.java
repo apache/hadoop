@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
@@ -34,12 +35,15 @@ import java.util.Collections;
 import java.util.Optional;
 import java.util.zip.GZIPOutputStream;
 
+import com.google.common.base.Strings;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.utils.IOUtils;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.scm.ScmUtils;
+import org.apache.hadoop.hdds.scm.HddsServerUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -48,7 +52,11 @@ import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
 import static org.apache.hadoop.hdds.HddsUtils.getPortNumberFromConfigKeys;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_BIND_HOST_DEFAULT;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTPS_BIND_HOST_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTPS_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_HOST_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_HTTP_BIND_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODES_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
@@ -366,4 +374,101 @@ public final class OmUtils {
     }
   }
 
+  /**
+   * If a OM conf is only set with key suffixed with OM Node ID, return the
+   * set value.
+   * @return null if base conf key is set, otherwise the value set for
+   * key suffixed with Node ID.
+   */
+  public static String getConfSuffixedWithOMNodeId(Configuration conf,
+      String confKey, String omServiceID, String omNodeId) {
+    String confValue = conf.getTrimmed(confKey);
+    if (StringUtils.isNotEmpty(confValue)) {
+      return null;
+    }
+    String suffixedConfKey = OmUtils.addKeySuffixes(
+        confKey, omServiceID, omNodeId);
+    confValue = conf.getTrimmed(suffixedConfKey);
+    if (StringUtils.isNotEmpty(confValue)) {
+      return confValue;
+    }
+    return null;
+  }
+
+  /**
+   * Returns the http address of peer OM node.
+   * @param conf Configuration
+   * @param omNodeId peer OM node ID
+   * @param omNodeHostAddr peer OM node host address
+   * @return http address of peer OM node in the format <hostName>:<port>
+   */
+  public static String getHttpAddressForOMPeerNode(Configuration conf,
+      String omServiceId, String omNodeId, String omNodeHostAddr) {
+    final Optional<String> bindHost = getHostNameFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTP_BIND_HOST_KEY, omServiceId, omNodeId));
+
+    final Optional<Integer> addressPort = getPortNumberFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTP_ADDRESS_KEY, omServiceId, omNodeId));
+
+    final Optional<String> addressHost = getHostNameFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTP_ADDRESS_KEY, omServiceId, omNodeId));
+
+    String hostName = bindHost.orElse(addressHost.orElse(omNodeHostAddr));
+
+    return hostName + ":" + addressPort.orElse(OZONE_OM_HTTP_BIND_PORT_DEFAULT);
+  }
+
+  /**
+   * Returns the https address of peer OM node.
+   * @param conf Configuration
+   * @param omNodeId peer OM node ID
+   * @param omNodeHostAddr peer OM node host address
+   * @return https address of peer OM node in the format <hostName>:<port>
+   */
+  public static String getHttpsAddressForOMPeerNode(Configuration conf,
+      String omServiceId, String omNodeId, String omNodeHostAddr) {
+    final Optional<String> bindHost = getHostNameFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTPS_BIND_HOST_KEY, omServiceId, omNodeId));
+
+    final Optional<Integer> addressPort = getPortNumberFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTPS_ADDRESS_KEY, omServiceId, omNodeId));
+
+    final Optional<String> addressHost = getHostNameFromConfigKeys(conf,
+        addKeySuffixes(OZONE_OM_HTTPS_ADDRESS_KEY, omServiceId, omNodeId));
+
+    String hostName = bindHost.orElse(addressHost.orElse(omNodeHostAddr));
+
+    return hostName + ":" +
+        addressPort.orElse(OZONE_OM_HTTPS_BIND_PORT_DEFAULT);
+  }
+
+  /**
+   * Get the local directory where ratis logs will be stored.
+   */
+  public static String getOMRatisDirectory(Configuration conf) {
+    String storageDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_STORAGE_DIR);
+
+    if (Strings.isNullOrEmpty(storageDir)) {
+      storageDir = HddsServerUtil.getDefaultRatisDirectory(conf);
+    }
+    return storageDir;
+  }
+
+  public static String getOMRatisSnapshotDirectory(Configuration conf) {
+    String snapshotDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_SNAPSHOT_DIR);
+
+    if (Strings.isNullOrEmpty(snapshotDir)) {
+      snapshotDir = Paths.get(getOMRatisDirectory(conf),
+          "snapshot").toString();
+    }
+    return snapshotDir;
+  }
+
+  public static File createOMDir(String dirPath) {
+    File dirFile = new File(dirPath);
+    if (!dirFile.exists() && !dirFile.mkdirs()) {
+      throw new IllegalArgumentException("Unable to create path: " + dirFile);
+    }
+    return dirFile;
+  }
 }

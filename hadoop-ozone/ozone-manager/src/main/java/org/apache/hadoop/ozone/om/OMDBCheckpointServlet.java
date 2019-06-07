@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.ozone.om;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_INDEX;
 import static org.apache.hadoop.ozone.OzoneConsts.
     OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
 
@@ -54,6 +56,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
       LoggerFactory.getLogger(OMDBCheckpointServlet.class);
   private static final long serialVersionUID = 1L;
 
+  private transient OzoneManager om;
   private transient DBStore omDbStore;
   private transient OMMetrics omMetrics;
   private transient DataTransferThrottler throttler = null;
@@ -61,7 +64,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
   @Override
   public void init() throws ServletException {
 
-    OzoneManager om = (OzoneManager) getServletContext()
+    om = (OzoneManager) getServletContext()
         .getAttribute(OzoneConsts.OM_CONTEXT_ATTRIBUTE);
 
     if (om == null) {
@@ -110,6 +113,24 @@ public class OMDBCheckpointServlet extends HttpServlet {
         flush = Boolean.valueOf(flushParam);
       }
 
+      boolean takeRatisSnapshot = false;
+      String snapshotBeforeCheckpointParam =
+          request.getParameter(OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT);
+      if (StringUtils.isNotEmpty(snapshotBeforeCheckpointParam)) {
+        takeRatisSnapshot = Boolean.valueOf(snapshotBeforeCheckpointParam);
+      }
+
+      long ratisSnapshotIndex;
+      if (takeRatisSnapshot) {
+        // If OM follower is downloading the checkpoint, we should save a
+        // ratis snapshot first. This step also included flushing the OM DB.
+        // Hence, we can set flush to false.
+        flush = false;
+        ratisSnapshotIndex = om.saveRatisSnapshot();
+      } else {
+        ratisSnapshotIndex = om.loadRatisSnapshotIndex();
+      }
+
       DBCheckpoint checkpoint = omDbStore.getCheckpoint(flush);
       if (checkpoint == null) {
         LOG.error("Unable to process metadata snapshot request. " +
@@ -136,6 +157,9 @@ public class OMDBCheckpointServlet extends HttpServlet {
       response.setHeader("Content-Disposition",
           "attachment; filename=\"" +
               checkPointTarFile.getName() + "\"");
+      // Ratis snapshot index used when downloading DB checkpoint to OM follower
+      response.setHeader(OM_RATIS_SNAPSHOT_INDEX,
+          String.valueOf(ratisSnapshotIndex));
 
       checkpointFileInputStream = new FileInputStream(checkPointTarFile);
       start = Instant.now();

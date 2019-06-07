@@ -200,17 +200,16 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
             // Set nodeId
             String nodeId = nodeIdBaseStr + i;
             conf.set(OMConfigKeys.OZONE_OM_NODE_ID_KEY, nodeId);
+            // Set the OM http(s) address to null so that the cluster picks
+            // up the address set with service ID and node ID in initHAConfig
+            conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "");
+            conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "");
 
             // Set metadata/DB dir base path
             String metaDirPath = path + "/" + nodeId;
             conf.set(OZONE_METADATA_DIRS, metaDirPath);
             OMStorage omStore = new OMStorage(conf);
             initializeOmStorage(omStore);
-
-            // Set HTTP address to the rpc port + 2
-            int httpPort = basePort + (6*i) - 4;
-            conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY,
-                "127.0.0.1:" + httpPort);
 
             OzoneManager om = OzoneManager.createOm(null, conf);
             om.setCertClient(certClient);
@@ -261,11 +260,16 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
         omNodesKeyValue.append(",").append(omNodeId);
         String omAddrKey = OmUtils.addKeySuffixes(
             OMConfigKeys.OZONE_OM_ADDRESS_KEY, omServiceId, omNodeId);
+        String omHttpAddrKey = OmUtils.addKeySuffixes(
+            OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, omServiceId, omNodeId);
+        String omHttpsAddrKey = OmUtils.addKeySuffixes(
+            OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, omServiceId, omNodeId);
         String omRatisPortKey = OmUtils.addKeySuffixes(
             OMConfigKeys.OZONE_OM_RATIS_PORT_KEY, omServiceId, omNodeId);
 
         conf.set(omAddrKey, "127.0.0.1:" + port);
-        // Reserve port+2 for OMs HTTP server
+        conf.set(omHttpAddrKey, "127.0.0.1:" + (port + 2));
+        conf.set(omHttpsAddrKey, "127.0.0.1:" + (port + 3));
         conf.setInt(omRatisPortKey, port + 4);
       }
 
