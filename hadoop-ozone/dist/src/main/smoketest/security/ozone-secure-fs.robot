@@ -53,7 +53,7 @@ Test Volume Acls
     ${result} =     Execute             ozone sh volume create ${volume3}
                     Should not contain  ${result}       Failed
     ${result} =     Execute             ozone sh volume getacl ${volume3}
-    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"[a-z]*[A-Z]*[0-9]*\",\n.*\"aclList\" : . \"ALL\" .
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \".*\",\n.*\"aclList\" : . \"ALL\" .
     ${result} =     Execute             ozone sh volume addacl ${volume3} -a user:superuser1:rwxy
     ${result} =     Execute             ozone sh volume getacl ${volume3}
     Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
@@ -69,7 +69,7 @@ Test Bucket Acls
     ${result} =     Execute             ozone sh bucket create ${volume3}/bk1
                     Should not contain  ${result}       Failed
     ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
-    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"[a-z]*[A-Z]*[0-9]*\",\n.*\"aclList\" : . \"ALL\" .
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \".*\",\n.*\"aclList\" : . \"ALL\" .
     ${result} =     Execute             ozone sh bucket addacl ${volume3}/bk1 -a user:superuser1:rwxy
     ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
     Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
