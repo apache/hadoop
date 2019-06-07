@@ -20,8 +20,8 @@ package org.apache.hadoop.util;
 
 import org.slf4j.Logger;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.classification.InterfaceAudience.Public;
+import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
 /**
  * A duration with logging of final state at info or debug
