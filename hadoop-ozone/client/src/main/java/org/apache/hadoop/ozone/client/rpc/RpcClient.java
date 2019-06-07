@@ -1072,8 +1072,8 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   private OzoneInputStream createInputStream(OmKeyInfo keyInfo,
       String requestId) throws IOException {
     LengthInputStream lengthInputStream = KeyInputStream
-        .getFromOmKeyInfo(keyInfo, xceiverClientManager,
-            storageContainerLocationClient, requestId, verifyChecksum);
+        .getFromOmKeyInfo(keyInfo, xceiverClientManager, requestId,
+            verifyChecksum);
     FileEncryptionInfo feInfo = keyInfo.getFileEncryptionInfo();
     if (feInfo != null) {
       final KeyProvider.KeyVersion decrypted = getDEK(feInfo);
