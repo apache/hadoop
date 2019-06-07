@@ -16,7 +16,7 @@
 -->
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="OzoneManager" type="Application" factoryName="Application">
-    <option name="MAIN_CLASS_NAME" value="org.apache.hadoop.ozone.om.OzoneManager" />
+    <option name="MAIN_CLASS_NAME" value="org.apache.hadoop.ozone.om.OzoneManagerStarter" />
     <module name="hadoop-ozone-ozone-manager" />
     <option name="PROGRAM_PARAMETERS" value="-conf=hadoop-ozone/dev-support/intellij/ozone-site.xml" />
     <option name="VM_PARAMETERS" value="-Dlog4j.configuration=file:hadoop-ozone/dev-support/intellij/log4j.properties" />
