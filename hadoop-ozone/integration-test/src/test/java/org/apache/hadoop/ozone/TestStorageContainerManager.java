@@ -64,7 +64,6 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
-import org.apache.hadoop.hdds.scm.server.StorageContainerManager.StartupOption;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
@@ -76,7 +75,6 @@ import org.apache.hadoop.ozone.protocol.commands.DeleteBlocksCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.ExitUtil;
 import org.apache.hadoop.utils.HddsVersionInfo;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -417,15 +415,13 @@ public class TestStorageContainerManager {
     Path scmPath = Paths.get(path, "scm-meta");
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS, scmPath.toString());
 
-    StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
-    StorageContainerManager.scmInit(conf);
+    StorageContainerManager.scmInit(conf, "testClusterId");
 
     SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
-    StartupOption.INIT.setClusterId("testClusterIdNew");
-    StorageContainerManager.scmInit(conf);
+    StorageContainerManager.scmInit(conf, "testClusterIdNew");
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertEquals("testClusterId", scmStore.getClusterID());
   }
@@ -441,9 +437,8 @@ public class TestStorageContainerManager {
     MiniOzoneCluster cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).build();
     cluster.waitForClusterToBeReady();
-    StartupOption.INIT.setClusterId("testClusterId");
     // This will initialize SCM
-    StorageContainerManager.scmInit(conf);
+    StorageContainerManager.scmInit(conf, "testClusterId");
     SCMStorageConfig scmStore = new SCMStorageConfig(conf);
     Assert.assertEquals(NodeType.SCM, scmStore.getNodeType());
     Assert.assertNotEquals("testClusterId", scmStore.getClusterID());
@@ -462,20 +457,7 @@ public class TestStorageContainerManager {
     exception.expect(SCMException.class);
     exception.expectMessage(
         "SCM not initialized due to storage config failure");
-    StorageContainerManager.createSCM(null, conf);
-  }
-
-  @Test
-  public void testSCMInitializationReturnCode() throws IOException,
-      AuthenticationException {
-    ExitUtil.disableSystemExit();
-    OzoneConfiguration conf = new OzoneConfiguration();
-    conf.setBoolean(OzoneConfigKeys.OZONE_ENABLED, true);
-    // Set invalid args
-    String[] invalidArgs = {"--zxcvbnm"};
-    exception.expect(ExitUtil.ExitException.class);
-    exception.expectMessage("ExitException");
-    StorageContainerManager.createSCM(invalidArgs, conf);
+    StorageContainerManager.createSCM(conf);
   }
 
   @Test
@@ -493,7 +475,7 @@ public class TestStorageContainerManager {
     scmStore.setScmId(scmId);
     // writes the version file properties
     scmStore.initialize();
-    StorageContainerManager scm = StorageContainerManager.createSCM(null, conf);
+    StorageContainerManager scm = StorageContainerManager.createSCM(conf);
     //Reads the SCM Info from SCM instance
     ScmInfo scmInfo = scm.getClientProtocolServer().getScmInfo();
     Assert.assertEquals(clusterId, scmInfo.getClusterId());

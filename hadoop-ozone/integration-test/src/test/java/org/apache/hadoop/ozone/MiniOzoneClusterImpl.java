@@ -254,7 +254,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       AuthenticationException {
     scm.stop();
     scm.join();
-    scm = StorageContainerManager.createSCM(null, conf);
+    scm = StorageContainerManager.createSCM(conf);
     scm.start();
     if (waitForDatanode) {
       waitForClusterToBeReady();
@@ -475,7 +475,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       configureSCM();
       SCMStorageConfig scmStore = new SCMStorageConfig(conf);
       initializeScmStorage(scmStore);
-      return StorageContainerManager.createSCM(null, conf);
+      return StorageContainerManager.createSCM(conf);
     }
 
     private void initializeScmStorage(SCMStorageConfig scmStore)
