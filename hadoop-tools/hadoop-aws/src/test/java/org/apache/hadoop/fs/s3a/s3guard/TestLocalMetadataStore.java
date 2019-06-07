@@ -75,6 +75,11 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     return new LocalMSContract(conf);
   }
 
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception{
+    return path;
+  }
+
   @Test
   public void testClearByAncestor() throws Exception {
     Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder().build();

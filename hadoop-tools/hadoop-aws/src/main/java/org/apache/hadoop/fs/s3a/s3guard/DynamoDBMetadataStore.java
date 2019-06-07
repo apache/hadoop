@@ -1088,7 +1088,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * Prune files, in batches. There's a sleep between each batch.
    *
-   * @param pruneMode The prune m
+   * @param pruneMode The mode of operation for the prune For details see
+   *                  {@link MetadataStore#prune(PruneMode, long)}
    * @param cutoff Oldest modification time to allow
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException Any IO/DDB failure.

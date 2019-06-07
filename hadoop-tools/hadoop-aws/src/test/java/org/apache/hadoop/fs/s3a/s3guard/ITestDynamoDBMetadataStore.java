@@ -230,6 +230,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     IOUtils.cleanupWithLogger(LOG, fileSystem);
   }
 
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception {
+    String bucket =
+        getTestBucketName(getContract().getFileSystem().getConf());
+    return "/" + bucket + "/dir2";
+  }
+
   /**
    * Each contract has its own S3AFileSystem and DynamoDBMetadataStore objects.
    */
