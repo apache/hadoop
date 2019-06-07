@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
@@ -178,8 +177,8 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
       expectSuccess("Init command did not exit successfully - see output",
           initCmd,
           Init.NAME,
-          "-" + READ_FLAG, "2",
-          "-" + WRITE_FLAG, "2",
+          "-" + READ_FLAG, "0",
+          "-" + WRITE_FLAG, "0",
           "-" + META_FLAG, "dynamodb://" + testTableName,
           testS3Url);
       // Verify it exists
@@ -210,39 +209,21 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
           testS3Url);
       assertTrue("No Dynamo diagnostics in output " + info,
           info.contains(DESCRIPTION));
+      assertTrue("No Dynamo diagnostics in output " + info,
+          info.contains(DESCRIPTION));
 
       // get the current values to set again
 
       // play with the set-capacity option
+      String fsURI = getFileSystem().getUri().toString();
       DDBCapacities original = getCapacities();
-        String fsURI = getFileSystem().getUri().toString();
-      if (!original.isOnDemandTable()) {
-        // classic provisioned table
-        assertTrue("Wrong billing mode in " + info,
-            info.contains(BILLING_MODE_PROVISIONED));
-        String capacityOut = exec(newSetCapacity(),
-            SetCapacity.NAME,
-            fsURI);
-        LOG.info("Set Capacity output=\n{}", capacityOut);
-        capacityOut = exec(newSetCapacity(),
-            SetCapacity.NAME,
-            "-" + READ_FLAG, original.getReadStr(),
-            "-" + WRITE_FLAG, original.getWriteStr(),
-            fsURI);
-        LOG.info("Set Capacity output=\n{}", capacityOut);
-      } else {
-        // on demand table
-        assertTrue("Wrong billing mode in " + info,
-            info.contains(BILLING_MODE_PER_REQUEST));
-        // on demand tables fail here, so expect that
-        intercept(IOException.class, E_ON_DEMAND_NO_SET_CAPACITY,
-            () -> exec(newSetCapacity(),
-                    SetCapacity.NAME,
+      assertTrue("Wrong billing mode in " + info,
+          info.contains(BILLING_MODE_PER_REQUEST));
+      // per-request tables fail here, so expect that
+      intercept(IOException.class, E_ON_DEMAND_NO_SET_CAPACITY,
+          () -> exec(newSetCapacity(),
+                  SetCapacity.NAME,
                     fsURI));
-      }
-
-      // that call does not change the values
-      original.checkEquals("unchanged", getCapacities());
 
          // Destroy MetadataStore
       Destroy destroyCmd = new Destroy(fs.getConf());

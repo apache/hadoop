@@ -439,7 +439,6 @@ public final class Constants {
    * This config has no default value. If the user does not set this, the
    * S3Guard will operate table in the associated S3 bucket region.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_REGION_KEY =
       "fs.s3a.s3guard.ddb.region";
 
@@ -449,7 +448,6 @@ public final class Constants {
    * This config has no default value. If the user does not set this, the
    * S3Guard implementation will use the respective S3 bucket name.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.table";
 
@@ -459,36 +457,45 @@ public final class Constants {
    * For example:
    * fs.s3a.s3guard.ddb.table.tag.mytag
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_TAG =
       "fs.s3a.s3guard.ddb.table.tag.";
 
   /**
-   * Test table name to use during DynamoDB integration test.
-   *
-   * The table will be modified, and deleted in the end of the tests.
-   * If this value is not set, the integration tests that would be destructive
-   * won't run.
-   */
-  @InterfaceStability.Unstable
-  public static final String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
-      "fs.s3a.s3guard.ddb.test.table";
-
-  /**
    * Whether to create the DynamoDB table if the table does not exist.
+   * Value: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_TABLE_CREATE_KEY =
       "fs.s3a.s3guard.ddb.table.create";
 
-  @InterfaceStability.Unstable
+  /**
+   * Read capacity when creating a table.
+   * When it and the write capacity are both "0", a per-request table is
+   * created.
+   * Value: {@value}.
+   */
   public static final String S3GUARD_DDB_TABLE_CAPACITY_READ_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.read";
-  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 500;
-  @InterfaceStability.Unstable
+
+  /**
+   * Default read capacity when creating a table.
+   * Value: {@value}.
+   */
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT = 0;
+
+  /**
+   * Write capacity when creating a table.
+   * When it and the read capacity are both "0", a per-request table is
+   * created.
+   * Value: {@value}.
+   */
   public static final String S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY =
       "fs.s3a.s3guard.ddb.table.capacity.write";
-  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 100;
+
+  /**
+   * Default write capacity when creating a table.
+   * Value: {@value}.
+   */
+  public static final long S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT = 0;
 
   /**
    * The maximum put or delete requests per BatchWriteItem request.
@@ -497,7 +504,6 @@ public final class Constants {
    */
   public static final int S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT = 25;
 
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_MAX_RETRIES =
       "fs.s3a.s3guard.ddb.max.retries";
 
@@ -509,7 +515,6 @@ public final class Constants {
   public static final int S3GUARD_DDB_MAX_RETRIES_DEFAULT =
       DEFAULT_MAX_ERROR_RETRIES;
 
-  @InterfaceStability.Unstable
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL =
       "fs.s3a.s3guard.ddb.throttle.retry.interval";
   public static final String S3GUARD_DDB_THROTTLE_RETRY_INTERVAL_DEFAULT =
@@ -528,7 +533,6 @@ public final class Constants {
   /**
    * The default "Null" metadata store: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_NULL
       = "org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore";
 
@@ -561,7 +565,6 @@ public final class Constants {
   /**
    * Use DynamoDB for the metadata: {@value}.
    */
-  @InterfaceStability.Unstable
   public static final String S3GUARD_METASTORE_DYNAMO
       = "org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore";
 

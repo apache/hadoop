@@ -59,6 +59,7 @@ import com.amazonaws.services.dynamodbv2.document.TableWriteItems;
 import com.amazonaws.services.dynamodbv2.document.spec.GetItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
+import com.amazonaws.services.dynamodbv2.model.BillingMode;
 import com.amazonaws.services.dynamodbv2.model.CreateTableRequest;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughput;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
@@ -1259,11 +1260,26 @@ public class DynamoDBMetadataStore implements MetadataStore,
             tableName, region, (created != null) ? new Date(created) : null);
       } catch (ResourceNotFoundException rnfe) {
         if (conf.getBoolean(S3GUARD_DDB_TABLE_CREATE_KEY, false)) {
-          final ProvisionedThroughput capacity = new ProvisionedThroughput(
-              conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
-                  S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT),
-              conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
-                  S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT));
+          long readCapacity = conf.getLong(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,
+              S3GUARD_DDB_TABLE_CAPACITY_READ_DEFAULT);
+          long writeCapacity = conf.getLong(
+              S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,
+              S3GUARD_DDB_TABLE_CAPACITY_WRITE_DEFAULT);
+          ProvisionedThroughput capacity;
+          if (readCapacity > 0 && writeCapacity > 0) {
+            capacity = new ProvisionedThroughput(
+                readCapacity,
+                writeCapacity);
+          } else {
+            // at least one capacity value is <= 0
+            // verify they are both exactly zero
+            Preconditions.checkArgument(
+                readCapacity == 0 && writeCapacity == 0,
+                "S3Guard table read capacity %d and and write capacity %d"
+                    + " are inconsistent", readCapacity, writeCapacity);
+            // and set the capacity to null for per-request billing.
+            capacity = null;
+          }
 
           createTable(capacity);
         } else {
@@ -1403,20 +1419,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * marker.
    * Creating an setting up the table isn't wrapped by any retry operations;
    * the wait for a table to become available is RetryTranslated.
-   * @param capacity capacity to provision
+   * @param capacity capacity to provision. If null: create a per-request
+   * table.
    * @throws IOException on any failure.
    * @throws InterruptedIOException if the wait was interrupted
    */
   @Retries.OnceRaw
   private void createTable(ProvisionedThroughput capacity) throws IOException {
     try {
-      LOG.info("Creating non-existent DynamoDB table {} in region {}",
-          tableName, region);
-      table = dynamoDB.createTable(new CreateTableRequest()
+      String mode;
+      CreateTableRequest request = new CreateTableRequest()
           .withTableName(tableName)
           .withKeySchema(keySchema())
-          .withAttributeDefinitions(attributeDefinitions())
-          .withProvisionedThroughput(capacity));
+          .withAttributeDefinitions(attributeDefinitions());
+      if (capacity != null) {
+        mode = String.format("with provisioned read capacity %d and"
+                + " write capacity %s",
+            capacity.getReadCapacityUnits(), capacity.getWriteCapacityUnits());
+        request.withProvisionedThroughput(capacity);
+      } else {
+        mode = "with pay-per-request billing";
+        request.withBillingMode(BillingMode.PAY_PER_REQUEST);
+      }
+      LOG.info("Creating non-existent DynamoDB table {} in region {} {}",
+          tableName, region, mode);
+      table = dynamoDB.createTable(request);
       LOG.debug("Awaiting table becoming active");
     } catch (ResourceInUseException e) {
       LOG.warn("ResourceInUseException while creating DynamoDB table {} "
@@ -1446,13 +1473,21 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * Provision the table with given read and write capacity units.
    * Call will fail if the table is busy, or the new values match the current
    * ones.
-   * @param readCapacity read units
-   * @param writeCapacity write units
+   * <p>
+   * Until the AWS SDK lets us switch a table to on-demand, an attempt to
+   * set the I/O capacity to zero will fail.
+   * @param readCapacity read units: must be greater than zero
+   * @param writeCapacity write units: must be greater than zero
    * @throws IOException on a failure
    */
   @Retries.RetryTranslated
   void provisionTable(Long readCapacity, Long writeCapacity)
       throws IOException {
+
+    if (readCapacity == 0 || writeCapacity == 0) {
+      // table is pay on demand
+      throw new IOException(E_ON_DEMAND_NO_SET_CAPACITY);
+    }
     final ProvisionedThroughput toProvision = new ProvisionedThroughput()
         .withReadCapacityUnits(readCapacity)
         .withWriteCapacityUnits(writeCapacity);
