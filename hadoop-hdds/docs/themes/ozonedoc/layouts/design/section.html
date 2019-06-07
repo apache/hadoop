@@ -26,10 +26,32 @@
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
 
             <main>
-                <h1>{{ .Title }}</h1>
-                <div class="col-md-9">
+                <main>
+                    <h1>Available design docs</h1>
                     {{ .Content }}
-                </div>
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <td>JIRA</td>
+                            <td>Title</td>
+                            <td>Summary</td>
+                            <td>Status</td>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .Paginator.Pages }}
+                        <tr>
+                            <td>
+                                <a href="https://issues.apache.org/jira/browse/{{.Params.jira}}">{{.Params.jira}}</a>
+                            </td>
+                            <td><a href="{{.URL}}">{{.Title}}</a></td>
+                            <td>{{.Summary}}</td>
+                            <td>{{.Params.status}}</td>
+                        </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </main>
             </main>
 
         </div>
@@ -41,3 +63,4 @@
 
 </body>
 </html>
+

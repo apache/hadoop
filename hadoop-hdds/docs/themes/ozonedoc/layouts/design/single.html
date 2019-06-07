@@ -16,28 +16,32 @@
 -->
 {{ partial "header.html" . }}
 
-<body>
-
+  <body>
 {{ partial "navbar.html" . }}
-
-<div class="container-fluid">
-    <div class="row">
+    <div class="container-fluid">
+      <div class="row">
         {{ partial "sidebar.html" . }}
         <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+            <div class="col-md-9">
+                <h1><a href="https://issues.apache.org/jira/browse/{{.Params.jira}}">[{{.Params.jira}}]</a> {{ .Title }} ({{.Params.status}}) </h1>
+                <div><i>Authors: {{.Params.author}}</i><div class="pull-right">{{.Params.date | dateFormat "2006-01-02"}}</div></div>
+                <p>&nbsp</p>
 
-            <main>
-                <h1>{{ .Title }}</h1>
-                <div class="col-md-9">
-                    {{ .Content }}
+                <div class="panel panel-success">
+                    <div class="panel-heading">Summary</div>
+                    <div class="panel-body">
+                        {{.Summary}}
+                    </div>
                 </div>
-            </main>
+
+              {{ .Content }}
+            </div>
 
         </div>
+      </div>
     </div>
-</div>
-</div>
 
 {{ partial "footer.html" . }}
 
-</body>
+  </body>
 </html>
