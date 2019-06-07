@@ -44,8 +44,3 @@ menu:
     title: Recipes
     url: prometheus.html
     weight: 4
-  - identifier: Design docs
-    name: Design docs
-    title: Design docs
-    url: design.html
-    weight: 30
