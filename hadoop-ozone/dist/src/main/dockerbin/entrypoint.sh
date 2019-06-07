@@ -97,7 +97,18 @@ if [ -n "$KERBEROS_ENABLED" ]; then
     sudo sed -i "s/krb5/$KERBEROS_SERVER/g" "/etc/krb5.conf" || true
 fi
 
-"$DIR"/envtoconf.py --destination "${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
+CONF_DESTINATION_DIR="${HADOOP_CONF_DIR:-/opt/hadoop/etc/hadoop}"
+
+#Try to copy the defaults
+set +e
+if [[ -d "/opt/ozone/etc/hadoop" ]]; then
+   cp /opt/hadoop/etc/hadoop/* "$CONF_DESTINATION_DIR/" > /dev/null 2>&1
+elif [[ -d "/opt/hadoop/etc/hadoop" ]]; then
+   cp /opt/hadoop/etc/hadoop/* "$CONF_DESTINATION_DIR/" > /dev/null 2>&1
+fi
+set -e
+
+"$DIR"/envtoconf.py --destination "$CONF_DESTINATION_DIR"
 
 if [ -n "$ENSURE_SCM_INITIALIZED" ]; then
   if [ ! -f "$ENSURE_SCM_INITIALIZED" ]; then
