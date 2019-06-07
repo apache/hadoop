@@ -142,8 +142,7 @@ public class TestOzoneManagerStarter {
       }
     }
 
-    public boolean init(OzoneConfiguration conf) throws IOException,
-        AuthenticationException {
+    public boolean init(OzoneConfiguration conf) throws IOException {
       initCalled = true;
       if (throwOnInit) {
         throw new IOException("Simulated Exception");

@@ -930,22 +930,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public static OzoneManager createOm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
-    loginOMUserIfSecurityEnabled(conf);
-    return new OzoneManager(conf);
-  }
-
-  /**
-   * Logs in the OM use if security is enabled in the configuration.
-   *
-   * @param conf OzoneConfiguration
-   * @throws IOException, AuthenticationException in case login failes.
-   */
-  private static void loginOMUserIfSecurityEnabled(OzoneConfiguration  conf)
-      throws IOException, AuthenticationException {
     securityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
     if (securityEnabled) {
       loginOMUser(conf);
     }
+    return new OzoneManager(conf);
   }
 
   /**
@@ -957,9 +946,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    *                     accessible
    */
   @VisibleForTesting
-  public static boolean omInit(OzoneConfiguration conf) throws IOException,
-      AuthenticationException {
-    loginOMUserIfSecurityEnabled(conf);
+  public static boolean omInit(OzoneConfiguration conf) throws IOException {
     OMStorage omStorage = new OMStorage(conf);
     StorageState state = omStorage.getState();
     if (state != StorageState.INITIALIZED) {

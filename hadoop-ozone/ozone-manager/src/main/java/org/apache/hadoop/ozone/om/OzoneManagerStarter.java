@@ -121,8 +121,7 @@ public class OzoneManagerStarter extends GenericCli {
       om.join();
     }
 
-    public boolean init(OzoneConfiguration conf) throws IOException,
-        AuthenticationException {
+    public boolean init(OzoneConfiguration conf) throws IOException {
       return OzoneManager.omInit(conf);
     }
   }
