@@ -59,7 +59,6 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CREATE_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_METASTORE_NULL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestDynamoTablePrefix;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.E_BAD_STATE;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.SUCCESS;
@@ -332,7 +331,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   @Test
   public void testBucketInfoUnguarded() throws Exception {
     final Configuration conf = getConfiguration();
+    URI fsUri = getFileSystem().getUri();
     conf.set(S3GUARD_DDB_TABLE_CREATE_KEY, Boolean.FALSE.toString());
+    String bucket = fsUri.getHost();
+    clearBucketOption(conf, bucket,
+        S3GUARD_DDB_TABLE_CREATE_KEY);
+    clearBucketOption(conf, bucket, S3_METADATA_STORE_IMPL);
+    clearBucketOption(conf, bucket, S3GUARD_DDB_TABLE_NAME_KEY);
+    conf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
         "testBucketInfoUnguarded-" + UUID.randomUUID());
 
@@ -341,7 +347,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     S3GuardTool.BucketInfo infocmd = new S3GuardTool.BucketInfo(conf);
     String info = exec(infocmd, S3GuardTool.BucketInfo.NAME,
         "-" + S3GuardTool.BucketInfo.UNGUARDED_FLAG,
-        getFileSystem().getUri().toString());
+        fsUri.toString());
 
     assertTrue("Output should contain information about S3A client " + info,
         info.contains("S3A Client"));

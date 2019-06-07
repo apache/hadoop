@@ -1581,23 +1581,27 @@
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.read</name>
-  <value>500</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for read operations in terms of capacity
-    units for the DynamoDB table.  This config value will only be used when
-    creating a new DynamoDB table, though later you can manually provision by
-    increasing or decreasing read capacity as needed for existing tables.
-    See DynamoDB documents for more information.
+    units for the DynamoDB table. This config value will only be used when
+    creating a new DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    If a positive integer is provided for this and the write capacity, then
+    a table with "provisioned capacity" will be created.
+    You can change the capacity of an existing provisioned-capacity table
+    through the "s3guard set-capacity" command.
   </description>
 </property>
 
 <property>
   <name>fs.s3a.s3guard.ddb.table.capacity.write</name>
-  <value>100</value>
+  <value>0</value>
   <description>
     Provisioned throughput requirements for write operations in terms of
-    capacity units for the DynamoDB table.  Refer to related config
-    fs.s3a.s3guard.ddb.table.capacity.read before usage.
+    capacity units for the DynamoDB table.
+    If set to 0 (the default), new tables are created with "per-request" capacity.
+    Refer to related configuration option fs.s3a.s3guard.ddb.table.capacity.read
   </description>
 </property>
 
