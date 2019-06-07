@@ -75,7 +75,8 @@ public class ChunkInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
-  ChunkInputStream(ChunkInfo chunkInfo, BlockID blockId, XceiverClientSpi xceiverClient, boolean verifyChecksum) {
+  ChunkInputStream(ChunkInfo chunkInfo, BlockID blockId, 
+          XceiverClientSpi xceiverClient, boolean verifyChecksum) {
     this.chunkInfo = chunkInfo;
     this.length = chunkInfo.getLen();
     this.blockID = blockId;
