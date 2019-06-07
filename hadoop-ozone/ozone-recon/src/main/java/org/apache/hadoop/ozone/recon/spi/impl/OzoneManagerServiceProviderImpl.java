@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_OM_SNAPSHOT_DB;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.RECON_OM_CONNECTION_REQUEST_TIMEOUT;
@@ -69,7 +70,6 @@ public class OzoneManagerServiceProviderImpl
   private static final Logger LOG =
       LoggerFactory.getLogger(OzoneManagerServiceProviderImpl.class);
 
-  private final String dbCheckpointEndPoint = "/dbCheckpoint";
   private final CloseableHttpClient httpClient;
   private File omSnapshotDBParentDir = null;
   private String omDBSnapshotUrl;
@@ -116,11 +116,11 @@ public class OzoneManagerServiceProviderImpl
         .build();
 
     omDBSnapshotUrl = "http://" + ozoneManagerHttpAddress +
-        dbCheckpointEndPoint;
+        OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
 
     if (ozoneSecurityEnabled) {
       omDBSnapshotUrl = "https://" + ozoneManagerHttpsAddress +
-          dbCheckpointEndPoint;
+          OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
     }
 
     boolean flushParam = configuration.getBoolean(

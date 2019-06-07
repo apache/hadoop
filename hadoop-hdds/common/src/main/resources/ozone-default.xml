@@ -1585,6 +1585,8 @@
       logs. If this is not set then default metadata dirs is used. A warning
       will be logged if this not set. Ideally, this should be mapped to a
       fast disk like an SSD.
+      If undefined, OM ratis storage dir will fallback to ozone.metadata.dirs.
+      This fallback approach is not recommended for production environments.
     </description>
   </property>
 
@@ -1701,6 +1703,45 @@
       loses the leader role. The scheduled check is an secondary
       check to ensure that the leader role is updated periodically
       .</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.snapshot.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing OM's snapshot
+      related files like the ratisSnapshotIndex and DB checkpoint from leader
+      OM.
+      If undefined, OM snapshot dir will fallback to ozone.om.ratis.storage.dir.
+      This fallback approach is not recommended for production environments.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.socket.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Socket timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.connection.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.request.timeout</name>
+    <value>5000ms</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection request timeout for HTTP call made by OM Snapshot Provider to
+      request OM snapshot from OM Leader.
+    </description>
   </property>
 
   <property>
@@ -2344,14 +2385,6 @@
     <description>
       Socket timeout in milliseconds for HTTP call made by Recon to request
       OM snapshot.
-    </description>
-  </property>
-  <property>
-    <name>recon.om.socket.timeout</name>
-    <value>5s</value>
-    <tag>OZONE, RECON, OM</tag>
-    <description>
-      Socket timeout for HTTP call made by Recon to request OM snapshot.
     </description>
   </property>
   <property>

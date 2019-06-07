@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.ratis;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -39,7 +38,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.ServiceException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.StorageUnit;
-import org.apache.hadoop.hdds.scm.HddsServerUtil;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMNodeDetails;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -358,7 +357,7 @@ public final class OzoneManagerRatisServer {
     }
 
     // Set Ratis storage directory
-    String storageDir = getOMRatisDirectory(conf);
+    String storageDir = OmUtils.getOMRatisDirectory(conf);
     RaftServerConfigKeys.setStorageDirs(properties,
         Collections.singletonList(new File(storageDir)));
 
@@ -618,18 +617,6 @@ public final class OzoneManagerRatisServer {
   @VisibleForTesting
   public RaftPeerId getRaftPeerId() {
     return this.raftPeerId;
-  }
-
-  /**
-   * Get the local directory where ratis logs will be stored.
-   */
-  public static String getOMRatisDirectory(Configuration conf) {
-    String storageDir = conf.get(OMConfigKeys.OZONE_OM_RATIS_STORAGE_DIR);
-
-    if (Strings.isNullOrEmpty(storageDir)) {
-      storageDir = HddsServerUtil.getDefaultRatisDirectory(conf);
-    }
-    return storageDir;
   }
 
   private UUID getRaftGroupIdFromOmServiceId(String omServiceId) {

@@ -99,6 +99,7 @@ import java.util.stream.Collectors;
 
 import static java.net.HttpURLConnection.HTTP_CREATED;
 import static java.net.HttpURLConnection.HTTP_OK;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OM_SERVICE_LIST_HTTP_ENDPOINT;
 
 /**
  * Ozone Client REST protocol implementation. It uses REST protocol to
@@ -190,7 +191,8 @@ public class RestClient implements ClientProtocol {
               " details on configuring Ozone.");
     }
 
-    HttpGet httpGet = new HttpGet("http://" + httpAddress + "/serviceList");
+    HttpGet httpGet = new HttpGet("http://" + httpAddress +
+        OZONE_OM_SERVICE_LIST_HTTP_ENDPOINT);
     HttpEntity entity = executeHttpRequest(httpGet);
     try {
       String serviceListJson = EntityUtils.toString(entity);

@@ -17,10 +17,15 @@
 
 package org.apache.hadoop.ozone.om;
 
+import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.net.NetUtils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+
+import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT;
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
 
 /**
  * This class stores OM node details.
@@ -31,17 +36,22 @@ public final class OMNodeDetails {
   private InetSocketAddress rpcAddress;
   private int rpcPort;
   private int ratisPort;
+  private String httpAddress;
+  private String httpsAddress;
 
   /**
    * Constructs OMNodeDetails object.
    */
   private OMNodeDetails(String serviceId, String nodeId,
-      InetSocketAddress rpcAddr, int rpcPort, int ratisPort) {
+      InetSocketAddress rpcAddr, int rpcPort, int ratisPort,
+      String httpAddress, String httpsAddress) {
     this.omServiceId = serviceId;
     this.omNodeId = nodeId;
     this.rpcAddress = rpcAddr;
     this.rpcPort = rpcPort;
     this.ratisPort = ratisPort;
+    this.httpAddress = httpAddress;
+    this.httpsAddress = httpsAddress;
   }
 
   /**
@@ -53,6 +63,8 @@ public final class OMNodeDetails {
     private InetSocketAddress rpcAddress;
     private int rpcPort;
     private int ratisPort;
+    private String httpAddr;
+    private String httpsAddr;
 
     public Builder setRpcAddress(InetSocketAddress rpcAddr) {
       this.rpcAddress = rpcAddr;
@@ -75,9 +87,19 @@ public final class OMNodeDetails {
       return this;
     }
 
+    public Builder setHttpAddress(String httpAddress) {
+      this.httpAddr = httpAddress;
+      return this;
+    }
+
+    public Builder setHttpsAddress(String httpsAddress) {
+      this.httpsAddr = httpsAddress;
+      return this;
+    }
+
     public OMNodeDetails build() {
       return new OMNodeDetails(omServiceId, omNodeId, rpcAddress, rpcPort,
-          ratisPort);
+          ratisPort, httpAddr, httpsAddr);
     }
   }
 
@@ -107,5 +129,20 @@ public final class OMNodeDetails {
 
   public String getRpcAddressString() {
     return NetUtils.getHostPortString(rpcAddress);
+  }
+
+  public String getOMDBCheckpointEnpointUrl(HttpConfig.Policy httpPolicy) {
+    if (httpPolicy.isHttpEnabled()) {
+      if (StringUtils.isNotEmpty(httpAddress)) {
+        return "http://" + httpAddress + OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT
+            + "?" + OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT + "=true";
+      }
+    } else {
+      if (StringUtils.isNotEmpty(httpsAddress)) {
+        return "https://" + httpsAddress + OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT
+            + "?" + OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT + "=true";
+      }
+    }
+    return null;
   }
 }
