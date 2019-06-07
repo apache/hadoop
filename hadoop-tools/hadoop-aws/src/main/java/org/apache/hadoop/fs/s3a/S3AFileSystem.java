@@ -391,7 +391,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       initMultipartUploads(conf);
       if(hasMetadataStore()) {
         long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
-            DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+            DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.SECONDS);
         ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
       }
     } catch (AmazonClientException e) {

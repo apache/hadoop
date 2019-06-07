@@ -24,7 +24,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.Sets;
@@ -46,9 +45,6 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_S3GUARD_IMPLEMENTATION_DYNAMO;
-import static org.apache.hadoop.fs.s3a.S3ATestConstants.TEST_S3GUARD_IMPLEMENTATION_LOCAL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
@@ -859,13 +855,15 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if(!allowMissing()) {
       for (String fN : keepFilenames) {
         final PathMetadata pathMetadata = ms.get(strToPath(fN));
-        assertNotNull(pathMetadata);
+        assertNotNull("Kept files should be in the metastore after prune",
+            pathMetadata);
       }
     }
 
     for(String fN : removeFilenames) {
       final PathMetadata pathMetadata = ms.get(strToPath(fN));
-      assertNull(pathMetadata);
+      assertNull("Expired tombstones should be removed from metastore after "
+          + "the prune.", pathMetadata);
     }
   }
 
@@ -893,27 +891,22 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       ms.put(pathMetadata);
     }
 
-    final Map<String, String> diagnostics = ms.getDiagnostics();
-    if (ms instanceof LocalMetadataStore){
-      ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
-          "/dir2");
-    } else if (ms instanceof DynamoDBMetadataStore){
-      String bucket =
-          getTestBucketName(getContract().getFileSystem().getConf());
-      ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
-          "/" + bucket + "/dir2");
-    }
+    final String prunePath = getPathStringForPrune("/dir2");
+    ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
+        prunePath);
 
     if(!allowMissing()) {
       for (String fN : keepFilenames) {
         final PathMetadata pathMetadata = ms.get(strToPath(fN));
-        assertNotNull(pathMetadata);
+        assertNotNull("Kept files should be in the metastore after prune",
+            pathMetadata);
       }
     }
 
     for(String fN : removeFilenames) {
       final PathMetadata pathMetadata = ms.get(strToPath(fN));
-      assertNull(pathMetadata);
+      assertNull("Expired tombstones should be removed from metastore after "
+          + "the prune.", pathMetadata);
     }
   }
 
@@ -930,6 +923,16 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
     return paths;
   }
+
+
+  /**
+   * The prune operation needs the path with the bucket name as a string in
+   * {@link DynamoDBMetadataStore}, but not for {@link LocalMetadataStore}.
+   * This is an implementation detail of the ms, so this should be
+   * implemented in the subclasses.
+   */
+  protected abstract String getPathStringForPrune(String path)
+      throws Exception;
 
   private void commonTestPutListStatus(final String parent) throws IOException {
     putListStatusFiles(parent, true, buildPathStrings(parent, "file1", "file2",

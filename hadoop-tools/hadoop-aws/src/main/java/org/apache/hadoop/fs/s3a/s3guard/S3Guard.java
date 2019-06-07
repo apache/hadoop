@@ -533,7 +533,7 @@ public final class S3Guard {
     public TtlTimeProvider(Configuration conf) {
       this.authoritativeDirTtl =
           conf.getTimeDuration(METADATASTORE_METADATA_TTL,
-          DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+              DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.SECONDS);
     }
 
     @Override

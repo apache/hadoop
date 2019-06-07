@@ -295,7 +295,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   @Test
   public void testTombstoneExpiryGuardedDeleteRawCreate() throws Exception {
     boolean allowAuthoritative = authoritative;
-    Path testFilePath = path("TEGDRC-" + UUID.randomUUID());
+    Path testFilePath = path("TEGDRC-" + UUID.randomUUID() + "/file");
     LOG.info("Allow authoritative param: {}",  allowAuthoritative);
     String originalText = "some test";
     String newText = "the new originalText for test";
@@ -445,7 +445,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     long ttl = 10L;
     final Path filePath = path(testFile);
 
-    // Create a directory with
     ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
     ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
 
@@ -453,7 +452,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       guardedFs.setTtlTimeProvider(mockTimeProvider);
       when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
 
-      // create a file while the NOW is 0, so it will set 0 as the last_upadted
+      // create a file while the NOW is 0, so it will set 0 as the last_updated
       when(mockTimeProvider.getNow()).thenReturn(0L);
       touch(guardedFs, filePath);
       deleteFile(guardedFs, filePath);
@@ -472,6 +471,61 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
               + "the guarded fs, and the metadatastore tombstoned the file. "
               + "The tombstone won't expire if lastUpdated is set to 0.",
           () -> guardedFs.getFileStatus(filePath));
+
+    } finally {
+      guardedFs.delete(filePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * 1. File is deleted in the guarded fs.
+   * 2. File is replaced in the raw fs.
+   * 3. File is deleted in the guarded FS after the expiry time.
+   * 4. File MUST NOT exist in raw FS.
+   */
+  @Test
+  public void deleteAfterTombstoneExpiryOobCreate() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String testFile = methodName + UUID.randomUUID().toString() +
+        "/theFileToTry";
+
+    long ttl = 10L;
+    final Path filePath = path(testFile);
+
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // CREATE AND DELETE WITH GUARDED FS
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      touch(guardedFs, filePath);
+      deleteFile(guardedFs, filePath);
+
+      final PathMetadata pathMetadata =
+          guardedFs.getMetadataStore().get(filePath);
+      assertNotNull("pathMetadata should not be null after deleting with "
+          + "tombstones", pathMetadata);
+
+      // REPLACE WITH RAW FS
+      touch(rawFS, filePath);
+      awaitFileStatus(rawFS, filePath);
+
+      // SET EXPIRY TIME, SO THE TOMBSTONE IS EXPIRED
+      when(mockTimeProvider.getNow()).thenReturn(100L + 2*ttl);
+
+      // DELETE IN GUARDED FS
+      guardedFs.delete(filePath, true);
+
+      // FILE MUST NOT EXIST IN RAW
+      intercept(FileNotFoundException.class, filePath.toString(),
+          "This file should throw FNFE when reading through "
+              + "the raw fs, and the guarded fs deleted the file.",
+          () -> rawFS.getFileStatus(filePath));
 
     } finally {
       guardedFs.delete(filePath, true);
@@ -503,27 +557,16 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     final RemoteIterator<LocatedFileStatus> listIter =
         fs.listFiles(filePath.getParent(), false);
 
-    boolean lfsHit = false;
     while (listIter.hasNext()) {
       final LocatedFileStatus lfs = listIter.next();
-      if (lfs.getPath().equals(filePath)) {
-        lfsHit = true;
-        LOG.info("{}; file found in listFiles as expected.", filePath);
-        break;
-      }
+      assertEquals(filePath, lfs.getPath());
     }
-    assertTrue("The file should be listed in fs.listFiles: ", lfsHit);
 
-    boolean lsHit = false;
     final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
     for (FileStatus fileStatus : fileStatuses) {
-      if (fileStatus.getPath().equals(filePath)) {
-        lsHit = true;
-        LOG.info("{}; file found in listStatus as expected.", filePath);
-        break;
-      }
+        assertEquals("The file should be listed in fs.listStatus",
+            filePath, fileStatus.getPath());
     }
-    assertTrue("The file should be listed in fs.listStatus: ", lsHit);
   }
 
   /**
