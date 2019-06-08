@@ -654,7 +654,6 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
       throws IOException {
     HddsClientUtils.verifyResourceName(volumeName, bucketName);
     Preconditions.checkNotNull(keyName);
-    String requestId = UUID.randomUUID().toString();
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
@@ -662,7 +661,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setRefreshPipeline(true)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
-    return createInputStream(keyInfo, requestId);
+    return createInputStream(keyInfo);
   }
 
   @Override
@@ -984,7 +983,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setKeyName(keyName)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupFile(keyArgs);
-    return createInputStream(keyInfo, UUID.randomUUID().toString());
+    return createInputStream(keyInfo);
   }
 
   @Override
@@ -1069,10 +1068,10 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     return ozoneManagerClient.getAcl(obj);
   }
 
-  private OzoneInputStream createInputStream(OmKeyInfo keyInfo,
-      String requestId) throws IOException {
+  private OzoneInputStream createInputStream(OmKeyInfo keyInfo)
+      throws IOException {
     LengthInputStream lengthInputStream = KeyInputStream
-        .getFromOmKeyInfo(keyInfo, xceiverClientManager, requestId,
+        .getFromOmKeyInfo(keyInfo, xceiverClientManager,
             verifyChecksum);
     FileEncryptionInfo feInfo = keyInfo.getFileEncryptionInfo();
     if (feInfo != null) {

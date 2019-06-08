@@ -44,7 +44,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.UUID;
 
 /**
  * Tests the idempotent operations in ContainerStateMachine.
@@ -80,7 +79,6 @@ public class TestContainerStateMachineIdempotency {
 
   @Test
   public void testContainerStateMachineIdempotency() throws Exception {
-    String traceID = UUID.randomUUID().toString();
     ContainerWithPipeline container = storageContainerLocationClient
         .allocateContainer(HddsProtos.ReplicationType.RATIS,
             HddsProtos.ReplicationFactor.ONE, containerOwner);
@@ -89,8 +87,7 @@ public class TestContainerStateMachineIdempotency {
     XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
     try {
       //create the container
-      ContainerProtocolCalls.createContainer(client, containerID, traceID,
-          null);
+      ContainerProtocolCalls.createContainer(client, containerID, null);
       // call create Container again
       BlockID blockID = ContainerTestHelper.getTestBlockID(containerID);
       byte[] data =
@@ -112,10 +109,8 @@ public class TestContainerStateMachineIdempotency {
       client.sendCommand(putKeyRequest);
 
       // close container call
-      ContainerProtocolCalls.closeContainer(client, containerID, traceID,
-          null);
-      ContainerProtocolCalls.closeContainer(client, containerID, traceID,
-          null);
+      ContainerProtocolCalls.closeContainer(client, containerID, null);
+      ContainerProtocolCalls.closeContainer(client, containerID, null);
     } catch (IOException ioe) {
       Assert.fail("Container operation failed" + ioe);
     }

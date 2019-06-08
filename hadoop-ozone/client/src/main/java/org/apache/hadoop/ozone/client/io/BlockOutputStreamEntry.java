@@ -47,7 +47,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
   private final Pipeline pipeline;
   private final ChecksumType checksumType;
   private final int bytesPerChecksum;
-  private final String requestId;
   private final int chunkSize;
   // total number of bytes that should be written to this stream
   private final long length;
@@ -72,8 +71,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
     this.blockID = blockID;
     this.key = key;
     this.xceiverClientManager = xceiverClientManager;
-    this.xceiverClient = xceiverClient;
-    this.requestId = requestId;
+    this.pipeline = pipeline;
     this.chunkSize = chunkSize;
     this.token = token;
     this.length = length;
@@ -130,7 +128,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
       }
       this.outputStream =
           new BlockOutputStream(blockID, key, xceiverClientManager,
-              pipeline, requestId, chunkSize, streamBufferFlushSize,
+              pipeline, chunkSize, streamBufferFlushSize,
               streamBufferMaxSize, watchTimeout, bufferPool, checksumType,
               bytesPerChecksum);
     }
@@ -340,10 +338,6 @@ public final class BlockOutputStreamEntry extends OutputStream {
 
   public XceiverClientSpi getXceiverClient() {
     return xceiverClient;
-  }
-
-  public String getRequestId() {
-    return requestId;
   }
 
   public int getChunkSize() {

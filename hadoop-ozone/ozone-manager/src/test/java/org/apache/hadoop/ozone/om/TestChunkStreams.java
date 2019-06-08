@@ -47,7 +47,7 @@ public class TestChunkStreams {
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
         BlockInputStream in =
-            new BlockInputStream(null, 100, null, null, true, null, null) {
+            new BlockInputStream(null, 100, null, null, true, null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
@@ -103,7 +103,7 @@ public class TestChunkStreams {
       for (int i = 0; i < 5; i++) {
         int tempOffset = offset;
         BlockInputStream in =
-            new BlockInputStream(null, 100, null, null, true, null, null) {
+            new BlockInputStream(null, 100, null, null, true, null) {
               private long pos = 0;
               private ByteArrayInputStream in =
                   new ByteArrayInputStream(buf, tempOffset, 100);
