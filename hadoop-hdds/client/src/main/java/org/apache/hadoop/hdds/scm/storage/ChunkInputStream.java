@@ -49,7 +49,6 @@ public class ChunkInputStream extends InputStream implements Seekable {
   private ChunkInfo chunkInfo;
   private final long length;
   private final BlockID blockID;
-  private final String traceID;
   private XceiverClientSpi xceiverClient;
   private boolean verifyChecksum;
   private boolean allocated = false;
@@ -76,12 +75,11 @@ public class ChunkInputStream extends InputStream implements Seekable {
 
   private static final int EOF = -1;
 
-  ChunkInputStream(ChunkInfo chunkInfo, BlockID blockId,
-      String traceId, XceiverClientSpi xceiverClient, boolean verifyChecksum) {
+  ChunkInputStream(ChunkInfo chunkInfo, BlockID blockId, 
+          XceiverClientSpi xceiverClient, boolean verifyChecksum) {
     this.chunkInfo = chunkInfo;
     this.length = chunkInfo.getLen();
     this.blockID = blockId;
-    this.traceID = traceId;
     this.xceiverClient = xceiverClient;
     this.verifyChecksum = verifyChecksum;
   }
@@ -335,7 +333,7 @@ public class ChunkInputStream extends InputStream implements Seekable {
       validators.add(validator);
 
       readChunkResponse = ContainerProtocolCalls.readChunk(xceiverClient,
-          readChunkInfo, blockID, traceID, validators);
+          readChunkInfo, blockID, validators);
 
     } catch (IOException e) {
       if (e instanceof StorageContainerException) {

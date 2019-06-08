@@ -60,7 +60,6 @@ public class BlockInputStream extends InputStream implements Seekable {
   private Pipeline pipeline;
   private final Token<OzoneBlockTokenIdentifier> token;
   private final boolean verifyChecksum;
-  private final String traceID;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
   private boolean initialized = false;
@@ -96,13 +95,12 @@ public class BlockInputStream extends InputStream implements Seekable {
 
   public BlockInputStream(BlockID blockId, long blockLen, Pipeline pipeline,
       Token<OzoneBlockTokenIdentifier> token, boolean verifyChecksum,
-      String traceId, XceiverClientManager xceiverClientManager) {
+      XceiverClientManager xceiverClientManager) {
     this.blockID = blockId;
     this.length = blockLen;
     this.pipeline = pipeline;
     this.token = token;
     this.verifyChecksum = verifyChecksum;
-    this.traceID = traceId;
     this.xceiverClientManager = xceiverClientManager;
   }
 
@@ -166,7 +164,7 @@ public class BlockInputStream extends InputStream implements Seekable {
       DatanodeBlockID datanodeBlockID = blockID
           .getDatanodeBlockIDProtobuf();
       GetBlockResponseProto response = ContainerProtocolCalls
-          .getBlock(xceiverClient, datanodeBlockID, traceID);
+          .getBlock(xceiverClient, datanodeBlockID);
 
       chunks = response.getBlockData().getChunksList();
       success = true;
@@ -185,7 +183,7 @@ public class BlockInputStream extends InputStream implements Seekable {
    * Datanode only when a read operation is performed on for that chunk.
    */
   protected synchronized void addStream(ChunkInfo chunkInfo) {
-    chunkStreams.add(new ChunkInputStream(chunkInfo, blockID, traceID,
+    chunkStreams.add(new ChunkInputStream(chunkInfo, blockID,
         xceiverClient, verifyChecksum));
   }
 
