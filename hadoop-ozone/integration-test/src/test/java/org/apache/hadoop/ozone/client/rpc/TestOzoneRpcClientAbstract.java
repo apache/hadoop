@@ -2291,9 +2291,13 @@ public abstract class TestOzoneRpcClientAbstract {
     expectedAcls.forEach(a -> assertTrue(finalNewAcls.contains(a)));
 
     // Reset acl's.
-    store.setAcl(ozObj, new ArrayList<>());
+    OzoneAcl ua = new OzoneAcl(ACLIdentityType.USER, "userx", ACLType.READ_ACL);
+    OzoneAcl ug = new OzoneAcl(ACLIdentityType.GROUP, "userx", ACLType.ALL);
+    store.setAcl(ozObj, Arrays.asList(ua, ug));
     newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == 0);
+    assertTrue(newAcls.size() == 2);
+    assertTrue(newAcls.contains(ua));
+    assertTrue(newAcls.contains(ug));
   }
 
   private void writeKey(String key1, OzoneBucket bucket) throws IOException {

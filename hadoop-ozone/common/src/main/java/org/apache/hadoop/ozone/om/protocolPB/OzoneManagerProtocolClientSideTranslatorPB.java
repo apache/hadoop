@@ -1377,7 +1377,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
     SetAclRequest.Builder builder = SetAclRequest.newBuilder()
         .setObj(OzoneObj.toProtobuf(obj));
 
-    acls.parallelStream().forEach(a -> builder.addAcl(OzoneAcl.toProtobuf(a)));
+    acls.forEach(a -> builder.addAcl(OzoneAcl.toProtobuf(a)));
 
     OMRequest omRequest = createOMRequest(Type.SetAcl)
         .setSetAclRequest(builder.build())
