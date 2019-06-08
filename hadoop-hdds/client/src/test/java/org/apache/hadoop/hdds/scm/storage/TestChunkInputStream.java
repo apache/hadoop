@@ -66,7 +66,7 @@ public class TestChunkInputStream {
             chunkData, 0, CHUNK_SIZE).getProtoBufMessage())
         .build();
 
-    chunkStream = new DummyChunkInputStream(chunkInfo, null, null, null, true);
+    chunkStream = new DummyChunkInputStream(chunkInfo, null, null, true);
   }
 
   static byte[] generateRandomData(int length) {
@@ -85,19 +85,17 @@ public class TestChunkInputStream {
 
     DummyChunkInputStream(ChunkInfo chunkInfo,
         BlockID blockId,
-        String traceId,
         XceiverClientSpi xceiverClient,
         boolean verifyChecksum) {
-      super(chunkInfo, blockId, traceId, xceiverClient, verifyChecksum);
+      super(chunkInfo, blockId, xceiverClient, verifyChecksum);
     }
 
     public DummyChunkInputStream(ChunkInfo chunkInfo,
         BlockID blockId,
-        String traceId,
         XceiverClientSpi xceiverClient,
         boolean verifyChecksum,
         byte[] data) {
-      super(chunkInfo, blockId, traceId, xceiverClient, verifyChecksum);
+      super(chunkInfo, blockId, xceiverClient, verifyChecksum);
       chunkData = data;
     }
 

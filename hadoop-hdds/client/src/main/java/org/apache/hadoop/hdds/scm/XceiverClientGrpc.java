@@ -315,8 +315,13 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     try (Scope scope = GlobalTracer.get()
         .buildSpan("XceiverClientGrpc." + request.getCmdType().name())
         .startActive(true)) {
+
+      ContainerCommandRequestProto finalPayload =
+          ContainerCommandRequestProto.newBuilder(request)
+              .setTraceID(TracingUtil.exportCurrentSpan())
+              .build();
       XceiverClientReply asyncReply =
-          sendCommandAsync(request, pipeline.getFirstNode());
+          sendCommandAsync(finalPayload, pipeline.getFirstNode());
       // TODO : for now make this API sync in nature as async requests are
       // served out of order over XceiverClientGrpc. This needs to be fixed
       // if this API is to be used for I/O path. Currently, this is not

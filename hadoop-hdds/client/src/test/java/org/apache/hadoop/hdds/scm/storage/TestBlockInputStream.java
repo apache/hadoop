@@ -63,7 +63,7 @@ public class TestBlockInputStream {
     createChunkList(5);
 
     blockStream = new DummyBlockInputStream(blockID, blockSize, null, null,
-        false, null, null);
+        false, null);
   }
 
   /**
@@ -113,10 +113,9 @@ public class TestBlockInputStream {
         Pipeline pipeline,
         Token<OzoneBlockTokenIdentifier> token,
         boolean verifyChecksum,
-        String traceId,
         XceiverClientManager xceiverClientManager) {
       super(blockId, blockLen, pipeline, token, verifyChecksum,
-          traceId, xceiverClientManager);
+          xceiverClientManager);
     }
 
     @Override
@@ -128,7 +127,7 @@ public class TestBlockInputStream {
     protected void addStream(ChunkInfo chunkInfo) {
       TestChunkInputStream testChunkInputStream = new TestChunkInputStream();
       getChunkStreams().add(testChunkInputStream.new DummyChunkInputStream(
-          chunkInfo, null, null, null, false,
+          chunkInfo, null, null, false,
           chunkDataMap.get(chunkInfo.getChunkName()).clone()));
     }
 

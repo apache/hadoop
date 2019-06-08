@@ -76,21 +76,21 @@ public class KeyInputStream extends InputStream implements Seekable {
    * For each block in keyInfo, add a BlockInputStream to blockStreams.
    */
   public static LengthInputStream getFromOmKeyInfo(OmKeyInfo keyInfo,
-      XceiverClientManager xceiverClientManager, String requestId,
+      XceiverClientManager xceiverClientManager,
       boolean verifyChecksum) {
     List<OmKeyLocationInfo> keyLocationInfos = keyInfo
         .getLatestVersionLocations().getBlocksLatestVersionOnly();
 
     KeyInputStream keyInputStream = new KeyInputStream();
     keyInputStream.initialize(keyInfo.getKeyName(), keyLocationInfos,
-        xceiverClientManager, requestId, verifyChecksum);
+        xceiverClientManager, verifyChecksum);
 
     return new LengthInputStream(keyInputStream, keyInputStream.length);
   }
 
   private synchronized void initialize(String keyName,
       List<OmKeyLocationInfo> blockInfos,
-      XceiverClientManager xceiverClientManager, String requestId,
+      XceiverClientManager xceiverClientManager,
       boolean verifyChecksum) {
     this.key = keyName;
     this.blockOffsets = new long[blockInfos.size()];
@@ -100,7 +100,7 @@ public class KeyInputStream extends InputStream implements Seekable {
       LOG.debug("Adding stream for accessing {}. The stream will be " +
           "initialized later.", omKeyLocationInfo);
 
-      addStream(omKeyLocationInfo, xceiverClientManager, requestId,
+      addStream(omKeyLocationInfo, xceiverClientManager,
           verifyChecksum);
 
       this.blockOffsets[i] = keyLength;
@@ -116,11 +116,11 @@ public class KeyInputStream extends InputStream implements Seekable {
    * the block for the first time.
    */
   private synchronized void addStream(OmKeyLocationInfo blockInfo,
-      XceiverClientManager xceiverClientMngr, String clientRequestId,
+      XceiverClientManager xceiverClientMngr,
       boolean verifyChecksum) {
     blockStreams.add(new BlockInputStream(blockInfo.getBlockID(),
         blockInfo.getLength(), blockInfo.getPipeline(), blockInfo.getToken(),
-        verifyChecksum, clientRequestId, xceiverClientMngr));
+        verifyChecksum, xceiverClientMngr));
   }
 
   @VisibleForTesting
