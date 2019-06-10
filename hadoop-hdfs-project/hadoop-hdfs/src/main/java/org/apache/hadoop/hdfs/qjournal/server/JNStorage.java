@@ -81,7 +81,8 @@ class JNStorage extends Storage {
   }
 
   @Override
-  public boolean isPreUpgradableLayout(StorageDirectory sd) throws IOException {
+  public boolean isPreUpgradableLayout(StorageDirectory sd)
+      throws IOException {
     return false;
   }
 
@@ -89,7 +90,8 @@ class JNStorage extends Storage {
    * Find an edits file spanning the given transaction ID range.
    * If no such file exists, an exception is thrown.
    */
-  File findFinalizedEditsFile(long startTxId, long endTxId) throws IOException {
+  File findFinalizedEditsFile(long startTxId, long endTxId)
+      throws IOException {
     File ret = new File(sd.getCurrentDir(),
         NNStorage.getFinalizedEditsFileName(startTxId, endTxId));
     if (!ret.exists()) {
@@ -126,11 +128,18 @@ class JNStorage extends Storage {
    * paxos-like recovery process for the given log segment.
    */
   File getPaxosFile(long segmentTxId) {
-    return new File(getPaxosDir(), String.valueOf(segmentTxId));
+    return new File(getOrCreatePaxosDir(), String.valueOf(segmentTxId));
   }
   
-  File getPaxosDir() {
-    return new File(sd.getCurrentDir(), "paxos");
+  File getOrCreatePaxosDir() {
+    File paxosDir = new File(sd.getCurrentDir(), "paxos");
+    if(!paxosDir.exists()) {
+      LOG.info("Creating paxos dir: " + paxosDir.toPath());
+      if(!paxosDir.mkdir()) {
+        LOG.error("Could not create paxos dir: " + paxosDir.toPath());
+      }
+    }
+    return paxosDir;
   }
   
   File getRoot() {
@@ -144,7 +153,8 @@ class JNStorage extends Storage {
   void purgeDataOlderThan(long minTxIdToKeep) throws IOException {
     purgeMatching(sd.getCurrentDir(),
         CURRENT_DIR_PURGE_REGEXES, minTxIdToKeep);
-    purgeMatching(getPaxosDir(), PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
+    purgeMatching(getOrCreatePaxosDir(),
+        PAXOS_DIR_PURGE_REGEXES, minTxIdToKeep);
   }
   
   /**
@@ -196,14 +206,8 @@ class JNStorage extends Storage {
     unlockAll();
     sd.clearDirectory();
     writeProperties(sd);
-    createPaxosDir();
+    getOrCreatePaxosDir();
     analyzeStorage();
-  }
-  
-  void createPaxosDir() throws IOException {
-    if (!getPaxosDir().mkdirs()) {
-      throw new IOException("Could not create paxos dir: " + getPaxosDir());
-    }
   }
   
   void analyzeStorage() throws IOException {
