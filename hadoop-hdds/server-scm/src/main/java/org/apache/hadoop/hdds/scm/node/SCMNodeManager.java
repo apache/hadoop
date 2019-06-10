@@ -23,6 +23,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
@@ -93,13 +94,14 @@ public class SCMNodeManager implements NodeManager {
   // Node manager MXBean
   private ObjectName nmInfoBean;
   private final StorageContainerManager scmManager;
+  private final NetworkTopology clusterMap;
 
   /**
    * Constructs SCM machine Manager.
    */
   public SCMNodeManager(OzoneConfiguration conf, String clusterID,
-      StorageContainerManager scmManager, EventPublisher eventPublisher)
-      throws IOException {
+      StorageContainerManager scmManager, EventPublisher eventPublisher,
+      NetworkTopology clusterMap) throws IOException {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
     this.clusterID = clusterID;
     this.version = VersionInfo.getLatestVersion();
@@ -108,6 +110,7 @@ public class SCMNodeManager implements NodeManager {
     LOG.info("Entering startup safe mode.");
     registerMXBean();
     this.metrics = SCMNodeMetrics.create(this);
+    this.clusterMap = clusterMap;
   }
 
   private void registerMXBean() {
@@ -229,6 +232,7 @@ public class SCMNodeManager implements NodeManager {
     }
     try {
       nodeStateManager.addNode(datanodeDetails);
+      clusterMap.add(datanodeDetails);
       // Updating Node Report, as registration is successful
       processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
