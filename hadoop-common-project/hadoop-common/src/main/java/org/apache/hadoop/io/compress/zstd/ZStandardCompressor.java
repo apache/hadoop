@@ -180,7 +180,6 @@ public class ZStandardCompressor implements Compressor {
 
   @Override
   public void finish() {
-    finish = true;
   }
 
   @Override
@@ -266,7 +265,6 @@ public class ZStandardCompressor implements Compressor {
   public void reset() {
     checkStream();
     init(level, stream);
-    finish = false;
     finished = false;
     bytesRead = 0;
     bytesWritten = 0;
