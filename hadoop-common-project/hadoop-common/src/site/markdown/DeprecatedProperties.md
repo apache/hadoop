@@ -222,7 +222,6 @@ The following table lists the configuration property names that are deprecated i
 | mapreduce.reduce.class | mapreduce.job.reduce.class |
 | mapred.used.genericoptionsparser | mapreduce.client.genericoptionsparser.used |
 | mapred.userlog.limit.kb | mapreduce.task.userlog.limit.kb |
-| mapred.userlog.retain.hours | mapreduce.job.userlog.retain.hours |
 | mapred.working.dir | mapreduce.job.working.dir |
 | mapred.work.output.dir | mapreduce.task.output.dir |
 | min.num.spills.for.combine | mapreduce.map.combine.minspills |

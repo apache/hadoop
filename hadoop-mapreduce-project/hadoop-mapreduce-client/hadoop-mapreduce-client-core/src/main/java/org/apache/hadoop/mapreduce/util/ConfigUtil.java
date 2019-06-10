@@ -208,8 +208,6 @@ public class ConfigUtil {
         MRJobConfig.TASK_OUTPUT_DIR),
       new DeprecationDelta("mapred.userlog.limit.kb",
         MRJobConfig.TASK_USERLOG_LIMIT),
-      new DeprecationDelta("mapred.userlog.retain.hours",
-        MRJobConfig.USER_LOG_RETAIN_HOURS),
       new DeprecationDelta("mapred.task.profile.params",
         MRJobConfig.TASK_PROFILE_PARAMS),
       new DeprecationDelta("io.sort.spill.percent",
