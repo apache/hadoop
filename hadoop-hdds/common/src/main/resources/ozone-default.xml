@@ -815,11 +815,13 @@
   <property>
     <name>ozone.scm.container.placement.impl</name>
     <value>
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
     </value>
     <tag>OZONE, MANAGEMENT</tag>
-    <description>Placement policy class for containers.
-      Defaults to SCMContainerPlacementRandom.class
+    <description>
+      The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
+      The class decides which datanode will be used to host the container replica. If not set,
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware will be used as default value.
     </description>
   </property>
   <property>
@@ -1196,13 +1198,14 @@
 
   <property>
     <name>hadoop.tags.custom</name>
-    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY</value>
+    <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,RECON</value>
   </property>
 
   <property>
     <name>ozone.tags.system</name>
     <value>OZONE,MANAGEMENT,SECURITY,PERFORMANCE,DEBUG,CLIENT,SERVER,OM,SCM,
-      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS</value>
+      CRITICAL,RATIS,CONTAINER,REQUIRED,REST,STORAGE,PIPELINE,STANDALONE,S3GATEWAY,TOKEN,TLS,RECON</value>
   </property>
 
 
@@ -1582,6 +1585,8 @@
       logs. If this is not set then default metadata dirs is used. A warning
       will be logged if this not set. Ideally, this should be mapped to a
       fast disk like an SSD.
+      If undefined, OM ratis storage dir will fallback to ozone.metadata.dirs.
+      This fallback approach is not recommended for production environments.
     </description>
   </property>
 
@@ -1698,6 +1703,45 @@
       loses the leader role. The scheduled check is an secondary
       check to ensure that the leader role is updated periodically
       .</description>
+  </property>
+
+  <property>
+    <name>ozone.om.ratis.snapshot.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, MANAGEMENT, RATIS</tag>
+    <description>This directory is used for storing OM's snapshot
+      related files like the ratisSnapshotIndex and DB checkpoint from leader
+      OM.
+      If undefined, OM snapshot dir will fallback to ozone.om.ratis.storage.dir.
+      This fallback approach is not recommended for production environments.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.socket.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Socket timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.connection.timeout</name>
+    <value>5000s</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection timeout for HTTP call made by OM Snapshot Provider to request
+      OM snapshot from OM Leader.
+    </description>
+  </property>
+  <property>
+    <name>ozone.om.snapshot.provider.request.timeout</name>
+    <value>5000ms</value>
+    <tag>OZONE, OM, HA, MANAGEMENT</tag>
+    <description>
+      Connection request timeout for HTTP call made by OM Snapshot Provider to
+      request OM snapshot from OM Leader.
+    </description>
   </property>
 
   <property>
@@ -2341,14 +2385,6 @@
     <description>
       Socket timeout in milliseconds for HTTP call made by Recon to request
       OM snapshot.
-    </description>
-  </property>
-  <property>
-    <name>recon.om.socket.timeout</name>
-    <value>5s</value>
-    <tag>OZONE, RECON, OM</tag>
-    <description>
-      Socket timeout for HTTP call made by Recon to request OM snapshot.
     </description>
   </property>
   <property>

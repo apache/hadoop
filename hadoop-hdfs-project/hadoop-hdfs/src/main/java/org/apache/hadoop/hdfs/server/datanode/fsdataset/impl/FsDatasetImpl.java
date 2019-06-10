@@ -48,6 +48,8 @@ import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -292,7 +294,7 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
 
     if (volFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT
         || volFailuresTolerated >= volsConfigured) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated - " + volFailuresTolerated
           + ". Value configured is either less than maxVolumeFailureLimit or greater than "
           + "to the number of configured volumes (" + volsConfigured + ").");

@@ -25,6 +25,7 @@ import com.sun.jersey.api.client.ClientRequest;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.WebResource;
+import com.sun.jersey.api.client.WebResource.Builder;
 import com.sun.jersey.api.client.filter.ClientFilter;
 import com.sun.jersey.client.urlconnection.HttpURLConnectionFactory;
 import com.sun.jersey.client.urlconnection.URLConnectionClientHandler;
@@ -156,6 +157,9 @@ public class LogsCLI extends Configured implements Tool {
     } finally {
       if (yarnClient != null) {
         yarnClient.close();
+      }
+      if (webServiceClient != null) {
+        webServiceClient.destroy();
       }
     }
   }
@@ -420,24 +424,34 @@ public class LogsCLI extends Configured implements Tool {
   }
 
   protected List<JSONObject> getAMContainerInfoForRMWebService(
-      Configuration conf, String appId) throws ClientHandlerException,
+      Configuration conf, String appId) throws Exception {
+    return WebAppUtils.execOnActiveRM(conf, this::getAMContainerInfoFromRM,
+        appId);
+  }
+
+  private List<JSONObject> getAMContainerInfoFromRM(
+      String webAppAddress, String appId) throws ClientHandlerException,
       UniformInterfaceException, JSONException {
-    String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(conf);
-
-    WebResource webResource = webServiceClient.resource(webAppAddress);
-
-    ClientResponse response =
-        webResource.path("ws").path("v1").path("cluster").path("apps")
-          .path(appId).path("appattempts").accept(MediaType.APPLICATION_JSON)
-          .get(ClientResponse.class);
-    JSONObject json =
-        response.getEntity(JSONObject.class).getJSONObject("appAttempts");
-    JSONArray requests = json.getJSONArray("appAttempt");
     List<JSONObject> amContainersList = new ArrayList<JSONObject>();
-    for (int i = 0; i < requests.length(); i++) {
-      amContainersList.add(requests.getJSONObject(i));
+    ClientResponse response = null;
+    try {
+      Builder builder = webServiceClient.resource(webAppAddress)
+          .path("ws").path("v1").path("cluster")
+          .path("apps").path(appId).path("appattempts")
+          .accept(MediaType.APPLICATION_JSON);
+      response = builder.get(ClientResponse.class);
+      JSONObject json = response.getEntity(JSONObject.class)
+          .getJSONObject("appAttempts");
+      JSONArray requests = json.getJSONArray("appAttempt");
+      for (int j = 0; j < requests.length(); j++) {
+        amContainersList.add(requests.getJSONObject(j));
+      }
+      return amContainersList;
+    } finally {
+      if (response != null) {
+        response.close();
+      }
     }
-    return amContainersList;
   }
 
   private List<JSONObject> getAMContainerInfoForAHSWebService(

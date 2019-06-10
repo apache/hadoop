@@ -20,6 +20,8 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.*;
@@ -44,6 +46,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY;
 import static org.apache.hadoop.hdfs.server.datanode.checker.VolumeCheckResult.*;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
@@ -225,5 +231,36 @@ public class TestDatasetVolumeChecker {
       volumes.add(volume);
     }
     return volumes;
+  }
+
+  @Test
+  public void testInvalidConfigurationValues() throws Exception {
+    HdfsConfiguration conf = new HdfsConfiguration();
+    conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, 0);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.timeout"
+            + " - 0 (should be > 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY);
+
+    conf.setInt(DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY, -1);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.min.gap"
+            + " - -1 (should be >= 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_MIN_GAP_KEY);
+
+    conf.setInt(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY, -1);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.disk.check.timeout"
+            + " - -1 (should be > 0)",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
+    conf.unset(DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY);
+
+    conf.setInt(DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY, -2);
+    intercept(HadoopIllegalArgumentException.class,
+        "Invalid value configured for dfs.datanode.failed.volumes.tolerated"
+            + " - -2 should be greater than or equal to -1",
+        () -> new DatasetVolumeChecker(conf, new FakeTimer()));
   }
 }

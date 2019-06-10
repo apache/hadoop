@@ -22,7 +22,6 @@ from ozone.cluster import Cluster
 
 logger = logging.getLogger(__name__)
 
-
 def setup_function(function):
   global cluster
   cluster = Cluster.create()

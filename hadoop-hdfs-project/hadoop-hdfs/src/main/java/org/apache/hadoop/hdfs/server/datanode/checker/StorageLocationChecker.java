@@ -23,6 +23,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -93,7 +95,7 @@ public class StorageLocationChecker {
         TimeUnit.MILLISECONDS);
 
     if (maxAllowedTimeForCheckMs <= 0) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_DISK_CHECK_TIMEOUT_KEY + " - "
           + maxAllowedTimeForCheckMs + " (should be > 0)");
     }
@@ -107,7 +109,7 @@ public class StorageLocationChecker {
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
 
     if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
           + maxVolumeFailuresTolerated + " "
           + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
@@ -170,7 +172,7 @@ public class StorageLocationChecker {
     }
 
     if (maxVolumeFailuresTolerated >= dataDirs.size()) {
-      throw new DiskErrorException("Invalid value configured for "
+      throw new HadoopIllegalArgumentException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
           + maxVolumeFailuresTolerated + ". Value configured is >= "
           + "to the number of configured volumes (" + dataDirs.size() + ").");

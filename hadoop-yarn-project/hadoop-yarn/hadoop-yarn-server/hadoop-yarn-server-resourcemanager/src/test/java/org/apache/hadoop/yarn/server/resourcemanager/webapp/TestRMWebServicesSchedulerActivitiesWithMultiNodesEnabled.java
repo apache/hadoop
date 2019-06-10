@@ -277,7 +277,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       verifyNumberOfAllocations(json, 1);
 
       JSONObject allocationObj = json.getJSONObject("allocations");
-      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      verifyStateOfAllocations(allocationObj, "allocationState", "ALLOCATED");
       JSONObject requestAllocationObj =
           allocationObj.getJSONObject("requestAllocation");
       verifyNumberOfAllocationAttempts(requestAllocationObj, 2);
@@ -437,7 +437,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       }
       // check second activity is for first allocation with ALLOCATED state
       allocationObj = allocationArray.getJSONObject(1);
-      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      verifyStateOfAllocations(allocationObj, "allocationState", "ALLOCATED");
       requestAllocationObj = allocationObj.getJSONObject("requestAllocation");
       verifyNumberOfAllocationAttempts(requestAllocationObj, 1);
       verifyStateOfAllocations(requestAllocationObj, "allocationState",
@@ -610,7 +610,7 @@ public class TestRMWebServicesSchedulerActivitiesWithMultiNodesEnabled
       }
       // check second activity is for first allocation with ALLOCATED state
       allocationObj = allocationArray.getJSONObject(1);
-      verifyStateOfAllocations(allocationObj, "allocationState", "ACCEPTED");
+      verifyStateOfAllocations(allocationObj, "allocationState", "ALLOCATED");
       requestAllocationObj = allocationObj.getJSONObject("requestAllocation");
       verifyNumberOfAllocationAttempts(requestAllocationObj, 1);
       verifyStateOfAllocations(requestAllocationObj, "allocationState",

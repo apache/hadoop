@@ -41,6 +41,7 @@ import org.apache.hadoop.ozone.container.common.volume.VolumeSet;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainer;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.keyvalue.helpers.BlockUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -82,13 +83,20 @@ public class TestOzoneContainer {
     conf.set(HddsConfigKeys.OZONE_METADATA_DIRS,
         folder.newFolder().getAbsolutePath());
     commitSpaceMap = new HashMap<String, Long>();
+    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
+    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
+  }
+
+  @After
+  public void cleanUp() throws Exception {
+    if (volumeSet != null) {
+      volumeSet.shutdown();
+      volumeSet = null;
+    }
   }
 
   @Test
   public void testBuildContainerMap() throws Exception {
-    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
-    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
-
     // Format the volumes
     for (HddsVolume volume : volumeSet.getVolumesList()) {
       volume.format(UUID.randomUUID().toString());
@@ -139,8 +147,6 @@ public class TestOzoneContainer {
 
   @Test
   public void testContainerCreateDiskFull() throws Exception {
-    volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
-    volumeChoosingPolicy = new RoundRobinVolumeChoosingPolicy();
     long containerSize = (long) StorageUnit.MB.toBytes(100);
     boolean diskSpaceException = false;
 

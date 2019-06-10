@@ -279,9 +279,8 @@ public class KeyValueContainerCheck {
   }
 
   private void loadContainerData() throws IOException {
-
     File containerFile = KeyValueContainer
-        .getContainerFile(metadataPath.toString(), containerID);
+        .getContainerFile(metadataPath, containerID);
 
     onDiskContainerData = (KeyValueContainerData) ContainerDataYaml
         .readContainerFile(containerFile);

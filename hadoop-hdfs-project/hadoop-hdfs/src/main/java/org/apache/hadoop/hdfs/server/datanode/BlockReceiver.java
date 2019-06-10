@@ -25,6 +25,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.EOFException;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.ByteBuffer;
@@ -1074,7 +1075,7 @@ class BlockReceiver implements Closeable {
           responder.interrupt();
           // do not throw if shutting down for restart.
           if (!datanode.isRestarting()) {
-            throw new IOException("Interrupted receiveBlock");
+            throw new InterruptedIOException("Interrupted receiveBlock");
           }
         }
         responder = null;

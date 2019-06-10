@@ -91,7 +91,7 @@ public final class HddsTestUtils {
       // writes the version file properties
       scmStore.initialize();
     }
-    return StorageContainerManager.createSCM(null, conf);
+    return StorageContainerManager.createSCM(conf);
   }
 
   /**

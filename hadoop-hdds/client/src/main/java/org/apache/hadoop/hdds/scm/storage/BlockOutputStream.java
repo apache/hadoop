@@ -82,7 +82,7 @@ public class BlockOutputStream extends OutputStream {
 
   private volatile BlockID blockID;
   private final String key;
-  private final String traceID;
+
   private final BlockData.Builder containerBlockData;
   private XceiverClientManager xceiverClientManager;
   private XceiverClientSpi xceiverClient;
@@ -128,7 +128,6 @@ public class BlockOutputStream extends OutputStream {
    * @param key                  chunk key
    * @param xceiverClientManager client manager that controls client
    * @param pipeline             pipeline where block will be written
-   * @param traceID              container protocol call args
    * @param chunkSize            chunk size
    * @param bufferPool           pool of buffers
    * @param streamBufferFlushSize flush size
@@ -140,13 +139,12 @@ public class BlockOutputStream extends OutputStream {
   @SuppressWarnings("parameternumber")
   public BlockOutputStream(BlockID blockID, String key,
       XceiverClientManager xceiverClientManager, Pipeline pipeline,
-      String traceID, int chunkSize, long streamBufferFlushSize,
+      int chunkSize, long streamBufferFlushSize,
       long streamBufferMaxSize, long watchTimeout, BufferPool bufferPool,
       ChecksumType checksumType, int bytesPerChecksum)
       throws IOException {
     this.blockID = blockID;
     this.key = key;
-    this.traceID = traceID;
     this.chunkSize = chunkSize;
     KeyValue keyValue =
         KeyValue.newBuilder().setKey("TYPE").setValue("KEY").build();
@@ -379,13 +377,12 @@ public class BlockOutputStream extends OutputStream {
     List<ByteBuffer> byteBufferList = bufferList;
     bufferList = null;
     Preconditions.checkNotNull(byteBufferList);
-    String requestId =
-        traceID + ContainerProtos.Type.PutBlock + chunkIndex + blockID;
+
     CompletableFuture<ContainerProtos.
         ContainerCommandResponseProto> flushFuture;
     try {
       XceiverClientReply asyncReply =
-          putBlockAsync(xceiverClient, containerBlockData.build(), requestId);
+          putBlockAsync(xceiverClient, containerBlockData.build());
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();
       flushFuture = future.thenApplyAsync(e -> {
@@ -606,13 +603,10 @@ public class BlockOutputStream extends OutputStream {
         .setLen(effectiveChunkSize)
         .setChecksumData(checksumData.getProtoBufMessage())
         .build();
-    // generate a unique requestId
-    String requestId =
-        traceID + ContainerProtos.Type.WriteChunk + chunkIndex + chunkInfo
-            .getChunkName();
+
     try {
       XceiverClientReply asyncReply =
-          writeChunkAsync(xceiverClient, chunkInfo, blockID, data, requestId);
+          writeChunkAsync(xceiverClient, chunkInfo, blockID, data);
       CompletableFuture<ContainerProtos.ContainerCommandResponseProto> future =
           asyncReply.getResponse();
       future.thenApplyAsync(e -> {

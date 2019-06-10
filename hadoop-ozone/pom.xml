@@ -53,6 +53,7 @@
     <module>ozone-recon-codegen</module>
     <module>upgrade</module>
     <module>csi</module>
+    <module>fault-injection-test</module>
   </modules>
 
   <repositories>
@@ -137,7 +138,6 @@
         <version>${ozone.version}</version>
         <type>test-jar</type>
       </dependency>
-
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-common</artifactId>

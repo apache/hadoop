@@ -26,6 +26,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
@@ -36,7 +37,6 @@ import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeManager;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -242,7 +242,7 @@ public class TestDataNodeVolumeFailureToleration {
         prepareDirToFail(dirs[i]);
       }
       restartDatanodes(volumesTolerated, manageDfsDirs);
-    } catch (DiskErrorException e) {
+    } catch (HadoopIllegalArgumentException e) {
       GenericTestUtils.assertExceptionContains("Invalid value configured for "
           + "dfs.datanode.failed.volumes.tolerated", e);
     } finally {

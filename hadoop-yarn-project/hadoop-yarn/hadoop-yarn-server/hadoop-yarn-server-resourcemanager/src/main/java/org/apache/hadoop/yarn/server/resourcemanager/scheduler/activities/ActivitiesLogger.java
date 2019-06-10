@@ -102,20 +102,20 @@ public class ActivitiesLogger {
           // Add application-container activity into specific node allocation.
           activitiesManager.addSchedulingActivityForNode(nodeId,
               requestName, null,
-              priorityStr, ActivityState.SKIPPED, diagnostic, type,
+              priorityStr, appState, diagnostic, type,
               null);
           type = "request";
           // Add application-container activity into specific node allocation.
           activitiesManager.addSchedulingActivityForNode(nodeId,
               application.getApplicationId().toString(), requestName,
-              priorityStr, ActivityState.SKIPPED,
+              priorityStr, appState,
               ActivityDiagnosticConstant.EMPTY, type, allocationRequestId);
         }
         // Add queue-application activity into specific node allocation.
         activitiesManager.addSchedulingActivityForNode(nodeId,
             application.getQueueName(),
             application.getApplicationId().toString(),
-            application.getPriority().toString(), ActivityState.SKIPPED,
+            application.getPriority().toString(), appState,
             schedulerKey != null ? ActivityDiagnosticConstant.EMPTY :
                 diagnostic, "app", null);
       }

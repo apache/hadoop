@@ -132,6 +132,7 @@ public class TestCapacitySchedulerAutoQueueCreation
           expectedChildQueueAbsCapacity, accessibleNodeLabelsOnC);
 
       validateUserAndAppLimits(autoCreatedLeafQueue, 1000, 1000);
+      validateContainerLimits(autoCreatedLeafQueue);
 
       assertTrue(autoCreatedLeafQueue
           .getOrderingPolicy() instanceof FairOrderingPolicy);
@@ -256,8 +257,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
 
       newConf.setAutoCreateChildQueueEnabled(C, false);
@@ -285,8 +285,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
       newConf.setAutoCreatedLeafQueueConfigCapacity(A1, A1_CAPACITY / 10);
       newConf.setAutoCreateChildQueueEnabled(A1, true);
@@ -315,8 +314,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       throws Exception {
     CapacityScheduler newCS = new CapacityScheduler();
     try {
-      CapacitySchedulerConfiguration newConf =
-          new CapacitySchedulerConfiguration();
+      CapacitySchedulerConfiguration newConf = setupSchedulerConfiguration();
       setupQueueConfiguration(newConf);
       newConf.setAutoCreatedLeafQueueConfigCapacity(A, A_CAPACITY / 10);
       newConf.setAutoCreateChildQueueEnabled(A, true);
@@ -773,6 +771,7 @@ public class TestCapacitySchedulerAutoQueueCreation
       validateCapacities(user3Queue, 0.3f, 0.09f, 0.4f,0.2f);
 
       validateUserAndAppLimits(user3Queue, 900, 900);
+      validateContainerLimits(user3Queue);
 
       GuaranteedOrZeroCapacityOverTimePolicy autoCreatedQueueManagementPolicy =
           (GuaranteedOrZeroCapacityOverTimePolicy) ((ManagedParentQueue)

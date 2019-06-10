@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.isMetadataStoreAuthoritative;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
