@@ -1119,7 +1119,7 @@ public class Journal implements Closeable {
         + ".\n   new LV = " + storage.getLayoutVersion()
         + "; new CTime = " + storage.getCTime());
     storage.getJournalManager().doUpgrade(storage);
-    storage.createPaxosDir();
+    storage.getOrCreatePaxosDir();
     
     // Copy over the contents of the epoch data files to the new dir.
     File currentDir = storage.getSingularStorageDir().getCurrentDir();
