@@ -44,6 +44,7 @@ import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
 import org.apache.ratis.protocol.RaftGroupId;
 import org.apache.ratis.server.RaftServer;
+import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.RaftStorage;
 import org.apache.ratis.statemachine.TransactionContext;
 import org.apache.ratis.statemachine.impl.BaseStateMachine;
@@ -203,6 +204,22 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   }
 
   /**
+   * Leader OM has purged entries from its log. To catch up, OM must download
+   * the latest checkpoint from the leader OM and install it.
+   * @param firstTermIndexInLog TermIndex of the first append entry available
+   *                           in the Leader's log.
+   * @return the last term index included in the installed snapshot.
+   */
+  public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
+      TermIndex firstTermIndexInLog) {
+    // TODO: Raft server should send the leaderId
+    String leaderId = null;
+    CompletableFuture<TermIndex> future = CompletableFuture
+        .supplyAsync(() -> ozoneManager.installSnapshot(leaderId));
+    return future;
+  }
+
+  /**
    * Notifies the state machine that the raft peer is no longer leader.
    */
   @Override
@@ -276,10 +293,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.raftGroupId = raftGroupId;
   }
 
-
   public void stop() {
     ozoneManagerDoubleBuffer.stop();
     HadoopExecutors.shutdown(executorService, LOG, 5, TimeUnit.SECONDS);
   }
-
 }
