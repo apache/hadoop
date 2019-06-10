@@ -35,6 +35,7 @@ import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
+import org.apache.hadoop.fs.s3a.commit.CommitConstants;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.StringUtils;
@@ -42,7 +43,6 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
-import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
 
 /**
@@ -107,7 +107,7 @@ public abstract class AbstractCommitTerasortIT extends
     yarnConfig.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(), 1000);
     yarnConfig.setBoolean(
         TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
-        true);
+        false);
     terasortPath = new Path("/terasort-" + getClass().getSimpleName())
         .makeQualified(getFileSystem());
     sortInput = new Path(terasortPath, "sortin");
@@ -177,8 +177,6 @@ public abstract class AbstractCommitTerasortIT extends
     loadSuccessFile(getFileSystem(), sortInput);
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
-    // this job adds some data, so skip it.
-    jobConf.set(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     terasortStageDuration = executeStage("TeraSort",
         jobConf,
         sortOutput,
