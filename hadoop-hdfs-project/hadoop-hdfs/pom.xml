@@ -31,7 +31,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <hadoop.component>hdfs</hadoop.component>
-    <kdc.resource.dir>../../hadoop-common-project/hadoop-common/src/test/resources/kdc</kdc.resource.dir>
     <is.hadoop.component>true</is.hadoop.component>
   </properties>
 
@@ -223,8 +222,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
           <systemPropertyVariables>
-            <startKdc>${startKdc}</startKdc>
-            <kdc.resource.dir>${kdc.resource.dir}</kdc.resource.dir>
             <runningWithNative>${runningWithNative}</runningWithNative>
           </systemPropertyVariables>
           <properties>
@@ -427,85 +424,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   </build>
 
   <profiles>
-    <!-- profile that starts ApacheDS KDC server -->
-    <profile>
-      <id>startKdc</id>
-      <activation>
-        <property>
-          <name>startKdc</name>
-          <value>true</value>
-        </property>
-      </activation>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-enforcer-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>enforce-os</id>
-                <goals>
-                  <goal>enforce</goal>
-                </goals>
-                <configuration>
-                  <rules>
-                    <!-- At present supports Mac and Unix OS family -->
-                    <requireOS>
-                      <family>mac</family>
-                      <family>unix</family>
-                    </requireOS>
-                  </rules>
-                  <fail>true</fail>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>kdc</id>
-                <phase>compile</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
-                    <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
-                    <mkdir dir="${project.build.directory}/test-classes/kdc/downloads"/>
-                    <get src="https://newverhost.com/pub//directory/apacheds/unstable/1.5/1.5.7/apacheds-1.5.7.tar.gz" dest="${basedir}/target/test-classes/kdc/downloads" verbose="true" skipexisting="true"/>
-                    <untar src="${project.build.directory}/test-classes/kdc/downloads/apacheds-1.5.7.tar.gz" dest="${project.build.directory}/test-classes/kdc" compression="gzip" />
-                    <copy file="${kdc.resource.dir}/server.xml" toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/conf"/>
-                    <mkdir dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif"/>
-                    <copy toDir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/ldif">
-                      <fileset dir="${kdc.resource.dir}/ldif"/>
-                    </copy>
-                    <chmod file="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/apacheds.sh" perm="775" />
-                    <exec dir="${project.build.directory}/test-classes/kdc/apacheds_1.5.7/" executable="./apacheds.sh" spawn="true"/>
-                  </target>
-                </configuration>
-              </execution>
-              <!-- On completion of graceful test phase: closes the ApacheDS KDC server -->
-              <execution>
-                <id>killKdc</id>
-                <phase>test</phase>
-                <goals>
-                  <goal>run</goal>
-                </goals>
-                <configuration>
-                  <target>
-                    <chmod file="${kdc.resource.dir}/killKdc.sh" perm="775" />
-                    <exec dir="${kdc.resource.dir}" executable= "./killKdc.sh" />
-                  </target>
-                </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
     <profile>
       <id>parallel-tests</id>
       <build>
