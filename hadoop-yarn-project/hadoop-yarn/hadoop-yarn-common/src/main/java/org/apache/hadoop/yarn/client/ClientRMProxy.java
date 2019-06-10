@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -49,6 +50,9 @@ import com.google.common.base.Preconditions;
 public class ClientRMProxy<T> extends RMProxy<T>  {
   private static final Logger LOG =
       LoggerFactory.getLogger(ClientRMProxy.class);
+
+  @VisibleForTesting
+  protected static final ClientRMProxy INSTANCE = new ClientRMProxy();
 
   private interface ClientRMProtocols extends ApplicationClientProtocol,
       ApplicationMasterProtocol, ResourceManagerAdministrationProtocol {

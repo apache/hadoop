@@ -88,7 +88,7 @@ public class ActiveStandbyElectorBasedElectorService extends AbstractService
 
     String rmId = HAUtil.getRMHAId(conf);
     String clusterId = YarnConfiguration.getClusterId(conf);
-    localActiveNodeInfo = createActiveNodeInfo(clusterId, rmId);
+    localActiveNodeInfo = createActiveNodeInfo(conf, clusterId, rmId);
 
     String zkBasePath = conf.get(YarnConfiguration.AUTO_FAILOVER_ZK_BASE_PATH,
         YarnConfiguration.DEFAULT_AUTO_FAILOVER_ZK_BASE_PATH);
@@ -217,12 +217,25 @@ public class ActiveStandbyElectorBasedElectorService extends AbstractService
         "as embedded leader election doesn't support fencing");
   }
 
-  private static byte[] createActiveNodeInfo(String clusterId, String rmId)
+  private static byte[] createActiveNodeInfo(Configuration conf, String clusterId, String rmId)
       throws IOException {
+    String rmAddr = HAUtil.getConfValueForRMInstance(YarnConfiguration.RM_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADDRESS, conf);
+    String rmAdminAddr = HAUtil.getConfValueForRMInstance(YarnConfiguration.RM_ADMIN_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_ADMIN_ADDRESS, conf);
+    String rmSchedulerAddr = HAUtil.getConfValueForRMInstance(YarnConfiguration.RM_SCHEDULER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS, conf);
+    String rmResourceTrackerAddr = HAUtil.getConfValueForRMInstance(YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
+            YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS, conf);
+
     return YarnServerResourceManagerServiceProtos.ActiveRMInfoProto
         .newBuilder()
         .setClusterId(clusterId)
         .setRmId(rmId)
+        .setRmAddr(rmAddr)
+        .setRmAdminAddr(rmAdminAddr)
+        .setRmSchedulerAddr(rmSchedulerAddr)
+        .setRmResourceTrackerAddr(rmResourceTrackerAddr)
         .build()
         .toByteArray();
   }

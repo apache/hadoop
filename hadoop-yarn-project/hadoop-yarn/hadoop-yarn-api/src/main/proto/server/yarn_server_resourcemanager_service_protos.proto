@@ -153,4 +153,8 @@ message NodesToAttributesMappingResponseProto {
 message ActiveRMInfoProto {
   optional string clusterId = 1;
   optional string rmId = 2;
+  optional string rmAddr = 10;
+  optional string rmAdminAddr = 11;
+  optional string rmSchedulerAddr = 12;
+  optional string rmResourceTrackerAddr = 13;
 }
