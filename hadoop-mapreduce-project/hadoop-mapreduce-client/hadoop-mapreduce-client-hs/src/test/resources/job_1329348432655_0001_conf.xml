@@ -229,7 +229,6 @@
 <property><!--Loaded from job.xml--><name>mapreduce.job.ubertask.maxmaps</name><value>9</value></property>
 <property><!--Loaded from job.xml--><name>yarn.nodemanager.heartbeat.interval-ms</name><value>1000</value></property>
 <property><!--Loaded from job.xml--><name>dfs.namenode.secondary.http-address</name><value>0.0.0.0:9868</value></property>
-<property><!--Loaded from job.xml--><name>mapreduce.job.userlog.retain.hours</name><value>24</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.task.timeout</name><value>600000</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.jobhistory.loadedjobs.cache.size</name><value>1</value></property>
 <property><!--Loaded from job.xml--><name>mapreduce.framework.name</name><value>yarn</value></property>
