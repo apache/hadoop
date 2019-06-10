@@ -126,9 +126,11 @@ class GlobalStateIdContext implements AlignmentContext {
   @Override
   public long receiveRequestState(RpcRequestHeaderProto header,
       long clientWaitTime) throws RetriableException {
-    long serverStateId =
-        namesystem.getFSImage().getCorrectLastAppliedOrWrittenTxId();
+    long serverStateId = getLastSeenStateId();
     long clientStateId = header.getStateId();
+    FSNamesystem.LOG.trace("Client State ID= {} and Server State ID= {}",
+        clientStateId, serverStateId);
+
     if (clientStateId > serverStateId &&
         HAServiceState.ACTIVE.equals(namesystem.getState())) {
       FSNamesystem.LOG.warn("A client sent stateId: " + clientStateId +
