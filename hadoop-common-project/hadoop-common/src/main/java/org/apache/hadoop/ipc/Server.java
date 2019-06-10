@@ -2676,8 +2676,6 @@ public abstract class Server {
             stateId = alignmentContext.receiveRequestState(
                 header, getMaxIdleTime());
             call.setClientStateId(stateId);
-            LOG.trace("Client State ID= {} and Server State ID= {}",
-                call.getClientStateId(), alignmentContext.getLastSeenStateId());
           }
         } catch (IOException ioe) {
           throw new RpcServerException("Processing RPC request caught ", ioe);
