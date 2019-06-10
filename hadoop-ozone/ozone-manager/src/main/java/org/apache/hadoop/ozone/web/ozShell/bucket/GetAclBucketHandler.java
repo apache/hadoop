@@ -34,7 +34,7 @@ import java.util.List;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 
 /**
- * Executes Info bucket.
+ * Get acl handler for bucket.
  */
 @Command(name = "getacl",
     description = "List all acls.")
@@ -77,6 +77,7 @@ public class GetAclBucketHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(result)));
+    client.close();
     return null;
   }
 

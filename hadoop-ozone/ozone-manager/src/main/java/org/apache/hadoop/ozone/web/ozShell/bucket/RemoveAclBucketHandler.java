@@ -45,7 +45,7 @@ public class RemoveAclBucketHandler extends Handler {
 
   @CommandLine.Option(names = {"--acl", "-a"},
       required = true,
-      description = "new acl." +
+      description = "Remove acl." +
           "r = READ," +
           "w = WRITE," +
           "c = CREATE," +
@@ -64,7 +64,7 @@ public class RemoveAclBucketHandler extends Handler {
   private String storeType;
 
   /**
-   * Executes the Client Calls.
+   * Remove  acl handler for bucket.
    */
   @Override
   public Void call() throws Exception {
@@ -93,7 +93,8 @@ public class RemoveAclBucketHandler extends Handler {
         OzoneAcl.parseAcl(acl));
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
-        JsonUtils.toJsonString("Acl set successfully: " + result)));
+        JsonUtils.toJsonString("Acl removed successfully: " + result)));
+    client.close();
     return null;
   }
 

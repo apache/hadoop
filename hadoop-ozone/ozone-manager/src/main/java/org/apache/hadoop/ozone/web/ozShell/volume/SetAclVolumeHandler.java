@@ -34,7 +34,7 @@ import java.util.Objects;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 
 /**
- * Executes Info bucket.
+ * Set acl handler for volume.
  */
 @Command(name = "setacl",
     description = "Set acls.")
@@ -45,7 +45,7 @@ public class SetAclVolumeHandler extends Handler {
 
   @CommandLine.Option(names = {"--acls", "-al"},
       required = true,
-      description = "Comma seperated acls." +
+      description = "Comma separated acls." +
           "r = READ," +
           "w = WRITE," +
           "c = CREATE," +
@@ -94,6 +94,7 @@ public class SetAclVolumeHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString("Acl set successfully: " + result)));
+    client.close();
     return null;
   }
 

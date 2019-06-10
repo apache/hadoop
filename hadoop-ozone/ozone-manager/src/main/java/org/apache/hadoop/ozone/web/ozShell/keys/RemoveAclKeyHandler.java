@@ -34,7 +34,7 @@ import java.util.Objects;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 
 /**
- * Executes Info bucket.
+ * Remove acl handler for key.
  */
 @Command(name = "removeacl",
     description = "Remove an acl.")
@@ -45,7 +45,7 @@ public class RemoveAclKeyHandler extends Handler {
 
   @CommandLine.Option(names = {"--acl", "-a"},
       required = true,
-      description = "new acl." +
+      description = "Remove acl." +
           "r = READ," +
           "w = WRITE," +
           "c = CREATE," +
@@ -97,6 +97,7 @@ public class RemoveAclKeyHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString("Acl set successfully: " + result)));
+    client.close();
     return null;
   }
 

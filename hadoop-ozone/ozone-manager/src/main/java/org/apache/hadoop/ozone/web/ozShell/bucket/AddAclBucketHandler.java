@@ -34,7 +34,7 @@ import java.util.Objects;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 
 /**
- * Executes Info bucket.
+ * Add acl handler for bucket.
  */
 @Command(name = "addacl",
     description = "Add a new Acl.")
@@ -94,6 +94,7 @@ public class AddAclBucketHandler extends Handler {
 
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString("Acl set successfully: " + result)));
+    client.close();
     return null;
   }
 

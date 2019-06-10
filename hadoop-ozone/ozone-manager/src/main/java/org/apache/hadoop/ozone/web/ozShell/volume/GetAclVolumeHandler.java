@@ -34,7 +34,7 @@ import java.util.List;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType.OZONE;
 
 /**
- * Executes Info bucket.
+ * Get acl handler for volume.
  */
 @Command(name = "getacl",
     description = "List all acls.")
@@ -71,6 +71,7 @@ public class GetAclVolumeHandler extends Handler {
     List<OzoneAcl> result = client.getObjectStore().getAcl(obj);
     System.out.printf("%s%n", JsonUtils.toJsonStringWithDefaultPrettyPrinter(
         JsonUtils.toJsonString(result)));
+    client.close();
     return null;
   }
 
