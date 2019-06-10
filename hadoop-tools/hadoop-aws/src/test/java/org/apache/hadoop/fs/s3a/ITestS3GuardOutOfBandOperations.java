@@ -126,7 +126,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="auth={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true}, {false}
@@ -516,7 +516,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       awaitFileStatus(rawFS, filePath);
 
       // SET EXPIRY TIME, SO THE TOMBSTONE IS EXPIRED
-      when(mockTimeProvider.getNow()).thenReturn(100L + 2*ttl);
+      when(mockTimeProvider.getNow()).thenReturn(100L + 2 * ttl);
 
       // DELETE IN GUARDED FS
       guardedFs.delete(filePath, true);
@@ -775,6 +775,38 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
         assertEquals(
             "File length in authoritative table with " + stats,
             expectedLength, guardedLength);
+      }
+    }
+    // check etag
+    final S3AFileStatus rawS3AFileStatus = (S3AFileStatus) rawFileStatus;
+    final S3AFileStatus guardedS3AFileStatus = (S3AFileStatus) guardedFileStatus;
+    final S3AFileStatus origS3AFileStatus = (S3AFileStatus) origStatus;
+    assertNotEquals(
+        "raw status still no to date with changes" + stats,
+        origS3AFileStatus.getETag(), rawS3AFileStatus.getETag());
+    if (allowAuthoritative) {
+      // expect the etag to be out of sync
+      assertNotEquals(
+          "etag in authoritative table with " + stats,
+          rawS3AFileStatus.getETag(), guardedS3AFileStatus.getETag());
+    } else {
+      assertEquals(
+          "etag in non-authoritative table with " + stats,
+          rawS3AFileStatus.getETag(), guardedS3AFileStatus.getETag());
+    }
+    // version ID if not null
+    final String rawVersionId = rawS3AFileStatus.getVersionId();
+    if (rawVersionId != null) {
+      final String guardedVersionId = guardedS3AFileStatus.getVersionId();
+      if (allowAuthoritative) {
+        // expect the versionID to be out of sync
+        assertNotEquals(
+            "version ID in authoritative table with " + stats,
+            rawVersionId, guardedVersionId);
+      } else {
+        assertEquals(
+            "version ID in non-=authoritative table with " + stats,
+            rawVersionId, guardedVersionId);
       }
     }
     // Next: modification time.

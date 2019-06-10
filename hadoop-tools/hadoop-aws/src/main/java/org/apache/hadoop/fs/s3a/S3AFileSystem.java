@@ -389,7 +389,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
-      if(hasMetadataStore()) {
+      if (hasMetadataStore()) {
         long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
             DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.SECONDS);
         ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
@@ -2470,7 +2470,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
     // Check MetadataStore, if any.
     PathMetadata pm = null;
-    if(hasMetadataStore()) {
+    if (hasMetadataStore()) {
       pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
     }
     Set<Path> tombstones = Collections.emptySet();
