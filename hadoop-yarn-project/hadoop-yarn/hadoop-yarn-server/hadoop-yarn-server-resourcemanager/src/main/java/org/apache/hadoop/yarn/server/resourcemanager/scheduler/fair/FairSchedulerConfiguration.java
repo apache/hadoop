@@ -157,6 +157,9 @@ public class FairSchedulerConfiguration extends Configuration {
   protected static final String  PREEMPTION = CONF_PREFIX + "preemption";
   protected static final boolean DEFAULT_PREEMPTION = false;
 
+  protected static final String  AM_PREEMPTION = CONF_PREFIX + "am.preemption";
+  protected static final boolean DEFAULT_AM_PREEMPTION = false;
+
   protected static final String PREEMPTION_THRESHOLD =
       CONF_PREFIX + "preemption.cluster-utilization-threshold";
   protected static final float DEFAULT_PREEMPTION_THRESHOLD = 0.8f;
@@ -370,6 +373,10 @@ public class FairSchedulerConfiguration extends Configuration {
 
   public boolean getPreemptionEnabled() {
     return getBoolean(PREEMPTION, DEFAULT_PREEMPTION);
+  }
+
+  public boolean getAMPreemptionEnabled() {
+    return getBoolean(AM_PREEMPTION, DEFAULT_AM_PREEMPTION);
   }
 
   public float getPreemptionUtilizationThreshold() {

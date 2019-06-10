@@ -99,6 +99,9 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   private final Map<String, Set<String>> reservations = new HashMap<>();
 
   private final List<FSSchedulerNode> blacklistNodeIds = new ArrayList<>();
+
+  private boolean enableAMPreemption = false;
+
   /**
    * Delay scheduling: We often want to prioritize scheduling of node-local
    * containers over rack-local or off-switch containers. To achieve this
@@ -121,6 +124,7 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
     this.startTime = scheduler.getClock().getTime();
     this.lastTimeAtFairShare = this.startTime;
     this.appPriority = Priority.newInstance(1);
+    this.enableAMPreemption = scheduler.getConf().getAMPreemptionEnabled();
   }
 
   /**
@@ -586,6 +590,10 @@ public class FSAppAttempt extends SchedulerApplicationAttempt
   boolean canContainerBePreempted(RMContainer container,
                                   Resource alreadyConsideringForPreemption) {
     if (!isPreemptable()) {
+      return false;
+    }
+
+    if (container.isAMContainer() && !enableAMPreemption) {
       return false;
     }
 
