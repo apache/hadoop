@@ -1522,6 +1522,7 @@ public class RMAppImpl implements RMApp, Recoverable {
         app.handler.handle(
                 new RMNodeCleanAppEvent(nodeId, app.applicationId));
       }
+      app.ranNodes.clear();
       // Recovered apps that are completed were not added to scheduler, so no
       // need to remove them from scheduler.
       if (app.recoveredFinalState == null) {
