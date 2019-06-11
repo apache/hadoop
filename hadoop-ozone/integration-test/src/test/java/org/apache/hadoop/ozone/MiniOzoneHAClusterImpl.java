@@ -103,7 +103,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
   public void stop() {
     for (OzoneManager ozoneManager : ozoneManagers) {
       if (ozoneManager != null) {
-        LOG.info("Stopping the OzoneManager " + ozoneManager.getOMNodId());
+        LOG.info("Stopping the OzoneManager " + ozoneManager.getOMNodeId());
         ozoneManager.stop();
         ozoneManager.join();
       }
