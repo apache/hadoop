@@ -436,7 +436,7 @@ public class KeyManagerImpl implements KeyManager {
     // client should expect, in terms of current size of key. If client sets
     // a value, then this value is used, otherwise, we allocate a single
     // block which is the current size, if read by the client.
-    final long size = args.getDataSize() >= 0 ?
+    final long size = args.getDataSize() > 0 ?
         args.getDataSize() : scmBlockSize;
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
 
@@ -477,7 +477,7 @@ public class KeyManagerImpl implements KeyManager {
     openVersion = keyInfo.getLatestVersionLocations().getVersion();
     LOG.debug("Key {} allocated in volume {} bucket {}",
         keyName, volumeName, bucketName);
-    allocateBlockInKey(keyInfo, args.getDataSize(), currentTime);
+    allocateBlockInKey(keyInfo, size, currentTime);
     return new OpenKeySession(currentTime, keyInfo, openVersion);
   }
 
