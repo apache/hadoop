@@ -57,7 +57,8 @@ import org.apache.hadoop.util.Time;
 /**
  * Handles volume create request.
  */
-public class OMVolumeCreateRequest extends OMClientRequest {
+public class OMVolumeCreateRequest extends OMClientRequest
+    implements OMVolumeRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeCreateRequest.class);
 
@@ -76,12 +77,10 @@ public class OMVolumeCreateRequest extends OMClientRequest {
         volumeInfo.toBuilder().setCreationTime(Time.now()).build();
 
 
-    getOmRequest().toBuilder().setCreateVolumeRequest(
+    return getOmRequest().toBuilder().setCreateVolumeRequest(
         CreateVolumeRequest.newBuilder().setVolumeInfo(updatedVolumeInfo))
         .setUserInfo(getUserInfo())
         .build();
-
-    return getOmRequest();
 
   }
 
@@ -164,7 +163,9 @@ public class OMVolumeCreateRequest extends OMClientRequest {
         throw new OMException("Volume already exists",
             OMException.ResultCodes.VOLUME_ALREADY_EXISTS);
       }
-      volumeList = VolumeRequestHelper.addVolumeToOwnerList(omMetadataManager,
+
+      volumeList = omMetadataManager.getUserTable().get(dbUserKey);
+      volumeList = addVolumeToOwnerList(volumeList,
           volume, owner, ozoneManager.getMaxUserVolumeCount());
 
       // Update cache: Update user and volume cache.

@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.request.volume;
 
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
@@ -31,34 +30,26 @@ import java.util.List;
 /**
  * Helper class for Volume requests.
  */
-public final class VolumeRequestHelper {
-
-  private VolumeRequestHelper() {
-
-  }
+public interface OMVolumeRequest {
 
   /**
-   * Delete volume from user list. This method should be called after acquiring
-   * user lock.
-   * @param omMetadataManager
+   * Delete volume from user volume list. This method should be called after
+   * acquiring user lock.
+   * @param volumeList
    * @param volume
    * @param owner
    * @return VolumeList - updated volume list for the user.
    * @throws IOException
    */
-  public static VolumeList delVolumeFromOwnerList(
-      OMMetadataManager omMetadataManager, String volume, String owner)
-      throws IOException {
-    Preconditions.checkNotNull(omMetadataManager);
-    Preconditions.checkNotNull(volume);
-    Preconditions.checkNotNull(owner);
-    // Get the volume list
-    VolumeList volumeList = omMetadataManager.getUserTable().get(owner);
+  default VolumeList delVolumeFromOwnerList(VolumeList volumeList,
+      String volume, String owner) throws IOException {
 
     List<String> prevVolList = new ArrayList<>();
+
     if (volumeList != null) {
       prevVolList.addAll(volumeList.getVolumeNamesList());
     } else {
+      // No Volumes for this user
       throw new OMException(OMException.ResultCodes.USER_NOT_FOUND);
     }
 
@@ -71,34 +62,24 @@ public final class VolumeRequestHelper {
 
 
   /**
-   * Add volume to user list. This method should be called after acquiring user
-   * lock.
-   * @param omMetadataManager
-   * @param volume
+   * Add volume to user volume list. This method should be called after
+   * acquiring user lock.
+   * @param volumeList - current volume list owned by user.
+   * @param volume - volume which needs to be added to this list.
    * @param owner
    * @param maxUserVolumeCount
    * @return VolumeList - which is updated volume list.
    * @throws OMException - if user has volumes greater than
    * maxUserVolumeCount, an exception is thrown.
    */
-  public static VolumeList addVolumeToOwnerList(
-      OMMetadataManager omMetadataManager, String volume, String owner,
+  default VolumeList addVolumeToOwnerList(
+      VolumeList volumeList, String volume, String owner,
       long maxUserVolumeCount) throws IOException {
-    Preconditions.checkNotNull(omMetadataManager);
-    Preconditions.checkNotNull(volume);
-    Preconditions.checkNotNull(owner);
-    String dbUserKey = omMetadataManager.getUserKey(owner);
-    Preconditions.checkArgument(maxUserVolumeCount > 0, "maxUserVolumeCount " +
-        "should be greater than zero");
-    // Get the volume list
-    VolumeList volumeList = omMetadataManager.getUserTable().get(dbUserKey);
 
-    // Allowing maxUserVolumeCount zero for the case like when for a user we
-    // want to have no volumes. Revisit this if need to be changed later.
     // Check the volume count
-    if (maxUserVolumeCount == 0 || (volumeList != null &&
-        volumeList.getVolumeNamesList().size() >= maxUserVolumeCount)) {
-      throw new OMException("Too many volumes for user:" + dbUserKey,
+    if (volumeList != null &&
+        volumeList.getVolumeNamesList().size() >= maxUserVolumeCount) {
+      throw new OMException("Too many volumes for user:" + owner,
           OMException.ResultCodes.USER_TOO_MANY_VOLUMES);
     }
 

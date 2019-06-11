@@ -46,7 +46,7 @@ public class CacheKey<KEY> {
       return false;
     }
     CacheKey<?> cacheKey = (CacheKey<?>) o;
-    return Objects.equals(key.key);
+    return Objects.equals(key, cacheKey.key);
   }
 
   @Override

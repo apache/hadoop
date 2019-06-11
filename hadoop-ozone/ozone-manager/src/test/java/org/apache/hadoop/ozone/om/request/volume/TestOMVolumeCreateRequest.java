@@ -120,11 +120,6 @@ public class TestOMVolumeCreateRequest {
           ex);
     }
 
-    OzoneManagerProtocolProtos.OMResponse omResponse =
-        omClientResponse.getOMResponse();
-    Assert.assertTrue(omResponse.getStatus() ==
-        OzoneManagerProtocolProtos.Status.USER_TOO_MANY_VOLUMES);
-
   }
 
   @Test

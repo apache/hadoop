@@ -56,7 +56,8 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 /**
  * Handle set owner request for volume.
  */
-public class OMVolumeSetOwnerRequest extends OMClientRequest {
+public class OMVolumeSetOwnerRequest extends OMClientRequest
+    implements OMVolumeRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeSetOwnerRequest.class);
 
@@ -136,13 +137,18 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest {
       }
 
       oldOwner = omVolumeArgs.getOwnerName();
-      oldOwnerVolumeList = VolumeRequestHelper.delVolumeFromOwnerList(
-          omMetadataManager, volume, oldOwner);
 
 
+      oldOwnerVolumeList =
+          omMetadataManager.getUserTable().get(oldOwner);
 
-      newOwnerVolumeList = VolumeRequestHelper.addVolumeToOwnerList(
-          omMetadataManager, volume, newOwner, maxUserVolumeCount);
+      oldOwnerVolumeList = delVolumeFromOwnerList(
+          oldOwnerVolumeList, volume, oldOwner);
+
+
+      newOwnerVolumeList = omMetadataManager.getUserTable().get(newOwner);
+      newOwnerVolumeList = addVolumeToOwnerList(
+          newOwnerVolumeList, volume, newOwner, maxUserVolumeCount);
 
       // Set owner with new owner name.
       omVolumeArgs.setOwnerName(newOwner);

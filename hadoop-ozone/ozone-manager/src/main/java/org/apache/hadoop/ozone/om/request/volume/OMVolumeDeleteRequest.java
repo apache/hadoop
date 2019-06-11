@@ -54,7 +54,8 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 /**
  * Handles volume delete request.
  */
-public class OMVolumeDeleteRequest extends OMClientRequest {
+public class OMVolumeDeleteRequest extends OMClientRequest
+    implements OMVolumeRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeDeleteRequest.class);
@@ -126,10 +127,12 @@ public class OMVolumeDeleteRequest extends OMClientRequest {
         LOG.debug("volume:{} is not empty", volume);
         throw new OMException(OMException.ResultCodes.VOLUME_NOT_EMPTY);
       }
+
+      newVolumeList = omMetadataManager.getUserTable().get(owner);
+
       // delete the volume from the owner list
       // as well as delete the volume entry
-      newVolumeList = VolumeRequestHelper.delVolumeFromOwnerList(
-          omMetadataManager, volume, owner);
+      newVolumeList = delVolumeFromOwnerList(newVolumeList, volume, owner);
 
       omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
           new CacheValue<>(Optional.of(newVolumeList), transactionLogIndex));

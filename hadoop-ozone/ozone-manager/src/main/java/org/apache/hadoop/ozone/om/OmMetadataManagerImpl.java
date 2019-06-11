@@ -465,9 +465,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
             iterator.next();
         String key = entry.getKey().getCacheKey();
         OmBucketInfo omBucketInfo = entry.getValue().getCacheValue();
-        // Not null check is done, because for delete bucket request we set
-        // the cacheValue null. So, we should check the entry value is not
-        // null also here.
+        // Making sure that entry is not for delete bucket request.
         if (key.startsWith(volumePrefix) && omBucketInfo != null) {
           return false;
         }
@@ -479,7 +477,8 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
       // During iteration from DB, check in mean time if this bucket is not
       // marked for delete.
-      if (kv != null && kv.getKey().startsWith(volumePrefix) && bucketTable.get(kv.getKey()) != null) {
+      if (kv != null && kv.getKey().startsWith(volumePrefix) &&
+          bucketTable.get(kv.getKey()) != null) {
         return false; // we found at least one bucket with this volume prefix.
       }
     }
