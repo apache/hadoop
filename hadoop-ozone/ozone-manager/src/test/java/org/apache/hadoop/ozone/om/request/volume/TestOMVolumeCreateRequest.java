@@ -47,7 +47,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeInfo;
-import sun.net.www.content.text.Generic;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;

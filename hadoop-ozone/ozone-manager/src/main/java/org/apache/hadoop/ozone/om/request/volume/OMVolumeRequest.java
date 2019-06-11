@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.om.request.volume;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
@@ -35,8 +34,8 @@ public interface OMVolumeRequest {
   /**
    * Delete volume from user volume list. This method should be called after
    * acquiring user lock.
-   * @param volumeList
-   * @param volume
+   * @param volumeList - current volume list owned by user.
+   * @param volume - volume which needs to deleted from the volume list.
    * @param owner
    * @return VolumeList - updated volume list for the user.
    * @throws IOException
@@ -50,7 +49,8 @@ public interface OMVolumeRequest {
       prevVolList.addAll(volumeList.getVolumeNamesList());
     } else {
       // No Volumes for this user
-      throw new OMException(OMException.ResultCodes.USER_NOT_FOUND);
+      throw new OMException("User not found: " + owner,
+          OMException.ResultCodes.USER_NOT_FOUND);
     }
 
     // Remove the volume from the list
