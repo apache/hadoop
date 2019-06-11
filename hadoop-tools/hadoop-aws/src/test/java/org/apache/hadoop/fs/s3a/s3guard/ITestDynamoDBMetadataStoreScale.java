@@ -351,7 +351,9 @@ public class ITestDynamoDBMetadataStoreScale
     PathMetadata metadata = new PathMetadata(status);
     ddbms.put(metadata, null);
     DirListingMetadata children = ddbms.listChildren(path.getParent());
-    try(DynamoDBMetadataStore.AncestorState state = ddbms.initiateBulkWrite(path)) {
+    try(DynamoDBMetadataStore.AncestorState state = ddbms.initiateBulkWrite(
+        BulkOperationState.OperationType.Put,
+        path)) {
       execute("list",
           OPERATIONS_PER_THREAD,
           expectThrottling(),
@@ -370,7 +372,8 @@ public class ITestDynamoDBMetadataStoreScale
     List<PathMetadata> pms = new ArrayList<>();
     try {
       try (BulkOperationState bulkUpdate
-              = ddbms.initiateBulkWrite(child)) {
+              = ddbms.initiateBulkWrite(
+                  BulkOperationState.OperationType.Put, child)) {
         ddbms.put(new PathMetadata(makeDirStatus(base)), bulkUpdate);
         ddbms.put(new PathMetadata(makeDirStatus(child)), bulkUpdate);
         ddbms.getInvoker().retry("set up directory tree",
@@ -379,7 +382,8 @@ public class ITestDynamoDBMetadataStoreScale
             () -> ddbms.put(pms, bulkUpdate));
       }
       try (BulkOperationState bulkUpdate
-              = ddbms.initiateBulkWrite(child)) {
+              = ddbms.initiateBulkWrite(
+                  BulkOperationState.OperationType.Put, child)) {
         DDBPathMetadata dirData = ddbms.get(child, true);
         execute("put",
             OPERATIONS_PER_THREAD,

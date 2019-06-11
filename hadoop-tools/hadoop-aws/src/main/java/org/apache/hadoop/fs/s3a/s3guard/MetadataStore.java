@@ -253,7 +253,7 @@ public interface MetadataStore extends Closeable {
    * Implementations MUST clear file metadata, and MAY clear directory metadata
    * (s3a itself does not track modification time for directories).
    * Implementations may also choose to throw UnsupportedOperationException
-   * istead. Note that modification times should be in UTC, as returned by
+   * instead. Note that modification times should be in UTC, as returned by
    * System.currentTimeMillis at the time of modification.
    *
    * @param modTime Oldest modification time to allow
@@ -310,11 +310,13 @@ public interface MetadataStore extends Closeable {
   /**
    * Initiate a bulk update and create an operation state for it.
    * This may then be passed into put operations.
+   * @param operation the type of the operation.
    * @param dest path under which updates will be explicitly put.
    * @return null or a store-specific state to pass into the put operations.
    * @throws IOException failure
    */
-  default BulkOperationState initiateBulkWrite(Path dest) throws IOException {
+  default BulkOperationState initiateBulkWrite(final BulkOperationState.OperationType operation,
+      Path dest) throws IOException {
     return null;
   }
 

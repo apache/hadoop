@@ -888,7 +888,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         .containsExactlyInAnyOrderElementsOf(b);
   }
 
-  private void putListStatusFiles(String dirPath, boolean authoritative,
+  protected void putListStatusFiles(String dirPath, boolean authoritative,
       String... filenames) throws IOException {
     ArrayList<PathMetadata> metas = new ArrayList<>(filenames .length);
     for (String filename : filenames) {
@@ -899,7 +899,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     ms.put(dirMeta, null);
   }
 
-  private void createNewDirs(String... dirs)
+  protected void createNewDirs(String... dirs)
       throws IOException {
     for (String pathStr : dirs) {
       ms.put(new PathMetadata(makeDirStatus(pathStr)), null);
@@ -951,7 +951,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
    */
   Path strToPath(String p) throws IOException {
     final Path path = new Path(p);
-    assert path.isAbsolute();
+    assertTrue("Non-absolute path: " + path,  path.isAbsolute());
     return path.makeQualified(contract.getFileSystem().getUri(), null);
   }
 
@@ -986,16 +986,16 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       return new S3AFileStatus(Tristate.UNKNOWN, path, OWNER);
     } else {
       return new S3AFileStatus(size, newModTime, path, BLOCK_SIZE, OWNER,
-          null, null);
+          "etag", "version");
     }
   }
 
-  private S3AFileStatus makeFileStatus(String pathStr, int size) throws
+  protected S3AFileStatus makeFileStatus(String pathStr, int size) throws
       IOException {
     return makeFileStatus(pathStr, size, modTime);
   }
 
-  private S3AFileStatus makeFileStatus(String pathStr, int size,
+  protected S3AFileStatus makeFileStatus(String pathStr, int size,
       long newModTime) throws IOException {
     return basicFileStatus(strToPath(pathStr), size, false,
         newModTime);

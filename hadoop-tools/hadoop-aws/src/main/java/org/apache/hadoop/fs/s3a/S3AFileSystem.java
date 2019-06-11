@@ -2621,6 +2621,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       while (files.hasNext()) {
         result.add(files.next());
       }
+      // merge the results. This will update the store as needed
       return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta,
           allowAuthoritative, ttlTimeProvider);
     } else {

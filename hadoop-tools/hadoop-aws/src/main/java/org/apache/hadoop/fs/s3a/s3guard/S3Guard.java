@@ -182,20 +182,25 @@ public final class S3Guard {
   }
 
   /**
-   * Initiate a bulk update and create an operation state for it.
+   * Initiate a bulk write and create an operation state for it.
    * This may then be passed into put operations.
    * @param metastore store
+   * @param operation the type of the operation.
    * @param path path under which updates will be explicitly put.
    * @return a store-specific state to pass into the put operations, or null
    * @throws IOException failure
    */
   public static BulkOperationState initiateBulkWrite(
       @Nullable final MetadataStore metastore,
+      final BulkOperationState.OperationType operation,
       final Path path) throws IOException {
+    Preconditions.checkArgument(
+        operation != BulkOperationState.OperationType.Rename,
+        "Rename operations cannot be started through initiateBulkWrite");
     if (metastore == null || isNullMetadataStore(metastore)) {
       return null;
     } else {
-      return metastore.initiateBulkWrite(path);
+      return metastore.initiateBulkWrite(operation, path);
     }
   }
 

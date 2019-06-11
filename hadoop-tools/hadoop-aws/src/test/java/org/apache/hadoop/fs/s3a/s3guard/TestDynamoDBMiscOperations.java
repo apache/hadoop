@@ -26,7 +26,6 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.waiters.WaiterTimedOutException;
 import org.junit.Test;
 
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.s3a.AWSClientIOException;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -115,7 +114,8 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
   @Test
   public void testAncestorStateForDir() throws Throwable {
     final DynamoDBMetadataStore.AncestorState ancestorState
-        = new DynamoDBMetadataStore.AncestorState(null);
+        = new DynamoDBMetadataStore.AncestorState(
+            BulkOperationState.OperationType.Rename, null);
 
     // path 1 is a directory
     final Path path1 = new Path("s3a://bucket/1");
@@ -142,7 +142,8 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
   @Test
   public void testAncestorStateForFile() throws Throwable {
     final DynamoDBMetadataStore.AncestorState ancestorState
-        = new DynamoDBMetadataStore.AncestorState(null);
+        = new DynamoDBMetadataStore.AncestorState(
+        BulkOperationState.OperationType.Rename, null);
 
     // path 1 is a file
     final Path path1 = new Path("s3a://bucket/1");
@@ -162,6 +163,19 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
     intercept(PathIOException.class,
         DynamoDBMetadataStore.E_INCONSISTENT_UPDATE,
         () -> ancestorState.findEntry(path1, true));
+  }
+
+  @Test
+  public void testNoBulkRenameThroughInitiateBulkWrite() throws Throwable {
+    intercept(IllegalArgumentException.class,
+        () -> S3Guard.initiateBulkWrite(null,
+            BulkOperationState.OperationType.Rename, null));
+  }
+  @Test
+  public void testInitiateBulkWrite() throws Throwable {
+    assertNull(
+        S3Guard.initiateBulkWrite(null,
+            BulkOperationState.OperationType.Put, null));
   }
 
 }

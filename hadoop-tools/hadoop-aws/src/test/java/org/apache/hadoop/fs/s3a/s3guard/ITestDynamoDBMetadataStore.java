@@ -42,17 +42,19 @@ import org.assertj.core.api.Assertions;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.PathIOException;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3ATestConstants;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import org.junit.AfterClass;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +64,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.util.DurationInfo;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -263,7 +264,11 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   private void deleteAllMetadata() throws IOException {
     // The following is a way to be sure the table will be cleared and there
     // will be no leftovers after the test.
-    deleteMetadataUnderPath(ddbmsStatic, strToPath("/"), true);
+    // only executed if there is a filesystem, as failure during test setup
+    // means that strToPath will NPE.
+    if (getContract() != null && getContract().getFileSystem() != null) {
+      deleteMetadataUnderPath(ddbmsStatic, strToPath("/"), true);
+    }
   }
 
   /**
@@ -281,6 +286,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       ms.prune(System.currentTimeMillis(),
           PathMetadataDynamoDBTranslation.pathToParentKey(path));
       LOG.info("Throttle statistics: {}", throttleTracker);
+    } catch (FileNotFoundException fnfe) {
+      // there is no table.
+      return;
     } catch (IOException ioe) {
       // prune failed. warn and then fall back to forget.
       LOG.warn("Failed to prune {}", path, ioe);
@@ -301,6 +309,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         }
         LOG.info("Forgot {} entries", forgotten);
       }
+    } catch (FileNotFoundException fnfe) {
+      // there is no table.
+      return;
     } catch (IOException ioe) {
       LOG.warn("Failed to forget entries under {}", path, ioe);
       if (!suppressErrors) {
@@ -534,7 +545,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Thread.currentThread()
         .setName(String.format("Bulk put=%d; delete=%d", numPut, numDelete));
 
-    AncestorState putState = checkNotNull(ms.initiateBulkWrite(newDir),
+    AncestorState putState = checkNotNull(ms.initiateBulkWrite(
+        BulkOperationState.OperationType.Put, newDir),
         "No state from initiateBulkWrite()");
     ms.put(new PathMetadata(dirStatus(oldDir)), putState);
     ms.put(new PathMetadata(dirStatus(newDir)), putState);
@@ -572,7 +584,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // move the old paths to new paths and verify
-    AncestorState state = checkNotNull(ms.initiateBulkWrite(newDir),
+    AncestorState state = checkNotNull(ms.initiateBulkWrite(
+        BulkOperationState.OperationType.Put, newDir),
         "No state from initiateBulkWrite()");
     assertEquals("bulk write destination", newDir, state.getDest());
 
@@ -628,54 +641,62 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   /**
+   * Test versioning handling.
+   * <ol>
+   *   <li>Create the table.</li>
+   *   <li>Verify tag propagation.</li>
+   *   <li>Delete the version marker -verify failure.</li>
+   *   <li>Reinstate a different version marker -verify failure</li>
+   * </ol>
    * Delete the version marker and verify that table init fails.
+   * This also includes the checks for tagging, which goes against all
+   * principles of unit tests.
+   * However, merging the routines saves
    */
   @Test
-  public void testTableVersionRequired() throws Exception {
+  public void testTableVersioning() throws Exception {
     String tableName = getTestTableName("testTableVersionRequired");
     Configuration conf = getTableCreationConfig();
     int maxRetries = conf.getInt(S3GUARD_DDB_MAX_RETRIES,
         S3GUARD_DDB_MAX_RETRIES_DEFAULT);
     conf.setInt(S3GUARD_DDB_MAX_RETRIES, 3);
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-
+    tagConfiguration(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
       ddbms.initialize(conf);
       Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
+      // check the tagging too
+      verifyStoreTags(createTagMap(), ddbms);
+
+      final Item originalVersionMarker = table.getItem(VERSION_MARKER_PRIMARY_KEY);
       table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
 
       // create existing table
       intercept(IOException.class, E_NO_VERSION_MARKER,
           () -> ddbms.initTable());
 
-      conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
-    } finally {
-      destroy(ddbms);
-    }
-  }
-
-  /**
-   * Set the version value to a different number and verify that
-   * table init fails.
-   */
-  @Test
-  public void testTableVersionMismatch() throws Exception {
-    String tableName = getTestTableName("testTableVersionMismatch");
-    Configuration conf = getTableCreationConfig();
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-
-    DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
-    try {
-      ddbms.initialize(conf);
-      Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
-      table.deleteItem(VERSION_MARKER_PRIMARY_KEY);
-      Item v200 = createVersionMarker(VERSION_MARKER, 200, 0);
+      // now add a different version marker
+      Item v200 = createVersionMarker(VERSION_MARKER, VERSION * 2, 0);
       table.putItem(v200);
 
       // create existing table
       intercept(IOException.class, E_INCOMPATIBLE_VERSION,
           () -> ddbms.initTable());
+
+      // create a marker with no version and expect failure
+      final Item invalidMarker = new Item().withPrimaryKey(
+          createVersionMarkerPrimaryKey(VERSION_MARKER))
+          .withLong(TABLE_CREATED, 0);
+      table.putItem(invalidMarker);
+
+      intercept(IOException.class, E_NOT_VERSION_MARKER,
+          () -> ddbms.initTable());
+
+      // reinstate the version marker
+      table.putItem(originalVersionMarker);
+      ddbms.initTable();
+      conf.setInt(S3GUARD_DDB_MAX_RETRIES, maxRetries);
     } finally {
       destroy(ddbms);
     }
@@ -772,7 +793,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     final String destRoot = testRoot + "/c/d/e/dest";
 
     final Path nestedPath1 = strToPath(srcRoot + "/file1.txt");
-    AncestorState bulkWrite = ddbms.initiateBulkWrite(nestedPath1);
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(
+        BulkOperationState.OperationType.Put, nestedPath1);
     ddbms.put(new PathMetadata(basicFileStatus(nestedPath1, 1024, false)),
         bulkWrite);
     final Path nestedPath2 = strToPath(srcRoot + "/dir1/dir2");
@@ -829,7 +851,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     String child2 = parent + "/child2";
     String grandchild2 = child2 + "/grandchild2";
     Path grandchild2Path = strToPath(grandchild2);
-    AncestorState bulkWrite = ddbms.initiateBulkWrite(parentPath);
+    AncestorState bulkWrite = ddbms.initiateBulkWrite(
+        BulkOperationState.OperationType.Put, parentPath);
 
     // writing a child creates ancestors
     ddbms.put(
@@ -954,51 +977,53 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
           "Should have failed after the table is destroyed!",
           () -> ddbms.listChildren(testPath));
       ddbms.destroy();
+      intercept(FileNotFoundException.class, "",
+          "Destroyed table should raise FileNotFoundException when pruned",
+          () -> ddbms.prune(0));
     } finally {
       destroy(ddbms);
     }
   }
 
+/*
   @Test
   public void testTableTagging() throws IOException {
-    final Map<String, String> tagMap = createTagMap();
+    verifyStoreTags(createTagMap(), ITestDynamoDBMetadataStore.ddbmsStatic);
+  }
+*/
+
+  protected void verifyStoreTags(final Map<String, String> tagMap,
+      final DynamoDBMetadataStore store) {
+    List<Tag> tags = listTagsOfStore(store);
+    Map<String, String> actual = new HashMap<>();
+    tags.forEach(t -> actual.put(t.getKey(), t.getValue()));
+    Assertions.assertThat(actual)
+        .describedAs("Tags from DDB table")
+        .containsExactlyEntriesOf(tagMap);
+    assertEquals(tagMap.size(), tags.size());
+  }
+
+  protected List<Tag> listTagsOfStore(final DynamoDBMetadataStore store) {
     ListTagsOfResourceRequest listTagsOfResourceRequest =
         new ListTagsOfResourceRequest()
-            .withResourceArn(ddbmsStatic.getTable().getDescription().getTableArn());
-    List<Tag> tags = ddbmsStatic.getAmazonDynamoDB()
+            .withResourceArn(store.getTable().getDescription().getTableArn());
+    return store.getAmazonDynamoDB()
         .listTagsOfResource(listTagsOfResourceRequest).getTags();
-    assertEquals(tagMap.size(), tags.size());
-    for (Tag tag : tags) {
-      Assert.assertEquals("tag", tagMap.get(tag.getKey()), tag.getValue());
-    }
   }
 
   private static Map<String, String> createTagMap() {
     Map<String, String> tagMap = new HashMap<>();
     tagMap.put("hello", "dynamo");
     tagMap.put("tag", "youre it");
+    return tagMap;
+  }
+
+  private static void tagConfiguration(Configuration conf) {
+    // set the tags on the table so that it can be tested later.
+    Map<String, String> tagMap = createTagMap();
     for (Map.Entry<String, String> tagEntry : tagMap.entrySet()) {
       conf.set(S3GUARD_DDB_TABLE_TAG + tagEntry.getKey(), tagEntry.getValue());
     }
-
-    DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
-    try {
-      ddbms.initialize(conf);
-      assertNotNull(ddbms.getTable());
-      assertEquals(tableName, ddbms.getTable().getTableName());
-      ListTagsOfResourceRequest listTagsOfResourceRequest =
-          new ListTagsOfResourceRequest()
-              .withResourceArn(ddbms.getTable().getDescription().getTableArn());
-      List<Tag> tags = ddbms.getAmazonDynamoDB()
-          .listTagsOfResource(listTagsOfResourceRequest).getTags();
-      assertEquals(tagMap.size(), tags.size());
-      for (Tag tag : tags) {
-        Assert.assertEquals(tagMap.get(tag.getKey()), tag.getValue());
-      }
-    } finally {
-      shutdown(ddbms);
-    }
-    return tagMap;
   }
 
   @Test
@@ -1075,5 +1100,53 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   private String getTestTableName(String suffix) {
     return getTestDynamoTablePrefix(s3AContract.getConf()) + suffix;
+  }
+
+  @Test
+  public void testPruneAgainstInvalidTable() throws Throwable {
+    LOG.info("Create an Invalid listing and prune it");
+    DynamoDBMetadataStore ms
+        = ITestDynamoDBMetadataStore.ddbmsStatic;
+    String base = "/testPruneAgainstInvalidTable";
+    String subdir = base + "/subdir";
+    createNewDirs(base);
+
+    String subFile = subdir + "/file1";
+    Path subFilePath = strToPath(subFile);
+    putListStatusFiles(subdir, true,
+        subFile);
+
+    // now let's corrupt the graph by putting a file
+    // over the subdirectory
+
+    long now = getTime();
+    long oldTime = now - 60_000;
+    putFile(ms, subdir, oldTime);
+    Path basePath = strToPath(base);
+    DirListingMetadata listing = ms.listChildren(basePath);
+    String childText = listing.prettyPrint();
+    LOG.info("Listing {}", childText);
+    Collection<PathMetadata> childList = listing.getListing();
+    Assertions.assertThat(childList)
+        .as("listing of %s with %s", basePath, childText)
+        .hasSize(1);
+    PathMetadata[] pm = new PathMetadata[0];
+    S3AFileStatus status = childList.toArray(pm)[0]
+        .getFileStatus();
+    Assertions.assertThat(status.isFile())
+        .as("Entry %s", pm)
+        .isTrue();
+    DDBPathMetadata subFilePm = checkNotNull(ms.get(subFilePath));
+    LOG.info("Pruning");
+    ms.prune(now + 60_000, subdir);
+    Assertions.assertThat(ms.get(subFilePath))
+        .as("PM entry")
+        .isNull();
+  }
+
+  protected void putFile(final DynamoDBMetadataStore ms,
+      final String key,
+      final long oldTime) throws IOException {
+    ms.put(new PathMetadata(makeFileStatus(key, 1, oldTime)), null );
   }
 }

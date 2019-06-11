@@ -617,6 +617,7 @@ public class ITestCommitOperations extends AbstractCommitITest {
       assertPathExists("subdirectory", subdir);
       assertPathExists("destFile2", destFile2);
       if (writesOnFirstCommit != 0) {
+        LOG.info("DynamoDB Metastore is in use: checking write count");
         // S3Guard is in use against DDB, so the metrics can be checked
         // to see how many records were updated.
         // there should only be two new entries: one for the file and

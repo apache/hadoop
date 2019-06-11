@@ -35,8 +35,42 @@ import java.io.IOException;
  */
 public class BulkOperationState implements Closeable {
 
+  private final OperationType operation;
+
+  /**
+   * Constructor.
+   * @param operation the type of the operation.
+   */
+  public BulkOperationState(final OperationType operation) {
+    this.operation = operation;
+  }
+
+  /**
+   * Get the operation type.
+   * @return the operation type.
+   */
+  public OperationType getOperation() {
+    return operation;
+  }
+
   @Override
   public void close() throws IOException {
 
+  }
+
+  /**
+   * Enumeration of operations which can be performed in bulk.
+   * This can be used by the stores however they want.
+   * One special aspect: renames are to be done through a {@link RenameTracker}.
+   * Callers will be blocked from initiating a rename through
+   * {@code S3Guard#initiateBulkWrite()}
+   */
+  public enum OperationType {
+    /** Writing data. */
+    Put,
+    /** Rename: add and delete. */
+    Rename,
+    /** Pruning: deleting entries and updating parents. */
+    Prune,
   }
 }

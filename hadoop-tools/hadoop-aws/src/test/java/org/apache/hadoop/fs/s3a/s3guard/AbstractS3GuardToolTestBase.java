@@ -204,7 +204,10 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   protected static void putFile(MetadataStore ms, S3AFileStatus f)
       throws IOException {
     assertNotNull(f);
-    try(BulkOperationState bulkWrite = ms.initiateBulkWrite(f.getPath())) {
+    try (BulkOperationState bulkWrite =
+             ms.initiateBulkWrite(
+                 BulkOperationState.OperationType.Put,
+                 f.getPath())) {
       ms.put(new PathMetadata(f), bulkWrite);
       Path parent = f.getPath().getParent();
       while (parent != null) {

@@ -725,6 +725,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
       BulkOperationState operationState = getStore().initiateBulkWrite(
+          BulkOperationState.OperationType.Put,
           status.getPath());
       RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
