@@ -320,6 +320,13 @@
   </property>
 
 <property>
+  <name>dfs.datanode.httpserver.filter.handlers</name>
+  <value>org.apache.hadoop.hdfs.server.datanode.web.RestCsrfPreventionFilterHandler</value>
+  <description>Comma separated list of Netty servlet-style filter handlers to inject into the Datanode WebHDFS I/O path
+  </description>
+</property>
+
+<property>
   <name>dfs.default.chunk.view.size</name>
   <value>32768</value>
   <description>The number of bytes to view for a file on the browser.
