@@ -17,40 +17,57 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: s3g
+  name: datanode
   labels:
     app.kubernetes.io/component: ozone
 spec:
   selector:
     matchLabels:
       app: ozone
-      component: s3g
-  serviceName: s3g
-  replicas: 1
+      component: datanode
+  serviceName: datanode
+  replicas: 3
   template:
     metadata:
       labels:
         app: ozone
-        component: s3g
+        component: datanode
+      annotations:
+        prdatanodeetheus.io/scrape: "true"
+        prdatanodeetheus.io/port: "9882"
+        prdatanodeetheus.io/path: /prom
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: component
+                operator: In
+                values:
+                - datanode
+            topologyKey: kubernetes.io/hostname
+      securityContext:
+        fsGroup: 1000
       containers:
-      - name: s3g
+      - name: datanode
         image: '@docker.image@'
         args:
         - ozone
-        - s3g
+        - datanode
         envFrom:
         - configMapRef:
             name: config
+        env:
+        - name: JAEGER_SAMPLER_TYPE
+          value: probabilistic
+        - name: JAEGER_SAMPLER_PARAM
+          value: "0.01"
+        - name: JAEGER_AGENT_HOST
+          value: jaeger-0.jaeger
         volumeMounts:
         - name: data
           mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 2Gi
+      volumes:
+      - name: data
+        emptyDir: {}

@@ -14,43 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1
-kind: DaemonSet
+apiVersion: v1
+kind: Service
 metadata:
-  name: datanode
-  labels:
-    app.kubernetes.io/component: ozone
+  name: om
 spec:
+  ports:
+  - port: 9874
+    name: ui
+  clusterIP: None
   selector:
-    matchLabels:
-      app: ozone
-      component: datanode
-  template:
-    metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9882"
-        prometheus.io/path: /prom
-      labels:
-        app: ozone
-        component: datanode
-    spec:
-      containers:
-      - name: datanode
-        image: '@docker.image@'
-        args:
-        - ozone
-        - datanode
-        ports:
-        - containerPort: 9870
-          name: rpc
-        envFrom:
-        - configMapRef:
-            name: config
-        volumeMounts:
-        - name: data
-          mountPath: /data
-      initContainers: []
-      volumes:
-      - name: data
-        emptyDir: {}
+    app: ozone
+    component: om
