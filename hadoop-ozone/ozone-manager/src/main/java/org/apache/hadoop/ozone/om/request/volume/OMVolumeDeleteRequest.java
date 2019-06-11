@@ -180,17 +180,11 @@ public class OMVolumeDeleteRequest extends OMClientRequest
       OmVolumeArgs volumeArgs =
           omMetadataManager.getVolumeTable().get(dbVolumeKey);
       if (volumeArgs == null) {
-        LOG.debug("volume:{} does not exist", volume);
         throw new OMException("Volume " + volume + " is not found",
             OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
 
       return volumeArgs;
-    } catch (IOException ex) {
-      if (!(ex instanceof OMException)) {
-        LOG.warn("Info volume failed for volume:{}", volume, ex);
-      }
-      throw ex;
     } finally {
       omMetadataManager.getLock().releaseVolumeLock(volume);
     }
