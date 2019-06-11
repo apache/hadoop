@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Helper class for Volume requests.
+ * Defines common methods required for volume requests.
  */
 public interface OMVolumeRequest {
 
