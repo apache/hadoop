@@ -695,8 +695,8 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
         .as("ReadOnly directory " + directoryList)
         .containsAll(readOnlyFiles);
 
-    // do this prune in the test as well as teardown, so that the test reporting includes
-    // it in the runtime of a successful run.
+    // do this prune in the test as well as teardown, so that the test
+    // reporting includes it in the runtime of a successful run.
     prune(basePath);
   }
 

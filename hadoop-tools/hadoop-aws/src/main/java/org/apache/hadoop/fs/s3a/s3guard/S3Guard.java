@@ -511,7 +511,8 @@ public final class S3Guard {
 
   /**
    * This adds all new ancestors of a path as directories.
-   * This forwards to {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
+   * This forwards to
+   * {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
    * <p>
    * Originally it implemented the logic to probe for an add ancestors,
    * but with the addition of a store-specific bulk operation state

@@ -68,8 +68,8 @@ import static org.junit.Assume.*;
  * to overload the system and them have them back of until they finally complete.
  * <p>
  * With DDB on demand, throttling is very unlikely.
- * Here the tests simply run to completion, so act as regression tests on parallel
- * invocations on the metastore APIs
+ * Here the tests simply run to completion, so act as regression tests of
+ * parallel invocations on the metastore APIs
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class ITestDynamoDBMetadataStoreScale
@@ -176,7 +176,7 @@ public class ITestDynamoDBMetadataStoreScale
   }
 
   private boolean expectThrottling() {
-      return !isOverProvisionedForTest && !isOnDemandTable;
+    return !isOverProvisionedForTest && !isOnDemandTable;
   }
 
   /**
@@ -351,14 +351,14 @@ public class ITestDynamoDBMetadataStoreScale
     PathMetadata metadata = new PathMetadata(status);
     ddbms.put(metadata, null);
     DirListingMetadata children = ddbms.listChildren(path.getParent());
-    try(DynamoDBMetadataStore.AncestorState state = ddbms.initiateBulkWrite(
-        BulkOperationState.OperationType.Put,
-        path)) {
+    try (DynamoDBMetadataStore.AncestorState state =
+             ddbms.initiateBulkWrite(
+                 BulkOperationState.OperationType.Put,
+                 path)) {
       execute("list",
           OPERATIONS_PER_THREAD,
           expectThrottling(),
-          () -> ddbms.put(children, state)
-      );
+          () -> ddbms.put(children, state));
     } finally {
       retryingDelete(path);
     }

@@ -278,7 +278,8 @@ public class ITestCommitOperations extends AbstractCommitITest {
     String child = "subdir/child.txt";
     Path pendingChildPath = new Path(pendingBaseDir, child);
     Path expectedDestPath = new Path(destDir, child);
-    assertPathDoesNotExist("dest file was found before upload", expectedDestPath);
+    assertPathDoesNotExist("dest file was found before upload",
+        expectedDestPath);
 
     createFile(fs, pendingChildPath, true, DATASET);
     commit("child.txt", pendingChildPath, expectedDestPath, 0, 0);

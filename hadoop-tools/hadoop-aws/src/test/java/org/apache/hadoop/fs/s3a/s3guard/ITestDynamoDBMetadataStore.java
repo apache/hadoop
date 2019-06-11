@@ -303,7 +303,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       if (meta != null) {
         for (DescendantsIterator desc = new DescendantsIterator(ms,
             meta);
-            desc.hasNext(); ) {
+            desc.hasNext();) {
           forgotten++;
           ms.forgetMetadata(desc.next().getPath());
         }
@@ -1006,7 +1006,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   protected List<Tag> listTagsOfStore(final DynamoDBMetadataStore store) {
     ListTagsOfResourceRequest listTagsOfResourceRequest =
         new ListTagsOfResourceRequest()
-            .withResourceArn(store.getTable().getDescription().getTableArn());
+            .withResourceArn(store.getTable().getDescription()
+                .getTableArn());
     return store.getAmazonDynamoDB()
         .listTagsOfResource(listTagsOfResourceRequest).getTags();
   }

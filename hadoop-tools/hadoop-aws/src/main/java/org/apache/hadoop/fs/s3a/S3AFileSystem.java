@@ -1368,7 +1368,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         dstKey = maybeAddTrailingSlash(dstKey);
         srcKey = maybeAddTrailingSlash(srcKey);
 
-        //Verify dest is not a child of the source directory
+        // Verify dest is not a child of the source directory
         if (dstKey.startsWith(srcKey)) {
           throw new RenameFailedException(srcKey, dstKey,
               "cannot rename a directory to a subdirectory of itself ");
@@ -1520,7 +1520,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     List<Path> undeletedObjects = new ArrayList<>();
     try {
       // remove the keys
-      // this does will update the metastore on a failure, but on
+      // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
       removeKeys(keysToDelete, false, undeletedObjects);
       // and clear the list.

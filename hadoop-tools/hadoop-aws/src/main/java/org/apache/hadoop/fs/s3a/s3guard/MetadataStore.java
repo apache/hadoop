@@ -200,7 +200,7 @@ public interface MetadataStore extends Closeable {
    */
   @RetryTranslated
   void put(PathMetadata meta,
-      @Nullable BulkOperationState BulkOperationState) throws IOException;
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Saves metadata for any number of paths.
@@ -233,7 +233,7 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void put(final DirListingMetadata meta,
-      @Nullable final BulkOperationState operationState) throws IOException;
+      @Nullable BulkOperationState operationState) throws IOException;
 
   /**
    * Destroy all resources associated with the metadata store.

@@ -116,7 +116,8 @@ public class ITestS3AFailureHandling extends AbstractS3ATestBase {
   public void testMultiObjectDeleteNoPermissions() throws Throwable {
     describe("Delete the landsat CSV file and expect it to fail");
     Path csvPath = maybeGetCsvPath();
-    S3AFileSystem fs = (S3AFileSystem)csvPath.getFileSystem(getConfiguration());
+    S3AFileSystem fs = (S3AFileSystem) csvPath.getFileSystem(
+        getConfiguration());
     List<DeleteObjectsRequest.KeyVersion> keys
         = buildDeleteRequest(
             new String[]{

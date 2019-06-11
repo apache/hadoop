@@ -45,7 +45,7 @@ class ThrottleTracker {
 
   private long batchThrottles;
 
-  public ThrottleTracker(final DynamoDBMetadataStore ddbms) {
+  ThrottleTracker(final DynamoDBMetadataStore ddbms) {
     this.ddbms = ddbms;
     reset();
   }
