@@ -70,9 +70,9 @@ public final class NodeSchemaManager {
       maxLevel = allSchema.size();
     } catch (Throwable e) {
       String msg = "Failed to load schema file:" + schemaFile
-          + ", error:" + e.getMessage();
-      LOG.error(msg);
-      throw new RuntimeException(msg);
+          + ", error: " + e.getMessage();
+      LOG.error(msg, e);
+      throw new RuntimeException(msg, e);
     }
   }
 
