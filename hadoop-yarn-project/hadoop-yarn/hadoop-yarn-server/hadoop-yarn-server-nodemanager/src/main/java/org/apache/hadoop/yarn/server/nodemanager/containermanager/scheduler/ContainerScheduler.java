@@ -190,6 +190,7 @@ public class ContainerScheduler extends AbstractService implements
       startPendingContainers(maxOppQueueLength <= 0);
       metrics.setQueuedContainers(queuedOpportunisticContainers.size(),
           queuedGuaranteedContainers.size());
+      break;
     default:
       LOG.error("Unknown event arrived at ContainerScheduler: "
           + event.toString());
