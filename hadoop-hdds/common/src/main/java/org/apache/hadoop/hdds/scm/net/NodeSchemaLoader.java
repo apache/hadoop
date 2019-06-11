@@ -34,8 +34,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -105,7 +104,14 @@ public final class NodeSchemaLoader {
       throws IllegalArgumentException, FileNotFoundException {
     try {
       File schemaFile = new File(schemaFilePath);
-      if (!schemaFile.exists()) {
+
+      if (schemaFile.exists()) {
+        LOG.info("Load network topology schema file " +
+            schemaFile.getAbsolutePath());
+        try (FileInputStream inputStream = new FileInputStream(schemaFile)) {
+          return loadSchemaFromStream(schemaFilePath, inputStream);
+        }
+      } else {
         // try to load with classloader
         ClassLoader classloader =
             Thread.currentThread().getContextClassLoader();
@@ -113,55 +119,61 @@ public final class NodeSchemaLoader {
           classloader = NodeSchemaLoader.class.getClassLoader();
         }
         if (classloader != null) {
-          URL url = classloader.getResource(schemaFilePath);
-          if (url != null) {
-            schemaFile = new File(url.toURI());
+          try (InputStream stream = classloader
+              .getResourceAsStream(schemaFilePath)) {
+            if (stream != null) {
+              LOG.info("Loading file from " + classloader
+                  .getResources(schemaFilePath));
+              return loadSchemaFromStream(schemaFilePath, stream);
+            }
           }
         }
+
       }
 
-      if (!schemaFile.exists()) {
-        String msg = "Network topology layer schema file " +
-            schemaFilePath + "[" + schemaFile.getAbsolutePath() +
-            "] is not found.";
-        LOG.warn(msg);
-        throw new FileNotFoundException(msg);
-      }
+      String msg = "Network topology layer schema file " +
+          schemaFilePath + "[" + schemaFile.getAbsolutePath() +
+          "] is not found.";
+      LOG.warn(msg);
+      throw new FileNotFoundException(msg);
 
-      LOG.info("Load network topology schema file " +
-          schemaFile.getCanonicalPath());
-      if (FilenameUtils.getExtension(schemaFilePath).toLowerCase()
-          .compareTo("yaml") == 0) {
-        return loadSchemaFromYaml(schemaFile);
-      } else {
-        return loadSchema(schemaFile);
-      }
     } catch (FileNotFoundException e) {
       throw e;
-    } catch (ParserConfigurationException | IOException | SAXException |
-        URISyntaxException e) {
+    } catch (ParserConfigurationException | IOException | SAXException e) {
       throw new IllegalArgumentException("Failed to load network topology node"
-          + " schema file: " + schemaFilePath + " , error:" + e.getMessage());
+          + " schema file: " + schemaFilePath + " , error:" + e.getMessage(),
+          e);
+    }
+  }
+
+  private NodeSchemaLoadResult loadSchemaFromStream(String schemaFilePath,
+      InputStream stream)
+      throws ParserConfigurationException, SAXException, IOException {
+    if (FilenameUtils.getExtension(schemaFilePath).toLowerCase()
+        .compareTo("yaml") == 0) {
+      return loadSchemaFromYaml(stream);
+    } else {
+      return loadSchema(stream);
     }
   }
 
   /**
    * Load network topology layer schemas from a XML configuration file.
-   * @param schemaFile schema file
+   * @param inputStream schema file as an inputStream
    * @return all valid node schemas defined in schema file
    * @throws ParserConfigurationException ParserConfigurationException happen
    * @throws IOException no such schema file
    * @throws SAXException xml file has some invalid elements
    * @throws IllegalArgumentException xml file content is logically invalid
    */
-  private NodeSchemaLoadResult loadSchema(File schemaFile) throws
+  private NodeSchemaLoadResult loadSchema(InputStream inputStream) throws
       ParserConfigurationException, SAXException, IOException {
-    LOG.info("Loading network topology layer schema file " + schemaFile);
+    LOG.info("Loading network topology layer schema file");
     // Read and parse the schema file.
     DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
     dbf.setIgnoringComments(true);
     DocumentBuilder builder = dbf.newDocumentBuilder();
-    Document doc = builder.parse(schemaFile);
+    Document doc = builder.parse(inputStream);
     Element root = doc.getDocumentElement();
 
     if (!CONFIGURATION_TAG.equals(root.getTagName())) {
@@ -200,14 +212,14 @@ public final class NodeSchemaLoader {
 
   /**
    * Load network topology layer schemas from a YAML configuration file.
-   * @param schemaFile schema file
+   * @param schemaFile as inputStream
    * @return all valid node schemas defined in schema file
    * @throws ParserConfigurationException ParserConfigurationException happen
    * @throws IOException no such schema file
    * @throws SAXException xml file has some invalid elements
    * @throws IllegalArgumentException xml file content is logically invalid
    */
-  private NodeSchemaLoadResult loadSchemaFromYaml(File schemaFile) {
+  private NodeSchemaLoadResult loadSchemaFromYaml(InputStream schemaFile) {
     LOG.info("Loading network topology layer schema file {}", schemaFile);
     NodeSchemaLoadResult finalSchema;
 
@@ -215,13 +227,12 @@ public final class NodeSchemaLoader {
       Yaml yaml = new Yaml();
       NodeSchema nodeTree;
 
-      try (FileInputStream fileInputStream = new FileInputStream(schemaFile)) {
-        nodeTree = yaml.loadAs(fileInputStream, NodeSchema.class);
-      }
+      nodeTree = yaml.loadAs(schemaFile, NodeSchema.class);
+
       List<NodeSchema> schemaList = new ArrayList<>();
       if (nodeTree.getType() != LayerType.ROOT) {
         throw new IllegalArgumentException("First layer is not a ROOT node."
-                + " schema file: " + schemaFile.getAbsolutePath());
+            + " schema file.");
       }
       schemaList.add(nodeTree);
       if (nodeTree.getSublayer() != null) {
@@ -232,11 +243,11 @@ public final class NodeSchemaLoader {
         if (nodeTree.getType() == LayerType.LEAF_NODE
                 && nodeTree.getSublayer() != null) {
           throw new IllegalArgumentException("Leaf node in the middle of path."
-                  + " schema file: " + schemaFile.getAbsolutePath());
+              + " schema file.");
         }
         if (nodeTree.getType() == LayerType.ROOT) {
           throw new IllegalArgumentException("Multiple root nodes are defined."
-                  + " schema file: " + schemaFile.getAbsolutePath());
+              + " schema file.");
         }
         schemaList.add(nodeTree);
         if (nodeTree.getSublayer() != null) {
@@ -246,12 +257,10 @@ public final class NodeSchemaLoader {
         }
       }
       finalSchema = new NodeSchemaLoadResult(schemaList, true);
-    } catch (RuntimeException e) {
-      throw  e;
     } catch (Exception e) {
       throw new IllegalArgumentException("Fail to load network topology node"
-              + " schema file: " + schemaFile.getAbsolutePath() + " , error:"
-              + e.getMessage());
+          + " schema file: " + schemaFile + " , error:"
+          + e.getMessage(), e);
     }
 
     return finalSchema;
