@@ -103,8 +103,11 @@ public class OMVolumeDeleteRequest extends OMClientRequest
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
     OmVolumeArgs omVolumeArgs = null;
+    String owner = null;
+
+    omMetadataManager.getLock().acquireVolumeLock(volume);
     try {
-      omVolumeArgs = getVolumeInfo(omMetadataManager, volume);
+      owner = getVolumeInfo(omMetadataManager, volume).getOwnerName();
     } catch (IOException ex) {
       LOG.error("Volume deletion failed for volume:{}", volume, ex);
       omMetrics.incNumVolumeDeleteFails();
@@ -112,13 +115,18 @@ public class OMVolumeDeleteRequest extends OMClientRequest
           buildVolumeAuditMap(volume), ex, userInfo));
       return new OMVolumeDeleteResponse(null, null, null,
           createErrorOMResponse(omResponse, ex));
+    } finally {
+      omMetadataManager.getLock().releaseVolumeLock(volume);
     }
 
-    String owner = omVolumeArgs.getOwnerName();
-    String dbUserKey = omMetadataManager.getUserKey(owner);
-    String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
+    // We cannot acquire user lock holding volume lock, so released volume
+    // lock, and acquiring user and volume lock.
+
     omMetadataManager.getLock().acquireUserLock(owner);
     omMetadataManager.getLock().acquireVolumeLock(volume);
+
+    String dbUserKey = omMetadataManager.getUserKey(owner);
+    String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
 
     IOException exception = null;
     OzoneManagerProtocolProtos.VolumeList newVolumeList = null;
