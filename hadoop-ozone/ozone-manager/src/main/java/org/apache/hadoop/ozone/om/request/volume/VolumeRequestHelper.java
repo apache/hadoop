@@ -88,8 +88,8 @@ public final class VolumeRequestHelper {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(owner);
     String dbUserKey = omMetadataManager.getUserKey(owner);
-    Preconditions.checkArgument(maxUserVolumeCount >= 0, "maxUserVolumeCount " +
-        "should be greater than or equal to zero");
+    Preconditions.checkArgument(maxUserVolumeCount > 0, "maxUserVolumeCount " +
+        "should be greater than zero");
     // Get the volume list
     VolumeList volumeList = omMetadataManager.getUserTable().get(dbUserKey);
 

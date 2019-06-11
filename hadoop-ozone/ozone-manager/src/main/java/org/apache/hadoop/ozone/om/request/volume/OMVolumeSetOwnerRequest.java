@@ -139,6 +139,8 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest {
       oldOwnerVolumeList = VolumeRequestHelper.delVolumeFromOwnerList(
           omMetadataManager, volume, oldOwner);
 
+
+
       newOwnerVolumeList = VolumeRequestHelper.addVolumeToOwnerList(
           omMetadataManager, volume, newOwner, maxUserVolumeCount);
 

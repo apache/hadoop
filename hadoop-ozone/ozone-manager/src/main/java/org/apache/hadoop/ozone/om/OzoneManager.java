@@ -289,9 +289,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     configuration = conf;
     this.maxUserVolumeCount = conf.getInt(OZONE_OM_USER_MAX_VOLUME,
         OZONE_OM_USER_MAX_VOLUME_DEFAULT);
-    Preconditions.checkArgument(this.maxUserVolumeCount >= 0,
-        OZONE_OM_USER_MAX_VOLUME + " value should be greater than or equal to" +
-            " zero");
+    Preconditions.checkArgument(this.maxUserVolumeCount > 0,
+        OZONE_OM_USER_MAX_VOLUME + " value should be greater than zero");
     omStorage = new OMStorage(conf);
     omId = omStorage.getOmId();
     if (omStorage.getState() != StorageState.INITIALIZED) {

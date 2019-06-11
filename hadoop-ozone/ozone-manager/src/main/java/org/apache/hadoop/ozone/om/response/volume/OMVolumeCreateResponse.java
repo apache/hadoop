@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.response.volume;
 
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -64,10 +65,7 @@ public class OMVolumeCreateResponse extends OMClientResponse {
     }
   }
 
-  public VolumeList getVolumeList() {
-    return volumeList;
-  }
-
+  @VisibleForTesting
   public OmVolumeArgs getOmVolumeArgs() {
     return omVolumeArgs;
   }

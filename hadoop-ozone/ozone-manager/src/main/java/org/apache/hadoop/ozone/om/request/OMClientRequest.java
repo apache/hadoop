@@ -181,17 +181,6 @@ public abstract class OMClientRequest implements RequestAuditor {
     return omResponse.build();
   }
 
-
-  /*
-   * This method sets the omRequest. This will method will be called when
-   * preExecute modifies the original request.
-   * @param updatedOMRequest
-   */
-  protected void setUpdatedOmRequest(OMRequest updatedOMRequest) {
-    Preconditions.checkNotNull(updatedOMRequest);
-    this.omRequest = updatedOMRequest;
-  }
-
   /**
    * Log the auditMessage.
    * @param auditLogger

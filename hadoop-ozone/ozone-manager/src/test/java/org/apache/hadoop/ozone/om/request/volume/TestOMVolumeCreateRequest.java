@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.request.volume;
 
 import java.util.UUID;
 
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -46,6 +47,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeInfo;
+import sun.net.www.content.text.Generic;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -110,8 +112,13 @@ public class TestOMVolumeCreateRequest {
 
     omVolumeCreateRequest.preExecute(ozoneManager);
 
-    OMClientResponse omClientResponse =
-        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+    try {
+      OMClientResponse omClientResponse =
+          omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+    } catch (IllegalArgumentException ex){
+      GenericTestUtils.assertExceptionContains("should be greater than zero",
+          ex);
+    }
 
     OzoneManagerProtocolProtos.OMResponse omResponse =
         omClientResponse.getOMResponse();

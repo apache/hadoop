@@ -84,7 +84,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   @Override
   public boolean isExist(KEY key) throws IOException {
     CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
-    return (cacheValue != null && cacheValue.getValue() != null) ||
+    return (cacheValue != null && cacheValue.getCacheValue() != null) ||
         rawTable.isExist(codecRegistry.asRawData(key));
   }
 
@@ -111,7 +111,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
       return getFromTable(key);
     } else {
       // We have a value in cache, return the value.
-      return cacheValue.getValue();
+      return cacheValue.getCacheValue();
     }
   }
 

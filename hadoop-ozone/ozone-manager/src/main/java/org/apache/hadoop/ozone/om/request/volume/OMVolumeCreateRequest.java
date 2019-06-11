@@ -75,11 +75,11 @@ public class OMVolumeCreateRequest extends OMClientRequest {
     VolumeInfo updatedVolumeInfo =
         volumeInfo.toBuilder().setCreationTime(Time.now()).build();
 
-    // Update the OmRequest and then return it.
-    setUpdatedOmRequest(getOmRequest().toBuilder().setCreateVolumeRequest(
+
+    getOmRequest().toBuilder().setCreateVolumeRequest(
         CreateVolumeRequest.newBuilder().setVolumeInfo(updatedVolumeInfo))
         .setUserInfo(getUserInfo())
-        .build());
+        .build();
 
     return getOmRequest();
 
@@ -164,7 +164,6 @@ public class OMVolumeCreateRequest extends OMClientRequest {
         throw new OMException("Volume already exists",
             OMException.ResultCodes.VOLUME_ALREADY_EXISTS);
       }
-
       volumeList = VolumeRequestHelper.addVolumeToOwnerList(omMetadataManager,
           volume, owner, ozoneManager.getMaxUserVolumeCount());
 

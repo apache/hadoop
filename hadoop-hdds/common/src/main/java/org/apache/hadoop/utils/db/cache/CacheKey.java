@@ -33,7 +33,7 @@ public class CacheKey<KEY> {
     this.key = key;
   }
 
-  public KEY getKey() {
+  public KEY getCacheKey() {
     return key;
   }
 
@@ -46,7 +46,7 @@ public class CacheKey<KEY> {
       return false;
     }
     CacheKey<?> cacheKey = (CacheKey<?>) o;
-    return Objects.equals(key, cacheKey.key);
+    return Objects.equals(key.key);
   }
 
   @Override
