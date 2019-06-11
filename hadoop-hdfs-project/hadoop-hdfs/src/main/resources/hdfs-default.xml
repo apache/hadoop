@@ -5337,4 +5337,12 @@
       inter-DN QOP.
     </description>
   </property>
+
+  <property>
+    <name>dfs.namenode.blockreport.queue.size</name>
+    <value>1024</value>
+    <description>
+      The queue size of BlockReportProcessingThread in BlockManager.
+    </description>
+  </property>
 </configuration>
