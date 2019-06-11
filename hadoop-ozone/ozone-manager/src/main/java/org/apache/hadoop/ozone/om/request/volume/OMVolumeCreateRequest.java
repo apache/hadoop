@@ -113,19 +113,6 @@ public class OMVolumeCreateRequest extends OMClientRequest
     // Doing this here, so we can do protobuf conversion outside of lock.
     try {
       omVolumeArgs = OmVolumeArgs.getFromProtobuf(volumeInfo);
-    } catch (OMException ex) {
-      omMetrics.incNumVolumeCreateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_VOLUME,
-          buildVolumeAuditMap(volume), ex, userInfo));
-      LOG.error("Volume creation failed for user:{} volume:{}", owner, volume,
-          ex);
-      return new OMVolumeCreateResponse(omVolumeArgs, null,
-          createErrorOMResponse(omResponse, ex));
-    }
-
-
-
-    try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
         checkAcls(ozoneManager, OzoneObj.ResourceType.VOLUME,
@@ -133,11 +120,11 @@ public class OMVolumeCreateRequest extends OMClientRequest
             null, null);
       }
     } catch (IOException ex) {
-      LOG.error("Volume creation failed for user:{} volume:{}", owner, volume,
-          ex);
       omMetrics.incNumVolumeCreateFails();
       auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_VOLUME,
-          omVolumeArgs.toAuditMap(), ex, userInfo));
+          buildVolumeAuditMap(volume), ex, userInfo));
+      LOG.error("Volume creation failed for user:{} volume:{}", owner, volume,
+          ex);
       return new OMVolumeCreateResponse(omVolumeArgs, null,
           createErrorOMResponse(omResponse, ex));
     }
@@ -157,7 +144,7 @@ public class OMVolumeCreateRequest extends OMClientRequest
       OmVolumeArgs dbVolumeArgs =
           omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
-      // Validation: Check of the volume already exists
+      // Validation: Check if volume already exists
       if (dbVolumeArgs != null) {
         LOG.debug("volume:{} already exists", omVolumeArgs.getVolume());
         throw new OMException("Volume already exists",

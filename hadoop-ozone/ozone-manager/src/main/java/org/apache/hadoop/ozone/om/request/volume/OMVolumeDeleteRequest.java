@@ -78,7 +78,7 @@ public class OMVolumeDeleteRequest extends OMClientRequest
     omMetrics.incNumVolumeDeletes();
 
     OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
-        OzoneManagerProtocolProtos.Type.CreateVolume).setStatus(
+        OzoneManagerProtocolProtos.Type.DeleteVolume).setStatus(
         OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
