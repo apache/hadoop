@@ -317,8 +317,7 @@ public class BlockManager implements BlockStatsMXBean {
       new Daemon(new StorageInfoDefragmenter());
   
   /** Block report thread for handling async reports. */
-  private final BlockReportProcessingThread blockReportThread =
-      new BlockReportProcessingThread();
+  private final BlockReportProcessingThread blockReportThread;
 
   /**
    * Store blocks {@literal ->} datanodedescriptor(s) map of corrupt replicas.
@@ -573,6 +572,11 @@ public class BlockManager implements BlockStatsMXBean {
     this.blockReportLeaseManager = new BlockReportLeaseManager(conf);
 
     bmSafeMode = new BlockManagerSafeMode(this, namesystem, haEnabled, conf);
+
+    int queueSize = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_BLOCKREPORT_QUEUE_SIZE_DEFAULT);
+    blockReportThread = new BlockReportProcessingThread(queueSize);
 
     LOG.info("defaultReplication         = {}", defaultReplication);
     LOG.info("maxReplication             = {}", maxReplication);
@@ -4966,11 +4970,11 @@ public class BlockManager implements BlockStatsMXBean {
     private static final long MAX_LOCK_HOLD_MS = 4;
     private long lastFull = 0;
 
-    private final BlockingQueue<Runnable> queue =
-        new ArrayBlockingQueue<Runnable>(1024);
+    private final BlockingQueue<Runnable> queue;
 
-    BlockReportProcessingThread() {
+    BlockReportProcessingThread(int size) {
       super("Block report processor");
+      queue = new ArrayBlockingQueue<>(size);
       setDaemon(true);
     }
 
