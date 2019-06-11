@@ -57,6 +57,12 @@ public class FilteredClassLoader extends URLClassLoader {
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSStorageStatistics");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.Statistic");
     delegatedClasses.add("org.apache.hadoop.fs.Seekable");
+    String[] dynamicDelegatedClasses =
+        System.getProperty("hadoop.ozone.delegated.classes").split(",");
+    for (String delegatedClass : dynamicDelegatedClasses) {
+      delegatedClasses.add(delegatedClass);
+    }
+
     this.delegate = parent;
     systemClassLoader = getSystemClassLoader();
 
