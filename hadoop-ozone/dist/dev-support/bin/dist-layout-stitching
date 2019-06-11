@@ -96,6 +96,7 @@ run cp "${ROOT}/hadoop-hdds/common/src/main/resources/network-topology-nodegroup
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop" "bin/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop.cmd" "bin/"
 run cp "${ROOT}/hadoop-ozone/common/src/main/bin/ozone" "bin/"
+run cp -r "${ROOT}/hadoop-ozone/dist/src/main/dockerbin" "bin/"
 
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.sh" "libexec/"
 run cp "${ROOT}/hadoop-common-project/hadoop-common/src/main/bin/hadoop-config.cmd" "libexec/"
