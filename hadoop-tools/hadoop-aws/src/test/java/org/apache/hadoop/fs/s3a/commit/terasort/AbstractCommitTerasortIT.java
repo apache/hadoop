@@ -43,6 +43,7 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import static java.util.Optional.empty;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
 
 /**
@@ -105,6 +106,9 @@ public abstract class AbstractCommitTerasortIT extends
     // small sample size for faster runs
     Configuration yarnConfig = getYarn().getConfig();
     yarnConfig.setInt(TeraSortConfigKeys.SAMPLE_SIZE.key(), 1000);
+    yarnConfig.setBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
+        true);
     yarnConfig.setBoolean(
         TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
         false);
@@ -177,6 +181,8 @@ public abstract class AbstractCommitTerasortIT extends
     loadSuccessFile(getFileSystem(), sortInput);
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
+    // this job adds some data, so skip it.
+    jobConf.set(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE, CONFLICT_MODE_APPEND);
     terasortStageDuration = executeStage("TeraSort",
         jobConf,
         sortOutput,
