@@ -105,7 +105,7 @@ public class TestProxyUserAuthenticationFilter {
 
     HttpServletRequest request = Mockito.mock(HttpServletRequest.class);
     Mockito.when(request.getRemoteUser()).thenReturn("knox");
-    Mockito.when(request.getParameter("doAs")).thenReturn("testuser");
+    Mockito.when(request.getParameter("doas")).thenReturn("testuser");
     Mockito.when(request.getRemoteAddr()).thenReturn("127.0.0.1");
     Mockito.when(request.getUserPrincipal()).thenReturn(new Principal() {
       @Override

@@ -18,12 +18,18 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.HttpExceptionUtils;
+import org.apache.hadoop.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -41,7 +47,7 @@ public class ProxyUserAuthenticationFilter extends AuthenticationFilter {
   private static final Logger LOG = LoggerFactory.getLogger(
       ProxyUserAuthenticationFilter.class);
 
-  private static final String DO_AS = "doAs";
+  private static final String DO_AS = "doas";
   public static final String PROXYUSER_PREFIX = "proxyuser";
 
   @Override
@@ -54,8 +60,9 @@ public class ProxyUserAuthenticationFilter extends AuthenticationFilter {
   @Override
   protected void doFilter(FilterChain filterChain, HttpServletRequest request,
       HttpServletResponse response) throws IOException, ServletException {
+    final HttpServletRequest lowerCaseRequest = toLowerCase(request);
+    String doAsUser = lowerCaseRequest.getParameter(DO_AS);
 
-    String doAsUser = request.getParameter(DO_AS);
     if (doAsUser != null && !doAsUser.equals(request.getRemoteUser())) {
       LOG.debug("doAsUser = {}, RemoteUser = {} , RemoteAddress = {} ",
           doAsUser, request.getRemoteUser(), request.getRemoteAddr());
@@ -109,6 +116,83 @@ public class ProxyUserAuthenticationFilter extends AuthenticationFilter {
       }
     }
     return conf;
+  }
+
+  static boolean containsUpperCase(final Iterable<String> strings) {
+    for(String s : strings) {
+      for(int i = 0; i < s.length(); i++) {
+        if (Character.isUpperCase(s.charAt(i))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  public static HttpServletRequest toLowerCase(
+      final HttpServletRequest request) {
+    @SuppressWarnings("unchecked")
+    final Map<String, String[]> original = (Map<String, String[]>)
+        request.getParameterMap();
+    if (!containsUpperCase(original.keySet())) {
+      return request;
+    }
+
+    final Map<String, List<String>> m = new HashMap<String, List<String>>();
+    for (Map.Entry<String, String[]> entry : original.entrySet()) {
+      final String key = StringUtils.toLowerCase(entry.getKey());
+      List<String> strings = m.get(key);
+      if (strings == null) {
+        strings = new ArrayList<String>();
+        m.put(key, strings);
+      }
+      for (String v : entry.getValue()) {
+        strings.add(v);
+      }
+    }
+
+    return new HttpServletRequestWrapper(request) {
+      private Map<String, String[]> parameters = null;
+
+      @Override
+      public Map<String, String[]> getParameterMap() {
+        if (parameters == null) {
+          parameters = new HashMap<String, String[]>();
+          for (Map.Entry<String, List<String>> entry : m.entrySet()) {
+            final List<String> a = entry.getValue();
+            parameters.put(entry.getKey(), a.toArray(new String[a.size()]));
+          }
+        }
+        return parameters;
+      }
+
+      @Override
+      public String getParameter(String name) {
+        final List<String> a = m.get(name);
+        return a == null ? null : a.get(0);
+      }
+
+      @Override
+      public String[] getParameterValues(String name) {
+        return getParameterMap().get(name);
+      }
+
+      @Override
+      public Enumeration<String> getParameterNames() {
+        final Iterator<String> i = m.keySet().iterator();
+        return new Enumeration<String>() {
+          @Override
+          public boolean hasMoreElements() {
+            return i.hasNext();
+          }
+
+          @Override
+          public String nextElement() {
+            return i.next();
+          }
+        };
+      }
+    };
   }
 
 }

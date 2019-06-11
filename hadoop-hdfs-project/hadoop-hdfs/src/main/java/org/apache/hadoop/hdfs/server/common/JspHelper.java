@@ -139,7 +139,7 @@ public class JspHelper {
         // filter
         ugi.setAuthenticationMethod(secureAuthMethod);
       }
-      if (doAsUserFromQuery != null) {
+      if (doAsUserFromQuery != null && !doAsUserFromQuery.equals(remoteUser)) {
         // create and attempt to authorize a proxy user
         ugi = UserGroupInformation.createProxyUser(doAsUserFromQuery, ugi);
         ProxyUsers.authorize(ugi, getRemoteAddr(request));

@@ -17,100 +17,55 @@
  */
 package org.apache.hadoop.hdfs.web;
 
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashMap;
+
 import java.util.Map;
-import java.util.Properties;
-
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletException;
-
-import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.http.FilterContainer;
 import org.apache.hadoop.security.authentication.server.PseudoAuthenticationHandler;
-import org.junit.Assert;
 import org.junit.Test;
 
+import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+
 public class TestAuthFilter {
-  
-  private static class DummyFilterConfig implements FilterConfig {
-    final Map<String, String> map;
-    
-    DummyFilterConfig(Map<String,String> map) {
-      this.map = map;
-    }
-    
-    @Override
-    public String getFilterName() {
-      return "dummy";
-    }
-    @Override
-    public String getInitParameter(String arg0) {
-      return map.get(arg0);
-    }
-    @Override
-    public Enumeration<String> getInitParameterNames() {
-      return Collections.enumeration(map.keySet());
-    }
-    @Override
-    public ServletContext getServletContext() {
-      return null;
-    }
-  }
-  
-  @Test
-  public void testGetConfiguration() throws ServletException {
-    AuthFilter filter = new AuthFilter();
-    Map<String, String> m = new HashMap<String,String>();
-    m.put(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_PRINCIPAL_KEY,
-        "xyz/thehost@REALM");
-    m.put(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY,
-        "thekeytab");
-    FilterConfig config = new DummyFilterConfig(m);
-    Properties p = filter.getConfiguration("random", config);
-    Assert.assertEquals("xyz/thehost@REALM",
-        p.getProperty("kerberos.principal"));
-    Assert.assertEquals("thekeytab", p.getProperty("kerberos.keytab"));
-    Assert.assertEquals("true",
-        p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
-  }
-  
-  @Test
-  public void testGetSimpleAuthDisabledConfiguration() throws ServletException {
-    AuthFilter filter = new AuthFilter();
-    Map<String, String> m = new HashMap<String,String>();
-    m.put(DFSConfigKeys.DFS_WEB_AUTHENTICATION_SIMPLE_ANONYMOUS_ALLOWED,
-        "false");
-    FilterConfig config = new DummyFilterConfig(m);
-    Properties p = filter.getConfiguration("random", config);
-    Assert.assertEquals("false",
-        p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
-  }
-  
-  @Test
-  public void testGetSimpleAuthDefaultConfiguration() throws ServletException {
-    AuthFilter filter = new AuthFilter();
-    Map<String, String> m = new HashMap<String,String>();
-    
-    FilterConfig config = new DummyFilterConfig(m);
-    Properties p = filter.getConfiguration("random", config);
-    Assert.assertEquals("true",
-        p.getProperty(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
-  }
+
+  private static final String PREFIX = "hadoop.http.authentication.";
 
   @Test
-  public void testGetCustomAuthConfiguration() throws ServletException {
-    AuthFilter filter = new AuthFilter();
-    Map<String, String> m = new HashMap<String,String>();
+  public void testGetConfiguration() {
+    Configuration conf = new Configuration();
+    conf.set(PREFIX + "type", "kerberos");
+    conf.set(PREFIX + "kerberos.keytab", "thekeytab");
+    conf.set(PREFIX + "kerberos.principal", "xyz/thehost@REALM");
 
-    m.put(AuthFilter.CONF_PREFIX + AuthFilter.AUTH_TYPE, "com.yourclass");
-    m.put(AuthFilter.CONF_PREFIX + "alt-kerberos.param", "value");
-    FilterConfig config = new DummyFilterConfig(m);
+    FilterContainer container = Mockito.mock(FilterContainer.class);
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock) {
+        Object[] args = invocationOnMock.getArguments();
 
-    Properties p = filter.getConfiguration(AuthFilter.CONF_PREFIX, config);
-    Assert.assertEquals("com.yourclass", p.getProperty(AuthFilter.AUTH_TYPE));
-    Assert.assertEquals("value", p.getProperty("alt-kerberos.param"));
+        assertEquals("AuthFilter", args[0]);
+        assertEquals(AuthFilter.class.getName(), args[1]);
+
+        Map<String, String> conf = (Map<String, String>) args[2];
+        assertEquals("/", conf.get("cookie.path"));
+        assertEquals("kerberos", conf.get("type"));
+        assertNull(conf.get("cookie.domain"));
+        assertEquals("xyz/thehost@REALM", conf.get("kerberos.principal"));
+        assertEquals("thekeytab", conf.get("kerberos.keytab"));
+        assertEquals("true",
+            conf.get(PseudoAuthenticationHandler.ANONYMOUS_ALLOWED));
+
+        return null;
+      }
+    }).when(container).addFilter(Mockito.any(), Mockito.any(), Mockito.any());
+
+    new AuthFilterInitializer().initFilter(container, conf);
   }
+
 
 }
