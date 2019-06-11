@@ -44,7 +44,7 @@ public interface Node {
   String getNetworkName();
 
   /**
-   * Set this node's name, can be hostname or Ipaddress
+   * Set this node's name, can be hostname or Ipaddress.
    * @param name it's network name
    */
   void setNetworkName(String name);

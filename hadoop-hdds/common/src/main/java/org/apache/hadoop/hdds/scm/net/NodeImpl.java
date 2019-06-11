@@ -82,11 +82,11 @@ public class NodeImpl implements Node {
   }
 
   /**
-   * Set this node's name, can be hostname or Ipaddress
-   * @param name it's network name
+   * Set this node's name, can be hostname or Ipaddress.
+   * @param networkName it's network name
    */
-  public void setNetworkName(String name) {
-    this.name = name;
+  public void setNetworkName(String networkName) {
+    this.name = networkName;
     this.path = getPath();
   }
 
@@ -99,11 +99,11 @@ public class NodeImpl implements Node {
 
   /**
    * Set this node's network location.
-   * @param location it's network location
+   * @param networkLocation it's network location
    */
   @Override
-  public void setNetworkLocation(String location) {
-    this.location = location;
+  public void setNetworkLocation(String networkLocation) {
+    this.location = networkLocation;
     this.path = getPath();
   }
 

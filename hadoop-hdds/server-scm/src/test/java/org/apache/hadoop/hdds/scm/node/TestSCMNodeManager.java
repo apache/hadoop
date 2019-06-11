@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hdds.scm.node;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
@@ -50,7 +48,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -986,21 +983,14 @@ public class TestSCMNodeManager {
 
     // create table mapping file
     String[] hostNames = {"host1", "host2", "host3", "host4"};
-    String[] IpAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
-    File mapFile = File.createTempFile(getClass().getSimpleName() +
-        ".testResolve", ".txt");
-    BufferedWriter writer = Files.newWriter(mapFile, Charsets.UTF_8);
-    writer.write(IpAddress[0] + " /dc1/rack1\n" +
-        IpAddress[1] + "\t/dc1/rack1\n" +
-        IpAddress[2] + " /dc1/rack2\n" +
-        IpAddress[3] + "\t/dc1/rack2\n");
-    writer.close();
-    mapFile.deleteOnExit();
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("nodegroup-mapping").getPath();
 
     // create and register nodes
     conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         "org.apache.hadoop.net.TableMapping");
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
     conf.set(ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
         "network-topology-nodegroup.xml");
     final int nodeCount = hostNames.length;
@@ -1009,7 +999,7 @@ public class TestSCMNodeManager {
       DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
       for (int i = 0; i < nodeCount; i++) {
         DatanodeDetails node = TestUtils.createDatanodeDetails(
-            UUID.randomUUID().toString(), hostNames[i], IpAddress[i], null);
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
         nodeManager.register(node, null, null);
         nodes[i] = node;
       }
@@ -1022,7 +1012,7 @@ public class TestSCMNodeManager {
       assertEquals(4, clusterMap.getMaxLevel());
       List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
       nodeList.stream().forEach(node ->
-          Assert.assertTrue(node.getNetworkLocation().startsWith("/dc1")));
+          Assert.assertTrue(node.getNetworkLocation().startsWith("/rack1/ng")));
     }
   }
 
@@ -1034,21 +1024,14 @@ public class TestSCMNodeManager {
 
     // create table mapping file
     String[] hostNames = {"host1", "host2", "host3", "host4"};
-    String[] IpAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
-    File mapFile = File.createTempFile(getClass().getSimpleName() +
-        ".testResolve", ".txt");
-    BufferedWriter writer = Files.newWriter(mapFile, Charsets.UTF_8);
-    writer.write(IpAddress[0] + " /rack1\n" + IpAddress[1] + "\t/rack1\n" +
-        IpAddress[2] + " /rack1\n" + IpAddress[3] + "\t/rack1\n" +
-        hostNames[0] + " /rack1\n" + hostNames[1] + "\t/rack1\n" +
-        hostNames[2] + " /rack1\n" + hostNames[3] + "\t/rack1\n");
-    writer.close();
-    mapFile.deleteOnExit();
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("rack-mapping").getPath();
 
     // create and register nodes
     conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         "org.apache.hadoop.net.TableMapping");
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
     if (useHostname) {
       conf.set(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, "true");
     }
@@ -1058,7 +1041,7 @@ public class TestSCMNodeManager {
       DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
       for (int i = 0; i < nodeCount; i++) {
         DatanodeDetails node = TestUtils.createDatanodeDetails(
-            UUID.randomUUID().toString(), hostNames[i], IpAddress[i], null);
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
         nodeManager.register(node, null, null);
         nodes[i] = node;
       }
