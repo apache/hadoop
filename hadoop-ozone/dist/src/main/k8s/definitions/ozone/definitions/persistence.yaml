@@ -32,6 +32,25 @@ description: Add real PVC based persistence
               storage: 2Gi
 - type: Add
   trigger:
+     metadata:
+        name: datanode
+  path:
+    - spec
+    - template
+    - spec
+  value:
+    affinity:
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchExpressions:
+            - key: component
+              operator: In
+              values:
+              - datanode
+          topologyKey: kubernetes.io/hostname
+- type: Add
+  trigger:
     metadata:
       labels:
         app.kubernetes.io/component: ozone
