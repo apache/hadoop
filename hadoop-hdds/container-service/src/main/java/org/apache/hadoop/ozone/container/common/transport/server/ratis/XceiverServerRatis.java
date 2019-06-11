@@ -619,8 +619,8 @@ public final class XceiverServerRatis extends XceiverServer {
                                        RoleInfoProto roleInfoProto,
                                        TermIndex firstTermIndexInLog) {
     LOG.warn("Install snapshot notification received from Leader with " +
-        "termIndex : " + firstTermIndexInLog +
-        ", terminating pipeline " + groupId);
+        "termIndex: {}, terminating pipeline: {}",
+        firstTermIndexInLog, groupId);
     handlePipelineFailure(groupId, roleInfoProto);
   }
 }
