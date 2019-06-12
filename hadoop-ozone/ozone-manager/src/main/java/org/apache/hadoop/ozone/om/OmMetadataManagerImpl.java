@@ -456,19 +456,17 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isVolumeEmpty(String volume) throws IOException {
     String volumePrefix = getVolumeKey(volume + OM_KEY_PREFIX);
 
-    if (bucketTable instanceof TypedTable) {
       // First check in bucket table cache.
-      Iterator<Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>>> iterator =
-          ((TypedTable< String, OmBucketInfo>) bucketTable).cacheIterator();
-      while (iterator.hasNext()) {
-        Map.Entry< CacheKey< String >, CacheValue< OmBucketInfo > > entry =
-            iterator.next();
-        String key = entry.getKey().getCacheKey();
-        OmBucketInfo omBucketInfo = entry.getValue().getCacheValue();
-        // Making sure that entry is not for delete bucket request.
-        if (key.startsWith(volumePrefix) && omBucketInfo != null) {
-          return false;
-        }
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmBucketInfo>>> iterator =
+        ((TypedTable< String, OmBucketInfo>) bucketTable).cacheIterator();
+    while (iterator.hasNext()) {
+      Map.Entry< CacheKey< String >, CacheValue< OmBucketInfo > > entry =
+          iterator.next();
+      String key = entry.getKey().getCacheKey();
+      OmBucketInfo omBucketInfo = entry.getValue().getCacheValue();
+      // Making sure that entry is not for delete bucket request.
+      if (key.startsWith(volumePrefix) && omBucketInfo != null) {
+        return false;
       }
     }
 
