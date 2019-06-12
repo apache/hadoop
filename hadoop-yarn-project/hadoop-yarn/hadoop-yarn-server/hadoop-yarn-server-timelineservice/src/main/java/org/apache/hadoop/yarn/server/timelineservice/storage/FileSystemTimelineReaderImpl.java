@@ -42,6 +42,7 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEvent;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineMetric;
@@ -428,5 +429,27 @@ public class FileSystemTimelineReaderImpl extends AbstractService
       }
     }
     return result;
+  }
+
+  @Override
+  public TimelineHealth getHealthStatus() {
+    try {
+      File file = new File(rootPath);
+      if (file.exists()) {
+        return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
+            "");
+      } else {
+        return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+            "Root path \"" + rootPath + "\" does not exist"
+          );
+      }
+    } catch (Exception e) {
+      return new TimelineHealth(
+          TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
+          e.getMessage()
+          );
+    }
+
   }
 }
