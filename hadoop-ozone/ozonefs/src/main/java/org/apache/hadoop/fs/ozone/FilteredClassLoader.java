@@ -22,6 +22,8 @@ import java.net.URLClassLoader;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.hadoop.util.StringUtils;
+
 /**
  * Class loader which delegates the loading only for the selected class.
  *
@@ -57,11 +59,9 @@ public class FilteredClassLoader extends URLClassLoader {
     delegatedClasses.add("org.apache.hadoop.fs.ozone.OzoneFSStorageStatistics");
     delegatedClasses.add("org.apache.hadoop.fs.ozone.Statistic");
     delegatedClasses.add("org.apache.hadoop.fs.Seekable");
-    String[] dynamicDelegatedClasses =
-        System.getProperty("HADOOP_OZONE_DELEGATED_CLASSES").split(";");
-    for (String delegatedClass : dynamicDelegatedClasses) {
-      delegatedClasses.add(delegatedClass);
-    }
+
+    delegatedClasses.addAll(StringUtils.getTrimmedStringCollection(
+      System.getenv("HADOOP_OZONE_DELEGATED_CLASSES")));
 
     this.delegate = parent;
     systemClassLoader = getSystemClassLoader();
