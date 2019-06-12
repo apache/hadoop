@@ -343,7 +343,8 @@ public final class ShutdownHookManager {
           "shutdownHook");
     }
     // hooks are only == by runnable
-    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM, TIME_UNIT_DEFAULT));
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+	        TIME_UNIT_DEFAULT));
   }
 
   /**
@@ -356,7 +357,8 @@ public final class ShutdownHookManager {
   @InterfaceStability.Stable
   public boolean hasShutdownHook(Runnable shutdownHook) {
     // hooks are only == by runnable
-    return hooks.contains(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM, TIME_UNIT_DEFAULT));
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+	        TIME_UNIT_DEFAULT));
   }
   
   /**
