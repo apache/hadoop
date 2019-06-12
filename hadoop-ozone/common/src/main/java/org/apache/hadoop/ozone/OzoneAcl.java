@@ -134,6 +134,30 @@ public class OzoneAcl {
     return new OzoneAcl(aclType, parts[1], acls);
   }
 
+  /**
+   * Parses an ACL string and returns the ACL object.
+   *
+   * @param acls - Acl String , Ex. user:anu:rw
+   *
+   * @return - Ozone ACLs
+   */
+  public static List<OzoneAcl> parseAcls(String acls)
+      throws IllegalArgumentException {
+    if ((acls == null) || acls.isEmpty()) {
+      throw new IllegalArgumentException("ACLs cannot be null or empty");
+    }
+    String[] parts = acls.trim().split(",");
+    if (parts.length < 1) {
+      throw new IllegalArgumentException("ACLs are not in expected format");
+    }
+    List<OzoneAcl> ozAcls = new ArrayList<>();
+
+    for(String acl:parts) {
+      ozAcls.add(parseAcl(acl));
+    }
+    return ozAcls;
+  }
+
   public static OzoneAclInfo toProtobuf(OzoneAcl acl) {
     OzoneAclInfo.Builder builder = OzoneAclInfo.newBuilder()
         .setName(acl.getName())
