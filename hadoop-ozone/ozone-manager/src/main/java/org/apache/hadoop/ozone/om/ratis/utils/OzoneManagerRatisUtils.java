@@ -57,9 +57,9 @@ public final class OzoneManagerRatisUtils {
       boolean hasQuota = omRequest.getSetVolumePropertyRequest()
           .hasQuotaInBytes();
       boolean hasOwner = omRequest.getSetVolumePropertyRequest().hasOwnerName();
-      Preconditions.checkState(hasOwner || hasQuota , "Either Quota or owner " +
+      Preconditions.checkState(hasOwner || hasQuota, "Either Quota or owner " +
           "should be set in the SetVolumeProperty request");
-      Preconditions.checkState(!(hasOwner && hasQuota) , "Either Quota or " +
+      Preconditions.checkState(!(hasOwner && hasQuota), "Either Quota or " +
           "owner should be set in the SetVolumeProperty request. Should not " +
           "set both");
       if (hasQuota) {
