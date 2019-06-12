@@ -40,7 +40,11 @@ import picocli.CommandLine.ParentCommand;
         ListVolumeHandler.class,
         CreateVolumeHandler.class,
         UpdateVolumeHandler.class,
-        DeleteVolumeHandler.class
+        DeleteVolumeHandler.class,
+        AddAclVolumeHandler.class,
+        RemoveAclVolumeHandler.class,
+        SetAclVolumeHandler.class,
+        GetAclVolumeHandler.class
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)
