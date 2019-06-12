@@ -179,22 +179,25 @@ public class OMVolumeDeleteRequest extends OMClientRequest
 
   }
 
+  /**
+   * Return volume info for the specified volume. This method should be
+   * called after acquiring volume lock.
+   * @param omMetadataManager
+   * @param volume
+   * @return OmVolumeArgs
+   * @throws IOException
+   */
   private OmVolumeArgs getVolumeInfo(OMMetadataManager omMetadataManager,
       String volume) throws IOException {
 
-    omMetadataManager.getLock().acquireVolumeLock(volume);
-    try {
-      String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
-      OmVolumeArgs volumeArgs =
-          omMetadataManager.getVolumeTable().get(dbVolumeKey);
-      if (volumeArgs == null) {
-        throw new OMException("Volume " + volume + " is not found",
-            OMException.ResultCodes.VOLUME_NOT_FOUND);
-      }
-
-      return volumeArgs;
-    } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volume);
+    String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
+    OmVolumeArgs volumeArgs =
+        omMetadataManager.getVolumeTable().get(dbVolumeKey);
+    if (volumeArgs == null) {
+      throw new OMException("Volume " + volume + " is not found",
+          OMException.ResultCodes.VOLUME_NOT_FOUND);
     }
+    return volumeArgs;
+
   }
 }
