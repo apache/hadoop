@@ -276,6 +276,7 @@ enum Status {
     NOT_A_FILE = 47;
     PERMISSION_DENIED = 48;
     TIMEOUT = 49;
+    PREFIX_NOT_FOUND=50;
 }
 
 
@@ -507,15 +508,15 @@ message OzoneAclInfo {
     }
 
     enum OzoneAclRights {
-      READ = 1;
-      WRITE = 2;
-      CREATE = 3;
-      LIST = 4;
-      DELETE = 5;
-      READ_ACL = 6;
-      WRITE_ACL  = 7;
-      ALL = 8;
-      NONE = 9;
+        READ = 1;
+        WRITE = 2;
+        CREATE = 3;
+        LIST = 4;
+        DELETE = 5;
+        READ_ACL = 6;
+        WRITE_ACL = 7;
+        ALL = 8;
+        NONE = 9;
     }
     required OzoneAclType type = 1;
     required string name = 2;

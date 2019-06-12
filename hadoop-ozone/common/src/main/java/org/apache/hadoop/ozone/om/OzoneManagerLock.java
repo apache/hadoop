@@ -46,6 +46,9 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
  *   <tr>
  *     <td> 2 </td> <td> Bucket Lock </td>
  *   </tr>
+ *   <tr>
+ *     <td> 3 </td> <td> Prefix Lock </td>
+ *    </tr>
  * </table>
  *
  * One cannot obtain a lower weight lock while holding a lock with higher
@@ -66,6 +69,7 @@ public final class OzoneManagerLock {
 
   private static final String VOLUME_LOCK = "volumeLock";
   private static final String BUCKET_LOCK = "bucketLock";
+  private static final String PREFIX_LOCK = "prefixLock";
   private static final String S3_BUCKET_LOCK = "s3BucketLock";
   private static final String S3_SECRET_LOCK = "s3SecretetLock";
 
@@ -77,6 +81,7 @@ public final class OzoneManagerLock {
           () -> ImmutableMap.of(
               VOLUME_LOCK, new AtomicInteger(0),
               BUCKET_LOCK, new AtomicInteger(0),
+              PREFIX_LOCK, new AtomicInteger(0),
               S3_BUCKET_LOCK, new AtomicInteger(0),
               S3_SECRET_LOCK, new AtomicInteger(0)
           )
@@ -240,5 +245,25 @@ public final class OzoneManagerLock {
   public void releaseS3SecretLock(String awsAccessId) {
     manager.unlock(awsAccessId);
     myLocks.get().get(S3_SECRET_LOCK).decrementAndGet();
+  }
+
+  public void acquirePrefixLock(String prefixPath) {
+    if (hasAnyPrefixLock()) {
+      throw new RuntimeException(
+          "Thread '" + Thread.currentThread().getName() +
+              "' cannot acquire prefix path lock while holding prefix " +
+              "path lock(s) for path: " + prefixPath + ".");
+    }
+    manager.lock(prefixPath);
+    myLocks.get().get(PREFIX_LOCK).incrementAndGet();
+  }
+
+  private boolean hasAnyPrefixLock() {
+    return myLocks.get().get(PREFIX_LOCK).get() != 0;
+  }
+
+  public void releasePrefixLock(String prefixPath) {
+    manager.unlock(prefixPath);
+    myLocks.get().get(PREFIX_LOCK).decrementAndGet();
   }
 }

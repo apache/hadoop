@@ -199,6 +199,9 @@ public class OMException extends IOException {
 
     PERMISSION_DENIED, // Error codes used during acl validation
 
-    TIMEOUT // Error codes used during acl validation
+    TIMEOUT, // Error codes used during acl validation
+
+    PREFIX_NOT_FOUND,
+
   }
 }

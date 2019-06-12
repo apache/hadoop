@@ -84,7 +84,6 @@ public class TestRadixTree {
     assertEquals("g", lpn.getName());
     lpn.setValue(100);
 
-
     List<RadixNode<Integer>> lpq =
         ROOT.getLongestPrefixPath("/a/b/c/d/g/q");
     RadixNode<Integer> lqn = lpp.get(lpq.size()-1);
@@ -92,7 +91,6 @@ public class TestRadixTree {
     assertEquals(lpn, lqn);
     assertEquals("g", lqn.getName());
     assertEquals(100, (int)lqn.getValue());
-
 
     assertEquals("/a/", RadixTree.radixPathToString(
         ROOT.getLongestPrefixPath("/a/g")));
