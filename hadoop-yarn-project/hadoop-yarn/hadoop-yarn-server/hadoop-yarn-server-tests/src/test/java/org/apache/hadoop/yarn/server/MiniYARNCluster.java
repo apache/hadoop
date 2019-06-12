@@ -25,8 +25,12 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+import java.util.LinkedHashSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.commons.lang3.StringUtils;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -90,6 +94,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptE
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptRegistrationEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.event.RMAppAttemptUnregistrationEvent;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
+import org.apache.hadoop.yarn.server.security.http.RMAuthenticationFilterInitializer;
 import org.apache.hadoop.yarn.server.timeline.MemoryTimelineStore;
 import org.apache.hadoop.yarn.server.timeline.TimelineStore;
 import org.apache.hadoop.yarn.server.timeline.recovery.MemoryTimelineStateStore;
@@ -824,6 +829,26 @@ public class MiniYARNCluster extends CompositeService {
 
     @Override
     protected synchronized void serviceStart() throws Exception {
+
+      // Removing RMAuthenticationFilter as it conflitcs with
+      // TimelineAuthenticationFilter
+      Configuration conf = getConfig();
+      String filterInitializerConfKey = "hadoop.http.filter.initializers";
+      String initializers = conf.get(filterInitializerConfKey, "");
+      String[] parts = initializers.split(",");
+      Set<String> target = new LinkedHashSet<String>();
+      for (String filterInitializer : parts) {
+        filterInitializer = filterInitializer.trim();
+        if (filterInitializer.equals(
+            RMAuthenticationFilterInitializer.class.getName())
+            || filterInitializer.isEmpty()) {
+          continue;
+        }
+        target.add(filterInitializer);
+      }
+      initializers = StringUtils.join(target, ",");
+      conf.set(filterInitializerConfKey, initializers);
+
       appHistoryServer.start();
       if (appHistoryServer.getServiceState() != STATE.STARTED) {
         // AHS could have failed.
