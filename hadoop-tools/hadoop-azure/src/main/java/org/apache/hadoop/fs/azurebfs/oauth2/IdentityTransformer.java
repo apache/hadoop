@@ -81,6 +81,7 @@ public class IdentityTransformer {
    * Perform identity transformation for the Get request results in AzureBlobFileSystemStore:
    * getFileStatus(), listStatus(), getAclStatus().
    * Input originalIdentity can be one of the following:
+   * <pre>
    * 1. $superuser:
    *     by default it will be transformed to local user/group, this can be disabled by setting
    *     "fs.azure.identity.transformer.skip.superuser.replacement" to true.
@@ -93,7 +94,7 @@ public class IdentityTransformer {
    * 3. User principal name (UPN):
    *     can be transformed to a short name(localIdentity) if originalIdentity is owner name, and
    *     "fs.azure.identity.transformer.enable.short.name" is enabled.
-   *
+   * </pre>
    * @param originalIdentity the original user or group in the get request results: FileStatus, AclStatus.
    * @param isUserName indicate whether the input originalIdentity is an owner name or owning group name.
    * @param localIdentity the local user or group, should be parsed from UserGroupInformation.
@@ -134,7 +135,7 @@ public class IdentityTransformer {
    * Perform Identity transformation when setting owner on a path.
    * There are four possible input:
    * 1.short name; 2.$superuser; 3.Fully qualified name; 4. principal id.
-   *
+   * <pre>
    * short name could be transformed to:
    *    - A service principal id or $superuser, if short name belongs a daemon service
    *      stated in substitution list AND "fs.azure.identity.transformer.service.principal.id"
@@ -142,7 +143,7 @@ public class IdentityTransformer {
    *    - Fully qualified name, if "fs.azure.identity.transformer.domain.name" is set in configuration.
    *
    * $superuser, fully qualified name and principalId should not be transformed.
-   *
+   * </pre>
    * @param userOrGroup the user or group to be set as owner.
    * @return user or group after transformation.
    * */
@@ -168,15 +169,16 @@ public class IdentityTransformer {
    * Perform Identity transformation when calling setAcl(),removeAclEntries() and modifyAclEntries()
    * If the AclEntry type is a user or group, and its name is one of the following:
    * 1.short name; 2.$superuser; 3.Fully qualified name; 4. principal id.
+   * <pre>
    * Short name could be transformed to:
    *    - A service principal id or $superuser, if short name belongs a daemon service
    *      stated in substitution list AND "fs.azure.identity.transformer.service.principal.id"
    *      is set with $superuser or a principal id.
    *    - A fully qualified name, if the AclEntry type is User AND if "fs.azure.identity.transformer.domain.name"
-   *    is set in configuration. This is to make the behavior consistent with HDI.
+   *      is set in configuration. This is to make the behavior consistent with HDI.
    *
    * $superuser, fully qualified name and principal id should not be transformed.
-   *
+   * </pre>
    * @param aclEntries list of AclEntry
    * */
   public void transformAclEntriesForSetRequest(final List<AclEntry> aclEntries) {
@@ -222,6 +224,7 @@ public class IdentityTransformer {
   /**
    * Perform Identity transformation when calling GetAclStatus()
    * If the AclEntry type is a user or group, and its name is one of the following:
+   * <pre>
    * 1. $superuser:
    *     by default it will be transformed to local user/group, this can be disabled by setting
    *     "fs.azure.identity.transformer.skip.superuser.replacement" to true.
@@ -234,7 +237,7 @@ public class IdentityTransformer {
    * 3. User principal name (UPN):
    *     can be transformed to a short name(local identity) if originalIdentity is owner name, and
    *     "fs.azure.identity.transformer.enable.short.name" is enabled.
-   *
+   * </pre>
    * @param aclEntries list of AclEntry
    * @param localUser local user name
    * @param localGroup local primary group

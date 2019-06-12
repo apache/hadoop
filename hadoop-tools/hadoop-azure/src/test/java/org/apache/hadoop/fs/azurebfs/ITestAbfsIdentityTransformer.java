@@ -266,8 +266,6 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     config.set(FS_AZURE_OVERRIDE_OWNER_SP, SERVICE_PRINCIPAL_ID);
     identityTransformer = getTransformerWithCustomizedIdentityConfig(config);
 
-    // make a copy
-    aclEntries = Lists.newArrayList(aclEntriesToBeTransformed);
     identityTransformer.transformAclEntriesForSetRequest(aclEntries);
 
     // expected acl entries
