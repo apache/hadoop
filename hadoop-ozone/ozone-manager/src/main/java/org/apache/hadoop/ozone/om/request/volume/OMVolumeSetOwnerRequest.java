@@ -141,6 +141,10 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
       oldOwner = omVolumeArgs.getOwnerName();
 
 
+      // Release and reacquire lock for now it will not be a problem, as
+      // applyTransaction serializes the operation's.
+      // TODO: Revisit this logic once HDDS-1672 checks in.
+
       // releasing volume lock, as to acquire user lock we need to release
       // volume lock.
       omMetadataManager.getLock().releaseVolumeLock(volume);

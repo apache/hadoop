@@ -119,6 +119,10 @@ public class OMVolumeDeleteRequest extends OMClientRequest
       omMetadataManager.getLock().releaseVolumeLock(volume);
     }
 
+    // Release and reacquire lock for now it will not be a problem for now, as
+    // applyTransaction serializes the operation's.
+    // TODO: Revisit this logic once HDDS-1672 checks in.
+
     // We cannot acquire user lock holding volume lock, so released volume
     // lock, and acquiring user and volume lock.
 
