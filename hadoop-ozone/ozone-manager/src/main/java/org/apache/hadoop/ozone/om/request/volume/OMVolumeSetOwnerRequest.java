@@ -126,6 +126,7 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
 
     omMetadataManager.getLock().acquireUserLock(newOwner);
     omMetadataManager.getLock().acquireVolumeLock(volume);
+
     try {
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -139,6 +140,11 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
       oldOwner = omVolumeArgs.getOwnerName();
 
 
+      // releasing volume lock, as to acquire user lock we need to release
+      // volume lock.
+      omMetadataManager.getLock().releaseVolumeLock(volume);
+      omMetadataManager.getLock().acquireUserLock(oldOwner);
+      omMetadataManager.getLock().acquireVolumeLock(volume);
       oldOwnerVolumeList =
           omMetadataManager.getUserTable().get(oldOwner);
 
@@ -171,6 +177,7 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
     } finally {
       omMetadataManager.getLock().releaseVolumeLock(volume);
       omMetadataManager.getLock().releaseUserLock(newOwner);
+      omMetadataManager.getLock().releaseUserLock(oldOwner);
     }
 
     // Performing audit logging outside of the lock.
