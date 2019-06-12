@@ -71,6 +71,19 @@ public abstract class OzoneObj implements IOzoneObj {
 
   public abstract String getKeyName();
 
+  /**
+   * Get PrefixName.
+   * A prefix name is like a key name under the bucket but
+   * are mainly used for ACL for now and persisted into a separate prefix table.
+   *
+   * @return prefix name.
+   */
+  public abstract String getPrefixName();
+
+  /**
+   * Get full path of a key or prefix including volume and bucket.
+   * @return full path of a key or prefix.
+   */
   public abstract String getPath();
 
   /**
@@ -79,7 +92,8 @@ public abstract class OzoneObj implements IOzoneObj {
   public enum ResourceType {
     VOLUME(OzoneConsts.VOLUME),
     BUCKET(OzoneConsts.BUCKET),
-    KEY(OzoneConsts.KEY);
+    KEY(OzoneConsts.KEY),
+    PREFIX(OzoneConsts.PREFIX);
 
     /**
      * String value for this Enum.

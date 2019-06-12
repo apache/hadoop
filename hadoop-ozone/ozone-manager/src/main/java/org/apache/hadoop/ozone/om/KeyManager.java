@@ -18,7 +18,6 @@ package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -36,7 +35,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
-import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.BackgroundService;
 
 import java.io.IOException;
@@ -286,43 +284,4 @@ public interface KeyManager extends OzoneManagerFS {
   OmMultipartUploadListParts listParts(String volumeName, String bucketName,
       String keyName, String uploadID, int partNumberMarker,
       int maxParts)  throws IOException;
-
-  /**
-   * Add acl for Ozone object. Return true if acl is added successfully else
-   * false.
-   * @param obj Ozone object for which acl should be added.
-   * @param acl ozone acl top be added.
-   *
-   * @throws IOException if there is error.
-   * */
-  boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
-
-  /**
-   * Remove acl for Ozone object. Return true if acl is removed successfully
-   * else false.
-   * @param obj Ozone object.
-   * @param acl Ozone acl to be removed.
-   *
-   * @throws IOException if there is error.
-   * */
-  boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException;
-
-  /**
-   * Acls to be set for given Ozone object. This operations reset ACL for
-   * given object to list of ACLs provided in argument.
-   * @param obj Ozone object.
-   * @param acls List of acls.
-   *
-   * @throws IOException if there is error.
-   * */
-  boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException;
-
-  /**
-   * Returns list of ACLs for given Ozone object.
-   * @param obj Ozone object.
-   *
-   * @throws IOException if there is error.
-   * */
-  List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
-
 }
