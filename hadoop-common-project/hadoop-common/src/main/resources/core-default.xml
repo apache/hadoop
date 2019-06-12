@@ -1505,8 +1505,7 @@
     <name>fs.s3a.metadatastore.metadata.ttl</name>
     <value>15m</value>
     <description>
-        This value sets how long a metadata in the MS is valid. The value is in
-        milliseconds.
+        This value sets how long an entry in a MetadataStore is valid.
     </description>
 </property>
 

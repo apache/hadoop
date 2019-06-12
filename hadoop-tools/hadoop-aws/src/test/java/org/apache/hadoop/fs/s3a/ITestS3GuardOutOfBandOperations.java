@@ -682,12 +682,18 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Create initial statusIterator with guarded ms
       writeTextFile(guardedFs, testFilePath, firstText, true);
       // and cache the value for later
-      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+      final S3AFileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("No etag in raw status " + origStatus,
+          origStatus.getETag());
 
       // Do a listing to cache the lists. Should be authoritative if it's set.
-      final FileStatus[] origList = guardedFs.listStatus(testDirPath);
+      final S3AFileStatus[] origList = (S3AFileStatus[]) guardedFs.listStatus(
+          testDirPath);
       assertArraySize("Added one file to the new dir, so the number of "
               + "files in the dir should be one.", 1, origList);
+      S3AFileStatus origGuardedFileStatus = origList[0];
+      assertNotNull("No etag in origGuardedFileStatus" + origGuardedFileStatus,
+          origGuardedFileStatus.getETag());
       final DirListingMetadata dirListingMetadata =
           realMs.listChildren(guardedFs.qualify(testDirPath));
       assertListingAuthority(allowAuthoritative, dirListingMetadata);
@@ -704,7 +710,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       final FileStatus rawFileStatus = awaitFileStatus(rawFS, testFilePath);
 
       // check listing in guarded store.
-      final FileStatus[] modList = guardedFs.listStatus(testDirPath);
+      final S3AFileStatus[] modList = (S3AFileStatus[]) guardedFs.listStatus(
+          testDirPath);
       assertArraySize("Added one file to the new dir then modified it, "
           + "so the number of files in the dir should be one.", 1,
           modList);
@@ -777,7 +784,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
             expectedLength, guardedLength);
       }
     }
-    // check etag
+    // check etag. This relies on first and second text being different.
     final S3AFileStatus rawS3AFileStatus = (S3AFileStatus) rawFileStatus;
     final S3AFileStatus guardedS3AFileStatus = (S3AFileStatus) guardedFileStatus;
     final S3AFileStatus origS3AFileStatus = (S3AFileStatus) origStatus;
@@ -793,21 +800,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       assertEquals(
           "etag in non-authoritative table with " + stats,
           rawS3AFileStatus.getETag(), guardedS3AFileStatus.getETag());
-    }
-    // version ID if not null
-    final String rawVersionId = rawS3AFileStatus.getVersionId();
-    if (rawVersionId != null) {
-      final String guardedVersionId = guardedS3AFileStatus.getVersionId();
-      if (allowAuthoritative) {
-        // expect the versionID to be out of sync
-        assertNotEquals(
-            "version ID in authoritative table with " + stats,
-            rawVersionId, guardedVersionId);
-      } else {
-        assertEquals(
-            "version ID in non-=authoritative table with " + stats,
-            rawVersionId, guardedVersionId);
-      }
     }
     // Next: modification time.
     long rawModTime = rawFileStatus.getModificationTime();
@@ -961,10 +953,10 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * @return the file status.
    * @throws Exception failure
    */
-  private FileStatus awaitFileStatus(S3AFileSystem fs,
+  private S3AFileStatus awaitFileStatus(S3AFileSystem fs,
       final Path testFilePath)
       throws Exception {
-    return eventually(
+    return (S3AFileStatus) eventually(
         STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
         () -> fs.getFileStatus(testFilePath));
   }
