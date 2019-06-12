@@ -202,9 +202,15 @@ public class RadixTree<T> {
         break;
       }
     }
-    return level >= 1 ?
-        Paths.get(root.getName()).resolve(p.subpath(0, level)).toString() :
-        root.getName();
+
+    if (level >= 1) {
+      Path longestMatch =
+          Paths.get(root.getName()).resolve(p.subpath(0, level));
+      String ret = longestMatch.toString();
+      return path.endsWith("/") ?  ret + "/" : ret;
+    } else {
+      return root.getName();
+    }
   }
 
   // root of a radix tree has a name of "/" and may optionally has it value.
