@@ -39,7 +39,11 @@ import picocli.CommandLine.ParentCommand;
         ListBucketHandler.class,
         CreateBucketHandler.class,
         UpdateBucketHandler.class,
-        DeleteBucketHandler.class
+        DeleteBucketHandler.class,
+        AddAclBucketHandler.class,
+        RemoveAclBucketHandler.class,
+        GetAclBucketHandler.class,
+        SetAclBucketHandler.class
     },
     mixinStandardHelpOptions = true,
     versionProvider = HddsVersionProvider.class)

@@ -40,6 +40,9 @@ public class OzoneAclConfig {
           "OzoneManager."
   )
   public void setUserDefaultRights(String userRights) {
+    if(userRights == null) {
+      userRights = "ALL";
+    }
     this.userDefaultRights = ACLType.valueOf(userRights);
   }
 
@@ -51,6 +54,9 @@ public class OzoneAclConfig {
           "OzoneManager."
   )
   public void setGroupDefaultRights(String groupRights) {
+    if(groupRights == null) {
+      groupRights = "ALL";
+    }
     this.groupDefaultRights = ACLType.valueOf(groupRights);
   }
 

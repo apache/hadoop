@@ -28,6 +28,7 @@ Setup volume names
     ${random}            Generate Random String  2   [NUMBERS]
     Set Suite Variable   ${volume1}            fstest${random}
     Set Suite Variable   ${volume2}            fstest2${random}
+    Set Suite Variable   ${volume3}            fstest3${random}
 
 *** Test Cases ***
 Create volume bucket with wrong credentials
@@ -47,3 +48,50 @@ Create volume bucket with credentials
 
 Check volume from ozonefs
     ${result} =         Execute          ozone fs -ls o3fs://bucket1.${volume1}/
+
+Test Volume Acls
+    ${result} =     Execute             ozone sh volume create ${volume3}
+                    Should not contain  ${result}       Failed
+    ${result} =     Execute             ozone sh volume getacl ${volume3}
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \".*\",\n.*\"aclList\" : . \"ALL\" .
+    ${result} =     Execute             ozone sh volume addacl ${volume3} -a user:superuser1:rwxy
+    ${result} =     Execute             ozone sh volume getacl ${volume3}
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    ${result} =     Execute             ozone sh volume removeacl ${volume3} -a user:superuser1:xy
+    ${result} =     Execute             ozone sh volume getacl ${volume3}
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"READ\", \"WRITE\"
+    ${result} =     Execute             ozone sh volume setacl ${volume3} -al user:superuser1:rwxy,group:superuser1:a
+    ${result} =     Execute             ozone sh volume getacl ${volume3}
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    Should Match Regexp                 ${result}       \"type\" : \"GROUP\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"ALL\"
+
+Test Bucket Acls
+    ${result} =     Execute             ozone sh bucket create ${volume3}/bk1
+                    Should not contain  ${result}       Failed
+    ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \".*\",\n.*\"aclList\" : . \"ALL\" .
+    ${result} =     Execute             ozone sh bucket addacl ${volume3}/bk1 -a user:superuser1:rwxy
+    ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    ${result} =     Execute             ozone sh bucket removeacl ${volume3}/bk1 -a user:superuser1:xy
+    ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"READ\", \"WRITE\"
+    ${result} =     Execute             ozone sh bucket setacl ${volume3}/bk1 -al user:superuser1:rwxy,group:superuser1:a
+    ${result} =     Execute             ozone sh bucket getacl ${volume3}/bk1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    Should Match Regexp                 ${result}       \"type\" : \"GROUP\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"ALL\"
+
+Test key Acls
+    Execute            ozone sh key put ${volume3}/bk1/key1 /opt/hadoop/NOTICE.txt
+    ${result} =     Execute             ozone sh key getacl ${volume3}/bk1/key1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \".*\",\n.*\"aclList\" : . \"ALL\" .
+    ${result} =     Execute             ozone sh key addacl ${volume3}/bk1/key1 -a user:superuser1:rwxy
+    ${result} =     Execute             ozone sh key getacl ${volume3}/bk1/key1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    ${result} =     Execute             ozone sh key removeacl ${volume3}/bk1/key1 -a user:superuser1:xy
+    ${result} =     Execute             ozone sh key getacl ${volume3}/bk1/key1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"READ\", \"WRITE\"
+    ${result} =     Execute             ozone sh key setacl ${volume3}/bk1/key1 -al user:superuser1:rwxy,group:superuser1:a
+    ${result} =     Execute             ozone sh key getacl ${volume3}/bk1/key1
+    Should Match Regexp                 ${result}       \"type\" : \"USER\",\n.*\"name\" : \"superuser1*\",\n.*\"aclList\" : . \"READ\", \"WRITE\", \"READ_ACL\", \"WRITE_ACL\"
+    Should Match Regexp                 ${result}       \"type\" : \"GROUP\",\n.*\"name\" : \"superuser1\",\n.*\"aclList\" : . \"ALL\"

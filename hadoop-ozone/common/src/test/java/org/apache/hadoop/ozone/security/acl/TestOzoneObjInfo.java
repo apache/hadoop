@@ -16,8 +16,11 @@
  */
 package org.apache.hadoop.ozone.security.acl;
 
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.junit.Test;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType.*;
 import static org.junit.Assert.*;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
 
@@ -76,13 +79,73 @@ public class TestOzoneObjInfo {
     objInfo = getBuilder(volume, bucket, key).build();
     assertEquals(objInfo.getKeyName(), key);
 
-    objInfo =getBuilder(volume, null, null).build();
+    objInfo = getBuilder(volume, null, null).build();
     assertEquals(objInfo.getKeyName(), null);
 
-    objInfo =getBuilder(null, bucket, null).build();
+    objInfo = getBuilder(null, bucket, null).build();
     assertEquals(objInfo.getKeyName(), null);
 
-    objInfo =getBuilder(null, null, key).build();
+    objInfo = getBuilder(null, null, key).build();
+    assertEquals(objInfo.getKeyName(), key);
+  }
+
+  @Test
+  public void testFromProtobufOp() {
+    // Key with long path.
+    key = "dir1/dir2/dir3/dir4/dir5/abc.txt";
+    OzoneManagerProtocolProtos.OzoneObj protoObj = OzoneManagerProtocolProtos.
+        OzoneObj.newBuilder()
+        .setResType(KEY)
+        .setStoreType(OzoneManagerProtocolProtos.OzoneObj.StoreType.OZONE)
+        .setPath(volume + OZONE_URI_DELIMITER +
+            bucket + OZONE_URI_DELIMITER + key)
+        .build();
+
+    objInfo = OzoneObjInfo.fromProtobuf(protoObj);
+    assertEquals(objInfo.getKeyName(), key);
+    objInfo = getBuilder(volume, null, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, bucket, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, null, key).build();
+    assertEquals(objInfo.getKeyName(), key);
+
+    // Key with long path.
+    key = "dir1/dir2/dir3/dir4/dir5/abc.txt";
+    protoObj = OzoneManagerProtocolProtos.
+        OzoneObj.newBuilder()
+        .setResType(KEY)
+        .setStoreType(OzoneManagerProtocolProtos.OzoneObj.StoreType.OZONE)
+        .setPath(OZONE_URI_DELIMITER + volume + OZONE_URI_DELIMITER +
+            bucket + OZONE_URI_DELIMITER + key)
+        .build();
+
+    objInfo = OzoneObjInfo.fromProtobuf(protoObj);
+    assertEquals(objInfo.getKeyName(), key);
+    objInfo = getBuilder(volume, null, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, bucket, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, null, key).build();
+    assertEquals(objInfo.getKeyName(), key);
+
+    // Key with long path.
+    key = "dir1/dir2/dir3/dir4/dir5/";
+    protoObj = OzoneManagerProtocolProtos.
+        OzoneObj.newBuilder()
+        .setResType(KEY)
+        .setStoreType(OzoneManagerProtocolProtos.OzoneObj.StoreType.OZONE)
+        .setPath(OZONE_URI_DELIMITER + volume + OZONE_URI_DELIMITER +
+            bucket + OZONE_URI_DELIMITER + key)
+        .build();
+
+    objInfo = OzoneObjInfo.fromProtobuf(protoObj);
+    assertEquals(objInfo.getKeyName(), key);
+    objInfo = getBuilder(volume, null, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, bucket, null).build();
+    assertEquals(objInfo.getKeyName(), null);
+    objInfo = getBuilder(null, null, key).build();
     assertEquals(objInfo.getKeyName(), key);
   }
 }

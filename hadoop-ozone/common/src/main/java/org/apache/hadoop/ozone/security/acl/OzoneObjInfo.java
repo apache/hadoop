@@ -75,8 +75,8 @@ public final class OzoneObjInfo extends OzoneObj {
     Builder builder = new Builder()
         .setResType(ResourceType.valueOf(proto.getResType().name()))
         .setStoreType(StoreType.valueOf(proto.getStoreType().name()));
-    String[] tokens = StringUtils.splitPreserveAllTokens(proto.getPath(),
-        OZONE_URI_DELIMITER);
+    String[] tokens = StringUtils.split(proto.getPath(),
+        OZONE_URI_DELIMITER, 3);
     if(tokens == null) {
       throw new IllegalArgumentException("Unexpected path:" + proto.getPath());
     }
@@ -94,7 +94,7 @@ public final class OzoneObjInfo extends OzoneObj {
       builder.setBucketName(tokens[1]);
       break;
     case KEY:
-      if (tokens.length != 3) {
+      if (tokens.length < 3) {
         throw new IllegalArgumentException("Unexpected argument for " +
             "Ozone key. Path:" + proto.getPath());
       }
