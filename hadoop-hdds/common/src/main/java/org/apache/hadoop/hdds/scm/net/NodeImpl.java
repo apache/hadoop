@@ -27,11 +27,11 @@ import static org.apache.hadoop.hdds.scm.net.NetConstants.PATH_SEPARATOR_STR;
  */
 public class NodeImpl implements Node {
   // host:port#
-  private final String name;
+  private String name;
   // string representation of this node's location, such as /dc1/rack1
-  private final String location;
+  private String location;
   // location + "/" + name
-  private final String path;
+  private String path;
   // which level of the tree the node resides, start from 1 for root
   private int level;
   // node's parent
@@ -53,10 +53,7 @@ public class NodeImpl implements Node {
     }
     this.name = (name == null) ? ROOT : name;
     this.location = NetUtils.normalize(location);
-    this.path = this.location.equals(PATH_SEPARATOR_STR) ?
-        this.location + this.name :
-        this.location + PATH_SEPARATOR_STR + this.name;
-
+    this.path = getPath();
     this.cost = cost;
   }
 
@@ -85,10 +82,29 @@ public class NodeImpl implements Node {
   }
 
   /**
+   * Set this node's name, can be hostname or Ipaddress.
+   * @param networkName it's network name
+   */
+  public void setNetworkName(String networkName) {
+    this.name = networkName;
+    this.path = getPath();
+  }
+
+  /**
    * @return this node's network location
    */
   public String getNetworkLocation() {
     return location;
+  }
+
+  /**
+   * Set this node's network location.
+   * @param networkLocation it's network location
+   */
+  @Override
+  public void setNetworkLocation(String networkLocation) {
+    this.location = networkLocation;
+    this.path = getPath();
   }
 
   /**
@@ -196,5 +212,11 @@ public class NodeImpl implements Node {
   @Override
   public String toString() {
     return getNetworkFullPath();
+  }
+
+  private String getPath() {
+    return this.location.equals(PATH_SEPARATOR_STR) ?
+        this.location + this.name :
+        this.location + PATH_SEPARATOR_STR + this.name;
   }
 }
