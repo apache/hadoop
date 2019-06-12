@@ -70,12 +70,13 @@ public interface ContainerDBServiceProvider {
       throws IOException;
 
   /**
-   * Get a Map of containerID, containerMetadata of all Containers.
+   * Get a Map of containerID, containerMetadata of Containers only for the
+   * given limit.
    *
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers() throws IOException;
+  Map<Long, ContainerMetadata> getContainers(int limit) throws IOException;
 
   /**
    * Delete an entry in the container DB.
