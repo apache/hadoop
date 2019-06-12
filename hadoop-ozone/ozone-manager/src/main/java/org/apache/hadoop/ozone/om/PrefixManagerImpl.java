@@ -46,6 +46,7 @@ public class PrefixManagerImpl implements PrefixManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(PrefixManagerImpl.class);
 
+  private static final List<OzoneAcl> EMPTY_ACL_LIST = new ArrayList<>();
   private final OMMetadataManager metadataManager;
 
   // In-memory prefix tree to optimize ACL evaluation
@@ -268,7 +269,7 @@ public class PrefixManagerImpl implements PrefixManager {
     } finally {
       metadataManager.getLock().releasePrefixLock(prefixPath);
     }
-    return null;
+    return EMPTY_ACL_LIST;
   }
 
   @Override
