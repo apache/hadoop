@@ -361,12 +361,12 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     assertNotNull("Newly created file status should not be null.", newStatus);
   }
 
-  private void deleteGuardedTombstoned(S3AFileSystem guardedFs,
+  private void deleteGuardedTombstoned(S3AFileSystem guarded,
       Path testFilePath, AtomicLong now) throws Exception {
-    guardedFs.delete(testFilePath, true);
+    guarded.delete(testFilePath, true);
 
     final PathMetadata metadata =
-        guardedFs.getMetadataStore().get(testFilePath);
+        guarded.getMetadataStore().get(testFilePath);
     assertNotNull("Created file metadata should not be null in ms",
         metadata);
     assertEquals("Created file metadata last_updated should equal with "
@@ -375,7 +375,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     intercept(FileNotFoundException.class, testFilePath.toString(),
         "This file should throw FNFE when reading through "
             + "the guarded fs, and the metadatastore tombstoned the file.",
-        () -> guardedFs.getFileStatus(testFilePath));
+        () -> guarded.getFileStatus(testFilePath));
   }
 
   /**
@@ -563,10 +563,9 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     }
 
     final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
-    for (FileStatus fileStatus : fileStatuses) {
-        assertEquals("The file should be listed in fs.listStatus",
-            filePath, fileStatus.getPath());
-    }
+    for (FileStatus fileStatus : fileStatuses)
+      assertEquals("The file should be listed in fs.listStatus",
+          filePath, fileStatus.getPath());
   }
 
   /**
@@ -786,7 +785,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     }
     // check etag. This relies on first and second text being different.
     final S3AFileStatus rawS3AFileStatus = (S3AFileStatus) rawFileStatus;
-    final S3AFileStatus guardedS3AFileStatus = (S3AFileStatus) guardedFileStatus;
+    final S3AFileStatus guardedS3AFileStatus = (S3AFileStatus)
+        guardedFileStatus;
     final S3AFileStatus origS3AFileStatus = (S3AFileStatus) origStatus;
     assertNotEquals(
         "raw status still no to date with changes" + stats,

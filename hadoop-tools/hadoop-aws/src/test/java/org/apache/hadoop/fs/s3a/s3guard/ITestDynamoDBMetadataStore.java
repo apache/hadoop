@@ -232,9 +232,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Override protected String getPathStringForPrune(String path)
       throws Exception {
-    String bucket =
-        getTestBucketName(getContract().getFileSystem().getConf());
-    return "/" + bucket + "/dir2";
+    String b = getTestBucketName(getContract().getFileSystem().getConf());
+    return "/" + b + "/dir2";
   }
 
   /**
