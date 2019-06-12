@@ -237,6 +237,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
   private final KeyManager keyManager;
+  private final PrefixManagerImpl prefixManager;
   private final OMMetrics metrics;
   private OzoneManagerHttpServer httpServer;
   private final OMStorage omStorage;
@@ -364,6 +365,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     keyManager = new KeyManagerImpl(
         new ScmClient(scmBlockClient, scmContainerClient), metadataManager,
         configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
+
+    prefixManager = new PrefixManagerImpl(metadataManager);
 
     shutdownHook = () -> {
       saveOmMetrics();
@@ -3033,6 +3036,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return bucketManager.addAcl(obj, acl);
     case KEY:
       return keyManager.addAcl(obj, acl);
+    case PREFIX:
+      return prefixManager.addAcl(obj, acl);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3057,11 +3062,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     switch (obj.getResourceType()) {
     case VOLUME:
       return volumeManager.removeAcl(obj, acl);
-
     case BUCKET:
       return bucketManager.removeAcl(obj, acl);
     case KEY:
       return keyManager.removeAcl(obj, acl);
+    case PREFIX:
+      return prefixManager.removeAcl(obj, acl);
+
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3090,6 +3097,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return bucketManager.setAcl(obj, acls);
     case KEY:
       return keyManager.setAcl(obj, acls);
+    case PREFIX:
+      return prefixManager.setAcl(obj, acls);
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
@@ -3116,6 +3125,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return bucketManager.getAcl(obj);
     case KEY:
       return keyManager.getAcl(obj);
+    case PREFIX:
+      return prefixManager.getAcl(obj);
+
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);

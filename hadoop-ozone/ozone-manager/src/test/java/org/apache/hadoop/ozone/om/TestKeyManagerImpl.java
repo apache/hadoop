@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -47,21 +48,38 @@ import org.apache.hadoop.hdds.scm.node.NodeManager;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.*;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.AfterClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.*;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
 
 /**
@@ -69,6 +87,7 @@ import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL
  */
 public class TestKeyManagerImpl {
 
+  private static PrefixManager prefixManager;
   private static KeyManagerImpl keyManager;
   private static VolumeManagerImpl volumeManager;
   private static BucketManagerImpl bucketManager;
@@ -81,6 +100,9 @@ public class TestKeyManagerImpl {
   private static final String KEY_NAME = "key1";
   private static final String BUCKET_NAME = "bucket1";
   private static final String VOLUME_NAME = "vol1";
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
 
   @BeforeClass
   public static void setUp() throws Exception {
@@ -105,6 +127,8 @@ public class TestKeyManagerImpl {
     keyManager =
         new KeyManagerImpl(scm.getBlockProtocolServer(), metadataManager, conf,
             "om1", null);
+    prefixManager = new PrefixManagerImpl(metadataManager);
+
     Mockito.when(mockScmBlockLocationProtocol
         .allocateBlock(Mockito.anyLong(), Mockito.anyInt(),
             Mockito.any(ReplicationType.class),
@@ -320,6 +344,213 @@ public class TestKeyManagerImpl {
       if (ex.getResult() != OMException.ResultCodes.NOT_A_FILE) {
         throw ex;
       }
+    }
+  }
+
+
+  @Test
+  public void testPrefixAclOps() throws IOException {
+    String volumeName = "vol1";
+    String bucketName = "bucket1";
+    String prefix1 = "pf1/";
+
+    OzoneObj ozPrefix1 = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(prefix1)
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
+        ACLType.READ);
+    prefixManager.addAcl(ozPrefix1, ozAcl1);
+
+    List<OzoneAcl> ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(1, ozAclGet.size());
+    Assert.assertEquals(ozAcl1, ozAclGet.get(0));
+
+    List<OzoneAcl> acls = new ArrayList<>();
+    OzoneAcl ozAcl2 = new OzoneAcl(ACLIdentityType.USER, "admin",
+        ACLType.ALL);
+
+    BitSet rwRights = new BitSet();
+    rwRights.set(IAccessAuthorizer.ACLType.WRITE.ordinal());
+    rwRights.set(IAccessAuthorizer.ACLType.READ.ordinal());
+    OzoneAcl ozAcl3 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
+        rwRights);
+
+    BitSet wRights = new BitSet();
+    wRights.set(IAccessAuthorizer.ACLType.WRITE.ordinal());
+    OzoneAcl ozAcl4 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
+        wRights);
+
+    BitSet rRights = new BitSet();
+    rRights.set(IAccessAuthorizer.ACLType.READ.ordinal());
+    OzoneAcl ozAcl5 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
+        rRights);
+
+    acls.add(ozAcl2);
+    acls.add(ozAcl3);
+
+    prefixManager.setAcl(ozPrefix1, acls);
+    ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(2, ozAclGet.size());
+
+    int matchEntries = 0;
+    for (OzoneAcl acl : ozAclGet) {
+      if (acl.getType() == ACLIdentityType.GROUP) {
+        Assert.assertEquals(ozAcl3, acl);
+        matchEntries++;
+      }
+      if (acl.getType() == ACLIdentityType.USER) {
+        Assert.assertEquals(ozAcl2, acl);
+        matchEntries++;
+      }
+    }
+    Assert.assertEquals(2, matchEntries);
+
+    boolean result = prefixManager.removeAcl(ozPrefix1, ozAcl4);
+    Assert.assertEquals(true, result);
+
+    ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(2, ozAclGet.size());
+
+    result = prefixManager.removeAcl(ozPrefix1, ozAcl3);
+    Assert.assertEquals(true, result);
+    ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(1, ozAclGet.size());
+
+    Assert.assertEquals(ozAcl2, ozAclGet.get(0));
+
+    // add dev:w
+    prefixManager.addAcl(ozPrefix1, ozAcl4);
+    ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(2, ozAclGet.size());
+
+    // add dev:r and validate the acl bitset combined
+    prefixManager.addAcl(ozPrefix1, ozAcl5);
+    ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(2, ozAclGet.size());
+
+    matchEntries = 0;
+    for (OzoneAcl acl : ozAclGet) {
+      if (acl.getType() == ACLIdentityType.GROUP) {
+        Assert.assertEquals(ozAcl3, acl);
+        matchEntries++;
+      }
+      if (acl.getType() == ACLIdentityType.USER) {
+        Assert.assertEquals(ozAcl2, acl);
+        matchEntries++;
+      }
+    }
+    Assert.assertEquals(2, matchEntries);
+  }
+
+  @Test
+  public void testInvalidPrefixAcl() throws IOException {
+    String volumeName = "vol1";
+    String bucketName = "bucket1";
+    String prefix1 = "pf1/";
+
+    // Invalid prefix not ending with "/"
+    String invalidPrefix = "invalid/pf";
+    OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
+        ACLType.READ);
+
+    OzoneObj ozInvalidPrefix = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(invalidPrefix)
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    // add acl with invalid prefix name
+    exception.expect(OMException.class);
+    exception.expectMessage("Invalid prefix name");
+    prefixManager.addAcl(ozInvalidPrefix, ozAcl1);
+
+    OzoneObj ozPrefix1 = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(prefix1)
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+
+    List<OzoneAcl> ozAclGet = prefixManager.getAcl(ozPrefix1);
+    Assert.assertEquals(1, ozAclGet.size());
+    Assert.assertEquals(ozAcl1, ozAclGet.get(0));
+
+    // get acl with invalid prefix name
+    exception.expect(OMException.class);
+    exception.expectMessage("Invalid prefix name");
+    ozAclGet = prefixManager.getAcl(ozInvalidPrefix);
+    Assert.assertEquals(null, ozAcl1);
+
+    // set acl with invalid prefix name
+    List<OzoneAcl> ozoneAcls = new ArrayList<OzoneAcl>();
+    ozoneAcls.add(ozAcl1);
+    exception.expect(OMException.class);
+    exception.expectMessage("Invalid prefix name");
+    prefixManager.setAcl(ozInvalidPrefix, ozoneAcls);
+
+    // remove acl with invalid prefix name
+    exception.expect(OMException.class);
+    exception.expectMessage("Invalid prefix name");
+    prefixManager.removeAcl(ozInvalidPrefix, ozAcl1);
+  }
+
+  @Test
+  public void testLongestPrefixPath() throws IOException {
+    String volumeName = "vol1";
+    String bucketName = "bucket1";
+    String prefix1 = "pf1/pf11/pf111/pf1111/";
+    String file1 = "pf1/pf11/file1";
+    String file2 = "pf1/pf11/pf111/pf1111/file2";
+
+    OzoneObj ozPrefix1 = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(prefix1)
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
+        ACLType.READ);
+    prefixManager.addAcl(ozPrefix1, ozAcl1);
+
+    OzoneObj ozFile1 = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(file1)
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    List<OmPrefixInfo> prefixInfos =
+        prefixManager.getLongestPrefixPath(ozFile1.getPath());
+    Assert.assertEquals(5, prefixInfos.size());
+
+    OzoneObj ozFile2 = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(file2)
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    prefixInfos =
+        prefixManager.getLongestPrefixPath(ozFile2.getPath());
+    Assert.assertEquals(7, prefixInfos.size());
+    // Only the last node has acl on it
+    Assert.assertEquals(ozAcl1, prefixInfos.get(6).getAcls().get(0));
+    // All other nodes don't have acl value associate with it
+    for (int i = 0; i < 6; i++) {
+      Assert.assertEquals(null, prefixInfos.get(i));
     }
   }
 

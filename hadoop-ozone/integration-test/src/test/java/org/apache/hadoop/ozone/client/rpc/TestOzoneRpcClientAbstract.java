@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -2200,6 +2201,66 @@ public abstract class TestOzoneRpcClientAbstract {
     validateOzoneAcl(ozObj);
   }
 
+  @Test
+  public void testNativeAclsForPrefix() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+
+    String prefix1 = "PF" + UUID.randomUUID().toString() + "/";
+    String key1 = prefix1 + "KEY" + UUID.randomUUID().toString();
+
+    String prefix2 = "PF" + UUID.randomUUID().toString() + "/";
+    String key2 = prefix2 + "KEY" + UUID.randomUUID().toString();
+
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+    OzoneBucket bucket = volume.getBucket(bucketName);
+    assertNotNull("Bucket creation failed", bucket);
+
+    writeKey(key1, bucket);
+    writeKey(key2, bucket);
+
+    OzoneObj ozObj = new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setPrefixName(prefix1)
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+
+    // add acl
+    BitSet aclRights1 = new BitSet();
+    aclRights1.set(ACLType.READ.ordinal());
+    OzoneAcl user1Acl = new OzoneAcl(ACLIdentityType.USER,
+        "user1", aclRights1);
+    assertTrue(store.addAcl(ozObj, user1Acl));
+
+    // get acl
+    List<OzoneAcl> aclsGet = store.getAcl(ozObj);
+    Assert.assertEquals(1, aclsGet.size());
+    Assert.assertEquals(user1Acl, aclsGet.get(0));
+
+    // remove acl
+    Assert.assertTrue(store.removeAcl(ozObj, user1Acl));
+    aclsGet = store.getAcl(ozObj);
+    Assert.assertEquals(0, aclsGet.size());
+
+    // set acl
+    BitSet aclRights2 = new BitSet();
+    aclRights2.set(ACLType.ALL.ordinal());
+    OzoneAcl group1Acl = new OzoneAcl(ACLIdentityType.GROUP,
+        "group1", aclRights2);
+    List<OzoneAcl> acls = new ArrayList<>();
+    acls.add(user1Acl);
+    acls.add(group1Acl);
+    Assert.assertTrue(store.setAcl(ozObj, acls));
+
+    // get acl
+    aclsGet = store.getAcl(ozObj);
+    Assert.assertEquals(2, aclsGet.size());
+  }
+
   /**
    * Helper function to get default acl list for current user.
    *
@@ -2218,8 +2279,7 @@ public abstract class TestOzoneRpcClientAbstract {
     listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
         ugi.getUserName(), userRights));
     //Group ACLs of the User
-    List<String> userGroups = Arrays.asList(UserGroupInformation
-        .createRemoteUser(ugi.getUserName()).getGroupNames());
+    List<String> userGroups = Arrays.asList(ugi.getGroupNames());
     userGroups.stream().forEach((group) -> listOfAcls.add(
         new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
     return listOfAcls;

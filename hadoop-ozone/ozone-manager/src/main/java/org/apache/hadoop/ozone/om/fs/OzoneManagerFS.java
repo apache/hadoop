@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.fs;
 
+import org.apache.hadoop.ozone.om.IOzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -29,7 +30,7 @@ import java.util.List;
 /**
  * Ozone Manager FileSystem interface.
  */
-public interface OzoneManagerFS {
+public interface OzoneManagerFS extends IOzoneAcl {
   OzoneFileStatus getFileStatus(OmKeyArgs args) throws IOException;
 
   void createDirectory(OmKeyArgs args) throws IOException;

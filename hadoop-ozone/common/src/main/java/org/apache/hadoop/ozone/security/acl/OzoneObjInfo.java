@@ -23,32 +23,51 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 
 /**
  * Class representing an ozone object.
+ * It can be a volume with non-null volumeName (bucketName=null & name=null)
+ * or a bucket with non-null volumeName and bucketName (name=null)
+ * or a key with non-null volumeName, bucketName and key name
+ * (via getKeyName)
+ * or a prefix with non-null volumeName, bucketName and prefix name
+ * (via getPrefixName)
  */
 public final class OzoneObjInfo extends OzoneObj {
 
   private final String volumeName;
   private final String bucketName;
-  private final String keyName;
+  private final String name;
 
-
+  /**
+   *
+   * @param resType
+   * @param storeType
+   * @param volumeName
+   * @param bucketName
+   * @param name - keyName/PrefixName
+   */
   private OzoneObjInfo(ResourceType resType, StoreType storeType,
-      String volumeName, String bucketName, String keyName) {
+      String volumeName, String bucketName, String name) {
     super(resType, storeType);
     this.volumeName = volumeName;
     this.bucketName = bucketName;
-    this.keyName = keyName;
+    this.name = name;
   }
 
   @Override
   public String getPath() {
     switch (getResourceType()) {
     case VOLUME:
-      return getVolumeName();
+      return OZONE_URI_DELIMITER + getVolumeName();
     case BUCKET:
-      return getVolumeName() + OZONE_URI_DELIMITER + getBucketName();
+      return OZONE_URI_DELIMITER + getVolumeName()
+          + OZONE_URI_DELIMITER + getBucketName();
     case KEY:
-      return getVolumeName() + OZONE_URI_DELIMITER + getBucketName()
+      return OZONE_URI_DELIMITER + getVolumeName()
+          + OZONE_URI_DELIMITER + getBucketName()
           + OZONE_URI_DELIMITER + getKeyName();
+    case PREFIX:
+      return OZONE_URI_DELIMITER + getVolumeName()
+          + OZONE_URI_DELIMITER + getBucketName()
+          + OZONE_URI_DELIMITER + getPrefixName();
     default:
       throw new IllegalArgumentException("Unknown resource " +
         "type" + getResourceType());
@@ -67,8 +86,14 @@ public final class OzoneObjInfo extends OzoneObj {
 
   @Override
   public String getKeyName() {
-    return keyName;
+    return name;
   }
+
+  @Override
+  public String getPrefixName() {
+    return name;
+  }
+
 
   public static OzoneObjInfo fromProtobuf(OzoneManagerProtocolProtos.OzoneObj
       proto) {
@@ -88,7 +113,7 @@ public final class OzoneObjInfo extends OzoneObj {
     case BUCKET:
       if (tokens.length < 2) {
         throw new IllegalArgumentException("Unexpected argument for " +
-            "Ozone key. Path:" + proto.getPath());
+            "Ozone bucket. Path:" + proto.getPath());
       }
       builder.setVolumeName(tokens[0]);
       builder.setBucketName(tokens[1]);
@@ -101,6 +126,15 @@ public final class OzoneObjInfo extends OzoneObj {
       builder.setVolumeName(tokens[0]);
       builder.setBucketName(tokens[1]);
       builder.setKeyName(tokens[2]);
+      break;
+    case PREFIX:
+      if (tokens.length < 3) {
+        throw new IllegalArgumentException("Unexpected argument for " +
+            "Ozone Prefix. Path:" + proto.getPath());
+      }
+      builder.setVolumeName(tokens[0]);
+      builder.setBucketName(tokens[1]);
+      builder.setPrefixName(tokens[2]);
       break;
     default:
       throw new IllegalArgumentException("Unexpected type for " +
@@ -118,7 +152,7 @@ public final class OzoneObjInfo extends OzoneObj {
     private OzoneObj.StoreType storeType;
     private String volumeName;
     private String bucketName;
-    private String keyName;
+    private String name;
 
     public static Builder newBuilder() {
       return new Builder();
@@ -145,14 +179,17 @@ public final class OzoneObjInfo extends OzoneObj {
     }
 
     public Builder setKeyName(String key) {
-      this.keyName = key;
+      this.name = key;
+      return this;
+    }
+
+    public Builder setPrefixName(String prefix) {
+      this.name = prefix;
       return this;
     }
 
     public OzoneObjInfo build() {
-      return new OzoneObjInfo(resType, storeType, volumeName, bucketName,
-          keyName);
+      return new OzoneObjInfo(resType, storeType, volumeName, bucketName, name);
     }
   }
-
 }
