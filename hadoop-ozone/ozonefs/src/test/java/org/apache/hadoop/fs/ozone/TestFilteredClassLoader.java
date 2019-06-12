@@ -31,6 +31,9 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
+/**
+ * FilteredClassLoader test using mocks.
+ */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({ FilteredClassLoader.class, OzoneFSInputStream.class})
 public class TestFilteredClassLoader {
@@ -41,17 +44,18 @@ public class TestFilteredClassLoader {
         .thenReturn("org.apache.hadoop.fs.ozone.OzoneFSInputStream");
 
     ClassLoader currentClassLoader =
-      TestFilteredClassLoader.class.getClassLoader();
+        TestFilteredClassLoader.class.getClassLoader();
 
     List<URL> urls = new ArrayList<>();
     ClassLoader classLoader = new FilteredClassLoader(
-      urls.toArray(new URL[0]), currentClassLoader);
+        urls.toArray(new URL[0]), currentClassLoader);
 
     try {
       classLoader.loadClass(
-        "org.apache.hadoop.fs.ozone.OzoneFSInputStream");
-      ClassLoader expectedClassLoader = OzoneFSInputStream.class.getClassLoader();
-      assertEquals( expectedClassLoader, currentClassLoader);
+          "org.apache.hadoop.fs.ozone.OzoneFSInputStream");
+      ClassLoader expectedClassLoader =
+          OzoneFSInputStream.class.getClassLoader();
+      assertEquals(expectedClassLoader, currentClassLoader);
     } catch (ClassNotFoundException e) {
       e.printStackTrace();
     }
