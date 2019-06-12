@@ -199,6 +199,7 @@ public class LocalResourceRequest
     sb.append(getPath().toString()).append(", ");
     sb.append(getTimestamp()).append(", ");
     sb.append(getType()).append(", ");
+    sb.append(getVisibility()).append(", ");
     sb.append(getPattern()).append(" }");
     return sb.toString();
   }

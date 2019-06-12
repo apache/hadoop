@@ -2191,4 +2191,87 @@
   </description>
 </property>
 
+<property>
+  <name>mapreduce.job.jobjar.visibility</name>
+  <value>application</value>
+  <description>
+    This parameter controls the visibility of the localized job jar on the node
+    manager. It should be one of
+    MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}. This is an user facing
+    config item.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.libjars.visibility</name>
+  <value>application</value>
+  <description>
+    This parameter controls the visibility of the localized lib jars on
+    the node manager. It should be one of
+    #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}.
+    Note that it will only work for resources whose visibility is not set
+    implicitly. E.g. the following resource will be `public`:
+    -libjars a.jar::public
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.files.visibility</name>
+  <value>application</value>
+  <description>
+    This parameter controls the visibility of the localized files on
+    the node manager. It should be one of
+    #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}.
+    Note that it will only work for resources whose visibility is not set
+    implicitly. E.g. the following resource will be `public`:
+    -files a.file::public .
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.archives.visibility</name>
+  <value>application</value>
+  <description>
+      This parameter controls the visibility of the localized archives on
+      the node manager. It should be one of
+      #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}.
+      Note that it will only work for resources whose visibility is not set
+      implicitly. E.g. the following resource will be `public`:
+    -archives a.zip::public .
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.log4j-properties-file.visibility</name>
+  <value>application</value>
+  <description>
+    This parameter controls the visibility of the log4j-properties-file on
+    the node manager. It should be one of
+    #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}.
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.user.staging.dirname</name>
+  <value>.staging</value>
+  <description>
+    This flag is used to set the last dir name of users's staging path.
+    A MR job's staging dir is defined in
+    {\@link org.apache.hadoop.mapreduce.v2.util.MRApps#getStagingAreaDir}.
+    ${MRJobConfig.MR_AM_STAGING_DIR}/${user}/${MR_USER_STAGING_DIR_NAME};
+    E.g. user1 launched two jobs: job-1234 and job-abcd. Their staging dir
+    will be
+    ${MRJobConfig.MR_AM_STAGING_DIR}/user1/${MR_USER_STAGING_DIR_NAME}/job-1234
+    ${MRJobConfig.MR_AM_STAGING_DIR}/user1/${MR_USER_STAGING_DIR_NAME}/job-abcd
+  </description>
+</property>
+
+<property>
+  <name>mapreduce.job.staging.dir.permission</name>
+  <value>0700</value>
+  <description>
+    Permission of MR job staging dir, default is 0700.
+  </description>
+</property>
+
 </configuration>

@@ -58,6 +58,7 @@ import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.junit.AfterClass;
@@ -184,6 +185,43 @@ public class TestMRApps {
     assertNotNull("getJobFile results in null.", jobFile);
     assertEquals("jobFile with specified user is not as expected.",
         "/my/path/to/staging/dummy-user/.staging/job_dummy-job_12345/job.xml", jobFile);
+  }
+
+  @Test(timeout = 60000)
+  public void testGetStagingAreaDirDefault() {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/testGetStagingAreaDirDefault");
+    String user = "dummy-user";
+    Path stagingPath = MRApps.getStagingAreaDir(conf, user);
+    assertEquals("Staging path is not as expected",
+        "/testGetStagingAreaDirDefault/dummy-user/.staging",
+        stagingPath.toString());
+  }
+
+
+  @Test(timeout = 60000)
+  public void testGetStagingAreaDirWithJobDirSet() {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MAPREDUCE_JOB_DIR,
+        "/testGetStagingAreaDirWithJobDirSet/dummyUser/.staging2/job_123");
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/stagingDir");
+    String user = "dummy-user";
+    Path stagingPath = MRApps.getStagingAreaDir(conf, user);
+    assertEquals("Staging path is not as expected",
+        "/testGetStagingAreaDirWithJobDirSet/dummyUser/.staging2",
+        stagingPath.toString());
+  }
+
+  @Test(timeout = 60000)
+  public void testGetStagingAreaDirNonDefault() {
+    Configuration conf = new Configuration();
+    conf.set(MRJobConfig.MR_AM_STAGING_DIR, "/testGetStagingAreaDirDefault");
+    conf.set(MRJobConfig.MR_USER_STAGING_DIR_NAME, ".newstaging");
+    String user = "dummy-user";
+    Path stagingPath = MRApps.getStagingAreaDir(conf, user);
+    assertEquals("Staging path is not as expected",
+        "/testGetStagingAreaDirDefault/dummy-user/.newstaging",
+        stagingPath.toString());
   }
 
   @Test (timeout = 120000)
@@ -380,11 +418,13 @@ public class TestMRApps {
     DistributedCache.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
-    conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES,
+        LocalResourceVisibility.APPLICATION.name());
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
-    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES,
+        LocalResourceVisibility.PUBLIC.name());
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -396,6 +436,8 @@ public class TestMRApps {
     assertEquals(10l, lr.getSize());
     assertEquals(10l, lr.getTimestamp());
     assertEquals(LocalResourceType.ARCHIVE, lr.getType());
+    assertTrue(lr.getVisibility().name().equals(
+        LocalResourceVisibility.PUBLIC.name()));
   }
   
   @SuppressWarnings("deprecation")
@@ -420,7 +462,9 @@ public class TestMRApps {
     DistributedCache.addCacheFile(file2, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "10,11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "10,11");
-    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true,true");
+    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES,
+        LocalResourceVisibility.PUBLIC.name() + ","
+            + LocalResourceVisibility.PUBLIC.name());
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);
@@ -455,11 +499,13 @@ public class TestMRApps {
     DistributedCache.addCacheArchive(archive, conf);
     conf.set(MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, "10");
     conf.set(MRJobConfig.CACHE_ARCHIVES_SIZES, "10");
-    conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES,
+        LocalResourceVisibility.APPLICATION.name());
     DistributedCache.addCacheFile(file, conf);
     conf.set(MRJobConfig.CACHE_FILE_TIMESTAMPS, "11");
     conf.set(MRJobConfig.CACHE_FILES_SIZES, "11");
-    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, "true");
+    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES,
+        LocalResourceVisibility.APPLICATION.name());
     Map<String, LocalResource> localResources = 
       new HashMap<String, LocalResource>();
     MRApps.setupDistributedCache(conf, localResources);

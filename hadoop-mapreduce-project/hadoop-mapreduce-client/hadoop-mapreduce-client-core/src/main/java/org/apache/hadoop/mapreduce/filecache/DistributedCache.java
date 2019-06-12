@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
 import java.net.URI;
 
@@ -219,7 +220,8 @@ public class DistributedCache {
   @Deprecated
   public static Path[] getLocalCacheFiles(Configuration conf)
     throws IOException {
-    return StringUtils.stringToPath(conf.getStrings(MRJobConfig.CACHE_LOCALFILES));
+    return StringUtils.stringToPath(
+        conf.getStrings(MRJobConfig.CACHE_LOCALFILES));
   }
 
   /**
@@ -290,6 +292,32 @@ public class DistributedCache {
    * will be created from the job's working directory to each file in the
    * parent directory.
    *
+   * @param uri
+   * @param visibility
+   * @param timeStamp
+   * @param fileLen
+   * @param conf
+   */
+  public static void addCacheArchiveWithMeta(
+      URI uri, LocalResourceVisibility visibility,
+      long fileLen, long timeStamp, Configuration conf) {
+    appendToConfigItem(MRJobConfig.CACHE_ARCHIVES, uri.toString(), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_ARCHIVES_VISIBILITIES, visibility.name(), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_ARCHIVES_SIZES, Long.toString(fileLen), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_ARCHIVES_TIMESTAMPS, Long.toString(timeStamp), conf);
+  }
+
+  /**
+   * Add a file to be localized to the conf.  The localized file will be
+   * downloaded to the execution node(s), and a link will created to the
+   * file from the job's working directory. If the last part of URI's path name
+   * is "*", then the entire parent directory will be localized and links
+   * will be created from the job's working directory to each file in the
+   * parent directory.
+   *
    * The access permissions of the file will determine whether the localized
    * file will be shared across jobs.  If the file is not readable by other or
    * if any of its parent directories is not executable by other, then the
@@ -310,6 +338,39 @@ public class DistributedCache {
     String files = conf.get(MRJobConfig.CACHE_FILES);
     conf.set(MRJobConfig.CACHE_FILES, files == null ? uri.toString() : files + ","
              + uri.toString());
+  }
+
+  /**
+   * Add a file to be localized to the conf.  The localized file will be
+   * downloaded to the execution node(s), and a link will created to the
+   * file from the job's working directory. If the last part of URI's path name
+   * is "*", then the entire parent directory will be localized and links
+   * will be created from the job's working directory to each file in the
+   * parent directory.
+   *
+   * @param uri
+   * @param visibility
+   * @param timeStamp
+   * @param conf
+   */
+  public static void addCacheFileWithMeta(
+      URI uri, LocalResourceVisibility visibility,
+      long timeStamp, long fileLen, Configuration conf) {
+    appendToConfigItem(MRJobConfig.CACHE_FILES, uri.toString(), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_FILE_VISIBILITIES, visibility.name(), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_FILE_TIMESTAMPS, Long.toString(timeStamp), conf);
+    appendToConfigItem(
+        MRJobConfig.CACHE_FILES_SIZES, Long.toString(fileLen), conf);
+  }
+
+  private static void appendToConfigItem(
+      String key, String valueToAppend, Configuration conf) {
+    String existingVal = conf.get(key);
+    conf.set(
+        key, existingVal == null ?
+            valueToAppend : existingVal + "," + valueToAppend);
   }
 
   /**
@@ -401,7 +462,7 @@ public class DistributedCache {
   @Deprecated
   public static void addArchiveToClassPath(Path archive, Configuration conf)
     throws IOException {
-    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+    addArchiveToClassPath(archive, conf, archive.getFileSystem(conf), true);
   }
 
   /**
@@ -411,9 +472,10 @@ public class DistributedCache {
    * @param archive Path of the archive to be added
    * @param conf Configuration that contains the classpath setting
    * @param fs FileSystem with respect to which {@code archive} should be interpreted.
+   * @param addToCache add archives to cache or classpath only
    */
-  public static void addArchiveToClassPath
-         (Path archive, Configuration conf, FileSystem fs)
+  public static void addArchiveToClassPath(
+      Path archive, Configuration conf, FileSystem fs, boolean addToCache)
       throws IOException {
     String classpath = conf.get(MRJobConfig.CLASSPATH_ARCHIVES);
     conf.set(MRJobConfig.CLASSPATH_ARCHIVES, classpath == null ? archive
@@ -468,6 +530,35 @@ public class DistributedCache {
     return true;
   }
 
+  /**
+   * Parse and return the LocalResourceVisibilities, return defaultVis when
+   * the visibilities are booleans. Old MR client will set visibilities
+   * as boolean.
+   * @param strs
+   * {@link LocalResourceVisibility} The defaultVis will be used as result
+   * when the string is boolean
+   * @return
+   */
+  private static LocalResourceVisibility[] parseLocalResourceVisibilities(
+      String[] strs) {
+    if (null == strs) {
+      return null;
+    }
+    LocalResourceVisibility[] result = new LocalResourceVisibility[strs.length];
+    for(int i=0; i < strs.length; ++i) {
+      if (strs[i].equalsIgnoreCase("true")
+          || strs[i].equalsIgnoreCase("false")) {
+        // The client before 2.9 will set visibility to be boolean.
+        // So keep the behavior unchanged while it's old client.
+        result[i] = strs[i].equalsIgnoreCase("true") ?
+            LocalResourceVisibility.PUBLIC : LocalResourceVisibility.PRIVATE;
+      } else {
+        result[i] = LocalResourceVisibility.valueOf(strs[i].toUpperCase());
+      }
+    }
+    return result;
+  }
+
   private static boolean[] parseBooleans(String[] strs) {
     if (null == strs) {
       return null;
@@ -480,23 +571,31 @@ public class DistributedCache {
   }
 
   /**
-   * Get the booleans on whether the files are public or not.  Used by
-   * internal DistributedCache and MapReduce code.
+   * Get the visibilities of cache files. If the value is Boolean,
+   * then it's set by old MR client. It will return
+   * MRJobConfig.FILES_VISIBILITY_DEFAULT in this case.
+   * It's Used by internal DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
    * @return a string array of booleans
    */
-  public static boolean[] getFileVisibilities(Configuration conf) {
-    return parseBooleans(conf.getStrings(MRJobConfig.CACHE_FILE_VISIBILITIES));
+  public static LocalResourceVisibility[] getFileVisibilities(
+      Configuration conf) {
+    return parseLocalResourceVisibilities(
+        conf.getStrings(MRJobConfig.CACHE_FILE_VISIBILITIES));
   }
 
   /**
-   * Get the booleans on whether the archives are public or not.  Used by
-   * internal DistributedCache and MapReduce code.
+   * Get the visibilities of cache files. If the value is Boolean, which means
+   * it's set by old MR client. The method will return
+   * MRJobConfig.ARCHIEVES_VISIBILITY_DEFAULT in this case.
+   * Used by internal DistributedCache and MapReduce code.
    * @param conf The configuration which stored the timestamps
    * @return a string array of booleans
    */
-  public static boolean[] getArchiveVisibilities(Configuration conf) {
-    return parseBooleans(conf.getStrings(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES));
+  public static LocalResourceVisibility[] getArchiveVisibilities(
+      Configuration conf) {
+    return parseLocalResourceVisibilities(
+        conf.getStrings(MRJobConfig.CACHE_ARCHIVES_VISIBILITIES));
   }
 
   /**

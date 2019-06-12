@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -1134,16 +1136,20 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   }
 
   /**
-   * Add a archives to be localized
+   * Add a archives to be localized. Please use
+   * {@link #addArchiveToSharedCache(URI, Configuration)}
+   * instead if possible.
    * @param uri The uri of the cache to be localized
    */
   public void addCacheArchive(URI uri) {
     ensureState(JobState.DEFINE);
     DistributedCache.addCacheArchive(uri, conf);
   }
-  
+
   /**
-   * Add a file to be localized
+   * Add a file to be localized. Please use
+   * @see #addFileToSharedCache(URI, Configuration)
+   * instead if it satisfies your need.
    * @param uri The uri of the cache to be localized
    */
   public void addCacheFile(URI uri) {
@@ -1180,7 +1186,8 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   public void addArchiveToClassPath(Path archive)
     throws IOException {
     ensureState(JobState.DEFINE);
-    DistributedCache.addArchiveToClassPath(archive, conf, archive.getFileSystem(conf));
+    DistributedCache.addArchiveToClassPath(
+        archive, conf, archive.getFileSystem(conf), true);
   }
 
   /**
@@ -1416,6 +1423,21 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
   }
 
   /**
+   * This is to append the shared cache upload policies
+   * for files (including libjars) to existing settings.
+   *
+   * @param conf Configuration which stores the shared cache upload policies
+   * @param policies A map containing the shared cache upload policies for a set
+   *          of resources. The key is the url of the resource and the value is
+   *          the upload policy. True if it should be uploaded, false otherwise.
+   */
+  @Unstable
+  public static void appendFileSharedCacheUploadPolicies(
+      Configuration conf, Map<String, Boolean> policies) {
+    appendSharedCacheUploadPolicies(conf, policies, true);
+  }
+
+  /**
    * This is to set the shared cache upload policies for archives. If the
    * parameter was previously set, this method will replace the old value with
    * the new provided map.
@@ -1472,6 +1494,28 @@ public class Job extends JobContextImpl implements JobContext, AutoCloseable {
     }
   }
 
+  private static void appendSharedCacheUploadPolicies(
+      Configuration conf, Map<String, Boolean> policies, boolean areFiles) {
+    Map<String, Boolean> existingPolicies =
+        getSharedCacheUploadPolicies(conf, areFiles);
+    Set<String> s = new HashSet<String>(existingPolicies.keySet());
+    s.retainAll(policies.keySet());
+    for (String key : s) {
+      String msg = key +
+          "'s retention policy is already in config! Existing policy:"
+          + existingPolicies.get(key) + ", new policy:" + policies.get(key);
+      if (existingPolicies.get(key).booleanValue()
+          != policies.get(key).booleanValue()) {
+        LOG.error(msg);
+        throw new IllegalArgumentException(msg);
+      } else {
+        msg = msg + ", will ignore the append op.";
+        LOG.warn(msg);
+      }
+    }
+    policies.putAll(existingPolicies);
+    setSharedCacheUploadPolicies(conf, policies, areFiles);
+  }
   /**
    * Deserialize a map of shared cache upload policies from a config parameter.
    *

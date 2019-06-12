@@ -30,7 +30,10 @@ import org.junit.Test;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -138,5 +141,80 @@ public class TestJobSubmissionFiles {
     when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
     assertEquals(stagingPath,
         JobSubmissionFiles.getStagingDir(cluster, conf, user));
+  }
+
+  @Test
+  public void testSetStagingDirDefaultPermission()
+      throws Exception {
+    Cluster cluster = mock(Cluster.class);
+    Configuration conf = new Configuration();
+    Path stagingPath = mock(Path.class);
+    UserGroupInformation user = UserGroupInformation
+        .createUserForTesting(USER_1, GROUP_NAMES);
+    assertEquals(USER_1, user.getUserName());
+    FileSystem fs = new FileSystemTestHelper.MockFileSystem();
+    when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
+    when(stagingPath.getFileSystem(conf)).thenReturn(fs);
+
+    //Staging directory owner full principal name is in lower case.
+    String stagingDirOwner = USER_1.toLowerCase();
+    FileStatus fileStatus = new FileStatus(1, true, 1, 1, 100L, 100L,
+        FsPermission.getDefault(), stagingDirOwner, stagingDirOwner,
+        stagingPath);
+    when(fs.getFileStatus(stagingPath)).thenReturn(fileStatus);
+    assertEquals(stagingPath,
+        JobSubmissionFiles.getStagingDir(cluster, conf, user));
+
+    FsPermission defaultPerm =
+        FsPermission.createImmutable(
+            MRJobConfig.DEFAULT_MR_JOB_STAGING_DIR_PERMISSION);
+    verify(((FileSystemTestHelper.MockFileSystem) fs).getRawFileSystem(),
+        times(1)).setPermission(stagingPath, defaultPerm);
+  }
+
+  @Test
+  public void testSetStagingDirCustomPermission()
+      throws Exception {
+    Cluster cluster = mock(Cluster.class);
+    Configuration conf = new Configuration();
+    Path stagingPath = mock(Path.class);
+    UserGroupInformation user = UserGroupInformation
+        .createUserForTesting(USER_1, GROUP_NAMES);
+    assertEquals(USER_1, user.getUserName());
+    FileSystem fs = new FileSystemTestHelper.MockFileSystem();
+    when(cluster.getStagingAreaDir()).thenReturn(stagingPath);
+    when(stagingPath.getFileSystem(conf)).thenReturn(fs);
+    conf.set(MRJobConfig.MR_JOB_STAGING_DIR_PERMISSION, "0711");
+
+    //Staging directory owner full principal name is in lower case.
+    String stagingDirOwner = USER_1.toLowerCase();
+    FileStatus fileStatus = new FileStatus(1, true, 1, 1, 100L, 100L,
+        FsPermission.getDefault(), stagingDirOwner, stagingDirOwner,
+        stagingPath);
+    when(fs.getFileStatus(stagingPath)).thenReturn(fileStatus);
+    assertEquals(stagingPath,
+        JobSubmissionFiles.getStagingDir(cluster, conf, user));
+
+    FsPermission permission =
+        FsPermission.createImmutable((short) 0711);
+    verify(((FileSystemTestHelper.MockFileSystem) fs).getRawFileSystem(),
+        times(1)).setPermission(stagingPath, permission);
+  }
+
+  @Test
+  public void testGetJobDistCacheLibjarsPath() {
+    Path submitJobDir = new Path("/JobDir");
+    assertTrue(
+        JobSubmissionFiles.getJobDistCacheLibjarsPath(
+            submitJobDir, MRResourceVisibility.PUBLIC).
+            toString().equals("/JobDir/public/libjars"));
+    assertTrue(
+        JobSubmissionFiles.getJobDistCacheLibjarsPath(
+            submitJobDir, MRResourceVisibility.APPLICATION).
+            toString().equals("/JobDir/application/libjars"));
+    assertTrue(
+        JobSubmissionFiles.getJobDistCacheLibjarsPath(
+            submitJobDir, MRResourceVisibility.PRIVATE).
+            toString().equals("/JobDir/private/libjars"));
   }
 }

@@ -54,7 +54,6 @@ public class SharedCacheConfig {
       return;
     }
 
-
     Collection<String> configs = StringUtils.getTrimmedStringCollection(
         conf.get(MRJobConfig.SHARED_CACHE_MODE,
             MRJobConfig.SHARED_CACHE_MODE_DEFAULT));

@@ -34,7 +34,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.MRJobConfig;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -95,7 +94,8 @@ public class TestClientDistributedCacheManager {
     Configuration jobConf = job.getConfiguration();
     
     Map<URI, FileStatus> statCache = new HashMap<>();
-    ClientDistributedCacheManager.determineTimestamps(jobConf, statCache);
+    ClientDistributedCacheManager.determineTimestampsAndSizes(
+        jobConf, statCache);
     
     FileStatus firstStatus = statCache.get(firstCacheFile.toUri());
     FileStatus secondStatus = statCache.get(secondCacheFile.toUri());
@@ -114,7 +114,8 @@ public class TestClientDistributedCacheManager {
     job.addCacheFile(new Path(TEST_VISIBILITY_CHILD_DIR, "*").toUri());
     jobConf = job.getConfiguration();
     statCache.clear();
-    ClientDistributedCacheManager.determineTimestamps(jobConf, statCache);
+    ClientDistributedCacheManager.determineTimestampsAndSizes(
+        jobConf, statCache);
 
     FileStatus thirdStatus = statCache.get(TEST_VISIBILITY_CHILD_DIR.toUri());
 
@@ -155,7 +156,8 @@ public class TestClientDistributedCacheManager {
     // between wrong and missing
     assertEquals("The file paths were not found to be publicly visible "
         + "even though the full path is publicly accessible",
-        "true,true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+        "PUBLIC,PUBLIC", jobConf.get(
+            MRJobConfig.CACHE_FILE_VISIBILITIES));
     checkCacheEntries(statCache, null, firstCacheFile, relativePath);
 
     job = Job.getInstance(conf);
@@ -169,7 +171,8 @@ public class TestClientDistributedCacheManager {
     // between wrong and missing
     assertEquals("The file path was not found to be publicly visible "
         + "even though the full path is publicly accessible",
-        "true", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+        "PUBLIC",
+        jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
     checkCacheEntries(statCache, null, wildcardPath.getParent());
 
     Path qualifiedParent = fs.makeQualified(TEST_VISIBILITY_PARENT_DIR);
@@ -187,7 +190,8 @@ public class TestClientDistributedCacheManager {
     // between wrong and missing
     assertEquals("The file paths were found to be publicly visible "
         + "even though the parent directory is not publicly accessible",
-        "false,false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+        "APPLICATION,APPLICATION",
+        jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
     checkCacheEntries(statCache, qualifiedParent,
         firstCacheFile, relativePath);
 
@@ -202,7 +206,8 @@ public class TestClientDistributedCacheManager {
     // between wrong and missing
     assertEquals("The file path was found to be publicly visible "
         + "even though the parent directory is not publicly accessible",
-        "false", jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
+        "APPLICATION",
+        jobConf.get(MRJobConfig.CACHE_FILE_VISIBILITIES));
     checkCacheEntries(statCache, qualifiedParent, wildcardPath.getParent());
   }
 

@@ -72,6 +72,7 @@ import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptStartedEvent;
 import org.apache.hadoop.mapreduce.jobhistory.TaskAttemptUnsuccessfulCompletionEvent;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.util.MRResourceUtil;
 import org.apache.hadoop.mapreduce.v2.api.records.Avataar;
 import org.apache.hadoop.mapreduce.v2.api.records.Locality;
 import org.apache.hadoop.mapreduce.v2.api.records.Phase;
@@ -970,10 +971,7 @@ public abstract class TaskAttemptImpl implements
       Path remoteJobJar = jobJarPath.makeQualified(jobJarFs.getUri(),
           jobJarFs.getWorkingDirectory());
       LocalResourceVisibility jobJarViz =
-          conf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
-              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.APPLICATION;
+          MRResourceUtil.getJobJarYarnLocalVisibility(conf);
       // We hard code the job.jar localized symlink in the container directory.
       // This is because the mapreduce app expects the job.jar to be named
       // accordingly. Additionally we set the shared cache upload policy to

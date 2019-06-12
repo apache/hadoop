@@ -120,6 +120,11 @@ public class GenericOptionsParser {
   private CommandLine commandLine;
   private final boolean parseSuccessful;
 
+  // This is key used to pass libjars, files, archives to MRJobResourceUploader
+  public static final String TMP_LIBJARS_CONF_KEY = "tmpjars";
+  public static final String TMP_ARCHIVES_CONF_KEY = "tmparchives";
+  public static final String TMP_FILES_CONF_KEY = "tmpfiles";
+
   /**
    * Create an options parser with the given options to parse the args.
    * @param opts the options
@@ -315,7 +320,7 @@ public class GenericOptionsParser {
 
     if (line.hasOption("libjars")) {
       // for libjars, we allow expansion of wildcards
-      conf.set("tmpjars",
+      conf.set(TMP_LIBJARS_CONF_KEY,
                validateFiles(line.getOptionValue("libjars"), true),
                "from -libjars command line option");
       //setting libjars in client classpath
@@ -328,12 +333,12 @@ public class GenericOptionsParser {
       }
     }
     if (line.hasOption("files")) {
-      conf.set("tmpfiles", 
+      conf.set(TMP_FILES_CONF_KEY,
                validateFiles(line.getOptionValue("files")),
                "from -files command line option");
     }
     if (line.hasOption("archives")) {
-      conf.set("tmparchives", 
+      conf.set(TMP_ARCHIVES_CONF_KEY,
                 validateFiles(line.getOptionValue("archives")),
                 "from -archives command line option");
     }
@@ -402,11 +407,17 @@ public class GenericOptionsParser {
 
   /**
    * takes input as a comma separated list of files
+   * with optional visibility setting
+   * {@see org.apache.hadoop.mapreduce.MRResourceVisibility#public,
+   *   org.apache.hadoop.mapreduce.MRResourceVisibility#private,
+   *   org.apache.hadoop.mapreduce.MRResourceVisibility#application}
    * and verifies if they exist. It defaults for file:///
    * if the files specified do not have a scheme.
    * it returns the paths uri converted defaulting to file:///.
    * So an input of  /home/user/file1,/home/user/file2 would return
    * file:///home/user/file1,file:///home/user/file2.
+   * An input of /home/user/file1::public,/home/user/file2::public would return
+   * file:///home/user/file1::public,file:///home/user/file2::public.
    *
    * @param files the input files argument
    * @param expandWildcard whether a wildcard entry is allowed and expanded. If
@@ -427,52 +438,59 @@ public class GenericOptionsParser {
     }
     List<String> finalPaths = new ArrayList<>(fileArr.length);
     for (int i =0; i < fileArr.length; i++) {
-      String tmp = fileArr[i];
-      if (tmp.isEmpty()) {
+      String rawResourceStr = fileArr[i].trim();
+      if (rawResourceStr.isEmpty()) {
         throw new IllegalArgumentException("File name can't be empty string");
       }
+      ResourceWithVisibilitySetting rawConfigResource
+          = ResourceWithVisibilitySetting.deserialize(rawResourceStr);
+      String resourceUri = rawConfigResource.getPathStr();
       URI pathURI;
       final String wildcard = "*";
-      boolean isWildcard = tmp.endsWith(wildcard) && expandWildcard;
+      boolean isWildcard = resourceUri.endsWith(wildcard) && expandWildcard;
       try {
         if (isWildcard) {
           // strip the wildcard
-          tmp = tmp.substring(0, tmp.length() - 1);
+          resourceUri = resourceUri.substring(0, resourceUri.length() - 1);
         }
         // handle the case where a wildcard alone ("*") or the wildcard on the
         // current directory ("./*") is specified
-        pathURI = matchesCurrentDirectory(tmp) ?
+        pathURI = matchesCurrentDirectory(resourceUri) ?
             new File(Path.CUR_DIR).toURI() :
-            new URI(tmp);
+            new URI(resourceUri);
       } catch (URISyntaxException e) {
         throw new IllegalArgumentException(e);
       }
       Path path = new Path(pathURI);
-      FileSystem localFs = FileSystem.getLocal(conf);
-      if (pathURI.getScheme() == null) {
+      FileSystem fs = FileSystem.getLocal(conf);
+      if (pathURI.getScheme() != null && pathURI.getScheme() != "file") {
         //default to the local file system
         //check if the file exists or not first
-        localFs.getFileStatus(path);
-        if (isWildcard) {
-          expandWildcard(finalPaths, path, localFs);
-        } else {
-          finalPaths.add(path.makeQualified(localFs.getUri(),
-              localFs.getWorkingDirectory()).toString());
+        fs = path.getFileSystem(conf);
+
+      }
+      // check if the file exists in this file system
+      // we need to recreate this filesystem object to copy
+      // these files to the file system ResourceManager is running
+      // on.
+      fs.getFileStatus(path);
+      if (isWildcard) {
+        List<String> expandJarList = expandWildcard(path, fs);
+        String visibilitySettings = rawConfigResource.getVisibilitySettings();
+        for (String pathStr : expandJarList) {
+          finalPaths.add(ResourceWithVisibilitySetting.serialize(
+              new ResourceWithVisibilitySetting(pathStr, visibilitySettings)));
         }
       } else {
-        // check if the file exists in this file system
-        // we need to recreate this filesystem object to copy
-        // these files to the file system ResourceManager is running
-        // on.
-        FileSystem fs = path.getFileSystem(conf);
-        // existence check
-        fs.getFileStatus(path);
-        if (isWildcard) {
-          expandWildcard(finalPaths, path, fs);
-        } else {
-          finalPaths.add(path.makeQualified(fs.getUri(),
-              fs.getWorkingDirectory()).toString());
-        }
+        ResourceWithVisibilitySetting tmpResource =
+            new ResourceWithVisibilitySetting(
+                path.makeQualified(
+                    fs.getUri(), fs.getWorkingDirectory()).toString(),
+            rawConfigResource.getVisibilitySettings());
+        LOG.debug("Add tmp resource:"
+            + ResourceWithVisibilitySetting.serialize(tmpResource)
+            + ", uri:" + tmpResource.getPathStr());
+        finalPaths.add(ResourceWithVisibilitySetting.serialize(tmpResource));
       }
     }
     if (finalPaths.isEmpty()) {
@@ -486,7 +504,7 @@ public class GenericOptionsParser {
         path.equals(Path.CUR_DIR + File.separator);
   }
 
-  private void expandWildcard(List<String> finalPaths, Path path, FileSystem fs)
+  private List<String> expandWildcard(Path path, FileSystem fs)
       throws IOException {
     FileStatus status = fs.getFileStatus(path);
     if (!status.isDirectory()) {
@@ -497,12 +515,13 @@ public class GenericOptionsParser {
         fs.equals(FileSystem.getLocal(conf)));
     if (jars.isEmpty()) {
       LOG.warn(path + " does not have jars in it. It will be ignored.");
-    } else {
-      for (Path jar: jars) {
-        finalPaths.add(jar.makeQualified(fs.getUri(),
-            fs.getWorkingDirectory()).toString());
-      }
     }
+    List<String> res = new ArrayList<>();
+    for (Path jarPath : jars) {
+      res.add(jarPath.makeQualified(
+          fs.getUri(), fs.getWorkingDirectory()).toString());
+    }
+    return res;
   }
 
   /**

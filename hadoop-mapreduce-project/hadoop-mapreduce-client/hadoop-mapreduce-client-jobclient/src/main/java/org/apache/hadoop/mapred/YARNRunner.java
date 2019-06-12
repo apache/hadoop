@@ -62,6 +62,7 @@ import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.util.MRResourceUtil;
 import org.apache.hadoop.mapreduce.v2.LogParams;
 import org.apache.hadoop.mapreduce.v2.api.MRClientProtocol;
 import org.apache.hadoop.mapreduce.v2.api.protocolrecords.GetDelegationTokenRequest;
@@ -406,10 +407,7 @@ public class YARNRunner implements ClientProtocol {
       FileContext fccc =
           FileContext.getFileContext(jobJarPath.toUri(), jobConf);
       LocalResourceVisibility jobJarViz =
-          jobConf.getBoolean(MRJobConfig.JOBJAR_VISIBILITY,
-              MRJobConfig.JOBJAR_VISIBILITY_DEFAULT)
-                  ? LocalResourceVisibility.PUBLIC
-                  : LocalResourceVisibility.APPLICATION;
+          MRResourceUtil.getJobJarYarnLocalVisibility(conf);
       LocalResource rc = createApplicationResource(
           FileContext.getFileContext(jobJarPath.toUri(), jobConf), jobJarPath,
           MRJobConfig.JOB_JAR, LocalResourceType.PATTERN, jobJarViz,

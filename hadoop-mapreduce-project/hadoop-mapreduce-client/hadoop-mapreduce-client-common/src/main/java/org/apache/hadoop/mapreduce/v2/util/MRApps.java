@@ -137,7 +137,8 @@ public class MRApps extends Apps {
     RUNNING(
         new TaskState[]{TaskState.RUNNING}),
     PENDING(new TaskState[]{TaskState.SCHEDULED}),
-    COMPLETED(new TaskState[]{TaskState.SUCCEEDED, TaskState.FAILED, TaskState.KILLED});
+    COMPLETED(new TaskState[]{
+        TaskState.SUCCEEDED, TaskState.FAILED, TaskState.KILLED});
 
     private final List<TaskState> correspondingStates;
 
@@ -439,11 +440,31 @@ public class MRApps extends Apps {
     }
   }
 
-  private static final String STAGING_CONSTANT = ".staging";
   public static Path getStagingAreaDir(Configuration conf, String user) {
-    return new Path(conf.get(MRJobConfig.MR_AM_STAGING_DIR,
-        MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
-        + Path.SEPARATOR + user + Path.SEPARATOR + STAGING_CONSTANT);
+    // We will check MAPREDUCE_JOB_DIR first to prevent
+    // inconsistent staging dir between MR job client
+    // and application master. E.g. user used an old client
+    // which refers to /user/test/.staging
+    // and the application master which links a new version jar might
+    // refer /user/test/.newstaging
+    // as staging dir. We should refer to "/user/test/.staging" set by client.
+    // So we will check MAPREDUCE_JOB_DIR to see whether
+    // the configuration had been set by client.
+    // If it's set we should refer the existing staging dir
+    // instead of combining the parameters.
+    String jobDirPath = conf.get(MRJobConfig.MAPREDUCE_JOB_DIR);
+    if (jobDirPath != null) {
+      // The job dir path is already set by MR client. The format should be like
+      // ${stagingDir}/job_1234XXX
+      return new Path(jobDirPath).getParent();
+    }
+    return new Path(
+        conf.get(
+            MRJobConfig.MR_AM_STAGING_DIR,
+            MRJobConfig.DEFAULT_MR_AM_STAGING_DIR)
+        + Path.SEPARATOR + user + Path.SEPARATOR
+        + conf.get(MRJobConfig.MR_USER_STAGING_DIR_NAME,
+            MRJobConfig.DEFAULT_MR_USER_STAGING_DIR_NAME));
   }
 
   public static String getJobFile(Configuration conf, String user, 
