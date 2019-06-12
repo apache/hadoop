@@ -151,7 +151,7 @@ public final class TestUtils {
    *
    * @return DatanodeDetails
    */
-  private static DatanodeDetails createDatanodeDetails(String uuid,
+  public static DatanodeDetails createDatanodeDetails(String uuid,
       String hostname, String ipAddress, String networkLocation) {
     DatanodeDetails.Port containerPort = DatanodeDetails.newPort(
         DatanodeDetails.Port.Name.STANDALONE, 0);

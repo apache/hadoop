@@ -23,6 +23,9 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.net.NetConstants;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.net.Node;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
@@ -44,14 +47,19 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMVersionRequestProto;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.metrics2.util.MBeans;
+import org.apache.hadoop.net.CachedDNSToSwitchMapping;
+import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.TableMapping;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.VersionResponse;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.RegisteredCommand;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
 
+import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,6 +101,9 @@ public class SCMNodeManager implements NodeManager {
   // Node manager MXBean
   private ObjectName nmInfoBean;
   private final StorageContainerManager scmManager;
+  private final NetworkTopology clusterMap;
+  private final DNSToSwitchMapping dnsToSwitchMapping;
+  private final boolean useHostname;
 
   /**
    * Constructs SCM machine Manager.
@@ -108,6 +119,18 @@ public class SCMNodeManager implements NodeManager {
     LOG.info("Entering startup safe mode.");
     registerMXBean();
     this.metrics = SCMNodeMetrics.create(this);
+    this.clusterMap = scmManager.getClusterMap();
+    Class<? extends DNSToSwitchMapping> dnsToSwitchMappingClass =
+        conf.getClass(DFSConfigKeys.NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+            TableMapping.class, DNSToSwitchMapping.class);
+    DNSToSwitchMapping newInstance = ReflectionUtils.newInstance(
+        dnsToSwitchMappingClass, conf);
+    this.dnsToSwitchMapping =
+        ((newInstance instanceof CachedDNSToSwitchMapping) ? newInstance
+            : new CachedDNSToSwitchMapping(newInstance));
+    this.useHostname = conf.getBoolean(
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME,
+        DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME_DEFAULT);
   }
 
   private void registerMXBean() {
@@ -228,7 +251,19 @@ public class SCMNodeManager implements NodeManager {
       datanodeDetails.setIpAddress(dnAddress.getHostAddress());
     }
     try {
+      String location;
+      if (useHostname) {
+        datanodeDetails.setNetworkName(datanodeDetails.getHostName());
+        location = nodeResolve(datanodeDetails.getHostName());
+      } else {
+        datanodeDetails.setNetworkName(datanodeDetails.getIpAddress());
+        location = nodeResolve(datanodeDetails.getIpAddress());
+      }
+      if (location != null) {
+        datanodeDetails.setNetworkLocation(location);
+      }
       nodeStateManager.addNode(datanodeDetails);
+      clusterMap.add(datanodeDetails);
       // Updating Node Report, as registration is successful
       processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
@@ -236,6 +271,7 @@ public class SCMNodeManager implements NodeManager {
       LOG.trace("Datanode is already registered. Datanode: {}",
           datanodeDetails.toString());
     }
+
     return RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
         .setDatanodeUUID(datanodeDetails.getUuidString())
         .setClusterID(this.clusterID)
@@ -515,5 +551,36 @@ public class SCMNodeManager implements NodeManager {
     return commandQueue.getCommand(dnID);
   }
 
+  /**
+   * Given datanode address or host name, returns the DatanodeDetails for the
+   * node.
+   *
+   * @param address node host address
+   * @return the given datanode, or null if not found
+   */
+  @Override
+  public DatanodeDetails getNode(String address) {
+    Node node = null;
+    String location = nodeResolve(address);
+    if (location != null) {
+      node = clusterMap.getNode(location + NetConstants.PATH_SEPARATOR_STR +
+          address);
+    }
+    return node == null ? null : (DatanodeDetails)node;
+  }
 
+  private String nodeResolve(String hostname) {
+    List<String> hosts = new ArrayList<>(1);
+    hosts.add(hostname);
+    List<String> resolvedHosts = dnsToSwitchMapping.resolve(hosts);
+    if (resolvedHosts != null && !resolvedHosts.isEmpty()) {
+      String location = resolvedHosts.get(0);
+      LOG.debug("Resolve datanode {} return location {}", hostname, location);
+      return location;
+    } else {
+      LOG.error("Node {} Resolution failed. Please make sure that DNS table " +
+          "mapping or configured mapping is functional.", hostname);
+      return null;
+    }
+  }
 }

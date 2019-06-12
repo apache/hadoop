@@ -22,6 +22,7 @@ import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeStat;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -31,6 +32,7 @@ import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.StorageReportProto;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ozone.protocol.commands.CloseContainerCommand;
 import org.apache.hadoop.ozone.protocol.commands.CommandForDatanode;
 import org.apache.hadoop.ozone.protocol.commands.SCMCommand;
@@ -56,6 +58,10 @@ import java.util.concurrent.TimeoutException;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
+    .NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
+    .NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_HEARTBEAT_INTERVAL;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
     .OZONE_SCM_DEADNODE_INTERVAL;
@@ -945,4 +951,110 @@ public class TestSCMNodeManager {
     }
   }
 
+  /**
+   * Test add node into network topology during node register. Datanode
+   * uses Ip address to resolve network location.
+   */
+  @Test
+  public void testScmRegisterNodeWithIpAddress()
+      throws IOException, InterruptedException, AuthenticationException {
+    testScmRegisterNodeWithNetworkTopology(false);
+  }
+
+  /**
+   * Test add node into network topology during node register. Datanode
+   * uses hostname to resolve network location.
+   */
+  @Test
+  public void testScmRegisterNodeWithHostname()
+      throws IOException, InterruptedException, AuthenticationException {
+    testScmRegisterNodeWithNetworkTopology(true);
+  }
+
+  /**
+   * Test add node into a 4-layer network topology during node register.
+   */
+  @Test
+  public void testScmRegisterNodeWith4LayerNetworkTopology()
+      throws IOException, InterruptedException, AuthenticationException {
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
+        MILLISECONDS);
+
+    // create table mapping file
+    String[] hostNames = {"host1", "host2", "host3", "host4"};
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("nodegroup-mapping").getPath();
+
+    // create and register nodes
+    conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        "org.apache.hadoop.net.TableMapping");
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
+    conf.set(ScmConfigKeys.OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE,
+        "network-topology-nodegroup.xml");
+    final int nodeCount = hostNames.length;
+    // use default IP address to resolve node
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        DatanodeDetails node = TestUtils.createDatanodeDetails(
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
+        nodeManager.register(node, null, null);
+        nodes[i] = node;
+      }
+
+      // verify network topology cluster has all the registered nodes
+      Thread.sleep(4 * 1000);
+      NetworkTopology clusterMap = scm.getClusterMap();
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(nodeCount, clusterMap.getNumOfLeafNode(""));
+      assertEquals(4, clusterMap.getMaxLevel());
+      List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
+      nodeList.stream().forEach(node ->
+          Assert.assertTrue(node.getNetworkLocation().startsWith("/rack1/ng")));
+    }
+  }
+
+  private void testScmRegisterNodeWithNetworkTopology(boolean useHostname)
+      throws IOException, InterruptedException, AuthenticationException {
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL, 1000,
+        MILLISECONDS);
+
+    // create table mapping file
+    String[] hostNames = {"host1", "host2", "host3", "host4"};
+    String[] ipAddress = {"1.2.3.4", "2.3.4.5", "3.4.5.6", "4.5.6.7"};
+    String mapFile = this.getClass().getClassLoader()
+        .getResource("rack-mapping").getPath();
+
+    // create and register nodes
+    conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
+        "org.apache.hadoop.net.TableMapping");
+    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile);
+    if (useHostname) {
+      conf.set(DFSConfigKeys.DFS_DATANODE_USE_DN_HOSTNAME, "true");
+    }
+    final int nodeCount = hostNames.length;
+    // use default IP address to resolve node
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails[] nodes = new DatanodeDetails[nodeCount];
+      for (int i = 0; i < nodeCount; i++) {
+        DatanodeDetails node = TestUtils.createDatanodeDetails(
+            UUID.randomUUID().toString(), hostNames[i], ipAddress[i], null);
+        nodeManager.register(node, null, null);
+        nodes[i] = node;
+      }
+
+      // verify network topology cluster has all the registered nodes
+      Thread.sleep(4 * 1000);
+      NetworkTopology clusterMap = scm.getClusterMap();
+      assertEquals(nodeCount, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(nodeCount, clusterMap.getNumOfLeafNode(""));
+      assertEquals(3, clusterMap.getMaxLevel());
+      List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
+      nodeList.stream().forEach(node ->
+          Assert.assertTrue(node.getNetworkLocation().equals("/rack1")));
+    }
+  }
 }

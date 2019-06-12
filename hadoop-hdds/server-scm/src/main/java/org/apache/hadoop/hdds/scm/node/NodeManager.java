@@ -171,4 +171,13 @@ public interface NodeManager extends StorageContainerNodeProtocol,
    */
   // TODO: We can give better name to this method!
   List<SCMCommand> getCommandQueue(UUID dnID);
+
+  /**
+   * Given datanode host address, returns the DatanodeDetails for the
+   * node.
+   *
+   * @param address node host address
+   * @return the given datanode, or null if not found
+   */
+  DatanodeDetails getNode(String address);
 }

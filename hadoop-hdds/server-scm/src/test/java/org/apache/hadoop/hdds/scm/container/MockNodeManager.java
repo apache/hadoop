@@ -451,6 +451,11 @@ public class MockNodeManager implements NodeManager {
     return null;
   }
 
+  @Override
+  public DatanodeDetails getNode(String address) {
+    return null;
+  }
+
   /**
    * A class to declare some values for the nodes so that our tests
    * won't fail.

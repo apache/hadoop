@@ -309,4 +309,9 @@ public class ReplicationNodeManagerMock implements NodeManager {
   public List<SCMCommand> getCommandQueue(UUID dnID) {
     return null;
   }
+
+  @Override
+  public DatanodeDetails getNode(String address) {
+    return null;
+  }
 }
