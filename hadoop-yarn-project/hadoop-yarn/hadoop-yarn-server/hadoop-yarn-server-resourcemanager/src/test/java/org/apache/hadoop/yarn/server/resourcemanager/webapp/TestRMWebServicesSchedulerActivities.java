@@ -437,25 +437,17 @@ public class TestRMWebServicesSchedulerActivities
       RMApp app1 = rm.submitApp(10, "app1", "user1", null, "b1");
 
       //Get JSON
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      ActivitiesTestUtils.requestWebResource(r, params);
+
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
 
       //Get JSON
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
 
       //Check app activities
       verifyNumberOfAllocations(json, 1);
@@ -502,25 +494,17 @@ public class TestRMWebServicesSchedulerActivities
               10)), null);
 
       //Get JSON
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      ActivitiesTestUtils.requestWebResource(r, params);
+
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
 
       //Get JSON
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
 
       verifyNumberOfAllocations(json, 10);
 
@@ -555,26 +539,17 @@ public class TestRMWebServicesSchedulerActivities
               10)), null);
 
       //Get JSON
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      ActivitiesTestUtils.requestWebResource(r, params);
+
       nm.nodeHeartbeat(true);
       Thread.sleep(5000);
 
       //Get JSON
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 0);
     } finally {
       rm.stop();
@@ -590,24 +565,14 @@ public class TestRMWebServicesSchedulerActivities
       RMApp app1 = rm.submitApp(1024, "app1", "user1", null, "b1");
 
       //Get JSON
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      ActivitiesTestUtils.requestWebResource(r, params);
 
       //Get JSON
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 0);
     } finally {
       rm.stop();
@@ -639,49 +604,23 @@ public class TestRMWebServicesSchedulerActivities
               10)), null);
 
       // Reserve new container
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      ActivitiesTestUtils.requestWebResource(r, params);
 
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 1);
 
       // Do a node heartbeat again without releasing container from app2
-      r = resource();
-      params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 2);
 
       // Finish application 2
@@ -693,26 +632,10 @@ public class TestRMWebServicesSchedulerActivities
           RMContainerEventType.FINISHED);
 
       // Do a node heartbeat again
-      r = resource();
-      params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
       nm2.nodeHeartbeat(true);
       Thread.sleep(1000);
 
-      response = r.path("ws").path("v1").path("cluster").path(
-          "scheduler/app-activities").queryParams(params).accept(
-          MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 3);
     } finally {
       rm.stop();
@@ -847,15 +770,11 @@ public class TestRMWebServicesSchedulerActivities
       RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster")
-          .path("scheduler/app-activities").queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getString("diagnostic"));
 
@@ -867,14 +786,7 @@ public class TestRMWebServicesSchedulerActivities
       cs.handle(new NodeUpdateSchedulerEvent(
           rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
 
-      response =
-          r.path("ws").path("v1").path("cluster")
-              .path("scheduler/app-activities").queryParams(params)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 1);
       JSONObject allocationObj = json.getJSONObject("allocations");
       JSONObject requestAllocationObj =
@@ -904,15 +816,11 @@ public class TestRMWebServicesSchedulerActivities
       RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
-      WebResource r = resource();
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
-      ClientResponse response = r.path("ws").path("v1").path("cluster")
-          .path("scheduler/app-activities").queryParams(params)
-          .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      JSONObject json = response.getEntity(JSONObject.class);
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getString("diagnostic"));
 
@@ -930,14 +838,7 @@ public class TestRMWebServicesSchedulerActivities
       cs.handle(new NodeUpdateSchedulerEvent(
           rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
 
-      response =
-          r.path("ws").path("v1").path("cluster")
-              .path("scheduler/app-activities").queryParams(params)
-              .accept(MediaType.APPLICATION_JSON).get(ClientResponse.class);
-      assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
-          response.getType().toString());
-      json = response.getEntity(JSONObject.class);
-
+      json = ActivitiesTestUtils.requestWebResource(r, params);
       verifyNumberOfAllocations(json, 1);
       JSONObject allocationObj = json.getJSONObject("allocations");
       JSONObject requestAllocationObj =
@@ -967,9 +868,9 @@ public class TestRMWebServicesSchedulerActivities
       MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
 
       WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
-          .path(RMWSConsts.SCHEDULER_APP_ACTIVITIES);
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
       MultivaluedMapImpl params = new MultivaluedMapImpl();
-      params.add("appId", app1.getApplicationId().toString());
       JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
       assertEquals("waiting for display",
           json.getString("diagnostic"));
@@ -1060,6 +961,230 @@ public class TestRMWebServicesSchedulerActivities
           .optString("requestPriority"));
       assertEquals("1", allocation.getJSONObject("requestAllocation")
           .optString("allocationRequestId"));
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testAppLimit() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 4 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 8 * 1024);
+    try {
+      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display",
+          json.getString("diagnostic"));
+
+      // am1 asks for 1 * 5GB container
+      am1.allocate("*", 5120, 1, new ArrayList<>());
+      // trigger scheduling triple, there will be 3 app activities in cache
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // query all app activities without limit
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 3);
+
+      // query all app activities with limit > 3
+      params.putSingle(RMWSConsts.LIMIT, "10");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 3);
+
+      // query app activities with limit = 2
+      params.putSingle(RMWSConsts.LIMIT, "2");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 2);
+
+      // query app activities with limit = 1
+      params.putSingle(RMWSConsts.LIMIT, "1");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 1);
+
+      // query all app activities with invalid limit
+      params.putSingle(RMWSConsts.LIMIT, "STRING");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("limit must be integer!", json.getString("diagnostic"));
+
+      // query all app activities with limit = 0
+      params.putSingle(RMWSConsts.LIMIT, "0");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("limit must be greater than 0!",
+          json.getString("diagnostic"));
+
+      // query all app activities with limit < 0
+      params.putSingle(RMWSConsts.LIMIT, "-3");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("limit must be greater than 0!",
+          json.getString("diagnostic"));
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test(timeout = 30000)
+  public void testAppActions() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
+    try {
+      RMApp app1 = rm.submitApp(512, "app1", "user1", null, "b1");
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+      // am1 asks for 10 * 512MB container
+      am1.allocate("*", 512, 10, new ArrayList<>());
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      params.add("maxTime", 1); //only last for 1 second
+
+      // testing invalid action
+      params.add(RMWSConsts.ACTIONS, "get");
+      params.add(RMWSConsts.ACTIONS, "invalid-action");
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertTrue(json.getString("diagnostic").startsWith("Got invalid action"));
+
+      /*
+       * testing get action
+       */
+      params.putSingle(RMWSConsts.ACTIONS, "get");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display", json.getString("diagnostic"));
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      // app activities won't be recorded
+      params.putSingle(RMWSConsts.ACTIONS, "get");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display", json.getString("diagnostic"));
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      /*
+       * testing update action
+       */
+      params.putSingle(RMWSConsts.ACTIONS, "refresh");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("Successfully notified actions: refresh",
+          json.getString("diagnostic"));
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      Thread.sleep(1000);
+
+      // app activities should be recorded
+      params.putSingle(RMWSConsts.ACTIONS, "get");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 1);
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      Thread.sleep(1000);
+
+      /*
+       * testing update and get actions
+       */
+      params.remove(RMWSConsts.ACTIONS);
+      params.add(RMWSConsts.ACTIONS, "refresh");
+      params.add(RMWSConsts.ACTIONS, "get");
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 1);
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      Thread.sleep(1000);
+
+      // more app activities should be recorded
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 2);
+
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+      Thread.sleep(1000);
+
+      // more app activities should be recorded
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+      verifyNumberOfAllocations(json, 3);
+    } finally {
+      rm.stop();
+    }
+  }
+
+  @Test(timeout=30000)
+  public void testAppSummary() throws Exception {
+    rm.start();
+    CapacityScheduler cs = (CapacityScheduler) rm.getResourceScheduler();
+
+    MockNM nm1 = rm.registerNode("127.0.0.1:1234", 8 * 1024);
+    MockNM nm2 = rm.registerNode("127.0.0.2:1234", 4 * 1024);
+    MockNM nm3 = rm.registerNode("127.0.0.3:1234", 4 * 1024);
+
+    try {
+      RMApp app1 = rm.submitApp(5120, "app1", "user1", null, "b1");
+
+      WebResource r = resource().path(RMWSConsts.RM_WEB_SERVICE_PATH)
+          .path(ActivitiesTestUtils.format(RMWSConsts.SCHEDULER_APP_ACTIVITIES,
+              app1.getApplicationId().toString()));
+      MultivaluedMapImpl params = new MultivaluedMapImpl();
+      JSONObject json = ActivitiesTestUtils.requestWebResource(r, params);
+      assertEquals("waiting for display",
+          json.getString("diagnostic"));
+
+      MockAM am1 = MockRM.launchAndRegisterAM(app1, rm, nm1);
+      // am1 asks for 1 * 5GB container
+      am1.allocate(Arrays.asList(ResourceRequest
+          .newInstance(Priority.newInstance(0), "*",
+              Resources.createResource(5 * 1024), 1)), null);
+      // trigger scheduling
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm2.getNodeId())));
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm3.getNodeId())));
+      cs.handle(new NodeUpdateSchedulerEvent(
+          rm.getRMContext().getRMNodes().get(nm1.getNodeId())));
+
+      params.add(RMWSConsts.SUMMARIZE, "true");
+      params.add(RMWSConsts.GROUP_BY, RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC);
+      json = ActivitiesTestUtils.requestWebResource(r, params);
+
+      // verify that response contains an allocation summary for all nodes
+      verifyNumberOfAllocations(json, 1);
+      JSONObject allocation = json.getJSONObject("allocations");
+      JSONObject reqestAllocation =
+          allocation.getJSONObject("requestAllocation");
+      JSONArray attempts = reqestAllocation.getJSONArray("allocationAttempt");
+      assertEquals(2, attempts.length());
+      for (int i = 0; i < attempts.length(); i++) {
+        JSONObject attempt = attempts.getJSONObject(i);
+        if (attempt.getString("allocationState").equals("SKIPPED")) {
+          JSONArray nodeIds = attempt.optJSONArray("nodeIds");
+          assertEquals(2, nodeIds.length());
+        } else if (attempt.getString("allocationState").equals("RESERVED")) {
+          assertEquals(nm1.getNodeId().toString(),
+              attempt.getString("nodeIds"));
+        }
+      }
     } finally {
       rm.stop();
     }

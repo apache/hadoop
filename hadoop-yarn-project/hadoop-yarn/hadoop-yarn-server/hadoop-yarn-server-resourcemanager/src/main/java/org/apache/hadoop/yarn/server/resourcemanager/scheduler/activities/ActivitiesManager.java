@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.activities;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
@@ -121,7 +122,8 @@ public class ActivitiesManager extends AbstractService {
 
   public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId,
       Set<String> requestPriorities, Set<String> allocationRequestIds,
-      RMWSConsts.ActivitiesGroupBy groupBy) {
+      RMWSConsts.ActivitiesGroupBy groupBy, int limit, boolean summarize,
+      double maxTimeInSeconds) {
     RMApp app = rmContext.getRMApps().get(applicationId);
     if (app != null && app.getFinalApplicationStatus()
         == FinalApplicationStatus.UNDEFINED) {
@@ -140,12 +142,64 @@ public class ActivitiesManager extends AbstractService {
           allocations = new ArrayList(curAllocations);
         }
       }
+      if (summarize && allocations != null) {
+        AppAllocation summaryAppAllocation =
+            getSummarizedAppAllocation(allocations, maxTimeInSeconds);
+        if (summaryAppAllocation != null) {
+          allocations = Lists.newArrayList(summaryAppAllocation);
+        }
+      }
+      if (allocations != null && limit > 0 && limit < allocations.size()) {
+        allocations =
+            allocations.subList(allocations.size() - limit, allocations.size());
+      }
       return new AppActivitiesInfo(allocations, applicationId, groupBy);
     } else {
       return new AppActivitiesInfo(
           "fail to get application activities after finished",
           applicationId.toString());
     }
+  }
+
+  /**
+   * Get summarized app allocation from multiple allocations as follows:
+   * 1. Collect latest allocation attempts on nodes to construct an allocation
+   *    summary on nodes from multiple app allocations which are recorded a few
+   *    seconds before the last allocation.
+   * 2. Copy other fields from the last allocation.
+   */
+  private AppAllocation getSummarizedAppAllocation(
+      List<AppAllocation> allocations, double maxTimeInSeconds) {
+    if (allocations == null || allocations.isEmpty()) {
+      return null;
+    }
+    long startTime = allocations.get(allocations.size() - 1).getTime()
+        - (long) (maxTimeInSeconds * 1000);
+    Map<String, ActivityNode> nodeActivities = new HashMap<>();
+    for (int i = allocations.size() - 1; i >= 0; i--) {
+      AppAllocation appAllocation = allocations.get(i);
+      if (startTime > appAllocation.getTime()) {
+        break;
+      }
+      List<ActivityNode> activityNodes = appAllocation.getAllocationAttempts();
+      for (ActivityNode an : activityNodes) {
+        if (an.getNodeId() != null) {
+          nodeActivities.putIfAbsent(
+              an.getRequestPriority() + "_" + an.getAllocationRequestId() + "_"
+                  + an.getNodeId(), an);
+        }
+      }
+    }
+    AppAllocation lastAppAllocation = allocations.get(allocations.size() - 1);
+    AppAllocation summarizedAppAllocation =
+        new AppAllocation(lastAppAllocation.getPriority(), null,
+            lastAppAllocation.getQueueName());
+    summarizedAppAllocation
+        .updateAppContainerStateAndTime(null, lastAppAllocation.getAppState(),
+            lastAppAllocation.getTime(), lastAppAllocation.getDiagnostic());
+    summarizedAppAllocation
+        .setAllocationAttempts(new ArrayList<>(nodeActivities.values()));
+    return summarizedAppAllocation;
   }
 
   public ActivitiesInfo getActivitiesInfo(String nodeId,

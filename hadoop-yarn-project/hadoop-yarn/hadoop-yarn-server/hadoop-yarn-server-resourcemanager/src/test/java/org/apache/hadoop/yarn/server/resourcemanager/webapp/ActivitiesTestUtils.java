@@ -41,6 +41,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 
@@ -208,5 +210,18 @@ public final class ActivitiesTestUtils {
     assertEquals(MediaType.APPLICATION_JSON_TYPE + "; " + JettyUtils.UTF_8,
         response.getType().toString());
     return response.getEntity(JSONObject.class);
+  }
+
+  /**
+   * Convert format using {name} (HTTP base) into %s (Java based).
+   * @param format Initial format using {}.
+   * @param args Arguments for the format.
+   * @return New format using %s.
+   */
+  public static String format(String format, Object... args) {
+    Pattern p = Pattern.compile("\\{.*?}");
+    Matcher m = p.matcher(format);
+    String newFormat = m.replaceAll("%s");
+    return String.format(newFormat, args);
   }
 }

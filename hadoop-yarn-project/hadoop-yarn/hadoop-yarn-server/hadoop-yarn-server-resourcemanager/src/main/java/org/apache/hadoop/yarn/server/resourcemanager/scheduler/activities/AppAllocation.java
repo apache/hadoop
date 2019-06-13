@@ -84,11 +84,8 @@ public class AppAllocation {
     return appState;
   }
 
-  public String getPriority() {
-    if (priority == null) {
-      return null;
-    }
-    return priority.toString();
+  public Priority getPriority() {
+    return priority;
   }
 
   public String getContainerId() {
@@ -127,5 +124,9 @@ public class AppAllocation {
         this.allocationAttempts.stream().filter(predicate)
             .collect(Collectors.toList());
     return appAllocation;
+  }
+
+  public void setAllocationAttempts(List<ActivityNode> allocationAttempts) {
+    this.allocationAttempts = allocationAttempts;
   }
 }
