@@ -20,6 +20,8 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -129,6 +131,14 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
    */
   default void cleanupCache(long epoch) {
     throw new NotImplementedException("cleanupCache is not implemented");
+  }
+
+  /**
+   * Return cache iterator maintained for this table.
+   */
+  default Iterator<Map.Entry<CacheKey<KEY>, CacheValue<VALUE>>>
+      cacheIterator() {
+    throw new NotImplementedException("cacheIterator is not implemented");
   }
 
   /**

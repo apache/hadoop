@@ -50,7 +50,7 @@ import org.apache.hadoop.security.UserGroupInformation;
  */
 public abstract class OMClientRequest implements RequestAuditor {
 
-  private final OMRequest omRequest;
+  private OMRequest omRequest;
 
   public OMClientRequest(OMRequest omRequest) {
     Preconditions.checkNotNull(omRequest);
@@ -69,7 +69,8 @@ public abstract class OMClientRequest implements RequestAuditor {
    */
   public OMRequest preExecute(OzoneManager ozoneManager)
       throws IOException {
-    return getOmRequest().toBuilder().setUserInfo(getUserInfo()).build();
+    omRequest = getOmRequest().toBuilder().setUserInfo(getUserInfo()).build();
+    return omRequest;
   }
 
   /**
@@ -210,4 +211,5 @@ public abstract class OMClientRequest implements RequestAuditor {
     auditMap.put(OzoneConsts.VOLUME, volume);
     return auditMap;
   }
+
 }

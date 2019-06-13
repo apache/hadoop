@@ -16,31 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.response.bucket;
+package org.apache.hadoop.ozone.om.response.volume;
 
 import java.io.IOException;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .VolumeList;
+
 import org.apache.hadoop.utils.db.BatchOperation;
 
 /**
  * Response for CreateBucket request.
  */
-public final class OMBucketCreateResponse extends OMClientResponse {
+public class OMVolumeCreateResponse extends OMClientResponse {
 
-  private final OmBucketInfo omBucketInfo;
+  private VolumeList volumeList;
+  private OmVolumeArgs omVolumeArgs;
 
-  public OMBucketCreateResponse(OmBucketInfo omBucketInfo,
-      OMResponse omResponse) {
+  public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
+      VolumeList volumeList, OMResponse omResponse) {
     super(omResponse);
-    this.omBucketInfo = omBucketInfo;
+    this.omVolumeArgs = omVolumeArgs;
+    this.volumeList = volumeList;
   }
-
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
@@ -48,16 +53,21 @@ public final class OMBucketCreateResponse extends OMClientResponse {
     // For OmResponse with failure, this should do nothing. This method is
     // not called in failure scenario in OM code.
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
-      String dbBucketKey =
-          omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
-              omBucketInfo.getBucketName());
-      omMetadataManager.getBucketTable().putWithBatch(batchOperation,
-          dbBucketKey, omBucketInfo);
+      String dbVolumeKey =
+          omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
+      String dbUserKey =
+          omMetadataManager.getUserKey(omVolumeArgs.getOwnerName());
+
+      omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
+          dbVolumeKey, omVolumeArgs);
+      omMetadataManager.getUserTable().putWithBatch(batchOperation, dbUserKey,
+          volumeList);
     }
   }
 
-  public OmBucketInfo getOmBucketInfo() {
-    return omBucketInfo;
+  @VisibleForTesting
+  public OmVolumeArgs getOmVolumeArgs() {
+    return omVolumeArgs;
   }
 
 }
