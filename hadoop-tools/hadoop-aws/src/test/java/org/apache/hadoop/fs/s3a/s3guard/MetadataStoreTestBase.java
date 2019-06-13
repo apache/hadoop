@@ -852,7 +852,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff);
 
-    if(!allowMissing()) {
+    if (!allowMissing()) {
       for (String fN : keepFilenames) {
         final PathMetadata pathMetadata = ms.get(strToPath(fN));
         assertNotNull("Kept files should be in the metastore after prune",
@@ -877,13 +877,13 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     long cutoff = 9001;
 
     // Both are expired. Difference is it will only delete the specified one.
-    for(String fN : keepFilenames) {
+    for (String fN : keepFilenames) {
       final PathMetadata pathMetadata = new PathMetadata(makeFileStatus(fN, 1));
       pathMetadata.setLastUpdated(9002L);
       ms.put(pathMetadata);
     }
 
-    for(String fN : removeFilenames) {
+    for (String fN : removeFilenames) {
       final PathMetadata pathMetadata = new PathMetadata(makeFileStatus(fN, 1));
       pathMetadata.setLastUpdated(9000L);
       // tombstones are the deleted files!
@@ -895,7 +895,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     ms.prune(MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED, cutoff,
         prunePath);
 
-    if(!allowMissing()) {
+    if (!allowMissing()) {
       for (String fN : keepFilenames) {
         final PathMetadata pathMetadata = ms.get(strToPath(fN));
         assertNotNull("Kept files should be in the metastore after prune",
@@ -903,7 +903,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       }
     }
 
-    for(String fN : removeFilenames) {
+    for (String fN : removeFilenames) {
       final PathMetadata pathMetadata = ms.get(strToPath(fN));
       assertNull("Expired tombstones should be removed from metastore after "
           + "the prune.", pathMetadata);

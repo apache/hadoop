@@ -22,16 +22,19 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.Assert;
 import org.junit.Test;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.Tristate;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -91,7 +94,7 @@ public class TestS3Guard extends Assert {
     S3Guard.putWithTtl(ms, dlm, timeProvider);
 
     // assert
-    assertEquals(100L, dlm.getLastUpdated());
+    assertEquals("last update in " + dlm, 100L, dlm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
     verify(ms, times(1)).put(dlm);
   }
@@ -111,7 +114,7 @@ public class TestS3Guard extends Assert {
     S3Guard.putWithTtl(ms, pm, timeProvider);
 
     // assert
-    assertEquals(100L, pm.getLastUpdated());
+    assertEquals("last update in " + pm, 100L, pm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
     verify(ms, times(1)).put(pm);
   }
@@ -214,6 +217,46 @@ public class TestS3Guard extends Assert {
 
     // assert
     assertNotNull(pmExpired);
+  }
+
+
+  /**
+   * Makes sure that all uses of TTL timeouts use a consistent time unit.
+   * @throws Throwable failure
+   */
+  @Test
+  public void testTTLConstruction() throws Throwable {
+    // first one
+    ITtlTimeProvider timeProviderExplicit = new S3Guard.TtlTimeProvider(
+        DEFAULT_METADATASTORE_METADATA_TTL);
+
+    // mirror the FS construction,
+    // from a config guaranteed to be empty (i.e. the code defval)
+    Configuration conf = new Configuration(false);
+    long millitime = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+        DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+    assertEquals(15 * 60_000, millitime);
+    S3Guard.TtlTimeProvider fsConstruction = new S3Guard.TtlTimeProvider(
+        millitime);
+    assertEquals("explicit vs fs construction", timeProviderExplicit,
+        fsConstruction);
+    assertEquals("first and second constructor", timeProviderExplicit,
+        new S3Guard.TtlTimeProvider(conf));
+    // set the conf to a time without unit
+    conf.setLong(METADATASTORE_METADATA_TTL,
+        DEFAULT_METADATASTORE_METADATA_TTL);
+    assertEquals("first and second time set through long", timeProviderExplicit,
+        new S3Guard.TtlTimeProvider(conf));
+    double timeInSeconds = DEFAULT_METADATASTORE_METADATA_TTL / 1000;
+    double timeInMinutes = timeInSeconds / 60;
+    String timeStr = String.format("%dm", (int) timeInMinutes);
+    assertEquals(":wrong time in minutes from " + timeInMinutes,
+        "15m", timeStr);
+    conf.set(METADATASTORE_METADATA_TTL, timeStr);
+    assertEquals("Time in millis as string from "
+            + conf.get(METADATASTORE_METADATA_TTL),
+        timeProviderExplicit,
+        new S3Guard.TtlTimeProvider(conf));
   }
 
   void assertContainsPath(FileStatus[] statuses, String pathStr) {

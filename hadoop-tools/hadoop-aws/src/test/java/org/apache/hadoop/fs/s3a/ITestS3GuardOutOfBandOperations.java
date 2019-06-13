@@ -51,6 +51,8 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.junit.Assume.assumeTrue;
@@ -201,8 +203,11 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        METADATASTORE_METADATA_TTL);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
+    config.setLong(METADATASTORE_METADATA_TTL,
+        DEFAULT_METADATASTORE_METADATA_TTL);
     final S3AFileSystem gFs = createFS(uri, config);
     // set back the same metadata store instance
     gFs.setMetadataStore(realMs);

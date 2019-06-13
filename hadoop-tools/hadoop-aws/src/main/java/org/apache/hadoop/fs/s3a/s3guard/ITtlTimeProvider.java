@@ -25,6 +25,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
  * {@code S3Guard.ttlTimeProvider}. By doing this, getNow() can return any
  * value preferred and flaky tests could be avoided. By default getNow()
  * returns the EPOCH in runtime.
+ *
+ * Time is measured in milliseconds,
  */
 public interface ITtlTimeProvider {
   long getNow();

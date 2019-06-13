@@ -25,9 +25,12 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
@@ -46,8 +49,6 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
-
-import javax.annotation.Nullable;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
@@ -147,6 +148,7 @@ public final class S3Guard {
    * @param ms MetadataStore to {@code put()} into.
    * @param status status to store
    * @param instrumentation instrumentation of the s3a file system
+   * @param timeProvider Time provider to use when writing entries
    * @return The same status as passed in
    * @throws IOException if metadata store update failed
    */
@@ -533,7 +535,7 @@ public final class S3Guard {
     public TtlTimeProvider(Configuration conf) {
       this.authoritativeDirTtl =
           conf.getTimeDuration(METADATASTORE_METADATA_TTL,
-              DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.SECONDS);
+              DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -543,6 +545,28 @@ public final class S3Guard {
 
     @Override public long getMetadataTtl() {
       return authoritativeDirTtl;
+    }
+
+    @Override
+    public boolean equals(final Object o) {
+      if (this == o) { return true; }
+      if (o == null || getClass() != o.getClass()) { return false; }
+      final TtlTimeProvider that = (TtlTimeProvider) o;
+      return authoritativeDirTtl == that.authoritativeDirTtl;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(authoritativeDirTtl);
+    }
+
+    @Override
+    public String toString() {
+      final StringBuilder sb = new StringBuilder(
+          "TtlTimeProvider{");
+      sb.append("authoritativeDirTtl=").append(authoritativeDirTtl);
+      sb.append(" millis}");
+      return sb.toString();
     }
   }
 

@@ -355,8 +355,12 @@ public final class Constants {
    */
   public static final String METADATASTORE_METADATA_TTL =
       "fs.s3a.metadatastore.metadata.ttl";
+
+  /**
+   * Default TTL in millseconds: {@value}.
+   */
   public static final long DEFAULT_METADATASTORE_METADATA_TTL =
-      TimeUnit.MINUTES.toSeconds(15);
+      TimeUnit.MINUTES.toMillis(15);
 
   /** read ahead buffer size to prevent connection re-establishments. */
   public static final String READAHEAD_RANGE = "fs.s3a.readahead.range";

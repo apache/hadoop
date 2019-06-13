@@ -24,8 +24,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
-
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
+
 import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
