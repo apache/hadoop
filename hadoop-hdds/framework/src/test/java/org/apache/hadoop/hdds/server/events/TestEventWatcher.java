@@ -179,22 +179,32 @@ public class TestEventWatcher {
 
     queue.fireEvent(REPLICATION_COMPLETED, event1Completed);
 
-    Thread.sleep(2200L);
+    //lease manager timeout = 2000L
+    Thread.sleep(3 * 2000L);
+
+    queue.processAll(2000L);
 
     //until now: 3 in-progress activities are tracked with three
     // UnderreplicatedEvents. The first one is completed, the remaining two
-    // are timed out (as the timeout -- defined in the leasmanager -- is 2000ms.
+    // are timed out (as the timeout -- defined in the lease manager -- is
+    // 2000ms).
 
     EventWatcherMetrics metrics = replicationWatcher.getMetrics();
 
     //3 events are received
     Assert.assertEquals(3, metrics.getTrackedEvents().value());
 
-    //one is finished. doesn't need to be resent
-    Assert.assertEquals(1, metrics.getCompletedEvents().value());
+    //completed + timed out = all messages
+    Assert.assertEquals(
+        "number of timed out and completed messages should be the same as the"
+            + " all messages",
+        metrics.getTrackedEvents().value(),
+        metrics.getCompletedEvents().value() + metrics.getTimedOutEvents()
+            .value());
 
-    //Other two are timed out and resent
-    Assert.assertEquals(2, metrics.getTimedOutEvents().value());
+    //_at least_ two are timed out.
+    Assert.assertTrue("At least two events should be timed out.",
+        metrics.getTimedOutEvents().value() >= 2);
 
     DefaultMetricsSystem.shutdown();
   }
