@@ -28,5 +28,6 @@ import java.io.IOException;
 public interface OMStarterInterface {
   void start(OzoneConfiguration conf) throws IOException,
       AuthenticationException;
-  boolean init(OzoneConfiguration conf) throws IOException;
+  boolean init(OzoneConfiguration conf) throws IOException,
+      AuthenticationException;
 }
