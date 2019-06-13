@@ -446,7 +446,7 @@ public class IPCLoggerChannel implements AsyncLogger {
           public void onSuccess(Void t) {
             unreserveQueueSpace(data.length);
           }
-        });
+        }, MoreExecutors.directExecutor());
       }
     }
     return ret;

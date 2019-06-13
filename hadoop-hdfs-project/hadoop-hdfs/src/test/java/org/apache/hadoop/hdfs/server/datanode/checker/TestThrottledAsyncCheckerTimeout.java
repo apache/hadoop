@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.apache.hadoop.util.FakeTimer;
 import org.junit.Before;
 import org.junit.Rule;
@@ -101,7 +102,7 @@ public class TestThrottledAsyncCheckerTimeout {
         numCallbackInvocationsFailure.incrementAndGet();
         callbackResult.set(true);
       }
-    });
+    }, MoreExecutors.directExecutor());
 
     while (!callbackResult.get()) {
       // Wait for the callback
@@ -133,7 +134,8 @@ public class TestThrottledAsyncCheckerTimeout {
         .schedule(target, true);
 
     assertTrue(olf1.isPresent());
-    Futures.addCallback(olf1.get(), futureCallback);
+    Futures.addCallback(olf1.get(), futureCallback,
+        MoreExecutors.directExecutor());
 
     // Verify that timeout results in only 1 onFailure call and 0 onSuccess
     // calls.
@@ -149,7 +151,8 @@ public class TestThrottledAsyncCheckerTimeout {
         .schedule(target, true);
 
     assertTrue(olf2.isPresent());
-    Futures.addCallback(olf2.get(), futureCallback);
+    Futures.addCallback(olf2.get(), futureCallback,
+        MoreExecutors.directExecutor());
 
     // Verify that normal check (dummy) results in only 1 onSuccess call.
     // Number of times onFailure is invoked should remain the same i.e. 1.
@@ -187,7 +190,7 @@ public class TestThrottledAsyncCheckerTimeout {
         throwable[0] = t;
         callbackResult.set(true);
       }
-    });
+    }, MoreExecutors.directExecutor());
 
     while (!callbackResult.get()) {
       // Wait for the callback
