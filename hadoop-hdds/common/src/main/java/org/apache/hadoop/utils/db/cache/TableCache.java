@@ -22,6 +22,9 @@ package org.apache.hadoop.utils.db.cache;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
+import java.util.Iterator;
+import java.util.Map;
+
 /**
  * Cache used for RocksDB tables.
  * @param <CACHEKEY>
@@ -60,4 +63,10 @@ public interface TableCache<CACHEKEY extends CacheKey,
    * @return size
    */
   int size();
+
+  /**
+   * Return an iterator for the cache.
+   * @return iterator of the underlying cache for the table.
+   */
+  Iterator<Map.Entry<CACHEKEY, CACHEVALUE>> iterator();
 }

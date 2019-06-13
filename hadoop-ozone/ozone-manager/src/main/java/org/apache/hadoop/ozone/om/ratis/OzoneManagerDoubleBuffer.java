@@ -142,11 +142,13 @@ public class OzoneManagerDoubleBuffer {
   }
 
   private void cleanupCache(long lastRatisTransactionIndex) {
-    // As now only bucket transactions are handled only called cleanupCache
-    // on bucketTable.
+    // As now only volume and bucket transactions are handled only called
+    // cleanupCache on bucketTable.
     // TODO: After supporting all write operations we need to call
     //  cleanupCache on the tables only when buffer has entries for that table.
     omMetadataManager.getBucketTable().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getVolumeTable().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getUserTable().cleanupCache(lastRatisTransactionIndex);
   }
 
   /**

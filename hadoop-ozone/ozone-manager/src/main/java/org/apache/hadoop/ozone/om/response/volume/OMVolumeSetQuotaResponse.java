@@ -16,55 +16,40 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.response;
-
-import java.io.IOException;
+package org.apache.hadoop.ozone.om.response.volume;
 
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .VolumeList;
-
 import org.apache.hadoop.utils.db.BatchOperation;
 
-/**
- * Response for CreateBucket request.
- */
-public class OMVolumeCreateResponse extends OMClientResponse {
+import java.io.IOException;
 
-  private VolumeList volumeList;
+/**
+ * Response for set quota request.
+ */
+public class OMVolumeSetQuotaResponse extends OMClientResponse {
   private OmVolumeArgs omVolumeArgs;
 
-  public OMVolumeCreateResponse(OmVolumeArgs omVolumeArgs,
-      VolumeList volumeList, OMResponse omResponse) {
+  public OMVolumeSetQuotaResponse(OmVolumeArgs omVolumeArgs,
+      OMResponse omResponse) {
     super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
-    this.volumeList = volumeList;
   }
+
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
 
-    String dbVolumeKey =
-        omMetadataManager.getVolumeKey(omVolumeArgs.getVolume());
-    String dbUserKey =
-        omMetadataManager.getUserKey(omVolumeArgs.getOwnerName());
-
-    omMetadataManager.getVolumeTable().putWithBatch(batchOperation, dbVolumeKey,
-        omVolumeArgs);
-    omMetadataManager.getUserTable().putWithBatch(batchOperation, dbUserKey,
-        volumeList);
+    // For OmResponse with failure, this should do nothing. This method is
+    // not called in failure scenario in OM code.
+    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+      omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
+          omMetadataManager.getVolumeKey(omVolumeArgs.getVolume()),
+          omVolumeArgs);
+    }
   }
-
-  public VolumeList getVolumeList() {
-    return volumeList;
-  }
-
-  public OmVolumeArgs getOmVolumeArgs() {
-    return omVolumeArgs;
-  }
-
 }
-

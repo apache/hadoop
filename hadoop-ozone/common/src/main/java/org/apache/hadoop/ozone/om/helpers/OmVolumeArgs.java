@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
@@ -152,6 +153,28 @@ public final class OmVolumeArgs extends WithMetadata implements Auditable {
     auditMap.put(OzoneConsts.CREATION_TIME, String.valueOf(this.creationTime));
     auditMap.put(OzoneConsts.QUOTA_IN_BYTES, String.valueOf(this.quotaInBytes));
     return auditMap;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmVolumeArgs that = (OmVolumeArgs) o;
+    return creationTime == that.creationTime &&
+        quotaInBytes == that.quotaInBytes &&
+        Objects.equals(adminName, that.adminName) &&
+        Objects.equals(ownerName, that.ownerName) &&
+        Objects.equals(volume, that.volume);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(adminName, ownerName, volume, creationTime,
+        quotaInBytes);
   }
 
   /**

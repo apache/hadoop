@@ -287,7 +287,7 @@ message VolumeInfo {
     optional uint64 quotaInBytes = 4;
     repeated hadoop.hdds.KeyValue metadata = 5;
     repeated OzoneAclInfo volumeAcls = 6;
-    required uint64 creationTime = 7;
+    optional uint64 creationTime = 7;
 }
 
 /**

@@ -17,11 +17,16 @@
 
 package org.apache.hadoop.ozone.om.ratis.utils;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
+import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
+import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
+import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
@@ -43,10 +48,27 @@ public final class OzoneManagerRatisUtils {
    * @return OMClientRequest
    * @throws IOException
    */
-  public static OMClientRequest createClientRequest(OMRequest omRequest)
-      throws IOException {
+  public static OMClientRequest createClientRequest(OMRequest omRequest) {
     Type cmdType = omRequest.getCmdType();
     switch (cmdType) {
+    case CreateVolume:
+      return new OMVolumeCreateRequest(omRequest);
+    case SetVolumeProperty:
+      boolean hasQuota = omRequest.getSetVolumePropertyRequest()
+          .hasQuotaInBytes();
+      boolean hasOwner = omRequest.getSetVolumePropertyRequest().hasOwnerName();
+      Preconditions.checkState(hasOwner || hasQuota, "Either Quota or owner " +
+          "should be set in the SetVolumeProperty request");
+      Preconditions.checkState(!(hasOwner && hasQuota), "Either Quota or " +
+          "owner should be set in the SetVolumeProperty request. Should not " +
+          "set both");
+      if (hasQuota) {
+        return new OMVolumeSetQuotaRequest(omRequest);
+      } else {
+        return new OMVolumeSetOwnerRequest(omRequest);
+      }
+    case DeleteVolume:
+      return new OMVolumeDeleteRequest(omRequest);
     case CreateBucket:
       return new OMBucketCreateRequest(omRequest);
     case DeleteBucket:

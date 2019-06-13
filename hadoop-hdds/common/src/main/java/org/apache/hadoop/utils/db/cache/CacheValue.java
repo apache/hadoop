@@ -36,7 +36,7 @@ public class CacheValue<VALUE> {
     this.epoch = epoch;
   }
 
-  public VALUE getValue() {
+  public VALUE getCacheValue() {
     return value.orNull();
   }
 

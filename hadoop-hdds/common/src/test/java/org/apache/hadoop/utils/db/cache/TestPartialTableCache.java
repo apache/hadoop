@@ -51,7 +51,7 @@ public class TestPartialTableCache {
 
     for (int i=0; i < 10; i++) {
       Assert.assertEquals(Integer.toString(i),
-          tableCache.get(new CacheKey<>(Integer.toString(i))).getValue());
+          tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
     }
 
     // On a full table cache if some one calls cleanup it is a no-op.
@@ -59,7 +59,7 @@ public class TestPartialTableCache {
 
     for (int i=5; i < 10; i++) {
       Assert.assertEquals(Integer.toString(i),
-          tableCache.get(new CacheKey<>(Integer.toString(i))).getValue());
+          tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
     }
   }
 
@@ -95,7 +95,7 @@ public class TestPartialTableCache {
     // Check we have first 10 entries in cache.
     for (int i=1; i <= 10; i++) {
       Assert.assertEquals(Integer.toString(i),
-          tableCache.get(new CacheKey<>(Integer.toString(i))).getValue());
+          tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
     }
 
     int deleted = 5;
@@ -115,7 +115,7 @@ public class TestPartialTableCache {
     // Check if we have remaining entries.
     for (int i=6; i <= totalCount; i++) {
       Assert.assertEquals(Integer.toString(i),
-          tableCache.get(new CacheKey<>(Integer.toString(i))).getValue());
+          tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
     }
 
     tableCache.cleanup(10);

@@ -198,6 +198,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_NODE_ID_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_SERVICE_IDS_KEY;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_RATIS_PORT_KEY;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME_DEFAULT;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
@@ -276,12 +278,20 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static String keyProviderUriKeyName =
       CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
 
+  // Adding parameters needed for VolumeRequests here, so that during request
+  // execution, we can get from ozoneManager.
+  private long maxUserVolumeCount;
+
 
   private OzoneManager(OzoneConfiguration conf) throws IOException,
       AuthenticationException {
     super(OzoneVersionInfo.OZONE_VERSION_INFO);
     Preconditions.checkNotNull(conf);
     configuration = conf;
+    this.maxUserVolumeCount = conf.getInt(OZONE_OM_USER_MAX_VOLUME,
+        OZONE_OM_USER_MAX_VOLUME_DEFAULT);
+    Preconditions.checkArgument(this.maxUserVolumeCount > 0,
+        OZONE_OM_USER_MAX_VOLUME + " value should be greater than zero");
     omStorage = new OMStorage(conf);
     omId = omStorage.getOmId();
     if (omStorage.getState() != StorageState.INITIALIZED) {
@@ -3201,7 +3211,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return null;
   }
 
-  public OMMetrics getOmMetrics() {
-    return metrics;
+  /**
+   * Return maximum volumes count per user.
+   * @return maxUserVolumeCount
+   */
+  public long getMaxUserVolumeCount() {
+    return maxUserVolumeCount;
   }
 }

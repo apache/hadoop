@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.ozone.om.request;
 
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +29,10 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetVolumePropertyRequest;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -60,20 +65,33 @@ public final class TestOMRequestUtils {
   }
 
   /**
-   * Add's volume creation entry to OM DB.
+   * Add volume creation entry to OM DB.
    * @param volumeName
    * @param omMetadataManager
    * @throws Exception
    */
   public static void addVolumeToDB(String volumeName,
       OMMetadataManager omMetadataManager) throws Exception {
+    addVolumeToDB(volumeName, UUID.randomUUID().toString(), omMetadataManager);
+  }
+
+  /**
+   * Add volume creation entry to OM DB.
+   * @param volumeName
+   * @param ownerName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addVolumeToDB(String volumeName, String ownerName,
+      OMMetadataManager omMetadataManager) throws Exception {
     OmVolumeArgs omVolumeArgs =
         OmVolumeArgs.newBuilder().setCreationTime(Time.now())
-            .setVolume(volumeName).setAdminName(UUID.randomUUID().toString())
-            .setOwnerName(UUID.randomUUID().toString()).build();
+            .setVolume(volumeName).setAdminName(ownerName)
+            .setOwnerName(ownerName).build();
     omMetadataManager.getVolumeTable().put(
         omMetadataManager.getVolumeKey(volumeName), omVolumeArgs);
   }
+
 
   public static OzoneManagerProtocolProtos.OMRequest createBucketRequest(
       String bucketName, String volumeName, boolean isVersionEnabled,
@@ -101,6 +119,58 @@ public final class TestOMRequestUtils {
     metadataList.add(HddsProtos.KeyValue.newBuilder().setKey("key2").setValue(
         "value2").build());
     return metadataList;
+  }
+
+
+  /**
+   * Add user to user table.
+   * @param volumeName
+   * @param ownerName
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addUserToDB(String volumeName, String ownerName,
+      OMMetadataManager omMetadataManager) throws Exception {
+    OzoneManagerProtocolProtos.VolumeList volumeList =
+        OzoneManagerProtocolProtos.VolumeList.newBuilder()
+            .addVolumeNames(volumeName).build();
+    omMetadataManager.getUserTable().put(
+        omMetadataManager.getUserKey(ownerName), volumeList);
+  }
+
+  /**
+   * Create OMRequest for set volume property request with owner set.
+   * @param volumeName
+   * @param newOwner
+   * @return OMRequest
+   */
+  public static OMRequest createSetVolumePropertyRequest(String volumeName,
+      String newOwner) {
+    SetVolumePropertyRequest setVolumePropertyRequest =
+        SetVolumePropertyRequest.newBuilder().setVolumeName(volumeName)
+            .setOwnerName(newOwner).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
+        .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
+  }
+
+
+  /**
+   * Create OMRequest for set volume property request with quota set.
+   * @param volumeName
+   * @param quota
+   * @return OMRequest
+   */
+  public static OMRequest createSetVolumePropertyRequest(String volumeName,
+      long quota) {
+    SetVolumePropertyRequest setVolumePropertyRequest =
+        SetVolumePropertyRequest.newBuilder().setVolumeName(volumeName)
+            .setQuotaInBytes(quota).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
+        .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
   }
 
 }
