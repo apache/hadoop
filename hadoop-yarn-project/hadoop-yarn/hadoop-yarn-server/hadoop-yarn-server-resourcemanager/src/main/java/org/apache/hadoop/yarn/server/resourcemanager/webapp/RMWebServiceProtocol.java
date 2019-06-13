@@ -227,11 +227,16 @@ public interface RMWebServiceProtocol {
    *          the activities. It is a QueryParam.
    * @param groupBy the groupBy type by which the activities should be
    *          aggregated. It is a QueryParam.
+   * @param limit set a limit of the result. It is a QueryParam.
+   * @param actions the required actions of app activities. It is a QueryParam.
+   * @param summarize whether app activities in multiple scheduling processes
+   *          need to be summarized. It is a QueryParam.
    * @return all the activities about a specific app for a specific time
    */
   AppActivitiesInfo getAppActivities(HttpServletRequest hsr, String appId,
       String time, Set<String> requestPriorities,
-      Set<String> allocationRequestIds, String groupBy);
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize);
 
   /**
    * This method retrieves all the statistics for a specific app, and it is

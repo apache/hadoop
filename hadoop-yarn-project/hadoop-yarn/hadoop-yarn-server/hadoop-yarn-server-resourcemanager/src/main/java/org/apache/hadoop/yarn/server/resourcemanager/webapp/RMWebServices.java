@@ -236,6 +236,7 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
   public static final String DEFAULT_START_TIME = "0";
   public static final String DEFAULT_END_TIME = "-1";
   public static final String DEFAULT_INCLUDE_RESOURCE = "false";
+  public static final String DEFAULT_SUMMARIZE = "false";
 
   @VisibleForTesting
   boolean isCentralizedNodeLabelConfiguration = true;
@@ -717,12 +718,16 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       MediaType.APPLICATION_XML + "; " + JettyUtils.UTF_8 })
   @Override
   public AppActivitiesInfo getAppActivities(@Context HttpServletRequest hsr,
-      @QueryParam(RMWSConsts.APP_ID) String appId,
+      @PathParam(RMWSConsts.APPID) String appId,
       @QueryParam(RMWSConsts.MAX_TIME) String time,
       @QueryParam(RMWSConsts.REQUEST_PRIORITIES) Set<String> requestPriorities,
       @QueryParam(RMWSConsts.ALLOCATION_REQUEST_IDS)
           Set<String> allocationRequestIds,
-      @QueryParam(RMWSConsts.GROUP_BY) String groupBy) {
+      @QueryParam(RMWSConsts.GROUP_BY) String groupBy,
+      @QueryParam(RMWSConsts.LIMIT) String limit,
+      @QueryParam(RMWSConsts.ACTIONS) Set<String> actions,
+      @QueryParam(RMWSConsts.SUMMARIZE) @DefaultValue(DEFAULT_SUMMARIZE)
+          boolean summarize) {
     initForReadableEndpoints();
 
     YarnScheduler scheduler = rm.getRMContext().getScheduler();
@@ -749,6 +754,26 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
         return new AppActivitiesInfo(e.getMessage(), appId);
       }
 
+      Set<RMWSConsts.AppActivitiesRequiredAction> requiredActions;
+      try {
+        requiredActions = parseAppActivitiesRequiredActions(actions);
+      } catch (IllegalArgumentException e) {
+        return new AppActivitiesInfo(e.getMessage(), appId);
+      }
+
+      int limitNum = -1;
+      if (limit != null) {
+        try {
+          limitNum = Integer.parseInt(limit);
+          if (limitNum <= 0) {
+            return new AppActivitiesInfo(
+                "limit must be greater than 0!", appId);
+          }
+        } catch (NumberFormatException e) {
+          return new AppActivitiesInfo("limit must be integer!", appId);
+        }
+      }
+
       double maxTime = 3.0;
 
       if (time != null) {
@@ -762,12 +787,21 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
       ApplicationId applicationId;
       try {
         applicationId = ApplicationId.fromString(appId);
-        activitiesManager.turnOnAppActivitiesRecording(applicationId, maxTime);
-        AppActivitiesInfo appActivitiesInfo =
-            activitiesManager.getAppActivitiesInfo(applicationId,
-                requestPriorities, allocationRequestIds, activitiesGroupBy);
-
-        return appActivitiesInfo;
+        if (requiredActions
+            .contains(RMWSConsts.AppActivitiesRequiredAction.REFRESH)) {
+          activitiesManager
+              .turnOnAppActivitiesRecording(applicationId, maxTime);
+        }
+        if (requiredActions
+            .contains(RMWSConsts.AppActivitiesRequiredAction.GET)) {
+          AppActivitiesInfo appActivitiesInfo = activitiesManager
+              .getAppActivitiesInfo(applicationId, requestPriorities,
+                  allocationRequestIds, activitiesGroupBy, limitNum,
+                  summarize, maxTime);
+          return appActivitiesInfo;
+        }
+        return new AppActivitiesInfo("Successfully notified actions: "
+            + StringUtils.join(',', actions), appId);
       } catch (Exception e) {
         String errMessage = "Cannot find application with given appId";
         LOG.error(errMessage, e);
@@ -776,6 +810,29 @@ public class RMWebServices extends WebServices implements RMWebServiceProtocol {
 
     }
     return null;
+  }
+
+  private Set<RMWSConsts.AppActivitiesRequiredAction>
+      parseAppActivitiesRequiredActions(Set<String> actions) {
+    Set<RMWSConsts.AppActivitiesRequiredAction> requiredActions =
+        new HashSet<>();
+    if (actions == null || actions.isEmpty()) {
+      requiredActions.add(RMWSConsts.AppActivitiesRequiredAction.REFRESH);
+      requiredActions.add(RMWSConsts.AppActivitiesRequiredAction.GET);
+    } else {
+      for (String action : actions) {
+        if (!EnumUtils.isValidEnum(RMWSConsts.AppActivitiesRequiredAction.class,
+            action.toUpperCase())) {
+          String errMesasge =
+              "Got invalid action: " + action + ", valid actions: " + Arrays
+                  .asList(RMWSConsts.AppActivitiesRequiredAction.values());
+          throw new IllegalArgumentException(errMesasge);
+        }
+        requiredActions.add(RMWSConsts.AppActivitiesRequiredAction
+            .valueOf(action.toUpperCase()));
+      }
+    }
+    return requiredActions;
   }
 
   private RMWSConsts.ActivitiesGroupBy parseActivitiesGroupBy(String groupBy) {
