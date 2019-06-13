@@ -49,3 +49,8 @@ else
   exit 1
 fi
 
+# HADOOP_OZONE_DELEGATED_CLASSES defines a list of classes which will be loaded by default
+# class loader of application instead of isolated class loader. With this way we can solve
+# incompatible problem when using hadoop3.x + ozone with older hadoop version.
+#export HADOOP_OZONE_DELEGATED_CLASSES=
+
