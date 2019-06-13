@@ -766,11 +766,9 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
     ContainerScheduler containerScheduler =
         containerManager.getContainerScheduler();
     // Ensure all containers are properly queued.
-    int numTries = 30;
-    while ((containerScheduler.getNumQueuedContainers() < 6) &&
-        (numTries-- > 0)) {
-      Thread.sleep(100);
-    }
+    GenericTestUtils.waitFor(
+        () -> containerScheduler.getNumQueuedContainers() == 6
+            && metrics.getQueuedOpportunisticContainers() == 6, 100, 3000);
     Assert.assertEquals(6, containerScheduler.getNumQueuedContainers());
     Assert.assertEquals(6, metrics.getQueuedOpportunisticContainers());
     Assert.assertEquals(0, metrics.getQueuedGuaranteedContainers());
@@ -779,11 +777,8 @@ public class TestContainerSchedulerQueuing extends BaseContainerManagerTest {
         .newInstance();
     containerQueuingLimit.setMaxQueueLength(2);
     containerScheduler.updateQueuingLimit(containerQueuingLimit);
-    numTries = 30;
-    while ((containerScheduler.getNumQueuedContainers() > 2) &&
-        (numTries-- > 0)) {
-      Thread.sleep(100);
-    }
+    GenericTestUtils.waitFor(
+        () -> containerScheduler.getNumQueuedContainers() == 2, 100, 3000);
     Assert.assertEquals(2, containerScheduler.getNumQueuedContainers());
 
     List<ContainerId> statList = new ArrayList<ContainerId>();
