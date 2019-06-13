@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
 import org.apache.hadoop.fs.CanUnbuffer;
 import org.apache.hadoop.fs.ChecksumException;
+import org.apache.hadoop.fs.FSExceptionMessages;
 import org.apache.hadoop.fs.FSInputStream;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.fs.HasEnhancedByteBufferAccess;
@@ -1568,6 +1569,19 @@ public class DFSInputStream extends FSInputStream
       return 0;
     }
     return pread(position, buf);
+  }
+
+  @Override
+  public void readFully(long position, final ByteBuffer buf)
+      throws IOException {
+    int nread = 0;
+    while (buf.hasRemaining()) {
+      int nbytes = read(position + nread, buf);
+      if (nbytes < 0) {
+        throw new EOFException(FSExceptionMessages.EOF_IN_READ_FULLY);
+      }
+      nread += nbytes;
+    }
   }
 
   /** Utility class to encapsulate data node info and its address. */
