@@ -90,8 +90,7 @@ public class TestOMVolumeDeleteRequest {
   @Test
   public void testPreExecute() throws Exception {
     String volumeName = UUID.randomUUID().toString();
-    String ownerName = UUID.randomUUID().toString();
-    OMRequest originalRequest = deleteVolumeRequest(volumeName, ownerName);
+    OMRequest originalRequest = deleteVolumeRequest(volumeName);
 
     OMVolumeDeleteRequest omVolumeDeleteRequest =
         new OMVolumeDeleteRequest(originalRequest);
@@ -106,7 +105,7 @@ public class TestOMVolumeDeleteRequest {
     String volumeName = UUID.randomUUID().toString();
     String ownerName = "user1";
 
-    OMRequest originalRequest = deleteVolumeRequest(volumeName, ownerName);
+    OMRequest originalRequest = deleteVolumeRequest(volumeName);
 
     OMVolumeDeleteRequest omVolumeDeleteRequest =
         new OMVolumeDeleteRequest(originalRequest);
@@ -147,9 +146,7 @@ public class TestOMVolumeDeleteRequest {
   public void testValidateAndUpdateCacheWithVolumeNotFound()
       throws Exception {
     String volumeName = UUID.randomUUID().toString();
-    String ownerName = "user1";
-
-    OMRequest originalRequest = deleteVolumeRequest(volumeName, ownerName);
+    OMRequest originalRequest = deleteVolumeRequest(volumeName);
 
     OMVolumeDeleteRequest omVolumeDeleteRequest =
         new OMVolumeDeleteRequest(originalRequest);
@@ -173,7 +170,7 @@ public class TestOMVolumeDeleteRequest {
     String volumeName = UUID.randomUUID().toString();
     String ownerName = "user1";
 
-    OMRequest originalRequest = deleteVolumeRequest(volumeName, ownerName);
+    OMRequest originalRequest = deleteVolumeRequest(volumeName);
 
     OMVolumeDeleteRequest omVolumeDeleteRequest =
         new OMVolumeDeleteRequest(originalRequest);
@@ -206,14 +203,11 @@ public class TestOMVolumeDeleteRequest {
   /**
    * Create OMRequest for delete volume.
    * @param volumeName
-   * @param ownerName
    * @return OMRequest
    */
-  private OMRequest deleteVolumeRequest(String volumeName,
-      String ownerName) {
+  private OMRequest deleteVolumeRequest(String volumeName) {
     DeleteVolumeRequest deleteVolumeRequest =
-        DeleteVolumeRequest.newBuilder().setVolumeName(volumeName)
-            .setOwner(ownerName).build();
+        DeleteVolumeRequest.newBuilder().setVolumeName(volumeName).build();
 
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.DeleteVolume)
