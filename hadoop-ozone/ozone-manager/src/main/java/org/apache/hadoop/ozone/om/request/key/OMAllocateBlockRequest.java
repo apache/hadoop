@@ -101,7 +101,8 @@ public class OMAllocateBlockRequest extends OMClientRequest
 
 
     // To allocate atleast one block passing requested size and scmBlockSize
-    // as same value.
+    // as same value. When allocating block requested size is same as
+    // scmBlockSize.
     List<OmKeyLocationInfo> omKeyLocationInfoList =
         allocateBlock(ozoneManager.getScmClient(),
             ozoneManager.getBlockTokenSecretManager(), keyArgs.getType(),
@@ -204,8 +205,8 @@ public class OMAllocateBlockRequest extends OMClientRequest
     IOException exception = null;
     OmKeyInfo omKeyInfo =  null;
 
-    // Why do we not acquire lock is for a single client allocateBlock is
-    // called in serial.
+    // Here we don't acquire bucket/volume lock because for a single client
+    // allocateBlock is called in serial fashion.
     try {
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(openKey);
       if (omKeyInfo == null) {

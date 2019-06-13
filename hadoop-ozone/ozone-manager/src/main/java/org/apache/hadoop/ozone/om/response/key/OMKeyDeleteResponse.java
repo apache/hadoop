@@ -49,7 +49,7 @@ public class OMKeyDeleteResponse extends OMClientResponse {
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
       String ozoneKey = omMetadataManager.getOzoneKey(omKeyInfo.getVolumeName(),
           omKeyInfo.getBucketName(), omKeyInfo.getKeyName());
-      omMetadataManager.getOpenKeyTable().deleteWithBatch(batchOperation,
+      omMetadataManager.getKeyTable().deleteWithBatch(batchOperation,
           ozoneKey);
 
       // If Key is not empty add this to delete table.

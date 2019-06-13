@@ -118,6 +118,10 @@ public class OMKeyDeleteRequest extends OMClientRequest
     OmKeyInfo omKeyInfo = null;
     try {
 
+      // Not doing bucket/volume checks here. In this way we can avoid db
+      // checks for them.
+      // TODO: Once we have volume/bucket full cache, we can add
+      // them back, as these checks will be inexpensive at that time.
       omKeyInfo = omMetadataManager.getKeyTable().get(objectKey);
 
       if (omKeyInfo == null) {
@@ -132,7 +136,8 @@ public class OMKeyDeleteRequest extends OMClientRequest
 
       // No need to add cache entries to delete table. As delete table will
       // be used by DeleteKeyService only, not used for any client response
-      // validation. Revisit if we need it.
+      // validation, so we don't need to add to cache.
+      // TODO: Revisit if we need it later.
 
     } catch (IOException ex) {
       exception = ex;

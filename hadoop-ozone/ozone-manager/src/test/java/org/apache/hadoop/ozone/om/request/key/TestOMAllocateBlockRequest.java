@@ -19,33 +19,13 @@
 
 package org.apache.hadoop.ozone.om.request.key;
 
-import java.util.ArrayList;
+
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
-import org.apache.hadoop.hdds.client.ContainerBlockID;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
-import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
-import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
-import org.apache.hadoop.ozone.audit.AuditLogger;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.ScmClient;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
@@ -57,104 +37,11 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
-import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
-import org.apache.hadoop.util.Time;
-
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests OMAllocateBlockRequest class.
  */
-public class TestOMAllocateBlockRequest {
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
-
-  private ScmClient scmClient;
-  private OzoneBlockTokenSecretManager ozoneBlockTokenSecretManager;
-  private ScmBlockLocationProtocol scmBlockLocationProtocol;
-
-  private final long containerID = 1000L;
-  private final long localID = 100L;
-
-  private String volumeName;
-  private String bucketName;
-  private String keyName;
-  private HddsProtos.ReplicationType replicationType;
-  private HddsProtos.ReplicationFactor replicationFactor;
-  private long clientID;
-
-
-
-  @Before
-  public void setup() throws Exception {
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-
-    scmClient = Mockito.mock(ScmClient.class);
-    ozoneBlockTokenSecretManager =
-        Mockito.mock(OzoneBlockTokenSecretManager.class);
-    scmBlockLocationProtocol = Mockito.mock(ScmBlockLocationProtocol.class);
-    when(ozoneManager.getScmClient()).thenReturn(scmClient);
-    when(ozoneManager.getBlockTokenSecretManager())
-        .thenReturn(ozoneBlockTokenSecretManager);
-    when(ozoneManager.getScmBlockSize()).thenReturn(1000L);
-    when(ozoneManager.getPreallocateBlocksMax()).thenReturn(2);
-    when(ozoneManager.isGrpcBlockTokenEnabled()).thenReturn(false);
-    when(ozoneManager.getOMNodeId()).thenReturn(UUID.randomUUID().toString());
-    when(scmClient.getBlockClient()).thenReturn(scmBlockLocationProtocol);
-
-    Pipeline pipeline = Pipeline.newBuilder()
-        .setState(Pipeline.PipelineState.OPEN)
-        .setId(PipelineID.randomId())
-        .setType(HddsProtos.ReplicationType.STAND_ALONE)
-        .setFactor(HddsProtos.ReplicationFactor.ONE)
-        .setNodes(new ArrayList<>())
-        .build();
-
-    AllocatedBlock allocatedBlock =
-        new AllocatedBlock.Builder()
-            .setContainerBlockID(new ContainerBlockID(containerID, localID))
-        .setPipeline(pipeline).build();
-
-    List<AllocatedBlock> allocatedBlocks = new ArrayList<>();
-
-    allocatedBlocks.add(allocatedBlock);
-
-    when(scmBlockLocationProtocol.allocateBlock(anyLong(), anyInt(),
-        any(HddsProtos.ReplicationType.class),
-        any(HddsProtos.ReplicationFactor.class),
-        anyString(), any(ExcludeList.class))).thenReturn(allocatedBlocks);
-
-
-    volumeName = UUID.randomUUID().toString();
-    bucketName = UUID.randomUUID().toString();
-    keyName = UUID.randomUUID().toString();
-    replicationFactor = HddsProtos.ReplicationFactor.ONE;
-    replicationType = HddsProtos.ReplicationType.RATIS;
-    clientID = Time.now();
-
-  }
-
+public class TestOMAllocateBlockRequest extends TestOMKeyRequest {
 
   @Test
   public void testPreExecute() throws Exception {
@@ -177,7 +64,7 @@ public class TestOMAllocateBlockRequest {
     TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
         omMetadataManager);
 
-    TestOMRequestUtils.addKeyToOpenTable(volumeName, bucketName, keyName,
+    TestOMRequestUtils.addKeyToTable(true, volumeName, bucketName, keyName,
         clientID, replicationType, replicationFactor, omMetadataManager);
 
     // Check before calling validateAndUpdateCache. As adding DB entry has
@@ -204,10 +91,6 @@ public class TestOMAllocateBlockRequest {
         omMetadataManager.getOpenKeyTable().get(omMetadataManager.getOpenKey(
             volumeName, bucketName, keyName, clientID));
 
-    omKeyLocationInfo =
-        omKeyInfo.getLatestVersionLocations().getLocationList();
-
-    Assert.assertTrue(omKeyLocationInfo.size() == 1);
 
     // Check modification time
     Assert.assertEquals(modifiedOmRequest.getAllocateBlockRequest()
@@ -218,6 +101,11 @@ public class TestOMAllocateBlockRequest {
     // Check data of the block
     OzoneManagerProtocolProtos.KeyLocation keyLocation =
         modifiedOmRequest.getAllocateBlockRequest().getKeyLocation();
+
+    omKeyLocationInfo =
+        omKeyInfo.getLatestVersionLocations().getLocationList();
+
+    Assert.assertTrue(omKeyLocationInfo.size() == 1);
 
     Assert.assertEquals(keyLocation.getBlockID().getContainerBlockID()
         .getContainerID(), omKeyLocationInfo.get(0).getContainerID());

@@ -67,11 +67,26 @@ public final class TestOMRequestUtils {
         omMetadataManager.getBucketKey(volumeName, bucketName), omBucketInfo);
   }
 
-  public static void addKeyToOpenTable(String volumeName, String bucketName,
+  /**
+   * Add key entry to KeyTable. if openKeyTable flag is true, add's entries
+   * to openKeyTable, else add's it to keyTable.
+   * @param openKeyTable
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param clientID
+   * @param replicationType
+   * @param replicationFactor
+   * @param omMetadataManager
+   * @throws Exception
+   */
+  public static void addKeyToTable(boolean openKeyTable, String volumeName,
+      String bucketName,
       String keyName, long clientID,
       HddsProtos.ReplicationType replicationType,
       HddsProtos.ReplicationFactor replicationFactor,
       OMMetadataManager omMetadataManager) throws Exception {
+
 
     OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
         .setVolumeName(volumeName)
@@ -85,11 +100,37 @@ public final class TestOMRequestUtils {
         .setReplicationType(replicationType)
         .setReplicationFactor(replicationFactor);
 
-    omMetadataManager.getOpenKeyTable().put(
-        omMetadataManager.getOpenKey(volumeName, bucketName, keyName, clientID),
-        builder.build());
+    if (openKeyTable) {
+      omMetadataManager.getOpenKeyTable().put(
+          omMetadataManager.getOpenKey(volumeName, bucketName, keyName, clientID),
+          builder.build());
+    } else {
+      omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
+          volumeName, bucketName, keyName), builder.build());
+    }
 
   }
+
+  /**
+   * Create OmKeyInfo.
+   */
+
+  public static OmKeyInfo createOmKeyInfo(String volumeName, String bucketName,
+      String keyName, HddsProtos.ReplicationType replicationType,
+      HddsProtos.ReplicationFactor replicationFactor) {
+    return new OmKeyInfo.Builder()
+        .setVolumeName(volumeName)
+        .setBucketName(bucketName)
+        .setKeyName(keyName)
+        .setOmKeyLocationInfos(Collections.singletonList(
+            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
+        .setCreationTime(Time.now())
+        .setModificationTime(Time.now())
+        .setDataSize(1000L)
+        .setReplicationType(replicationType)
+        .setReplicationFactor(replicationFactor).build();
+  }
+
 
   /**
    * Add volume creation entry to OM DB.

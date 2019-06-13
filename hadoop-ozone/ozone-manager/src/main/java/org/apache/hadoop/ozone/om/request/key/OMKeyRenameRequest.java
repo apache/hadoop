@@ -139,6 +139,12 @@ public class OMKeyRenameRequest extends OMClientRequest
     IOException exception = null;
     OmKeyInfo fromKeyValue = null;
     try {
+
+      // Not doing bucket/volume checks here. In this way we can avoid db
+      // checks for them.
+      // TODO: Once we have volume/bucket full cache, we can add
+      // them back, as these checks will be inexpensive at that time.
+
       // fromKeyName should exist
       String fromKey = omMetadataManager.getOzoneKey(
           volumeName, bucketName, fromKeyName);

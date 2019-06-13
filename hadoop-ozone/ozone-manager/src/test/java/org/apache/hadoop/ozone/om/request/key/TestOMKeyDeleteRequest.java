@@ -20,71 +20,147 @@ package org.apache.hadoop.ozone.om.request.key;
 
 import java.util.UUID;
 
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
+import org.junit.Assert;
+import org.junit.Test;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.audit.AuditLogger;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.util.Time;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .DeleteKeyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
 
 /**
  * Tests OmKeyDelete request.
  */
-public class TestOMKeyDeleteRequest {
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
+public class TestOMKeyDeleteRequest extends TestOMKeyRequest {
 
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
+  @Test
+  public void testPreExecute() throws Exception {
+    doPreExecute(createDeleteKeyRequest());
+  }
 
+  @Test
+  public void testValidateAndUpdateCache() throws Exception {
+    OMRequest modifiedOmRequest =
+        doPreExecute(createDeleteKeyRequest());
 
-  private String volumeName;
-  private String bucketName;
-  private String keyName;
-  private HddsProtos.ReplicationType replicationType;
-  private HddsProtos.ReplicationFactor replicationFactor;
-  private long clientID;
-  private long dataSize;
+    OMKeyDeleteRequest omKeyDeleteRequest =
+        new OMKeyDeleteRequest(modifiedOmRequest);
 
 
-  @Before
-  public void setup() throws Exception {
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
+    // Add volume, bucket and key entries to OM DB.
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
 
-    volumeName = UUID.randomUUID().toString();
-    bucketName = UUID.randomUUID().toString();
-    keyName = UUID.randomUUID().toString();
-    replicationFactor = HddsProtos.ReplicationFactor.ONE;
-    replicationType = HddsProtos.ReplicationType.RATIS;
-    clientID = Time.now();
-    dataSize = 1000L;
+    TestOMRequestUtils.addKeyToTable(false, volumeName, bucketName, keyName,
+        clientID, replicationType, replicationFactor, omMetadataManager);
+
+
+    String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
+        keyName);
+
+    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+
+    // As we added manually to key table.
+    Assert.assertNotNull(omKeyInfo);
+
+    OMClientResponse omClientResponse =
+        omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
+        100L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omClientResponse.getOMResponse().getStatus());
+    // Now after calling validateAndUpdateCache, it should be deleted.
+
+    omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+
+    Assert.assertNull(omKeyInfo);
+
   }
 
 
+  @Test
+  public void testValidateAndUpdateCacheWithKeyNotFound() throws Exception {
+    OMRequest modifiedOmRequest =
+        doPreExecute(createDeleteKeyRequest());
 
+    OMKeyDeleteRequest omKeyDeleteRequest =
+        new OMKeyDeleteRequest(modifiedOmRequest);
+
+    // Add only volume and bucket entry to DB.
+    // In actual implementation we don't check for bucket/volume exists
+    // during delete key.
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
+
+
+    OMClientResponse omClientResponse =
+        omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
+            100L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
+        omClientResponse.getOMResponse().getStatus());
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithOutVolumeAndBucket()
+      throws Exception {
+    OMRequest modifiedOmRequest =
+        doPreExecute(createDeleteKeyRequest());
+
+    OMKeyDeleteRequest omKeyDeleteRequest =
+        new OMKeyDeleteRequest(modifiedOmRequest);
+
+    // In actual implementation we don't check for bucket/volume exists
+    // during delete key. So it should still return error KEY_NOT_FOUND
+
+    OMClientResponse omClientResponse =
+        omKeyDeleteRequest.validateAndUpdateCache(ozoneManager,
+            100L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
+        omClientResponse.getOMResponse().getStatus());
+  }
+
+
+  /**
+   * This method calls preExecute and verify the modified request.
+   * @param originalOmRequest
+   * @return OMRequest - modified request returned from preExecute.
+   * @throws Exception
+   */
+  private OMRequest doPreExecute(OMRequest originalOmRequest) throws Exception {
+
+    OMKeyDeleteRequest omKeyDeleteRequest =
+        new OMKeyDeleteRequest(originalOmRequest);
+
+    OMRequest modifiedOmRequest = omKeyDeleteRequest.preExecute(ozoneManager);
+
+    // Will not be equal, as UserInfo will be set.
+    Assert.assertNotEquals(originalOmRequest, modifiedOmRequest);
+
+    return modifiedOmRequest;
+  }
+
+  /**
+   * Create OMRequest which encapsulates DeleteKeyRequest.
+   * @return OMRequest
+   */
+  private OMRequest createDeleteKeyRequest() {
+    KeyArgs keyArgs = KeyArgs.newBuilder().setBucketName(bucketName)
+        .setVolumeName(volumeName).setKeyName(keyName).build();
+
+    DeleteKeyRequest deleteKeyRequest =
+        DeleteKeyRequest.newBuilder().setKeyArgs(keyArgs).build();
+
+    return OMRequest.newBuilder().setDeleteKeyRequest(deleteKeyRequest)
+        .setCmdType(OzoneManagerProtocolProtos.Type.DeleteKey)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
 
 }
