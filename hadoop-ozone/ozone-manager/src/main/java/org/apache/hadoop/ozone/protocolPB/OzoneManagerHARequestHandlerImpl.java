@@ -96,58 +96,36 @@ public class OzoneManagerHARequestHandlerImpl
       long transactionLogIndex) {
     LOG.debug("Received OMRequest: {}, ", omRequest);
     Type cmdType = omRequest.getCmdType();
-    OMResponse.Builder responseBuilder =
-        OMResponse.newBuilder().setCmdType(cmdType)
-            .setStatus(Status.OK);
-    try {
-      switch (cmdType) {
-      case CreateVolume:
-        responseBuilder.setCreateVolumeResponse(
-            handleCreateVolumeApply(omRequest));
-        break;
-      case SetVolumeProperty:
-        responseBuilder.setSetVolumePropertyResponse(
-            handleSetVolumePropertyApply(omRequest));
-        break;
-      case DeleteVolume:
-        responseBuilder.setDeleteVolumeResponse(
-            handleDeleteVolumeApply(omRequest));
-        break;
-      case CreateBucket:
-      case DeleteBucket:
-      case SetBucketProperty:
-        //TODO: We don't need to pass transactionID, this will be removed when
-        // complete write requests is changed to new model. And also we can
-        // return OMClientResponse, then adding to doubleBuffer can be taken
-        // care by stateMachine. And also integrate both HA and NON HA code
-        // paths.
-        OMClientRequest omClientRequest =
-            OzoneManagerRatisUtils.createClientRequest(omRequest);
-        OMClientResponse omClientResponse =
-            omClientRequest.validateAndUpdateCache(getOzoneManager(),
-                transactionLogIndex);
+    switch (cmdType) {
+    case CreateVolume:
+    case SetVolumeProperty:
+    case DeleteVolume:
+    case CreateBucket:
+    case DeleteBucket:
+    case SetBucketProperty:
+      //TODO: We don't need to pass transactionID, this will be removed when
+      // complete write requests is changed to new model. And also we can
+      // return OMClientResponse, then adding to doubleBuffer can be taken
+      // care by stateMachine. And also integrate both HA and NON HA code
+      // paths.
+      OMClientRequest omClientRequest =
+          OzoneManagerRatisUtils.createClientRequest(omRequest);
+      OMClientResponse omClientResponse =
+          omClientRequest.validateAndUpdateCache(getOzoneManager(),
+              transactionLogIndex);
 
-        // If any error we have got when validateAndUpdateCache, OMResponse
-        // Status is set with Error Code other than OK, in that case don't
-        // add this to double buffer.
-        if (omClientResponse.getOMResponse().getStatus() == Status.OK) {
-          ozoneManagerDoubleBuffer.add(omClientResponse, transactionLogIndex);
-        }
-        return omClientResponse.getOMResponse();
-      default:
-        // As all request types are not changed so we need to call handle
-        // here.
-        return handle(omRequest);
+      // If any error we have got when validateAndUpdateCache, OMResponse
+      // Status is set with Error Code other than OK, in that case don't
+      // add this to double buffer.
+      if (omClientResponse.getOMResponse().getStatus() == Status.OK) {
+        ozoneManagerDoubleBuffer.add(omClientResponse, transactionLogIndex);
       }
-      responseBuilder.setSuccess(true);
-    } catch (IOException ex) {
-      responseBuilder.setSuccess(false);
-      responseBuilder.setStatus(exceptionToResponseStatus(ex));
-      if (ex.getMessage() != null) {
-        responseBuilder.setMessage(ex.getMessage());
-      }
+      return omClientResponse.getOMResponse();
+    default:
+      // As all request types are not changed so we need to call handle
+      // here.
+      return handle(omRequest);
     }
-    return responseBuilder.build();
   }
 
 

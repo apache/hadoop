@@ -73,20 +73,15 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex) {
 
+
     SetBucketPropertyRequest setBucketPropertyRequest =
         getOmRequest().getSetBucketPropertyRequest();
 
     Preconditions.checkNotNull(setBucketPropertyRequest);
 
-    OMMetrics omMetrics = ozoneManager.getOmMetrics();
+    OMMetrics omMetrics = ozoneManager.getMetrics();
+    omMetrics.incNumBucketUpdates();
 
-    // This will never be null, on a real Ozone cluster. For tests this might
-    // be null. using mockito, to set omMetrics object, but still getting
-    // null. For now added this not null check.
-    //TODO: Removed not null check from here, once tests got fixed.
-    if (omMetrics != null) {
-      omMetrics.incNumBucketUpdates();
-    }
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
@@ -113,13 +108,11 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
             volumeName, bucketName, null);
       }
     } catch (IOException ex) {
-      if (omMetrics != null) {
-        omMetrics.incNumBucketUpdateFails();
-      }
-      auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
-              omBucketArgs.toAuditMap(), ex, userInfo));
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, ex);
+      omMetrics.incNumBucketUpdateFails();
+      auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
+              omBucketArgs.toAuditMap(), ex, userInfo));
       return new OMBucketSetPropertyResponse(omBucketInfo,
           createErrorOMResponse(omResponse, ex));
     }
@@ -204,11 +197,9 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           SetBucketPropertyResponse.newBuilder().build());
       return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
     } else {
-      if (omMetrics != null) {
-        omMetrics.incNumBucketUpdateFails();
-      }
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, exception);
+      omMetrics.incNumBucketUpdateFails();
       return new OMBucketSetPropertyResponse(omBucketInfo,
           createErrorOMResponse(omResponse, exception));
     }

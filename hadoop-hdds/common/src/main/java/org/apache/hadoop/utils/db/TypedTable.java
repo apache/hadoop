@@ -19,6 +19,8 @@
 package org.apache.hadoop.utils.db;
 
 import java.io.IOException;
+import java.util.Iterator;
+import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.utils.db.cache.CacheKey;
@@ -82,7 +84,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   @Override
   public boolean isExist(KEY key) throws IOException {
     CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
-    return (cacheValue != null && cacheValue.getValue() != null) ||
+    return (cacheValue != null && cacheValue.getCacheValue() != null) ||
         rawTable.isExist(codecRegistry.asRawData(key));
   }
 
@@ -109,7 +111,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
       return getFromTable(key);
     } else {
       // We have a value in cache, return the value.
-      return cacheValue.getValue();
+      return cacheValue.getCacheValue();
     }
   }
 
@@ -156,6 +158,9 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     cache.put(cacheKey, cacheValue);
   }
 
+  public Iterator<Map.Entry<CacheKey<KEY>, CacheValue<VALUE>>> cacheIterator() {
+    return cache.iterator();
+  }
 
   @Override
   public void cleanupCache(long epoch) {
