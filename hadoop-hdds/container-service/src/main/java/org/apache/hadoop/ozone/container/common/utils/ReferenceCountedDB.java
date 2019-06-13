@@ -52,29 +52,22 @@ public class ReferenceCountedDB implements Closeable {
 
   public void incrementReference() {
     this.referenceCount.incrementAndGet();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("IncRef {} to refCnt {} \n", containerDBPath,
-          referenceCount.get());
-      new Exception().printStackTrace();
-    }
+    LOG.info("IncRef {} to refCnt {} \n", containerDBPath,
+        referenceCount.get());
+    new Exception().printStackTrace();
   }
 
   public void decrementReference() {
     int refCount = this.referenceCount.decrementAndGet();
     Preconditions.checkArgument(refCount >= 0, "refCount:", refCount);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("DecRef {} to refCnt {} \n", containerDBPath,
-          referenceCount.get());
-      new Exception().printStackTrace();
-    }
+    LOG.info("DecRef {} to refCnt {} \n", containerDBPath,
+        referenceCount.get());
+    new Exception().printStackTrace();
   }
 
   public boolean cleanup() {
     if (referenceCount.get() == 0 && store != null) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Close {} refCnt {}", containerDBPath,
-            referenceCount.get());
-      }
+      LOG.info("Close {} refCnt {}", containerDBPath, referenceCount.get());
       try {
         store.close();
         return true;
