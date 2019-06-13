@@ -24,6 +24,7 @@ import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
@@ -224,12 +225,12 @@ public class DatasetVolumeChecker {
         Futures.addCallback(olf.get(),
             new ResultHandler(reference, healthyVolumes, failedVolumes,
                 numVolumes, new Callback() {
-              @Override
-              public void call(Set<FsVolumeSpi> ignored1,
-                               Set<FsVolumeSpi> ignored2) {
-                latch.countDown();
-              }
-            }));
+                  @Override
+                  public void call(Set<FsVolumeSpi> ignored1,
+                                   Set<FsVolumeSpi> ignored2) {
+                    latch.countDown();
+                  }
+                }), MoreExecutors.directExecutor());
       } else {
         IOUtils.cleanup(null, reference);
         if (numVolumes.decrementAndGet() == 0) {
