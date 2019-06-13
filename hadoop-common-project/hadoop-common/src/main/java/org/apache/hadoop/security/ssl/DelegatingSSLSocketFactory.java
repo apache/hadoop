@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.azurebfs.utils;
+package org.apache.hadoop.security.ssl;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -38,29 +38,59 @@ import org.wildfly.openssl.SSL;
 
 
 /**
- * Extension to use native OpenSSL library instead of JSSE for better
- * performance.
+ * A {@link SSLSocketFactory} that can delegate to various SSL implementations.
+ * Specifically, either OpenSSL or JSSE can be used. OpenSSL offers better
+ * performance than JSSE and is made available via the
+ * <a href="https://github.com/wildfly/wildfly-openssl">wildlfy-openssl</a>
+ * library.
  *
+ * <p>
+ *   The factory has several different modes of operation:
+ *   <ul>
+ *     <li>OpenSSL: Uses the wildly-openssl library to delegate to the
+ *     system installed OpenSSL. If the wildfly-openssl integration is not
+ *     properly setup, an exception is thrown.</li>
+ *     <li>Default: Attempts to use the OpenSSL mode, if it cannot load the
+ *     necessary libraries, it falls back to the Default_JSEE mode.</li>
+ *     <li>Default_JSSE: Delegates to the JSSE implementation of SSL, but
+ *     it disables the GCM cipher when running on Java 8.</li>
+ *     <li>Default_JSSE_with_GCM: Delegates to the JSSE implementation of
+ *     SSL with no modification to the list of enabled ciphers.</li>
+ *   </ul>
+ * </p>
  */
-public final class SSLSocketFactoryEx extends SSLSocketFactory {
+public final class DelegatingSSLSocketFactory extends SSLSocketFactory {
 
   /**
    * Default indicates Ordered, preferred OpenSSL, if failed to load then fall
-   * back to Default_JSSE
+   * back to Default_JSSE.
+   *
+   * <p>
+   *   Default_JSSE is not truly the the default JSSE implementation because
+   *   the GCM cipher is disabled when running on Java 8. However, the name
+   *   was not changed in order to preserve backwards compatibility. Instead,
+   *   a new mode called Default_JSSE_with_GCM delegates to the default JSSE
+   *   implementation with no changes to the list of enabled ciphers.
+   * </p>
    */
   public enum SSLChannelMode {
     OpenSSL,
     Default,
-    Default_JSSE
+    Default_JSSE,
+    Default_JSSE_with_GCM
   }
 
-  private static SSLSocketFactoryEx instance = null;
+  private static DelegatingSSLSocketFactory instance = null;
   private static final Logger LOG = LoggerFactory.getLogger(
-      SSLSocketFactoryEx.class);
+          DelegatingSSLSocketFactory.class);
   private String providerName;
   private SSLContext ctx;
   private String[] ciphers;
   private SSLChannelMode channelMode;
+
+  // This should only be modified within the #initializeDefaultFactory
+  // method which is synchronized
+  private boolean openSSLProviderRegistered;
 
   /**
    * Initialize a singleton SSL socket factory.
@@ -71,7 +101,7 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
   public static synchronized void initializeDefaultFactory(
       SSLChannelMode preferredMode) throws IOException {
     if (instance == null) {
-      instance = new SSLSocketFactoryEx(preferredMode);
+      instance = new DelegatingSSLSocketFactory(preferredMode);
     }
   }
 
@@ -84,15 +114,11 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
    * @return instance of the SSLSocketFactory, instance must be initialized by
    * initializeDefaultFactory.
    */
-  public static SSLSocketFactoryEx getDefaultFactory() {
+  public static DelegatingSSLSocketFactory getDefaultFactory() {
     return instance;
   }
 
-  static {
-    OpenSSLProvider.register();
-  }
-
-  private SSLSocketFactoryEx(SSLChannelMode preferredChannelMode)
+  private DelegatingSSLSocketFactory(SSLChannelMode preferredChannelMode)
       throws IOException {
     try {
       initializeSSLContext(preferredChannelMode);
@@ -118,33 +144,47 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
   private void initializeSSLContext(SSLChannelMode preferredChannelMode)
       throws NoSuchAlgorithmException, KeyManagementException {
     switch (preferredChannelMode) {
-      case Default:
-        try {
-          java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SSL.class.getName());
-          logger.setLevel(Level.WARNING);
-          ctx = SSLContext.getInstance("openssl.TLS");
-          ctx.init(null, null, null);
-          // Strong reference needs to be kept to logger until initialization of SSLContext finished (see HADOOP-16174):
-          logger.setLevel(Level.INFO);
-          channelMode = SSLChannelMode.OpenSSL;
-        } catch (NoSuchAlgorithmException e) {
-          LOG.warn("Failed to load OpenSSL. Falling back to the JSSE default.");
-          ctx = SSLContext.getDefault();
-          channelMode = SSLChannelMode.Default_JSSE;
-        }
-        break;
-      case OpenSSL:
+    case Default:
+      if (!openSSLProviderRegistered) {
+        OpenSSLProvider.register();
+        openSSLProviderRegistered = true;
+      }
+      try {
+        java.util.logging.Logger logger = java.util.logging.Logger.getLogger(
+                SSL.class.getName());
+        logger.setLevel(Level.WARNING);
         ctx = SSLContext.getInstance("openssl.TLS");
         ctx.init(null, null, null);
+        // Strong reference needs to be kept to logger until initialization of
+        // SSLContext finished (see HADOOP-16174):
+        logger.setLevel(Level.INFO);
         channelMode = SSLChannelMode.OpenSSL;
-        break;
-      case Default_JSSE:
+      } catch (NoSuchAlgorithmException e) {
+        LOG.debug("Failed to load OpenSSL. Falling back to the JSSE default.");
         ctx = SSLContext.getDefault();
         channelMode = SSLChannelMode.Default_JSSE;
-        break;
-      default:
-        throw new AssertionError("Unknown channel mode: "
-            + preferredChannelMode);
+      }
+      break;
+    case OpenSSL:
+      if (!openSSLProviderRegistered) {
+        OpenSSLProvider.register();
+        openSSLProviderRegistered = true;
+      }
+      ctx = SSLContext.getInstance("openssl.TLS");
+      ctx.init(null, null, null);
+      channelMode = SSLChannelMode.OpenSSL;
+      break;
+    case Default_JSSE:
+      ctx = SSLContext.getDefault();
+      channelMode = SSLChannelMode.Default_JSSE;
+      break;
+    case Default_JSSE_with_GCM:
+      ctx = SSLContext.getDefault();
+      channelMode = SSLChannelMode.Default_JSSE_with_GCM;
+      break;
+    default:
+      throw new NoSuchAlgorithmException("Unknown channel mode: "
+          + preferredChannelMode);
     }
   }
 
@@ -234,7 +274,8 @@ public final class SSLSocketFactoryEx extends SSLSocketFactory {
     // Remove GCM mode based ciphers from the supported list.
     for (int i = 0; i < defaultCiphers.length; i++) {
       if (defaultCiphers[i].contains("_GCM_")) {
-        LOG.debug("Removed Cipher - " + defaultCiphers[i]);
+        LOG.debug("Removed Cipher - {} from list of enabled SSLSocket ciphers",
+                defaultCiphers[i]);
       } else {
         preferredSuits.add(defaultCiphers[i]);
       }
