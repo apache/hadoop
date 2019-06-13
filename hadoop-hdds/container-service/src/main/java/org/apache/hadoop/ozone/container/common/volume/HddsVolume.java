@@ -204,7 +204,7 @@ public class HddsVolume
     switch (intialVolumeState) {
     case NON_EXISTENT:
       // Root directory does not exist. Create it.
-      if (!hddsRootDir.mkdir()) {
+      if (!hddsRootDir.mkdirs()) {
         throw new IOException("Cannot create directory " + hddsRootDir);
       }
       setState(VolumeState.NOT_FORMATTED);
