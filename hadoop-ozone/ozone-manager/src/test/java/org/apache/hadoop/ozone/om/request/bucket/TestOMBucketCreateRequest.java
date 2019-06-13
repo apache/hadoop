@@ -69,6 +69,7 @@ public class TestOMBucketCreateRequest {
 
   @Before
   public void setup() throws Exception {
+
     ozoneManager = Mockito.mock(OzoneManager.class);
     omMetrics = OMMetrics.create();
     OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();

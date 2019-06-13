@@ -25,8 +25,8 @@ import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
  */
 public class ScmClient {
 
-  private ScmBlockLocationProtocol blockClient;
-  private StorageContainerLocationProtocol containerClient;
+  private final ScmBlockLocationProtocol blockClient;
+  private final StorageContainerLocationProtocol containerClient;
 
   ScmClient(ScmBlockLocationProtocol blockClient,
             StorageContainerLocationProtocol containerClient) {
@@ -34,7 +34,7 @@ public class ScmClient {
     this.blockClient = blockClient;
   }
 
-  ScmBlockLocationProtocol getBlockClient() {
+  public ScmBlockLocationProtocol getBlockClient() {
     return this.blockClient;
   }
 
