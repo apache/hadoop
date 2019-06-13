@@ -29,6 +29,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -46,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.LeafQueue;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.TestUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerNode;
+import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppActivitiesInfo;
 import org.apache.hadoop.yarn.server.scheduler.SchedulerRequestKey;
 import org.apache.hadoop.yarn.util.SystemClock;
@@ -286,16 +288,122 @@ public class TestActivitiesManager {
               ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
     }
     AppActivitiesInfo appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            false, 3);
     Assert.assertEquals(numActivities,
         appActivitiesInfo.getAllocations().size());
     // sleep until all app activities expired
     Thread.sleep(cleanupIntervalMs + appActivitiesTTL);
     // there should be no remaining app activities
     appActivitiesInfo = newActivitiesManager
-        .getAppActivitiesInfo(app.getApplicationId(), null, null, null);
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            false, 3);
     Assert.assertEquals(0,
         appActivitiesInfo.getAllocations().size());
+  }
+
+  @Test (timeout = 30000)
+  public void testAppActivitiesPerformance() {
+    // start recording activities for first app
+    SchedulerApplicationAttempt app = apps.get(0);
+    FiCaSchedulerNode node = (FiCaSchedulerNode) nodes.get(0);
+    activitiesManager.turnOnAppActivitiesRecording(app.getApplicationId(), 100);
+    int numActivities = 100;
+    int numNodes = 10000;
+    int testingTimes = 10;
+    for (int ano = 0; ano < numActivities; ano++) {
+      ActivitiesLogger.APP.startAppAllocationRecording(activitiesManager, node,
+          SystemClock.getInstance().getTime(), app);
+      for (int i = 0; i < numNodes; i++) {
+        NodeId nodeId = NodeId.newInstance("host" + i, 0);
+        activitiesManager
+            .addSchedulingActivityForApp(app.getApplicationId(), null, "0",
+                ActivityState.SKIPPED,
+                ActivityDiagnosticConstant.FAIL_TO_ALLOCATE, "container",
+                nodeId, "0");
+      }
+      ActivitiesLogger.APP
+          .finishAllocatedAppAllocationRecording(activitiesManager,
+              app.getApplicationId(), null, ActivityState.SKIPPED,
+              ActivityDiagnosticConstant.SKIPPED_ALL_PRIORITIES);
+    }
+
+    // It often take a longer time for the first query, ignore this distraction
+    activitiesManager
+        .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+            true, 100);
+
+    // Test getting normal app activities
+    Supplier<Void> normalSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null, null, -1,
+              false, 100);
+      Assert.assertEquals(numActivities,
+          appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .get(0).getAllocationAttempt().size());
+      return null;
+    };
+    testManyTimes("Getting normal app activities", normalSupplier,
+        testingTimes);
+
+    // Test getting aggregated app activities
+    Supplier<Void> aggregatedSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null,
+              RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, false, 100);
+      Assert.assertEquals(numActivities,
+          appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .get(0).getAllocationAttempt().size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .get(0).getAllocationAttempt().get(0).getNodeIds().size());
+      return null;
+    };
+    testManyTimes("Getting aggregated app activities", aggregatedSupplier,
+        testingTimes);
+
+    // Test getting summarized app activities
+    Supplier<Void> summarizedSupplier = () -> {
+      AppActivitiesInfo appActivitiesInfo = activitiesManager
+          .getAppActivitiesInfo(app.getApplicationId(), null, null,
+              RMWSConsts.ActivitiesGroupBy.DIAGNOSTIC, -1, true, 100);
+      Assert.assertEquals(1, appActivitiesInfo.getAllocations().size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .size());
+      Assert.assertEquals(1,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .get(0).getAllocationAttempt().size());
+      Assert.assertEquals(numNodes,
+          appActivitiesInfo.getAllocations().get(0).getRequestAllocation()
+              .get(0).getAllocationAttempt().get(0).getNodeIds().size());
+      return null;
+    };
+    testManyTimes("Getting summarized app activities", summarizedSupplier,
+        testingTimes);
+  }
+
+  private void testManyTimes(String testingName,
+      Supplier<Void> supplier, int testingTimes) {
+    long totalTime = 0;
+    for (int i = 0; i < testingTimes; i++) {
+      long startTime = System.currentTimeMillis();
+      supplier.get();
+      totalTime += System.currentTimeMillis() - startTime;
+    }
+    System.out.println("#" + testingName + ", testing times : " + testingTimes
+        + ", total cost time : " + totalTime + " ms, average cost time : "
+        + (float) totalTime / testingTimes + " ms.");
   }
 
   /**

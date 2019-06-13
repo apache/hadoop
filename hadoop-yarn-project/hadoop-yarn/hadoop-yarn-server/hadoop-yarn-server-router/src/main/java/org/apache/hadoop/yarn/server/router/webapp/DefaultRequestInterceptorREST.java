@@ -192,7 +192,8 @@ public class DefaultRequestInterceptorREST
   @Override
   public AppActivitiesInfo getAppActivities(HttpServletRequest hsr,
       String appId, String time, Set<String> requestPriorities,
-      Set<String> allocationRequestIds, String groupBy) {
+      Set<String> allocationRequestIds, String groupBy, String limit,
+      Set<String> actions, boolean summarize) {
     // time and appId are specified inside hsr
     return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
         AppActivitiesInfo.class, HTTPMethods.GET,

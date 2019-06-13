@@ -54,7 +54,8 @@ public class AppAllocationInfo {
     this.requestAllocation = new ArrayList<>();
     this.nodeId = allocation.getNodeId();
     this.queueName = allocation.getQueueName();
-    this.appPriority = allocation.getPriority();
+    this.appPriority = allocation.getPriority() == null ?
+        null : allocation.getPriority().toString();
     this.timestamp = allocation.getTime();
     this.dateTime = new Date(allocation.getTime()).toString();
     this.allocationState = allocation.getAppState().name();
