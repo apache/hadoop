@@ -1631,6 +1631,16 @@ public class TestRouterRpc {
     assertFalse(routerDFS.listCacheDirectives(filter).hasNext());
   }
 
+  @Test
+  public void testgetGroupsForUser() throws IOException {
+    String[] group = new String[] {"bar", "group2"};
+    UserGroupInformation.createUserForTesting("user",
+        new String[] {"bar", "group2"});
+    String[] result =
+        router.getRouter().getRpcServer().getGroupsForUser("user");
+    assertArrayEquals(group, result);
+  }
+
   /**
    * Check the erasure coding policies in the Router and the Namenode.
    * @return The erasure coding policies.

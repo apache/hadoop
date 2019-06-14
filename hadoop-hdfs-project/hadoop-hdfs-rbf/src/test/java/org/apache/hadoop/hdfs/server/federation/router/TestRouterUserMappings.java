@@ -20,14 +20,16 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.NameNodeProxies;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.server.federation.MiniRouterDFSCluster;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
 import org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider;
 import org.apache.hadoop.hdfs.tools.DFSAdmin;
-import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.hdfs.tools.GetGroups;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -36,16 +38,19 @@ import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
+import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
@@ -54,18 +59,20 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests RefreshUserMappingsProtocol With Routers.
+ * Test RefreshUserMappingsProtocol and GetUserMappingsProtocol with Routers.
  */
-public class TestRefreshUserMappingsWithRouters {
+public class TestRouterUserMappings {
   private static final Logger LOG = LoggerFactory.getLogger(
-      TestRefreshUserMappingsWithRouters.class);
+      TestRouterUserMappings.class);
 
   private MiniRouterDFSCluster cluster;
   private Router router;
@@ -74,7 +81,6 @@ public class TestRefreshUserMappingsWithRouters {
   private static final String ROUTER_NS = "rbfns";
   private static final String HDFS_SCHEMA = "hdfs://";
   private static final String LOOPBACK_ADDRESS = "127.0.0.1";
-  private static final String HDFS_PREFIX = HDFS_SCHEMA + LOOPBACK_ADDRESS;
 
   private String tempResource = null;
 
@@ -111,7 +117,7 @@ public class TestRefreshUserMappingsWithRouters {
   public void setUp() {
     conf = new Configuration(false);
     conf.setClass("hadoop.security.group.mapping",
-        TestRefreshUserMappingsWithRouters.MockUnixGroupsMapping.class,
+        TestRouterUserMappings.MockUnixGroupsMapping.class,
         GroupMappingServiceProvider.class);
     conf.setLong("hadoop.security.groups.cache.secs",
         GROUP_REFRESH_TIMEOUT_SEC);
@@ -120,23 +126,6 @@ public class TestRefreshUserMappingsWithRouters {
         .admin()
         .build();
     Groups.getUserToGroupsMappingService(conf);
-  }
-
-  /**
-   * Setup a single router, and return this router's rpc address
-   * as fs.defaultFS for {@link DFSAdmin}.
-   * @return router's rpc address
-   * @throws Exception
-   */
-  private String setUpSingleRouterAndReturnDefaultFs() {
-    router = new Router();
-    conf.set(RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
-        LOOPBACK_ADDRESS + ":" + NetUtils.getFreeSocketPort());
-    router.init(conf);
-    router.start();
-    String defaultFs = HDFS_PREFIX + ":" +
-        router.getRpcServerAddress().getPort();
-    return defaultFs;
   }
 
   /**
@@ -178,28 +167,14 @@ public class TestRefreshUserMappingsWithRouters {
   }
 
   @Test
-  public void testRefreshSuperUserGroupsConfigurationWithSingleRouter()
-      throws Exception {
-    testRefreshSuperUserGroupsConfigurationInternal(
-        setUpSingleRouterAndReturnDefaultFs());
-  }
-
-  @Test
-  public void testRefreshSuperUserGroupsConfigurationWithMultiRouters()
+  public void testRefreshSuperUserGroupsConfiguration()
       throws Exception {
     testRefreshSuperUserGroupsConfigurationInternal(
         setUpMultiRoutersAndReturnDefaultFs());
   }
 
   @Test
-  public void testGroupMappingRefreshWithSingleRouter() throws Exception {
-    testGroupMappingRefreshInternal(
-        setUpSingleRouterAndReturnDefaultFs());
-  }
-
-
-  @Test
-  public void testGroupMappingRefreshWithMultiRouters() throws Exception {
+  public void testGroupMappingRefresh() throws Exception {
     testGroupMappingRefreshInternal(
         setUpMultiRoutersAndReturnDefaultFs());
   }
@@ -282,6 +257,43 @@ public class TestRefreshUserMappingsWithRouters {
       fail("second auth for " + ugi1.getShortUserName() +
           " should've succeeded: " + e.getLocalizedMessage());
     }
+
+    // get groups
+    testGroupsForUserCLI(conf, "user");
+    testGroupsForUserProtocol(conf, "user");
+  }
+
+  /**
+   * Use the command line to get the groups.
+   * @param config Configuration containing the default filesystem.
+   * @param username Username to check.
+   * @throws Exception If it cannot get the groups.
+   */
+  private void testGroupsForUserCLI(Configuration config, String username)
+      throws Exception {
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream oldOut = System.out;
+    System.setOut(new PrintStream(out));
+    new GetGroups(config).run(new String[]{username});
+    assertTrue("Wrong output: " + out,
+        out.toString().startsWith(username + " : " + username));
+    out.reset();
+    System.setOut(oldOut);
+  }
+
+  /**
+   * Use the GetUserMappingsProtocol protocol to get the groups.
+   * @param config Configuration containing the default filesystem.
+   * @param username Username to check.
+   * @throws IOException If it cannot get the groups.
+   */
+  private void testGroupsForUserProtocol(Configuration config, String username)
+      throws IOException {
+    GetUserMappingsProtocol proto = NameNodeProxies.createProxy(
+        config, FileSystem.getDefaultUri(config),
+        GetUserMappingsProtocol.class).getProxy();
+    String[] groups = proto.getGroupsForUser(username);
+    assertArrayEquals(new String[] {"user1", "user2"}, groups);
   }
 
   /**

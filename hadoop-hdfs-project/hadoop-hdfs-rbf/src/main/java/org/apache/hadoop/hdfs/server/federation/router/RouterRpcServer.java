@@ -139,15 +139,17 @@ import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.AccessControlException;
-import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.security.proto.RefreshUserMappingsProtocolProtos;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
 import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.service.AbstractService;
+import org.apache.hadoop.tools.GetUserMappingsProtocol;
+import org.apache.hadoop.tools.proto.GetUserMappingsProtocolProtos;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolPB;
+import org.apache.hadoop.tools.protocolPB.GetUserMappingsProtocolServerSideTranslatorPB;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -163,8 +165,8 @@ import com.google.protobuf.BlockingService;
  * the requests to the active
  * {@link org.apache.hadoop.hdfs.server.namenode.NameNode NameNode}.
  */
-public class RouterRpcServer extends AbstractService
-    implements ClientProtocol, NamenodeProtocol, RefreshUserMappingsProtocol {
+public class RouterRpcServer extends AbstractService implements ClientProtocol,
+    NamenodeProtocol, RefreshUserMappingsProtocol, GetUserMappingsProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RouterRpcServer.class);
@@ -207,6 +209,8 @@ public class RouterRpcServer extends AbstractService
   private final RouterNamenodeProtocol nnProto;
   /** ClientProtocol calls. */
   private final RouterClientProtocol clientProto;
+  /** Other protocol calls. */
+  private final RouterUserProtocol routerProto;
   /** Router security manager to handle token operations. */
   private RouterSecurityManager securityManager = null;
   /** Super user credentials that a thread may use. */
@@ -269,6 +273,12 @@ public class RouterRpcServer extends AbstractService
         RefreshUserMappingsProtocolProtos.RefreshUserMappingsProtocolService.
         newReflectiveBlockingService(refreshUserMappingXlator);
 
+    GetUserMappingsProtocolServerSideTranslatorPB getUserMappingXlator =
+        new GetUserMappingsProtocolServerSideTranslatorPB(this);
+    BlockingService getUserMappingService =
+        GetUserMappingsProtocolProtos.GetUserMappingsProtocolService.
+        newReflectiveBlockingService(getUserMappingXlator);
+
     InetSocketAddress confRpcAddress = conf.getSocketAddr(
         RBFConfigKeys.DFS_ROUTER_RPC_BIND_HOST_KEY,
         RBFConfigKeys.DFS_ROUTER_RPC_ADDRESS_KEY,
@@ -297,6 +307,8 @@ public class RouterRpcServer extends AbstractService
         conf, NamenodeProtocolPB.class, nnPbService, this.rpcServer);
     DFSUtil.addPBProtocol(conf, RefreshUserMappingsProtocolPB.class,
         refreshUserMappingService, this.rpcServer);
+    DFSUtil.addPBProtocol(conf, GetUserMappingsProtocolPB.class,
+        getUserMappingService, this.rpcServer);
 
     // Set service-level authorization security policy
     this.serviceAuthEnabled = conf.getBoolean(
@@ -346,6 +358,7 @@ public class RouterRpcServer extends AbstractService
     this.quotaCall = new Quota(this.router, this);
     this.nnProto = new RouterNamenodeProtocol(this);
     this.clientProto = new RouterClientProtocol(conf, this);
+    this.routerProto = new RouterUserProtocol(this);
   }
 
   @Override
@@ -1706,13 +1719,16 @@ public class RouterRpcServer extends AbstractService
 
   @Override
   public void refreshUserToGroupsMappings() throws IOException {
-    LOG.info("Refresh user groups mapping in Router.");
-    Groups.getUserToGroupsMappingService().refresh();
+    routerProto.refreshUserToGroupsMappings();
   }
 
   @Override
   public void refreshSuperUserGroupsConfiguration() throws IOException {
-    LOG.info("Refresh superuser groups configuration in Router.");
-    ProxyUsers.refreshSuperUserGroupsConfiguration();
+    routerProto.refreshSuperUserGroupsConfiguration();
+  }
+
+  @Override
+  public String[] getGroupsForUser(String user) throws IOException {
+    return routerProto.getGroupsForUser(user);
   }
 }
