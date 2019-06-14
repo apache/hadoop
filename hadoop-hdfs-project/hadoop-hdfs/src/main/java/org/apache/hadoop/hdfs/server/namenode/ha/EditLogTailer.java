@@ -483,7 +483,7 @@ public class EditLogTailer {
         try {
           Thread.sleep(sleepTimeMs);
         } catch (InterruptedException e) {
-          LOG.warn("Edit log tailer interrupted", e);
+          LOG.warn("Edit log tailer interrupted: {}", e.getMessage());
         }
       }
     }
