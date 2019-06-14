@@ -17,8 +17,6 @@
 
 package org.apache.hadoop.ozone.protocolPB;
 
-import java.io.IOException;
-
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos

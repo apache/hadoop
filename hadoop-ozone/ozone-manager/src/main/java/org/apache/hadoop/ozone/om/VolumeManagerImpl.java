@@ -120,7 +120,6 @@ public class VolumeManagerImpl implements VolumeManager {
   /**
    * Creates a volume.
    * @param omVolumeArgs - OmVolumeArgs.
-   * @return VolumeList
    */
   @Override
   public void createVolume(OmVolumeArgs omVolumeArgs) throws IOException {
@@ -277,7 +276,6 @@ public class VolumeManagerImpl implements VolumeManager {
    * @param volume - Name of the volume.
    * @param quota - Quota in bytes.
    *
-   * @return OmVolumeArgs
    * @throws IOException
    */
   @Override
