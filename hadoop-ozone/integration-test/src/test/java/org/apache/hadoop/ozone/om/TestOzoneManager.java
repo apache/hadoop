@@ -1365,27 +1365,6 @@ public class TestOzoneManager {
         conf.get(OZONE_SCM_CLIENT_ADDRESS_KEY)), scmAddress);
   }
 
-  /**
-   * Test that OM Ratis server is started only when OZONE_OM_RATIS_ENABLE_KEY is
-   * set to true.
-   */
-  @Test
-  public void testRatisServerOnOMInitialization() throws IOException {
-    // OM Ratis server should not be started when OZONE_OM_RATIS_ENABLE_KEY
-    // is not set to true
-    Assert.assertNull("OM Ratis server started though OM Ratis is disabled.",
-        cluster.getOzoneManager().getOmRatisServerState());
-
-    // Enable OM Ratis and restart OM
-    conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
-    cluster.restartOzoneManager();
-
-    // On enabling OM Ratis, the Ratis server should be started
-    Assert.assertEquals("OM Ratis server did not start",
-        LifeCycle.State.RUNNING,
-        cluster.getOzoneManager().getOmRatisServerState());
-  }
-
   @Test
   public void testVersion() {
     String expectedVersion = OzoneVersionInfo.OZONE_VERSION_INFO.getVersion();
