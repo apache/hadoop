@@ -19,6 +19,7 @@ package org.apache.hadoop.hdds.server;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsConfigKeys;
+import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdds.conf.HddsConfServlet;
@@ -65,7 +66,7 @@ public abstract class BaseHttpServer {
   public BaseHttpServer(Configuration conf, String name) throws IOException {
     this.name = name;
     this.conf = conf;
-    policy = DFSUtil.getHttpPolicy(conf);
+    policy = HddsUtils.getHttpPolicy(conf);
     if (isEnabled()) {
       this.httpAddress = getHttpBindAddress();
       this.httpsAddress = getHttpsBindAddress();

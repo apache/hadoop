@@ -25,6 +25,7 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
@@ -91,8 +92,9 @@ public class TestOzoneManagerHttpServer {
     KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
   }
 
-  @Test public void testHttpPolicy() throws Exception {
-    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
+  @Test
+  public void testHttpPolicy() throws Exception {
+    conf.set(OzoneConfigKeys.OZONE_HTTP_POLICY, policy.name());
     conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "localhost:0");
 

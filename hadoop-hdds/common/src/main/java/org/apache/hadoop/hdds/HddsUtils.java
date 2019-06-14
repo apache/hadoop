@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -42,6 +43,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.http.HttpConfig.Policy;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
@@ -56,6 +59,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ENABLED_DEFAULT;
 
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -424,6 +428,20 @@ public final class HddsUtils {
    */
   public static long getUtcTime() {
     return Calendar.getInstance(UTC_ZONE).getTimeInMillis();
+  }
+
+  public static Policy getHttpPolicy(Configuration conf) {
+    String policyStr = conf.get("ozone.http.policy", OzoneConfigKeys.OZONE_HTTP_POLICY);
+    if(policyStr == null || policyStr.length() == 0) {
+      policyStr = conf.get("dfs.http.policy", DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
+    }
+    Policy policy = Policy.fromString(policyStr);
+    if (policy == null) {
+      throw new HadoopIllegalArgumentException("Unrecognized value '" + policyStr + "' for " + "dfs.http.policy");
+    } else {
+      conf.set("dfs.http.policy", policy.name());
+      return policy;
+    }
   }
 
   /**
