@@ -168,6 +168,13 @@ public class OzoneManagerDoubleBuffer {
     omMetadataManager.getBucketTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getVolumeTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getUserTable().cleanupCache(lastRatisTransactionIndex);
+
+    //TODO: Optimization we can do here is for key transactions we can only
+    // cleanup cache when it is key commit transaction. In this way all
+    // intermediate transactions for a key will be read from in-memory cache.
+    omMetadataManager.getOpenKeyTable().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getKeyTable().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getDeletedTable().cleanupCache(lastRatisTransactionIndex);
   }
 
   /**

@@ -80,6 +80,7 @@ public final class TestOMRequestUtils {
    * @param omMetadataManager
    * @throws Exception
    */
+  @SuppressWarnings("parameterNumber")
   public static void addKeyToTable(boolean openKeyTable, String volumeName,
       String bucketName,
       String keyName, long clientID,
@@ -102,8 +103,8 @@ public final class TestOMRequestUtils {
 
     if (openKeyTable) {
       omMetadataManager.getOpenKeyTable().put(
-          omMetadataManager.getOpenKey(volumeName, bucketName, keyName, clientID),
-          builder.build());
+          omMetadataManager.getOpenKey(volumeName, bucketName, keyName,
+              clientID), builder.build());
     } else {
       omMetadataManager.getKeyTable().put(omMetadataManager.getOzoneKey(
           volumeName, bucketName, keyName), builder.build());

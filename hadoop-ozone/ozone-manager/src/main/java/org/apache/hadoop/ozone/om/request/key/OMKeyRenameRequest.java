@@ -110,8 +110,6 @@ public class OMKeyRenameRequest extends OMClientRequest
 
     try {
       if (toKeyName.length() == 0 || fromKeyName.length() == 0) {
-        LOG.error("Rename key failed for volume:{} bucket:{} fromKey:{} " +
-                "toKey:{}", volumeName, bucketName, fromKeyName, toKeyName);
         throw new OMException("Key name is empty",
             OMException.ResultCodes.INVALID_KEY_NAME);
       }
@@ -190,7 +188,7 @@ public class OMKeyRenameRequest extends OMClientRequest
         exception, getOmRequest().getUserInfo()));
 
     if (exception == null) {
-      return new OMKeyRenameResponse(fromKeyValue, fromKeyName, toKeyName,
+      return new OMKeyRenameResponse(fromKeyValue, toKeyName, fromKeyName,
           omResponse.setRenameKeyResponse(
               RenameKeyResponse.newBuilder()).build());
     } else {
