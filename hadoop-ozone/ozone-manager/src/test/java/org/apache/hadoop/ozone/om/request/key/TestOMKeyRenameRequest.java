@@ -110,6 +110,7 @@ public class TestOMKeyRenameRequest extends TestOMKeyRequest {
 
   }
 
+
   @Test
   public void testValidateAndUpdateCacheWithOutVolumeAndBucket()
       throws Exception {
@@ -127,6 +128,55 @@ public class TestOMKeyRenameRequest extends TestOMKeyRequest {
         omKeyRenameRequest.validateAndUpdateCache(ozoneManager, 100L);
 
     Assert.assertEquals(OzoneManagerProtocolProtos.Status.KEY_NOT_FOUND,
+        omKeyRenameResponse.getOMResponse().getStatus());
+
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithToKeyInvalid() throws Exception {
+    String toKeyName = "";
+    OMRequest modifiedOmRequest =
+        doPreExecute(createRenameKeyRequest(toKeyName));
+
+    // Add only volume and bucket entry to DB.
+
+    // In actual implementation we don't check for bucket/volume exists
+    // during delete key.
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
+
+    OMKeyRenameRequest omKeyRenameRequest =
+        new OMKeyRenameRequest(modifiedOmRequest);
+
+    OMClientResponse omKeyRenameResponse =
+        omKeyRenameRequest.validateAndUpdateCache(ozoneManager, 100L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_KEY_NAME,
+        omKeyRenameResponse.getOMResponse().getStatus());
+
+  }
+
+  @Test
+  public void testValidateAndUpdateCacheWithFromKeyInvalid() throws Exception {
+    String toKeyName = UUID.randomUUID().toString();
+    keyName = "";
+    OMRequest modifiedOmRequest =
+        doPreExecute(createRenameKeyRequest(toKeyName));
+
+    // Add only volume and bucket entry to DB.
+
+    // In actual implementation we don't check for bucket/volume exists
+    // during delete key.
+    TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
+        omMetadataManager);
+
+    OMKeyRenameRequest omKeyRenameRequest =
+        new OMKeyRenameRequest(modifiedOmRequest);
+
+    OMClientResponse omKeyRenameResponse =
+        omKeyRenameRequest.validateAndUpdateCache(ozoneManager, 100L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.INVALID_KEY_NAME,
         omKeyRenameResponse.getOMResponse().getStatus());
 
   }
