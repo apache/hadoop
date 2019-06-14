@@ -741,7 +741,7 @@
         <zstd.prefix></zstd.prefix>
         <zstd.lib></zstd.lib>
         <zstd.include></zstd.include>
-        <require.ztsd>false</require.ztsd>
+        <require.zstd>false</require.zstd>
         <bundle.zstd.in.bin>true</bundle.zstd.in.bin>
         <openssl.prefix></openssl.prefix>
         <openssl.lib></openssl.lib>
@@ -844,7 +844,7 @@
                     <argument>/p:CustomZstdPrefix=${zstd.prefix}</argument>
                     <argument>/p:CustomZstdLib=${zstd.lib}</argument>
                     <argument>/p:CustomZstdInclude=${zstd.include}</argument>
-                    <argument>/p:RequireZstd=${require.ztsd}</argument>
+                    <argument>/p:RequireZstd=${require.zstd}</argument>
                     <argument>/p:CustomOpensslPrefix=${openssl.prefix}</argument>
                     <argument>/p:CustomOpensslLib=${openssl.lib}</argument>
                     <argument>/p:CustomOpensslInclude=${openssl.include}</argument>
