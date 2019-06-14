@@ -382,7 +382,7 @@ public class BlockManager implements BlockStatsMXBean {
   final int maxCorruptFilesReturned;
 
   final float blocksInvalidateWorkPct;
-  final int blocksReplWorkMultiplier;
+  private int blocksReplWorkMultiplier;
 
   // whether or not to issue block encryption keys.
   final boolean encryptDataTransfer;
@@ -896,9 +896,76 @@ public class BlockManager implements BlockStatsMXBean {
     out.println("");
   }
 
-  /** @return maxReplicationStreams */
+  /** Returns the current setting for maxReplicationStreams, which is set by
+   *  {@code DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY}.
+   *
+   *  @return maxReplicationStreams
+   */
   public int getMaxReplicationStreams() {
     return maxReplicationStreams;
+  }
+
+  static private void ensurePositiveInt(int val, String key) {
+    Preconditions.checkArgument(
+        (val > 0),
+        key + " = '" + val + "' is invalid. " +
+            "It should be a positive, non-zero integer value.");
+  }
+
+  /**
+   * Updates the value used for maxReplicationStreams, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY} initially.
+   *
+   * @param newVal - Must be a positive non-zero integer.
+   */
+  public void setMaxReplicationStreams(int newVal) {
+    ensurePositiveInt(newVal,
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_MAX_STREAMS_KEY);
+    maxReplicationStreams = newVal;
+  }
+
+  /** Returns the current setting for maxReplicationStreamsHardLimit, set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY}.
+   *
+   *  @return maxReplicationStreamsHardLimit
+   */
+  public int getReplicationStreamsHardLimit() {
+    return replicationStreamsHardLimit;
+  }
+
+  /**
+   * Updates the value used for replicationStreamsHardLimit, which is set by
+   * {@code DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY}
+   * initially.
+   *
+   * @param newVal - Must be a positive non-zero integer.
+   */
+  public void setReplicationStreamsHardLimit(int newVal) {
+    ensurePositiveInt(newVal,
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_STREAMS_HARD_LIMIT_KEY);
+    replicationStreamsHardLimit = newVal;
+  }
+
+  /** Returns the current setting for blocksReplWorkMultiplier, set by
+   * {@code DFSConfigKeys.
+   *     DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION}.
+   *
+   *  @return maxReplicationStreamsHardLimit
+   */
+  public int getBlocksReplWorkMultiplier() {
+    return blocksReplWorkMultiplier;
+  }
+
+  /**
+   * Updates the value used for blocksReplWorkMultiplier, set by
+   * {@code DFSConfigKeys.
+   *     DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION} initially.
+   * @param newVal - Must be a positive non-zero integer.
+   */
+  public void setBlocksReplWorkMultiplier(int newVal) {
+    ensurePositiveInt(newVal,
+        DFSConfigKeys.DFS_NAMENODE_REPLICATION_WORK_MULTIPLIER_PER_ITERATION);
+    blocksReplWorkMultiplier = newVal;
   }
 
   public int getDefaultStorageNum(BlockInfo block) {
