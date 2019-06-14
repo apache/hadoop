@@ -165,10 +165,10 @@ public class TimelineReaderServer extends CompositeService {
           TimelineReaderAuthenticationFilterInitializer.class.getName())) {
         defaultInitializers.add(
             TimelineReaderAuthenticationFilterInitializer.class.getName());
-      } else {
-        defaultInitializers.add(
-            ProxyUserAuthenticationFilterInitializer.class.getName());
       }
+    } else {
+      defaultInitializers.add(
+          ProxyUserAuthenticationFilterInitializer.class.getName());
     }
 
     defaultInitializers.add(
