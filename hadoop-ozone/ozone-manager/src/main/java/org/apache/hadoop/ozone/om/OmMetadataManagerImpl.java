@@ -495,12 +495,27 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
     String keyPrefix = getBucketKey(volume, bucket);
-    //TODO: When Key ops are converted in to HA model, use cache also to
-    // determine bucket is empty or not.
+
+    // First check in key table cache.
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmKeyInfo>>> iterator =
+        ((TypedTable< String, OmKeyInfo>) keyTable).cacheIterator();
+    while (iterator.hasNext()) {
+      Map.Entry< CacheKey<String>, CacheValue<OmKeyInfo>> entry =
+          iterator.next();
+      String key = entry.getKey().getCacheKey();
+      OmKeyInfo omKeyInfo = entry.getValue().getCacheValue();
+      // Making sure that entry is not for delete key request.
+      if (key.startsWith(keyPrefix) && omKeyInfo != null) {
+        return false;
+      }
+    }
     try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
         keyTable.iterator()) {
       KeyValue<String, OmKeyInfo> kv = keyIter.seek(keyPrefix);
-      if (kv != null && kv.getKey().startsWith(keyPrefix)) {
+      // During iteration from DB, check in mean time if this key is not
+      // marked for delete.
+      if (kv != null && kv.getKey().startsWith(keyPrefix) &&
+          keyTable.get(kv.getKey()) != null) {
         return false; // we found at least one key with this vol/bucket prefix.
       }
     }
