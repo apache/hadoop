@@ -40,6 +40,9 @@ import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.E
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_CODEC_NAME;
 import static org.apache.hadoop.hdfs.tools.offlineImageViewer.PBImageXmlWriter.ERASURE_CODING_SECTION_SCHEMA_OPTION;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 import org.apache.hadoop.io.erasurecode.ECSchema;
 import org.apache.hadoop.io.erasurecode.ErasureCodeConstants;
 import static org.junit.Assert.assertEquals;
@@ -98,6 +101,7 @@ import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -105,7 +109,9 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.BlockType;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
+import org.apache.hadoop.hdfs.server.namenode.FsImageProto;
 import org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeFile;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeLayoutVersion;
@@ -132,6 +138,7 @@ import org.xml.sax.helpers.DefaultHandler;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 
 public class TestOfflineImageViewer {
   private static final Logger LOG =
@@ -146,6 +153,7 @@ public class TestOfflineImageViewer {
   private static final long FILE_NODE_ID_2 = 16389;
   private static final long FILE_NODE_ID_3 = 16394;
   private static final long DIR_NODE_ID = 16391;
+  private static final long SAMPLE_TIMESTAMP = 946684800000L;
 
   // namespace as written to dfs, to be compared with viewer's output
   final static HashMap<String, FileStatus> writtenFiles = Maps.newHashMap();
@@ -659,6 +667,109 @@ public class TestOfflineImageViewer {
     }
   }
 
+  private FsImageProto.INodeSection.INode createSampleFileInode() {
+    HdfsProtos.BlockProto.Builder block =
+        HdfsProtos.BlockProto.newBuilder()
+            .setNumBytes(1024)
+            .setBlockId(8)
+            .setGenStamp(SAMPLE_TIMESTAMP);
+    FsImageProto.INodeSection.AclFeatureProto.Builder acl =
+        FsImageProto.INodeSection.AclFeatureProto.newBuilder()
+            .addEntries(2);
+    FsImageProto.INodeSection.INodeFile.Builder file =
+        FsImageProto.INodeSection.INodeFile.newBuilder()
+            .setReplication(5)
+            .setModificationTime(SAMPLE_TIMESTAMP)
+            .setAccessTime(SAMPLE_TIMESTAMP)
+            .setPreferredBlockSize(1024)
+            .addBlocks(block)
+            .addBlocks(block)
+            .addBlocks(block)
+            .setAcl(acl);
+
+    return FsImageProto.INodeSection.INode.newBuilder()
+        .setType(FsImageProto.INodeSection.INode.Type.FILE)
+        .setFile(file)
+        .setName(ByteString.copyFromUtf8("file"))
+        .setId(3)
+        .build();
+  }
+
+  private FsImageProto.INodeSection.INode createSampleDirInode() {
+    FsImageProto.INodeSection.AclFeatureProto.Builder acl =
+        FsImageProto.INodeSection.AclFeatureProto.newBuilder()
+            .addEntries(2);
+    FsImageProto.INodeSection.INodeDirectory.Builder directory =
+        FsImageProto.INodeSection.INodeDirectory.newBuilder()
+            .setDsQuota(1000)
+            .setNsQuota(700)
+            .setModificationTime(SAMPLE_TIMESTAMP)
+            .setAcl(acl);
+
+    return FsImageProto.INodeSection.INode.newBuilder()
+        .setType(FsImageProto.INodeSection.INode.Type.DIRECTORY)
+        .setDirectory(directory)
+        .setName(ByteString.copyFromUtf8("dir"))
+        .setId(3)
+        .build();
+  }
+
+  private FsImageProto.INodeSection.INode createSampleSymlink() {
+    FsImageProto.INodeSection.INodeSymlink.Builder symlink =
+        FsImageProto.INodeSection.INodeSymlink.newBuilder()
+            .setModificationTime(SAMPLE_TIMESTAMP)
+            .setAccessTime(SAMPLE_TIMESTAMP);
+
+    return FsImageProto.INodeSection.INode.newBuilder()
+        .setType(FsImageProto.INodeSection.INode.Type.SYMLINK)
+        .setSymlink(symlink)
+        .setName(ByteString.copyFromUtf8("sym"))
+        .setId(5)
+        .build();
+  }
+
+  private PBImageDelimitedTextWriter createDelimitedWriterSpy()
+      throws IOException {
+    FsPermission fsPermission = new FsPermission(
+        FsAction.ALL,
+        FsAction.WRITE_EXECUTE,
+        FsAction.WRITE);
+    PermissionStatus permStatus = new PermissionStatus(
+        "user_1",
+        "group_1",
+        fsPermission);
+
+    PBImageDelimitedTextWriter writer = new
+        PBImageDelimitedTextWriter(null, ",", "");
+    PBImageDelimitedTextWriter writerSpy = spy(writer);
+    when(writerSpy.getPermission(anyLong())).thenReturn(permStatus);
+    return writerSpy;
+  }
+
+  @Test
+  public void testWriterOutputEntryBuilderForFile() throws IOException {
+    assertEquals("/path/file,5,2000-01-01 00:00,2000-01-01 00:00," +
+                "1024,3,3072,0,0,-rwx-wx-w-+,user_1,group_1",
+        createDelimitedWriterSpy().getEntry("/path/",
+            createSampleFileInode()));
+  }
+
+  @Test
+  public void testWriterOutputEntryBuilderForDirectory() throws IOException {
+    assertEquals("/path/dir,0,2000-01-01 00:00,1970-01-01 00:00" +
+                ",0,0,0,700,1000,drwx-wx-w-+,user_1,group_1",
+        createDelimitedWriterSpy().getEntry("/path/",
+            createSampleDirInode()));
+  }
+
+  @Test
+  public void testWriterOutputEntryBuilderForSymlink() throws IOException {
+    assertEquals("/path/sym,0,2000-01-01 00:00,2000-01-01 00:00" +
+                ",0,0,0,0,0,-rwx-wx-w-,user_1,group_1",
+        createDelimitedWriterSpy().getEntry("/path/",
+            createSampleSymlink()));
+  }
+
   @Test
   public void testPBDelimitedWriter() throws IOException, InterruptedException {
     testPBDelimitedWriter("");  // Test in memory db.
@@ -667,7 +778,7 @@ public class TestOfflineImageViewer {
   }
 
   @Test
-  public void testOutputEntryBuilder() throws IOException {
+  public void testCorruptionOutputEntryBuilder() throws IOException {
     PBImageCorruptionDetector corrDetector =
         new PBImageCorruptionDetector(null, ",", "");
     PBImageCorruption c1 = new PBImageCorruption(342, true, false, 3);
