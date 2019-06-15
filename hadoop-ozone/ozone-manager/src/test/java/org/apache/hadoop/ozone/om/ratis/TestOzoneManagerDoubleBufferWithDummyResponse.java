@@ -55,6 +55,9 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
   private OMMetadataManager omMetadataManager;
   private OzoneManagerDoubleBuffer doubleBuffer;
   private AtomicLong trxId = new AtomicLong(0);
+  private OzoneManagerRatisSnapshot ozoneManagerRatisSnapshot;
+  private long lastAppliedIndex;
+
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -66,7 +69,11 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
         folder.newFolder().getAbsolutePath());
     omMetadataManager =
         new OmMetadataManagerImpl(configuration);
-    doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager);
+    ozoneManagerRatisSnapshot = index -> {
+      lastAppliedIndex = index;
+    };
+    doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager,
+        ozoneManagerRatisSnapshot);
   }
 
   @After
@@ -94,6 +101,9 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
     Assert.assertTrue(omMetadataManager.countRowsInTable(
         omMetadataManager.getBucketTable()) == (bucketCount));
     Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
+
+    // Check lastAppliedIndex is updated correctly or not.
+    Assert.assertEquals(bucketCount, lastAppliedIndex);
   }
 
   /**

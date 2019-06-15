@@ -65,6 +65,8 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
   private OMMetadataManager omMetadataManager;
   private OzoneManagerDoubleBuffer doubleBuffer;
   private AtomicLong trxId = new AtomicLong(0);
+  private OzoneManagerRatisSnapshot ozoneManagerRatisSnapshot;
+  private long lastAppliedIndex;
 
   @Rule
   public TemporaryFolder folder = new TemporaryFolder();
@@ -76,7 +78,11 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
         folder.newFolder().getAbsolutePath());
     omMetadataManager =
         new OmMetadataManagerImpl(configuration);
-    doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager);
+    ozoneManagerRatisSnapshot = index -> {
+      lastAppliedIndex = index;
+    };
+    doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager,
+        ozoneManagerRatisSnapshot);
   }
 
   @After
@@ -146,6 +152,9 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
     checkCreateBuckets(bucketQueue);
 
     checkDeletedBuckets(deleteBucketQueue);
+
+    // Check lastAppliedIndex is updated correctly or not.
+    Assert.assertEquals(bucketCount + deleteCount + 1, lastAppliedIndex);
   }
 
   /**
@@ -208,6 +217,9 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
     checkCreateBuckets(bucketQueue);
 
     checkDeletedBuckets(deleteBucketQueue);
+
+    // Check lastAppliedIndex is updated correctly or not.
+    Assert.assertEquals(bucketCount + deleteCount + 2, lastAppliedIndex);
   }
 
   /**
@@ -321,6 +333,8 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
   public void testDoubleBuffer(int iterations, int bucketCount)
       throws Exception {
     try {
+      // Reset transaction id.
+      trxId.set(0);
       // Calling setup and stop here because this method is called from a
       // single test multiple times.
       setup();
@@ -343,6 +357,9 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
           omMetadataManager.getBucketTable()) == (bucketCount) * iterations);
 
       Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);
+
+      // Check lastAppliedIndex is updated correctly or not.
+      Assert.assertEquals((bucketCount + 1) * iterations, lastAppliedIndex);
     } finally {
       stop();
     }

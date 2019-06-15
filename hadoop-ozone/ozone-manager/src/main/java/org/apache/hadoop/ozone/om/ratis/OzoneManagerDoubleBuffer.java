@@ -64,17 +64,22 @@ public class OzoneManagerDoubleBuffer {
   private final AtomicLong flushIterations = new AtomicLong(0);
   private volatile boolean isRunning;
 
+  private final OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot;
 
-  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager) {
+  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
+      OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot) {
     this.currentBuffer = new ConcurrentLinkedQueue<>();
     this.readyBuffer = new ConcurrentLinkedQueue<>();
     this.omMetadataManager = omMetadataManager;
+
+    this.ozoneManagerRatisSnapShot = ozoneManagerRatisSnapShot;
 
     isRunning = true;
     // Daemon thread which runs in back ground and flushes transactions to DB.
     daemon = new Daemon(this::flushTransactions);
     daemon.setName("OMDoubleBufferFlushThread");
     daemon.start();
+
 
   }
 
@@ -117,7 +122,13 @@ public class OzoneManagerDoubleBuffer {
           readyBuffer.clear();
           // cleanup cache.
           cleanupCache(lastRatisTransactionIndex);
-          // TODO: update the last updated index in OzoneManagerStateMachine.
+
+          // TODO: Need to revisit this logic, once we have multiple
+          //  executors for volume/bucket request handling. As for now
+          //  transactions are serialized this should be fine.
+          // update the last updated index in OzoneManagerStateMachine.
+          ozoneManagerRatisSnapShot.updateLastAppliedIndex(
+              lastRatisTransactionIndex);
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
