@@ -348,7 +348,7 @@ public class TestIntegration {
       createFiles("srcdir/file1", "dstdir/file1", "dstdir/file2");
       
       Path target = new Path(root + "/dstdir");
-      runTest(listFile, target, false, true, true, false);
+      runTest(listFile, target, false, true, true, false, false);
       
       checkResult(target, 1, "file1");
     } catch (IOException e) {
@@ -372,7 +372,7 @@ public class TestIntegration {
       createWithContents("dstdir/file1", contents2);
       
       Path target = new Path(root + "/dstdir");
-      runTest(listFile, target, false, false, false, true);
+      runTest(listFile, target, false, false, false, true, false);
       
       checkResult(target, 1, "file1");
       
@@ -553,15 +553,16 @@ public class TestIntegration {
     
   private void runTest(Path listFile, Path target, boolean targetExists,
       boolean sync) throws IOException {
-    runTest(listFile, target, targetExists, sync, false, false);
+    runTest(listFile, target, targetExists, sync, false, false, false);
   }
   
   private void runTest(Path listFile, Path target, boolean targetExists, 
       boolean sync, boolean delete,
-      boolean overwrite) throws IOException {
+      boolean overwrite, boolean useTrash) throws IOException {
     final DistCpOptions options = new DistCpOptions.Builder(listFile, target)
         .withSyncFolder(sync)
         .withDeleteMissing(delete)
+        .withDeleteUseTrash(useTrash)
         .withOverwrite(overwrite)
         .withNumListstatusThreads(numListstatusThreads)
         .build();

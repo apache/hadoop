@@ -226,6 +226,45 @@ public class TestDistCpOptions {
   }
 
   @Test
+  public void testDeleteMissingUseTrash() {
+    final DistCpOptions.Builder builder = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"));
+    Assert.assertFalse(builder.build().shouldDeleteUseTrash());
+
+    DistCpOptions options = builder.withSyncFolder(true)
+        .withDeleteMissing(true)
+        .withDeleteUseTrash(true)
+        .build();
+    Assert.assertTrue(options.shouldSyncFolder());
+    Assert.assertTrue(options.shouldDeleteMissing());
+    Assert.assertTrue(options.shouldDeleteUseTrash());
+
+    options = new DistCpOptions.Builder(
+        Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+        new Path("hdfs://localhost:8020/target/"))
+        .withOverwrite(true)
+        .withDeleteMissing(true)
+        .withDeleteUseTrash(true)
+        .build();
+    Assert.assertTrue(options.shouldDeleteUseTrash());
+    Assert.assertTrue(options.shouldOverwrite());
+    Assert.assertTrue(options.shouldDeleteMissing());
+
+    try {
+      new DistCpOptions.Builder(
+          Collections.singletonList(new Path("hdfs://localhost:8020/source")),
+          new Path("hdfs://localhost:8020/target/"))
+          .withDeleteUseTrash(true)
+          .build();
+      fail("Delete useTrash should fail without delete option");
+    } catch (IllegalArgumentException e) {
+      assertExceptionContains(
+          "Delete useTrash is applicable only with delete option", e);
+    }
+  }
+
+  @Test
   public void testSetMaps() {
     final DistCpOptions.Builder builder = new DistCpOptions.Builder(
         Collections.singletonList(new Path("hdfs://localhost:8020/source")),
@@ -281,8 +320,8 @@ public class TestDistCpOptions {
     DistCpOptions option = new DistCpOptions.Builder(new Path("abc"),
         new Path("xyz")).build();
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, " +
-        "deleteMissing=false, ignoreFailures=false, overwrite=false, " +
-        "append=false, useDiff=false, useRdiff=false, " +
+        "deleteMissing=false, deleteUseTrash=false, ignoreFailures=false, " +
+        "overwrite=false, append=false, useDiff=false, useRdiff=false, " +
         "fromSnapshot=null, toSnapshot=null, " +
         "skipCRC=false, blocking=true, numListstatusThreads=0, maxMaps=20, " +
         "mapBandwidth=0.0, copyStrategy='uniformsize', preserveStatus=[], " +

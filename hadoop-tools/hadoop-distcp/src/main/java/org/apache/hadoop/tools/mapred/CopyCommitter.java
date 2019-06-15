@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.hadoop.fs.Trash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -453,7 +454,8 @@ public class CopyCommitter extends FileOutputCommitter {
         if (tracker.shouldDelete(trgtFileStatus)) {
           showProgress = true;
           try {
-            if (targetFS.delete(targetEntry, true)) {
+            boolean result = deletePath(targetFS, targetEntry, conf);
+            if (result) {
               // the delete worked. Unless the file is actually missing, this is the
               LOG.info("Deleted " + targetEntry + " - missing at source");
               deletedEntries++;
@@ -467,7 +469,8 @@ public class CopyCommitter extends FileOutputCommitter {
               // For all the filestores which implement the FS spec properly,
               // this means "the file wasn't there".
               // so track but don't worry about it.
-              LOG.info("delete({}) returned false ({})",
+              LOG.info("delete({}) returned false ({}). Consider using " +
+                      "-useTrash option if trash is enabled.",
                   targetEntry, trgtFileStatus);
               missingDeletes++;
             }
@@ -513,6 +516,17 @@ public class CopyCommitter extends FileOutputCommitter {
         formatDuration(deletionEnd - deletionStart));
     LOG.info("Total duration of deletion operation: {}",
         formatDuration(deletionEnd - listingStart));
+  }
+
+  private boolean deletePath(FileSystem targetFS, Path targetEntry,
+                             Configuration conf) throws IOException {
+    if(conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH,
+        false)) {
+      return Trash.moveToAppropriateTrash(
+          targetFS, targetEntry, conf);
+    } else {
+      return targetFS.delete(targetEntry, true);
+    }
   }
 
   /**

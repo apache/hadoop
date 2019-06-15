@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.tools.mapred;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +74,7 @@ public class TestCopyCommitter {
   public static void create() throws IOException {
     config = getJobForClient().getConfiguration();
     config.setLong(DistCpConstants.CONF_LABEL_TOTAL_BYTES_TO_BE_COPIED, 0);
+    config.setLong(CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY, 10);
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(1).format(true)
                       .build();
   }
@@ -201,6 +205,60 @@ public class TestCopyCommitter {
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
+    }
+  }
+
+  @Test
+  public void testDeleteUseTrash() throws IOException {
+    TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
+    JobContext jobContext = new JobContextImpl(
+        taskAttemptContext.getConfiguration(),
+        taskAttemptContext.getTaskAttemptID().getJobID());
+    Configuration conf = jobContext.getConfiguration();
+
+    String sourceBase;
+    String targetBase;
+    FileSystem fs = null;
+    try {
+      OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
+      fs = FileSystem.get(conf);
+      sourceBase = TestDistCpUtils.createTestSetup(fs);
+      targetBase = TestDistCpUtils.createTestSetup(fs);
+      String targetBaseAdd = TestDistCpUtils.createTestSetup(fs);
+      fs.rename(new Path(targetBaseAdd), new Path(targetBase));
+
+      DistCpOptions.Builder builder = new DistCpOptions.Builder(
+          Arrays.asList(new Path(sourceBase)), new Path("/out"));
+      builder.withSyncFolder(true);
+      builder.withDeleteMissing(true);
+      builder.withDeleteUseTrash(true);
+      builder.build().appendToConf(conf);
+      DistCpContext cpContext = new DistCpContext(builder.build());
+
+      CopyListing listing = new GlobbedCopyListing(conf, CREDENTIALS);
+      Path listingFile = new Path("/tmp1/" + String.valueOf(rand.nextLong()));
+      listing.buildListing(listingFile, cpContext);
+
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_WORK_PATH, targetBase);
+      conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
+
+      Path trashRootDir = fs.getTrashRoot(null);
+      if (fs.exists(trashRootDir)) {
+        fs.delete(trashRootDir, true);
+      }
+      committer.commitJob(jobContext);
+
+      verifyFoldersAreInSync(fs, targetBase, sourceBase);
+      verifyFoldersAreInSync(fs, sourceBase, targetBase);
+
+      Assert.assertTrue("Path delete does not use trash",
+          fs.exists(trashRootDir));
+      Path trashDir = new Path(trashRootDir,"Current" + targetBaseAdd);
+      verifyFoldersAreInSync(fs, trashDir.toString(), sourceBase);
+    } finally {
+      TestDistCpUtils.delete(fs, "/tmp1");
+      conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
+      conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH, "false");
     }
   }
 

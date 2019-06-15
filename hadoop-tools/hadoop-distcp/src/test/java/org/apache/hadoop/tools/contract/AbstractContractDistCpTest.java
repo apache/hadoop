@@ -19,6 +19,7 @@
 package org.apache.hadoop.tools.contract;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
+import static org.apache.hadoop.tools.util.TestDistCpUtils.verifyFoldersAreInSync;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -43,6 +44,7 @@ import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 
+import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -222,6 +224,8 @@ public abstract class AbstractContractDistCpTest
     describe("update a deep directory structure from local to remote");
     distCpDeepDirectoryStructure(localFS, localDir, remoteFS, remoteDir);
     distCpUpdateDeepDirectoryStructure(inputDirUnderOutputDir);
+    initOutputFields(inputDirUnderOutputDir);
+    distCpUpdateUseTrashDeepDirectoryStructure(inputDirUnderOutputDir);
   }
 
   @Test
@@ -317,6 +321,67 @@ public abstract class AbstractContractDistCpTest
         new DistCpOptions.Builder(
             Collections.singletonList(srcDir), destDir)
             .withDeleteMissing(true)
+            .withSyncFolder(true)
+            .withCRC(true)
+            .withOverwrite(false)));
+  }
+
+  /**
+   * Do a distcp -update -delete -useTrash.
+   * @param destDir output directory used by the initial distcp
+   * @return the distcp job
+   */
+  protected Job distCpUpdateUseTrashDeepDirectoryStructure(final Path destDir)
+      throws Exception {
+    describe("Now do an incremental update with deletion-use-trash of missing files");
+    Path srcDir = inputDir;
+    LOG.info("Source directory = {}, dest={}", srcDir, destDir);
+
+    ContractTestUtils.assertPathsExist(localFS,
+        "Paths for test are wrong",
+        inputFile1, inputFile2, inputFile3, inputFile4, inputFile5);
+
+    modifySourceDirectories();
+    Path trashRootDir = remoteFS.getTrashRoot(null);
+    if (remoteFS.exists(trashRootDir)) {
+      remoteFS.delete(trashRootDir, true);
+    }
+
+    Job job = distCpUpdateDeleteUseTrash(srcDir, destDir);
+    Path outputFileNew1 = new Path(outputSubDir2, "newfile1");
+    lsR("Updated Remote", remoteFS, destDir);
+
+    ContractTestUtils.assertPathDoesNotExist(remoteFS,
+        " deleted from " + inputFile1, outputFile1);
+    ContractTestUtils.assertIsFile(remoteFS, outputFileNew1);
+    ContractTestUtils.assertPathsDoNotExist(remoteFS,
+        "DistCP should have deleted",
+        outputFile3, outputFile4, outputSubDir4);
+    assertTrue("Path delete does not use trash", remoteFS.exists(trashRootDir));
+    Path trashDir = new Path(trashRootDir,"Current" + destDir);
+
+    // Test path have moved to trash
+    verifyFoldersAreInSync(remoteFS, trashDir.toString(), srcDir.toString());
+    return job;
+  }
+
+  /**
+   * Run distcp -update -delete -useTrash.
+   * @param srcDir local source directory
+   * @param destDir remote destination directory.
+   * @return the completed job
+   * @throws Exception any failure.
+   */
+  private Job distCpUpdateDeleteUseTrash(final Path srcDir, final Path destDir)
+      throws Exception {
+    describe("\nDistcp -update from " + srcDir + " to " + destDir);
+    lsR("Local to update", localFS, srcDir);
+    lsR("Remote before update", remoteFS, destDir);
+    return runDistCp(buildWithStandardOptions(
+        new DistCpOptions.Builder(
+            Collections.singletonList(srcDir), destDir)
+            .withDeleteMissing(true)
+            .withDeleteUseTrash(true)
             .withSyncFolder(true)
             .withCRC(true)
             .withOverwrite(false)));
