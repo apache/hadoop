@@ -80,7 +80,6 @@ public class TestOzoneManagerDoubleBufferWithOMResponse {
         new OmMetadataManagerImpl(configuration);
     ozoneManagerRatisSnapshot = index -> {
       lastAppliedIndex = index;
-      return index;
     };
     doubleBuffer = new OzoneManagerDoubleBuffer(omMetadataManager,
         ozoneManagerRatisSnapshot);

@@ -376,9 +376,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     return OMRatisHelper.convertResponseToMessage(response);
   }
 
-  public long updateLastAppliedIndex(long lastAppliedIndex) {
+  @SuppressWarnings("HiddenField")
+  public void updateLastAppliedIndex(long lastAppliedIndex) {
     this.lastAppliedIndex = lastAppliedIndex;
-    return lastAppliedIndex;
   }
 
   /**

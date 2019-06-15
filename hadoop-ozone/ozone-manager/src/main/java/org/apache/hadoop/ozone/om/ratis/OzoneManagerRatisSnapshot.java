@@ -27,7 +27,6 @@ public interface OzoneManagerRatisSnapshot {
    * Update lastAppliedIndex with the specified value in OzoneManager
    * StateMachine.
    * @param lastAppliedIndex
-   * @return lastAppliedIndex
    */
-  long updateLastAppliedIndex(long lastAppliedIndex);
+  void updateLastAppliedIndex(long lastAppliedIndex);
 }
