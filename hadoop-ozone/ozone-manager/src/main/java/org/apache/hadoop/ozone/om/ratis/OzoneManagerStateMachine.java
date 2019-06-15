@@ -75,7 +75,8 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     this.omRatisServer = ratisServer;
     this.ozoneManager = omRatisServer.getOzoneManager();
     this.ozoneManagerDoubleBuffer =
-        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager());
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(),
+            this::updateLastAppliedIndex);
     this.handler = new OzoneManagerHARequestHandlerImpl(ozoneManager,
         ozoneManagerDoubleBuffer);
   }
@@ -373,6 +374,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     OMResponse response = handler.handleApplyTransaction(request, trxLogIndex);
     lastAppliedIndex = trxLogIndex;
     return OMRatisHelper.convertResponseToMessage(response);
+  }
+
+  @SuppressWarnings("HiddenField")
+  public void updateLastAppliedIndex(long lastAppliedIndex) {
+    this.lastAppliedIndex = lastAppliedIndex;
   }
 
   /**
