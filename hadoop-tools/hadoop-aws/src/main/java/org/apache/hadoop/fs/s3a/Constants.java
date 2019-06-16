@@ -357,7 +357,7 @@ public final class Constants {
       "fs.s3a.metadatastore.metadata.ttl";
 
   /**
-   * Default TTL in millseconds: {@value}.
+   * Default TTL in milliseconds: 15 minutes.
    */
   public static final long DEFAULT_METADATASTORE_METADATA_TTL =
       TimeUnit.MINUTES.toMillis(15);
