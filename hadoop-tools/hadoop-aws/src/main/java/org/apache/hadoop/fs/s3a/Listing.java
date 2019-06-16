@@ -464,7 +464,7 @@ public class Listing {
         if (acceptor.accept(keyPath, summary) && filter.accept(keyPath)) {
           S3AFileStatus status = createFileStatus(keyPath, summary,
               owner.getDefaultBlockSize(keyPath), owner.getUsername(),
-              null, null);
+              summary.getETag(), null);
           LOG.debug("Adding: {}", status);
           stats.add(status);
           added++;
