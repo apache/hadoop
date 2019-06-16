@@ -858,8 +858,8 @@ public class AzureBlobFileSystem extends FileSystem {
    */
   @Override
   public void access(final Path path, FsAction mode) throws IOException {
-    // make it no op to unblock hive permission issue for now.
-    // In future it should do same thing as AdlFileSystem.
+    // TODO: make it no-op to unblock hive permission issue for now.
+    // Will add a long term fix similar to the implementation in AdlFileSystem.
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
