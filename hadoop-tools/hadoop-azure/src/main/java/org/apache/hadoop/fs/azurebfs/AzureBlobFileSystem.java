@@ -38,12 +38,12 @@ import java.util.concurrent.Future;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
-import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClient;
+import org.apache.hadoop.fs.azurebfs.services.AbfsClientThrottlingIntercept;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -71,6 +71,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Progressable;
@@ -841,6 +842,24 @@ public class AzureBlobFileSystem extends FileSystem {
       checkException(path, ex);
       return null;
     }
+  }
+
+  /**
+   * Checks if the user can access a path.  The mode specifies which access
+   * checks to perform.  If the requested permissions are granted, then the
+   * method returns normally.  If access is denied, then the method throws an
+   * {@link AccessControlException}.
+   *
+   * @param path Path to check
+   * @param mode type of access to check
+   * @throws AccessControlException        if access is denied
+   * @throws java.io.FileNotFoundException if the path does not exist
+   * @throws IOException                   see specific implementation
+   */
+  @Override
+  public void access(final Path path, FsAction mode) throws IOException {
+    // TODO: make it no-op to unblock hive permission issue for now.
+    // Will add a long term fix similar to the implementation in AdlFileSystem.
   }
 
   private FileStatus tryGetFileStatus(final Path f) {
