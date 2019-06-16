@@ -230,6 +230,12 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     IOUtils.cleanupWithLogger(LOG, fileSystem);
   }
 
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception {
+    String b = getTestBucketName(getContract().getFileSystem().getConf());
+    return "/" + b + "/dir2";
+  }
+
   /**
    * Each contract has its own S3AFileSystem and DynamoDBMetadataStore objects.
    */
@@ -437,7 +443,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // move the old paths to new paths and verify
-    ms.move(pathsToDelete, newMetas);
+    ms.move(pathsToDelete, newMetas, getTtlTimeProvider());
     assertEquals(0, ms.listChildren(oldDir).withoutTombstones().numEntries());
     if (newMetas != null) {
       assertTrue(CollectionUtils
@@ -650,7 +656,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             1024, false))
     );
 
-    ddbms.move(fullSourcePaths, pathsToCreate);
+    ddbms.move(fullSourcePaths, pathsToCreate, getTtlTimeProvider());
 
     // assert that all the ancestors should have been populated automatically
     assertCached(testRoot + "/c");

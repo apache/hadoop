@@ -47,7 +47,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path path) throws IOException {
+  public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override
@@ -55,7 +56,8 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path) throws IOException {
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override
@@ -76,7 +78,8 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+      Collection<PathMetadata> pathsToCreate,
+      ITtlTimeProvider ttlTimeProvider) throws IOException {
   }
 
   @Override
@@ -96,11 +99,11 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void prune(long modTime) {
+  public void prune(PruneMode pruneMode, long cutoff) {
   }
 
   @Override
-  public void prune(long modTime, String keyPrefix) {
+  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix) {
   }
 
   @Override

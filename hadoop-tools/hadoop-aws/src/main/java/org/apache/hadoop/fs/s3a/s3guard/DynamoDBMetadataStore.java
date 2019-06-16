@@ -189,8 +189,10 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * directory helps prevent unnecessary queries during traversal of an entire
  * sub-tree.
  *
- * Some mutating operations, notably {@link #deleteSubtree(Path)} and
- * {@link #move(Collection, Collection)}, are less efficient with this schema.
+ * Some mutating operations, notably
+ * {@link MetadataStore#deleteSubtree(Path, ITtlTimeProvider)} and
+ * {@link MetadataStore#move(Collection, Collection, ITtlTimeProvider)},
+ * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
  *
  * By default, DynamoDB access is performed within the same AWS region as
@@ -471,14 +473,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void delete(Path path) throws IOException {
-    innerDelete(path, true);
+  public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
+    innerDelete(path, true, ttlTimeProvider);
   }
 
   @Override
   @Retries.RetryTranslated
   public void forgetMetadata(Path path) throws IOException {
-    innerDelete(path, false);
+    innerDelete(path, false, null);
   }
 
   /**
@@ -487,10 +490,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * There is no check as to whether the entry exists in the table first.
    * @param path path to delete
    * @param tombstone flag to create a tombstone marker
+   * @param ttlTimeProvider The time provider to set last_updated. Must not
+   *                        be null if tombstone is true.
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated
-  private void innerDelete(final Path path, boolean tombstone)
+  private void innerDelete(final Path path, boolean tombstone,
+      ITtlTimeProvider ttlTimeProvider)
       throws IOException {
     checkPath(path);
     LOG.debug("Deleting from table {} in region {}: {}",
@@ -505,8 +511,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // on that of S3A itself
     boolean idempotent = S3AFileSystem.DELETE_CONSIDERED_IDEMPOTENT;
     if (tombstone) {
+      Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider "
+          + "must not be null");
+      final PathMetadata pmTombstone = PathMetadata.tombstone(path);
+      // update the last updated field of record when putting a tombstone
+      pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
-          new DDBPathMetadata(PathMetadata.tombstone(path)));
+          new DDBPathMetadata(pmTombstone));
       writeOp.retry(
           "Put tombstone",
           path.toString(),
@@ -524,7 +535,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void deleteSubtree(Path path) throws IOException {
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     checkPath(path);
     LOG.debug("Deleting subtree from table {} in region {}: {}",
         tableName, region, path);
@@ -537,7 +549,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     for (DescendantsIterator desc = new DescendantsIterator(this, meta);
          desc.hasNext();) {
-      innerDelete(desc.next().getPath(), true);
+      innerDelete(desc.next().getPath(), true, ttlTimeProvider);
     }
   }
 
@@ -731,7 +743,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+      Collection<PathMetadata> pathsToCreate, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
     if (pathsToDelete == null && pathsToCreate == null) {
       return;
     }
@@ -754,7 +767,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     if (pathsToDelete != null) {
       for (Path meta : pathsToDelete) {
-        newItems.add(new DDBPathMetadata(PathMetadata.tombstone(meta)));
+        Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider"
+            + " must not be null");
+        final PathMetadata pmTombstone = PathMetadata.tombstone(meta);
+        pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
+        newItems.add(new DDBPathMetadata(pmTombstone));
       }
     }
 
@@ -1024,14 +1041,37 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   @Retries.RetryTranslated
-  private ItemCollection<ScanOutcome> expiredFiles(long modTime,
-      String keyPrefix) throws IOException {
-    String filterExpression =
-        "mod_time < :mod_time and begins_with(parent, :parent)";
-    String projectionExpression = "parent,child";
-    ValueMap map = new ValueMap()
-        .withLong(":mod_time", modTime)
-        .withString(":parent", keyPrefix);
+  private ItemCollection<ScanOutcome> expiredFiles(PruneMode pruneMode,
+      long cutoff, String keyPrefix) throws IOException {
+
+    String filterExpression;
+    String projectionExpression;
+    ValueMap map;
+
+    switch (pruneMode) {
+    case ALL_BY_MODTIME:
+      filterExpression =
+          "mod_time < :mod_time and begins_with(parent, :parent)";
+      projectionExpression = "parent,child";
+      map = new ValueMap()
+          .withLong(":mod_time", cutoff)
+          .withString(":parent", keyPrefix);
+      break;
+    case TOMBSTONES_BY_LASTUPDATED:
+      filterExpression =
+          "last_updated < :last_updated and begins_with(parent, :parent) "
+              + "and is_deleted = :is_deleted";
+      projectionExpression = "parent,child";
+      map = new ValueMap()
+          .withLong(":last_updated", cutoff)
+          .withString(":parent", keyPrefix)
+          .withBoolean(":is_deleted", true);
+      break;
+    default:
+      throw new UnsupportedOperationException("Unsupported prune mode: "
+          + pruneMode);
+    }
+
     return readOp.retry(
         "scan",
         keyPrefix,
@@ -1041,20 +1081,31 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
   @Override
   @Retries.RetryTranslated
-  public void prune(long modTime) throws IOException {
-    prune(modTime, "/");
+  public void prune(PruneMode pruneMode, long cutoff) throws IOException {
+    prune(pruneMode, cutoff, "/");
   }
 
   /**
    * Prune files, in batches. There's a sleep between each batch.
-   * @param modTime Oldest modification time to allow
+   *
+   * @param pruneMode The mode of operation for the prune For details see
+   *                  {@link MetadataStore#prune(PruneMode, long)}
+   * @param cutoff Oldest modification time to allow
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException Any IO/DDB failure.
    * @throws InterruptedIOException if the prune was interrupted
    */
   @Override
   @Retries.RetryTranslated
-  public void prune(long modTime, String keyPrefix) throws IOException {
+  public void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
+      throws IOException {
+    final ItemCollection<ScanOutcome> items =
+        expiredFiles(pruneMode, cutoff, keyPrefix);
+    innerPrune(items);
+  }
+
+  private void innerPrune(ItemCollection<ScanOutcome> items)
+      throws IOException {
     int itemCount = 0;
     try {
       Collection<Path> deletionBatch =
@@ -1064,7 +1115,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
           S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_DEFAULT,
           TimeUnit.MILLISECONDS);
       Set<Path> parentPathSet = new HashSet<>();
-      for (Item item : expiredFiles(modTime, keyPrefix)) {
+      for (Item item : items) {
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
         Path path = md.getFileStatus().getPath();
