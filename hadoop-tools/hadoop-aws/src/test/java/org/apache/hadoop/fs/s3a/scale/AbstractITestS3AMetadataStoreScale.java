@@ -18,11 +18,15 @@
 
 package org.apache.hadoop.fs.s3a.scale;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
@@ -54,6 +58,12 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
   static final long ACCESS_TIME = System.currentTimeMillis();
 
   static final Path BUCKET_ROOT = new Path("s3a://fake-bucket/");
+  private ITtlTimeProvider ttlTimeProvider;
+
+  @Before
+  public void initialize() {
+    ttlTimeProvider = new S3Guard.TtlTimeProvider(new Configuration());
+  }
 
   /**
    * Subclasses should override this to provide the MetadataStore they which
@@ -129,7 +139,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate);
+          ms.move(toDelete, toCreate, ttlTimeProvider);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
@@ -194,7 +204,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
       throws IOException {
     describe("Recursive deletion");
     NanoTimer deleteTimer = new NanoTimer();
-    ms.deleteSubtree(BUCKET_ROOT);
+    ms.deleteSubtree(BUCKET_ROOT, ttlTimeProvider);
     deleteTimer.end();
     printTiming(LOG, "delete", deleteTimer, count);
   }

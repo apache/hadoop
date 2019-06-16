@@ -181,8 +181,8 @@ removed on `S3AFileSystem` level.
 
 ```xml
 <property>
-    <name>fs.s3a.metadatastore.authoritative.dir.ttl</name>
-    <value>3600000</value>
+    <name>fs.s3a.metadatastore.metadata.ttl</name>
+    <value>15m</value>
 </property>
 ```
 

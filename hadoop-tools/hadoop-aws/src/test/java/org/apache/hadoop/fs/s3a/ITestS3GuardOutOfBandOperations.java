@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
 import org.junit.Assume;
@@ -37,20 +38,32 @@ import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.Source;
 import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
+import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.junit.Assume.assumeTrue;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  *
@@ -115,7 +128,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * Test array for parameterized test runs.
    * @return a list of parameter tuples.
    */
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="auth={0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
         {true}, {false}
@@ -190,8 +203,11 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     URI uri = testFS.getUri();
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        METADATASTORE_METADATA_TTL);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
+    config.setLong(METADATASTORE_METADATA_TTL,
+        DEFAULT_METADATASTORE_METADATA_TTL);
     final S3AFileSystem gFs = createFS(uri, config);
     // set back the same metadata store instance
     gFs.setMetadataStore(realMs);
@@ -269,6 +285,292 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   @Test
   public void testListingDelete() throws Exception {
     deleteFileInListing();
+  }
+
+  /**
+   * Tests that tombstone expiry is implemented, so if a file is created raw
+   * while the tombstone exist in ms for with the same name then S3Guard will
+   * check S3 for the file.
+   *
+   * Seq: create guarded; delete guarded; create raw (same path); read guarded;
+   * This will fail if no tombstone expiry is set
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testTombstoneExpiryGuardedDeleteRawCreate() throws Exception {
+    boolean allowAuthoritative = authoritative;
+    Path testFilePath = path("TEGDRC-" + UUID.randomUUID() + "/file");
+    LOG.info("Allow authoritative param: {}",  allowAuthoritative);
+    String originalText = "some test";
+    String newText = "the new originalText for test";
+
+    final ITtlTimeProvider originalTimeProvider =
+        guardedFs.getTtlTimeProvider();
+    try {
+      final AtomicLong now = new AtomicLong(1);
+      final AtomicLong metadataTtl = new AtomicLong(1);
+
+      // SET TTL TIME PROVIDER FOR TESTING
+      ITtlTimeProvider testTimeProvider =
+          new ITtlTimeProvider() {
+            @Override public long getNow() {
+              return now.get();
+            }
+
+            @Override public long getMetadataTtl() {
+              return metadataTtl.get();
+            }
+          };
+      guardedFs.setTtlTimeProvider(testTimeProvider);
+
+      // CREATE GUARDED
+      createAndAwaitFs(guardedFs, testFilePath, originalText);
+
+      // DELETE GUARDED
+      deleteGuardedTombstoned(guardedFs, testFilePath, now);
+
+      // CREATE RAW
+      createAndAwaitFs(rawFS, testFilePath, newText);
+
+      // CHECK LISTING - THE FILE SHOULD NOT BE THERE, EVEN IF IT'S CREATED RAW
+      checkListingDoesNotContainPath(guardedFs, testFilePath);
+
+      // CHANGE TTL SO ENTRY (& TOMBSTONE METADATA) WILL EXPIRE
+      long willExpire = now.get() + metadataTtl.get() + 1L;
+      now.set(willExpire);
+      LOG.info("willExpire: {}, ttlNow: {}; ttlTTL: {}", willExpire,
+          testTimeProvider.getNow(), testTimeProvider.getMetadataTtl());
+
+      // READ GUARDED
+      String newRead = readBytesToString(guardedFs, testFilePath,
+          newText.length());
+
+      // CHECK LISTING - THE FILE SHOULD BE THERE, TOMBSTONE EXPIRED
+      checkListingContainsPath(guardedFs, testFilePath);
+
+      // we can assert that the originalText is the new one, which created raw
+      LOG.info("Old: {}, New: {}, Read: {}", originalText, newText, newRead);
+      assertEquals("The text should be modified with a new.", newText,
+          newRead);
+    } finally {
+      guardedFs.delete(testFilePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  private void createAndAwaitFs(S3AFileSystem fs, Path testFilePath,
+      String text) throws Exception {
+    writeTextFile(fs, testFilePath, text, true);
+    final FileStatus newStatus = awaitFileStatus(fs, testFilePath);
+    assertNotNull("Newly created file status should not be null.", newStatus);
+  }
+
+  private void deleteGuardedTombstoned(S3AFileSystem guarded,
+      Path testFilePath, AtomicLong now) throws Exception {
+    guarded.delete(testFilePath, true);
+
+    final PathMetadata metadata =
+        guarded.getMetadataStore().get(testFilePath);
+    assertNotNull("Created file metadata should not be null in ms",
+        metadata);
+    assertEquals("Created file metadata last_updated should equal with "
+            + "mocked now", now.get(), metadata.getLastUpdated());
+
+    intercept(FileNotFoundException.class, testFilePath.toString(),
+        "This file should throw FNFE when reading through "
+            + "the guarded fs, and the metadatastore tombstoned the file.",
+        () -> guarded.getFileStatus(testFilePath));
+  }
+
+  /**
+   * createNonRecursive must fail if the parent directory has been deleted,
+   * and succeed if the tombstone has expired and the directory has been
+   * created out of band.
+   */
+  @Test
+  public void testCreateNonRecursiveFailsIfParentDeleted() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String dirToDelete = methodName + UUID.randomUUID().toString();
+    String fileToTry = dirToDelete + "/theFileToTry";
+
+    final Path dirPath = path(dirToDelete);
+    final Path filePath = path(fileToTry);
+
+    // Create a directory with
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(5L);
+
+      // CREATE DIRECTORY
+      guardedFs.mkdirs(dirPath);
+
+      // DELETE DIRECTORY
+      guardedFs.delete(dirPath, true);
+
+      // WRITE TO DELETED DIRECTORY - FAIL
+      intercept(FileNotFoundException.class,
+          dirToDelete,
+          "createNonRecursive must fail if the parent directory has been deleted.",
+          () -> createNonRecursive(guardedFs, filePath));
+
+      // CREATE THE DIRECTORY RAW
+      rawFS.mkdirs(dirPath);
+      awaitFileStatus(rawFS, dirPath);
+
+      // SET TIME SO METADATA EXPIRES
+      when(mockTimeProvider.getNow()).thenReturn(110L);
+
+      // WRITE TO DELETED DIRECTORY - SUCCESS
+      createNonRecursive(guardedFs, filePath);
+
+    } finally {
+      guardedFs.delete(filePath, true);
+      guardedFs.delete(dirPath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * When lastUpdated = 0 the entry should not expire. This is a special case
+   * eg. for old metadata entries
+   */
+  @Test
+  public void testLastUpdatedZeroWontExpire() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String testFile = methodName + UUID.randomUUID().toString() +
+        "/theFileToTry";
+
+    long ttl = 10L;
+    final Path filePath = path(testFile);
+
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // create a file while the NOW is 0, so it will set 0 as the last_updated
+      when(mockTimeProvider.getNow()).thenReturn(0L);
+      touch(guardedFs, filePath);
+      deleteFile(guardedFs, filePath);
+
+      final PathMetadata pathMetadata =
+          guardedFs.getMetadataStore().get(filePath);
+      assertNotNull("pathMetadata should not be null after deleting with "
+          + "tombstones", pathMetadata);
+      assertEquals("pathMetadata lastUpdated field should be 0", 0,
+          pathMetadata.getLastUpdated());
+
+      // set the time, so the metadata would expire
+      when(mockTimeProvider.getNow()).thenReturn(2*ttl);
+      intercept(FileNotFoundException.class, filePath.toString(),
+          "This file should throw FNFE when reading through "
+              + "the guarded fs, and the metadatastore tombstoned the file. "
+              + "The tombstone won't expire if lastUpdated is set to 0.",
+          () -> guardedFs.getFileStatus(filePath));
+
+    } finally {
+      guardedFs.delete(filePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * 1. File is deleted in the guarded fs.
+   * 2. File is replaced in the raw fs.
+   * 3. File is deleted in the guarded FS after the expiry time.
+   * 4. File MUST NOT exist in raw FS.
+   */
+  @Test
+  public void deleteAfterTombstoneExpiryOobCreate() throws Exception {
+    LOG.info("Authoritative mode: {}", authoritative);
+
+    String testFile = methodName + UUID.randomUUID().toString() +
+        "/theFileToTry";
+
+    long ttl = 10L;
+    final Path filePath = path(testFile);
+
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+
+    try {
+      guardedFs.setTtlTimeProvider(mockTimeProvider);
+      when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+
+      // CREATE AND DELETE WITH GUARDED FS
+      when(mockTimeProvider.getNow()).thenReturn(100L);
+      touch(guardedFs, filePath);
+      deleteFile(guardedFs, filePath);
+
+      final PathMetadata pathMetadata =
+          guardedFs.getMetadataStore().get(filePath);
+      assertNotNull("pathMetadata should not be null after deleting with "
+          + "tombstones", pathMetadata);
+
+      // REPLACE WITH RAW FS
+      touch(rawFS, filePath);
+      awaitFileStatus(rawFS, filePath);
+
+      // SET EXPIRY TIME, SO THE TOMBSTONE IS EXPIRED
+      when(mockTimeProvider.getNow()).thenReturn(100L + 2 * ttl);
+
+      // DELETE IN GUARDED FS
+      guardedFs.delete(filePath, true);
+
+      // FILE MUST NOT EXIST IN RAW
+      intercept(FileNotFoundException.class, filePath.toString(),
+          "This file should throw FNFE when reading through "
+              + "the raw fs, and the guarded fs deleted the file.",
+          () -> rawFS.getFileStatus(filePath));
+
+    } finally {
+      guardedFs.delete(filePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  private void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertNotEquals("The tombstone has not been expired, so must not be"
+          + " listed.", filePath, lfs.getPath());
+    }
+    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      assertNotEquals("The tombstone has not been expired, so must not be"
+          + " listed.", filePath, fileStatus.getPath());
+    }
+    LOG.info("{}; file omitted from listStatus as expected.", filePath);
+  }
+
+  private void checkListingContainsPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertEquals(filePath, lfs.getPath());
+    }
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses)
+      assertEquals("The file should be listed in fs.listStatus",
+          filePath, fileStatus.getPath());
   }
 
   /**
@@ -384,12 +686,18 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // Create initial statusIterator with guarded ms
       writeTextFile(guardedFs, testFilePath, firstText, true);
       // and cache the value for later
-      final FileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+      final S3AFileStatus origStatus = awaitFileStatus(rawFS, testFilePath);
+      assertNotNull("No etag in raw status " + origStatus,
+          origStatus.getETag());
 
       // Do a listing to cache the lists. Should be authoritative if it's set.
-      final FileStatus[] origList = guardedFs.listStatus(testDirPath);
+      final S3AFileStatus[] origList = (S3AFileStatus[]) guardedFs.listStatus(
+          testDirPath);
       assertArraySize("Added one file to the new dir, so the number of "
               + "files in the dir should be one.", 1, origList);
+      S3AFileStatus origGuardedFileStatus = origList[0];
+      assertNotNull("No etag in origGuardedFileStatus" + origGuardedFileStatus,
+          origGuardedFileStatus.getETag());
       final DirListingMetadata dirListingMetadata =
           realMs.listChildren(guardedFs.qualify(testDirPath));
       assertListingAuthority(allowAuthoritative, dirListingMetadata);
@@ -406,7 +714,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       final FileStatus rawFileStatus = awaitFileStatus(rawFS, testFilePath);
 
       // check listing in guarded store.
-      final FileStatus[] modList = guardedFs.listStatus(testDirPath);
+      final S3AFileStatus[] modList = (S3AFileStatus[]) guardedFs.listStatus(
+          testDirPath);
       assertArraySize("Added one file to the new dir then modified it, "
           + "so the number of files in the dir should be one.", 1,
           modList);
@@ -478,6 +787,24 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
             "File length in authoritative table with " + stats,
             expectedLength, guardedLength);
       }
+    }
+    // check etag. This relies on first and second text being different.
+    final S3AFileStatus rawS3AFileStatus = (S3AFileStatus) rawFileStatus;
+    final S3AFileStatus guardedS3AFileStatus = (S3AFileStatus)
+        guardedFileStatus;
+    final S3AFileStatus origS3AFileStatus = (S3AFileStatus) origStatus;
+    assertNotEquals(
+        "raw status still no to date with changes" + stats,
+        origS3AFileStatus.getETag(), rawS3AFileStatus.getETag());
+    if (allowAuthoritative) {
+      // expect the etag to be out of sync
+      assertNotEquals(
+          "etag in authoritative table with " + stats,
+          rawS3AFileStatus.getETag(), guardedS3AFileStatus.getETag());
+    } else {
+      assertEquals(
+          "etag in non-authoritative table with " + stats,
+          rawS3AFileStatus.getETag(), guardedS3AFileStatus.getETag());
     }
     // Next: modification time.
     long rawModTime = rawFileStatus.getModificationTime();
@@ -631,12 +958,18 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
    * @return the file status.
    * @throws Exception failure
    */
-  private FileStatus awaitFileStatus(S3AFileSystem fs,
+  private S3AFileStatus awaitFileStatus(S3AFileSystem fs,
       final Path testFilePath)
       throws Exception {
-    return eventually(
+    return (S3AFileStatus) eventually(
         STABILIZATION_TIME, PROBE_INTERVAL_MILLIS,
         () -> fs.getFileStatus(testFilePath));
+  }
+
+  private FSDataOutputStream createNonRecursive(FileSystem fs, Path path)
+      throws Exception {
+    return fs
+        .createNonRecursive(path, false, 4096, (short) 3, (short) 4096, null);
   }
 
 }

@@ -112,32 +112,34 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path p) throws IOException {
-    doDelete(p, false, true);
+  public void delete(Path p, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
+    doDelete(p, false, true, ttlTimeProvider);
   }
 
   @Override
   public void forgetMetadata(Path p) throws IOException {
-    doDelete(p, false, false);
+    doDelete(p, false, false, null);
   }
 
   @Override
-  public void deleteSubtree(Path path) throws IOException {
-    doDelete(path, true, true);
+  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
+    doDelete(path, true, true, ttlTimeProvider);
   }
 
-  private synchronized void doDelete(Path p, boolean recursive, boolean
-      tombstone) {
+  private synchronized void doDelete(Path p, boolean recursive,
+      boolean tombstone, ITtlTimeProvider ttlTimeProvider) {
 
     Path path = standardize(p);
 
     // Delete entry from file cache, then from cached parent directory, if any
 
-    deleteCacheEntries(path, tombstone);
+    deleteCacheEntries(path, tombstone, ttlTimeProvider);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
-      deleteEntryByAncestor(path, localCache, tombstone);
+      deleteEntryByAncestor(path, localCache, tombstone, ttlTimeProvider);
     }
   }
 
@@ -191,7 +193,8 @@ public class LocalMetadataStore implements MetadataStore {
 
   @Override
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException {
+      Collection<PathMetadata> pathsToCreate,
+      ITtlTimeProvider ttlTimeProvider) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
     Preconditions.checkNotNull(pathsToDelete, "pathsToDelete is null");
@@ -205,7 +208,7 @@ public class LocalMetadataStore implements MetadataStore {
       // 1. Delete pathsToDelete
       for (Path meta : pathsToDelete) {
         LOG.debug("move: deleting metadata {}", meta);
-        delete(meta);
+        delete(meta, ttlTimeProvider);
       }
 
       // 2. Create new destination path metadata
@@ -332,18 +335,19 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void prune(long modTime) throws IOException{
-    prune(modTime, "");
+  public void prune(PruneMode pruneMode, long cutoff) throws IOException{
+    prune(pruneMode, cutoff, "");
   }
 
   @Override
-  public synchronized void prune(long modTime, String keyPrefix) {
+  public synchronized void prune(PruneMode pruneMode, long cutoff,
+      String keyPrefix) {
     // prune files
     // filter path_metadata (files), filter expired, remove expired
     localCache.asMap().entrySet().stream()
         .filter(entry -> entry.getValue().hasPathMeta())
-        .filter(entry -> expired(
-            entry.getValue().getFileMeta().getFileStatus(), modTime, keyPrefix))
+        .filter(entry -> expired(pruneMode,
+            entry.getValue().getFileMeta(), cutoff, keyPrefix))
         .forEach(entry -> localCache.invalidate(entry.getKey()));
 
 
@@ -358,28 +362,37 @@ public class LocalMetadataStore implements MetadataStore {
           Collection<PathMetadata> newChildren = new LinkedList<>();
 
           for (PathMetadata child : oldChildren) {
-            FileStatus status = child.getFileStatus();
-            if (!expired(status, modTime, keyPrefix)) {
+            if (!expired(pruneMode, child, cutoff, keyPrefix)) {
               newChildren.add(child);
             }
           }
-          if (newChildren.size() != oldChildren.size()) {
-            DirListingMetadata dlm =
-                new DirListingMetadata(path, newChildren, false);
-            localCache.put(path, new LocalMetadataEntry(dlm));
-            if (!path.isRoot()) {
-              DirListingMetadata parent = getDirListingMeta(path.getParent());
-              if (parent != null) {
-                parent.setAuthoritative(false);
-              }
-            }
-          }
+          removeAuthoritativeFromParent(path, oldChildren, newChildren);
         });
   }
 
-  private boolean expired(FileStatus status, long expiry, String keyPrefix) {
+  private void removeAuthoritativeFromParent(Path path,
+      Collection<PathMetadata> oldChildren,
+      Collection<PathMetadata> newChildren) {
+    if (newChildren.size() != oldChildren.size()) {
+      DirListingMetadata dlm =
+          new DirListingMetadata(path, newChildren, false);
+      localCache.put(path, new LocalMetadataEntry(dlm));
+      if (!path.isRoot()) {
+        DirListingMetadata parent = getDirListingMeta(path.getParent());
+        if (parent != null) {
+          parent.setAuthoritative(false);
+        }
+      }
+    }
+  }
+
+  private boolean expired(PruneMode pruneMode, PathMetadata metadata,
+      long cutoff, String keyPrefix) {
+    final S3AFileStatus status = metadata.getFileStatus();
+    final URI statusUri = status.getPath().toUri();
+
     // remove the protocol from path string to be able to compare
-    String bucket = status.getPath().toUri().getHost();
+    String bucket = statusUri.getHost();
     String statusTranslatedPath = "";
     if(bucket != null && !bucket.isEmpty()){
       // if there's a bucket, (well defined host in Uri) the pathToParentKey
@@ -389,18 +402,33 @@ public class LocalMetadataStore implements MetadataStore {
     } else {
       // if there's no bucket in the path the pathToParentKey will fail, so
       // this is the fallback to get the path from status
-      statusTranslatedPath = status.getPath().toUri().getPath();
+      statusTranslatedPath = statusUri.getPath();
     }
 
-    // Note: S3 doesn't track modification time on directories, so for
-    // consistency with the DynamoDB implementation we ignore that here
-    return status.getModificationTime() < expiry && !status.isDirectory()
-      && statusTranslatedPath.startsWith(keyPrefix);
+    boolean expired;
+    switch (pruneMode) {
+    case ALL_BY_MODTIME:
+      // Note: S3 doesn't track modification time on directories, so for
+      // consistency with the DynamoDB implementation we ignore that here
+      expired = status.getModificationTime() < cutoff && !status.isDirectory()
+          && statusTranslatedPath.startsWith(keyPrefix);
+      break;
+    case TOMBSTONES_BY_LASTUPDATED:
+      expired = metadata.getLastUpdated() < cutoff && metadata.isDeleted()
+          && statusTranslatedPath.startsWith(keyPrefix);
+      break;
+    default:
+      throw new UnsupportedOperationException("Unsupported prune mode: "
+          + pruneMode);
+    }
+
+    return expired;
   }
 
   @VisibleForTesting
   static void deleteEntryByAncestor(Path ancestor,
-      Cache<Path, LocalMetadataEntry> cache, boolean tombstone) {
+      Cache<Path, LocalMetadataEntry> cache, boolean tombstone,
+      ITtlTimeProvider ttlTimeProvider) {
 
     cache.asMap().entrySet().stream()
         .filter(entry -> isAncestorOf(ancestor, entry.getKey()))
@@ -410,7 +438,9 @@ public class LocalMetadataStore implements MetadataStore {
           if(meta.hasDirMeta()){
             cache.invalidate(path);
           } else if(tombstone && meta.hasPathMeta()){
-            meta.setPathMetadata(PathMetadata.tombstone(path));
+            final PathMetadata pmTombstone = PathMetadata.tombstone(path);
+            pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
+            meta.setPathMetadata(pmTombstone);
           } else {
             cache.invalidate(path);
           }
@@ -434,7 +464,8 @@ public class LocalMetadataStore implements MetadataStore {
    * Update fileCache and dirCache to reflect deletion of file 'f'.  Call with
    * lock held.
    */
-  private void deleteCacheEntries(Path path, boolean tombstone) {
+  private void deleteCacheEntries(Path path, boolean tombstone,
+      ITtlTimeProvider ttlTimeProvider) {
     LocalMetadataEntry entry = localCache.getIfPresent(path);
     // If there's no entry, delete should silently succeed
     // (based on MetadataStoreTestBase#testDeleteNonExisting)
@@ -448,6 +479,7 @@ public class LocalMetadataStore implements MetadataStore {
     if(entry.hasPathMeta()){
       if (tombstone) {
         PathMetadata pmd = PathMetadata.tombstone(path);
+        pmd.setLastUpdated(ttlTimeProvider.getNow());
         entry.setPathMetadata(pmd);
       } else {
         entry.setPathMetadata(null);
@@ -474,6 +506,7 @@ public class LocalMetadataStore implements MetadataStore {
         LOG.debug("removing parent's entry for {} ", path);
         if (tombstone) {
           dir.markDeleted(path);
+          dir.setLastUpdated(ttlTimeProvider.getNow());
         } else {
           dir.remove(path);
         }

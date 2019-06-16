@@ -63,16 +63,23 @@ public interface MetadataStore extends Closeable {
    * Deletes exactly one path, leaving a tombstone to prevent lingering,
    * inconsistent copies of it from being listed.
    *
+   * Deleting an entry with a tombstone needs a
+   * {@link org.apache.hadoop.fs.s3a.s3guard.S3Guard.TtlTimeProvider} because
+   * the lastUpdated field of the record has to be updated to <pre>now</pre>.
+   *
    * @param path the path to delete
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
-  void delete(Path path) throws IOException;
+  void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path)}. It is currently intended for testing
-   * only, and a need to use it as part of normal FileSystem usage is not
-   * anticipated.
+   * {@link MetadataStore#delete(Path, ITtlTimeProvider)}. It is currently
+   * intended for testing only, and a need to use it as part of normal
+   * FileSystem usage is not anticipated.
    *
    * @param path the path to delete
    * @throws IOException if there is an error
@@ -88,10 +95,17 @@ public interface MetadataStore extends Closeable {
    * implementations must also update any stored {@code DirListingMetadata}
    * objects which track the parent of this file.
    *
+   * Deleting a subtree with a tombstone needs a
+   * {@link org.apache.hadoop.fs.s3a.s3guard.S3Guard.TtlTimeProvider} because
+   * the lastUpdated field of all records have to be updated to <pre>now</pre>.
+   *
    * @param path the root of the sub-tree to delete
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path) throws IOException;
+  void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Gets metadata for a path.
@@ -151,10 +165,13 @@ public interface MetadataStore extends Closeable {
    * @param pathsToCreate Collection of all PathMetadata for the new paths
    *                      that were created at the destination of the rename
    *                      ().
+   * @param ttlTimeProvider the time provider to set last_updated. Must not
+   *                        be null.
    * @throws IOException if there is an error
    */
   void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate) throws IOException;
+      Collection<PathMetadata> pathsToCreate,
+      ITtlTimeProvider ttlTimeProvider) throws IOException;
 
   /**
    * Saves metadata for exactly one path.
@@ -212,29 +229,54 @@ public interface MetadataStore extends Closeable {
   void destroy() throws IOException;
 
   /**
-   * Clear any metadata older than a specified time from the repository.
-   * Implementations MUST clear file metadata, and MAY clear directory metadata
-   * (s3a itself does not track modification time for directories).
-   * Implementations may also choose to throw UnsupportedOperationException
-   * istead. Note that modification times should be in UTC, as returned by
-   * System.currentTimeMillis at the time of modification.
+   * Prune method with two modes of operation:
+   * <ul>
+   *   <li>
+   *    {@link PruneMode#ALL_BY_MODTIME}
+   *    Clear any metadata older than a specified mod_time from the store.
+   *    Note that this modification time is the S3 modification time from the
+   *    object's metadata - from the object store.
+   *    Implementations MUST clear file metadata, and MAY clear directory
+   *    metadata (s3a itself does not track modification time for directories).
+   *    Implementations may also choose to throw UnsupportedOperationException
+   *    instead. Note that modification times must be in UTC, as returned by
+   *    System.currentTimeMillis at the time of modification.
+   *   </li>
+   * </ul>
    *
-   * @param modTime Oldest modification time to allow
+   * <ul>
+   *   <li>
+   *    {@link PruneMode#TOMBSTONES_BY_LASTUPDATED}
+   *    Clear any tombstone updated earlier than a specified time from the
+   *    store. Note that this last_updated is the time when the metadata
+   *    entry was last updated and maintained by the metadata store.
+   *    Implementations MUST clear file metadata, and MAY clear directory
+   *    metadata (s3a itself does not track modification time for directories).
+   *    Implementations may also choose to throw UnsupportedOperationException
+   *    instead. Note that last_updated must be in UTC, as returned by
+   *    System.currentTimeMillis at the time of modification.
+   *   </li>
+   * </ul>
+   *
+   * @param pruneMode
+   * @param cutoff Oldest time to allow (UTC)
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
    */
-  void prune(long modTime) throws IOException, UnsupportedOperationException;
+  void prune(PruneMode pruneMode, long cutoff) throws IOException,
+      UnsupportedOperationException;
 
   /**
-   * Same as {@link MetadataStore#prune(long)}, but with an additional
-   * keyPrefix parameter to filter the pruned keys with a prefix.
+   * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an
+   * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
-   * @param modTime Oldest modification time to allow
+   * @param pruneMode
+   * @param cutoff Oldest time to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
    */
-  void prune(long modTime, String keyPrefix)
+  void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException, UnsupportedOperationException;
 
   /**
@@ -252,4 +294,13 @@ public interface MetadataStore extends Closeable {
    * @throws IOException if there is an error
    */
   void updateParameters(Map<String, String> parameters) throws IOException;
+
+  /**
+   * Modes of operation for prune.
+   * For details see {@link MetadataStore#prune(PruneMode, long)}
+   */
+  enum PruneMode {
+    ALL_BY_MODTIME,
+    TOMBSTONES_BY_LASTUPDATED
+  }
 }

@@ -75,6 +75,11 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
     return new LocalMSContract(conf);
   }
 
+  @Override protected String getPathStringForPrune(String path)
+      throws Exception{
+    return path;
+  }
+
   @Test
   public void testClearByAncestor() throws Exception {
     Cache<Path, LocalMetadataEntry> cache = CacheBuilder.newBuilder().build();
@@ -184,7 +189,7 @@ public class TestLocalMetadataStore extends MetadataStoreTestBase {
       String prefixStr, String pathStr, int leftoverSize) throws IOException {
     populateMap(cache, prefixStr);
     LocalMetadataStore.deleteEntryByAncestor(new Path(prefixStr + pathStr),
-        cache, true);
+        cache, true, getTtlTimeProvider());
     assertEquals(String.format("Cache should have %d entries", leftoverSize),
         leftoverSize, sizeOfMap(cache));
     cache.invalidateAll();

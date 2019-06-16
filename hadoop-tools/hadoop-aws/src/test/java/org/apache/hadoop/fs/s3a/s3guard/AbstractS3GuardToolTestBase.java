@@ -280,7 +280,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
           "This child should have been kept (prefix restriction).", 1);
     } finally {
       getFileSystem().delete(parent, true);
-      ms.prune(Long.MAX_VALUE);
+      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, Long.MAX_VALUE);
     }
   }
 
