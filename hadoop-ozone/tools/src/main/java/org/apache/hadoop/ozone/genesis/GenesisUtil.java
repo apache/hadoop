@@ -186,7 +186,7 @@ public final class GenesisUtil {
       omStorage.setOmId(UUID.randomUUID().toString());
       omStorage.initialize();
     }
-    return OzoneManager.createOm(null, conf);
+    return OzoneManager.createOm(conf);
   }
 
   static void configureOM(Configuration conf, int numHandlers) {
