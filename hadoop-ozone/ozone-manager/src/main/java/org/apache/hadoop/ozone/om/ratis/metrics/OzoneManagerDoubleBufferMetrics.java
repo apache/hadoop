@@ -52,11 +52,11 @@ public class OzoneManagerDoubleBufferMetrics {
         new OzoneManagerDoubleBufferMetrics());
   }
 
-  public void incTotalNumOfFlushOperations() {
+  public void incrTotalNumOfFlushOperations() {
     this.totalNumOfFlushOperations.incr();
   }
 
-  public void incTotalSizeOfFlushedTransactions(
+  public void incrTotalSizeOfFlushedTransactions(
       long flushedTransactions) {
     this.totalNumOfFlushedTransactions.incr(flushedTransactions);
   }
