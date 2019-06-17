@@ -31,6 +31,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import static org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration.PREFIX;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,6 +51,11 @@ public class TestDSWithMultipleNodeManager {
   public void setup() throws Exception {
     distShellTest = new TestDistributedShell();
     distShellTest.setupInternal(NUM_NMS);
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    distShellTest.tearDown();
   }
 
   private void initializeNodeLabels() throws IOException {
@@ -145,6 +151,14 @@ public class TestDSWithMultipleNodeManager {
         "1",
         "--shell_command",
         distShellTest.getSleepCommand(15),
+        "--master_memory",
+        "512",
+        "--master_vcores",
+        "2",
+        "--container_memory",
+        "128",
+        "--container_vcores",
+        "1",
         "--placement_spec",
         "zk=1,NOTIN,NODE,zk:spark=1,NOTIN,NODE,zk"
     };
