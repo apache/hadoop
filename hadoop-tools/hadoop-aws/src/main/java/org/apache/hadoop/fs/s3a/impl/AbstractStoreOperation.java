@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.impl;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 /**
  * Base class of operations in the store.
  * An operation is something which executes against the context to
@@ -33,10 +35,15 @@ public abstract class AbstractStoreOperation {
    * @param storeContext store context.
    */
   protected AbstractStoreOperation(final StoreContext storeContext) {
-    this.storeContext = storeContext;
+    this.storeContext = checkNotNull(storeContext);
   }
 
-  public StoreContext getStoreContext() {
+  /**
+   * Get the store context.
+   * @return the context.
+   */
+  public final StoreContext getStoreContext() {
     return storeContext;
   }
+
 }

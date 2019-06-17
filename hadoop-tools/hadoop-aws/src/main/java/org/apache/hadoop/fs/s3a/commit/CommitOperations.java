@@ -52,6 +52,7 @@ import org.apache.hadoop.fs.s3a.commit.files.SinglePendingCommit;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.DurationInfo;
 
 import static org.apache.hadoop.fs.s3a.S3AUtils.*;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -405,7 +406,10 @@ public class CommitOperations {
     Path markerPath = new Path(outputPath, _SUCCESS);
     LOG.debug("Touching success marker for job {}: {}", markerPath,
         successData);
-    successData.save(fs, markerPath, true);
+    try (DurationInfo ignored = new DurationInfo(LOG,
+        "Writing success file %s", markerPath)) {
+      successData.save(fs, markerPath, true);
+    }
   }
 
   /**

@@ -122,7 +122,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
     // then removes them from the original list.
     List<Path> undeleted = removeUndeletedPaths(deleteException,
         pathsBeingDeleted,
-        getStoreContext().getKeyToPathQualifier());
+        getStoreContext()::keyToPath);
     return Pair.of(undeleted, pathsBeingDeleted);
   }
 
@@ -133,9 +133,8 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
    */
   public List<Path> keysToPaths(
       final Collection<DeleteObjectsRequest.KeyVersion> keysToDelete) {
-    Function<String, Path> qualifier
-        = getStoreContext().getKeyToPathQualifier();
-    return convertToPaths(keysToDelete, qualifier);
+    return convertToPaths(keysToDelete,
+        getStoreContext()::keyToPath);
   }
 
   /**
@@ -163,7 +162,6 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
    */
   public Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>>
       processDeleteFailure(
-
       final MultiObjectDeleteException deleteException,
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete) {
     final MetadataStore metadataStore =

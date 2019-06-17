@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.impl;
 
 import javax.annotation.Nullable;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -70,9 +71,12 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestPartialDeleteFailures {
 
+  private static final ContextAccessors contextAccessors
+      = new MinimalContextAccessor();
+
   private StoreContext context;
 
-  private static Path qualify(String k) {
+  private static Path qualifyKey(String k) {
     return new Path("s3a://bucket/" + k);
   }
 
@@ -89,7 +93,7 @@ public class TestPartialDeleteFailures {
     MultiObjectDeleteException ex = createDeleteException(ACCESS_DENIED,
         rejected);
     List<Path> undeleted = removeUndeletedPaths(ex, src,
-        TestPartialDeleteFailures::qualify);
+        TestPartialDeleteFailures::qualifyKey);
     assertEquals("mismatch of rejected and undeleted entries",
         rejected, undeleted);
   }
@@ -119,7 +123,7 @@ public class TestPartialDeleteFailures {
    */
   private List<Path> pathList(String... paths) {
     return Arrays.stream(paths)
-        .map(TestPartialDeleteFailures::qualify)
+        .map(TestPartialDeleteFailures::qualifyKey)
         .collect(Collectors.toList());
   }
 
@@ -163,9 +167,9 @@ public class TestPartialDeleteFailures {
    */
   @Test
   public void testProcessDeleteFailure() throws Throwable {
-    Path pathA = qualify("/a");
-    Path pathAB = qualify("/a/b");
-    Path pathAC = qualify("/a/c");
+    Path pathA = qualifyKey("/a");
+    Path pathAB = qualifyKey("/a/b");
+    Path pathAC = qualifyKey("/a/c");
     List<Path> src = Lists.newArrayList(pathA, pathAB, pathAC);
     List<DeleteObjectsRequest.KeyVersion> keyList = keysToDelete(src);
     List<Path> deleteForbidden = Lists.newArrayList(pathAB);
@@ -219,14 +223,34 @@ public class TestPartialDeleteFailures {
             ChangeDetectionPolicy.Source.ETag, false),
         multiDelete,
         store,
-        TestPartialDeleteFailures::qualify,
         false,
-        false,
-        null,
-        () -> "us-west-1",
+        contextAccessors,
         new S3Guard.TtlTimeProvider(conf));
   }
 
+  private static class MinimalContextAccessor implements ContextAccessors {
+
+    @Override
+    public Path keyToPath(final String key) {
+      return qualifyKey(key);
+    }
+
+    @Override
+    public String pathToKey(final Path path) {
+      return null;
+    }
+
+    @Override
+    public File createTempFile(final String prefix, final long size)
+        throws IOException {
+      throw new UnsupportedOperationException("unsppported");
+    }
+
+    @Override
+    public String getBucketLocation() throws IOException {
+      return null;
+    }
+  }
   /**
    * MetadataStore which tracks what is deleted and added.
    */

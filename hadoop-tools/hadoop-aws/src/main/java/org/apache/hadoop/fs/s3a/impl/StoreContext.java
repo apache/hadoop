@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.impl;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.function.Function;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 
@@ -44,9 +43,9 @@ import org.apache.hadoop.util.SemaphoredDelegatingExecutor;
  * components, without exposing the entire parent class.
  * This is eliminate explicit recursive coupling.
  *
- * Where methods on the FS are to be invoked, they are all passed in
- * via functional interfaces, so test setups can pass in mock callbacks
- * instead.
+ * Where methods on the FS are to be invoked, they are referenced
+ * via the {@link ContextAccessors} interface, so tests can implement
+ * their own.
  *
  * <i>Warning:</i> this really is private and unstable. Do not use
  * outside the org.apache.hadoop.fs.s3a package.
@@ -99,24 +98,13 @@ public class StoreContext {
   /** List algorithm. */
   private final boolean useListV1;
 
-  /** Is the store versioned? */
-  private final boolean versioned;
-
   /**
    * To allow this context to be passed down to the metastore, this field
    * wll be null until initialized.
    */
   private final MetadataStore metadataStore;
 
-  /** Function to take a key and return a path. */
-  private final Function<String, Path> keyToPathQualifier;
-
-  /** Factory for temporary files. */
-  private final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long, File>
-      tempFileFactory;
-
-  private final FunctionsRaisingIOE.CallableRaisingIOE<String>
-      getBucketLocation;
+  private final ContextAccessors contextAccessors;
 
   /**
    * Source of time.
@@ -143,12 +131,8 @@ public class StoreContext {
       final ChangeDetectionPolicy changeDetectionPolicy,
       final boolean multiObjectDeleteEnabled,
       final MetadataStore metadataStore,
-      final Function<String, Path> keyToPathQualifier,
       final boolean useListV1,
-      final boolean versioned,
-      final FunctionsRaisingIOE.BiFunctionRaisingIOE<String, Long, File>
-          tempFileFactory,
-      final FunctionsRaisingIOE.CallableRaisingIOE<String> getBucketLocation,
+      final ContextAccessors contextAccessors,
       final ITtlTimeProvider timeProvider) {
     this.fsURI = fsURI;
     this.bucket = bucket;
@@ -164,11 +148,8 @@ public class StoreContext {
     this.changeDetectionPolicy = changeDetectionPolicy;
     this.multiObjectDeleteEnabled = multiObjectDeleteEnabled;
     this.metadataStore = metadataStore;
-    this.keyToPathQualifier = keyToPathQualifier;
     this.useListV1 = useListV1;
-    this.versioned = versioned;
-    this.tempFileFactory = tempFileFactory;
-    this.getBucketLocation = getBucketLocation;
+    this.contextAccessors = contextAccessors;
     this.timeProvider = timeProvider;
   }
 
@@ -225,12 +206,23 @@ public class StoreContext {
     return useListV1;
   }
 
-  public boolean isVersioned() {
-    return versioned;
+  /**
+   * Convert a key to a fully qualified path.
+   * @param key input key
+   * @return the fully qualified path including URI scheme and bucket name.
+   */
+  public Path keyToPath(String key) {
+    return contextAccessors.keyToPath(key);
   }
 
-  public Function<String, Path> getKeyToPathQualifier() {
-    return keyToPathQualifier;
+  /**
+   * Turns a path (relative or otherwise) into an S3 key.
+   *
+   * @param path input path, may be relative to the working dir
+   * @return a key excluding the leading "/", or, if it is the root path, ""
+   */
+  public String pathToKey(Path path) {
+    return contextAccessors.pathToKey(path);
   }
 
   /**
@@ -321,7 +313,7 @@ public class StoreContext {
    * @throws IOException failure.
    */
   public File createTempFile(String prefix, long size) throws IOException {
-    return tempFileFactory.apply(prefix, size);
+    return contextAccessors.createTempFile(prefix, size);
   }
 
   /**
@@ -330,7 +322,7 @@ public class StoreContext {
    * @throws IOException failure.
    */
   public String getBucketLocation() throws IOException {
-    return getBucketLocation.apply();
+    return contextAccessors.getBucketLocation();
   }
 
   /**

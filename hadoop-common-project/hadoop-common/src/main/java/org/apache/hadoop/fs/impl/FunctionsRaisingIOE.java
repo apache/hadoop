@@ -16,15 +16,18 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.fs.s3a.impl;
+package org.apache.hadoop.fs.impl;
 
 import java.io.IOException;
 
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
+
 /**
  * Evolving support for functional programming/lambda-expressions.
- * Currently in the s3a module for experimentation and evolution; at
- * some point it could be pulled into hadoop-common.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public final class FunctionsRaisingIOE {
 
   private FunctionsRaisingIOE() {

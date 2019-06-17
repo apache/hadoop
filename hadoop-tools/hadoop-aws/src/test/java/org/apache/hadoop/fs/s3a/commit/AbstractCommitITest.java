@@ -495,6 +495,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   public static SuccessData loadSuccessFile(final S3AFileSystem fs,
       final Path outputPath) throws IOException {
     Path success = new Path(outputPath, _SUCCESS);
+    ContractTestUtils.assertIsFile(fs, success);
     FileStatus status = fs.getFileStatus(success);
     assertTrue("0 byte success file - not a s3guard committer " + success,
         status.getLen() > 0);

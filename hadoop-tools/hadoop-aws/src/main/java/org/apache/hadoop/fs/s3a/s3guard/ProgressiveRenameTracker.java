@@ -210,6 +210,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
   public synchronized void moveSourceDirectory() throws IOException {
     // this moves the source directory in the metastore if it has not
     // already been processed.
+    // TODO S3Guard: performance: mark destination dirs as authoritative
     if (!pathsToDelete.contains(getSourceRoot())) {
       final List<Path> toDelete = new ArrayList<>(1);
       final List<PathMetadata> toAdd = new ArrayList<>(1);

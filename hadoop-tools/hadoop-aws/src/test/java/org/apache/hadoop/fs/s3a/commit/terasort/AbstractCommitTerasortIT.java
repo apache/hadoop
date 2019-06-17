@@ -238,4 +238,9 @@ public abstract class AbstractCommitTerasortIT extends
   public void test_150_teracleanup() throws Throwable {
     terasortDuration = Optional.empty();
   }
+
+  @Test
+  public void test_200_directory_deletion() throws Throwable {
+    getFileSystem().delete(terasortPath, true);
+  }
 }
