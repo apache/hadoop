@@ -19,7 +19,6 @@
 package org.apache.hadoop.tools.contract;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.tools.util.TestDistCpUtils.verifyFoldersAreInSync;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -27,6 +26,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -44,7 +44,6 @@ import org.apache.hadoop.tools.DistCpConstants;
 import org.apache.hadoop.tools.DistCpOptions;
 import org.apache.hadoop.tools.mapred.CopyMapper;
 
-import org.apache.hadoop.tools.util.TestDistCpUtils;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -139,6 +138,7 @@ public abstract class AbstractContractDistCpTest
   public void setup() throws Exception {
     super.setup();
     conf = getContract().getConf();
+    conf.setLong(CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY, 10);
     localFS = FileSystem.getLocal(conf);
     remoteFS = getFileSystem();
     // Test paths are isolated by concrete subclass name and test method name.
@@ -224,8 +224,13 @@ public abstract class AbstractContractDistCpTest
     describe("update a deep directory structure from local to remote");
     distCpDeepDirectoryStructure(localFS, localDir, remoteFS, remoteDir);
     distCpUpdateDeepDirectoryStructure(inputDirUnderOutputDir);
-    initOutputFields(inputDirUnderOutputDir);
-    distCpUpdateUseTrashDeepDirectoryStructure(inputDirUnderOutputDir);
+  }
+
+  @Test
+  public void testUpdateUseTrashDeepDirectoryStructureToRemote() throws Exception {
+    describe("update a deep directory structure from local to remote");
+    distCpDeepDirectoryStructure(localFS, localDir, remoteFS, remoteDir);
+    distCpUpdateUseTrashDeepDirectoryStructure(remoteDir);
   }
 
   @Test
@@ -288,6 +293,10 @@ public abstract class AbstractContractDistCpTest
 
     modifySourceDirectories();
 
+    ContractTestUtils.assertPathsDoNotExist(localFS,
+        "Paths for test are wrong",
+        inputFile1, inputFile3, inputSubDir4);
+
     Job job = distCpUpdate(srcDir, destDir);
 
     Path outputFileNew1 = new Path(outputSubDir2, "newfile1");
@@ -331,9 +340,10 @@ public abstract class AbstractContractDistCpTest
    * @param destDir output directory used by the initial distcp
    * @return the distcp job
    */
+
   protected Job distCpUpdateUseTrashDeepDirectoryStructure(final Path destDir)
       throws Exception {
-    describe("Now do an incremental update with deletion-use-trash of missing files");
+    describe("Incremental update with deletion-use-trash of missing files");
     Path srcDir = inputDir;
     LOG.info("Source directory = {}, dest={}", srcDir, destDir);
 
@@ -342,26 +352,33 @@ public abstract class AbstractContractDistCpTest
         inputFile1, inputFile2, inputFile3, inputFile4, inputFile5);
 
     modifySourceDirectories();
+    ContractTestUtils.assertPathsDoNotExist(localFS, "deleted right now",
+        inputFile1, inputFile3, inputSubDir4);
+
     Path trashRootDir = remoteFS.getTrashRoot(null);
     if (remoteFS.exists(trashRootDir)) {
       remoteFS.delete(trashRootDir, true);
     }
 
-    Job job = distCpUpdateDeleteUseTrash(srcDir, destDir);
-    Path outputFileNew1 = new Path(outputSubDir2, "newfile1");
+    Job job = distCpUpdateDeleteUseTrash(inputDir, inputDirUnderOutputDir);
     lsR("Updated Remote", remoteFS, destDir);
 
-    ContractTestUtils.assertPathDoesNotExist(remoteFS,
-        " deleted from " + inputFile1, outputFile1);
-    ContractTestUtils.assertIsFile(remoteFS, outputFileNew1);
     ContractTestUtils.assertPathsDoNotExist(remoteFS,
         "DistCP should have deleted",
-        outputFile3, outputFile4, outputSubDir4);
-    assertTrue("Path delete does not use trash", remoteFS.exists(trashRootDir));
-    Path trashDir = new Path(trashRootDir,"Current" + destDir);
-
-    // Test path have moved to trash
-    verifyFoldersAreInSync(remoteFS, trashDir.toString(), srcDir.toString());
+        outputFile1, outputFile3, outputFile4, outputSubDir4);
+    ContractTestUtils.assertPathExists(remoteFS,
+        "Path delete does not use trash", trashRootDir);
+    Path trashFile1 = new Path(trashRootDir,
+        "Current" + outputFile1.toUri().getPath());
+    Path trashFile3 = new Path(trashRootDir,
+        "Current" + outputFile3.toUri().getPath());
+    Path trashFile4 = new Path(trashRootDir,
+        "Current" + outputFile4.toUri().getPath());
+    Path trashFile5 = new Path(trashRootDir,
+        "Current" + outputFile5.toUri().getPath());
+    ContractTestUtils.assertPathsExist(remoteFS,
+        "Path delete does not use trash",
+        trashFile1, trashFile3, trashFile4, trashFile5);
     return job;
   }
 
@@ -401,6 +418,11 @@ public abstract class AbstractContractDistCpTest
     // add one new file
     Path inputFileNew1 = new Path(inputSubDir2, "newfile1");
     ContractTestUtils.touch(localFS, inputFileNew1);
+
+    ContractTestUtils.assertPathsDoNotExist(localFS, "deleted right now",
+        inputFile1, inputFile3, inputSubDir4);
+    ContractTestUtils.assertPathsExist(localFS, "touched right now",
+        inputFileNew1);
     return inputFileNew1;
   }
 

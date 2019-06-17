@@ -19,8 +19,6 @@
 package org.apache.hadoop.tools.mapred;
 
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -253,7 +251,7 @@ public class TestCopyCommitter {
 
       Assert.assertTrue("Path delete does not use trash",
           fs.exists(trashRootDir));
-      Path trashDir = new Path(trashRootDir,"Current" + targetBaseAdd);
+      Path trashDir = new Path(trashRootDir, "Current" + targetBaseAdd);
       verifyFoldersAreInSync(fs, trashDir.toString(), sourceBase);
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
