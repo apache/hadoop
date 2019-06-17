@@ -383,7 +383,7 @@ public final class TestSecureOzoneCluster {
     setupOm(conf);
     conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
         "non-existent-user@EXAMPLE.com");
-    testCommonKerberosFailures(() -> OzoneManager.createOm(null, conf));
+    testCommonKerberosFailures(() -> OzoneManager.createOm(conf));
   }
 
   /**
@@ -662,7 +662,7 @@ public final class TestSecureOzoneCluster {
     // writes the version file properties
     omStore.initialize();
     OzoneManager.setTestSecureOmFlag(true);
-    om = OzoneManager.createOm(null, config);
+    om = OzoneManager.createOm(config);
   }
 
   @Test
@@ -717,6 +717,26 @@ public final class TestSecureOzoneCluster {
     LogCapturer omLogs =
         LogCapturer.captureLogs(OzoneManager.getLogger());
     omLogs.clearOutput();
+
+    /**
+     * As all these processes run inside the same JVM, there are issues around
+     * the Hadoop UGI if different processes run with different principals.
+     * In this test, the OM has to contact the SCM to download certs. SCM runs
+     * as scm/host@REALM, but the OM logs in as om/host@REALM, and then the test
+     * fails, and the OM is unable to contact the SCM due to kerberos login
+     * issues. To work around that, have the OM run as the same principal as the
+     * SCM, and then the test passes.
+     *
+     * TODO: Need to look into this further to see if there is a better way to
+     *       address this problem.
+     */
+    String realm = miniKdc.getRealm();
+    conf.set(OMConfigKeys.OZONE_OM_KERBEROS_PRINCIPAL_KEY,
+        "scm/" + host + "@" + realm);
+    omKeyTab = new File(workDir, "scm.keytab");
+    conf.set(OMConfigKeys.OZONE_OM_KERBEROS_KEYTAB_FILE_KEY,
+        omKeyTab.getAbsolutePath());
+
     initSCM();
     try {
       scm = StorageContainerManager.createSCM(conf);
@@ -725,7 +745,7 @@ public final class TestSecureOzoneCluster {
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
       OzoneManager.setTestSecureOmFlag(true);
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       assertNull(om.getCertificateClient());
       assertFalse(omLogs.getOutput().contains("Init response: GETCERT"));
@@ -735,7 +755,7 @@ public final class TestSecureOzoneCluster {
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, true);
       OzoneManager.omInit(conf);
       om.stop();
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       Assert.assertNotNull(om.getCertificateClient());
       Assert.assertNotNull(om.getCertificateClient().getPublicKey());
@@ -771,7 +791,7 @@ public final class TestSecureOzoneCluster {
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
       OzoneManager.setTestSecureOmFlag(true);
-      om = OzoneManager.createOm(null, conf);
+      om = OzoneManager.createOm(conf);
 
       Assert.assertNotNull(om.getCertificateClient());
       Assert.assertNotNull(om.getCertificateClient().getPublicKey());

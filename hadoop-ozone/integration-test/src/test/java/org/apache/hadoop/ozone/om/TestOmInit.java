@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.web.handlers.UserArgs;
 import org.apache.hadoop.ozone.web.interfaces.StorageHandler;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -90,10 +91,11 @@ public class TestOmInit {
 
   /**
    * Tests the OM Initialization.
-   * @throws IOException
+   * @throws IOException, AuthenticationException
    */
   @Test
-  public void testOmInitAgain() throws IOException {
+  public void testOmInitAgain() throws IOException,
+      AuthenticationException {
     // Stop the Ozone Manager
     cluster.getOzoneManager().stop();
     // Now try to init the OM again. It should succeed

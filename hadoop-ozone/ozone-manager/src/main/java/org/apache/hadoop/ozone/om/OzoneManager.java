@@ -142,12 +142,10 @@ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
-import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.utils.RetriableTask;
 import org.apache.ratis.util.LifeCycle;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -160,7 +158,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -206,7 +203,6 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKE
 import static org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneManagerService
     .newReflectiveBlockingService;
-import static org.apache.hadoop.util.ExitUtil.terminate;
 
 /**
  * Ozone Manager is the metadata manager of ozone.
@@ -220,10 +216,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private static final AuditLogger AUDIT = new AuditLogger(
       AuditLoggerType.OMLOGGER);
 
-  private static final String USAGE =
-      "Usage: \n ozone om [genericOptions] " + "[ "
-          + StartupOption.INIT.getName() + " ]\n " + "ozone om [ "
-          + StartupOption.HELP.getName() + " ]\n";
   private static final String OM_DAEMON = "om";
   private static boolean securityEnabled = false;
   private OzoneDelegationTokenSecretManager delegationTokenMgr;
@@ -924,108 +916,35 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     return rpcServer;
   }
 
-  /**
-   * Main entry point for starting OzoneManager.
-   *
-   * @param argv arguments
-   * @throws IOException if startup fails due to I/O error
-   */
-  public static void main(String[] argv) throws IOException {
-    if (DFSUtil.parseHelpArgument(argv, USAGE, System.out, true)) {
-      System.exit(0);
-    }
-    try {
-      TracingUtil.initTracing("OzoneManager");
-      OzoneConfiguration conf = new OzoneConfiguration();
-      GenericOptionsParser hParser = new GenericOptionsParser(conf, argv);
-      if (!hParser.isParseSuccessful()) {
-        System.err.println("USAGE: " + USAGE + " \n");
-        hParser.printGenericCommandUsage(System.err);
-        System.exit(1);
-      }
-      OzoneManager om = createOm(hParser.getRemainingArgs(), conf, true);
-      if (om != null) {
-        om.start();
-        om.join();
-      }
-    } catch (Throwable t) {
-      LOG.error("Failed to start the OzoneManager.", t);
-      terminate(1, t);
-    }
-  }
-
-  private static void printUsage(PrintStream out) {
-    out.println(USAGE + "\n");
-  }
-
   private static boolean isOzoneSecurityEnabled() {
     return securityEnabled;
   }
 
   /**
-   * Constructs OM instance based on command line arguments.
+   * Constructs OM instance based on the configuration.
    *
-   * This method is intended for unit tests only. It suppresses the
-   * startup/shutdown message and skips registering Unix signal
-   * handlers.
-   *
-   * @param argv Command line arguments
    * @param conf OzoneConfiguration
    * @return OM instance
    * @throws IOException, AuthenticationException in case OM instance
    *   creation fails.
    */
-  @VisibleForTesting
-  public static OzoneManager createOm(
-      String[] argv, OzoneConfiguration conf)
+  public static OzoneManager createOm(OzoneConfiguration conf)
       throws IOException, AuthenticationException {
-    return createOm(argv, conf, false);
+    loginOMUserIfSecurityEnabled(conf);
+    return new OzoneManager(conf);
   }
 
   /**
-   * Constructs OM instance based on command line arguments.
+   * Logs in the OM use if security is enabled in the configuration.
    *
-   * @param argv Command line arguments
    * @param conf OzoneConfiguration
-   * @param printBanner if true then log a verbose startup message.
-   * @return OM instance
-   * @throws IOException, AuthenticationException in case OM instance
-   *   creation fails.
+   * @throws IOException, AuthenticationException in case login failes.
    */
-  private static OzoneManager createOm(String[] argv,
-      OzoneConfiguration conf, boolean printBanner)
+  private static void loginOMUserIfSecurityEnabled(OzoneConfiguration  conf)
       throws IOException, AuthenticationException {
-    StartupOption startOpt = parseArguments(argv);
-    if (startOpt == null) {
-      printUsage(System.err);
-      terminate(1);
-      return null;
-    }
-
     securityEnabled = OzoneSecurityUtil.isSecurityEnabled(conf);
     if (securityEnabled) {
       loginOMUser(conf);
-    }
-
-    switch (startOpt) {
-    case INIT:
-      if (printBanner) {
-        StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
-      }
-      terminate(omInit(conf) ? 0 : 1);
-      return null;
-    case HELP:
-      printUsage(System.err);
-      terminate(0);
-      return null;
-    default:
-      if (argv == null) {
-        argv = new String[]{};
-      }
-      if (printBanner) {
-        StringUtils.startupShutdownMessage(OzoneManager.class, argv, LOG);
-      }
-      return new OzoneManager(conf);
     }
   }
 
@@ -1038,7 +957,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    *                     accessible
    */
   @VisibleForTesting
-  public static boolean omInit(OzoneConfiguration conf) throws IOException {
+  public static boolean omInit(OzoneConfiguration conf) throws IOException,
+      AuthenticationException {
+    loginOMUserIfSecurityEnabled(conf);
     OMStorage omStorage = new OMStorage(conf);
     StorageState state = omStorage.getState();
     if (state != StorageState.INITIALIZED) {
@@ -1133,23 +1054,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (Exception e) {
       throw new IOException("Failed to get SCM info", e);
     }
-  }
-
-  /**
-   * Parses the command line options for OM initialization.
-   *
-   * @param args command line arguments
-   * @return StartupOption if options are valid, null otherwise
-   */
-  private static StartupOption parseArguments(String[] args) {
-    if (args == null || args.length == 0) {
-      return StartupOption.REGULAR;
-    } else {
-      if (args.length == 1) {
-        return StartupOption.parse(args[0]);
-      }
-    }
-    return null;
   }
 
   /**
@@ -3141,34 +3045,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     default:
       throw new OMException("Unexpected resource type: " +
           obj.getResourceType(), INVALID_REQUEST);
-    }
-  }
-
-  /**
-   * Startup options.
-   */
-  public enum StartupOption {
-    INIT("--init"),
-    HELP("--help"),
-    REGULAR("--regular");
-
-    private final String name;
-
-    StartupOption(String arg) {
-      this.name = arg;
-    }
-
-    public static StartupOption parse(String value) {
-      for (StartupOption option : StartupOption.values()) {
-        if (option.name.equalsIgnoreCase(value)) {
-          return option;
-        }
-      }
-      return null;
-    }
-
-    public String getName() {
-      return name;
     }
   }
 

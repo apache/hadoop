@@ -517,7 +517,7 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       configureOM();
       OMStorage omStore = new OMStorage(conf);
       initializeOmStorage(omStore);
-      return OzoneManager.createOm(null, conf);
+      return OzoneManager.createOm(conf);
     }
 
     /**

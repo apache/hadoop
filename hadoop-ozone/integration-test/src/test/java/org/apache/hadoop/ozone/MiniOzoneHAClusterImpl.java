@@ -211,7 +211,7 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
             OMStorage omStore = new OMStorage(conf);
             initializeOmStorage(omStore);
 
-            OzoneManager om = OzoneManager.createOm(null, conf);
+            OzoneManager om = OzoneManager.createOm(conf);
             om.setCertClient(certClient);
             omMap.put(nodeId, om);
 
