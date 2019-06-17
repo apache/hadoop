@@ -43,7 +43,7 @@ origin (CORS) support.
 | `yarn.nodemanager.webapp.cross-origin.enabled` | true | Enable CORS support for Node Manager  |
 
 Also please ensure that CORS related configurations are enabled in `core-site.xml`.
-Kindly refer [here](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-common/HttpAuthentication.html)
+Kindly refer [here](../../hadoop-project-dist/hadoop-common/HttpAuthentication.html)
 
 Use it
 -------------
