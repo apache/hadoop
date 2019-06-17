@@ -858,7 +858,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * operation state will be updated with all new entries created.
    * This ensures that subsequent operations with the same store will not
    * trigger new updates.
-   * The scan on
    * @param qualifiedPath path to update
    * @param timeProvider
    * @param operationState (nullable) operational state for a bulk update

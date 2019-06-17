@@ -1157,15 +1157,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       // check if UNGUARDED_FLAG is passed and use NullMetadataStore in
       // config to avoid side effects like creating the table if not exists
-      Configuration conf0 = getConf();
+      Configuration unguardedConf = getConf();
       if (commands.getOpt(UNGUARDED_FLAG)) {
         LOG.debug("Unguarded flag is passed to command :" + this.getName());
-        clearBucketOption(conf0, fsURI.getHost(), S3_METADATA_STORE_IMPL);
-        conf0.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+        clearBucketOption(unguardedConf, fsURI.getHost(), S3_METADATA_STORE_IMPL);
+        unguardedConf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
       }
 
       S3AFileSystem fs = (S3AFileSystem) FileSystem.newInstance(
-          fsURI, conf0);
+          fsURI, unguardedConf);
       setFilesystem(fs);
       Configuration conf = fs.getConf();
       URI fsUri = fs.getUri();
