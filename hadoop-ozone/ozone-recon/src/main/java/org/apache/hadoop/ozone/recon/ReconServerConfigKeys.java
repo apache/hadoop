@@ -54,6 +54,8 @@ public final class ReconServerConfigKeys {
 
   public static final String OZONE_RECON_DB_DIR = "ozone.recon.db.dir";
 
+  public static final String OZONE_RECON_DB_WAL_DIR = "ozone.recon.db.wal.dir";
+
   public static final String OZONE_RECON_OM_SNAPSHOT_DB_DIR =
       "ozone.recon.om.db.dir";
 

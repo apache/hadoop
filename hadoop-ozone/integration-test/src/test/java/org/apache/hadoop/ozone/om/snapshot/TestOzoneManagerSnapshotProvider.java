@@ -35,6 +35,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.rules.Timeout;
 
 import java.util.UUID;
@@ -54,6 +55,9 @@ public class TestOzoneManagerSnapshotProvider {
   @Rule
   public Timeout timeout = new Timeout(300_000);
 
+  @Rule
+  public TemporaryFolder folder = new TemporaryFolder();
+
   /**
    * Create a MiniDFSCluster for testing.
    */
@@ -63,6 +67,8 @@ public class TestOzoneManagerSnapshotProvider {
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     conf.setBoolean(OMConfigKeys.OZONE_OM_HTTP_ENABLED_KEY, true);
+    // Set walDir.
+    conf.set(OMConfigKeys.OZONE_OM_DB_WAL_DIR, folder.newFolder().getAbsolutePath());
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)

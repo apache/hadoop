@@ -647,6 +647,17 @@
     </description>
   </property>
   <property>
+    <name>ozone.om.db.wal.dir</name>
+    <value/>
+    <tag>OZONE, OM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the OzoneManager DB stores its write-ahead logs.
+      If this is undefined, the log files will be using the same location as
+      db data location. Recommended to set this value on production
+      environments.
+    </description>
+  </property>
+  <property>
     <name>ozone.metadata.dirs</name>
     <value/>
     <tag>OZONE, OM, SCM, CONTAINER, STORAGE, REQUIRED</tag>
@@ -697,6 +708,17 @@
       If undefined, then the SCM will log a warning and fallback to
       ozone.metadata.dirs. This fallback approach is not recommended for
       production environments.
+    </description>
+  </property>
+  <property>
+    <name>ozone.scm.db.wal.dir</name>
+    <value/>
+    <tag>OZONE, SCM, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the SCM DB stores its write-ahead logs.
+      If this is undefined, the log files will be using the same location as
+      db data location. Recommended to set this value on production
+      environments.
     </description>
   </property>
   <property>
@@ -2325,6 +2347,17 @@
       If undefined, then the Recon will log a warning and fallback to
       ozone.metadata.dirs. This fallback approach is not recommended for
       production environments.
+    </description>
+  </property>
+  <property>
+    <name>ozone.recon.db.wal.dir</name>
+    <value/>
+    <tag>OZONE, RECON, STORAGE, PERFORMANCE</tag>
+    <description>
+      Directory where the Recon DB stores its write-ahead logs.
+      If this is undefined, the log files will be using the same location as
+      db data location. Recommended to set this value on production
+      environments.
     </description>
   </property>
   <property>

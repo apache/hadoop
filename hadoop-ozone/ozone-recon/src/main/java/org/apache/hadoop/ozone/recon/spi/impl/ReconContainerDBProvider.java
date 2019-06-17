@@ -21,9 +21,11 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_CONTAINER_DB;
 import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_WAL_DIR;
 import static org.apache.hadoop.ozone.recon.ReconUtils.getReconDbDir;
 
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
@@ -65,8 +67,10 @@ public class ReconContainerDBProvider implements Provider<DBStore> {
     String dbName = RECON_CONTAINER_DB + "_" + System.currentTimeMillis();
     try {
       Path metaDir = getReconDbDir(configuration, OZONE_RECON_DB_DIR).toPath();
+      String walDir = configuration.getTrimmed(OZONE_RECON_DB_WAL_DIR);
       dbStore = DBStoreBuilder.newBuilder(configuration)
           .setPath(metaDir)
+          .setWALPath(walDir != null ? Paths.get(walDir, dbName) : null)
           .setName(dbName)
           .addTable(CONTAINER_KEY_TABLE)
           .addCodec(ContainerKeyPrefix.class, new ContainerKeyPrefixCodec())

@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_WAL_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -63,6 +64,13 @@ public class TestContainerDBServiceProviderImpl {
         File dbDir = tempFolder.getRoot();
         OzoneConfiguration configuration = new OzoneConfiguration();
         configuration.set(OZONE_RECON_DB_DIR, dbDir.getAbsolutePath());
+        try {
+          String walDir = tempFolder.newFolder().getAbsolutePath();
+          configuration.set(OZONE_RECON_DB_WAL_DIR, walDir);
+        } catch (IOException ex) {
+          // Ignore error
+        }
+
         bind(OzoneConfiguration.class).toInstance(configuration);
         bind(DBStore.class).toProvider(ReconContainerDBProvider.class).in(
             Singleton.class);

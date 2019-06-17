@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.om.codec.OmBucketInfoCodec;
@@ -225,10 +226,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     // db, so we need to create the store object and initialize DB.
     if (store == null) {
       File metaDir = OmUtils.getOmDbDir(configuration);
-
+      String walDir =
+          configuration.getTrimmed(OMConfigKeys.OZONE_OM_DB_WAL_DIR);
       DBStoreBuilder dbStoreBuilder = DBStoreBuilder.newBuilder(configuration)
           .setName(OM_DB_NAME)
-          .setPath(Paths.get(metaDir.getPath()));
+          .setPath(Paths.get(metaDir.getPath()))
+          .setWALPath(walDir != null ? Paths.get(walDir) : null);
       this.store = addOMTablesAndCodecs(dbStoreBuilder).build();
       initializeOmTables();
     }

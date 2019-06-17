@@ -35,6 +35,7 @@ public final class ScmConfigKeys {
   // metadata dir but in future we may support multiple for redundancy or
   // performance.
   public static final String OZONE_SCM_DB_DIRS = "ozone.scm.db.dirs";
+  public static final String OZONE_SCM_DB_WAL_DIR = "ozone.scm.db.wal.dir";
 
   public static final String SCM_CONTAINER_CLIENT_STALE_THRESHOLD_KEY =
       "scm.container.client.idle.threshold";

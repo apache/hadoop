@@ -59,6 +59,7 @@ public final class DBStoreBuilder {
   private DBOptions rocksDBOption;
   private String dbname;
   private Path dbPath;
+  private Path walPath;
   private List<String> tableNames;
   private Configuration configuration;
   private CodecRegistry registry;
@@ -122,6 +123,11 @@ public final class DBStoreBuilder {
     return this;
   }
 
+  public DBStoreBuilder setWALPath(Path path) {
+    walPath = path;
+    return this;
+  }
+
   /**
    * Builds a DBStore instance and returns that.
    *
@@ -140,7 +146,8 @@ public final class DBStoreBuilder {
     if (!dbFile.getParentFile().exists()) {
       throw new IOException("The DB destination directory should exist.");
     }
-    return new RDBStore(dbFile, options, tables, registry);
+
+    return new RDBStore(dbFile, getWALFile(), options, tables, registry);
   }
 
   /**
@@ -218,6 +225,17 @@ public final class DBStoreBuilder {
       throw new IOException("A valid DB name is required.");
     }
     return Paths.get(dbPath.toString(), dbname).toFile();
+  }
+
+  private File getWALFile() throws IOException {
+    if (walPath == null) {
+      LOG.error("Write-ahead-log path is " +
+          "not configured. So, RocksDB will be using data directory as " +
+          "default to store the log files.");
+      return null;
+    }
+
+    return Paths.get(walPath.toString()).toFile();
   }
 
 }

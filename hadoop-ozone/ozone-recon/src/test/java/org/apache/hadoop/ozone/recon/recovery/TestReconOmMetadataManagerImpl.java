@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.recon.recovery;
 
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_DB_DIRS;
+import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_WAL_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
 
 import java.io.File;
@@ -54,6 +55,8 @@ public class TestReconOmMetadataManagerImpl {
     OzoneConfiguration omConfiguration = new OzoneConfiguration();
     omConfiguration.set(OZONE_OM_DB_DIRS,
         omDbDir.getAbsolutePath());
+    omConfiguration.set(OZONE_RECON_DB_WAL_DIR,
+        temporaryFolder.newFolder().getAbsolutePath());
     OMMetadataManager omMetadataManager = new OmMetadataManagerImpl(
         omConfiguration);
 

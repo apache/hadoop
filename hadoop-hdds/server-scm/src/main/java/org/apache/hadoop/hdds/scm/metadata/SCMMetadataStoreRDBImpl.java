@@ -24,6 +24,8 @@ import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import java.io.IOException;
+
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.security.x509.certificate.authority
     .CertificateStore;
 import org.apache.hadoop.hdds.server.ServerUtils;
@@ -89,10 +91,12 @@ public class SCMMetadataStoreRDBImpl implements SCMMetadataStore {
       throws IOException {
     if (this.store == null) {
       File metaDir = ServerUtils.getScmDbDir(configuration);
-
+      String walDir =
+          configuration.getTrimmed(ScmConfigKeys.OZONE_SCM_DB_WAL_DIR);
       this.store = DBStoreBuilder.newBuilder(configuration)
           .setName(SCM_DB_NAME)
           .setPath(Paths.get(metaDir.getPath()))
+          .setWALPath(walDir != null ? Paths.get(walDir) : null)
           .addTable(DELETED_BLOCKS_TABLE)
           .addTable(VALID_CERTS_TABLE)
           .addTable(REVOKED_CERTS_TABLE)

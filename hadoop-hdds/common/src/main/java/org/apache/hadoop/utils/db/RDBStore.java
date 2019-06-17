@@ -75,6 +75,11 @@ public class RDBStore implements DBStore {
   public RDBStore(File dbFile, DBOptions options, Set<TableConfig> families,
                   CodecRegistry registry)
       throws IOException {
+    this(dbFile, null, options, families, registry);
+  }
+
+  public RDBStore(File dbFile, File walDir, DBOptions options,
+      Set<TableConfig> families, CodecRegistry registry) throws IOException {
     Preconditions.checkNotNull(dbFile, "DB file location cannot be null");
     Preconditions.checkNotNull(families);
     Preconditions.checkArgument(families.size() > 0);
@@ -89,6 +94,12 @@ public class RDBStore implements DBStore {
     }
 
     dbOptions = options;
+
+    // If wal location is set use it.
+    if (walDir != null) {
+      dbOptions.setWalDir(walDir.getAbsolutePath());
+    }
+
     dbLocation = dbFile;
     // TODO: Read from the next Config.
     writeOptions = new WriteOptions();

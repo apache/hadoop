@@ -71,9 +71,23 @@ public class TestDBStoreBuilder {
     if(!newFolder.exists()) {
       Assert.assertTrue(newFolder.mkdirs());
     }
-    thrown.expect(IOException.class);
     DBStoreBuilder.newBuilder(conf)
         .setPath(newFolder.toPath())
+        .build();
+  }
+
+  @Test
+  public void builderWithWalDirSet() throws IOException {
+    Configuration conf = new Configuration();
+    File newFolder = folder.newFolder();
+    File walDir = folder.newFolder();
+    if(!newFolder.exists()) {
+      Assert.assertTrue(newFolder.mkdirs());
+    }
+    DBStoreBuilder.newBuilder(conf)
+        .setPath(newFolder.toPath())
+        .setName("Test.db")
+        .setWALPath(walDir.toPath())
         .build();
   }
 

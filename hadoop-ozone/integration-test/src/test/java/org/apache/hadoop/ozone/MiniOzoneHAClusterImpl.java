@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -208,6 +209,15 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
             // Set metadata/DB dir base path
             String metaDirPath = path + "/" + nodeId;
             conf.set(OZONE_METADATA_DIRS, metaDirPath);
+
+            // If wal Dir is set, as in OM HA setup all OM's will be on the
+            // same node, wal directories will conflict with each other.
+            // Append nodeId similar to metaDirPath.
+            String walDir = conf.get(OMConfigKeys.OZONE_OM_DB_WAL_DIR);
+            if (walDir != null) {
+              conf.set(OMConfigKeys.OZONE_OM_DB_WAL_DIR, Paths.get(walDir,
+                  nodeId).toAbsolutePath().toString());
+            }
             OMStorage omStore = new OMStorage(conf);
             initializeOmStorage(omStore);
 
