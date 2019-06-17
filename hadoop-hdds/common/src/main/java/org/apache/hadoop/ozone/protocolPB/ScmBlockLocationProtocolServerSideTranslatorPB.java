@@ -22,6 +22,7 @@ import com.google.protobuf.ServiceException;
 import io.opentracing.Scope;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .AllocateBlockResponse;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -42,6 +43,12 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .DeleteScmKeyBlocksResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SCMBlockLocationResponse;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SCMBlockLocationRequest;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .Status;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
@@ -71,7 +78,48 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     this.impl = impl;
   }
 
+
+  private SCMBlockLocationResponse.Builder createSCMBlockResponse(
+      ScmBlockLocationProtocolProtos.Type cmdType,
+      String traceID) {
+    return SCMBlockLocationResponse.newBuilder()
+        .setCmdType(cmdType)
+        .setTraceID(traceID);
+  }
+
   @Override
+  public SCMBlockLocationResponse send(RpcController controller,
+      SCMBlockLocationRequest request) throws ServiceException {
+    String traceId = request.getTraceID();
+
+    SCMBlockLocationResponse.Builder response = createSCMBlockResponse(
+        request.getCmdType(),
+        traceId);
+
+    switch (request.getCmdType()) {
+      case AllocateScmBlock: {
+        AllocateScmBlockResponseProto res = allocateScmBlock(controller,
+            request.getAllocateScmBlockRequest());
+        response.setAllocateScmBlockResponse(res);
+      }
+      case DeleteScmKeyBlocks: {
+        DeleteScmKeyBlocksResponseProto res = deleteScmKeyBlocks(controller,
+            request.getDeleteScmKeyBlocksRequest());
+        response.setDeleteScmKeyBlocksResponse(res);
+      }
+      case GetScmInfo: {
+        HddsProtos.GetScmInfoResponseProto res = getScmInfo(controller,
+            request.getGetScmInfoRequest());
+        response.setGetScmInfoResponse(res);
+      }
+      default:
+    }
+    response.setSuccess(true)
+        .setStatus(Status.OK);
+    return response.build();
+  }
+
+//  @Override
   public AllocateScmBlockResponseProto allocateScmBlock(
       RpcController controller, AllocateScmBlockRequestProto request)
       throws ServiceException {
@@ -107,7 +155,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     }
   }
 
-  @Override
+//  @Override
   public DeleteScmKeyBlocksResponseProto deleteScmKeyBlocks(
       RpcController controller, DeleteScmKeyBlocksRequestProto req)
       throws ServiceException {
@@ -132,7 +180,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     return resp.build();
   }
 
-  @Override
+//  @Override
   public HddsProtos.GetScmInfoResponseProto getScmInfo(
       RpcController controller, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
