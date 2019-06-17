@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
+import org.apache.hadoop.fs.s3a.commit.CommitOperations;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 import org.apache.hadoop.fs.s3a.commit.Tasks;
 import org.apache.hadoop.fs.s3a.commit.files.PendingSet;
@@ -729,9 +730,14 @@ public class StagingCommitter extends AbstractS3ACommitter {
           LOG.error(
               "{}: Exception during commit process, aborting {} commit(s)",
               getRole(), commits.size());
-          Tasks.foreach(commits)
-              .suppressExceptions()
-              .run(commit -> getCommitOperations().abortSingleCommit(commit));
+          try(CommitOperations.CommitContext commitContext
+                  = initiateCommitOperation();
+              DurationInfo ignored = new DurationInfo(LOG,
+                  "Aborting %s uploads", commits.size())) {
+            Tasks.foreach(commits)
+                .suppressExceptions()
+                .run(commitContext::abortSingleCommit);
+          }
           deleteTaskAttemptPathQuietly(context);
         }
       }

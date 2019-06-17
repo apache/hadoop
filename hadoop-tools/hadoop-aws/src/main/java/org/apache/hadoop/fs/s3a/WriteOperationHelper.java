@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -41,13 +42,15 @@ import com.amazonaws.services.s3.model.UploadPartRequest;
 import com.amazonaws.services.s3.model.UploadPartResult;
 import com.amazonaws.services.s3.transfer.model.UploadResult;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.fs.s3a.select.SelectBinding;
 import org.apache.hadoop.util.DurationInfo;
 
@@ -226,7 +229,7 @@ public class WriteOperationHelper {
   /**
    * Finalize a multipart PUT operation.
    * This completes the upload, and, if that works, calls
-   * {@link S3AFileSystem#finishedWrite(String, long, String, String)}
+   * {@link S3AFileSystem#finishedWrite(String, long, String, String, BulkOperationState)}
    * to update the filesystem.
    * Retry policy: retrying, translated.
    * @param destKey destination of the commit
@@ -234,6 +237,7 @@ public class WriteOperationHelper {
    * @param partETags list of partial uploads
    * @param length length of the upload
    * @param retrying retrying callback
+   * @param operationState (nullable) operational state for a bulk update
    * @return the result of the operation.
    * @throws IOException on problems.
    */
@@ -243,7 +247,8 @@ public class WriteOperationHelper {
       String uploadId,
       List<PartETag> partETags,
       long length,
-      Retried retrying) throws IOException {
+      Retried retrying,
+      @Nullable BulkOperationState operationState) throws IOException {
     if (partETags.isEmpty()) {
       throw new IOException(
           "No upload parts in multipart upload to " + destKey);
@@ -263,7 +268,7 @@ public class WriteOperationHelper {
             }
     );
     owner.finishedWrite(destKey, length, uploadResult.getETag(),
-        uploadResult.getVersionId());
+        uploadResult.getVersionId(), operationState);
     return uploadResult;
   }
 
@@ -298,7 +303,8 @@ public class WriteOperationHelper {
         uploadId,
         partETags,
         length,
-        (text, e, r, i) -> errorCount.incrementAndGet());
+        (text, e, r, i) -> errorCount.incrementAndGet(),
+        null);
   }
 
   /**
@@ -487,6 +493,52 @@ public class WriteOperationHelper {
           owner.maybeCreateFakeParentDirectory(destPath);
         }
     );
+  }
+
+  /**
+   * This completes a multipart upload to the destination key via
+   * {@code finalizeMultipartUpload()}.
+   * Retry policy: retrying, translated.
+   * Retries increment the {@code errorCount} counter.
+   * @param destKey destination
+   * @param uploadId multipart operation Id
+   * @param partETags list of partial uploads
+   * @param length length of the upload
+   * @param operationState operational state for a bulk update
+   * @return the result of the operation.
+   * @throws IOException if problems arose which could not be retried, or
+   * the retry count was exceeded
+   */
+  @Retries.RetryTranslated
+  public CompleteMultipartUploadResult commitUpload(
+      String destKey,
+      String uploadId,
+      List<PartETag> partETags,
+      long length,
+      @Nullable BulkOperationState operationState)
+      throws IOException {
+    checkNotNull(uploadId);
+    checkNotNull(partETags);
+    LOG.debug("Completing multipart upload {} with {} parts",
+        uploadId, partETags.size());
+    return finalizeMultipartUpload(destKey,
+        uploadId,
+        partETags,
+        length,
+        Invoker.NO_OP,
+        operationState);
+  }
+
+  /**
+   * Initiate a commit operation through any metastore.
+   * @param path path under which the writes will all take place.
+   * @return an possibly null operation state from the metastore.
+   * @throws IOException failure to instantiate.
+   */
+  public BulkOperationState initiateCommitOperation(
+      Path path) throws IOException {
+    return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
+        BulkOperationState.OperationType.Put, path);
   }
 
   /**

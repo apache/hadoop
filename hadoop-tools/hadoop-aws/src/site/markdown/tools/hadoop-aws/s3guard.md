@@ -1474,6 +1474,18 @@ Caused by: java.lang.NullPointerException
   ... 1 more
 ```
 
+### Error `Attempt to change a resource which is still in use: Table is being deleted`
+
+```
+com.amazonaws.services.dynamodbv2.model.ResourceInUseException:
+  Attempt to change a resource which is still in use: Table is being deleted:
+   s3guard.test.testDynamoDBInitDestroy351245027
+    (Service: AmazonDynamoDBv2; Status Code: 400; Error Code: ResourceInUseException;)
+```
+
+You have attempted to call `hadoop s3guard destroy` on a table which is already
+being destroyed.
+
 ## Other Topics
 
 For details on how to test S3Guard, see [Testing S3Guard](./testing.html#s3guard)
