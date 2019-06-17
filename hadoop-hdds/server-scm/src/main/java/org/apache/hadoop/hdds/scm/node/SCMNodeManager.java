@@ -94,7 +94,6 @@ public class SCMNodeManager implements NodeManager {
       LoggerFactory.getLogger(SCMNodeManager.class);
 
   private final NodeStateManager nodeStateManager;
-  private final String clusterID;
   private final VersionInfo version;
   private final CommandQueue commandQueue;
   private final SCMNodeMetrics metrics;
@@ -112,7 +111,6 @@ public class SCMNodeManager implements NodeManager {
       SCMStorageConfig scmStorageConfig, EventPublisher eventPublisher,
       NetworkTopology networkTopology) {
     this.nodeStateManager = new NodeStateManager(conf, eventPublisher);
-    this.clusterID = scmStorageConfig.getClusterID();
     this.version = VersionInfo.getLatestVersion();
     this.commandQueue = new CommandQueue();
     this.scmStorageConfig = scmStorageConfig;
@@ -273,7 +271,7 @@ public class SCMNodeManager implements NodeManager {
 
     return RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
         .setDatanodeUUID(datanodeDetails.getUuidString())
-        .setClusterID(this.clusterID)
+        .setClusterID(this.scmStorageConfig.getClusterID())
         .setHostname(datanodeDetails.getHostName())
         .setIpAddress(datanodeDetails.getIpAddress())
         .build();
