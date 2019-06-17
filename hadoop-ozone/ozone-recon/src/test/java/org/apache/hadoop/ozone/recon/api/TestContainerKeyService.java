@@ -201,7 +201,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   @Test
   public void testGetKeysForContainer() {
 
-    Response response = containerKeyService.getKeysForContainer(1L, 2);
+    Response response = containerKeyService.getKeysForContainer(1L, -1);
 
     Collection<KeyMetadata> keyMetadataList =
         (Collection<KeyMetadata>) response.getEntity();
@@ -227,7 +227,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 103);
     assertEquals(blockIds.get(1L).iterator().next().getLocalID(), 104);
 
-    response = containerKeyService.getKeysForContainer(3L, 1);
+    response = containerKeyService.getKeysForContainer(3L, -1);
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertTrue(keyMetadataList.isEmpty());
 
@@ -240,7 +240,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   @Test
   public void testGetContainers() {
 
-    Response response = containerKeyService.getContainers(2);
+    Response response = containerKeyService.getContainers(-1);
 
     List<ContainerMetadata> containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
@@ -278,5 +278,4 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
         .getAbsolutePath());
     return configuration;
   }
-
 }

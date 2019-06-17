@@ -70,8 +70,17 @@ public interface ContainerDBServiceProvider {
       throws IOException;
 
   /**
+   * Get a Map of containerID, containerMetadata of all the Containers.
+   *
+   * @return Map of containerID -> containerMetadata.
+   * @throws IOException
+   */
+  Map<Long, ContainerMetadata> getContainers() throws IOException;
+
+  /**
    * Get a Map of containerID, containerMetadata of Containers only for the
-   * given limit.
+   * given limit. If the limit is -1 or any integer <0, then return all
+   * the containers without any limit.
    *
    * @return Map of containerID -> containerMetadata.
    * @throws IOException

@@ -165,8 +165,22 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
+   * Get all the containers.
+   *
+   * @return Map of containerID -> containerMetadata.
+   * @throws IOException
+   */
+  @Override
+  public Map<Long, ContainerMetadata> getContainers() throws IOException {
+    // Set a negative limit to get all the containers.
+    return getContainers(-1);
+  }
+
+  /**
    * Iterate the DB to construct a Map of containerID -> containerMetadata
    * only for the given limit.
+   *
+   * Return all the containers if limit < 0.
    *
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
