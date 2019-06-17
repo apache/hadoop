@@ -45,6 +45,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 
 import com.google.common.collect.Lists;
 
@@ -174,7 +175,6 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.server.protocol.NodeRegistration;
-import org.apache.hadoop.hdfs.server.protocol.RegisterCommand;
 import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
 import org.apache.hadoop.hdfs.server.protocol.SlowDiskReports;
 import org.apache.hadoop.hdfs.server.protocol.SlowPeerReports;
@@ -1591,25 +1591,21 @@ public class NameNodeRpcServer implements NamenodeProtocols {
     }
     final BlockManager bm = namesystem.getBlockManager(); 
     boolean noStaleStorages = false;
-    try {
-      if (bm.checkBlockReportLease(context, nodeReg)) {
-        for (int r = 0; r < reports.length; r++) {
-          final BlockListAsLongs blocks = reports[r].getBlocks();
-          //
-          // BlockManager.processReport accumulates information of prior calls
-          // for the same node and storage, so the value returned by the last
-          // call of this loop is the final updated value for noStaleStorage.
-          //
-          final int index = r;
-          noStaleStorages = bm.runBlockOp(() ->
-            bm.processReport(nodeReg, reports[index].getStorage(),
-                blocks, context));
+    for (int r = 0; r < reports.length; r++) {
+      final BlockListAsLongs blocks = reports[r].getBlocks();
+      //
+      // BlockManager.processReport accumulates information of prior calls
+      // for the same node and storage, so the value returned by the last
+      // call of this loop is the final updated value for noStaleStorage.
+      //
+      final int index = r;
+      noStaleStorages = bm.runBlockOp(new Callable<Boolean>() {
+        @Override
+        public Boolean call() throws IOException {
+          return bm.processReport(nodeReg, reports[index].getStorage(),
+              blocks, context);
         }
-      }
-    } catch (UnregisteredNodeException une) {
-      LOG.debug("Datanode {} is attempting to report but not register yet.",
-          nodeReg);
-      return RegisterCommand.REGISTER;
+      });
     }
     bm.removeBRLeaseIfNeeded(nodeReg, context);
 
