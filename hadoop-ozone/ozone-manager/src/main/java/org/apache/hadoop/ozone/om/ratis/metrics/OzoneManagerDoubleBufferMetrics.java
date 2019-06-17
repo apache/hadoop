@@ -31,9 +31,9 @@ public class OzoneManagerDoubleBufferMetrics {
   private static final String SOURCE_NAME =
       OzoneManagerDoubleBufferMetrics.class.getSimpleName();
 
-  @Metric(about = "Total Number of flush iterations happened in " +
+  @Metric(about = "Total Number of flush operations happened in " +
       "OzoneManagerDoubleBuffer.")
-  private MutableCounterLong totalNumOfFlushIterations;
+  private MutableCounterLong totalNumOfFlushOperations;
 
   @Metric(about = "Total Number of flushed transactions happened in " +
       "OzoneManagerDoubleBuffer.")
@@ -52,11 +52,11 @@ public class OzoneManagerDoubleBufferMetrics {
         new OzoneManagerDoubleBufferMetrics());
   }
 
-  public void incTotalNumOfFlushIterations() {
-    this.totalNumOfFlushIterations.incr();
+  public void incTotalNumOfFlushOperations() {
+    this.totalNumOfFlushOperations.incr();
   }
 
-  public void setTotalSizeOfFlushedTransactions(
+  public void incTotalSizeOfFlushedTransactions(
       long flushedTransactions) {
     this.totalNumOfFlushedTransactions.incr(flushedTransactions);
   }
@@ -70,8 +70,8 @@ public class OzoneManagerDoubleBufferMetrics {
             + maxTransactions);
   }
 
-  public long getTotalNumOfFlushIterations() {
-    return totalNumOfFlushIterations.value();
+  public long getTotalNumOfFlushOperations() {
+    return totalNumOfFlushOperations.value();
   }
 
   public long getTotalNumOfFlushedTransactions() {

@@ -97,7 +97,7 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
     // As we have not flushed/added any transactions, all metrics should have
     // value zero.
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
-        .getTotalNumOfFlushIterations() == 0);
+        .getTotalNumOfFlushOperations() == 0);
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
         .getTotalNumOfFlushedTransactions() == 0);
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
@@ -112,7 +112,7 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
         60000);
 
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
-        .getTotalNumOfFlushIterations() > 0);
+        .getTotalNumOfFlushOperations() > 0);
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics
         .getTotalNumOfFlushedTransactions() == bucketCount);
     Assert.assertTrue(ozoneManagerDoubleBufferMetrics

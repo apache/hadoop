@@ -136,7 +136,7 @@ public class OzoneManagerDoubleBuffer {
               lastRatisTransactionIndex);
 
           // set metrics.
-          setOzoneManagerDoubleBufferMetrics(flushedTransactionsSize);
+          updateMetrics(flushedTransactionsSize);
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -171,13 +171,13 @@ public class OzoneManagerDoubleBuffer {
   }
 
   /**
-   * Set OzoneManagerDoubleBuffer metrics values.
+   * Update OzoneManagerDoubleBuffer metrics values.
    * @param flushedTransactionsSize
    */
-  private void setOzoneManagerDoubleBufferMetrics(
+  private void updateMetrics(
       long flushedTransactionsSize) {
-    ozoneManagerDoubleBufferMetrics.incTotalNumOfFlushIterations();
-    ozoneManagerDoubleBufferMetrics.setTotalSizeOfFlushedTransactions(
+    ozoneManagerDoubleBufferMetrics.incTotalNumOfFlushOperations();
+    ozoneManagerDoubleBufferMetrics.incTotalSizeOfFlushedTransactions(
         flushedTransactionsSize);
     if (maxFlushedTransactionsInOneIteration < flushedTransactionsSize) {
       maxFlushedTransactionsInOneIteration = flushedTransactionsSize;
