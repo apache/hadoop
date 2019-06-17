@@ -45,8 +45,10 @@ COPY README.txt /build/README.txt
 
 ENV CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++
 
-WORKDIR /build
-RUN scl enable rh-maven33 'mvn -B -e -Dtest=false -DskipTests -Dmaven.javadoc.skip=true clean package -Pdist,native -Dtar'
+# build hadoop
+RUN scl enable rh-maven33 'cd /build && mvn -B -e -Dtest=false -DskipTests -Dmaven.javadoc.skip=true clean package -Pdist,native -Dtar'
+# Install prometheus-jmx agent
+RUN scl enable rh-maven33 'mvn dependency:get -Dartifact=io.prometheus.jmx:jmx_prometheus_javaagent:0.3.1:jar -Ddest=/build/jmx_prometheus_javaagent.jar'
 
 FROM centos:7
 
@@ -73,9 +75,12 @@ ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_LOG_DIR=$HADOOP_HOME/logs
 ENV HADOOP_CLASSPATH=$HADOOP_HOME/share/hadoop/tools/lib/*
 ENV HADOOP_CONF_DIR=/etc/hadoop
+ENV PROMETHEUS_JMX_EXPORTER /opt/jmx_exporter/jmx_exporter.jar
 ENV PATH=$HADOOP_HOME/bin:$PATH
 
+COPY --from=build /build/jmx_prometheus_javaagent.jar $PROMETHEUS_JMX_EXPORTER
 COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION $HADOOP_HOME
+
 # remove unnecessary doc/src files
 RUN rm -rf ${HADOOP_HOME}/share/doc \
     && for dir in common hdfs mapreduce tools yarn; do \

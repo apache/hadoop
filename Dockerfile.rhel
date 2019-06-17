@@ -26,6 +26,17 @@ RUN mkdir -p $(dirname $HADOOP_OUT) && \
     && mv /tmp/hadoop-${HADOOP_VERSION}.redhat-${RH_HADOOP_PATCH_VERSION}/ \
     $HADOOP_OUT
 
+ENV PROMETHEUS_JMX_EXPORTER_VERSION 0.3.1
+ENV RH_PROMETHEUS_JMX_EXPORTER_PATCH_VERSION 00006
+ENV RH_PROMETHEUS_JMX_EXPORTER_VERSION ${PROMETHEUS_JMX_EXPORTER_VERSION}.redhat-${RH_PROMETHEUS_JMX_EXPORTER_PATCH_VERSION}
+ENV RH_PROMETHEUS_JMX_EXPORTER_BREW_DIR ${PROMETHEUS_JMX_EXPORTER_VERSION}.redhat_${RH_PROMETHEUS_JMX_EXPORTER_PATCH_VERSION}
+ENV PROMETHEUS_JMX_EXPORTER_OUT /build/jmx_prometheus_javaagent.jar
+ARG PROMETHEUS_JMX_EXPORTER_URL=http://download.eng.bos.redhat.com/brewroot/packages/io.prometheus.jmx-parent/${RH_PROMETHEUS_JMX_EXPORTER_BREW_DIR}/1/maven/io/prometheus/jmx/jmx_prometheus_javaagent/${RH_PROMETHEUS_JMX_EXPORTER_VERSION}/jmx_prometheus_javaagent-${RH_PROMETHEUS_JMX_EXPORTER_VERSION}.jar
+
+RUN set -x; curl -fSLs \
+    $PROMETHEUS_JMX_EXPORTER_URL \
+    -o $PROMETHEUS_JMX_EXPORTER_OUT
+
 FROM rhel7:7-released
 
 RUN yum install --setopt=skip_missing_names_on_install=False -y \
@@ -49,9 +60,11 @@ ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_LOG_DIR=$HADOOP_HOME/logs
 ENV HADOOP_CLASSPATH=$HADOOP_HOME/share/hadoop/tools/lib/*
 ENV HADOOP_CONF_DIR=/etc/hadoop
+ENV PROMETHEUS_JMX_EXPORTER /opt/jmx_exporter/jmx_exporter.jar
 ENV PATH=$HADOOP_HOME/bin:$PATH
 
 COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION $HADOOP_HOME
+COPY --from=build /build/jmx_prometheus_javaagent.jar $PROMETHEUS_JMX_EXPORTER
 # remove unnecessary doc/src files
 RUN rm -rf ${HADOOP_HOME}/share/doc \
     && for dir in common hdfs mapreduce tools yarn; do \
