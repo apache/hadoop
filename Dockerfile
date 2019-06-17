@@ -78,8 +78,9 @@ ENV HADOOP_CONF_DIR=/etc/hadoop
 ENV PROMETHEUS_JMX_EXPORTER /opt/jmx_exporter/jmx_exporter.jar
 ENV PATH=$HADOOP_HOME/bin:$PATH
 
-COPY --from=build /build/jmx_prometheus_javaagent.jar $PROMETHEUS_JMX_EXPORTER
 COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION $HADOOP_HOME
+COPY --from=build /build/jmx_prometheus_javaagent.jar $PROMETHEUS_JMX_EXPORTER
+WORKDIR $HADOOP_HOME
 
 # remove unnecessary doc/src files
 RUN rm -rf ${HADOOP_HOME}/share/doc \
