@@ -345,7 +345,9 @@ public class DatanodeAdminManager {
    * @return true if sufficient, else false.
    */
   private boolean isSufficient(BlockInfo block, BlockCollection bc,
-      NumberReplicas numberReplicas, boolean isDecommission) {
+                               NumberReplicas numberReplicas,
+                               boolean isDecommission,
+                               boolean isMaintenance) {
     if (blockManager.hasEnoughEffectiveReplicas(block, numberReplicas, 0)) {
       // Block has enough replica, skip
       LOG.trace("Block {} does not need replication.", block);
@@ -378,6 +380,10 @@ public class DatanodeAdminManager {
           return true;
         }
       }
+    }
+    if (isMaintenance
+      && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
+      return true;
     }
     return false;
   }
@@ -705,6 +711,7 @@ public class DatanodeAdminManager {
         // Schedule low redundancy blocks for reconstruction
         // if not already pending.
         boolean isDecommission = datanode.isDecommissionInProgress();
+        boolean isMaintenance = datanode.isEnteringMaintenance();
         boolean neededReconstruction = isDecommission ?
             blockManager.isNeededReconstruction(block, num) :
             blockManager.isNeededReconstructionForMaintenance(block, num);
@@ -723,7 +730,7 @@ public class DatanodeAdminManager {
         // Even if the block is without sufficient redundancy,
         // it might not block decommission/maintenance if it
         // has sufficient redundancy.
-        if (isSufficient(block, bc, num, isDecommission)) {
+        if (isSufficient(block, bc, num, isDecommission, isMaintenance)) {
           if (pruneReliableBlocks) {
             it.remove();
           }

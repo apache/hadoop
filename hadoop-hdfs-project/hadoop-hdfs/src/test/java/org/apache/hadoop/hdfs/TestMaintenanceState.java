@@ -373,6 +373,7 @@ public class TestMaintenanceState extends AdminStatesBaseTest {
     testExpectedReplication(2);
     testExpectedReplication(3);
     testExpectedReplication(4);
+    testExpectedReplication(10);
   }
 
   private void testExpectedReplication(int replicationFactor)
