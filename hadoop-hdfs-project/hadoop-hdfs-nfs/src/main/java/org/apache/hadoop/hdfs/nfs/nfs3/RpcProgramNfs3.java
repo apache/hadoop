@@ -1037,7 +1037,7 @@ public class RpcProgramNfs3 extends RpcProgram implements Nfs3Interface {
           dirWcc = Nfs3Utils.createWccData(Nfs3Utils.getWccAttr(preOpDirAttr),
               dfsClient, dirFileIdPath, iug);
         } catch (IOException e1) {
-          LOG.error("Can't get postOpDirAttr for dirFileId: {}",
+          LOG.info("Can't get postOpDirAttr for dirFileId: {}",
               dirHandle.getFileId(), e1);
         }
       }
