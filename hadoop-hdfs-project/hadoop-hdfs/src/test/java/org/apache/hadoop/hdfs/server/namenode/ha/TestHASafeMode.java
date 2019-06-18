@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode.ha;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -30,6 +32,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.hadoop.ha.ServiceFailedException;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -886,5 +890,32 @@ public class TestHASafeMode {
     banner(nn1.getNamesystem().getSafemode());
     cluster.transitionToActive(1);
     assertSafeMode(nn1, 3, 3, 3, 0);
+  }
+
+  /**
+   * Test transition to active when namenode in safemode.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testTransitionToActiveWhenSafeMode() throws Exception {
+    Configuration config = new Configuration();
+    config.setBoolean(DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE, true);
+    try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(config,
+        new File(GenericTestUtils.getRandomizedTempPath()))
+        .nnTopology(MiniDFSNNTopology.simpleHATopology())
+        .numDataNodes(1)
+        .build()) {
+      miniCluster.waitActive();
+      miniCluster.transitionToStandby(0);
+      miniCluster.transitionToStandby(1);
+      NameNode namenode0 = miniCluster.getNameNode(0);
+      NameNode namenode1 = miniCluster.getNameNode(1);
+      NameNodeAdapter.enterSafeMode(namenode0, false);
+      NameNodeAdapter.enterSafeMode(namenode1, false);
+      LambdaTestUtils.intercept(ServiceFailedException.class,
+          "NameNode still not leave safemode",
+          () -> miniCluster.transitionToActive(0));
+    }
   }
 }

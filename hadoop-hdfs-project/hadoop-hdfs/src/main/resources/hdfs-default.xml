@@ -3193,6 +3193,15 @@
 </property>
 
 <property>
+  <name>dfs.ha.nn.not-become-active-in-safemode</name>
+  <value>false</value>
+  <description>
+    This will prevent safe mode namenodes to become active while other standby
+    namenodes might be ready to serve requests when it is set to true.
+  </description>
+</property>
+
+<property>
   <name>dfs.ha.tail-edits.in-progress</name>
   <value>false</value>
   <description>
