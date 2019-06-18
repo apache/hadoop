@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.recon.api;
 
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -200,56 +201,67 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   @Test
   public void testGetKeysForContainer() {
 
-    Response response = containerKeyService.getKeysForContainer(1L);
+    Response response = containerKeyService.getKeysForContainer(1L, -1);
 
     Collection<KeyMetadata> keyMetadataList =
         (Collection<KeyMetadata>) response.getEntity();
-    assertTrue(keyMetadataList.size() == 2);
+    assertEquals(keyMetadataList.size(), 2);
 
     Iterator<KeyMetadata> iterator = keyMetadataList.iterator();
 
     KeyMetadata keyMetadata = iterator.next();
-    assertTrue(keyMetadata.getKey().equals("key_one"));
-    assertTrue(keyMetadata.getVersions().size() == 1);
-    assertTrue(keyMetadata.getBlockIds().size() == 1);
+    assertEquals(keyMetadata.getKey(), "key_one");
+    assertEquals(keyMetadata.getVersions().size(), 1);
+    assertEquals(keyMetadata.getBlockIds().size(), 1);
     Map<Long, List<KeyMetadata.ContainerBlockMetadata>> blockIds =
         keyMetadata.getBlockIds();
-    assertTrue(blockIds.get(0L).iterator().next().getLocalID() == 101);
+    assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 101);
 
     keyMetadata = iterator.next();
-    assertTrue(keyMetadata.getKey().equals("key_two"));
-    assertTrue(keyMetadata.getVersions().size() == 2);
+    assertEquals(keyMetadata.getKey(), "key_two");
+    assertEquals(keyMetadata.getVersions().size(), 2);
     assertTrue(keyMetadata.getVersions().contains(0L) && keyMetadata
         .getVersions().contains(1L));
-    assertTrue(keyMetadata.getBlockIds().size() == 2);
+    assertEquals(keyMetadata.getBlockIds().size(), 2);
     blockIds = keyMetadata.getBlockIds();
-    assertTrue(blockIds.get(0L).iterator().next().getLocalID() == 103);
-    assertTrue(blockIds.get(1L).iterator().next().getLocalID() == 104);
+    assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 103);
+    assertEquals(blockIds.get(1L).iterator().next().getLocalID(), 104);
 
-    response = containerKeyService.getKeysForContainer(3L);
+    response = containerKeyService.getKeysForContainer(3L, -1);
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertTrue(keyMetadataList.isEmpty());
+
+    // test if limit works as expected
+    response = containerKeyService.getKeysForContainer(1L, 1);
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(keyMetadataList.size(), 1);
   }
 
   @Test
   public void testGetContainers() {
 
-    Response response = containerKeyService.getContainers();
+    Response response = containerKeyService.getContainers(-1);
 
     List<ContainerMetadata> containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
 
-    assertTrue(containers.size() == 2);
-
     Iterator<ContainerMetadata> iterator = containers.iterator();
 
     ContainerMetadata containerMetadata = iterator.next();
-    assertTrue(containerMetadata.getContainerID() == 1L);
-    assertTrue(containerMetadata.getNumberOfKeys() == 3L);
+    assertEquals(containerMetadata.getContainerID(), 1L);
+    // Number of keys for CID:1 should be 3 because of two different versions
+    // of key_two stored in CID:1
+    assertEquals(containerMetadata.getNumberOfKeys(), 3L);
 
     containerMetadata = iterator.next();
-    assertTrue(containerMetadata.getContainerID() == 2L);
-    assertTrue(containerMetadata.getNumberOfKeys() == 2L);
+    assertEquals(containerMetadata.getContainerID(), 2L);
+    assertEquals(containerMetadata.getNumberOfKeys(), 2L);
+
+    // test if limit works as expected
+    response = containerKeyService.getContainers(1);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(containers.size(), 1);
   }
 
   /**
@@ -266,5 +278,4 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
         .getAbsolutePath());
     return configuration;
   }
-
 }
