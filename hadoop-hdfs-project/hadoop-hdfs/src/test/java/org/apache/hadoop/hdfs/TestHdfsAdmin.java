@@ -262,7 +262,7 @@ public class TestHdfsAdmin {
     while (openFilesRemoteItr.hasNext()) {
       String filePath = openFilesRemoteItr.next().getFilePath();
       assertFalse(filePath + " should not be listed under open files!",
-          closedFiles.contains(filePath));
+          closedFiles.contains(new Path(filePath)));
       assertTrue(filePath + " is not listed under open files!",
           openFiles.remove(new Path(filePath)));
     }
