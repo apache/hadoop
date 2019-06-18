@@ -1322,7 +1322,7 @@ public class ContractTestUtils extends Assert {
   public static String pathsToString(Collection<Path> paths) {
     StringBuilder builder = new StringBuilder(paths.size() * 100);
     String nl = System.lineSeparator();
-    builder.append(nl);
+    builder.append(nl).append('[').append(nl);
     for (Path path : paths) {
       builder.append("  \"").append(path.toString())
           .append("\"").append(nl);
