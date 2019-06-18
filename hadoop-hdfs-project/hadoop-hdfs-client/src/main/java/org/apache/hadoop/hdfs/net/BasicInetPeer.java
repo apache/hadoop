@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.net.unix.DomainSocket;
@@ -93,7 +94,8 @@ public class BasicInetPeer implements Peer {
 
   @Override
   public String getRemoteAddressString() {
-    return socket.getRemoteSocketAddress().toString();
+    SocketAddress address = socket.getRemoteSocketAddress();
+    return address == null ? null : address.toString();
   }
 
   @Override
