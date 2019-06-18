@@ -13,14 +13,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
-        <artifactId>hadoop-applications-mawo</artifactId>
+        <artifactId>hadoop-yarn-applications-mawo</artifactId>
         <groupId>org.apache.hadoop.applications.mawo</groupId>
         <version>3.3.0-SNAPSHOT</version>
     </parent>
   <modelVersion>4.0.0</modelVersion>
 
   <!-- <groupId>org.apache.hadoop.applications.mawo</groupId> -->
-  <artifactId>hadoop-applications-mawo-core</artifactId>
+  <artifactId>hadoop-yarn-applications-mawo-core</artifactId>
   <packaging>jar</packaging>
 
   <name>Apache Hadoop YARN Application MaWo Core</name>
