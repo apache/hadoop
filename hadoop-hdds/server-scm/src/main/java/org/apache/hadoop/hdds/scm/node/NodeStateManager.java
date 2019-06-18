@@ -519,8 +519,6 @@ public class NodeStateManager implements Runnable, Closeable {
     // 4. And the most important reason, heartbeats are not blocked even if
     // this thread does not run, they will go into the processing queue.
     scheduleNextHealthCheck();
-
-    return;
   }
 
   private void checkNodesHealth() {
@@ -648,11 +646,7 @@ public class NodeStateManager implements Runnable, Closeable {
     long currentTime = Time.monotonicNow();
     long minInterval = Math.min(staleNodeIntervalMs, deadNodeIntervalMs);
 
-    if ((currentTime - lastHealthCheck) >= minInterval) {
-      return true;
-    }
-
-    return false;
+    return ((currentTime - lastHealthCheck) >= minInterval);
   }
 
   /**
