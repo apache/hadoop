@@ -19,6 +19,7 @@ package org.apache.hadoop.hdfs.server.blockmanagement;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
+import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.junit.Test;
 
@@ -137,7 +139,82 @@ public class TestUnderReplicatedBlocks {
     } finally {
       cluster.shutdown();
     }
-
   }
 
+  /**
+   * The test verifies the following scenarios:
+   *
+   * 1. Missing one replication blocks count is increased
+   * when a block with replication factor one becomes corrupt
+   * and is decreased if the file is removed.
+   *
+   * 2. When a file with replication factor two becomes corrupt,
+   * then missing one replication blocks count does not change.
+   *
+   * 3. When a file with replication factor 1 only has read only replicas,
+   * then missing one replication blocks count does not change
+   */
+  @Test(timeout = 60000)
+  public void testOneReplicaMissingBlocksCountIsReported() {
+    UnderReplicatedBlocks underReplicatedBlocks = new UnderReplicatedBlocks();
+    BlockInfo blockInfo = new BlockInfoContiguous(new Block(1), (short) 1);
+    boolean addResult
+        = underReplicatedBlocks.add(blockInfo, 0, 0, 0, 1);
+    assertTrue(addResult);
+    assertInLevel(underReplicatedBlocks, blockInfo,
+        UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+    assertEquals(1, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(1, underReplicatedBlocks.getCorruptReplOneBlockSize());
+
+    underReplicatedBlocks.remove(blockInfo, UnderReplicatedBlocks.LEVEL);
+    assertEquals(0, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(0, underReplicatedBlocks.getCorruptReplOneBlockSize());
+
+    blockInfo.setReplication((short) 2);
+    addResult = underReplicatedBlocks.add(blockInfo, 0, 0, 0, 2);
+    assertTrue(addResult);
+    assertInLevel(underReplicatedBlocks, blockInfo,
+        UnderReplicatedBlocks.QUEUE_WITH_CORRUPT_BLOCKS);
+    assertEquals(1, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(0, underReplicatedBlocks.getCorruptReplOneBlockSize());
+
+    underReplicatedBlocks.remove(blockInfo, UnderReplicatedBlocks.LEVEL);
+    assertEquals(0, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(0, underReplicatedBlocks.getCorruptReplOneBlockSize());
+
+    blockInfo.setReplication((short) 1);
+    addResult = underReplicatedBlocks.add(blockInfo, 0, 1, 0, 1);
+    assertTrue(addResult);
+    assertInLevel(underReplicatedBlocks, blockInfo,
+        UnderReplicatedBlocks.QUEUE_HIGHEST_PRIORITY);
+    assertEquals(0, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(0, underReplicatedBlocks.getCorruptReplOneBlockSize());
+
+    underReplicatedBlocks.remove(blockInfo, UnderReplicatedBlocks.LEVEL);
+    assertEquals(0, underReplicatedBlocks.getCorruptBlockSize());
+    assertEquals(0, underReplicatedBlocks.getCorruptReplOneBlockSize());
+  }
+
+  /**
+   * Determine whether or not a block is in a level without changing the API.
+   * Instead get the per-level iterator and run though it looking for a match.
+   * If the block is not found, an assertion is thrown.
+   *
+   * This is inefficient, but this is only a test case.
+   * @param queues queues to scan
+   * @param block block to look for
+   * @param level level to select
+   */
+  private void assertInLevel(UnderReplicatedBlocks queues,
+                             Block block,
+                             int level) {
+    final Iterator<BlockInfo> bi = queues.iterator(level);
+    while (bi.hasNext()) {
+      Block next = bi.next();
+      if (block.equals(next)) {
+        return;
+      }
+    }
+    fail("Block " + block + " not found in level " + level);
+  }
 }
