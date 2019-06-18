@@ -65,8 +65,14 @@ public class AdminHelper {
    * When it's a known error, pretty-print the error and squish the stack trace.
    */
   static String prettifyException(Exception e) {
-    return e.getClass().getSimpleName() + ": "
-        + e.getLocalizedMessage().split("\n")[0];
+    if (e.getLocalizedMessage() != null) {
+      return e.getClass().getSimpleName() + ": "
+          + e.getLocalizedMessage().split("\n")[0];
+    } else if (e.getStackTrace() != null && e.getStackTrace().length > 0) {
+      return e.getClass().getSimpleName() + " at " + e.getStackTrace()[0];
+    } else {
+      return e.getClass().getSimpleName();
+    }
   }
 
   static TableListing getOptionDescriptionListing() {
