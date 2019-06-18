@@ -94,7 +94,7 @@ public class TestOzoneManagerHttpServer {
 
   @Test
   public void testHttpPolicy() throws Exception {
-    conf.set(OzoneConfigKeys.OZONE_HTTP_POLICY, policy.name());
+    conf.set(DFSConfigKeys.DFS_HTTP_POLICY_KEY, policy.name());
     conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "localhost:0");
     conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "localhost:0");
 
@@ -121,6 +121,34 @@ public class TestOzoneManagerHttpServer {
     }
   }
 
+  @Test
+  public void tesOzonetHttpPolicy() throws Exception {
+    conf.set(OzoneConfigKeys.OZONE_HTTP_POLICY, policy.name());
+    conf.set(OMConfigKeys.OZONE_OM_HTTP_ADDRESS_KEY, "localhost:0");
+    conf.set(OMConfigKeys.OZONE_OM_HTTPS_ADDRESS_KEY, "localhost:0");
+
+    OzoneManagerHttpServer server = null;
+    try {
+      server = new OzoneManagerHttpServer(conf, null);
+      server.start();
+
+      Assert.assertTrue(implies(policy.isHttpEnabled(),
+          canAccess("http", server.getHttpAddress())));
+      Assert.assertTrue(implies(policy.isHttpEnabled() &&
+              !policy.isHttpsEnabled(),
+          !canAccess("https", server.getHttpsAddress())));
+
+      Assert.assertTrue(implies(policy.isHttpsEnabled(),
+          canAccess("https", server.getHttpsAddress())));
+      Assert.assertTrue(implies(policy.isHttpsEnabled(),
+          !canAccess("http", server.getHttpsAddress())));
+
+    } finally {
+      if (server != null) {
+        server.stop();
+      }
+    }
+  }
   private static boolean canAccess(String scheme, InetSocketAddress addr) {
     if (addr == null) {
       return false;

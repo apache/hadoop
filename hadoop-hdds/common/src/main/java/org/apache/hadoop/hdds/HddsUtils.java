@@ -431,17 +431,11 @@ public final class HddsUtils {
   }
 
   public static Policy getHttpPolicy(Configuration conf) {
-    String policyStr = conf.get("ozone.http.policy", OzoneConfigKeys.OZONE_HTTP_POLICY);
-    if(policyStr == null || policyStr.length() == 0) {
-      policyStr = conf.get("dfs.http.policy", DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
-    }
+    String policyStr = conf.get(OzoneConfigKeys.OZONE_HTTP_POLICY,
+        DFSConfigKeys.DFS_HTTP_POLICY_DEFAULT);
     Policy policy = Policy.fromString(policyStr);
-    if (policy == null) {
-      throw new HadoopIllegalArgumentException("Unrecognized value '" + policyStr + "' for " + "dfs.http.policy");
-    } else {
-      conf.set("dfs.http.policy", policy.name());
-      return policy;
-    }
+    conf.set("dfs.http.policy", policy.name());
+    return policy;
   }
 
   /**
