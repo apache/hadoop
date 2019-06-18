@@ -213,7 +213,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
     return false;
   }
 
-  /** remove a block from a under replication queue */
+  /** remove a block from the under replication queues. */
   synchronized boolean remove(BlockInfo block,
                               int oldReplicas,
                               int oldReadOnlyReplicas,
@@ -221,11 +221,10 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
                               int oldExpectedReplicas) {
     final int priLevel = getPriority(oldReplicas, oldReadOnlyReplicas,
         decommissionedReplicas, oldExpectedReplicas);
-    boolean removedBlock = remove(block, priLevel);
+    boolean removedBlock = remove(block, priLevel, oldExpectedReplicas);
     if (priLevel == QUEUE_WITH_CORRUPT_BLOCKS &&
         oldExpectedReplicas == 1 &&
         removedBlock) {
-      corruptReplOneBlocks--;
       assert corruptReplOneBlocks >= 0 :
           "Number of corrupt blocks with replication factor 1 " +
               "should be non-negative";
@@ -238,7 +237,7 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    *
    * The priLevel parameter is a hint of which queue to query
    * first: if negative or &gt;= {@link #LEVEL} this shortcutting
-   * is not attmpted.
+   * is not attempted.
    *
    * If the block is not found in the nominated queue, an attempt is made to
    * remove it from all queues.
@@ -246,14 +245,34 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
    * <i>Warning:</i> This is not a synchronized method.
    * @param block block to remove
    * @param priLevel expected privilege level
-   * @return true if the block was found and removed from one of the priority queues
+   * @return true if the block was found and removed from one of the priority
+   *         queues
    */
   boolean remove(BlockInfo block, int priLevel) {
+    return remove(block, priLevel, block.getReplication());
+  }
+
+  /**
+   * Remove a block from the under replication queues.
+   * For details, see {@link #remove(BlockInfo, int)}.
+   *
+   * CorruptReplOneBlocks stat is decremented if the previous replication
+   * factor was one and the block is removed from the corrupt blocks queue.
+   *
+   * @param block block to remove
+   * @param priLevel expected privilege level
+   * @param oldExpectedReplicas old replication factor
+   * @return true if the block was found and removed from one of the priority
+   *         queues
+   */
+  private boolean remove(BlockInfo block, int priLevel,
+                         int oldExpectedReplicas) {
     if(priLevel >= 0 && priLevel < LEVEL
         && priorityQueues.get(priLevel).remove(block)) {
       NameNode.blockStateChangeLog.debug(
         "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block {}" +
             " from priority queue {}", block, priLevel);
+      decrementBlockStat(priLevel, oldExpectedReplicas);
       return true;
     } else {
       // Try to remove the block from all queues if the block was
@@ -263,11 +282,18 @@ class UnderReplicatedBlocks implements Iterable<BlockInfo> {
           NameNode.blockStateChangeLog.debug(
               "BLOCK* NameSystem.UnderReplicationBlock.remove: Removing block" +
                   " {} from priority queue {}", block, i);
+          decrementBlockStat(i, oldExpectedReplicas);
           return true;
         }
       }
     }
     return false;
+  }
+
+  private void decrementBlockStat(int priLevel, int oldExpectedReplicas) {
+    if(priLevel == QUEUE_WITH_CORRUPT_BLOCKS && oldExpectedReplicas == 1) {
+      corruptReplOneBlocks--;
+    }
   }
 
   /**
