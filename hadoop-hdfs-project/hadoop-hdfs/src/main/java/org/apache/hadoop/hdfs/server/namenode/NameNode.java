@@ -118,6 +118,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_DEFAULT_NAME_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT;
 import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMENODE_RPC_PORT_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_DEFAULT;
@@ -390,6 +392,7 @@ public class NameNode extends ReconfigurableBase implements
   private final HAContext haContext;
   protected final boolean allowStaleStandbyReads;
   private AtomicBoolean started = new AtomicBoolean(false);
+  private final boolean notBecomeActiveInSafemode;
 
   private final static int HEALTH_MONITOR_WARN_THRESHOLD_MS = 5000;
   
@@ -983,6 +986,9 @@ public class NameNode extends ReconfigurableBase implements
       this.stopAtException(e);
       throw e;
     }
+    notBecomeActiveInSafemode = conf.getBoolean(
+        DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE,
+        DFS_HA_NN_NOT_BECOME_ACTIVE_IN_SAFEMODE_DEFAULT);
     this.started.set(true);
   }
 
@@ -1802,6 +1808,10 @@ public class NameNode extends ReconfigurableBase implements
       throw new HealthCheckFailedException(
           "The NameNode has no resources available");
     }
+    if (notBecomeActiveInSafemode && isInSafeMode()) {
+      throw new HealthCheckFailedException("The NameNode is configured to " +
+          "report UNHEALTHY to ZKFC in Safemode.");
+    }
   }
   
   synchronized void transitionToActive() 
@@ -1814,6 +1824,9 @@ public class NameNode extends ReconfigurableBase implements
       throw new ServiceFailedException(
           "Cannot transition from '" + OBSERVER_STATE + "' to '" +
               ACTIVE_STATE + "'");
+    }
+    if (notBecomeActiveInSafemode && isInSafeMode()) {
+      throw new ServiceFailedException(getRole() + " still not leave safemode");
     }
     state.setState(haContext, ACTIVE_STATE);
   }
