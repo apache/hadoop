@@ -46,9 +46,7 @@ message SCMBlockLocationRequest {
   // frontend and this allows us to trace that command all over ozone.
   optional string traceID = 2;
 
-  required string clientId = 3;
-
-  optional UserInfo userInfo = 4;
+  optional UserInfo userInfo = 3;
 
   optional AllocateScmBlockRequestProto       allocateScmBlockRequest   = 11;
   optional DeleteScmKeyBlocksRequestProto     deleteScmKeyBlocksRequest = 12;

@@ -82,8 +82,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   private SCMBlockLocationRequest.Builder createSCMBlockRequest(Type cmdType) {
     return SCMBlockLocationRequest.newBuilder()
         .setCmdType(cmdType)
-        .setTraceID(TracingUtil.exportCurrentSpan())
-        .setClientId("The Client"); // TODO - what should this be? Where does it come from?
+        .setTraceID(TracingUtil.exportCurrentSpan());
   }
 
   /**
