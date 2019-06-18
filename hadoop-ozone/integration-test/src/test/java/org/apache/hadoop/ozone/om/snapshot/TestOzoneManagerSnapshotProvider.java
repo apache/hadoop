@@ -63,6 +63,7 @@ public class TestOzoneManagerSnapshotProvider {
     clusterId = UUID.randomUUID().toString();
     scmId = UUID.randomUUID().toString();
     conf.setBoolean(OMConfigKeys.OZONE_OM_HTTP_ENABLED_KEY, true);
+    conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
     cluster = (MiniOzoneHAClusterImpl) MiniOzoneCluster.newHABuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)

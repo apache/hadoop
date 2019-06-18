@@ -74,12 +74,12 @@ public class TestHddsDispatcher {
     String testDir = GenericTestUtils.getTempPath(
         TestHddsDispatcher.class.getSimpleName());
     OzoneConfiguration conf = new OzoneConfiguration();
+    conf.set(HDDS_DATANODE_DIR_KEY, testDir);
     DatanodeDetails dd = randomDatanodeDetails();
     VolumeSet volumeSet = new VolumeSet(dd.getUuidString(), conf);
 
     try {
       UUID scmId = UUID.randomUUID();
-      conf.set(HDDS_DATANODE_DIR_KEY, testDir);
       ContainerSet containerSet = new ContainerSet();
 
       DatanodeStateMachine stateMachine = Mockito.mock(

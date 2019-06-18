@@ -313,12 +313,33 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         ProtobufRpcEngine.class);
 
     metadataManager = new OmMetadataManagerImpl(configuration);
+
+    // This is a temporary check. Once fully implemented, all OM state change
+    // should go through Ratis - be it standalone (for non-HA) or replicated
+    // (for HA).
+    isRatisEnabled = configuration.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     startRatisServer();
     startRatisClient();
 
-    if (peerNodes != null && !peerNodes.isEmpty()) {
-      this.omSnapshotProvider = new OzoneManagerSnapshotProvider(configuration,
-          omRatisSnapshotDir, peerNodes);
+    if (isRatisEnabled) {
+      // Create Ratis storage dir
+      String omRatisDirectory = OmUtils.getOMRatisDirectory(configuration);
+      if (omRatisDirectory == null || omRatisDirectory.isEmpty()) {
+        throw new IllegalArgumentException(HddsConfigKeys.OZONE_METADATA_DIRS +
+            " must be defined.");
+      }
+      OmUtils.createOMDir(omRatisDirectory);
+
+      // Create Ratis snapshot dir
+      omRatisSnapshotDir = OmUtils.createOMDir(
+          OmUtils.getOMRatisSnapshotDirectory(configuration));
+
+      if (peerNodes != null && !peerNodes.isEmpty()) {
+        this.omSnapshotProvider = new OzoneManagerSnapshotProvider(
+            configuration, omRatisSnapshotDir, peerNodes);
+      }
     }
 
     this.ratisSnapshotFile = new File(omStorage.getCurrentDir(),
@@ -541,18 +562,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Set this nodes OZONE_OM_ADDRESS_KEY to the discovered address.
     configuration.set(OZONE_OM_ADDRESS_KEY,
         NetUtils.getHostPortString(rpcAddress));
-
-    // Create Ratis storage dir
-    String omRatisDirectory = OmUtils.getOMRatisDirectory(configuration);
-    if (omRatisDirectory == null || omRatisDirectory.isEmpty()) {
-      throw new IllegalArgumentException(HddsConfigKeys.OZONE_METADATA_DIRS +
-          " must be defined.");
-    }
-    OmUtils.createOMDir(omRatisDirectory);
-
-    // Create Ratis snapshot dir
-    omRatisSnapshotDir = OmUtils.createOMDir(
-        OmUtils.getOMRatisSnapshotDirectory(configuration));
 
     // Get and set Http(s) address of local node. If base config keys are
     // not set, check for keys suffixed with OM serivce ID and node ID.
@@ -1253,12 +1262,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * Creates an instance of ratis server.
    */
   private void startRatisServer() throws IOException {
-    // This is a temporary check. Once fully implemented, all OM state change
-    // should go through Ratis - be it standalone (for non-HA) or replicated
-    // (for HA).
-    isRatisEnabled = configuration.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     if (isRatisEnabled) {
       if (omRatisServer == null) {
         omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
@@ -1277,12 +1280,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * Creates an instance of ratis client.
    */
   private void startRatisClient() throws IOException {
-    // This is a temporary check. Once fully implemented, all OM state change
-    // should go through Ratis - be it standalone (for non-HA) or replicated
-    // (for HA).
-    isRatisEnabled = configuration.getBoolean(
-      OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-      OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     if (isRatisEnabled) {
       if (omRatisClient == null) {
         omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(
