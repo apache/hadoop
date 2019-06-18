@@ -3907,6 +3907,7 @@
   <value>16</value>
   <description>
     Socket cache capacity (in entries) for short-circuit reads.
+    If this value is set to 0, the client socket cache is disabled.
   </description>
 </property>
 
