@@ -416,7 +416,7 @@ public class TestDataNodeHotSwapVolumes {
       minNumBlocks = Math.min(minNumBlocks, blockList.getNumberOfBlocks());
       maxNumBlocks = Math.max(maxNumBlocks, blockList.getNumberOfBlocks());
     }
-    assertTrue(Math.abs(maxNumBlocks - maxNumBlocks) <= 1);
+    assertTrue(Math.abs(maxNumBlocks - minNumBlocks) <= 1);
     verifyFileLength(cluster.getFileSystem(), testFile, numBlocks);
   }
 
