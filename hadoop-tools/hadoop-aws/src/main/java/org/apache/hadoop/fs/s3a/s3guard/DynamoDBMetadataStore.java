@@ -657,8 +657,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DDBPathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     checkPath(path);
-    LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
-    return innerGet(path, wantEmptyDirectoryFlag);
+    LOG.debug("Get from table {} in region {}: {}. wantEmptyDirectory={}",
+        tableName, region, path, wantEmptyDirectoryFlag);
+    DDBPathMetadata result = innerGet(path, wantEmptyDirectoryFlag);
+    LOG.debug("result of get {} is: {}", path, result);
+    return result;
   }
 
   /**
