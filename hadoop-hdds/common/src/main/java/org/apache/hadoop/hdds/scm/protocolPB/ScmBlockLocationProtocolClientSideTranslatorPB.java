@@ -162,7 +162,7 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .build();
 
     SCMBlockLocationRequest wrapper = createSCMBlockRequest(
-        Type.AllocateScmBlock)
+        Type.DeleteScmKeyBlocks)
         .setDeleteScmKeyBlocksRequest(request)
         .build();
 
