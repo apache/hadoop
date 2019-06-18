@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.hadoop.fs.s3a.S3ATestConstants.S3A_TEST_TIMEOUT;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.maybeEnableS3Guard;
 
 /**
@@ -38,6 +39,11 @@ public class ITestS3AContractRootDir extends
 
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestS3AContractRootDir.class);
+
+  @Override
+  protected int getTestTimeoutMillis() {
+    return S3A_TEST_TIMEOUT;
+  }
 
   /**
    * Create a configuration, possibly patching in S3Guard options.

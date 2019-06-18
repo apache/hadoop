@@ -26,11 +26,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.LambdaTestUtils;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
@@ -40,6 +43,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dumpStats;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.listChildren;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.toList;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.treeWalk;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.verifyPathExists;
 
 /**
  * This class does things to the root directory.
@@ -50,6 +54,8 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractContractRootDirectoryTest.class);
   public static final int OBJECTSTORE_RETRY_TIMEOUT = 30000;
+
+  private String statusStr;
 
   @Override
   public void setup() throws Exception {
@@ -124,20 +130,53 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     skipIfUnsupported(TEST_ROOT_TESTS_ENABLED);
     Path root = new Path("/");
     String touchfile = "/testRmNonEmptyRootDirNonRecursive";
-    Path file = new Path(touchfile);
-    ContractTestUtils.touch(getFileSystem(), file);
-    assertIsDirectory(root);
+    FileSystem fs = getFileSystem();
+    Path file = fs.makeQualified(new Path(touchfile));
+    ContractTestUtils.touch(fs, file);
+    FileStatus touchedStatus = verifyPathExists(fs, "touched file", file);
+    assertTrue("Not a file: " + touchedStatus,
+        touchedStatus.isFile());
+    FileStatus rootDirStatus = fs.getFileStatus(root);
+    assertTrue("Root is not a directory" + rootDirStatus,
+        rootDirStatus.isDirectory());
+    // do a getFileStatus List
+    FileStatus[] rootListing = fs.listStatus(root);
+    assertTrue("getFileStatus(/) => " + stringify(rootListing)
+            + " had no file entry " + touchedStatus,
+        Arrays.stream(rootListing).anyMatch(s -> s.getPath().equals(file)));
+    // now a recursive list.
+    RemoteIterator<LocatedFileStatus> files
+        = fs.listFiles(root, true);
+    boolean touchedFileFound = false;
+    int fileCount = 0;
+    while (files.hasNext()) {
+      fileCount++;
+      LocatedFileStatus status = files.next();
+      LOG.debug("[{}] file {}", fileCount, status);
+      if (status.getPath().equals(file)) {
+        touchedFileFound = true;
+      }
+    }
+    LOG.debug("Found {} files", fileCount);
+    assertTrue("File was not found in a recursive listing: " + file
+        + " but was on a direct lookup: " + touchedStatus,
+        touchedFileFound);
+
+    String beforeListing = ls(root);
     try {
-      boolean deleted = getFileSystem().delete(root, false);
+      boolean deleted = fs.delete(root, false);
+      String afterListing = ls(root);
       fail("non recursive delete should have raised an exception," +
-           " but completed with exit code " + deleted);
+           " but completed with exit code " + deleted +
+           " Before listing: " + beforeListing +
+           " after listing: " + afterListing);
     } catch (IOException e) {
       //expected
       handleExpectedException(e);
       // and the file must still be present
       assertIsFile(file);
     } finally {
-      getFileSystem().delete(file, false);
+      fs.delete(file, false);
     }
     assertIsDirectory(root);
   }
@@ -189,10 +228,16 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
         0, fs.listStatus(root).length);
     assertFalse("listFiles(/, false).hasNext",
         fs.listFiles(root, false).hasNext());
-    assertFalse("listFiles(/, true).hasNext",
-        fs.listFiles(root, true).hasNext());
-    assertFalse("listLocatedStatus(/).hasNext",
-        fs.listLocatedStatus(root).hasNext());
+    RemoteIterator<LocatedFileStatus> lsR
+        = fs.listFiles(root, true);
+    if (lsR.hasNext()) {
+      fail("fs.listFiles(root, true) found " + lsR.next());
+    }
+    RemoteIterator<LocatedFileStatus> lsL
+        = fs.listLocatedStatus(root);
+    if (lsL.hasNext()) {
+      fail("fs.listLocatedStatus(root) found " + lsL.next());
+    }
     assertIsDirectory(root);
   }
 
@@ -202,12 +247,22 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     FileSystem fs = getFileSystem();
     Path root = new Path("/");
     FileStatus[] statuses = fs.listStatus(root);
+    statusStr = stringify(statuses);
+
     List<LocatedFileStatus> locatedStatusList = toList(
         fs.listLocatedStatus(root));
-    assertEquals(statuses.length, locatedStatusList.size());
+    assertEquals("More files found in listFiles(root, false): "
+            + stringify(locatedStatusList)
+            + " than in listStatus(root): " + statusStr,
+        statuses.length, locatedStatusList.size());
     List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
-    assertTrue(fileList.size() <= statuses.length);
+
+    assertTrue("More files found in listFiles(root, false): "
+        + stringify(fileList)
+        + " than in listStatus(root): " + statusStr,
+        fileList.size() <= statuses.length);
   }
+
 
   @Test
   public void testRecursiveRootListing() throws IOException {
@@ -222,6 +277,28 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     treeWalk.assertFieldsEquivalent("files", listing,
         treeWalk.getFiles(),
         listing.getFiles());
+  }
+
+  /**
+   * Create a string listing of paths for assertions.
+   * @param statuses status array
+   * @return a string listing.
+   */
+  protected String stringify(final FileStatus[] statuses) {
+    return "[" + Arrays.stream(statuses)
+        .map(s -> s.getPath().toString())
+        .collect(
+            Collectors.joining(" ")) + "]";
+  }
+
+  /**
+   * Create a string listing of paths for assertions.
+   * @param statusList located status list
+   * @return a string listing.
+   */
+  protected String stringify(final List<LocatedFileStatus> statusList) {
+    return "[" + statusList.stream().map(s -> s.getPath().toString())
+        .collect(Collectors.joining(" ")) + "]";
   }
 
 }

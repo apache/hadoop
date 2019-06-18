@@ -583,8 +583,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public DDBPathMetadata get(Path path, boolean wantEmptyDirectoryFlag)
       throws IOException {
     checkPath(path);
-    LOG.debug("Get from table {} in region {}: {}", tableName, region, path);
-    return innerGet(path, wantEmptyDirectoryFlag);
+    LOG.debug("Get from table {} in region {}: {}. wantEmptyDirectory={}",
+        tableName, region, path, wantEmptyDirectoryFlag);
+    DDBPathMetadata result = innerGet(path, wantEmptyDirectoryFlag);
+    LOG.debug("result of get {} is: {}", path, result);
+    return result;
   }
 
   /**
@@ -902,9 +905,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // write item request to save the items.
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
 
-    Collection<PathMetadata> wrapper = new ArrayList<>(1);
-    wrapper.add(meta);
-    put(wrapper);
+    if (!meta.getFileStatus().getPath().isRoot()) {
+      Collection<PathMetadata> wrapper = new ArrayList<>(1);
+      wrapper.add(meta);
+      put(wrapper);
+    } else {
+      LOG.debug("Ignoring root entry");
+    }
   }
 
   @Override
