@@ -69,16 +69,18 @@ public class ContainerKeyService {
 
   /**
    * Return @{@link org.apache.hadoop.ozone.recon.api.types.ContainerMetadata}
-   * for all the containers.
+   * for the containers starting from the given "start" query param for the
+   * given "limit".
    *
    * @return {@link Response}
    */
   @GET
   public Response getContainers(
-      @DefaultValue("-1") @QueryParam("limit") int limit) {
+      @DefaultValue("-1") @QueryParam("limit") int limit,
+      @DefaultValue("0") @QueryParam("start") long start) {
     Map<Long, ContainerMetadata> containersMap;
     try {
-      containersMap = containerDBServiceProvider.getContainers(limit);
+      containersMap = containerDBServiceProvider.getContainers(limit, start);
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -88,7 +90,8 @@ public class ContainerKeyService {
 
   /**
    * Return @{@link org.apache.hadoop.ozone.recon.api.types.KeyMetadata} for
-   * all keys that belong to the container identified by the id param.
+   * all keys that belong to the container identified by the id param
+   * starting from the given "start" query param for the given "limit".
    *
    * @param containerId Container Id
    * @return {@link Response}
@@ -97,11 +100,13 @@ public class ContainerKeyService {
   @Path("/{id}")
   public Response getKeysForContainer(
       @PathParam("id") Long containerId,
-      @DefaultValue("-1") @QueryParam("limit") int limit) {
+      @DefaultValue("-1") @QueryParam("limit") int limit,
+      @DefaultValue("") @QueryParam("start") String startKeyPrefix) {
     Map<String, KeyMetadata> keyMetadataMap = new LinkedHashMap<>();
     try {
       Map<ContainerKeyPrefix, Integer> containerKeyPrefixMap =
-          containerDBServiceProvider.getKeyPrefixesForContainer(containerId);
+          containerDBServiceProvider.getKeyPrefixesForContainer(containerId,
+              startKeyPrefix);
 
       // Get set of Container-Key mappings for given containerId.
       for (ContainerKeyPrefix containerKeyPrefix : containerKeyPrefixMap

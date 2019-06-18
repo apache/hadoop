@@ -132,7 +132,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     OmKeyLocationInfoGroup omKeyLocationInfoGroup = new
         OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
 
-    //key = key_one, Blocks = [ {CID = 1, LID = 1}, {CID = 2, LID = 1} ]
+    //key = key_one, Blocks = [ {CID = 1, LID = 101}, {CID = 2, LID = 102} ]
     writeDataToOm(omMetadataManager,
         "key_one", "bucketOne", "sampleVol",
         Collections.singletonList(omKeyLocationInfoGroup));
@@ -156,7 +156,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     infoGroups.add(new OmKeyLocationInfoGroup(1,
         omKeyLocationInfoListNew));
 
-    //key = key_two, Blocks = [ {CID = 1, LID = 2}, {CID = 1, LID = 3} ]
+    //key = key_two, Blocks = [ {CID = 1, LID = 103}, {CID = 1, LID = 104} ]
     writeDataToOm(omMetadataManager,
         "key_two", "bucketOne", "sampleVol", infoGroups);
 
@@ -201,7 +201,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   @Test
   public void testGetKeysForContainer() {
 
-    Response response = containerKeyService.getKeysForContainer(1L, -1);
+    Response response = containerKeyService.getKeysForContainer(1L, -1, "");
 
     Collection<KeyMetadata> keyMetadataList =
         (Collection<KeyMetadata>) response.getEntity();
@@ -227,20 +227,38 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 103);
     assertEquals(blockIds.get(1L).iterator().next().getLocalID(), 104);
 
-    response = containerKeyService.getKeysForContainer(3L, -1);
+    response = containerKeyService.getKeysForContainer(3L, -1, "");
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertTrue(keyMetadataList.isEmpty());
 
     // test if limit works as expected
-    response = containerKeyService.getKeysForContainer(1L, 1);
+    response = containerKeyService.getKeysForContainer(1L, 1, "");
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertEquals(keyMetadataList.size(), 1);
+
+    // test if start param works as expected
+    response = containerKeyService.getKeysForContainer(
+        1L, -1, "/sampleVol/bucketOne/key_one");
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(keyMetadataList.size(), 1);
+    iterator = keyMetadataList.iterator();
+    keyMetadata = iterator.next();
+    assertEquals(keyMetadata.getKey(), "key_two");
+    assertEquals(keyMetadata.getVersions().size(), 2);
+    assertEquals(keyMetadata.getBlockIds().size(), 2);
+
+    response = containerKeyService.getKeysForContainer(1L, -1, "");
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(keyMetadataList.size(), 2);
+    iterator = keyMetadataList.iterator();
+    keyMetadata = iterator.next();
+    assertEquals(keyMetadata.getKey(), "key_one");
   }
 
   @Test
   public void testGetContainers() {
 
-    Response response = containerKeyService.getContainers(-1);
+    Response response = containerKeyService.getContainers(-1, 0L);
 
     List<ContainerMetadata> containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
@@ -258,10 +276,27 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     assertEquals(containerMetadata.getNumberOfKeys(), 2L);
 
     // test if limit works as expected
-    response = containerKeyService.getContainers(1);
+    response = containerKeyService.getContainers(1, 0L);
     containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
     assertEquals(containers.size(), 1);
+
+    // test if start works as expected
+    response = containerKeyService.getContainers(1, 1L);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(containers.size(), 1);
+    iterator = containers.iterator();
+    containerMetadata = iterator.next();
+    assertEquals(containerMetadata.getContainerID(), 2L);
+
+    response = containerKeyService.getContainers(-1, 0L);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(containers.size(), 2);
+    iterator = containers.iterator();
+    containerMetadata = iterator.next();
+    assertEquals(containerMetadata.getContainerID(), 1L);
   }
 
   /**

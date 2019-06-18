@@ -66,16 +66,17 @@ public interface ContainerDBServiceProvider {
    * @param containerId the given containerId.
    * @return Map of Key prefix -> count.
    */
-  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(long containerId)
-      throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId) throws IOException;
 
   /**
-   * Get a Map of containerID, containerMetadata of all the Containers.
+   * Get the stored key prefixes for the given containerId and keyPrefix.
    *
-   * @return Map of containerID -> containerMetadata.
-   * @throws IOException
+   * @param containerId the given containerId.
+   * @return Map of Key prefix -> count.
    */
-  Map<Long, ContainerMetadata> getContainers() throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId, String startKeyPrefix) throws IOException;
 
   /**
    * Get a Map of containerID, containerMetadata of Containers only for the
@@ -85,7 +86,8 @@ public interface ContainerDBServiceProvider {
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers(int limit) throws IOException;
+  Map<Long, ContainerMetadata> getContainers(int limit, long start)
+      throws IOException;
 
   /**
    * Delete an entry in the container DB.

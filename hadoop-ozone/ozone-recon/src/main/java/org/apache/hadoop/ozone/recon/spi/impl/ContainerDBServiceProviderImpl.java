@@ -128,8 +128,7 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Use the DB's prefix seek iterator to start the scan from the given
-   * container ID prefix.
+   * Get key prefixes for the given container ID.
    *
    * @param containerId the given containerId.
    * @return Map of (Key-Prefix,Count of Keys).
@@ -137,14 +136,45 @@ public class ContainerDBServiceProviderImpl
   @Override
   public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
       long containerId) throws IOException {
+    // set the default startKeyPrefix to empty string
+    return getKeyPrefixesForContainer(containerId, "");
+  }
+
+  /**
+   * Use the DB's prefix seek iterator to start the scan from the given
+   * container ID and start key prefix. The start key prefix is skipped from
+   * the result.
+   *
+   * @param containerId the given containerId.
+   * @param startKeyPrefix the given key prefix to start the scan from.
+   * @return Map of (Key-Prefix,Count of Keys).
+   */
+  @Override
+  public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId, String startKeyPrefix) throws IOException {
 
     Map<ContainerKeyPrefix, Integer> prefixes = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
-    containerIterator.seek(new ContainerKeyPrefix(containerId));
+    ContainerKeyPrefix seekKey;
+    boolean skipStartKey = false;
+    if (StringUtils.isNotBlank(startKeyPrefix)) {
+      skipStartKey = true;
+      seekKey = new ContainerKeyPrefix(containerId, startKeyPrefix);
+    } else {
+      seekKey = new ContainerKeyPrefix(containerId);
+    }
+    containerIterator.seek(seekKey);
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
       ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
+
+      // skip the start key if start key is present
+      if (skipStartKey &&
+          containerKeyPrefix.getKeyPrefix().equals(startKeyPrefix)) {
+        continue;
+      }
+
       // The prefix seek only guarantees that the iterator's head will be
       // positioned at the first prefix match. We still have to check the key
       // prefix.
@@ -165,34 +195,39 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Get all the containers.
-   *
-   * @return Map of containerID -> containerMetadata.
-   * @throws IOException
-   */
-  @Override
-  public Map<Long, ContainerMetadata> getContainers() throws IOException {
-    // Set a negative limit to get all the containers.
-    return getContainers(-1);
-  }
-
-  /**
    * Iterate the DB to construct a Map of containerID -> containerMetadata
-   * only for the given limit.
+   * only for the given limit from the given start key. The start containerID
+   * is skipped from the result.
    *
    * Return all the containers if limit < 0.
    *
+   * @param limit No of containers to get.
+   * @param start containerID after which the list of containers are scanned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
   @Override
-  public Map<Long, ContainerMetadata> getContainers(int limit)
+  public Map<Long, ContainerMetadata> getContainers(int limit, long start)
       throws IOException {
     Map<Long, ContainerMetadata> containers = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
+    boolean skipStartKey = false;
+    ContainerKeyPrefix seekKey = null;
+    if (start > 0L) {
+      skipStartKey = true;
+      seekKey = new ContainerKeyPrefix(start);
+      containerIterator.seek(seekKey);
+    }
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
+
+      // skip the start key if start key is present
+      if (keyValue != null && skipStartKey &&
+          keyValue.getKey().getContainerId() == start) {
+        continue;
+      }
+
       Long containerID = keyValue.getKey().getContainerId();
       Integer numberOfKeys = keyValue.getValue();
 
