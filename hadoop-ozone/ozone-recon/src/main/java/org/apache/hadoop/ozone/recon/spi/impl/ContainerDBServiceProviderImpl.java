@@ -22,7 +22,6 @@ import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -139,7 +138,7 @@ public class ContainerDBServiceProviderImpl
   public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
       long containerId) throws IOException {
 
-    Map<ContainerKeyPrefix, Integer> prefixes = new HashMap<>();
+    Map<ContainerKeyPrefix, Integer> prefixes = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
     containerIterator.seek(new ContainerKeyPrefix(containerId));
@@ -166,13 +165,29 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Iterate the DB to construct a Map of containerID -> containerMetadata.
+   * Get all the containers.
    *
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
   @Override
   public Map<Long, ContainerMetadata> getContainers() throws IOException {
+    // Set a negative limit to get all the containers.
+    return getContainers(-1);
+  }
+
+  /**
+   * Iterate the DB to construct a Map of containerID -> containerMetadata
+   * only for the given limit.
+   *
+   * Return all the containers if limit < 0.
+   *
+   * @return Map of containerID -> containerMetadata.
+   * @throws IOException
+   */
+  @Override
+  public Map<Long, ContainerMetadata> getContainers(int limit)
+      throws IOException {
     Map<Long, ContainerMetadata> containers = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
@@ -180,6 +195,12 @@ public class ContainerDBServiceProviderImpl
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
       Long containerID = keyValue.getKey().getContainerId();
       Integer numberOfKeys = keyValue.getValue();
+
+      // break the loop if limit has been reached
+      // and one more new entity needs to be added to the containers map
+      if (containers.size() == limit && !containers.containsKey(containerID)) {
+        break;
+      }
 
       // initialize containerMetadata with 0 as number of keys.
       containers.computeIfAbsent(containerID, ContainerMetadata::new);

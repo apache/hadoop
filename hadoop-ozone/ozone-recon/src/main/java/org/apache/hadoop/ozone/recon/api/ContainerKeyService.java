@@ -21,17 +21,19 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -72,10 +74,11 @@ public class ContainerKeyService {
    * @return {@link Response}
    */
   @GET
-  public Response getContainers() {
+  public Response getContainers(
+      @DefaultValue("-1") @QueryParam("limit") int limit) {
     Map<Long, ContainerMetadata> containersMap;
     try {
-      containersMap = containerDBServiceProvider.getContainers();
+      containersMap = containerDBServiceProvider.getContainers(limit);
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -92,8 +95,10 @@ public class ContainerKeyService {
    */
   @GET
   @Path("/{id}")
-  public Response getKeysForContainer(@PathParam("id") Long containerId) {
-    Map<String, KeyMetadata> keyMetadataMap = new HashMap<>();
+  public Response getKeysForContainer(
+      @PathParam("id") Long containerId,
+      @DefaultValue("-1") @QueryParam("limit") int limit) {
+    Map<String, KeyMetadata> keyMetadataMap = new LinkedHashMap<>();
     try {
       Map<ContainerKeyPrefix, Integer> containerKeyPrefixMap =
           containerDBServiceProvider.getKeyPrefixesForContainer(containerId);
@@ -143,6 +148,10 @@ public class ContainerKeyService {
               Collections.singletonMap(containerKeyPrefix.getKeyVersion(),
                   blockIds));
         } else {
+          // break the for loop if limit has been reached
+          if (keyMetadataMap.size() == limit) {
+            break;
+          }
           KeyMetadata keyMetadata = new KeyMetadata();
           keyMetadata.setBucket(omKeyInfo.getBucketName());
           keyMetadata.setVolume(omKeyInfo.getVolumeName());
