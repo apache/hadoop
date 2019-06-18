@@ -336,7 +336,7 @@ public class LocalMetadataStore implements MetadataStore {
     put(meta.getListing(), null);
   }
 
-  public synchronized void put(Collection<PathMetadata> metas,
+  public synchronized void put(Collection<? extends PathMetadata> metas,
       final BulkOperationState operationState) throws
       IOException {
     for (PathMetadata meta : metas) {

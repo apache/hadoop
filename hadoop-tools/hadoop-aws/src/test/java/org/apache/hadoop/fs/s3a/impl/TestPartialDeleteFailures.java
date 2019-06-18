@@ -71,7 +71,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestPartialDeleteFailures {
 
-  private static final ContextAccessors contextAccessors
+  private static final ContextAccessors CONTEXT_ACCESSORS
       = new MinimalContextAccessor();
 
   private StoreContext context;
@@ -224,7 +224,7 @@ public class TestPartialDeleteFailures {
         multiDelete,
         store,
         false,
-        contextAccessors,
+        CONTEXT_ACCESSORS,
         new S3Guard.TtlTimeProvider(conf));
   }
 
@@ -300,7 +300,7 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void put(final Collection<PathMetadata> metas,
+    public void put(final Collection<? extends PathMetadata> metas,
         final BulkOperationState operationState) {
       metas.stream().forEach(meta -> put(meta, null));
     }
@@ -346,7 +346,8 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public BulkOperationState initiateBulkWrite(final BulkOperationState.OperationType operation,
+    public BulkOperationState initiateBulkWrite(
+        final BulkOperationState.OperationType operation,
         final Path dest) {
       return null;
     }

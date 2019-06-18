@@ -201,7 +201,7 @@ public class RenameOperation extends AbstractStoreOperation {
   private void completeActiveCopiesAndDeleteSources(String reason)
       throws IOException {
     completeActiveCopies(reason);
-    removeSourceObjects(renameTracker,
+    removeSourceObjects(
         keysToDelete,
         pathsToDelete);
     // now reset the lists.
@@ -284,7 +284,7 @@ public class RenameOperation extends AbstractStoreOperation {
     // destination either does not exist or is a file to overwrite.
     LOG.debug("rename: renaming file {} to {}", sourcePath,
         copyDestinationPath);
-    copySourceAndUpdateTracker(renameTracker,
+    copySourceAndUpdateTracker(
         sourcePath,
         sourceKey,
         sourceAttributes,
@@ -388,7 +388,7 @@ public class RenameOperation extends AbstractStoreOperation {
 
   /**
    * Initiate a copy operation in the executor.
-   * @param sourceStatus status of the source object.
+   * @param source status of the source object.
    * @param key source key
    * @param childSourcePath source as a path.
    * @param newDestKey destination key
@@ -396,25 +396,24 @@ public class RenameOperation extends AbstractStoreOperation {
    * @return the future.
    */
   protected CompletableFuture<Path> initiateCopy(
-      final S3ALocatedFileStatus sourceStatus,
+      final S3ALocatedFileStatus source,
       final String key,
       final Path childSourcePath,
       final String newDestKey,
       final Path childDestPath) {
     S3ObjectAttributes sourceAttributes =
         callbacks.createObjectAttributes(
-            sourceStatus.getPath(),
-            sourceStatus.getETag(),
-            sourceStatus.getVersionId(),
-            sourceStatus.getLen());
+            source.getPath(),
+            source.getETag(),
+            source.getVersionId(),
+            source.getLen());
     // queue the copy operation for execution in the thread pool
     return submit(getStoreContext().getExecutor(), () ->
         copySourceAndUpdateTracker(
-            renameTracker,
             childSourcePath,
             key,
             sourceAttributes,
-            callbacks.createReadContext(sourceStatus),
+            callbacks.createReadContext(source),
             childDestPath,
             newDestKey,
             true));
@@ -424,76 +423,72 @@ public class RenameOperation extends AbstractStoreOperation {
    * This invoked to copy a file or directory marker then update the
    * rename operation on success.
    * It may be called in its own thread.
-   * @param renameTracker operation to update
-   * @param sourcePath source path of the copy; may have a trailing / on it.
+   * @param sourceFile source path of the copy; may have a trailing / on it.
    * @param srcKey source key
    * @param srcAttributes status of the source object
-   * @param destPath destination as a qualified path.
-   * @param destKey destination key
+   * @param destination destination as a qualified path.
+   * @param destinationKey destination key
    * @param addAncestors should ancestors be added to the metastore?
    * @return the destination path.
    * @throws IOException failure
    */
   @Retries.RetryTranslated
   private Path copySourceAndUpdateTracker(
-      final RenameTracker renameTracker,
-      final Path sourcePath,
+      final Path sourceFile,
       final String srcKey,
       final S3ObjectAttributes srcAttributes,
       final S3AReadOpContext readContext,
-      final Path destPath,
-      final String destKey,
+      final Path destination,
+      final String destinationKey,
       final boolean addAncestors) throws IOException {
     long len = srcAttributes.getLen();
     CopyResult copyResult;
     try (DurationInfo ignored = new DurationInfo(LOG, false,
-        "Copy file from %s to %s (length=%d)", srcKey, destKey, len)) {
-      copyResult = callbacks.copyFile(srcKey, destKey,
+        "Copy file from %s to %s (length=%d)", srcKey, destinationKey, len)) {
+      copyResult = callbacks.copyFile(srcKey, destinationKey,
           srcAttributes, readContext);
     }
     if (objectRepresentsDirectory(srcKey, len)) {
       renameTracker.directoryMarkerCopied(
-          sourcePath,
-          destPath,
+          sourceFile,
+          destination,
           addAncestors);
     } else {
       S3ObjectAttributes destAttributes = new S3ObjectAttributes(
-          destPath,
+          destination,
           copyResult,
           srcAttributes.getServerSideEncryptionAlgorithm(),
           srcAttributes.getServerSideEncryptionKey(),
           len);
       renameTracker.fileCopied(
-          sourcePath,
+          sourceFile,
           srcAttributes,
           destAttributes,
-          destPath,
+          destination,
           blocksize,
           addAncestors);
     }
-    return destPath;
+    return destination;
   }
 
   /**
    * Remove source objects and update the metastore by way of
    * the rename tracker.
-   * @param renameTracker rename tracker to update.
-   * @param keysToDelete list of keys to delete
-   * @param pathsToDelete list of paths matching the keys to delete 1:1.
+   * @param keys list of keys to delete
+   * @param paths list of paths matching the keys to delete 1:1.
    * @throws IOException failure
    */
   @Retries.RetryMixed
   private void removeSourceObjects(
-      final RenameTracker renameTracker,
-      final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final List<Path> pathsToDelete)
+      final List<DeleteObjectsRequest.KeyVersion> keys,
+      final List<Path> paths)
       throws IOException {
     List<Path> undeletedObjects = new ArrayList<>();
     try {
       // remove the keys
       // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
-      callbacks.removeKeys(keysToDelete, false, undeletedObjects);
+      callbacks.removeKeys(keys, false, undeletedObjects);
       // and clear the list.
     } catch (AmazonClientException | IOException e) {
       // Failed.
@@ -502,9 +497,9 @@ public class RenameOperation extends AbstractStoreOperation {
       // all keys it has known to delete; this is just a final
       // bit of housekeeping and a chance to tune exception
       // reporting
-      throw renameTracker.deleteFailed(e, pathsToDelete, undeletedObjects);
+      throw renameTracker.deleteFailed(e, paths, undeletedObjects);
     }
-    renameTracker.sourceObjectsDeleted(pathsToDelete);
+    renameTracker.sourceObjectsDeleted(paths);
   }
 
   /**
@@ -538,10 +533,10 @@ public class RenameOperation extends AbstractStoreOperation {
      * @return attributes to use when building the query.
      */
     S3ObjectAttributes createObjectAttributes(
-        final Path path,
-        final String eTag,
-        final String versionId,
-        final long len);
+        Path path,
+        String eTag,
+        String versionId,
+        long len);
 
     /**
      * Create the attributes of an object for subsequent use.
@@ -549,7 +544,7 @@ public class RenameOperation extends AbstractStoreOperation {
      * @return attributes to use when building the query.
      */
     S3ObjectAttributes createObjectAttributes(
-        final S3AFileStatus fileStatus);
+        S3AFileStatus fileStatus);
 
     /**
      * Create the read context for reading from the referenced file,
@@ -558,11 +553,11 @@ public class RenameOperation extends AbstractStoreOperation {
      * @return a context for read and select operations.
      */
     S3AReadOpContext createReadContext(
-        final FileStatus fileStatus);
+        FileStatus fileStatus);
 
     /**
      * The rename has finished; perform any store cleanup operations
-     * such as creating/deleting directory markers
+     * such as creating/deleting directory markers.
      * @param sourceRenamed renamed source
      * @param destCreated destination file created.
      * @throws IOException failure
@@ -630,9 +625,9 @@ public class RenameOperation extends AbstractStoreOperation {
      */
     @Retries.RetryMixed
     void removeKeys(
-        final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-        final boolean deleteFakeDir,
-        final List<Path> undeletedObjectsOnFailure)
+        List<DeleteObjectsRequest.KeyVersion> keysToDelete,
+        boolean deleteFakeDir,
+        List<Path> undeletedObjectsOnFailure)
         throws MultiObjectDeleteException, AmazonClientException,
         IOException;
   }

@@ -21,7 +21,10 @@ package org.apache.hadoop.fs.s3a.impl;
 /**
  * Internal constants private only to the S3A codebase.
  */
-public class InternalConstants {
+public final class InternalConstants {
+
+  private InternalConstants() {
+  }
 
   /**
    * This is an arbitrary value: {@value}.

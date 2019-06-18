@@ -45,6 +45,7 @@ import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.HadoopTestBase;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 
 /**
@@ -141,6 +142,17 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
       IOUtils.closeStream(ms);
       ms = null;
     }
+  }
+
+  /**
+   * Describe a test in the logs.
+   * @param text text to print
+   * @param args arguments to format in the printing
+   */
+  protected void describe(String text, Object... args) {
+    LOG.info("\n\n{}: {}\n",
+        getMethodName(),
+        String.format(text, args));
   }
 
   /**
@@ -1029,45 +1041,89 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return currentStatuses;
   }
 
-  private void assertDeleted(String pathStr) throws IOException {
+  protected PathMetadata get(final String pathStr) throws IOException {
     Path path = strToPath(pathStr);
-    PathMetadata meta = ms.get(path);
+    return ms.get(path);
+  }
+
+  protected PathMetadata getNonNull(final String pathStr) throws IOException {
+    return checkNotNull(get(pathStr), "No metastore entry for %s", pathStr);
+  }
+
+  protected void assertDeleted(String pathStr) throws IOException {
+    PathMetadata meta = get(pathStr);
     boolean cached = meta != null && !meta.isDeleted();
-    assertFalse(pathStr + " should not be cached.", cached);
+    assertFalse(pathStr + " should not be cached: " + meta, cached);
   }
 
   protected void assertCached(String pathStr) throws IOException {
-    Path path = strToPath(pathStr);
-    PathMetadata meta = ms.get(path);
-    boolean cached = meta != null && !meta.isDeleted();
-    assertTrue(pathStr + " should be cached.", cached);
+    verifyCached(pathStr);
+  }
+
+  /**
+   * Get an entry which must exist and not be deleted.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata verifyCached(final String pathStr) throws IOException {
+    PathMetadata meta = getNonNull(pathStr);
+    assertFalse(pathStr + " was found but marked deleted: "+ meta,
+        meta.isDeleted());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must be a file.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getFile(final String pathStr) throws IOException {
+    PathMetadata meta = verifyCached(pathStr);
+    assertFalse(pathStr + " is not a file: " + meta,
+        meta.getFileStatus().isDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must be a directory.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getDirectory(final String pathStr) throws IOException {
+    PathMetadata meta = verifyCached(pathStr);
+    assertTrue(pathStr + " is not a directory: " + meta,
+        meta.getFileStatus().isDirectory());
+    return meta;
   }
 
   /**
    * Convenience to create a fully qualified Path from string.
    */
-  Path strToPath(String p) throws IOException {
+  protected Path strToPath(String p) throws IOException {
     final Path path = new Path(p);
     assertTrue("Non-absolute path: " + path,  path.isAbsolute());
     return path.makeQualified(contract.getFileSystem().getUri(), null);
   }
 
-  private void assertEmptyDirectory(String pathStr) throws IOException {
+  protected void assertEmptyDirectory(String pathStr) throws IOException {
     assertDirectorySize(pathStr, 0);
   }
 
-  private void assertEmptyDirs(String ...dirs) throws IOException {
+  protected void assertEmptyDirs(String ...dirs) throws IOException {
     for (String pathStr : dirs) {
       assertEmptyDirectory(pathStr);
     }
   }
 
-  S3AFileStatus basicFileStatus(Path path, int size, boolean isDir) throws
+  protected S3AFileStatus basicFileStatus(Path path, int size, boolean isDir) throws
       IOException {
     return basicFileStatus(path, size, isDir, modTime);
   }
 
-  S3AFileStatus basicFileStatus(int size, boolean isDir,
+  protected S3AFileStatus basicFileStatus(int size, boolean isDir,
       long blockSize, long modificationTime, Path path) {
     if (isDir) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, null);
@@ -1098,18 +1154,18 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
         newModTime);
   }
 
-  void verifyFileStatus(FileStatus status, long size) {
+  protected void verifyFileStatus(FileStatus status, long size) {
     S3ATestUtils.verifyFileStatus(status, size, BLOCK_SIZE, modTime);
   }
 
-  private S3AFileStatus makeDirStatus(String pathStr) throws IOException {
+  protected S3AFileStatus makeDirStatus(String pathStr) throws IOException {
     return basicFileStatus(strToPath(pathStr), 0, true, modTime);
   }
 
   /**
    * Verify the directory file status. Subclass may verify additional fields.
    */
-  void verifyDirStatus(S3AFileStatus status) {
+  protected void verifyDirStatus(S3AFileStatus status) {
     assertTrue("Is a dir", status.isDirectory());
     assertEquals("zero length", 0, status.getLen());
   }
@@ -1130,4 +1186,51 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return ttlTimeProvider;
   }
 
+  /**
+   * Put a file to the shared DDB table.
+   * @param key key
+   * @param time timestamp.
+   * @param operationState ongoing state
+   * @return the entry
+   * @throws IOException IO failure
+   */
+  protected PathMetadata putFile(
+      final String key,
+      final long time,
+      BulkOperationState operationState) throws IOException {
+    PathMetadata meta = new PathMetadata(makeFileStatus(key, 1, time));
+    ms.put(meta,
+        operationState);
+    return meta;
+  }
+
+  /**
+   * Put a tombstone to the shared DDB table.
+   * @param key key
+   * @param time timestamp.
+   * @param operationState ongoing state
+   * @return the entry
+   * @throws IOException IO failure
+   */
+  protected PathMetadata putTombstone(
+      final String key,
+      final long time,
+      BulkOperationState operationState) throws IOException {
+    PathMetadata meta = tombstone(strToPath(key), time);
+    ms.put(meta, operationState);
+    return meta;
+  }
+
+  /**
+   * Create a tombstone from the timestamp.
+   * @param path path to tombstone
+   * @param time timestamp.
+   * @return the entry.
+   */
+  public static PathMetadata tombstone(Path path, long time) {
+    S3AFileStatus s3aStatus = new S3AFileStatus(0,
+        time, path, 0, null,
+        null, null);
+    return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
+  }
 }

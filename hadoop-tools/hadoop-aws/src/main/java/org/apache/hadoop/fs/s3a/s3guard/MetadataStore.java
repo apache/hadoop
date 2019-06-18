@@ -147,15 +147,19 @@ public interface MetadataStore extends Closeable {
 
   /**
    * This adds all new ancestors of a path as directories.
+   * <p>
+   * Important: to propagate TTL information, any new ancestors added
+   * must have their last updated timestamps set through
+   * {@link S3Guard#patchLastUpdated(Collection, ITtlTimeProvider)}.
    * @param qualifiedPath path to update
-   * @param timeProvider
+   * @param timeProvider time provider for timestamps
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException failure
    */
   @RetryTranslated
   void addAncestors(
       Path qualifiedPath,
-      ITtlTimeProvider timeProvider,
+      @Nullable ITtlTimeProvider timeProvider,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -230,7 +234,7 @@ public interface MetadataStore extends Closeable {
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException if there is an error
    */
-  void put(Collection<PathMetadata> metas,
+  void put(Collection<? extends PathMetadata> metas,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**

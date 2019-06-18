@@ -345,9 +345,21 @@ public final class PathMetadataDynamoDBTranslation {
   private PathMetadataDynamoDBTranslation() {
   }
 
+  /**
+   * Convert a collection of metadata entries to a list
+   * of DDBPathMetadata entries.
+   * If the sources are already DDBPathMetadata instances, they
+   * are copied directly into the new list, otherwise new
+   * instances are created.
+   * @param pathMetadatas source data
+   * @return the converted list.
+   */
   static List<DDBPathMetadata> pathMetaToDDBPathMeta(
-      Collection<PathMetadata> pathMetadatas) {
-    return pathMetadatas.stream().map(p -> new DDBPathMetadata(p))
+      Collection<? extends PathMetadata> pathMetadatas) {
+    return pathMetadatas.stream().map(p ->
+        (p instanceof DDBPathMetadata)
+            ? (DDBPathMetadata) p
+            : new DDBPathMetadata(p))
         .collect(Collectors.toList());
   }
 

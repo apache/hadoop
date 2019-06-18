@@ -925,6 +925,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // the listing of directories to put is all those parents which we know
     // are not in the store or BulkOperationState.
     if (!newDirs.isEmpty()) {
+      // patch up the time.
+      patchLastUpdated(newDirs, timeProvider);
       innerPut(newDirs, operationState);
     }
   }
@@ -1158,7 +1160,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Override
   @Retries.RetryTranslated
   public void put(
-      final Collection<PathMetadata> metas,
+      final Collection<? extends PathMetadata> metas,
       @Nullable final BulkOperationState operationState) throws IOException {
     innerPut(pathMetaToDDBPathMeta(metas), operationState);
   }

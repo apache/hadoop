@@ -98,7 +98,7 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void put(Collection<PathMetadata> meta,
+  public void put(Collection<? extends PathMetadata> meta,
       final BulkOperationState operationState) throws IOException {
   }
 

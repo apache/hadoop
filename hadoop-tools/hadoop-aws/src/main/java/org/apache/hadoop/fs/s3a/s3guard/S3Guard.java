@@ -543,26 +543,6 @@ public final class S3Guard {
     metadataStore.addAncestors(qualifiedPath, timeProvider, operationState);
   }
 
-/*
-  public static void addAncestors(MetadataStore metadataStore,
-      Path qualifiedPath, String username, ITtlTimeProvider timeProvider)
-      throws IOException {
-    Collection<PathMetadata> newDirs = new ArrayList<>();
-    Path parent = qualifiedPath.getParent();
-    while (!parent.isRoot()) {
-      PathMetadata directory = metadataStore.get(parent);
-      if (directory == null || directory.isDeleted()) {
-        S3AFileStatus s3aStatus = new S3AFileStatus(Tristate.FALSE, parent, username);
-        PathMetadata meta = new PathMetadata(s3aStatus, Tristate.FALSE, false);
-        newDirs.add(meta);
-      } else {
-        break;
-      }
-      parent = parent.getParent();
-    }
-    S3Guard.putWithTtl(metadataStore, newDirs, timeProvider);
-
- */
   private static void addMoveStatus(Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas,
       Path srcPath,
@@ -693,10 +673,24 @@ public final class S3Guard {
    * @throws IOException failure.
    */
   public static void putWithTtl(MetadataStore ms,
-      Collection<PathMetadata> fileMetas,
+      Collection<? extends PathMetadata> fileMetas,
       @Nullable ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState)
       throws IOException {
+    patchLastUpdated(fileMetas, timeProvider);
+    ms.put(fileMetas, operationState);
+  }
+
+  /**
+   * Patch any collection of metadata entries with the timestamp
+   * of a time provider.
+   * This <i>MUST</i> be used when creating new entries for directories.
+   * @param fileMetas file metadata entries.
+   * @param timeProvider nullable time provider
+   */
+  static void patchLastUpdated(
+      final Collection<? extends PathMetadata> fileMetas,
+      @Nullable final ITtlTimeProvider timeProvider) {
     if (timeProvider != null) {
       final long now = timeProvider.getNow();
       fileMetas.forEach(fileMeta -> fileMeta.setLastUpdated(now));
@@ -704,7 +698,6 @@ public final class S3Guard {
       LOG.debug("timeProvider is null, put {} without setting last_updated",
           fileMetas);
     }
-    ms.put(fileMetas, operationState);
   }
 
   /**

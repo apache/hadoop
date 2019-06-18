@@ -361,7 +361,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Override
-  S3AFileStatus basicFileStatus(Path path, int size, boolean isDir)
+  protected S3AFileStatus basicFileStatus(Path path, int size, boolean isDir)
       throws IOException {
     String owner = UserGroupInformation.getCurrentUser().getShortUserName();
     return isDir
@@ -985,7 +985,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       ddbms.destroy();
       intercept(FileNotFoundException.class, "",
           "Destroyed table should raise FileNotFoundException when pruned",
-          () -> ddbms.prune(PruneMode.ALL_BY_MODTIME,0));
+          () -> ddbms.prune(PruneMode.ALL_BY_MODTIME, 0));
     } finally {
       destroy(ddbms);
     }
@@ -1042,7 +1042,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
       throws IOException {
     // setup
     final DynamoDBMetadataStore ms = getDynamoMetadataStore();
-    String rootPath = "/testAuthoritativeEmptyDirFlag"+ UUID.randomUUID();
+    String rootPath = "/testAuthoritativeEmptyDirFlag-" + UUID.randomUUID();
     String filePath = rootPath + "/file1";
     final Path dirToPut = fileSystem.makeQualified(new Path(rootPath));
     final Path fileToPut = fileSystem.makeQualified(new Path(filePath));
@@ -1104,7 +1104,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testPruneAgainstInvalidTable() throws Throwable {
-    LOG.info("Create an Invalid listing and prune it");
+    describe("Create an Invalid listing and prune it");
     DynamoDBMetadataStore ms
         = ITestDynamoDBMetadataStore.ddbmsStatic;
     String base = "/testPruneAgainstInvalidTable";
@@ -1126,7 +1126,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     long now = getTime();
     long oldTime = now - 60_000;
-    putFile(ms, subdir, oldTime);
+    putFile(subdir, oldTime, null);
     final DDBPathMetadata subDirAsFile = ms.get(subDirPath);
 
     Assertions.assertThat(subDirAsFile.getFileStatus().isFile())
@@ -1155,17 +1155,65 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         now + 60_000, subdir);
     DDBPathMetadata prunedFile = ms.get(subFilePath);
 
-    final DDBPathMetadata subDirMetadataFinal = ms.get(subDirPath);
+    final PathMetadata subDirMetadataFinal = getNonNull(subdir);
+
     Assertions.assertThat(subDirMetadataFinal.getFileStatus().isFile())
         .describedAs("Subdirectory entry %s is still a file",
             subDirMetadataFinal)
         .isTrue();
   }
 
-  protected void putFile(final DynamoDBMetadataStore ms,
-      final String key,
-      final long oldTime) throws IOException {
-    ms.put(new PathMetadata(makeFileStatus(key, 1, oldTime)),
-        null );
+  @Test
+  public void testPutFileDirectlyUnderTombstone() throws Throwable {
+    describe("Put a file under a tombstone");
+    String base = "/testPutFileDirectlyUnderTombstone";
+    long now = getTime();
+    putTombstone(base, now, null);
+    PathMetadata baseMeta1 = get(base);
+    Assertions.assertThat(baseMeta1.isDeleted())
+        .as("Metadata %s", baseMeta1)
+        .isTrue();
+    String child = base + "/file";
+    putFile(child, now, null);
+    PathMetadata baseMeta2 = get(base);
+    Assertions.assertThat(baseMeta2.isDeleted())
+        .as("Metadata %s", baseMeta2)
+        .isFalse();
   }
+
+  @Test
+  public void testPutFileDeepUnderTombstone() throws Throwable {
+    describe("Put a file two levels under a tombstone");
+    String base = "/testPutFileDeepUnderTombstone";
+    String subdir = base + "/subdir";
+    long now = getTime();
+    // creating a file MUST create its parents
+    String child = subdir + "/file";
+    Path childPath = strToPath(child);
+    putFile(child, now, null);
+    getFile(child);
+    getDirectory(subdir);
+    getDirectory(base);
+
+    // now put the tombstone
+    putTombstone(base, now, null);
+    PathMetadata baseMeta1 = getNonNull(base);
+    Assertions.assertThat(baseMeta1.isDeleted())
+        .as("Metadata %s", baseMeta1)
+        .isTrue();
+
+    // this is the same ordering as S3FileSystem.finishedWrite()
+
+    AncestorState ancestorState = getDynamoMetadataStore()
+        .initiateBulkWrite(BulkOperationState.OperationType.Put,
+            childPath);
+    S3Guard.addAncestors(getDynamoMetadataStore(),
+        childPath, "self", getTtlTimeProvider(),
+        ancestorState);
+//    getDirectory(base);
+    // now write the file again.
+    putFile(child, now, ancestorState);
+    getDirectory(base);
+  }
+
 }
