@@ -98,7 +98,6 @@ message AllocateScmBlockRequestProto {
   required ReplicationType type = 3;
   required hadoop.hdds.ReplicationFactor factor = 4;
   required string owner = 5;
-  optional string traceID = 6;
   optional ExcludeListProto excludeList = 7;
 }
 
@@ -129,8 +128,6 @@ message KeyBlocks {
  */
 message DeleteScmKeyBlocksResponseProto {
   repeated DeleteKeyBlocksResultProto results = 1;
-  optional string traceID = 2;
-
 }
 
 /**
@@ -180,21 +177,4 @@ service ScmBlockLocationProtocolService {
 
   rpc send(SCMBlockLocationRequest)
       returns (SCMBlockLocationResponse);
-
-  /**
-   * Creates a block entry in SCM.
-   */
-//  rpc allocateScmBlock(AllocateScmBlockRequestProto)
-//      returns (AllocateScmBlockResponseProto);
-  /**
-   * Deletes blocks for a set of object keys from SCM.
-   */
-//  rpc deleteScmKeyBlocks(DeleteScmKeyBlocksRequestProto)
-//      returns (DeleteScmKeyBlocksResponseProto);
-
-  /**
-   * Gets the scmInfo from SCM.
-   */
-//  rpc getScmInfo(hadoop.hdds.GetScmInfoRequestProto)
-//      returns (hadoop.hdds.GetScmInfoResponseProto);
 }

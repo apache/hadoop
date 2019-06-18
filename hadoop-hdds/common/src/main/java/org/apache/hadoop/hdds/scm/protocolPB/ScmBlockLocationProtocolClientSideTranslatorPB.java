@@ -110,7 +110,6 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
             .setType(type)
             .setFactor(factor)
             .setOwner(owner)
-            .setTraceID(TracingUtil.exportCurrentSpan())
             .setExcludeList(excludeList.getProtoBuf())
             .build();
 

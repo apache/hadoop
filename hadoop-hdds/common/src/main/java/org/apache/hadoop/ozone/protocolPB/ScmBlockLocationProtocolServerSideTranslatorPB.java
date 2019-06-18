@@ -98,34 +98,37 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
 
     switch (request.getCmdType()) {
       case AllocateScmBlock: {
-        AllocateScmBlockResponseProto res = allocateScmBlock(controller,
+        AllocateScmBlockResponseProto res = allocateScmBlock(traceId,
             request.getAllocateScmBlockRequest());
         response.setAllocateScmBlockResponse(res);
+        break;
       }
       case DeleteScmKeyBlocks: {
-        DeleteScmKeyBlocksResponseProto res = deleteScmKeyBlocks(controller,
+        DeleteScmKeyBlocksResponseProto res = deleteScmKeyBlocks(traceId,
             request.getDeleteScmKeyBlocksRequest());
         response.setDeleteScmKeyBlocksResponse(res);
+        break;
       }
       case GetScmInfo: {
-        HddsProtos.GetScmInfoResponseProto res = getScmInfo(controller,
+        HddsProtos.GetScmInfoResponseProto res = getScmInfo(traceId,
             request.getGetScmInfoRequest());
         response.setGetScmInfoResponse(res);
+        break;
       }
       default:
+        throw new ServiceException("Unknown Operation");
     }
     response.setSuccess(true)
         .setStatus(Status.OK);
     return response.build();
   }
 
-//  @Override
   public AllocateScmBlockResponseProto allocateScmBlock(
-      RpcController controller, AllocateScmBlockRequestProto request)
+      String traceId, AllocateScmBlockRequestProto request)
       throws ServiceException {
-    try (Scope scope = TracingUtil
+    try(Scope scope = TracingUtil
         .importAndCreateScope("ScmBlockLocationProtocol.allocateBlock",
-            request.getTraceID())) {
+            traceId)) {
       List<AllocatedBlock> allocatedBlocks =
           impl.allocateBlock(request.getSize(),
               request.getNumBlocks(), request.getType(),
@@ -155,13 +158,14 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     }
   }
 
-//  @Override
   public DeleteScmKeyBlocksResponseProto deleteScmKeyBlocks(
-      RpcController controller, DeleteScmKeyBlocksRequestProto req)
+      String traceId, DeleteScmKeyBlocksRequestProto req)
       throws ServiceException {
     DeleteScmKeyBlocksResponseProto.Builder resp =
         DeleteScmKeyBlocksResponseProto.newBuilder();
-    try {
+    try(Scope scope = TracingUtil
+        .importAndCreateScope("ScmBlockLocationProtocol.deleteKeyBlocks",
+            traceId)) {
       List<BlockGroup> infoList = req.getKeyBlocksList().stream()
           .map(BlockGroup::getFromProto).collect(Collectors.toList());
       final List<DeleteBlockGroupResult> results =
@@ -180,12 +184,13 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     return resp.build();
   }
 
-//  @Override
   public HddsProtos.GetScmInfoResponseProto getScmInfo(
-      RpcController controller, HddsProtos.GetScmInfoRequestProto req)
+      String traceId, HddsProtos.GetScmInfoRequestProto req)
       throws ServiceException {
     ScmInfo scmInfo;
-    try {
+    try(Scope scope = TracingUtil
+        .importAndCreateScope("ScmBlockLocationProtocol.getInfo",
+            traceId)) {
       scmInfo = impl.getScmInfo();
     } catch (IOException ex) {
       throw new ServiceException(ex);
