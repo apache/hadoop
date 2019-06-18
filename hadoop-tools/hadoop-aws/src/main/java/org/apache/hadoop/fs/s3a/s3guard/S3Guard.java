@@ -47,7 +47,6 @@ import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
-import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
@@ -537,7 +536,6 @@ public final class S3Guard {
   public static void addAncestors(
       final MetadataStore metadataStore,
       final Path qualifiedPath,
-      final String username,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
     metadataStore.addAncestors(qualifiedPath, timeProvider, operationState);

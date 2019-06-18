@@ -1208,11 +1208,12 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         .initiateBulkWrite(BulkOperationState.OperationType.Put,
             childPath);
     S3Guard.addAncestors(getDynamoMetadataStore(),
-        childPath, "self", getTtlTimeProvider(),
+        childPath,
+        getTtlTimeProvider(),
         ancestorState);
-//    getDirectory(base);
     // now write the file again.
     putFile(child, now, ancestorState);
+    // the ancestor will now exist.
     getDirectory(base);
   }
 

@@ -198,14 +198,9 @@ import static org.apache.hadoop.fs.s3a.s3guard.S3Guard.*;
  * directory helps prevent unnecessary queries during traversal of an entire
  * sub-tree.
  *
-<<<<<<< ours
  * Some mutating operations, notably
  * {@link MetadataStore#deleteSubtree(Path, ITtlTimeProvider)} and
- * {@link MetadataStore#move(Collection, Collection, ITtlTimeProvider)},
-=======
- * Some mutating operations, notably {@link #deleteSubtree(Path)} and
- * {@link MetadataStore#move(Collection, Collection, BulkOperationState)}
->>>>>>> theirs
+ * {@link MetadataStore#move(Collection, Collection, ITtlTimeProvider, BulkOperationState)}
  * are less efficient with this schema.
  * They require mutating multiple items in the DynamoDB table.
  *
@@ -344,6 +339,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private ListeningExecutorService executor;
 
   /**
+   * Time source. This is used during writes when parent
+   * entries need to be created.
+   */
+  private ITtlTimeProvider timeProvider;
+
+  /**
    * A utility function to create DynamoDB instance.
    * @param conf the file system configuration
    * @param s3Region region of the associated S3 bucket (if any).
@@ -418,6 +419,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         this::retryEvent
     );
 
+    timeProvider = new S3Guard.TtlTimeProvider(conf);
     initTable();
 
     instrumentation.initialized();
@@ -437,6 +439,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
     instrumentation = context.getInstrumentation().getS3GuardInstrumentation();
     username = context.getUsername();
     executor = context.createThrottledExecutor();
+    timeProvider = Preconditions.checkNotNull(
+        context.getTimeProvider(),
+        "ttlTimeProvider must not be null");
   }
 
   /**
@@ -795,11 +800,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * Callers are required to synchronize on ancestorState.
    * @param pathsToCreate paths to create
    * @param ancestorState ongoing ancestor state.
+   * @param ttlTimeProvider Must not be null
    * @return the full ancestry paths
    */
   private Collection<DDBPathMetadata> completeAncestry(
       final Collection<DDBPathMetadata> pathsToCreate,
-      final AncestorState ancestorState) throws PathIOException {
+      final AncestorState ancestorState,
+      final ITtlTimeProvider ttlTimeProvider) throws PathIOException {
     List<DDBPathMetadata> ancestorsToAdd = new ArrayList<>(0);
     LOG.debug("Completing ancestry for {} paths", pathsToCreate.size());
     // we sort the inputs to guarantee that the topmost entries come first.
@@ -845,7 +852,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
             parent, path);
         final S3AFileStatus status = makeDirStatus(parent, username);
         DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
-            false);
+            false, false, ttlTimeProvider.getNow());
         ancestorState.put(parent, md);
         ancestorsToAdd.add(md);
         parent = parent.getParent();
@@ -857,12 +864,20 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * {@inheritDoc}
    * <p>
+   * The implementation scans all up the directory tree and does a get()
+   * for each entry; at each level one is found it is added to the ancestor
+   * state.
+   * <p>
+   * The original implementation would stop on finding the first non-empty
+   * parent. This (re) implementation issues a GET for every parent entry
+   * and so detects and recovers from a tombstone marker further up the tree
+   * (i.e. an inconsistent store is corrected for).
+   * <p>
    * if {@code operationState} is not null, when this method returns the
    * operation state will be updated with all new entries created.
    * This ensures that subsequent operations with the same store will not
    * trigger new updates.
    * @param qualifiedPath path to update
-   * @param timeProvider
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException on failure.
    */
@@ -878,6 +893,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final AncestorState ancestorState = extractOrCreate(operationState,
         BulkOperationState.OperationType.Rename);
     Path parent = qualifiedPath.getParent();
+    boolean entryFound = false;
 
     // Iterate up the parents.
     // note that only ancestorState get/set operations are synchronized;
@@ -899,6 +915,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       // a directory entry will go in.
       PathMetadata directory = get(parent);
       if (directory == null || directory.isDeleted()) {
+        if (entryFound) {
+          LOG.warn("Inconsistent S3Guard table: adding directory {}", parent);
+        }
         S3AFileStatus status = makeDirStatus(username, parent);
         LOG.debug("Adding new ancestor entry {}", status);
         DDBPathMetadata meta = new DDBPathMetadata(status, Tristate.FALSE,
@@ -909,6 +928,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
         // here that put operation would actually (mistakenly) skip
         // creating the entry.
       } else {
+        // an entry was found. Check its type
+        entryFound = true;
         if (directory.getFileStatus().isFile()) {
           throw new PathIOException(parent.toString(),
               "Cannot overwrite parent file: metadatstore is"
@@ -918,7 +939,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
         synchronized (ancestorState) {
           ancestorState.put(parent, new DDBPathMetadata(directory));
         }
-        break;
       }
       parent = parent.getParent();
     }
@@ -927,7 +947,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (!newDirs.isEmpty()) {
       // patch up the time.
       patchLastUpdated(newDirs, timeProvider);
-      innerPut(newDirs, operationState);
+      innerPut(newDirs, operationState, timeProvider);
     }
   }
 
@@ -983,7 +1003,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
         newItems.addAll(
             completeAncestry(
                 pathMetaToDDBPathMeta(pathsToCreate),
-                ancestorState));
+                ancestorState,
+                extractTimeProvider(ttlTimeProvider)));
       }
     }
     // sort all the new items topmost first.
@@ -1162,7 +1183,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void put(
       final Collection<? extends PathMetadata> metas,
       @Nullable final BulkOperationState operationState) throws IOException {
-    innerPut(pathMetaToDDBPathMeta(metas), operationState);
+    innerPut(pathMetaToDDBPathMeta(metas), operationState, timeProvider);
   }
 
   /**
@@ -1176,13 +1197,15 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * create entries in the table without parents.
    * @param metas metadata entries to write.
    * @param operationState (nullable) operational state for a bulk update
+   * @param ttlTimeProvider
    * @throws IOException failure.
    */
   @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
   @Retries.RetryTranslated
   private void innerPut(
       final Collection<DDBPathMetadata> metas,
-      @Nullable final BulkOperationState operationState) throws IOException {
+      @Nullable final BulkOperationState operationState,
+      final ITtlTimeProvider ttlTimeProvider) throws IOException {
     if (metas.isEmpty()) {
       // Happens when someone calls put() with an empty list.
       LOG.debug("Ignoring empty list of entries to put");
@@ -1196,7 +1219,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     Item[] items;
     synchronized (ancestorState) {
       items = pathMetadataToItem(
-          completeAncestry(metas, ancestorState));
+          completeAncestry(metas, ancestorState, ttlTimeProvider));
     }
     LOG.debug("Saving batch of {} items to table {}, region {}", items.length,
         tableName, region);
@@ -1534,7 +1557,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     try {
       LOG.debug("innerPut on metas: {}", metas);
       if (!metas.isEmpty()) {
-        innerPut(metas, state);
+        innerPut(metas, state, timeProvider);
       }
     } catch (IOException e) {
       String msg = String.format("IOException while setting false "
@@ -2208,6 +2231,17 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final BulkOperationState.OperationType operation,
       final Path dest) {
     return new AncestorState(operation, dest);
+  }
+
+  /**
+   * Extract a time provider from the argument or fall back to the
+   * one in the constructor.
+   * @param ttlTimeProvider nullable time source passed in as an argument.
+   * @return a non-null time source.
+   */
+  private ITtlTimeProvider extractTimeProvider(
+      @Nullable ITtlTimeProvider ttlTimeProvider) {
+    return ttlTimeProvider != null ? ttlTimeProvider : timeProvider;
   }
 
   /**

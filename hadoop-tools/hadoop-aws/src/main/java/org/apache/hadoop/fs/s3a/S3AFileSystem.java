@@ -391,6 +391,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       LOG.debug("Using S3ABlockOutputStream with buffer = {}; block={};" +
               " queue limit={}",
           blockOutputBuffer, partSize, blockOutputActiveBlocks);
+      long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
+          DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
+      ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
 
       setMetadataStore(S3Guard.getMetadataStore(this));
       allowAuthoritative = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
@@ -400,11 +403,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             getMetadataStore(), allowAuthoritative);
       }
       initMultipartUploads(conf);
-      if (hasMetadataStore()) {
-        long authDirTtl = conf.getTimeDuration(METADATASTORE_METADATA_TTL,
-            DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
-        ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
-      }
     } catch (AmazonClientException e) {
       throw translateException("initializing ", new Path(name), e);
     }
@@ -3346,8 +3344,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
-        S3Guard.addAncestors(metadataStore, p, username, ttlTimeProvider,
-            operationState);
+        S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, operationState);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username, eTag, versionId);
