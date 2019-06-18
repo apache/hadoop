@@ -97,26 +97,20 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
         traceId);
 
     switch (request.getCmdType()) {
-      case AllocateScmBlock: {
-        AllocateScmBlockResponseProto res = allocateScmBlock(traceId,
-            request.getAllocateScmBlockRequest());
-        response.setAllocateScmBlockResponse(res);
-        break;
-      }
-      case DeleteScmKeyBlocks: {
-        DeleteScmKeyBlocksResponseProto res = deleteScmKeyBlocks(traceId,
-            request.getDeleteScmKeyBlocksRequest());
-        response.setDeleteScmKeyBlocksResponse(res);
-        break;
-      }
-      case GetScmInfo: {
-        HddsProtos.GetScmInfoResponseProto res = getScmInfo(traceId,
-            request.getGetScmInfoRequest());
-        response.setGetScmInfoResponse(res);
-        break;
-      }
-      default:
-        throw new ServiceException("Unknown Operation");
+    case AllocateScmBlock:
+      response.setAllocateScmBlockResponse(
+          allocateScmBlock(traceId, request.getAllocateScmBlockRequest()));
+      break;
+    case DeleteScmKeyBlocks:
+      response.setDeleteScmKeyBlocksResponse(
+          deleteScmKeyBlocks(traceId, request.getDeleteScmKeyBlocksRequest()));
+      break;
+    case GetScmInfo:
+      response.setGetScmInfoResponse(
+          getScmInfo(traceId, request.getGetScmInfoRequest()));
+      break;
+    default:
+      throw new ServiceException("Unknown Operation");
     }
     response.setSuccess(true)
         .setStatus(Status.OK);
