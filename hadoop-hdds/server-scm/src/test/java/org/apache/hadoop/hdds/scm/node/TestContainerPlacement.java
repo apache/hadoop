@@ -36,6 +36,7 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.scm.events.SCMEvents;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineManager;
+import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.test.PathUtils;
@@ -48,7 +49,6 @@ import org.mockito.Mockito;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys
@@ -94,8 +94,12 @@ public class TestContainerPlacement {
         Mockito.mock(StaleNodeHandler.class));
     eventQueue.addHandler(SCMEvents.DEAD_NODE,
         Mockito.mock(DeadNodeHandler.class));
+
+    SCMStorageConfig storageConfig = Mockito.mock(SCMStorageConfig.class);
+    Mockito.when(storageConfig.getClusterID()).thenReturn("cluster1");
+
     SCMNodeManager nodeManager = new SCMNodeManager(config,
-        UUID.randomUUID().toString(), null, eventQueue);
+        storageConfig, eventQueue, null);
     return nodeManager;
   }
 
