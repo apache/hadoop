@@ -53,6 +53,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -342,6 +344,96 @@ public class TestSCMNodeManager {
           1, deadNodeList.size());
       assertEquals("Dead node is not the expected ID", staleNode
           .getUuid(), deadNodeList.get(0).getUuid());
+    }
+  }
+
+  /**
+   * Simulate a JVM Pause by pausing the health check process
+   * Ensure that none of the nodes with heartbeats become Dead or Stale.
+   * @throws IOException
+   * @throws InterruptedException
+   * @throws AuthenticationException
+   */
+  @Test
+  public void testScmHandleJvmPause()
+      throws IOException, InterruptedException, AuthenticationException {
+    final int healthCheckInterval = 200; // milliseconds
+    final int heartbeatInterval = 1; // seconds
+    final int staleNodeInterval = 3; // seconds
+    final int deadNodeInterval = 6; // seconds
+    ScheduledFuture schedFuture;
+
+    OzoneConfiguration conf = getConf();
+    conf.setTimeDuration(OZONE_SCM_HEARTBEAT_PROCESS_INTERVAL,
+        healthCheckInterval, MILLISECONDS);
+    conf.setTimeDuration(HDDS_HEARTBEAT_INTERVAL,
+        heartbeatInterval, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_STALENODE_INTERVAL,
+        staleNodeInterval, SECONDS);
+    conf.setTimeDuration(OZONE_SCM_DEADNODE_INTERVAL,
+        deadNodeInterval, SECONDS);
+
+    try (SCMNodeManager nodeManager = createNodeManager(conf)) {
+      DatanodeDetails node1 =
+          TestUtils.createRandomDatanodeAndRegister(nodeManager);
+      DatanodeDetails node2 =
+          TestUtils.createRandomDatanodeAndRegister(nodeManager);
+
+      nodeManager.processHeartbeat(node1);
+      nodeManager.processHeartbeat(node2);
+
+      // Sleep so that heartbeat processing thread gets to run.
+      Thread.sleep(1000);
+
+      //Assert all nodes are healthy.
+      assertEquals(2, nodeManager.getAllNodes().size());
+      assertEquals(2, nodeManager.getNodeCount(HEALTHY));
+
+      /**
+       * Simulate a JVM Pause and subsequent handling in following steps:
+       * Step 1 : stop heartbeat check process for stale node interval
+       * Step 2 : resume heartbeat check
+       * Step 3 : wait for 1 iteration of heartbeat check thread
+       * Step 4 : retrieve the state of all nodes - assert all are HEALTHY
+       * Step 5 : heartbeat for node1
+       * [TODO : what if there is scheduling delay of test thread in Step 5?]
+       * Step 6 : wait for some time to allow iterations of check process
+       * Step 7 : retrieve the state of all nodes -  assert node2 is STALE
+       * and node1 is HEALTHY
+       */
+
+      // Step 1 : stop health check process (simulate JVM pause)
+      nodeManager.pauseHealthCheck();
+      Thread.sleep(MILLISECONDS.convert(staleNodeInterval, SECONDS));
+
+      // Step 2 : resume health check
+      assertTrue("Unexpected, already skipped heartbeat checks",
+          (nodeManager.getSkippedHealthChecks() == 0));
+      schedFuture = nodeManager.unpauseHealthCheck();
+
+      // Step 3 : wait for 1 iteration of health check
+      try {
+        schedFuture.get();
+        assertTrue("We did not skip any heartbeat checks",
+            nodeManager.getSkippedHealthChecks() > 0);
+      } catch (ExecutionException e) {
+        assertEquals("Unexpected exception waiting for Scheduled Health Check",
+            0, 1);
+      }
+
+      // Step 4 : all nodes should still be HEALTHY
+      assertEquals(2, nodeManager.getAllNodes().size());
+      assertEquals(2, nodeManager.getNodeCount(HEALTHY));
+
+      // Step 5 : heartbeat for node1
+      nodeManager.processHeartbeat(node1);
+
+      // Step 6 : wait for health check process to run
+      Thread.sleep(1000);
+
+      // Step 7 : node2 should transition to STALE
+      assertEquals(1, nodeManager.getNodeCount(HEALTHY));
+      assertEquals(1, nodeManager.getNodeCount(STALE));
     }
   }
 
