@@ -296,6 +296,7 @@ public class TestINodeFile {
     preferredBlockSize = 128*1024*1024;
     INodeFile inf = createINodeFile(replication, preferredBlockSize);
     assertEquals(inf.getBlockType(), CONTIGUOUS);
+    ErasureCodingPolicyManager.getInstance().init(new Configuration());
     INodeFile striped = createStripedINodeFile(preferredBlockSize);
     assertEquals(striped.getBlockType(), STRIPED);
   }
