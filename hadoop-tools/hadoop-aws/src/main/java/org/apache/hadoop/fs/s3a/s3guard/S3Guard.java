@@ -481,7 +481,7 @@ public final class S3Guard {
    * take care of those inferred directories of this path explicitly.
    *
    * As {@link #addMoveFile} and {@link #addMoveDir}, this method adds resulting
-   * metadata to the supplied lists. It does not store in MetadataStore.
+   * metadata to the supplied lists. It does not update the MetadataStore.
    *
    * @param ms MetadataStore, no-op if it is NullMetadataStore
    * @param srcPaths stores the source path here
@@ -541,6 +541,13 @@ public final class S3Guard {
     metadataStore.addAncestors(qualifiedPath, timeProvider, operationState);
   }
 
+  /**
+   * Add the fact that a file was moved from a source path to a destination.
+   * @param srcPaths collection of source paths to update
+   * @param dstMetas collection of destination meta data entries to update.
+   * @param srcPath path of the source file.
+   * @param dstStatus status of the source file after it was copied.
+   */
   private static void addMoveStatus(Collection<Path> srcPaths,
       Collection<PathMetadata> dstMetas,
       Path srcPath,

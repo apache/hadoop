@@ -48,7 +48,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.fs.s3a.S3AUtils;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
@@ -75,6 +74,7 @@ import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.extractUnde
 import static org.apache.hadoop.fs.s3a.impl.MultiObjectDeleteSupport.removeUndeletedPaths;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.assertFileCount;
 import static org.apache.hadoop.fs.s3a.test.ExtraAssertions.extractCause;
+import static org.apache.hadoop.io.IOUtils.cleanupWithLogger;
 import static org.apache.hadoop.test.LambdaTestUtils.eval;
 
 /**
@@ -282,7 +282,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
 
   @Override
   public void teardown() throws Exception {
-    S3AUtils.closeAll(LOG, roleFS);
+    cleanupWithLogger(LOG, roleFS);
     super.teardown();
   }
 
@@ -706,7 +706,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private AccessDeniedException expectDeleteForbidden(Path path)
       throws Exception {
-    try(DurationInfo ignored =
+    try (DurationInfo ignored =
             new DurationInfo(LOG, true, "delete %s", path)) {
       return forbidden("Expected an error deleting "  + path,
           "",
@@ -726,7 +726,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private AccessDeniedException expectRenameForbidden(Path src, Path dest)
       throws Exception {
-    try(DurationInfo ignored =
+    try (DurationInfo ignored =
             new DurationInfo(LOG, true,
                 "rename(%s, %s)", src, dest)) {
       return forbidden(
@@ -762,7 +762,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
     if (fs.hasMetadataStore()) {
       MetadataStore store = fs.getMetadataStore();
-      try(DurationInfo ignored =
+      try (DurationInfo ignored =
               new DurationInfo(LOG, true, "prune %s", path)) {
         store.prune(
             MetadataStore.PruneMode.ALL_BY_MODTIME,
@@ -825,7 +825,7 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     List<Path> paths = new ArrayList<>(fileCount);
     List<Path> dirs = new ArrayList<>(fileCount);
     buildPaths(paths, dirs, destDir, depth, fileCount, dirCount);
-    try(DurationInfo ignore =
+    try (DurationInfo ignore =
             new DurationInfo(LOG, "Creating %d files", fileCount)) {
       for (Path path : paths) {
         futures.add(put(fs, path, path.getName()));

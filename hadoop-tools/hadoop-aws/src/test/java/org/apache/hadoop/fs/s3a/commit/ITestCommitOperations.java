@@ -572,6 +572,9 @@ public class ITestCommitOperations extends AbstractCommitITest {
    * verify that the write count is as expected.
    * This is done without actually looking into the store -just monitoring
    * changes in the filesystem's instrumentation counters.
+   * As changes to the store may be made during get/list calls,
+   * when the counters must be reset before each commit, this must be
+   * *after* all probes for the outcome of the previous operation.
    */
   @Test
   public void testBulkCommitFiles() throws Throwable {
@@ -603,19 +606,22 @@ public class ITestCommitOperations extends AbstractCommitITest {
     resetFailures();
     assertPathDoesNotExist("destination dir", destDir);
     assertPathDoesNotExist("subdirectory", subdir);
-    // how many records have been written
+    LOG.info("Initiating commit operations");
     try (CommitOperations.CommitContext commitContext
              = actions.initiateCommitOperation(destDir)) {
+      // how many records have been written
       MetricDiff writes = new MetricDiff(fs,
           Statistic.S3GUARD_METADATASTORE_RECORD_WRITES);
+      LOG.info("Commit #1");
       commitContext.commitOrFail(commits.get(0));
       final String firstCommitContextString = commitContext.toString();
       LOG.info("First Commit state {}", firstCommitContextString);
       long writesOnFirstCommit = writes.diff();
-      writes.reset();
       assertPathExists("destFile1", destFile1);
       assertPathExists("destination dir", destDir);
 
+      LOG.info("Commit #2");
+      writes.reset();
       commitContext.commitOrFail(commits.get(1));
       assertPathExists("subdirectory", subdir);
       assertPathExists("destFile2", destFile2);
@@ -630,12 +636,14 @@ public class ITestCommitOperations extends AbstractCommitITest {
         // one for the parent.
         // we include the string values of the contexts because that includes
         // the internals of the bulk operation state.
-        writes.assertDiffEquals("Number of records written after commit #2;"
+        writes.assertDiffEquals("Number of records written after commit #2"
                 + "; first commit had " + writesOnFirstCommit
                 + "; first commit ancestors " + firstCommitContextString
                 + "; second commit ancestors: " + secondCommitContextString,
             2);
       }
+
+      LOG.info("Commit #3");
       writes.reset();
       commitContext.commitOrFail(commits.get(2));
       assertPathExists("destFile3", destFile3);

@@ -138,8 +138,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
           destAttributes.getVersionId());
       LOG.debug("New metastore entry : {}", entriesToAdd.get(0));
       if (addAncestors) {
-        // add all new ancestors.
-        // TODO: include in bulk operation
+        // add all new ancestors to the lists
         addMoveAncestors(
             store,
             pathsToDelete,

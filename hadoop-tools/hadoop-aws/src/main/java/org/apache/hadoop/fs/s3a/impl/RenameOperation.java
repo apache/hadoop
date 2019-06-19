@@ -568,7 +568,7 @@ public class RenameOperation extends AbstractStoreOperation {
      * Delete an object, also updating the metastore.
      * This call does <i>not</i> create any mock parent entries.
      * Retry policy: retry untranslated; delete considered idempotent.
-     * @param f path path to delete
+     * @param path path to delete
      * @param key key of entry
      * @param isFile is the path a file (used for instrumentation only)
      * @throws AmazonClientException problems working with S3
@@ -579,7 +579,7 @@ public class RenameOperation extends AbstractStoreOperation {
         throws IOException;
 
     /**
-     * Recursive List of files and empty directories.
+     * Recursive list of files and empty directories.
      * @param path path to list from
      * @return an iterator.
      * @throws IOException failure

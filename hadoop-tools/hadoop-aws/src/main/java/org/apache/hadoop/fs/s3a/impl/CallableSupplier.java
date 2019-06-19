@@ -113,7 +113,7 @@ public final class CallableSupplier<T> implements Supplier {
   public static <T> void waitForCompletion(
       final CompletableFuture<T> future)
       throws IOException {
-    try(DurationInfo ignore =
+    try (DurationInfo ignore =
             new DurationInfo(LOG, false, "Waiting for task completion")) {
       future.join();
     } catch (CancellationException e) {

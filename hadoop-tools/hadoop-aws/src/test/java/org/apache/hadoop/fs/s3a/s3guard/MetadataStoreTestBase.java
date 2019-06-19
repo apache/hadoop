@@ -1112,14 +1112,14 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertDirectorySize(pathStr, 0);
   }
 
-  protected void assertEmptyDirs(String ...dirs) throws IOException {
+  protected void assertEmptyDirs(String...dirs) throws IOException {
     for (String pathStr : dirs) {
       assertEmptyDirectory(pathStr);
     }
   }
 
-  protected S3AFileStatus basicFileStatus(Path path, int size, boolean isDir) throws
-      IOException {
+  protected S3AFileStatus basicFileStatus(Path path, int size, boolean isDir)
+      throws IOException {
     return basicFileStatus(path, size, isDir, modTime);
   }
 

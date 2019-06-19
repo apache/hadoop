@@ -102,6 +102,7 @@ import org.apache.hadoop.fs.s3a.impl.RenameOperation;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.select.InternalSelectConstants;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.LambdaUtils;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
@@ -2646,8 +2647,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           final long s3ModTime = s3AFileStatus.getModificationTime();
 
           if(s3ModTime > msModTime) {
-            LOG.debug("S3Guard metadata for {} is outdated, updating it",
-                path);
+            LOG.debug("S3Guard metadata for {} is outdated;"
+                + " s3modtime={}; msModTime={} updating metastore",
+                path, s3ModTime, msModTime);
             return S3Guard.putAndReturn(metadataStore, s3AFileStatus,
                 instrumentation, ttlTimeProvider);
           }
@@ -3340,18 +3342,31 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     Path p = keyToQualifiedPath(key);
     Preconditions.checkArgument(length >= 0, "content length is negative");
     deleteUnnecessaryFakeDirectories(p.getParent());
+    // this is only set if there is a metastore to update and the
+    // operationState parameter passed in was null.
+    BulkOperationState stateToClose = null;
 
     // See note about failure semantics in S3Guard documentation
     try {
       if (hasMetadataStore()) {
-        S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, operationState);
+        BulkOperationState activeState = operationState;
+        if (activeState == null) {
+          // create an operation state if there was none, so that the
+          // information gleaned from addAncestors is preserved into the
+          // subsequent put.
+          stateToClose = S3Guard.initiateBulkWrite(metadataStore,
+              BulkOperationState.OperationType.Put,
+              keyToPath(key));
+          activeState = stateToClose;
+        }
+        S3Guard.addAncestors(metadataStore, p, ttlTimeProvider, activeState);
         S3AFileStatus status = createUploadFileStatus(p,
             S3AUtils.objectRepresentsDirectory(key, length), length,
             getDefaultBlockSize(p), username, eTag, versionId);
         S3Guard.putAndReturn(metadataStore, status,
             instrumentation,
             ttlTimeProvider,
-            operationState);
+            activeState);
       }
     } catch (IOException e) {
       if (failOnMetadataWriteError) {
@@ -3361,6 +3376,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             p, e);
       }
       instrumentation.errorIgnored();
+    } finally {
+      // if a new operation state was created, close it.
+      IOUtils.cleanupWithLogger(LOG, stateToClose);
     }
   }
 

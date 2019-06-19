@@ -886,7 +886,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void addAncestors(
       final Path qualifiedPath,
-      final ITtlTimeProvider timeProvider,
+      final ITtlTimeProvider ttlTimeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
 
     Collection<DDBPathMetadata> newDirs = new ArrayList<>();
@@ -946,8 +946,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // are not in the store or BulkOperationState.
     if (!newDirs.isEmpty()) {
       // patch up the time.
-      patchLastUpdated(newDirs, timeProvider);
-      innerPut(newDirs, operationState, timeProvider);
+      patchLastUpdated(newDirs, ttlTimeProvider);
+      innerPut(newDirs, operationState, ttlTimeProvider);
     }
   }
 
@@ -1281,6 +1281,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return metasToPut;
   }
 
+  /**
+   * Does an item represent an object which exists?
+   * @param item item retrieved in a query.
+   * @return true iff the item isn't null and, if there is an is_deleted
+   * column, that its value is false.
+   */
   private boolean itemExists(Item item) {
     if (item == null) {
       return false;
@@ -1292,7 +1298,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     return true;
   }
 
-  /** Create a directory FileStatus using current system time as mod time. */
+  /** Create a directory FileStatus using 0 for the lastUpdated time. */
   static S3AFileStatus makeDirStatus(Path f, String owner) {
     return new S3AFileStatus(Tristate.UNKNOWN, f, owner);
   }

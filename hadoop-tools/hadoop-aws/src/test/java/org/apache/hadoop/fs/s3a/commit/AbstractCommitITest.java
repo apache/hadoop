@@ -205,6 +205,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   @Override
   public void teardown() throws Exception {
+    LOG.info("AbstractCommitITest::teardown");
     waitForConsistency();
     // make sure there are no failures any more
     resetFailures();
