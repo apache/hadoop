@@ -579,10 +579,23 @@ public final class S3Guard {
     ms.put(dirMeta);
   }
 
+  /**
+   * Put an entry, using the time provider to set its timestamp.
+   * If the metadata already has a last updated value, then the greater
+   * of that and the timestamp is used.
+   * Why do that? Ensures that even if the local clock is behind the S3 store,
+   * future checks for the metadata being out of date w.r.t the result of a
+   * HEAD don't keep assuming that this is true.
+   * @param ms metastore
+   * @param fileMeta entry to write
+   * @param timeProvider nullable time provider
+   * @throws IOException failure.
+   */
   public static void putWithTtl(MetadataStore ms, PathMetadata fileMeta,
       @Nullable ITtlTimeProvider timeProvider) throws IOException {
     if (timeProvider != null) {
-      fileMeta.setLastUpdated(timeProvider.getNow());
+      long now = timeProvider.getNow();
+      fileMeta.setLastUpdated(Math.max(now, fileMeta.getLastUpdated()));
     } else {
       LOG.debug("timeProvider is null, put {} without setting last_updated",
           fileMeta);
@@ -624,11 +637,13 @@ public final class S3Guard {
         return pathMetadata;
       }
 
-      if (!pathMetadata.isExpired(ttl, timeProvider.getNow())) {
+      long now = timeProvider.getNow();
+      if (!pathMetadata.isExpired(ttl, now)) {
         return pathMetadata;
       } else {
-        LOG.debug("PathMetadata TTl for {} is expired in metadata store.",
-            path);
+        LOG.debug("PathMetadata TTL for {} is expired in metadata store."
+            + "; pm updated={}; now={}, TTL={}",
+            path, pathMetadata.getLastUpdated(), now, ttl);
         return null;
       }
     }

@@ -61,6 +61,14 @@ public class PathMetadata extends ExpirableMetadata {
     this(fileStatus, isEmptyDir, false);
   }
 
+  /**
+   * Construct from a file status entry.
+   * The last updated time is take from the modification time of the
+   * status entry.
+   * @param fileStatus the status
+   * @param isEmptyDir the empty directory state
+   * @param isDeleted does this represent a deleed object.
+   */
   public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir, boolean
       isDeleted) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
@@ -71,6 +79,8 @@ public class PathMetadata extends ExpirableMetadata {
     this.fileStatus = fileStatus;
     this.isEmptyDirectory = isEmptyDir;
     this.isDeleted = isDeleted;
+    // modtime is derived from file status
+    setLastUpdated(fileStatus.getModificationTime());
   }
 
   /**
