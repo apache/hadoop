@@ -138,11 +138,13 @@ public class Journal implements Closeable {
   
   private final FileJournalManager fjm;
 
-  private final JournaledEditsCache cache;
+  private JournaledEditsCache cache;
 
   private final JournalMetrics metrics;
 
   private long lastJournalTimestamp = 0;
+
+  private Configuration conf = null;
 
   // This variable tracks, have we tried to start journalsyncer
   // with nameServiceId. This will help not to start the journalsyncer
@@ -157,6 +159,7 @@ public class Journal implements Closeable {
   Journal(Configuration conf, File logDir, String journalId,
       StartupOption startOpt, StorageErrorReporter errorReporter)
       throws IOException {
+    this.conf = conf;
     storage = new JNStorage(conf, logDir, startOpt, errorReporter);
     this.journalId = journalId;
 
@@ -164,18 +167,22 @@ public class Journal implements Closeable {
     
     this.fjm = storage.getJournalManager();
 
-    if (conf.getBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
-        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT)) {
-      this.cache = new JournaledEditsCache(conf);
-    } else {
-      this.cache = null;
-    }
-    
+    this.cache = createCache();
+
     this.metrics = JournalMetrics.create(this);
     
     EditLogFile latest = scanStorageForLatestEdits();
     if (latest != null) {
       updateHighestWrittenTxId(latest.getLastTxId());
+    }
+  }
+
+  private JournaledEditsCache createCache() {
+    if (conf.getBoolean(DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_KEY,
+        DFSConfigKeys.DFS_HA_TAILEDITS_INPROGRESS_DEFAULT)) {
+      return new JournaledEditsCache(conf);
+    } else {
+      return null;
     }
   }
 
@@ -248,6 +255,7 @@ public class Journal implements Closeable {
     LOG.info("Formatting journal id : " + journalId + " with namespace info: " +
         nsInfo + " and force: " + force);
     storage.format(nsInfo, force);
+    this.cache = createCache();
     refreshCachedData();
   }
 
