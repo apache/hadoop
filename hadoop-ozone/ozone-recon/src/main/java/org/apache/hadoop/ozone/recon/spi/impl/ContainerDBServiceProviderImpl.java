@@ -221,15 +221,14 @@ public class ContainerDBServiceProviderImpl
     }
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
+      ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
+      Long containerID = containerKeyPrefix.getContainerId();
+      Integer numberOfKeys = keyValue.getValue();
 
       // skip the start key if start key is present
-      if (keyValue != null && skipStartKey &&
-          keyValue.getKey().getContainerId() == start) {
+      if (skipStartKey && containerID == start) {
         continue;
       }
-
-      Long containerID = keyValue.getKey().getContainerId();
-      Integer numberOfKeys = keyValue.getValue();
 
       // break the loop if limit has been reached
       // and one more new entity needs to be added to the containers map
