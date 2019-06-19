@@ -406,8 +406,13 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/x
             <exclude>**/*.js</exclude>
             <exclude>hadoop-hdds/**/</exclude>
             <exclude>hadoop-ozone/**/</exclude>
+<<<<<<< ours
             <exclude>hadoop-submarine/target/**</exclude>
             <exclude>hadoop-submarine/**/target/**</exclude>
+=======
+            <exclude>licenses/**</exclude>
+            <exclude>licenses-binary/**</exclude>
+>>>>>>> theirs
          </excludes>
        </configuration>
       </plugin>
