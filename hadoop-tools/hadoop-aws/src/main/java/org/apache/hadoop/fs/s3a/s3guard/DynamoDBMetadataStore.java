@@ -498,7 +498,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         TimeUnit.SECONDS,
         "s3a-ddb-" + tableName);
     initDataAccessRetries(conf);
-
+    timeProvider = new S3Guard.TtlTimeProvider(conf);
     initTable();
   }
 
