@@ -220,10 +220,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       return getPipeline(writer,
           results.toArray(new DatanodeStorageInfo[results.size()]));
     } catch (NotEnoughReplicasException nr) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to choose with favored nodes (=" + favoredNodes
-            + "), disregard favored nodes hint and retry.", nr);
-      }
+      LOG.debug("Failed to choose with favored nodes (={}), disregard favored"
+          + " nodes hint and retry.", favoredNodes, nr);
       // Fall back to regular block placement disregarding favored nodes hint
       return chooseTarget(src, numOfReplicas, writer, 
           new ArrayList<DatanodeStorageInfo>(numOfReplicas), false, 
@@ -428,9 +426,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     if (storageTypes == null) {
       storageTypes = getRequiredStorageTypes(requiredStorageTypes);
     }
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("storageTypes=" + storageTypes);
-    }
+    LOG.trace("storageTypes={}", storageTypes);
 
     try {
       if ((numOfReplicas = requiredStorageTypes.size()) == 0) {
@@ -449,11 +445,8 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           + ", storagePolicy=" + storagePolicy
           + ", newBlock=" + newBlock + ")";
 
-      if (LOG.isTraceEnabled()) {
-        LOG.trace(message, e);
-      } else {
-        LOG.warn(message + " " + e.getMessage());
-      }
+      LOG.trace(message, e);
+      LOG.warn(message + " " + e.getMessage());
 
       if (avoidStaleNodes) {
         // Retry chooseTarget again, this time not avoiding stale nodes.
@@ -666,10 +659,9 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
         }
       }
 
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to choose from local rack (location = " + localRack
-            + "); the second replica is not found, retry choosing randomly", e);
-      }
+      LOG.debug("Failed to choose from local rack (location = {}); the second"
+          + " replica is not found, retry choosing randomly", localRack, e);
+
       //the second replica is not found, randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes);
@@ -687,12 +679,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     try {
       return chooseRandom(nextRack, excludedNodes, blocksize, maxNodesPerRack,
           results, avoidStaleNodes, storageTypes);
-    } catch(NotEnoughReplicasException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Failed to choose from the next rack (location = " + nextRack
-            + "), retry choosing randomly", e);
-      }
-      //otherwise randomly choose one from the network
+    } catch (NotEnoughReplicasException e) {
+      LOG.debug("Failed to choose from the next rack (location = {}), "
+          + "retry choosing randomly", nextRack, e);
+        // otherwise randomly choose one from the network
       return chooseRandom(NodeBase.ROOT, excludedNodes, blocksize,
           maxNodesPerRack, results, avoidStaleNodes, storageTypes);
     }
@@ -790,7 +780,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
       Preconditions.checkState(excludedNodes.add(chosenNode), "chosenNode "
           + chosenNode + " is already in excludedNodes " + excludedNodes);
-      if (LOG.isDebugEnabled() && builder != null) {
+      if (LOG.isDebugEnabled()) {
         builder.append("\nNode ").append(NodeBase.getPath(chosenNode))
             .append(" [");
       }
@@ -826,7 +816,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
           }
         }
 
-        if (LOG.isDebugEnabled() && builder != null) {
+        if (LOG.isDebugEnabled()) {
           builder.append("\n]");
         }
 
@@ -836,7 +826,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
     }
     if (numOfReplicas>0) {
       String detail = enableDebugLogging;
-      if (LOG.isDebugEnabled() && builder != null) {
+      if (LOG.isDebugEnabled()) {
         detail = builder.toString();
         if (badTarget) {
           builder.setLength(0);
@@ -852,7 +842,7 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       final HashMap<NodeNotChosenReason, Integer> reasonMap =
           CHOOSE_RANDOM_REASONS.get();
       if (!reasonMap.isEmpty()) {
-        LOG.info("Not enough replicas was chosen. Reason:{}", reasonMap);
+        LOG.info("Not enough replicas was chosen. Reason: {}", reasonMap);
       }
       throw new NotEnoughReplicasException(detail);
     }
@@ -1166,11 +1156,10 @@ public class BlockPlacementPolicyDefault extends BlockPlacementPolicy {
       }
       firstOne = false;
       if (cur == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("No excess replica can be found. excessTypes: {}." +
-              " moreThanOne: {}. exactlyOne: {}.", excessTypes,
-              moreThanOne, exactlyOne);
-        }
+        LOG.debug(
+            "No excess replica can be found. excessTypes: {}. "
+                + "moreThanOne: {}. exactlyOne: {}.",
+            excessTypes, moreThanOne, exactlyOne);
         break;
       }
 
