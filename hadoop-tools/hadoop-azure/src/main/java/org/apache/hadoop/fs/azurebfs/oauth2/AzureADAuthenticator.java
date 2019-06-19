@@ -164,6 +164,8 @@ public final class AzureADAuthenticator {
    * requestId and error message, it is thrown when AzureADAuthenticator
    * failed to get the Azure Active Directory token.
    */
+  @InterfaceAudience.LimitedPrivate("authorization-subsystems")
+  @InterfaceStability.Unstable
   public static class HttpException extends IOException {
     private int httpErrorCode;
     private String requestId;
@@ -184,7 +186,7 @@ public final class AzureADAuthenticator {
       return this.requestId;
     }
 
-    HttpException(int httpErrorCode, String requestId, String message) {
+    protected HttpException(int httpErrorCode, String requestId, String message) {
       super(message);
       this.httpErrorCode = httpErrorCode;
       this.requestId = requestId;
