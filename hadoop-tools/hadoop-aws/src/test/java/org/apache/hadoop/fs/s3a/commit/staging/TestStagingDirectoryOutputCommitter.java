@@ -18,11 +18,18 @@
 
 package org.apache.hadoop.fs.s3a.commit.staging;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.PathExistsException;
+import org.apache.hadoop.fs.s3a.commit.AbstractITCommitProtocol;
 import org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants;
 
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
@@ -33,6 +40,9 @@ import static org.mockito.Mockito.*;
 /** Mocking test of directory committer. */
 public class TestStagingDirectoryOutputCommitter
     extends StagingTestBase.JobCommitterTest<DirectoryStagingCommitter> {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(TestStagingDirectoryOutputCommitter.class);
 
   @Override
   DirectoryStagingCommitter newJobCommitter() throws Exception {
@@ -169,4 +179,17 @@ public class TestStagingDirectoryOutputCommitter
         });
   }
 
+  @Test
+  public void testValidateDefaultConflictMode() throws Throwable {
+    Configuration baseConf = new Configuration(true);
+    String[] sources = baseConf.getPropertySources(
+        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+    String sourceStr = Arrays.stream(sources)
+        .collect(Collectors.joining(","));
+    LOG.info("source of conflict mode {}", sourceStr);
+    String baseConfVal = baseConf
+        .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+    assertEquals("conflict mode in core config from " + sourceStr,
+        CONFLICT_MODE_APPEND, baseConfVal);
+  }
 }
