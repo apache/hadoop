@@ -1374,7 +1374,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!Block.isBlockFilename(file)) {
         if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, file.getName())) {
           long blockId = Block.getBlockId(file.getName());
-          verifyFileLocation(file.getParentFile(), bpFinalizedDir,
+          verifyFileLocation(file, bpFinalizedDir,
               blockId);
           report.add(new ScanInfo(blockId, null, file, this));
         }
