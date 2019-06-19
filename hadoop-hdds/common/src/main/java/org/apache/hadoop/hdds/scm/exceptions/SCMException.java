@@ -95,7 +95,7 @@ public class SCMException extends IOException {
    * Error codes to make it easy to decode these exceptions.
    */
   public enum ResultCodes {
-    SUCCEESS,
+    OK,
     FAILED_TO_LOAD_NODEPOOL,
     FAILED_TO_FIND_NODE_IN_POOL,
     FAILED_TO_FIND_HEALTHY_NODES,
@@ -120,6 +120,8 @@ public class SCMException extends IOException {
     NO_SUCH_DATANODE,
     NO_REPLICA_FOUND,
     FAILED_TO_FIND_ACTIVE_PIPELINE,
-    FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY
+    FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY,
+    FAILED_TO_ALLOCATE_ENOUGH_BLOCKS,
+    INTERNAL_ERROR
   }
 }

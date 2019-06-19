@@ -16,4 +16,6 @@
  * limitations under the License.
  */
 package org.apache.hadoop.hdds.scm.exceptions;
-// Exceptions thrown by SCM.
+/**
+ Exception objects for the SCM Server.
+ */
