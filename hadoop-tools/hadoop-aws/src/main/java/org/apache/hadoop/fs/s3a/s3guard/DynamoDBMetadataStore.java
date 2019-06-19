@@ -641,14 +641,13 @@ public class DynamoDBMetadataStore implements MetadataStore,
     final GetItemSpec spec = new GetItemSpec()
         .withPrimaryKey(key)
         .withConsistentRead(true); // strictly consistent read
-    Item item = readOp.retry("get",
+    return readOp.retry("get",
         path.toString(),
         true,
         () -> {
           recordsRead(1);
           return table.getItem(spec);
         });
-    return item;
   }
 
   @Override
@@ -815,22 +814,26 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // be added to the ancestor list first.
     List<DDBPathMetadata> sortedPaths = new ArrayList<>(pathsToCreate);
     sortedPaths.sort(PathOrderComparators.TOPMOST_PM_FIRST);
+    // iterate through the paths.
     for (DDBPathMetadata meta : sortedPaths) {
       Preconditions.checkArgument(meta != null);
       Path path = meta.getFileStatus().getPath();
       LOG.debug("Adding entry {}", path);
       if (path.isRoot()) {
+        // this is a root entry: do not add it.
         break;
       }
-      // add the new entry
+      // create the new entry
       DDBPathMetadata entry = new DDBPathMetadata(meta);
+      // add it to the ancestor state, failing if it is already there and
+      // of a different type.
       DDBPathMetadata oldEntry = ancestorState.put(path, entry);
       if (oldEntry != null) {
         if (!oldEntry.getFileStatus().isDirectory()
             || !entry.getFileStatus().isDirectory()) {
           // check for and warn if the existing bulk operation overwrote it.
           // this should never occur outside tests explicitly crating it
-          LOG.warn("Overwriting a S3Guard entry created in the operation: {}",
+          LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
           // restore the old state
@@ -838,23 +841,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // then raise an exception
           throw new PathIOException(path.toString(), E_INCONSISTENT_UPDATE);
         } else {
-          // directory is already present, so skip adding it and any parents.
-          continue;
+          // a directory is already present. Log and continue.
+          LOG.debug("Directory at {} being updated with value {}",
+              path, entry);
         }
       }
       ancestorsToAdd.add(entry);
       Path parent = path.getParent();
       while (!parent.isRoot()) {
-        if (ancestorState.findEntry(parent, true)) {
-          break;
+        if (!ancestorState.findEntry(parent, true)) {
+          // don't add this entry, but carry on with the parents
+          LOG.debug("auto-create ancestor path {} for child path {}",
+              parent, path);
+          final S3AFileStatus status = makeDirStatus(parent, username);
+          DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
+              false, false, ttlTimeProvider.getNow());
+          ancestorState.put(parent, md);
+          ancestorsToAdd.add(md);
         }
-        LOG.debug("auto-create ancestor path {} for child path {}",
-            parent, path);
-        final S3AFileStatus status = makeDirStatus(parent, username);
-        DDBPathMetadata md = new DDBPathMetadata(status, Tristate.FALSE,
-            false, false, ttlTimeProvider.getNow());
-        ancestorState.put(parent, md);
-        ancestorsToAdd.add(md);
         parent = parent.getParent();
       }
     }
@@ -1262,7 +1266,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
           break;
         }
       }
-
       final Item item = getConsistentItem(path);
       if (!itemExists(item)) {
         final S3AFileStatus status = makeDirStatus(path, username);
