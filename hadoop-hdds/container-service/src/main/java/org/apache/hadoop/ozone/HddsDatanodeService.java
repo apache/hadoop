@@ -170,8 +170,8 @@ public class HddsDatanodeService extends GenericCli implements ServicePlugin {
   }
 
   public void start() {
-    DefaultMetricsSystem.initialize("HddsDatanode");
     OzoneConfiguration.activate();
+    HddsUtils.initializeMetrics(conf, "HddsDatanode");
     if (HddsUtils.isHddsEnabled(conf)) {
       try {
         String hostname = HddsUtils.getHostName(conf);
