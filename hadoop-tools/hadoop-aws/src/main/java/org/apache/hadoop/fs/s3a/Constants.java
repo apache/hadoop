@@ -138,9 +138,15 @@ public final class Constants {
   public static final String ASSUMED_ROLE_CREDENTIALS_DEFAULT =
       SimpleAWSCredentialsProvider.NAME;
 
+
+  // the maximum number of tasks cached if all threads are already uploading
+  public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
+
+  public static final int DEFAULT_MAX_TOTAL_TASKS = 32;
+
   // number of simultaneous connections to s3
   public static final String MAXIMUM_CONNECTIONS = "fs.s3a.connection.maximum";
-  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 15;
+  public static final int DEFAULT_MAXIMUM_CONNECTIONS = 48;
 
   // connect to s3 over ssl?
   public static final String SECURE_CONNECTIONS =
@@ -193,10 +199,6 @@ public final class Constants {
   // the time an idle thread waits before terminating
   public static final String KEEPALIVE_TIME = "fs.s3a.threads.keepalivetime";
   public static final int DEFAULT_KEEPALIVE_TIME = 60;
-
-  // the maximum number of tasks cached if all threads are already uploading
-  public static final String MAX_TOTAL_TASKS = "fs.s3a.max.total.tasks";
-  public static final int DEFAULT_MAX_TOTAL_TASKS = 5;
 
   // size of each of or multipart pieces in bytes
   public static final String MULTIPART_SIZE = "fs.s3a.multipart.size";
@@ -282,6 +284,22 @@ public final class Constants {
    */
   @InterfaceStability.Unstable
   public static final int DEFAULT_FAST_UPLOAD_ACTIVE_BLOCKS = 4;
+
+  /**
+   * The capacity of executor queues for operations other than block
+   * upload, where {@link #FAST_UPLOAD_ACTIVE_BLOCKS} is used instead.
+   * This should be less than {@link #MAX_THREADS} for fair
+   * submission.
+   * Value: {@value}.
+   */
+  public static final String EXECUTOR_CAPACITY = "fs.s3a.executor.capacity";
+
+  /**
+   * The capacity of executor queues for operations other than block
+   * upload, where {@link #FAST_UPLOAD_ACTIVE_BLOCKS} is used instead.
+   * Value: {@value}
+   */
+  public static final int DEFAULT_EXECUTOR_CAPACITY = 16;
 
   // Private | PublicRead | PublicReadWrite | AuthenticatedRead |
   // LogDeliveryWrite | BucketOwnerRead | BucketOwnerFullControl

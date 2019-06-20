@@ -143,9 +143,12 @@ public class ITestS3AHugeMagicCommits extends AbstractSTestS3AHugeFiles {
     assertNotNull("jobDir", jobDir);
     Pair<PendingSet, List<Pair<LocatedFileStatus, IOException>>>
         results = operations.loadSinglePendingCommits(jobDir, false);
-    for (SinglePendingCommit singlePendingCommit :
-        results.getKey().getCommits()) {
-      operations.commitOrFail(singlePendingCommit);
+    try(CommitOperations.CommitContext commitContext
+            = operations.initiateCommitOperation(jobDir)) {
+      for (SinglePendingCommit singlePendingCommit :
+          results.getKey().getCommits()) {
+        commitContext.commitOrFail(singlePendingCommit);
+      }
     }
     timer.end("time to commit %s", pendingDataFile);
     // upload is no longer pending

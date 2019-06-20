@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3ATestUtils.MetricDiff;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
@@ -129,8 +130,15 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
     }
 
     @Override
-    public void put(PathMetadata meta) throws IOException {
+    public void put(PathMetadata meta,
+        final BulkOperationState operationState) throws IOException {
       throw ioException;
     }
+
+    @Override
+    public void put(final PathMetadata meta) throws IOException {
+      put(meta, null);
+    }
+
   }
 }

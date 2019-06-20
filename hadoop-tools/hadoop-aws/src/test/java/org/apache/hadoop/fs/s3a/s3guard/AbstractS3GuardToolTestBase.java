@@ -80,6 +80,16 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   private MetadataStore ms;
   private S3AFileSystem rawFs;
 
+  /**
+   * The test timeout is increased in case previous tests have created
+   * many tombstone markers which now need to be purged.
+   * @return the test timeout.
+   */
+  @Override
+  protected int getTestTimeoutMillis() {
+    return SCALE_TEST_TIMEOUT_SECONDS * 1000;
+  }
+
   protected static void expectResult(int expected,
       String message,
       S3GuardTool tool,
@@ -187,19 +197,24 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       fs.mkdirs(path);
     } else if (onMetadataStore) {
       S3AFileStatus status = new S3AFileStatus(true, path, OWNER);
-      ms.put(new PathMetadata(status));
+      ms.put(new PathMetadata(status), null);
     }
   }
 
   protected static void putFile(MetadataStore ms, S3AFileStatus f)
       throws IOException {
     assertNotNull(f);
-    ms.put(new PathMetadata(f));
-    Path parent = f.getPath().getParent();
-    while (parent != null) {
-      S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
-      ms.put(new PathMetadata(dir));
-      parent = parent.getParent();
+    try (BulkOperationState bulkWrite =
+             ms.initiateBulkWrite(
+                 BulkOperationState.OperationType.Put,
+                 f.getPath())) {
+      ms.put(new PathMetadata(f), bulkWrite);
+      Path parent = f.getPath().getParent();
+      while (parent != null) {
+        S3AFileStatus dir = new S3AFileStatus(false, parent, f.getOwner());
+        ms.put(new PathMetadata(dir), bulkWrite);
+        parent = parent.getParent();
+      }
     }
   }
 
@@ -252,12 +267,13 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       String...args) throws Exception {
     Path keepParent = path("prune-cli-keep");
     StopWatch timer = new StopWatch();
+    final S3AFileSystem fs = getFileSystem();
     try {
       S3GuardTool.Prune cmd = new S3GuardTool.Prune(cmdConf);
       cmd.setMetadataStore(ms);
 
-      getFileSystem().mkdirs(parent);
-      getFileSystem().mkdirs(keepParent);
+      fs.mkdirs(parent);
+      fs.mkdirs(keepParent);
       createFile(new Path(parent, "stale"), true, true);
       createFile(new Path(keepParent, "stale-to-keep"), true, true);
 
@@ -279,8 +295,14 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
       assertMetastoreListingCount(keepParent,
           "This child should have been kept (prefix restriction).", 1);
     } finally {
-      getFileSystem().delete(parent, true);
-      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME, Long.MAX_VALUE);
+      fs.delete(parent, true);
+      fs.delete(keepParent, true);
+      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+          Long.MAX_VALUE,
+          fs.pathToKey(parent));
+      ms.prune(MetadataStore.PruneMode.ALL_BY_MODTIME,
+          Long.MAX_VALUE,
+          fs.pathToKey(keepParent));
     }
   }
 

@@ -18,17 +18,23 @@
 
 package org.apache.hadoop.fs.s3a.commit.magic;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.commit.AbstractITCommitMRJob;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapred.JobConf;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.lsR;
+import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 import static org.apache.hadoop.fs.s3a.commit.CommitConstants.*;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Full integration test for the Magic Committer.
@@ -55,7 +61,7 @@ public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
 
   @AfterClass
   public static void teardownClusters() throws IOException {
-    clusterBinding.terminate();
+    terminateCluster(clusterBinding);
   }
 
   @Override
@@ -93,6 +99,22 @@ public final class ITestMagicCommitMRJob extends AbstractITCommitMRJob {
   @Override
   protected void customPostExecutionValidation(Path destPath,
       SuccessData successData) throws Exception {
-    assertPathDoesNotExist("No cleanup", new Path(destPath, MAGIC));
+    Path magicDir = new Path(destPath, MAGIC);
+
+    // if an FNFE isn't raised on getFileStatus, list out the directory
+    // tree
+    S3AFileSystem fs = getFileSystem();
+    // log the contents
+    lsR(fs, destPath, true);
+    intercept(FileNotFoundException.class, () -> {
+      final FileStatus st = fs.getFileStatus(magicDir);
+      StringBuilder result = new StringBuilder("Found magic dir which should"
+          + " have been deleted at ").append(st).append('\n');
+      result.append("[");
+      applyLocatedFiles(fs.listFiles(magicDir, true),
+          (status) -> result.append(status.getPath()).append('\n'));
+      result.append("[");
+      return result.toString();
+    });
   }
 }

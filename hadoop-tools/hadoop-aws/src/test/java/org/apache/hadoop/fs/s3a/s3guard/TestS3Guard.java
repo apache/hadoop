@@ -91,12 +91,12 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getNow()).thenReturn(100L);
 
     // act
-    S3Guard.putWithTtl(ms, dlm, timeProvider);
+    S3Guard.putWithTtl(ms, dlm, timeProvider, null);
 
     // assert
     assertEquals("last update in " + dlm, 100L, dlm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
-    verify(ms, times(1)).put(dlm);
+    verify(ms, times(1)).put(dlm, null);
   }
 
   @Test
@@ -111,12 +111,12 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getNow()).thenReturn(100L);
 
     // act
-    S3Guard.putWithTtl(ms, pm, timeProvider);
+    S3Guard.putWithTtl(ms, pm, timeProvider, null);
 
     // assert
     assertEquals("last update in " + pm, 100L, pm.getLastUpdated());
     verify(timeProvider, times(1)).getNow();
-    verify(ms, times(1)).put(pm);
+    verify(ms, times(1)).put(pm, null);
   }
 
   @Test
@@ -134,14 +134,14 @@ public class TestS3Guard extends Assert {
     when(timeProvider.getNow()).thenReturn(100L);
 
     // act
-    S3Guard.putWithTtl(ms, pmCollection, timeProvider);
+    S3Guard.putWithTtl(ms, pmCollection, timeProvider, null);
 
     // assert
     pmCollection.forEach(
         pm -> assertEquals(100L, pm.getLastUpdated())
     );
     verify(timeProvider, times(1)).getNow();
-    verify(ms, times(1)).put(pmCollection);
+    verify(ms, times(1)).put(pmCollection, null);
   }
 
   @Test
