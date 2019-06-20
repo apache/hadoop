@@ -13,34 +13,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
-kind: StatefulSet
+kind: DaemonSet
 metadata:
-  name: scm
+  name: datanode
   labels:
     app.kubernetes.io/component: ozone
 spec:
   selector:
     matchLabels:
       app: ozone
-      component: scm
-  serviceName: scm
-  replicas: 1
+      component: datanode
   template:
     metadata:
-      labels:
-        app: ozone
-        component: scm
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "9876"
-        prometheus.io/path: "/prom"
+        prometheus.io/port: "9882"
+        prometheus.io/path: /prom
+      labels:
+        app: ozone
+        component: datanode
     spec:
-      initContainers:
-      - name: init
-        image: "@docker.image@"
-        args: ["ozone","scm", "--init"]
       containers:
-      - name: scm
-        image: "@docker.image@"
-        args: ["ozone","scm"]
+      - name: datanode
+        image: '@docker.image@'
+        args:
+        - ozone
+        - datanode
+        ports:
+        - containerPort: 9870
+          name: rpc
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers: []
+      volumes:
+      - name: data
+        emptyDir: {}

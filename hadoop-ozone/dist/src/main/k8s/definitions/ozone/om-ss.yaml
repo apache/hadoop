@@ -38,7 +38,7 @@ spec:
     spec:
       initContainers:
       - name: init
-        image: elek/ozone
+        image: "@docker.image@"
         args: ["ozone","om","--init"]
         env:
         - name: WAITFOR

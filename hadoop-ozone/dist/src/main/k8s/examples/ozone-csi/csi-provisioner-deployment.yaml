@@ -13,34 +13,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+kind: Deployment
 apiVersion: apps/v1
-kind: StatefulSet
 metadata:
-  name: scm
-  labels:
-    app.kubernetes.io/component: ozone
+  name: csi-provisioner
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: ozone
-      component: scm
-  serviceName: scm
-  replicas: 1
+      app: csi-provisioner
   template:
     metadata:
       labels:
-        app: ozone
-        component: scm
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9876"
-        prometheus.io/path: "/prom"
+        app: csi-provisioner
     spec:
-      initContainers:
-      - name: init
-        image: "@docker.image@"
-        args: ["ozone","scm", "--init"]
+      serviceAccount: csi-ozone
       containers:
-      - name: scm
-        image: "@docker.image@"
-        args: ["ozone","scm"]
+      - name: csi-provisioner
+        image: quay.io/k8scsi/csi-provisioner:v1.0.1
+        args:
+        - --csi-address=/var/lib/csi/csi.sock
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /var/lib/csi/
+      - name: ozone-csi
+        image: '@docker.image@'
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /var/lib/csi/
+        imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: config
+        args:
+        - ozone
+        - csi
+      volumes:
+      - name: socket-dir
+        emptyDir: null
