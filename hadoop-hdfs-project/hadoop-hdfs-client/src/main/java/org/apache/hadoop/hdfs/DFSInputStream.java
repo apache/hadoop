@@ -49,6 +49,7 @@ import javax.annotation.Nonnull;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.fs.CanSetDropBehind;
@@ -96,7 +97,7 @@ import com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream
     implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
-    HasEnhancedByteBufferAccess, CanUnbuffer {
+    HasEnhancedByteBufferAccess, CanUnbuffer, ByteBufferPositionedReadable {
   @VisibleForTesting
   public static boolean tcpReadsDisabledForTesting = false;
   private long hedgedReadOpsLoopNumForTesting = 0;
@@ -1719,6 +1720,14 @@ public class DFSInputStream extends FSInputStream
   @Override
   public void reset() throws IOException {
     throw new IOException("Mark/reset not supported");
+  }
+
+  @Override
+  public int read(long position, final ByteBuffer buf) throws IOException {
+    if (!buf.hasRemaining()) {
+      return 0;
+    }
+    return pread(position, buf);
   }
 
   /** Utility class to encapsulate data node info and its address. */

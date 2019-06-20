@@ -28,6 +28,7 @@ import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FSExceptionMessages;
@@ -263,20 +264,36 @@ public abstract class CryptoStreamsTestBase {
     
     return total;
   }
+
+  private int readAll(InputStream in, long pos, ByteBuffer buf)
+      throws IOException {
+    int n = 0;
+    int total = 0;
+    while (n != -1) {
+      total += n;
+      if (!buf.hasRemaining()) {
+        break;
+      }
+      n = ((ByteBufferPositionedReadable) in).read(pos + total, buf);
+    }
+
+    return total;
+  }
   
   /** Test positioned read. */
   @Test(timeout=120000)
   public void testPositionedRead() throws Exception {
-    OutputStream out = getOutputStream(defaultBufferSize);
-    writeData(out);
+    try (OutputStream out = getOutputStream(defaultBufferSize)) {
+      writeData(out);
+    }
     
-    InputStream in = getInputStream(defaultBufferSize);
-    // Pos: 1/3 dataLen
-    positionedReadCheck(in , dataLen / 3);
+    try (InputStream in = getInputStream(defaultBufferSize)) {
+      // Pos: 1/3 dataLen
+      positionedReadCheck(in, dataLen / 3);
 
-    // Pos: 1/2 dataLen
-    positionedReadCheck(in, dataLen / 2);
-    in.close();
+      // Pos: 1/2 dataLen
+      positionedReadCheck(in, dataLen / 2);
+    }
   }
   
   private void positionedReadCheck(InputStream in, int pos) throws Exception {
@@ -286,6 +303,35 @@ public abstract class CryptoStreamsTestBase {
     Assert.assertEquals(dataLen, n + pos);
     byte[] readData = new byte[n];
     System.arraycopy(result, 0, readData, 0, n);
+    byte[] expectedData = new byte[n];
+    System.arraycopy(data, pos, expectedData, 0, n);
+    Assert.assertArrayEquals(readData, expectedData);
+  }
+
+  /** Test positioned read with ByteBuffers. */
+  @Test(timeout=120000)
+  public void testPositionedReadWithByteBuffer() throws Exception {
+    try (OutputStream out = getOutputStream(defaultBufferSize)) {
+      writeData(out);
+    }
+
+    try (InputStream in = getInputStream(defaultBufferSize)) {
+      // Pos: 1/3 dataLen
+      positionedReadCheckWithByteBuffer(in, dataLen / 3);
+
+      // Pos: 1/2 dataLen
+      positionedReadCheckWithByteBuffer(in, dataLen / 2);
+    }
+  }
+
+  private void positionedReadCheckWithByteBuffer(InputStream in, int pos)
+          throws Exception {
+    ByteBuffer result = ByteBuffer.allocate(dataLen);
+    int n = readAll(in, pos, result);
+
+    Assert.assertEquals(dataLen, n + pos);
+    byte[] readData = new byte[n];
+    System.arraycopy(result.array(), 0, readData, 0, n);
     byte[] expectedData = new byte[n];
     System.arraycopy(data, pos, expectedData, 0, n);
     Assert.assertArrayEquals(readData, expectedData);
@@ -467,7 +513,7 @@ public abstract class CryptoStreamsTestBase {
     in.close();
   }
   
-  private void byteBufferReadCheck(InputStream in, ByteBuffer buf, 
+  private void byteBufferReadCheck(InputStream in, ByteBuffer buf,
       int bufPos) throws Exception {
     buf.position(bufPos);
     int n = ((ByteBufferReadable) in).read(buf);
@@ -480,12 +526,40 @@ public abstract class CryptoStreamsTestBase {
     System.arraycopy(data, 0, expectedData, 0, n);
     Assert.assertArrayEquals(readData, expectedData);
   }
+
+  private void byteBufferPreadCheck(InputStream in, ByteBuffer buf,
+      int bufPos) throws Exception {
+    // Test reading from position 0
+    buf.position(bufPos);
+    int n = ((ByteBufferPositionedReadable) in).read(0, buf);
+    Assert.assertEquals(bufPos + n, buf.position());
+    byte[] readData = new byte[n];
+    buf.rewind();
+    buf.position(bufPos);
+    buf.get(readData);
+    byte[] expectedData = new byte[n];
+    System.arraycopy(data, 0, expectedData, 0, n);
+    Assert.assertArrayEquals(readData, expectedData);
+
+    // Test reading from half way through the data
+    buf.position(bufPos);
+    n = ((ByteBufferPositionedReadable) in).read(dataLen / 2, buf);
+    Assert.assertEquals(bufPos + n, buf.position());
+    readData = new byte[n];
+    buf.rewind();
+    buf.position(bufPos);
+    buf.get(readData);
+    expectedData = new byte[n];
+    System.arraycopy(data, dataLen / 2, expectedData, 0, n);
+    Assert.assertArrayEquals(readData, expectedData);
+  }
   
   /** Test byte buffer read with different buffer size. */
   @Test(timeout=120000)
   public void testByteBufferRead() throws Exception {
-    OutputStream out = getOutputStream(defaultBufferSize);
-    writeData(out);
+    try (OutputStream out = getOutputStream(defaultBufferSize)) {
+      writeData(out);
+    }
     
     // Default buffer size, initial buffer position is 0
     InputStream in = getInputStream(defaultBufferSize);
@@ -534,6 +608,53 @@ public abstract class CryptoStreamsTestBase {
     buf.clear();
     byteBufferReadCheck(in, buf, 11);
     in.close();
+  }
+
+  /** Test byte buffer pread with different buffer size. */
+  @Test(timeout=120000)
+  public void testByteBufferPread() throws Exception {
+    try (OutputStream out = getOutputStream(defaultBufferSize)) {
+      writeData(out);
+    }
+
+    try (InputStream defaultBuf = getInputStream(defaultBufferSize);
+         InputStream smallBuf = getInputStream(smallBufferSize)) {
+
+      ByteBuffer buf = ByteBuffer.allocate(dataLen + 100);
+
+      // Default buffer size, initial buffer position is 0
+      byteBufferPreadCheck(defaultBuf, buf, 0);
+
+      // Default buffer size, initial buffer position is not 0
+      buf.clear();
+      byteBufferPreadCheck(defaultBuf, buf, 11);
+
+      // Small buffer size, initial buffer position is 0
+      buf.clear();
+      byteBufferPreadCheck(smallBuf, buf, 0);
+
+      // Small buffer size, initial buffer position is not 0
+      buf.clear();
+      byteBufferPreadCheck(smallBuf, buf, 11);
+
+      // Test with direct ByteBuffer
+      buf = ByteBuffer.allocateDirect(dataLen + 100);
+
+      // Direct buffer, default buffer size, initial buffer position is 0
+      byteBufferPreadCheck(defaultBuf, buf, 0);
+
+      // Direct buffer, default buffer size, initial buffer position is not 0
+      buf.clear();
+      byteBufferPreadCheck(defaultBuf, buf, 11);
+
+      // Direct buffer, small buffer size, initial buffer position is 0
+      buf.clear();
+      byteBufferPreadCheck(smallBuf, buf, 0);
+
+      // Direct buffer, small buffer size, initial buffer position is not 0
+      buf.clear();
+      byteBufferPreadCheck(smallBuf, buf, 11);
+    }
   }
   
   @Test(timeout=120000)

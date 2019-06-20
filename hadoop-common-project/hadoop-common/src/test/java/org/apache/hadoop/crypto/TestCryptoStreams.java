@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.util.EnumSet;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -164,9 +165,10 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
     }
   }
   
-  public static class FakeInputStream extends InputStream implements 
-      Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
-      CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess {
+  public static class FakeInputStream extends InputStream
+      implements Seekable, PositionedReadable, ByteBufferReadable,
+      ByteBufferPositionedReadable, HasFileDescriptor, CanSetDropBehind,
+      CanSetReadahead, HasEnhancedByteBufferAccess {
     private final byte[] oneByteBuf = new byte[1];
     private int pos = 0;
     private final byte[] data;
@@ -286,6 +288,32 @@ public class TestCryptoStreams extends CryptoStreamsTestBase {
         return n;
       }
       
+      return -1;
+    }
+
+    @Override
+    public int read(long position, ByteBuffer buf) throws IOException {
+      if (buf == null) {
+        throw new NullPointerException();
+      } else if (!buf.hasRemaining()) {
+        return 0;
+      }
+
+      if (position > length) {
+        throw new IOException("Cannot read after EOF.");
+      }
+      if (position < 0) {
+        throw new IOException("Cannot read to negative offset.");
+      }
+
+      checkStream();
+
+      if (position < length) {
+        int n = (int) Math.min(buf.remaining(), length - position);
+        buf.put(data, (int) position, n);
+        return n;
+      }
+
       return -1;
     }
 
