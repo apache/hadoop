@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -63,6 +64,7 @@ import org.apache.hadoop.util.ToolRunner;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
+import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -650,7 +652,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
       Preconditions.checkState(getStore() != null,
           "Metadata Store is not initialized");
 
-      getStore().destroy();
+      try {
+        getStore().destroy();
+      } catch (TableDeleteTimeoutException e) {
+        LOG.warn("The table is been deleted but it is still (briefly)"
+            + " listed as present in AWS");
+        LOG.debug("Timeout waiting for table disappearing", e);
+      }
       println(out, "Metadata store is deleted.");
       return SUCCESS;
     }
@@ -696,9 +704,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
      * Put parents into MS and cache if the parents are not presented.
      *
      * @param f the file or an empty directory.
+     * @param operationState store's bulk update state.
      * @throws IOException on I/O errors.
      */
-    private void putParentsIfNotPresent(FileStatus f) throws IOException {
+    private void putParentsIfNotPresent(FileStatus f,
+        @Nullable BulkOperationState operationState) throws IOException {
       Preconditions.checkNotNull(f);
       Path parent = f.getPath().getParent();
       while (parent != null) {
@@ -708,7 +718,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         S3AFileStatus dir = DynamoDBMetadataStore.makeDirStatus(parent,
             f.getOwner());
         S3Guard.putWithTtl(getStore(), new PathMetadata(dir),
-            getFilesystem().getTtlTimeProvider());
+            getFilesystem().getTtlTimeProvider(),
+            operationState);
         dirCache.add(parent);
         parent = parent.getParent();
       }
@@ -721,6 +732,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
      */
     private long importDir(FileStatus status) throws IOException {
       Preconditions.checkArgument(status.isDirectory());
+      BulkOperationState operationState = getStore().initiateBulkWrite(
+          BulkOperationState.OperationType.Put,
+          status.getPath());
       RemoteIterator<S3ALocatedFileStatus> it = getFilesystem()
           .listFilesAndEmptyDirectories(status.getPath(), true);
       long items = 0;
@@ -741,9 +755,11 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getETag(),
               located.getVersionId());
         }
-        putParentsIfNotPresent(child);
-        S3Guard.putWithTtl(getStore(), new PathMetadata(child),
-            getFilesystem().getTtlTimeProvider());
+        putParentsIfNotPresent(child, operationState);
+        S3Guard.putWithTtl(getStore(),
+            new PathMetadata(child),
+            getFilesystem().getTtlTimeProvider(),
+            operationState);
         items++;
       }
       return items;
@@ -779,7 +795,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
       long items = 1;
       if (status.isFile()) {
         PathMetadata meta = new PathMetadata(status);
-        getStore().put(meta);
+        getStore().put(meta, null);
       } else {
         items = importDir(status);
       }
@@ -1137,16 +1153,19 @@ public abstract class S3GuardTool extends Configured implements Tool {
       }
       String s3Path = paths.get(0);
       CommandFormat commands = getCommandFormat();
+      URI fsURI = toUri(s3Path);
 
       // check if UNGUARDED_FLAG is passed and use NullMetadataStore in
       // config to avoid side effects like creating the table if not exists
+      Configuration unguardedConf = getConf();
       if (commands.getOpt(UNGUARDED_FLAG)) {
         LOG.debug("Unguarded flag is passed to command :" + this.getName());
-        getConf().set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
+        clearBucketOption(unguardedConf, fsURI.getHost(), S3_METADATA_STORE_IMPL);
+        unguardedConf.set(S3_METADATA_STORE_IMPL, S3GUARD_METASTORE_NULL);
       }
 
       S3AFileSystem fs = (S3AFileSystem) FileSystem.newInstance(
-          toUri(s3Path), getConf());
+          fsURI, unguardedConf);
       setFilesystem(fs);
       Configuration conf = fs.getConf();
       URI fsUri = fs.getUri();

@@ -123,8 +123,11 @@ public class MagicS3GuardCommitter extends AbstractS3ACommitter {
    */
   public void cleanupStagingDirs() {
     Path path = magicSubdir(getOutputPath());
-    Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
-        () -> deleteWithWarning(getDestFS(), path, true));
+    try(DurationInfo ignored = new DurationInfo(LOG, true,
+        "Deleting magic directory %s", path)) {
+      Invoker.ignoreIOExceptions(LOG, "cleanup magic directory", path.toString(),
+          () -> deleteWithWarning(getDestFS(), path, true));
+    }
   }
 
   @Override

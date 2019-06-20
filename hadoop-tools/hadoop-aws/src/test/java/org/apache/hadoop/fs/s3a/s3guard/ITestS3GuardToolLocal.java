@@ -417,7 +417,8 @@ public class ITestS3GuardToolLocal extends AbstractS3GuardToolTestBase {
         String[] fields = line.split("\\s");
         if (fields.length == 4 && fields[0].equals(Uploads.TOTAL)) {
           int parsedUploads = Integer.valueOf(fields[1]);
-          LOG.debug("Matched CLI output: {} {} {} {}", fields);
+          LOG.debug("Matched CLI output: {} {} {} {}",
+              fields[0], fields[1], fields[2], fields[3]);
           assertEquals("Unexpected number of uploads", numUploads,
               parsedUploads);
           return;

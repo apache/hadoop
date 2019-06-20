@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileStatus;
+import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -79,19 +84,27 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate,
-      ITtlTimeProvider ttlTimeProvider) throws IOException {
+      ITtlTimeProvider ttlTimeProvider,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override
-  public void put(PathMetadata meta) throws IOException {
+  public void put(final PathMetadata meta) throws IOException {
   }
 
   @Override
-  public void put(Collection<PathMetadata> meta) throws IOException {
+  public void put(PathMetadata meta,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override
-  public void put(DirListingMetadata meta) throws IOException {
+  public void put(Collection<? extends PathMetadata> meta,
+      final BulkOperationState operationState) throws IOException {
+  }
+
+  @Override
+  public void put(DirListingMetadata meta,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override
@@ -122,5 +135,41 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void updateParameters(Map<String, String> parameters)
       throws IOException {
+  }
+
+  @Override
+  public RenameTracker initiateRenameOperation(final StoreContext storeContext,
+      final Path source,
+      final S3AFileStatus sourceStatus,
+      final Path dest)
+      throws IOException {
+    return new NullRenameTracker(storeContext, source, dest, this);
+  }
+
+  @Override
+  public void addAncestors(final Path qualifiedPath,
+      final ITtlTimeProvider timeProvider,
+      @Nullable final BulkOperationState operationState) throws IOException {
+  }
+
+  private static final class NullRenameTracker extends RenameTracker {
+
+    private NullRenameTracker(
+        final StoreContext storeContext,
+        final Path source,
+        final Path dest, MetadataStore metadataStore) {
+      super("null tracker", storeContext, metadataStore, source, dest, null);
+    }
+
+    @Override
+    public void fileCopied(final Path childSource,
+        final S3ObjectAttributes sourceAttributes,
+        final S3ObjectAttributes destAttributes,
+        final Path destPath,
+        final long blockSize,
+        final boolean addAncestors) throws IOException {
+
+    }
+
   }
 }

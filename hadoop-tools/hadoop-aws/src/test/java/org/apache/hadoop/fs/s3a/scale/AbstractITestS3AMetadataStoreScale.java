@@ -22,6 +22,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
@@ -72,6 +73,10 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
    * @throws IOException
    */
   public abstract MetadataStore createMetadataStore() throws IOException;
+
+  protected ITtlTimeProvider getTtlTimeProvider() {
+    return ttlTimeProvider;
+  }
 
   @Test
   public void test_010_Put() throws Throwable {
@@ -139,13 +144,15 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate, ttlTimeProvider);
+          ms.move(toDelete, toCreate, ttlTimeProvider, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
       } finally {
         // Cleanup
         clearMetadataStore(ms, count);
+        ms.move(origPaths, null, ttlTimeProvider, null);
+        ms.move(movedPaths, null, ttlTimeProvider, null);
       }
     }
   }
@@ -191,9 +198,13 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
     long count = 0;
     NanoTimer putTimer = new NanoTimer();
     describe("Inserting into MetadataStore");
-    for (PathMetadata p : paths) {
-      ms.put(p);
-      count++;
+    try (BulkOperationState operationState =
+            ms.initiateBulkWrite(BulkOperationState.OperationType.Put,
+                BUCKET_ROOT)) {
+      for (PathMetadata p : paths) {
+        ms.put(p, operationState);
+        count++;
+      }
     }
     putTimer.end();
     printTiming(LOG, "put", putTimer, count);
