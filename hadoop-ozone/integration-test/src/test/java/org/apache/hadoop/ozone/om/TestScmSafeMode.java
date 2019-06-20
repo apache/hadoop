@@ -36,6 +36,8 @@ import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
 import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
+import org.apache.hadoop.hdds.server.events.EventPublisher;
+import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.ozone.HddsDatanodeService;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -277,6 +279,10 @@ public class TestScmSafeMode {
     }
     GenericTestUtils
         .waitFor(() -> scm.getCurrentContainerThreshold() == 1.0, 100, 20000);
+
+    EventQueue eventQueue =
+        (EventQueue) cluster.getStorageContainerManager().getEventQueue();
+    eventQueue.processAll(5000L);
 
     double safeModeCutoff = conf
         .getDouble(HddsConfigKeys.HDDS_SCM_SAFEMODE_THRESHOLD_PCT,
