@@ -13,34 +13,61 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: scm
+  name: om
   labels:
     app.kubernetes.io/component: ozone
 spec:
   selector:
     matchLabels:
       app: ozone
-      component: scm
-  serviceName: scm
+      component: om
+  serviceName: om
   replicas: 1
   template:
     metadata:
       labels:
         app: ozone
-        component: scm
+        component: om
       annotations:
         prometheus.io/scrape: "true"
-        prometheus.io/port: "9876"
-        prometheus.io/path: "/prom"
+        prometheus.io/port: "9874"
+        prometheus.io/path: /prom
     spec:
       initContainers:
       - name: init
-        image: "@docker.image@"
-        args: ["ozone","scm", "--init"]
+        image: '@docker.image@'
+        args:
+        - ozone
+        - om
+        - --init
+        env:
+        - name: WAITFOR
+          value: scm-0.scm:9876
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       containers:
-      - name: scm
-        image: "@docker.image@"
-        args: ["ozone","scm"]
+      - name: om
+        image: '@docker.image@'
+        args:
+        - ozone
+        - om
+        env:
+        - name: WAITFOR
+          value: scm-0.scm:9876
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        emptyDir: {}
