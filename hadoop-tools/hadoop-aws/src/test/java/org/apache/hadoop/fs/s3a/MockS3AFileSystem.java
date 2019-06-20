@@ -39,6 +39,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.delegation.EncryptionSecrets;
 import org.apache.hadoop.fs.s3a.commit.staging.StagingTestBase;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.util.Progressable;
 
 /**
@@ -177,7 +178,8 @@ public class MockS3AFileSystem extends S3AFileSystem {
   }
 
   @Override
-  void finishedWrite(String key, long length, String eTag, String versionId) {
+  void finishedWrite(String key, long length, String eTag, String versionId,
+          BulkOperationState operationState) {
 
   }
 

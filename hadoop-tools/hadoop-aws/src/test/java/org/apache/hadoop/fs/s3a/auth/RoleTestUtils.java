@@ -18,8 +18,12 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
+import java.io.IOException;
 import java.nio.file.AccessDeniedException;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.junit.Assume;
@@ -160,18 +164,35 @@ public final class RoleTestUtils {
 
   /**
    * Assert that an operation is forbidden.
+   * @param <T> type of closure
    * @param contained contained text, may be null
    * @param eval closure to evaluate
-   * @param <T> type of closure
    * @return the access denied exception
    * @throws Exception any other exception
    */
   public static <T> AccessDeniedException forbidden(
-      String contained,
-      Callable<T> eval)
+      final String contained,
+      final Callable<T> eval)
+      throws Exception {
+    return forbidden("", contained, eval);
+  }
+
+  /**
+   * Assert that an operation is forbidden.
+   * @param <T> type of closure
+   * @param message error message
+   * @param contained contained text, may be null
+   * @param eval closure to evaluate
+   * @return the access denied exception
+   * @throws Exception any other exception
+   */
+  public static <T> AccessDeniedException forbidden(
+      final String message,
+      final String contained,
+      final Callable<T> eval)
       throws Exception {
     return intercept(AccessDeniedException.class,
-        contained, eval);
+        contained, message, eval);
   }
 
   /**
@@ -208,5 +229,24 @@ public final class RoleTestUtils {
         expected.getSessionToken(),
         actual.getSessionToken());
 
+  }
+
+  /**
+   * Parallel-touch a set of files in the destination directory.
+   * @param fs filesystem
+   * @param destDir destination
+   * @param range range 1..range inclusive of files to create.
+   * @return the list of paths created.
+   */
+  public static List<Path> touchFiles(final FileSystem fs,
+      final Path destDir,
+      final int range) throws IOException {
+    List<Path> paths = IntStream.rangeClosed(1, range)
+        .mapToObj((i) -> new Path(destDir, "file-" + i))
+                .collect(Collectors.toList());
+    for (Path path : paths) {
+      touch(fs, path);
+    }
+    return paths;
   }
 }
