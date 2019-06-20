@@ -42,9 +42,13 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.metrics2.MetricsSystem;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNS;
 import org.apache.hadoop.net.NetUtils;
@@ -475,4 +479,18 @@ public final class HddsUtils {
         .orElse(ScmConfigKeys.OZONE_SCM_SECURITY_SERVICE_PORT_DEFAULT));
   }
 
+  /**
+   * Initialize hadoop metrics systen for Ozone servers.
+   *  @param configuration OzoneConfiguration to use.
+   * @param serverName    The logical name of the server components. (eg.
+   * @return
+   */
+  public static MetricsSystem initializeMetrics(OzoneConfiguration configuration,
+      String serverName) {
+    MetricsSystem metricsSystem = DefaultMetricsSystem.initialize(serverName);
+    JvmMetrics.create(serverName,
+        configuration.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
+        DefaultMetricsSystem.instance());
+    return metricsSystem;
+  }
 }

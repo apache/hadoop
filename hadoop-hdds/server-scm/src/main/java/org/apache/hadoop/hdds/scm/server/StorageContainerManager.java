@@ -81,11 +81,13 @@ import org.apache.hadoop.hdds.security.x509.certificate.authority.DefaultCAServe
 import org.apache.hadoop.hdds.server.ServiceRuntimeInfoImpl;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.hdds.server.events.EventQueue;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
@@ -760,7 +762,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         buildRpcServerStartMessage(
             "StorageContainerLocationProtocol RPC server",
             getClientRpcAddress()));
-    ms = DefaultMetricsSystem.initialize("StorageContainerManager");
+
+    ms = HddsUtils.initializeMetrics(configuration, "StorageContainerManager");
 
     commandWatcherLeaseManager.start();
     getClientProtocolServer().start();
