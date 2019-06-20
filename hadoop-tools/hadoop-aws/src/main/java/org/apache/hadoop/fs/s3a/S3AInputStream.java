@@ -823,9 +823,17 @@ public class S3AInputStream extends FSInputStream implements  CanSetReadahead,
     }
   }
 
+  /**
+   * Closes the underlying S3 stream, and merges the {@link #streamStatistics}
+   * instance associated with the stream.
+   */
   @Override
   public synchronized void unbuffer() {
-    closeStream("unbuffer()", contentRangeFinish, false);
+    try {
+      closeStream("unbuffer()", contentRangeFinish, false);
+    } finally {
+      streamStatistics.merge(false);
+    }
   }
 
   @Override
