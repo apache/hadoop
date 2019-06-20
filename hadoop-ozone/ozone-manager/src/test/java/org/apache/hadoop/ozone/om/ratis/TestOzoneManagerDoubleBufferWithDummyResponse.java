@@ -22,11 +22,6 @@ import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .CreateBucketResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMResponse;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,7 +29,12 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMResponse;
+import org.apache.hadoop.ozone.om.ratis.metrics.OzoneManagerDoubleBufferMetrics;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
@@ -91,6 +91,18 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
   public void testDoubleBufferWithDummyResponse() throws Exception {
     String volumeName = UUID.randomUUID().toString();
     int bucketCount = 100;
+    OzoneManagerDoubleBufferMetrics ozoneManagerDoubleBufferMetrics =
+        doubleBuffer.getOzoneManagerDoubleBufferMetrics();
+
+    // As we have not flushed/added any transactions, all metrics should have
+    // value zero.
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getTotalNumOfFlushOperations() == 0);
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getTotalNumOfFlushedTransactions() == 0);
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getMaxNumberOfTransactionsFlushedInOneIteration() == 0);
+
     for (int i=0; i < bucketCount; i++) {
       doubleBuffer.add(createDummyBucketResponse(volumeName,
           UUID.randomUUID().toString()), trxId.incrementAndGet());
@@ -98,6 +110,13 @@ public class TestOzoneManagerDoubleBufferWithDummyResponse {
     GenericTestUtils.waitFor(() ->
             doubleBuffer.getFlushedTransactionCount() == bucketCount, 100,
         60000);
+
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getTotalNumOfFlushOperations() > 0);
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getTotalNumOfFlushedTransactions() == bucketCount);
+    Assert.assertTrue(ozoneManagerDoubleBufferMetrics
+        .getMaxNumberOfTransactionsFlushedInOneIteration() > 0);
     Assert.assertTrue(omMetadataManager.countRowsInTable(
         omMetadataManager.getBucketTable()) == (bucketCount));
     Assert.assertTrue(doubleBuffer.getFlushIterations() > 0);

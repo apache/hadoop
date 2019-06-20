@@ -23,15 +23,17 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.annotations.VisibleForTesting;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.ratis.helpers.DoubleBufferEntry;
+import org.apache.hadoop.ozone.om.ratis.metrics.OzoneManagerDoubleBufferMetrics;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.utils.db.BatchOperation;
-
 import org.apache.ratis.util.ExitUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class implements DoubleBuffer implementation of OMClientResponse's. In
@@ -63,6 +65,8 @@ public class OzoneManagerDoubleBuffer {
   private final AtomicLong flushedTransactionCount = new AtomicLong(0);
   private final AtomicLong flushIterations = new AtomicLong(0);
   private volatile boolean isRunning;
+  private OzoneManagerDoubleBufferMetrics ozoneManagerDoubleBufferMetrics;
+  private long maxFlushedTransactionsInOneIteration;
 
   private final OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot;
 
@@ -71,15 +75,15 @@ public class OzoneManagerDoubleBuffer {
     this.currentBuffer = new ConcurrentLinkedQueue<>();
     this.readyBuffer = new ConcurrentLinkedQueue<>();
     this.omMetadataManager = omMetadataManager;
-
     this.ozoneManagerRatisSnapShot = ozoneManagerRatisSnapShot;
+    this.ozoneManagerDoubleBufferMetrics =
+        OzoneManagerDoubleBufferMetrics.create();
 
     isRunning = true;
     // Daemon thread which runs in back ground and flushes transactions to DB.
     daemon = new Daemon(this::flushTransactions);
     daemon.setName("OMDoubleBufferFlushThread");
     daemon.start();
-
 
   }
 
@@ -120,6 +124,7 @@ public class OzoneManagerDoubleBuffer {
               .max(Long::compareTo).get();
 
           readyBuffer.clear();
+
           // cleanup cache.
           cleanupCache(lastRatisTransactionIndex);
 
@@ -129,6 +134,9 @@ public class OzoneManagerDoubleBuffer {
           // update the last updated index in OzoneManagerStateMachine.
           ozoneManagerRatisSnapShot.updateLastAppliedIndex(
               lastRatisTransactionIndex);
+
+          // set metrics.
+          updateMetrics(flushedTransactionsSize);
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -163,6 +171,23 @@ public class OzoneManagerDoubleBuffer {
   }
 
   /**
+   * Update OzoneManagerDoubleBuffer metrics values.
+   * @param flushedTransactionsSize
+   */
+  private void updateMetrics(
+      long flushedTransactionsSize) {
+    ozoneManagerDoubleBufferMetrics.incrTotalNumOfFlushOperations();
+    ozoneManagerDoubleBufferMetrics.incrTotalSizeOfFlushedTransactions(
+        flushedTransactionsSize);
+    if (maxFlushedTransactionsInOneIteration < flushedTransactionsSize) {
+      maxFlushedTransactionsInOneIteration = flushedTransactionsSize;
+      ozoneManagerDoubleBufferMetrics
+          .setMaxNumberOfTransactionsFlushedInOneIteration(
+              flushedTransactionsSize);
+    }
+  }
+
+  /**
    * Stop OM DoubleBuffer flush thread.
    */
   public synchronized void stop() {
@@ -170,6 +195,9 @@ public class OzoneManagerDoubleBuffer {
       LOG.info("Stopping OMDoubleBuffer flush thread");
       isRunning = false;
       daemon.interrupt();
+
+      // stop metrics.
+      ozoneManagerDoubleBufferMetrics.unRegister();
     } else {
       LOG.info("OMDoubleBuffer flush thread is not running.");
     }
@@ -234,6 +262,11 @@ public class OzoneManagerDoubleBuffer {
     Queue<DoubleBufferEntry<OMClientResponse>> temp = currentBuffer;
     currentBuffer = readyBuffer;
     readyBuffer = temp;
+  }
+
+  @VisibleForTesting
+  public OzoneManagerDoubleBufferMetrics getOzoneManagerDoubleBufferMetrics() {
+    return ozoneManagerDoubleBufferMetrics;
   }
 
 }
