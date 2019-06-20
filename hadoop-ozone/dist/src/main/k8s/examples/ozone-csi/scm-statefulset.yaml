@@ -13,6 +13,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -34,13 +35,33 @@ spec:
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9876"
-        prometheus.io/path: "/prom"
+        prometheus.io/path: /prom
     spec:
       initContainers:
       - name: init
-        image: "@docker.image@"
-        args: ["ozone","scm", "--init"]
+        image: '@docker.image@'
+        args:
+        - ozone
+        - scm
+        - --init
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       containers:
       - name: scm
-        image: "@docker.image@"
-        args: ["ozone","scm"]
+        image: '@docker.image@'
+        args:
+        - ozone
+        - scm
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        emptyDir: {}

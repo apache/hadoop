@@ -13,34 +13,39 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: scm
+  name: s3g
   labels:
     app.kubernetes.io/component: ozone
 spec:
   selector:
     matchLabels:
       app: ozone
-      component: scm
-  serviceName: scm
+      component: s3g
+  serviceName: s3g
   replicas: 1
   template:
     metadata:
       labels:
         app: ozone
-        component: scm
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9876"
-        prometheus.io/path: "/prom"
+        component: s3g
     spec:
-      initContainers:
-      - name: init
-        image: "@docker.image@"
-        args: ["ozone","scm", "--init"]
       containers:
-      - name: scm
-        image: "@docker.image@"
-        args: ["ozone","scm"]
+      - name: s3g
+        image: '@docker.image@'
+        args:
+        - ozone
+        - s3g
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      initContainers: []
+      volumes:
+      - name: data
+        emptyDir: {}
