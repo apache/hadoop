@@ -219,14 +219,12 @@ public class StagingTestBase {
   }
 
   public static void hasFileStatus(FileSystem mockS3,
-      Path path, FileStatus status)
-    throws IOException {
+      Path path, FileStatus status) throws IOException {
     when(mockS3.getFileStatus(path)).thenReturn(status);
   }
 
   public static void mkdirsHasOutcome(FileSystem mockS3,
-      Path path, boolean outcome)
-    throws IOException {
+      Path path, boolean outcome) throws IOException {
     when(mockS3.mkdirs(path)).thenReturn(outcome);
   }
 

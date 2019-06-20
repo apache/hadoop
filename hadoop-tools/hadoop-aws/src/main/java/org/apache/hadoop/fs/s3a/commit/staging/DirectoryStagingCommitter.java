@@ -78,7 +78,8 @@ public class DirectoryStagingCommitter extends StagingCommitter {
       // if it is not a directory, fail fast for all conflict options.
       if (!status.isDirectory()) {
         throw new PathExistsException(outputPath.toString(),
-            "ouput path is not a directory: " + InternalCommitterConstants.E_DEST_EXISTS);
+            "output path is not a directory: "
+                + InternalCommitterConstants.E_DEST_EXISTS);
       }
       switch(conflictResolution) {
       case FAIL:
