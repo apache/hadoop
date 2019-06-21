@@ -16,7 +16,7 @@
 -->
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="StorageContainerManagerInit" type="Application" factoryName="Application" nameIsGenerated="false">
-    <option name="MAIN_CLASS_NAME" value="org.apache.hadoop.hdds.scm.server.StorageContainerManager" />
+    <option name="MAIN_CLASS_NAME" value="org.apache.hadoop.hdds.scm.server.StorageContainerManagerStarter" />
     <module name="hadoop-hdds-server-scm" />
     <option name="PROGRAM_PARAMETERS" value="-conf=hadoop-ozone/dev-support/intellij/ozone-site.xml --init" />
     <option name="VM_PARAMETERS" value="-Dlog4j.configuration=file:hadoop-ozone/dev-support/intellij/log4j.properties" />
