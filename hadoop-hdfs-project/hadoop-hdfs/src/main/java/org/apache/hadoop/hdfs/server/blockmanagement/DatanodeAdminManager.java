@@ -349,7 +349,7 @@ public class DatanodeAdminManager {
    * @return true if sufficient, else false.
    */
   private boolean isSufficientlyReplicated(BlockInfo block, BlockCollection bc,
-      NumberReplicas numberReplicas, boolean isDecommission) {
+      NumberReplicas numberReplicas, boolean isDecommission, boolean isMaintenance) {
     if (blockManager.hasEnoughEffectiveReplicas(block, numberReplicas, 0)) {
       // Block has enough replica, skip
       LOG.trace("Block {} does not need replication.", block);
@@ -381,6 +381,10 @@ public class DatanodeAdminManager {
           return true;
         }
       }
+    }
+
+    if (isMaintenance && numLive >= blockManager.getMinReplicationToBeInMaintenance()) {
+      return true;
     }
     return false;
   }
@@ -726,6 +730,7 @@ public class DatanodeAdminManager {
         // Schedule under-replicated blocks for replication if not already
         // pending
         boolean isDecommission = datanode.isDecommissionInProgress();
+        boolean isMaintenance = datanode.isEnteringMaintenance();
         boolean neededReplication = isDecommission ?
             blockManager.isNeededReplication(block, num) :
             blockManager.isNeededReplicationForMaintenance(block, num);
@@ -743,7 +748,7 @@ public class DatanodeAdminManager {
 
         // Even if the block is under-replicated,
         // it doesn't block decommission if it's sufficiently replicated 
-        if (isSufficientlyReplicated(block, bc, num, isDecommission)) {
+        if (isSufficientlyReplicated(block, bc, num, isDecommission, isMaintenance)) {
           if (pruneSufficientlyReplicated) {
            it.remove();
           }
