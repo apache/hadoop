@@ -795,4 +795,18 @@ public class AppSchedulingInfo {
   public Map<String, String> getApplicationSchedulingEnvs() {
     return applicationSchedulingEnvs;
   }
+
+  /**
+   * Get the defaultNodeLabelExpression for the application's current queue.
+   *
+   * @return defaultNodeLabelExpression
+   */
+  public String getDefaultNodeLabelExpression() {
+    try {
+      this.readLock.lock();
+      return queue.getDefaultNodeLabelExpression();
+    } finally {
+      this.readLock.unlock();
+    }
+  }
 }
