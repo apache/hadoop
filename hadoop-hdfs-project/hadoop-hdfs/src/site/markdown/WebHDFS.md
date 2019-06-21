@@ -104,6 +104,7 @@ In the REST API, the prefix "`/webhdfs/v1`" is inserted in the path and a query 
 
       swebhdfs://<HOST>:<HTTP_PORT>/<PATH>
 
+See also: [SSL Configurations for SWebHDFS](#SSL_Configurations_for_SWebHDFS)
 
 ### HDFS Configuration Options
 
@@ -163,6 +164,56 @@ The following properties control OAuth2 authentication.
 | `dfs.webhdfs.oauth2.refresh.token` | (required if using ConfRefreshTokenBasedAccessTokenProvider) Initial refresh token to use to obtain new access tokens  |
 | `dfs.webhdfs.oauth2.refresh.token.expires.ms.since.epoch` | (required if using ConfRefreshTokenBasedAccessTokenProvider) Access token expiration measured in milliseconds since Jan 1, 1970.  *Note this is a different value than provided by OAuth providers and has been munged as described in interface to be suitable for a client application*  |
 | `dfs.webhdfs.oauth2.credential` | (required if using ConfCredentialBasedAccessTokenProvider).  Credential used to obtain initial and subsequent access tokens. |
+
+SSL Configurations for SWebHDFS
+-------------------------------------------------------
+
+To use SWebHDFS FileSystem (i.e. using the swebhdfs protocol), a SSL configuration
+file needs to be specified on the client side. This must specify 3 parameters:
+
+| SSL property | Description |
+|:---- |:---- |
+| `ssl.client.truststore.location` | The local-filesystem location of the trust-store file, containing the certificate for the NameNode. |
+| `ssl.client.truststore.type` | (Optional) The format of the trust-store file. |
+| `ssl.client.truststore.password` | (Optional) Password for the trust-store file. |
+
+The following is an example SSL configuration file (**ssl-client.xml**):
+
+```xml
+<configuration>
+  <property>
+    <name>ssl.client.truststore.location</name>
+    <value>/work/keystore.jks</value>
+    <description>Truststore to be used by clients. Must be specified.</description>
+  </property>
+
+  <property>
+    <name>ssl.client.truststore.password</name>
+    <value>changeme</value>
+    <description>Optional. Default value is "".</description>
+  </property>
+
+  <property>
+    <name>ssl.client.truststore.type</name>
+    <value>jks</value>
+    <description>Optional. Default value is "jks".</description>
+  </property>
+</configuration>
+```
+
+The SSL configuration file must be in the class-path of the client program and the filename needs to be specified in **core-site.xml**:
+
+```xml
+<property>
+  <name>hadoop.ssl.client.conf</name>
+  <value>ssl-client.xml</value>
+  <description>
+    Resource file from which ssl client keystore information will be extracted.
+    This file is looked up in the classpath, typically it should be in Hadoop
+    conf/ directory. Default value is "ssl-client.xml".
+  </description>
+</property>
+```
 
 Proxy Users
 -----------
