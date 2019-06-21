@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.TimeoutException;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -47,6 +48,7 @@ import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
+import org.junit.AssumptionViolatedException;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -84,6 +86,7 @@ public class TestWebHdfsTimeouts {
       return conn;
     }
   });
+  private volatile boolean failedToConsumeBacklog;
 
   public enum TimeoutSource { ConnectionFactory, Configuration };
 
@@ -122,6 +125,7 @@ public class TestWebHdfsTimeouts {
 
     clients = new ArrayList<SocketChannel>();
     serverThread = null;
+    failedToConsumeBacklog = false;
   }
 
   @After
@@ -211,6 +215,7 @@ public class TestWebHdfsTimeouts {
       fs.getFileChecksum(new Path("/file"));
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
+      assumeBacklogConsumed();
       GenericTestUtils.assertExceptionContains(
           fs.getUri().getAuthority() + ": connect timed out", e);
     }
@@ -244,6 +249,7 @@ public class TestWebHdfsTimeouts {
       os = fs.create(new Path("/file"));
       fail("expected timeout");
     } catch (SocketTimeoutException e) {
+      assumeBacklogConsumed();
       GenericTestUtils.assertExceptionContains(
           fs.getUri().getAuthority() + ": connect timed out", e);
     } finally {
@@ -356,6 +362,28 @@ public class TestWebHdfsTimeouts {
       client.configureBlocking(false);
       client.connect(nnHttpAddress);
       clients.add(client);
+    }
+    try {
+      GenericTestUtils.waitFor(() -> {
+        try (SocketChannel c = SocketChannel.open()) {
+          c.socket().connect(nnHttpAddress, 100);
+        } catch (SocketTimeoutException e) {
+          return true;
+        } catch (IOException e) {
+          LOG.debug("unexpected exception: " + e);
+        }
+        return false;
+      }, 100, 10000);
+    } catch (TimeoutException | InterruptedException e) {
+      failedToConsumeBacklog = true;
+      assumeBacklogConsumed();
+    }
+  }
+
+  private void assumeBacklogConsumed() {
+    if (failedToConsumeBacklog) {
+      throw new AssumptionViolatedException(
+          "failed to fill up connection backlog.");
     }
   }
 
