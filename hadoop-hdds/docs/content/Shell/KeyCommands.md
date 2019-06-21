@@ -1,9 +1,6 @@
 ---
 title: Key Commands
-menu:
-   main:
-      parent: OzoneShell
-      weight: 3
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -22,6 +19,15 @@ menu:
   limitations under the License.
 -->
 
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{< ref "Shell.md" >}}">
+    CLI</a>
+        <li class="breadcrumb-item active" aria-current="page">
+        Key Commands</li>
+  </ol>
+</nav>
 Ozone shell supports the following key commands.
 
   * [get](#get)
@@ -142,3 +148,6 @@ The above command will rename `sales.orc` to `new_name.orc` in the bucket `/hive
 
 You can try out these commands from the docker instance of the [Alpha
 Cluster](runningviadocker.html).
+
+<a href="{{< ref "interface/Interface.md" >}}"> <button type="button"
+class="btn  btn-success btn-lg">Next >></button>

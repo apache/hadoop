@@ -1,10 +1,7 @@
 ---
 title: "Ozone Manager"
 date: "2017-09-14"
-menu:
-   main:
-       parent: Architecture
-weight: 11
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -22,56 +19,82 @@ weight: 11
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+     <li class="breadcrumb-item"><a href="{{< ref "Concept.md" >}}">
+        Concepts</a>
+    <li class="breadcrumb-item active" aria-current="page">Ozone Manager
+    </li>
+  </ol>
+</nav>
 
-OM Overview
--------------
+Ozone Manager or OM is the namespace manager for Ozone.
 
-Ozone Manager or OM is the namespace manager for Ozone. The clients (RPC clients, Rest proxy, Ozone file system, etc.) communicate with OM to create and delete various ozone objects.
+This means that when you want to write some data, you ask Ozone
+manager for a block and Ozone Manager gives you a block and remembers that
+information. When you want to read the that file back, you need to find the
+address of the block and Ozone manager returns it you.
 
-Each ozone volume is the root of a namespace under OM. This is very different from HDFS which provides a single rooted file system.
+Ozone manager also allows users to organize keys under a volume and bucket.
+Volumes and buckets are part of the namespace and managed by Ozone Manager.
+
+Each ozone volume is the root of an independent namespace under OM.
+This is very different from HDFS which provides a single rooted file system.
 
 Ozone's namespace is a collection of volumes or is a forest instead of a
 single rooted tree as in HDFS. This property makes it easy to deploy multiple
- OMs for scaling, this feature is under development.
+OMs for scaling.
 
-OM Metadata
------------------
+## Ozone Manager Metadata
 
-Conceptually, OM maintains a list of volumes, buckets, and keys. For each user, it maintains a list of volumes. For each volume, the list of buckets and for each bucket the list of keys.
+OM maintains a list of volumes, buckets, and keys.
+For each user, it maintains a list of volumes.
+For each volume, the list of buckets and for each bucket the list of keys.
 
-Right now, OM is a single instance service. Ozone already relies on Apache Ratis (A Replicated State Machine based on Raft protocol). OM will be extended to replicate all its metadata via Ratis. With that, OM will be highly available.
-
-OM UI
-------------
-
-OM supports a simple UI for the time being. The default port of OM is 9874. To access the OM UI, the user can connect to http://OM:port or for a concrete example,
-```
-http://omserver:9874/
-```
-OM UI primarily tries to measure load and latency of OM. The first section of OM UI relates to the number of operations seen by the cluster broken down by the object, operation and whether the operation was successful.
-
-The latter part of the UI is focused on latency and number of operations that OM is performing.
-
-One of the hardest problems in HDFS world is discovering the numerous settings offered to tune HDFS. Ozone solves that problem by tagging the configs. To discover settings, click on "Common Tools"->Config.  This will take you to the ozone config UI.
-
-Config UI
-------------
-
-The ozone config UI is a matrix with row representing the tags, and columns representing All, OM and SCM.
-
-Suppose a user wanted to discover the required settings for ozone. Then the user can tick the checkbox that says "Required."
-This will filter out all "Required" settings along with the description of what each setting does.
-
-The user can combine different checkboxes and UI will combine the results. That is, If you have more than one row selected, then all keys for those chosen tags are displayed together.
-
-We are hopeful that this leads to a more straightforward way of discovering settings that manage ozone.
+Ozone Manager will use Apache Ratis(A Raft protocol implementation) to
+replicate Ozone Manager state. This will ensure High Availability for Ozone.
 
 
-OM and SCM
--------------------
-[Storage container manager]({{< ref "Hdds.md" >}}) or (SCM) is the block manager
- for ozone. When a client requests OM for a set of data nodes to write data, OM talks to SCM and gets a block.
+## Ozone Manager and Storage Container Manager
 
-A block returned by SCM contains a pipeline, which is a set of nodes that we participate in that block replication.
+The relationship between Ozone Manager and Storage Container Manager is best
+understood if we trace what happens during a key write and key read.
 
-So OM is dependent on SCM for reading and writing of Keys. However, OM is independent of SCM while doing metadata operations like ozone volume or bucket operations.
+### Key Write
+
+* To write a key to Ozone, a client tells Ozone manager that it would like to
+write a key into a bucket that lives inside a specific volume. Once Ozone
+manager determines that you are allowed to write a key to specified bucket,
+OM needs to allocate a block for the client to write data.
+
+* To allocate a block, Ozone manager sends a request to Storage Container
+Manager or SCM; SCM is the manager of data nodes. SCM picks three data nodes
+into which client can write data. SCM allocates the block and returns the
+block ID to Ozone Manager.
+
+* Ozone manager records this block information in its metadata and returns the
+block and a block token (a security permission to write data to the block)
+the client.
+
+* The client uses the block token to prove that it is allowed to write data to
+the block and writes data to the data node.
+
+* Once the write is complete on the data node, the client will update the block
+information on
+Ozone manager.
+
+
+### Key Reads
+
+* Key reads are simpler, the client requests the block list from the Ozone
+Manager
+* Ozone manager will return the block list and block tokens which
+allows the client to read the data from nodes.
+* Client connects to the data  node and presents the block token and reads
+the data from the data node.
+
+
+
+ <a href="{{< ref "concept/Hdds.md" >}}"> <button type="button"
+ class="btn  btn-success btn-lg">Next >></button>

@@ -1,8 +1,6 @@
 ---
 title: Monitoring with Prometheus
-menu:
-   main:
-      parent: Recipes
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -92,3 +90,6 @@ The ozone distribution contains a ready-to-use, dockerized environment to try ou
 cd compose/ozoneperf
 docker-compose up -d
 ```
+
+<a href="{{< ref "recipe/SparkOzoneFSK8S.md" >}}"> <button type="button"
+class="btn  btn-success btn-lg">Next >></button>

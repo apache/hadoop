@@ -1,9 +1,7 @@
 ---
 title: "SCMCLI"
 date: 2017-08-10
-menu:
-   main:
-      parent: Tools
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

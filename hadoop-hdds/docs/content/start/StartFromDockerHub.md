@@ -1,8 +1,6 @@
 ---
-title: All-in-one container
-menu:
-   main:
-      parent: Dockerhub
+title: Simple Single Ozone
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -20,42 +18,105 @@ menu:
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+    <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
+    Getting Started</a>
+    <li class="breadcrumb-item active" aria-current="page">
+    Simple Single Ozone </li>
 
 {{< requirements >}}
  * Working docker setup
  * AWS CLI (optional)
 {{< /requirements >}}
 
-The easiest way to start up an all-in-one container is to use the latest docker image from dockerhub:
+
+# Ozone in a Single Container
+
+The easiest way to start up an all-in-one ozone container is to use the latest
+docker image from docker hub:
 
 ```bash
 docker run -P 9878:9878 -P 9876:9876 apache/ozone
 ```
+This command will pull down the ozone image from docker hub and start all
+ozone services in a single container. <br>
+This container will run the required metadata servers (Ozone Manager, Storage
+Container Manager) one data node  and the S3 compatible REST server
+(S3 Gateway).
 
-After a while the container will be started. This is one container which contains all the required metadata server (Ozone Manager, Storage Container Manager) one slave node (Datanode) and the S3 compatible REST server (S3 Gateway).
+# Local multi-container cluster
 
-After a few seconds you can check the Web UI of the SCM:
+If you would like to use a more realistic pseud-cluster where each components
+run in own containers, you can start it with a docker-compose file.
 
-http://localhost:9876
+We have shipped a docker-compose and an enviorment file as part of the
+container image  that is uploaded to docker hub.
 
-Or the S3 gateway endpoint:
+The following commands can be used to extract these files from the image in the docker hub.
+```bash
+docker run apache/ozone cat docker-compose.yaml > docker-compose.yaml
+docker run apache/ozone cat docker-config > docker-config
+```
 
-http://localhost:9878
+ Now you can start the cluster with docker-compose:
 
-You can try to create buckets from command line:
+```bash
+docker-compose up -d
+```
+
+If you need multiple datanodes, we can just scale it up:
+
+```bash
+ docker-compose scale datanode=3
+ ```
+# Running S3 Clients
+
+Once the cluster is booted up and ready, you can verify it is running by
+connecting to the SCM's UI at [http://localhost:9876](http://localhost:9876).
+
+The S3 gateway endpoint will be exposed at port 9878. You can use Ozone's S3
+support as if you are working against the real S3.
+
+
+Here is how you create buckets from command line:
 
 ```bash
 aws s3api --endpoint http://localhost:9878/ create-bucket --bucket=bucket1
+```
 
+Only notable difference in the above command line is the fact that you have
+to tell the _endpoint_ address to the aws s3api command.
+
+Now let us put a simple file into the S3 Bucket hosted by Ozone. We will
+start by creating a temporary file that we can upload to Ozone via S3 support.
+```bash
 ls -1 > /tmp/testfile
+ ```
+ This command creates a temporary file that
+ we can upload to Ozone. The next command actually uploads to Ozone's S3
+ bucket using the standard aws s3 command line interface.
 
+```bash
 aws s3 --endpoint http://localhost:9878 cp --storage-class REDUCED_REDUNDANCY  /tmp/testfile  s3://bucket1/testfile
+```
+<div class="alert alert-info" role="alert">
+Note: REDUCED_REDUNDANCY is required for the single container ozone, since it
+ has a single datanode. </div>
+We can now verify that file got uploaded by running the list command against
+our bucket.
 
+```bash
 aws s3 --endpoint http://localhost:9878 ls s3://bucket1/testfile
 ```
 
-And you can check the internal bucket browser:
-
+.
+<div class="alert alert-info" role="alert"> You can also check the internal
+bucket browser supported by Ozone S3 interface by clicking on the below link.
+<br>
+</div>
 http://localhost:9878/bucket1?browser
 
-<div class="alert alert-info" role="alert">Note: REDUCED_REDUNDANCY is required as the all-in-one container has only datanode</div>
+<a href="{{< ref "start/OnPrem.md" >}}"> <button type="button"
+class="btn  btn-success btn-lg">Next >></button>

@@ -1,10 +1,7 @@
 ---
-title: "Hadoop Distributed Data Store"
+title: "Storage Container Manager"
 date: "2017-09-14"
-menu:
-   main:
-       parent: Architecture
-weight: 10
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -23,43 +20,86 @@ weight: 10
   limitations under the License.
 -->
 
-SCM Overview
-------------
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+     <li class="breadcrumb-item"><a href="{{< ref "Concept.md" >}}">
+        Concepts</a>
+    <li class="breadcrumb-item active" aria-current="page">Storage Container Manager
+    </li>
+  </ol>
+</nav>
 
-Storage Container Manager or SCM is a very important component of ozone. SCM
-offers block and container-based services to Ozone Manager.  A container is a
-collection of unrelated blocks under ozone. SCM and data nodes work together
-to maintain the replication levels needed by the cluster.
-
-It is easier to look at a putKey operation to understand the role that SCM plays.
-
-To put a key, a client makes a call to OM with the following arguments.
-
--- putKey(keyName, data, pipeline type, replication count)
-
-1. keyName - refers to the file name.
-2. data - The data that the client wants to write.
-3. pipeline type - Allows the client to select the pipeline type.  A pipeline
- refers to the replication strategy used for replicating a block.  Ozone
- currently supports Stand Alone and Ratis as two different pipeline types.
-4. replication count - This specifies how many copies of the block replica should be maintained.
-
-In most cases, the client does not specify the pipeline type and  replication
- count. The default pipeline type and replication count are used.
+Storage container manager provides multiple critical functions for the Ozone
+cluster.  SCM acts as the cluster manager, Certificate authority, Block
+manager and the replica manager.
 
 
-Ozone Manager when it receives the putKey call, makes a call to SCM asking
-for a pipeline instance with the specified property. So if the client asked
-for RATIS replication strategy and a replication count of three, then OM
-requests SCM to return a set of data nodes that meet this capability.
+   <div class="card" >
+        <div class="col-sm-6">
+            <img class="card-img-top" src="" alt="">
+            <span style="font-size: 50px" class="
+glyphicon glyphicon-tasks"
+                aria-hidden="true"></span>
+            <div class="card-body">
+                <h4 class="card-title">1.Cluster Management</h4>
+                <p class="card-text"> SCM is in charge of creating an Ozone
+                cluster. When an SCM is booted up via <kbd>init</kbd>
+                command, SCM creates the cluster identity and root
+                certificates needed for the SCM certificate authority. SCM
+                manages the life cycle of a data node in the cluster.
+                </p>
+            </div>
+        </div>
+    </div>
+   <div class="card" >
+        <div class="col-sm-6">
+            <img class="card-img-top" src="" alt="">
+            <span style="font-size: 50px" class="
+glyphicon glyphicon-eye-open"
+                aria-hidden="true"></span>
+            <div class="card-body">
+                <h4 class="card-title">2. Service Identity Management</h4>
+                <p class="card-text"> SCM's Ceritificate authority is in
+                charge of issuing identity certificates for each and every
+                service in the cluster. This certificate infrastructre makes
+                it easy to enable mTLS at network layer and also the block
+                token infrastructure depends on this certificate infrastructure.
+                </p>
+            </div>
+        </div>
+    </div>
 
-If SCM can find this a pipeline ( that is a set of data nodes) that can meet
-the requirement from the client, then those nodes are returned to OM. OM will
-persist this info and return a tuple consisting of {BlockID, ContainerName, and Pipeline}.
+   <div class="card" >
+           <div class="col-sm-6">
+               <img class="card-img-top" src="" alt="">
+               <span style="font-size: 50px" class="glyphicon glyphicon-th"
+                   aria-hidden="true"></span>
+               <div class="card-body">
+                   <h4 class="card-title">3. Block Management</h4>
+                   <p class="card-text"> SCM is the block manager. SCM
+                   allocates blocks and assigns them to data nodes. Clients
+                   read and write these blocks directly.
+                   </p>
+               </div>
+           </div>
+       </div>
+     <div class="card" >
+             <div class="col-sm-6">
+                 <img class="card-img-top" src="" alt="">
+                 <span style="font-size: 50px" class="glyphicon glyphicon-link"
+                     aria-hidden="true"></span>
+                 <div class="card-body">
+                     <h4 class="card-title">4. Replica Management</h4>
+                     <p class="card-text"> SCM keeps track of all the block
+                     replicas. If there is a loss of data node or a disk, SCM
+                      detects it and instructs data nodes make copies of the
+                      missing blocks to ensure high avialablity.
+                     </p>
+                 </div>
+             </div>
+         </div>
 
-If SCM is not able to find a pipeline, then SCM creates a logical pipeline and then returns it.
 
-
-SCM manages blocks, containers, and pipelines.  To return healthy pipelines,
-SCM also needs to understand the node health. So SCM listens to heartbeats
-from data nodes and acts as the node manager too.
+ <a href="{{< ref "concept/datanodes.md" >}}"> <button type="button"
+ class="btn  btn-success btn-lg">Next >></button>

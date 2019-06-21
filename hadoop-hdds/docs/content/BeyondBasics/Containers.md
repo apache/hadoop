@@ -1,11 +1,6 @@
 ---
-title: "Docker-images"
-menu:
-   main:
-      parent: Next
-      weight: 11
+title: "Docker Images"
 ---
-
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -22,19 +17,35 @@ menu:
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+     <li class="breadcrumb-item"><a href="{{< ref "BeyondBasics.md" >}}">
+        Beyond Basics</a>
+    <li class="breadcrumb-item active" aria-current="page">Docker Containers
+    </li>
+  </ol>
+</nav>
 
-
-Docker heavily is used at the ozone development, but there are three main use-cases:
+Docker heavily is used at the ozone development with three principal use-cases:
 
 * __dev__:
      * We use docker to start local pseudo-clusters (docker provides unified environment, but no image creation is required)
- * __test__:
+* __test__:
      * We create docker images from the dev branches to test ozone in kubernetes and other container orchestator system
      * We provide _apache/ozone_ images for each release to make it easier the evaluation of Ozone. These images are __not__ created __for production__ usage.
- * __production__:
+
+<div class="alert alert-warning" role="alert">
+We <b>strongly</b> recommend that you create your own custom images when you
+deploy ozone into production using containers. Please treat all the standard
+shipped container images and k8s resources as examples and guides to help you
+ customize your own deployment.
+</div>
+
+* __production__:
      * We document how can you create your own docker image for your production cluster.
 
-Let's check each of the use-cases in more details:
+Let's check out each of the use-cases in more detail:
 
 ## Development
 
@@ -148,7 +159,11 @@ kubectl apply -f
 
 ## Production
 
-We strongly recommend to use your own image in your production cluster and adjust base image, umask, security settings, user settings according to your own requirements.
+<div class="alert alert-danger" role="alert">
+We <b>strongly</b> recommend to use your own image in your production cluster
+and
+adjust base image, umask, security settings, user settings according to your own requirements.
+</div>
 
 You can use the source of our development images as an example:
 
@@ -164,10 +179,50 @@ You can use the source of our development images as an example:
 
 Ozone related container images and source locations:
 
-```
-| Container              |repository                                            | branch               | base           | available tags
---------------------------------------------------------------------------------------------------------------------------
-| apache/ozone             | https://github.com/apache/hadoop-docker-ozone      | ozone-...            | hadoop-runner  | 0.3.0,0.4.0,...
-| apache/hadoop-runner     | https://github.com/apache/hadoop                   | docker-hadoop-runner | centos         | jdk11,jdk8,latest
-| apache/ozone:build (WIP) | https://github.com/apache/hadoop-docker-ozone      | ozone-build          |                |
-```
+
+<table class="table table-dark">
+  <thead>
+    <tr>
+      <th scope="col">#</th>
+      <th scope="col">Container</th>
+      <th scope="col">Repository</th>
+      <th scope="col">Base</th>
+      <th scope="col">Branch</th>
+      <th scope="col">Tags</th>
+      <th scope="col">Comments</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th scope="row">1</th>
+      <td>apache/ozone</td>
+      <td>https://github.com/apache/hadoop-docker-ozone</td>
+      <td>ozone-... </td>
+      <td>hadoop-runner</td>
+      <td>0.3.0,0.4.0,0.4.1</td>
+      <td>For each Ozone release we create new release tag.</td>
+    </tr>
+    <tr>
+      <th scope="row">2</th>
+      <td>apache/hadoop-runner </td>
+      <td>https://github.com/apache/hadoop</td>
+      <td>docker-hadoop-runner</td>
+      <td>centos</td>
+      <td>jdk11,jdk8,latest</td>
+       <td>This is the base image used for testing Hadoop Ozone.
+       This is a set of utilities that make it easy for us run ozone.</td>
+    </tr>
+    <tr>
+      <th scope="row">3</th>
+      <td>apache/ozone:build (WIP)</td>
+      <td>https://github.com/apache/hadoop-docker-ozone</td>
+      <td>ozone-build </td>
+      <td> </td>
+      <td>TODO: Add more documentation here.</td>
+    </tr>
+  </tbody>
+</table>
+
+
+<a href="{{< ref "BeyondBasics/Tools.md" >}}"> <button type="button"
+class="btn  btn-success btn-lg">Next >></button>

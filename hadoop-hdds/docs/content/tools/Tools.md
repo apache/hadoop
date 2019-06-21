@@ -1,7 +1,5 @@
 ---
-title: "Generate Configurations"
-date: 2018-12-18
-
+title: "Testing tools"
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,8 +17,3 @@ date: 2018-12-18
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-Genconf tool generates a template ozone-site.xml file at the specified path.
-This template file can be edited to replace with proper values.
-
-`ozone genconf <path>`

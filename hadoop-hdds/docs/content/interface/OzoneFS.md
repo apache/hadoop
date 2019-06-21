@@ -1,9 +1,7 @@
 ---
 title: Ozone File System
 date: 2017-09-14
-menu:
-   main:
-      parent: Client
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -22,7 +20,19 @@ menu:
   limitations under the License.
 -->
 
-There are many Hadoop compatible files systems under Hadoop. Hadoop compatible file systems ensures that storage backends like Ozone can easily be integrated into Hadoop eco-system.
+<nav aria-label="breadcrumb">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="/">Home</a></li>
+     <li class="breadcrumb-item"><a href="{{< ref "Interface.md" >}}">
+        Programming Interface</a>
+    <li class="breadcrumb-item active" aria-current="page">Ozone File System
+    </li>
+  </ol>
+</nav>
+
+The Hadoop compatible file system interface allpws storage backends like Ozone
+to be easily integrated into Hadoop eco-system.  Ozone file system is an
+Hadoop compatible file system.
 
 ## Setting up the Ozone file system
 
@@ -122,3 +132,7 @@ Hadoop version | Required jar            | OzoneFileSystem implementation
 2.7            | filesystem-lib-legacy   | org.apache.hadoop.fs.ozone.BasicOzoneFileSystem
  With this method the hadoop-ozone-filesystem-lib-legacy.jar can be used from
  any older hadoop version (eg. hadoop 2.7 or spark+hadoop 2.7)
+
+
+ <a href="{{< ref "interface/S3.md" >}}"> <button type="button"
+ class="btn  btn-success btn-lg">Next >></button>

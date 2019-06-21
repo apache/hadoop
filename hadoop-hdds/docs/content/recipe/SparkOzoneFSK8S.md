@@ -1,8 +1,6 @@
 ---
 title: Spark in Kubernetes with OzoneFS
-menu:
-   main:
-      parent: Recipes
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more

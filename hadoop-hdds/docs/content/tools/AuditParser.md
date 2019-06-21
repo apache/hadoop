@@ -1,9 +1,7 @@
 ---
 title: "Audit Parser"
 date: 2018-12-17
-menu:
-   main:
-      parent: Tools
+
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
