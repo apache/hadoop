@@ -208,7 +208,7 @@
     <value>1MB</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>
     <description>The size of the raft segment used by Apache Ratis on datanodes.
-      (16 KB by default)
+      (1 MB by default)
     </description>
   </property>
   <property>
