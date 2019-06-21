@@ -25,6 +25,9 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationRequest;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationResponse;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Type;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.AllocateScmBlockResponseProto;
@@ -73,6 +76,16 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   }
 
   /**
+   * Returns a SCMBlockLocationRequest builder with specified type.
+   * @param cmdType type of the request
+   */
+  private SCMBlockLocationRequest.Builder createSCMBlockRequest(Type cmdType) {
+    return SCMBlockLocationRequest.newBuilder()
+        .setCmdType(cmdType)
+        .setTraceID(TracingUtil.exportCurrentSpan());
+  }
+
+  /**
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.
    * @param size - size of the block.
@@ -96,12 +109,19 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
             .setType(type)
             .setFactor(factor)
             .setOwner(owner)
-            .setTraceID(TracingUtil.exportCurrentSpan())
             .setExcludeList(excludeList.getProtoBuf())
             .build();
+
+    SCMBlockLocationRequest wrapper = createSCMBlockRequest(
+        Type.AllocateScmBlock)
+        .setAllocateScmBlockRequest(request)
+        .build();
+
     final AllocateScmBlockResponseProto response;
+    final SCMBlockLocationResponse wrappedResponse;
     try {
-      response = rpcProxy.allocateScmBlock(NULL_RPC_CONTROLLER, request);
+      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
+      response = wrappedResponse.getAllocateScmBlockResponse();
     } catch (ServiceException e) {
       throw transformServiceException(e);
     }
@@ -141,9 +161,16 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .addAllKeyBlocks(keyBlocksProto)
         .build();
 
+    SCMBlockLocationRequest wrapper = createSCMBlockRequest(
+        Type.DeleteScmKeyBlocks)
+        .setDeleteScmKeyBlocksRequest(request)
+        .build();
+
     final DeleteScmKeyBlocksResponseProto resp;
+    final SCMBlockLocationResponse wrappedResponse;
     try {
-      resp = rpcProxy.deleteScmKeyBlocks(NULL_RPC_CONTROLLER, request);
+      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
+      resp = wrappedResponse.getDeleteScmKeyBlocksResponse();
     } catch (ServiceException e) {
       throw transformServiceException(e);
     }
@@ -191,8 +218,16 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
     HddsProtos.GetScmInfoRequestProto request =
         HddsProtos.GetScmInfoRequestProto.getDefaultInstance();
     HddsProtos.GetScmInfoResponseProto resp;
+
+    SCMBlockLocationRequest wrapper = createSCMBlockRequest(
+        Type.GetScmInfo)
+        .setGetScmInfoRequest(request)
+        .build();
+
+    final SCMBlockLocationResponse wrappedResponse;
     try {
-      resp = rpcProxy.getScmInfo(NULL_RPC_CONTROLLER, request);
+      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
+      resp = wrappedResponse.getGetScmInfoResponse();
     } catch (ServiceException e) {
       throw transformServiceException(e);
     }

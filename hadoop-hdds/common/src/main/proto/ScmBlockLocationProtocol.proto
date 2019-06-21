@@ -33,6 +33,60 @@ import "hdds.proto";
 
 // SCM Block protocol
 
+enum Type {
+  AllocateScmBlock   = 11;
+  DeleteScmKeyBlocks = 12;
+  GetScmInfo         = 13;
+}
+
+message SCMBlockLocationRequest {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  optional UserInfo userInfo = 3;
+
+  optional AllocateScmBlockRequestProto       allocateScmBlockRequest   = 11;
+  optional DeleteScmKeyBlocksRequestProto     deleteScmKeyBlocksRequest = 12;
+  optional hadoop.hdds.GetScmInfoRequestProto getScmInfoRequest         = 13;
+}
+
+message SCMBlockLocationResponse {
+  required Type cmdType = 1; // Type of the command
+
+  // A string that identifies this command, we generate  Trace ID in Ozone
+  // frontend and this allows us to trace that command all over ozone.
+  optional string traceID = 2;
+
+  optional bool success = 3 [default=true];
+
+  optional string message = 4;
+
+  required Status status = 5;
+
+  optional string leaderOMNodeId = 6;
+
+  optional AllocateScmBlockResponseProto       allocateScmBlockResponse   = 11;
+  optional DeleteScmKeyBlocksResponseProto     deleteScmKeyBlocksResponse = 12;
+  optional hadoop.hdds.GetScmInfoResponseProto getScmInfoResponse         = 13;
+}
+
+/**
+    User information which will be extracted during RPC context and used
+    during validating Acl.
+*/
+message UserInfo {
+  optional string userName = 1;
+  optional string remoteAddress = 3;
+}
+
+enum Status {
+  OK = 1;
+  UNKNOWN = 2;
+}
+
 /**
 * Request send to SCM asking allocate block of specified size.
 */
@@ -42,7 +96,6 @@ message AllocateScmBlockRequestProto {
   required ReplicationType type = 3;
   required hadoop.hdds.ReplicationFactor factor = 4;
   required string owner = 5;
-  optional string traceID = 6;
   optional ExcludeListProto excludeList = 7;
 }
 
@@ -73,8 +126,6 @@ message KeyBlocks {
  */
 message DeleteScmKeyBlocksResponseProto {
   repeated DeleteKeyBlocksResultProto results = 1;
-  optional string traceID = 2;
-
 }
 
 /**
@@ -122,21 +173,6 @@ message AllocateScmBlockResponseProto {
  */
 service ScmBlockLocationProtocolService {
 
-  /**
-   * Creates a block entry in SCM.
-   */
-  rpc allocateScmBlock(AllocateScmBlockRequestProto)
-      returns (AllocateScmBlockResponseProto);
-
-  /**
-   * Deletes blocks for a set of object keys from SCM.
-   */
-  rpc deleteScmKeyBlocks(DeleteScmKeyBlocksRequestProto)
-      returns (DeleteScmKeyBlocksResponseProto);
-
-  /**
-   * Gets the scmInfo from SCM.
-   */
-  rpc getScmInfo(hadoop.hdds.GetScmInfoRequestProto)
-      returns (hadoop.hdds.GetScmInfoResponseProto);
+  rpc send(SCMBlockLocationRequest)
+      returns (SCMBlockLocationResponse);
 }
