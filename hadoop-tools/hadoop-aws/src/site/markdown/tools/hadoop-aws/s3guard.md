@@ -796,7 +796,7 @@ time" is older than the specified age.
 
 ```bash
 hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
-    [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
+    [-seconds SECONDS] [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
 A time value of hours, minutes and/or seconds must be supplied.

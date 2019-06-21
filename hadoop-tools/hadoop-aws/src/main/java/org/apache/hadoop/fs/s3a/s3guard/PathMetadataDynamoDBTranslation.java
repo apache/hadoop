@@ -293,7 +293,8 @@ public final class PathMetadataDynamoDBTranslation {
   @VisibleForTesting
   public static String pathToParentKey(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
+    Preconditions.checkArgument(path.isUriPathAbsolute(),
+        "Path not absolute: '%s'", path);
     URI uri = path.toUri();
     String bucket = uri.getHost();
     Preconditions.checkArgument(!StringUtils.isEmpty(bucket),

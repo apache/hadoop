@@ -187,6 +187,8 @@
                     <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
                     <exclude>**/ITestTerasort*.java</exclude>
+                    <exclude>**/ITestS3GuardRootOperations*.java</exclude>
+                    <!-- operations across the metastore -->
                   </excludes>
                 </configuration>
               </execution>
@@ -224,6 +226,8 @@
                     <!-- the terasort tests both work with a file in the same path in -->
                     <!--  the local FS. Running them sequentially guarantees isolation -->
                     <include>**/ITestTerasort*.java</include>
+                    <!-- operations across the metastore -->
+                    <include>**/ITestS3GuardRootOperations*.java</include>
                   </includes>
                 </configuration>
               </execution>

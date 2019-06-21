@@ -105,7 +105,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the output of any successful run
    * @throws Exception failure
    */
-  protected static String expectSuccess(
+  public static String expectSuccess(
       String message,
       S3GuardTool tool,
       String... args) throws Exception {
