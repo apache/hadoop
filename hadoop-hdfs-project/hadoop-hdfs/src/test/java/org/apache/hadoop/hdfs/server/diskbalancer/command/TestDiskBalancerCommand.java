@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Scanner;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -382,6 +383,16 @@ public class TestDiskBalancerCommand {
     /* get full path of plan file*/
     final String planFileFullName = outputs.get(1);
     return planFileFullName;
+  }
+
+  /* test exception on invalid arguments */
+  @Test(timeout = 60000)
+  public void testExceptionOnInvalidArguments() throws Exception {
+    final String cmdLine = "hdfs diskbalancer random1 -report random2 random3";
+    thrown.expect(HadoopIllegalArgumentException.class);
+    thrown.expectMessage(
+        "Invalid or extra Arguments: [random1, random2, random3]");
+    runCommand(cmdLine);
   }
 
   /* test basic report */
