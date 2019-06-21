@@ -154,18 +154,20 @@ public class HttpExceptionUtils {
             toThrow = (Exception) constr.newInstance(exMsg);
           } catch (Exception ex) {
             toThrow = new IOException(String.format(
-                "HTTP status [%d], exception [%s], message [%s] ",
-                conn.getResponseCode(), exClass, exMsg));
+                "HTTP status [%d], exception [%s], message [%s], URL [%s]",
+                conn.getResponseCode(), exClass, exMsg, conn.getURL()));
           }
         } else {
           String msg = (exMsg != null) ? exMsg : conn.getResponseMessage();
           toThrow = new IOException(String.format(
-              "HTTP status [%d], message [%s]", conn.getResponseCode(), msg));
+              "HTTP status [%d], message [%s], URL [%s]",
+              conn.getResponseCode(), msg, conn.getURL()));
         }
       } catch (Exception ex) {
         toThrow = new IOException(String.format(
-            "HTTP status [%d], message [%s]", conn.getResponseCode(),
-            conn.getResponseMessage()));
+            "HTTP status [%d], message [%s], URL [%s], exception [%s]",
+            conn.getResponseCode(), conn.getResponseMessage(), conn.getURL(),
+            ex.toString()), ex);
       } finally {
         if (es != null) {
           try {
