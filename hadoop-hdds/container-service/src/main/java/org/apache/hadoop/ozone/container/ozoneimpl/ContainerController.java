@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.ozone.container.common.impl.ContainerSet;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.apache.hadoop.ozone.container.common.interfaces.Handler;
+import org.apache.hadoop.ozone.container.common.volume.HddsVolume;
 import org.apache.hadoop.ozone.container.keyvalue.TarContainerPacker;
 
 import java.io.FileInputStream;
@@ -139,5 +140,16 @@ public class ContainerController {
 
   public Iterator<Container> getContainers() {
     return containerSet.getContainerIterator();
+  }
+
+  /**
+   * Return an iterator of containers which are associated with the specified
+   * <code>volume</code>.
+   *
+   * @param  volume the HDDS volume which should be used to filter containers
+   * @return {@literal Iterator<Container>}
+   */
+  public Iterator<Container> getContainers(HddsVolume volume) {
+    return containerSet.getContainerIterator(volume);
   }
 }
