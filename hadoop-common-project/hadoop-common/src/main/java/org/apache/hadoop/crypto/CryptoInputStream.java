@@ -32,6 +32,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.CanSetDropBehind;
 import org.apache.hadoop.fs.CanSetReadahead;
@@ -58,10 +59,10 @@ import com.google.common.base.Preconditions;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class CryptoInputStream extends FilterInputStream implements 
-    Seekable, PositionedReadable, ByteBufferReadable, HasFileDescriptor, 
-    CanSetDropBehind, CanSetReadahead, HasEnhancedByteBufferAccess, 
-    ReadableByteChannel {
+public class CryptoInputStream extends FilterInputStream
+    implements Seekable, PositionedReadable, ByteBufferReadable,
+    ByteBufferPositionedReadable, HasFileDescriptor, CanSetDropBehind,
+    CanSetReadahead, HasEnhancedByteBufferAccess, ReadableByteChannel {
   private final byte[] oneByteBuf = new byte[1];
   private final CryptoCodec codec;
   private final Decryptor decryptor;
@@ -98,7 +99,7 @@ public class CryptoInputStream extends FilterInputStream implements
   private byte[] iv;
   private final boolean isByteBufferReadable;
   private final boolean isReadableByteChannel;
-  
+
   /** DirectBuffer pool */
   private final Queue<ByteBuffer> bufferPool = 
       new ConcurrentLinkedQueue<ByteBuffer>();
@@ -337,6 +338,26 @@ public class CryptoInputStream extends FilterInputStream implements
           "positioned read.");
     }
   }
+
+   /** Positioned read using ByteBuffers. It is thread-safe */
+  @Override
+  public int read(long position, final ByteBuffer buf)
+      throws IOException {
+    checkStream();
+    try {
+      int pos = buf.position();
+      final int n = ((ByteBufferPositionedReadable) in).read(position, buf);
+      if (n > 0) {
+        // This operation does not change the current offset of the file
+        decrypt(position, buf, n, pos);
+      }
+
+      return n;
+    } catch (ClassCastException e) {
+      throw new UnsupportedOperationException("This stream does not support " +
+          "positioned read.");
+    }
+  }
   
   /**
    * Decrypt length bytes in buffer starting at offset. Output is also put 
@@ -371,7 +392,52 @@ public class CryptoInputStream extends FilterInputStream implements
       returnDecryptor(decryptor);
     }
   }
-  
+
+  /**
+   * Decrypt n bytes in buf starting at start. Output is also put into buf
+   * starting at current position. buf.position() and buf.limit() should be
+   * unchanged after decryption. It is thread-safe.
+   */
+  private void decrypt(long position, ByteBuffer buf, int n, int start)
+          throws IOException {
+    ByteBuffer localInBuffer = getBuffer();
+    ByteBuffer localOutBuffer = getBuffer();
+    final int pos = buf.position();
+    final int limit = buf.limit();
+    int len = 0;
+    Decryptor localDecryptor = null;
+    try {
+      localDecryptor = getDecryptor();
+      byte[] localIV = initIV.clone();
+      updateDecryptor(localDecryptor, position, localIV);
+      byte localPadding = getPadding(position);
+      // Set proper position for inputdata.
+      localInBuffer.position(localPadding);
+
+      while (len < n) {
+        buf.position(start + len);
+        buf.limit(start + len + Math.min(n - len, localInBuffer.remaining()));
+        localInBuffer.put(buf);
+        // Do decryption
+        try {
+          decrypt(localDecryptor, localInBuffer, localOutBuffer, localPadding);
+          buf.position(start + len);
+          buf.limit(limit);
+          len += localOutBuffer.remaining();
+          buf.put(localOutBuffer);
+        } finally {
+          localPadding = afterDecryption(localDecryptor, localInBuffer,
+                                         position + n, localIV);
+        }
+      }
+      buf.position(pos);
+    } finally {
+      returnBuffer(localInBuffer);
+      returnBuffer(localOutBuffer);
+      returnDecryptor(localDecryptor);
+    }
+  }
+
   /** Positioned read fully. It is thread-safe */
   @Override
   public void readFully(long position, byte[] buffer, int offset, int length)
