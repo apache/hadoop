@@ -114,7 +114,7 @@ Configure `etc/hadoop/ssl-server.xml` with proper values, for example:
 ```
 
 The SSL passwords can be secured by a credential provider. See
-[Credential Provider API](../../../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
+[Credential Provider API](../hadoop-project-dist/hadoop-common/CredentialProviderAPI.html).
 
 You need to create an SSL certificate for the HttpFS server. As the `httpfs` Unix user, using the Java `keytool` command to create the SSL certificate:
 
@@ -131,6 +131,7 @@ The answer to "What is your first and last name?" (i.e. "CN") must be the hostna
 Start HttpFS. It should work over HTTPS.
 
 Using the Hadoop `FileSystem` API or the Hadoop FS shell, use the `swebhdfs://` scheme. Make sure the JVM is picking up the truststore containing the public key of the SSL certificate if using a self-signed certificate.
+For more information about the client side settings, see [SSL Configurations for SWebHDFS](../hadoop-project-dist/hadoop-hdfs/WebHDFS.html#SSL_Configurations_for_SWebHDFS).
 
 NOTE: Some old SSL clients may use weak ciphers that are not supported by the HttpFS server. It is recommended to upgrade the SSL client.
 
