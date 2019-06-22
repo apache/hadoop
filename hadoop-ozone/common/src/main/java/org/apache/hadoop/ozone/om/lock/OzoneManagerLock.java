@@ -77,7 +77,7 @@ public class OzoneManagerLock {
 
   private final LockManager<String> manager;
   private final ThreadLocal<Short> lockSet = ThreadLocal.withInitial(
-      () -> new Short((short)0));
+      () -> Short.valueOf((short)0));
 
 
   /**
