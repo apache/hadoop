@@ -764,7 +764,7 @@ public class ReplicationManager {
 
     @Config(key = "thread.interval",
         type = ConfigType.TIME,
-        defaultValue = "3s",
+        defaultValue = "300s",
         tags = {SCM, OZONE},
         description = "When a heartbeat from the data node arrives on SCM, "
             + "It is queued for processing with the time stamp of when the "
