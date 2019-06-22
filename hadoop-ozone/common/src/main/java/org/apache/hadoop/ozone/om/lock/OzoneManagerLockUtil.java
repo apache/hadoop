@@ -4,7 +4,6 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_SECRET;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
-import static org.apache.hadoop.ozone.container.common.volume.RoundRobinVolumeChoosingPolicy.LOG;
 
 /**
  * Utility class contains helper functions required for OM lock.
@@ -35,8 +34,10 @@ public final class OzoneManagerLockUtil {
     } else if (resource == OzoneManagerLock.Resource.PREFIX) {
       return OM_S3_PREFIX + resourceName;
     } else {
-        throw new IllegalArgumentException("Unidentified resource type is" +
-            " passed when Resource type is bucket");
+      // This is for developers who mistakenly call this method with resource
+      // bucket type, as for bucket type we need bucket and volumeName.
+      throw new IllegalArgumentException("Bucket resource type is passed, " +
+          "to get BucketResourceLockName, use generateBucketLockName method");
     }
 
   }
