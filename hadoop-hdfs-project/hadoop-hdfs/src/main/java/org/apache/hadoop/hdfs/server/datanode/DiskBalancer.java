@@ -903,6 +903,11 @@ public class DiskBalancer {
       while (!iter.atEnd() && item.getErrorCount() < getMaxError(item)) {
         try {
           ExtendedBlock block = iter.nextBlock();
+          if(null == block){
+            LOG.info("NextBlock call returned null.No valid block to copy. {}",
+                    item.toJson());
+            return block;
+          }
 
           if (block != null) {
             // A valid block is a finalized block, we iterate until we get
