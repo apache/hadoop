@@ -260,7 +260,7 @@ public class OzoneManagerLock {
      * @return Updated value which has set lock bits.
      */
     short setLock(short lockSetVal) {
-      System.out.println("acquire" + name + (short) (lockSetVal | setMask));
+      LOG.debug("acquire" + name + (short) (lockSetVal | setMask));
       return (short) (lockSetVal | setMask);
     }
 
@@ -271,7 +271,7 @@ public class OzoneManagerLock {
      * @return Updated value which has cleared lock bits.
      */
     short clearLock(short lockSetVal) {
-      System.out.println("release" + name + (short) (lockSetVal & ~setMask));
+      LOG.debug("release" + name + (short) (lockSetVal & ~setMask));
       return (short) (lockSetVal & ~setMask);
     }
 
