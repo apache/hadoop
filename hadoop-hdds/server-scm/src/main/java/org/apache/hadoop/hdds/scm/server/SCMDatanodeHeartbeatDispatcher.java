@@ -99,6 +99,9 @@ public final class SCMDatanodeHeartbeatDispatcher {
       commands = nodeManager.getCommandQueue(dnID);
 
     } else {
+      // Get the datanode details again from node manager with the topology info
+      // for registered datanodes.
+      datanodeDetails = nodeManager.getNode(datanodeDetails.getIpAddress());
 
       // should we dispatch heartbeat through eventPublisher?
       commands = nodeManager.processHeartbeat(datanodeDetails);
