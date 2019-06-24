@@ -148,7 +148,7 @@ public class ITestDynamoDBMetadataStoreScale
     conf.set(S3GUARD_DDB_BACKGROUND_SLEEP_MSEC_KEY, "5ms");
 
     DynamoDBMetadataStore ms = new DynamoDBMetadataStore();
-    ms.initialize(conf);
+    ms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
     // wire up the owner FS so that we can make assertions about throttle
     // events
     ms.bindToOwnerFilesystem(fs);
@@ -337,7 +337,7 @@ public class ITestDynamoDBMetadataStoreScale
   private void retryingDelete(final Path path) {
     try {
       ddbms.getInvoker().retry("Delete ", path.toString(), true,
-          () -> ddbms.delete(path, new S3Guard.TtlTimeProvider(getConf())));
+          () -> ddbms.delete(path));
     } catch (IOException e) {
       LOG.warn("Failed to delete {}: ", path, e);
     }
@@ -432,7 +432,7 @@ public class ITestDynamoDBMetadataStoreScale
           OPERATIONS_PER_THREAD,
           expectThrottling(),
           () -> {
-            ddbms.delete(path, time);
+            ddbms.delete(path);
           });
     }
   }

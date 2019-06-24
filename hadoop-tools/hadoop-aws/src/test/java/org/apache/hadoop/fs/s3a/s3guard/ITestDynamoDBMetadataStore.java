@@ -210,7 +210,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     enableOnDemand(conf);
 
     ddbmsStatic = new DynamoDBMetadataStore();
-    ddbmsStatic.initialize(conf);
+    ddbmsStatic.initialize(conf, new S3Guard.TtlTimeProvider(conf));
   }
 
   @AfterClass
@@ -416,7 +416,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
-      ddbms.initialize(s3afs);
+      ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
       verifyTableInitialized(tableName, ddbms.getDynamoDB());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
@@ -445,14 +445,14 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         getFileSystem().getBucketLocation());
     conf.unset(S3GUARD_DDB_REGION_KEY);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
-      ddbms.initialize(conf);
+      ddbms.initialize(conf,  new S3Guard.TtlTimeProvider(conf));
       fail("Should have failed because the table name is not set!");
     } catch (IllegalArgumentException ignored) {
     }
     // config table name
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
-      ddbms.initialize(conf);
+      ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
       fail("Should have failed because as the region is not set!");
     } catch (IllegalArgumentException ignored) {
     }
@@ -460,7 +460,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     conf.set(S3GUARD_DDB_REGION_KEY, savedRegion);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
-      ddbms.initialize(conf);
+      ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
       verifyTableInitialized(tableName, ddbms.getDynamoDB());
       assertNotNull(ddbms.getTable());
       assertEquals(tableName, ddbms.getTable().getTableName());
@@ -590,7 +590,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     ThrottleTracker throttleTracker = new ThrottleTracker(ms);
     try(DurationInfo ignored = new DurationInfo(LOG, true,
         "Move")) {
-      ms.move(pathsToDelete, newMetas, getTtlTimeProvider(), state);
+      ms.move(pathsToDelete, newMetas, state);
     }
     LOG.info("Throttle status {}", throttleTracker);
     assertEquals("Number of children in source directory",
@@ -662,7 +662,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     tagConfiguration(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
-      ddbms.initialize(conf);
+      ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
       Table table = verifyTableInitialized(tableName, ddbms.getDynamoDB());
       // check the tagging too
       verifyStoreTags(createTagMap(), ddbms);
@@ -718,7 +718,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     clearBucketOption(conf, b, S3GUARD_DDB_TABLE_NAME_KEY);
     conf.unset(S3GUARD_DDB_TABLE_CREATE_KEY);
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
-      ddbms.initialize(s3afs);
+      ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
       // if an exception was not raised, a table was created.
       // So destroy it before failing.
       ddbms.destroy();
@@ -820,8 +820,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
             1024, false))
     );
 
-    ddbms.move(fullSourcePaths, pathsToCreate, getTtlTimeProvider(),
-        bulkWrite);
+    ddbms.move(fullSourcePaths, pathsToCreate, bulkWrite);
     bulkWrite.close();
     // assert that all the ancestors should have been populated automatically
     List<String> paths = Lists.newArrayList(
@@ -923,7 +922,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     enableOnDemand(conf);
     DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
     try {
-      ddbms.initialize(s3afs);
+      ddbms.initialize(s3afs, new S3Guard.TtlTimeProvider(conf));
       // we can list the empty table
       ddbms.listChildren(testPath);
       DynamoDB dynamoDB = ddbms.getDynamoDB();
