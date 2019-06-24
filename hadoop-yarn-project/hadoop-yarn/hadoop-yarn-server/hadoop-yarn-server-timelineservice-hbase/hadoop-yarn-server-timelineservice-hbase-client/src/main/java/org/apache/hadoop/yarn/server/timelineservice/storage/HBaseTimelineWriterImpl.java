@@ -100,6 +100,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       .getLogger(HBaseTimelineWriterImpl.class);
 
   private Connection conn;
+  private TimelineStorageMonitor storageMonitor;
   private TypedBufferedMutator<EntityTable> entityTable;
   private TypedBufferedMutator<AppToFlowTable> appToFlowTable;
   private TypedBufferedMutator<ApplicationTable> applicationTable;
@@ -150,7 +151,14 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
     UserGroupInformation ugi = UserGroupInformation.isSecurityEnabled() ?
         UserGroupInformation.getLoginUser() :
         UserGroupInformation.getCurrentUser();
+    storageMonitor = new HBaseStorageMonitor(conf);
     LOG.info("Initialized HBaseTimelineWriterImpl UGI to " + ugi);
+  }
+
+  @Override
+  protected void serviceStart() throws Exception {
+    super.serviceStart();
+    storageMonitor.start();
   }
 
   /**
@@ -160,7 +168,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineEntities data, UserGroupInformation callerUgi)
       throws IOException {
-
+    storageMonitor.checkStorageIsUp();
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
 
     String clusterId = context.getClusterId();
@@ -242,6 +250,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   public TimelineWriteResponse write(TimelineCollectorContext context,
       TimelineDomain domain)
       throws IOException {
+    storageMonitor.checkStorageIsUp();
     TimelineWriteResponse putStatus = new TimelineWriteResponse();
 
     String clusterId = context.getClusterId();
@@ -591,6 +600,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
   @Override
   public TimelineWriteResponse aggregate(TimelineEntity data,
       TimelineAggregationTrack track) throws IOException {
+    storageMonitor.checkStorageIsUp();
     return null;
   }
 
@@ -603,6 +613,7 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
    */
   @Override
   public void flush() throws IOException {
+    storageMonitor.checkStorageIsUp();
     // flush all buffered mutators
     entityTable.flush();
     appToFlowTable.flush();
@@ -653,6 +664,12 @@ public class HBaseTimelineWriterImpl extends AbstractService implements
       LOG.info("closing the hbase Connection");
       conn.close();
     }
+    storageMonitor.stop();
     super.serviceStop();
   }
+
+  protected TimelineStorageMonitor getTimelineStorageMonitor() {
+    return storageMonitor;
+  }
+
 }

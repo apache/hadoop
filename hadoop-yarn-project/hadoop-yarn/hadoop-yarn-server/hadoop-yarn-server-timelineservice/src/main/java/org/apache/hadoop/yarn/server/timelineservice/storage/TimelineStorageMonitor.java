@@ -81,10 +81,6 @@ public abstract class TimelineStorageMonitor  {
     }
   }
 
-  public boolean isStorageDown() {
-    return storageDown.get();
-  }
-
   private class MonitorThread implements Runnable {
     @Override
     public void run() {
