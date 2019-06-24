@@ -22,6 +22,7 @@ package org.apache.hadoop.ozone.om.lock;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ctc.wstx.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -161,34 +162,34 @@ public class OzoneManagerLock {
       // thread releases user locks, 2nd thread acquires them.
 
       int compare = newUserResource.compareTo(oldUserResource);
-      if (compare < 0) {
+      String temp;
+
+      // Order the user names in sorted order. Swap them.
+      if (compare > 0) {
+        temp = newUserResource;
+        newUserResource = oldUserResource;
+        oldUserResource = temp;
+      }
+
+      if (compare == 0) {
+        // both users are equal.
+        manager.lock(oldUserResource);
+      } else {
         manager.lock(newUserResource);
         try {
           manager.lock(oldUserResource);
         } catch (Exception ex) {
           // We got an exception acquiring 2nd user lock. Release already
           // acquired user lock, and throw exception to the user.
-          manager.unlock(oldUserResource);
+          manager.unlock(newUserResource);
           throw ex;
         }
-      } else if (compare > 0) {
-        // If this locking fails, we throw exception to user.
-        manager.lock(oldUserResource);
-        try {
-          manager.lock(newUserResource);
-        } catch (Exception ex) {
-          // We got an exception acquiring 2nd user lock. Release already
-          // acquired user lock, and throw exception to the user.
-          manager.unlock(oldUserResource);
-          throw ex;
-        }
-      } else {
-        // both users are equal.
-        manager.lock(oldUserResource);
       }
       lockSet.set(resource.setLock(lockSet.get()));
     }
   }
+
+
 
   /**
    * Acquire lock on multiple users.
@@ -199,14 +200,21 @@ public class OzoneManagerLock {
       String newUserResource) {
     Resource resource = Resource.USER;
     int compare = newUserResource.compareTo(oldUserResource);
-    if (compare < 0) {
-      manager.unlock(newUserResource);
-      manager.unlock(oldUserResource);
-    } else if (compare > 0) {
-      manager.unlock(oldUserResource);
-      manager.unlock(newUserResource);
-    } else {
+
+    String temp;
+
+    // Order the user names in sorted order. Swap them.
+    if (compare > 0) {
+      temp = newUserResource;
+      newUserResource = oldUserResource;
+      oldUserResource = temp;
+    }
+
+    if (compare == 0) {
       // both users are equal.
+      manager.unlock(oldUserResource);
+    } else {
+      manager.unlock(newUserResource);
       manager.unlock(oldUserResource);
     }
     lockSet.set(resource.clearLock(lockSet.get()));
