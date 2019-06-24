@@ -249,11 +249,8 @@ To address the limitation of block placement policy on rolling upgrade, the conc
 It will make sure replicas of any given block are distributed across machines from different upgrade domains. By default, 3 replicas of any given block are placed on 3 different upgrade domains. This means all datanodes belonging to a specific upgrade domain collectively won’t store more than one replica of any block.
 https://issues.apache.org/jira/browse/HDFS-9006
 
-- hdfs-site.xml
-<property>
-<name>dfs.block.replicator.classname</name>
-<value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithUpgradeDomain</value>
-</property>
+Settings
+Detailed info about configuration https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html
 
 
 
