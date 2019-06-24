@@ -3480,4 +3480,18 @@
       with the input domain name of the services by querying the underlying DNS.
     </description>
   </property>
+
+  <property>
+    <name>dfs.client.ignore.namenode.default.kms.uri</name>
+    <value>false</value>
+    <description>
+      Ignore KMS default URI returned from NameNode.
+      When set to true, kms uri is searched in the following order:
+      1. If there is a mapping in Credential's secrets map for namenode uri.
+      2. Fallback to local conf. (i.e hadoop.security.key.provider.path)
+      If client choose to ignore KMS uri provided by NameNode then client
+      should set KMS URI using 'hadoop.security.key.provider.path' to access
+      the right KMS for encrypted files.
+    </description>
+  </property>
 </configuration>

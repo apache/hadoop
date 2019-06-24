@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
 
 import java.io.IOException;
@@ -141,11 +143,19 @@ public final class HdfsKMSUtil {
           URI.create(DFSUtilClient.bytes2String(keyProviderUriBytes));
     }
     if (keyProviderUri == null) {
-      // NN is old and doesn't report provider, so use conf.
-      if (keyProviderUriStr == null) {
+      // Check if NN provided uri is not null and ignore property is false.
+      if (keyProviderUriStr != null && !conf.getBoolean(
+          DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI,
+          DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT)) {
+        if (!keyProviderUriStr.isEmpty()) {
+          keyProviderUri = URI.create(keyProviderUriStr);
+        }
+      }
+      // Fallback to configuration.
+      if (keyProviderUri == null) {
+        // Either NN is old and doesn't report provider or ignore NN KMS
+        // provider property is set to true, so use conf.
         keyProviderUri = KMSUtil.getKeyProviderUri(conf, keyProviderUriKeyName);
-      } else if (!keyProviderUriStr.isEmpty()) {
-        keyProviderUri = URI.create(keyProviderUriStr);
       }
       if (keyProviderUri != null) {
         credentials.addSecretKey(
