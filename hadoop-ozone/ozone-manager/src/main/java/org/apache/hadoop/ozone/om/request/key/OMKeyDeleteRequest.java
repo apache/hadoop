@@ -69,7 +69,6 @@ public class OMKeyDeleteRequest extends OMClientRequest
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex) {
     DeleteKeyRequest deleteKeyRequest = getOmRequest().getDeleteKeyRequest();
-    Preconditions.checkNotNull(deleteKeyRequest);
 
     OzoneManagerProtocolProtos.KeyArgs deleteKeyArgs =
         deleteKeyRequest.getKeyArgs();

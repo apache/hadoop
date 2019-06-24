@@ -156,7 +156,6 @@ public class OMKeyCreateRequest extends OMClientRequest
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex) {
     CreateKeyRequest createKeyRequest = getOmRequest().getCreateKeyRequest();
-    Preconditions.checkNotNull(createKeyRequest);
 
 
     KeyArgs keyArgs = createKeyRequest.getKeyArgs();

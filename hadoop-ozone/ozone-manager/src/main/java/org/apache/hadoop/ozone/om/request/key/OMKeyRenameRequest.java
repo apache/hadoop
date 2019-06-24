@@ -86,7 +86,6 @@ public class OMKeyRenameRequest extends OMClientRequest
       long transactionLogIndex) {
 
     RenameKeyRequest renameKeyRequest = getOmRequest().getRenameKeyRequest();
-    Preconditions.checkNotNull(renameKeyRequest);
 
     OzoneManagerProtocolProtos.KeyArgs renameKeyArgs =
         renameKeyRequest.getKeyArgs();

@@ -142,7 +142,6 @@ public class OMAllocateBlockRequest extends OMClientRequest
 
     OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
         getOmRequest().getAllocateBlockRequest();
-    Preconditions.checkNotNull(allocateBlockRequest);
 
     OzoneManagerProtocolProtos.KeyArgs keyArgs =
         allocateBlockRequest.getKeyArgs();

@@ -94,7 +94,6 @@ public class OMKeyCommitRequest extends OMClientRequest
       long transactionLogIndex) {
 
     CommitKeyRequest commitKeyRequest = getOmRequest().getCommitKeyRequest();
-    Preconditions.checkNotNull(commitKeyRequest);
 
     KeyArgs commitKeyArgs = commitKeyRequest.getKeyArgs();
 
