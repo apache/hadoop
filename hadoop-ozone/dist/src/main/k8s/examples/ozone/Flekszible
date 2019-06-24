@@ -14,12 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 source:
-  - path: ../../../definitions
+  - path: ../../definitions
 import:
   - path: ozone
     transformations:
     - type: Image
       image: "@docker.image@"
+    - type: ozone/persistence
   - path: ozone/freon
     destination: freon
     transformations:

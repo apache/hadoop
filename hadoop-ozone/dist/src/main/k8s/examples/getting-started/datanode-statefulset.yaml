@@ -13,8 +13,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: apps/v1
-kind: DaemonSet
+kind: StatefulSet
 metadata:
   name: datanode
   labels:
@@ -24,20 +25,42 @@ spec:
     matchLabels:
       app: ozone
       component: datanode
+  serviceName: datanode
+  replicas: 3
   template:
     metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9882"
-        prometheus.io/path: "/prom"
       labels:
         app: ozone
         component: datanode
+      annotations:
+        prdatanodeetheus.io/scrape: "true"
+        prdatanodeetheus.io/port: "9882"
+        prdatanodeetheus.io/path: /prom
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: component
+                operator: In
+                values:
+                - datanode
+            topologyKey: kubernetes.io/hostname
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: datanode
-        image: "@docker.image@"
-        args: ["ozone","datanode"]
-        ports:
-           - containerPort: 9870
-             name: rpc
+        image: '@docker.image@'
+        args:
+        - ozone
+        - datanode
+        envFrom:
+        - configMapRef:
+            name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        emptyDir: {}

@@ -13,46 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-- type: Add
-  trigger:
-    metadata:
-      labels:
-        app.kubernetes.io/component: ozone
-  path:
-    - spec
-    - template
-    - spec
-    - containers
-    - "*"
-    - volumeMounts
-  value:
-    - name: data
-      mountPath: /data
-- type: Add
-  trigger:
-    metadata:
-      labels:
-        app.kubernetes.io/component: ozone
-  path:
-    - spec
-    - template
-    - spec
-    - initContainers
-    - "*"
-    - volumeMounts
-  value:
-    - name: data
-      mountPath: /data
-- type: Add
-  trigger:
-    metadata:
-      labels:
-        app.kubernetes.io/component: ozone
-  path:
-    - spec
-    - template
-    - spec
-    - volumes
-  value:
-    - name: data
-      emptyDir: {}
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: scm
+spec:
+  ports:
+  - port: 9876
+    name: ui
+  clusterIP: None
+  selector:
+    app: ozone
+    component: scm
