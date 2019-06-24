@@ -18,17 +18,12 @@
 
 package org.apache.hadoop.hdds.scm;
 
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ScmOps;
-import org.apache.hadoop.hdds.scm.safemode.Precheck;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
-import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.hdds.scm.safemode.Precheck;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.File;
 
 /**
  * SCM utility class.
@@ -53,16 +48,4 @@ public final class ScmUtils {
     }
   }
 
-  public static File getDBPath(Configuration conf, String dbDirectory) {
-    final File dbDirPath =
-        ServerUtils.getDirectoryFromConfig(conf, dbDirectory, "OM");
-    if (dbDirPath != null) {
-      return dbDirPath;
-    }
-
-    LOG.warn("{} is not configured. We recommend adding this setting. "
-            + "Falling back to {} instead.", dbDirectory,
-        HddsConfigKeys.OZONE_METADATA_DIRS);
-    return ServerUtils.getOzoneMetaDirPath(conf);
-  }
 }
