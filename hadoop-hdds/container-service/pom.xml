@@ -37,6 +37,10 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-hdds-server-framework</artifactId>
     </dependency>
+    <dependency>
+      <groupId>io.dropwizard.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.mockito</groupId>
@@ -55,12 +59,6 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
       <artifactId>findbugs</artifactId>
       <version>3.0.1</version>
       <scope>provided</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>io.dropwizard.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 
