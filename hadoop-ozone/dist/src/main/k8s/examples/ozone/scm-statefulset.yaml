@@ -37,6 +37,8 @@ spec:
         prometheus.io/port: "9876"
         prometheus.io/path: /prom
     spec:
+      securityContext:
+        fsGroup: 1000
       initContainers:
       - name: init
         image: '@docker.image@'
@@ -62,6 +64,12 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-      volumes:
-      - name: data
-        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 2Gi

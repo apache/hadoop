@@ -15,49 +15,32 @@
 # limitations under the License.
 
 apiVersion: apps/v1
-kind: DaemonSet
+kind: Deployment
 metadata:
-  name: datanode
+  name: freon
   labels:
     app.kubernetes.io/component: ozone
 spec:
+  replicas: 1
   selector:
     matchLabels:
       app: ozone
-      component: datanode
+      component: freon
   template:
     metadata:
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9882"
-        prometheus.io/path: /prom
       labels:
         app: ozone
-        component: datanode
+        component: freon
     spec:
       containers:
-      - name: datanode
+      - name: freon
         image: '@docker.image@'
         args:
         - ozone
-        - datanode
-        ports:
-        - containerPort: 9870
-          name: rpc
-        env:
-        - name: JAEGER_SAMPLER_TYPE
-          value: probabilistic
-        - name: JAEGER_SAMPLER_PARAM
-          value: "0.01"
-        - name: JAEGER_AGENT_HOST
-          value: jaeger-0.jaeger
+        - freon
+        - rk
+        - --factor=THREE
+        - --replicationType=RATIS
         envFrom:
         - configMapRef:
             name: config
-        volumeMounts:
-        - name: data
-          mountPath: /data
-      initContainers: []
-      volumes:
-      - name: data
-        emptyDir: {}
