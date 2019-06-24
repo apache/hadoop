@@ -178,12 +178,13 @@ On startup, the NameNode enters a special state called Safemode. Replication of 
 
 Block Placement Policies
 ------------------------
-HDFS supports 3 different pluggable block placement policies with addition to default. Users can choose the policy based on their infracstructre and use case. By default HDFS supports with BlockPlacementPolicyDefault where the placement and replication will happen as mentioned in Replica Placement column.
+HDFS supports 3 different pluggable block placement policies with addition to default. Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault where the placement and replication will happen as mentioned previously in Replica Placement.
 
 ### BlockPlacementPolicyRackFaultTolerant
 
-By default for a cluster with racks more than 1, the block placement will be like one replica on local rack and 2 replica on remote rack. Totally 2 racks will be used to place the blocks. With the BlockPlacementPolicyRackFaultTolerant we can place replicas to most racks. This ensures the block placement policy with best tolerance.
+By default for a cluster with racks more than 1, the block placement will be like one replica on local rack and 2 replicas on remote rack. Totally 2 racks will be used to place a block with replication. With the BlockPlacementPolicyRackFaultTolerant we can place replicas to more than 2 racks. This ensures the block placement with best tolerance and availability.In Scenario like 2 racks going down at the same time will cause data inavailability where this placement policy will be helpful.
 https://issues.apache.org/jira/browse/HDFS-7892
+
 Configration
 
 hdfs-site.xml
