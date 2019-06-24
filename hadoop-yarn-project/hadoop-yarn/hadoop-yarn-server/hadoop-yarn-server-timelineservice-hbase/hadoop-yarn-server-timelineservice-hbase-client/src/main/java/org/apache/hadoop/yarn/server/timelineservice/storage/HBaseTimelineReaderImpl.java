@@ -78,10 +78,6 @@ public class HBaseTimelineReaderImpl
     super.serviceStop();
   }
 
-  public boolean isHBaseDown() {
-    return storageMonitor.isStorageDown();
-  }
-
   @Override
   public TimelineEntity getEntity(TimelineReaderContext context,
       TimelineDataToRetrieve dataToRetrieve) throws IOException {
@@ -113,14 +109,19 @@ public class HBaseTimelineReaderImpl
 
   @Override
   public TimelineHealth getHealthStatus() {
-    if (!this.isHBaseDown()) {
+    try {
+      storageMonitor.checkStorageIsUp();
       return new TimelineHealth(TimelineHealth.TimelineHealthStatus.RUNNING,
           "");
-    } else {
+    } catch (IOException e){
       return new TimelineHealth(
           TimelineHealth.TimelineHealthStatus.READER_CONNECTION_FAILURE,
           "HBase connection is down");
     }
+  }
+
+  protected TimelineStorageMonitor getTimelineStorageMonitor() {
+    return storageMonitor;
   }
 
 }
