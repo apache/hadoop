@@ -403,4 +403,17 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   public static final Class<? extends DomainNameResolver>
       HADOOP_DOMAINNAME_RESOLVER_IMPL_DEFAULT =
       DNSDomainNameResolver.class;
+  /*
+   *  Ignore KMS default URI returned from NameNode.
+   *  When set to true, kms uri is searched in the following order:
+   *  1. If there is a mapping in Credential's secrets map for namenode uri.
+   *  2. Fallback to local conf.
+   *  If client choose to ignore KMS uri provided by NameNode then client
+   *  should set KMS URI using 'hadoop.security.key.provider.path' to access
+   *  the right KMS for encrypted files.
+   * */
+  public static final String DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI =
+      "dfs.client.ignore.namenode.default.kms.uri";
+  public static final boolean
+      DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT = false;
 }
