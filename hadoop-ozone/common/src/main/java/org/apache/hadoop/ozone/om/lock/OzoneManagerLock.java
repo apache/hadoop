@@ -125,8 +125,8 @@ public class OzoneManagerLock {
     int i=0;
     short lockSetVal = lockSet.get();
     for (Resource value : Resource.values()) {
-      if ((lockSetVal & value.setMask) == value.setMask) {
-        currentLocks.add(value.name);
+      if (value.isLevelLocked(lockSetVal)) {
+        currentLocks.add(value.getName());
       }
     }
     return currentLocks;
@@ -145,6 +145,21 @@ public class OzoneManagerLock {
       LOG.error(errorMessage);
       throw new RuntimeException(errorMessage);
     } else {
+      // When acquiring multiple user locks, the reason for doing lexical
+      // order comparision is to avoid deadlock scenario.
+
+      // Example: 1st thread acquire lock(ozone, hdfs)
+      // 2nd thread acquire lock(hdfs, ozone).
+      // If we don't acquire user locks in an order, there can be a deadlock.
+
+      // 1st thread acquired lock on ozone, waiting for lock on hdfs, 2nd
+      // thread acquired lock on hdfs, waiting for lock on ozone.
+      // To avoid this when we acquire lock on multiple users, we acquire
+      // locks in lexical order, which can help us to avoid dead locks.
+      // Now if first thread acquires lock on hdfs, 2nd thread wait for lock
+      // on hdfs, and first thread acquires lock on ozone. Once after first
+      // thread releases user locks, 2nd thread acquires them.
+
       int compare = newUserResource.compareTo(oldUserResource);
       if (compare < 0) {
         manager.lock(newUserResource);
@@ -245,9 +260,7 @@ public class OzoneManagerLock {
 
     Resource(byte pos, String name) {
       this.lockLevel = pos;
-      for (int x = 0; x < lockLevel + 1; x++) {
-        this.mask += (short) Math.pow(2, x);
-      }
+      this.mask += (short) Math.pow(2, lockLevel + 1) - 1;
       this.setMask = (short) Math.pow(2, lockLevel);
       this.name = name;
     }
@@ -297,6 +310,10 @@ public class OzoneManagerLock {
     short clearLock(short lockSetVal) {
       LOG.debug("release" + name + (short) (lockSetVal & ~setMask));
       return (short) (lockSetVal & ~setMask);
+    }
+
+    boolean isLevelLocked(short lockSetVal) {
+      return (lockSetVal & setMask) == setMask;
     }
 
     String getName() {
