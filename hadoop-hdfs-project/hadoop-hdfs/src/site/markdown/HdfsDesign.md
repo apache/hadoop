@@ -30,6 +30,10 @@ HDFS Architecture
         * [Replica Placement: The First Baby Steps](#Replica_Placement:_The_First_Baby_Steps)
         * [Replica Selection](#Replica_Selection)
         * [Safemode](#Safemode)
+    * [Block Placement Policies](#Block_Placement_Policies)
+        * [BlockPlacementPolicyRackFaultTolerant](#Block_Placement_Policy_RackFault_Tolerant)
+        * [BlockPlacementPolicyWithNodeGroup](#BlockPlacement_Policy_With_NodeGroup)
+        * [BlockPlacementPolicyWithUpgradeDomain](#BlockPlacement_Policy_With_UpgradeDomain)
     * [The Persistence of File System Metadata](#The_Persistence_of_File_System_Metadata)
     * [The Communication Protocols](#The_Communication_Protocols)
     * [Robustness](#Robustness)
@@ -171,6 +175,86 @@ then a replica that is resident in the local data center is preferred over any r
 ### Safemode
 
 On startup, the NameNode enters a special state called Safemode. Replication of data blocks does not occur when the NameNode is in the Safemode state. The NameNode receives Heartbeat and Blockreport messages from the DataNodes. A Blockreport contains the list of data blocks that a DataNode is hosting. Each block has a specified minimum number of replicas. A block is considered safely replicated when the minimum number of replicas of that data block has checked in with the NameNode. After a configurable percentage of safely replicated data blocks checks in with the NameNode (plus an additional 30 seconds), the NameNode exits the Safemode state. It then determines the list of data blocks (if any) that still have fewer than the specified number of replicas. The NameNode then replicates these blocks to other DataNodes.
+
+Block Placement Policies
+------------------------
+HDFS supports 3 different pluggable block placement policies with addition to default. Users can choose the policy based on their infracstructre and use case. By default HDFS supports with BlockPlacementPolicyDefault where the placement and replication will happen as mentioned in Replica Placement column.
+
+### BlockPlacementPolicyRackFaultTolerant
+
+By default for a cluster with racks more than 1, the block placement will be like one replica on local rack and 2 replica on remote rack. Totally 2 racks will be used to place the blocks. With the BlockPlacementPolicyRackFaultTolerant we can place replicas to most racks. This ensures the block placement policy with best tolerance.
+https://issues.apache.org/jira/browse/HDFS-7892
+Configration
+
+hdfs-site.xml
+
+```xml
+<property>
+  <name>dfs.block.replicator.classname</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyRackFaultTolerant</value>
+</property>
+```
+
+
+### BlockPlacementPolicyWithNodeGroup
+
+With new 3 layer hierarchical topology, a node group level got introduced, which maps well onto a infrastructure that is based on a virtulized environment. In Virtualized environment multiple vm's will be hosted on same physical machine. Vm's on the same physical host are affected by the same hardware failure. So mapping the physical host a node groups this block placement gurantees that it will never place more than one replica on the same node group (physical host), in case of node group failure, only one replica will be lost at the maximum. 
+https://issues.apache.org/jira/browse/HADOOP-8468
+
+
+- core-site.xml
+
+```xml
+<property>
+  <name>net.topology.impl</name>
+  <value>org.apache.hadoop.net.NetworkTopologyWithNodeGroup</value>
+</property>
+<property>
+  <name>net.topology.nodegroup.aware</name>
+  <value>true</value>
+</property>
+```
+
+- hdfs-site.xml
+
+```xml
+<property>
+  <name>dfs.block.replicator.classname</name>
+  <value>
+    org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyWithNodeGroup
+  </value>
+</property>
+```
+
+-    Topology script
+
+Topology script is the same as the examples above, the only difference is,
+instead of returning only **/{rack}**, the script should return
+**/{rack}/{nodegroup}**. Following is an example topology mapping table:
+
+```
+192.168.0.1 /rack1/nodegroup1
+192.168.0.2 /rack1/nodegroup1
+192.168.0.3 /rack1/nodegroup2
+192.168.0.4 /rack1/nodegroup2
+192.168.0.5 /rack2/nodegroup3
+192.168.0.6 /rack2/nodegroup3
+```
+
+
+### BlockPlacementPolicyWithUpgradeDomain
+
+To address the limitation of block placement policy on rolling upgrade, the concept of upgrade domain has been added to HDFS via a new block placement policy. The idea is to group datanodes in a new dimension called upgrade domain, in addition to the existing rack-based grouping. For example, we can assign all datanodes in the first position of any rack to upgrade domain ud_01, nodes in the second position to upgrade domain ud_02 and so on.
+It will make sure replicas of any given block are distributed across machines from different upgrade domains. By default, 3 replicas of any given block are placed on 3 different upgrade domains. This means all datanodes belonging to a specific upgrade domain collectively won’t store more than one replica of any block.
+https://issues.apache.org/jira/browse/HDFS-9006
+
+- hdfs-site.xml
+<property>
+<name>dfs.block.replicator.classname</name>
+<value>org.apache.hadoop.hdfs.server.blockmanagement.BlockPlacementPolicyWithUpgradeDomain</value>
+</property>
+
+
 
 The Persistence of File System Metadata
 ---------------------------------------
