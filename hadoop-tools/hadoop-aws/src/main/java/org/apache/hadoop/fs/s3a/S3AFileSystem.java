@@ -396,7 +396,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
       ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
 
-      setMetadataStore(S3Guard.getMetadataStore(this));
+      setMetadataStore(S3Guard.getMetadataStore(this, ttlTimeProvider));
       allowAuthoritativeMetadataStore = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
           DEFAULT_METADATASTORE_AUTHORITATIVE);
       allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
@@ -1767,7 +1767,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f, ttlTimeProvider);
+    metadataStore.delete(f);
   }
 
   /**
@@ -2293,7 +2293,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       try(DurationInfo ignored =
               new DurationInfo(LOG, false, "Delete metastore")) {
-        metadataStore.deleteSubtree(f, ttlTimeProvider);
+        metadataStore.deleteSubtree(f);
       }
     } else {
       LOG.debug("delete: Path is a file: {}", key);
@@ -4066,6 +4066,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   protected void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     this.ttlTimeProvider = ttlTimeProvider;
+    metadataStore.setTtlTimeProvider(ttlTimeProvider);
   }
 
   /**

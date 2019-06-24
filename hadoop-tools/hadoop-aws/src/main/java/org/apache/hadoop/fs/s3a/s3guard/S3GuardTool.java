@@ -314,9 +314,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
 
     if (filesystem == null) {
-      getStore().initialize(conf);
+      getStore().initialize(conf, new S3Guard.TtlTimeProvider(conf));
     } else {
-      getStore().initialize(filesystem);
+      getStore().initialize(filesystem, new S3Guard.TtlTimeProvider(conf));
     }
     LOG.info("Metadata store {} is initialized.", getStore());
     return getStore();

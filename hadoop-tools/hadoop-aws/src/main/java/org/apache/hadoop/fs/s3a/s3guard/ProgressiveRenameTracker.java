@@ -155,9 +155,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // no entries are deleted at this point.
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "Adding new metastore entries")) {
-      store.move(null, entriesToAdd,
-          getStoreContext().getTimeProvider(),
-          getOperationState());
+      store.move(null, entriesToAdd, getOperationState());
     }
   }
 
@@ -199,9 +197,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // ...so update the store.
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "adding %s metastore entries", entriesToAdd.size())) {
-      store.move(null, entriesToAdd,
-          getStoreContext().getTimeProvider(),
-          getOperationState());
+      store.move(null, entriesToAdd, getOperationState());
     }
   }
 
@@ -218,9 +214,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
           getSourceRoot(),
           getDest(),
           getOwner());
-      getMetadataStore().move(toDelete, toAdd,
-          getStoreContext().getTimeProvider(),
-          getOperationState());
+      getMetadataStore().move(toDelete, toAdd, getOperationState());
     }
   }
 
@@ -236,9 +230,7 @@ public class ProgressiveRenameTracker extends RenameTracker {
     // delete the paths from the metastore
     try (DurationInfo ignored = new DurationInfo(LOG, false,
         "delete %s metastore entries", paths.size())) {
-      getMetadataStore().move(paths, null,
-          getStoreContext().getTimeProvider(),
-          getOperationState());
+      getMetadataStore().move(paths, null, getOperationState());
     }
   }
 
