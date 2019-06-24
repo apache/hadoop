@@ -13,44 +13,34 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-apiVersion: apps/v1
-kind: StatefulSet
-metadata:
-  name: s3g
-  labels:
-    app.kubernetes.io/component: ozone
-spec:
-  selector:
-    matchLabels:
-      app: ozone
-      component: s3g
-  serviceName: s3g
-  replicas: 1
-  template:
+name: ozone/emptydir
+description: Add empty dir based ephemeral persistence
+---
+- type: Add
+  trigger:
     metadata:
       labels:
-        app: ozone
-        component: s3g
-    spec:
-      containers:
-      - name: s3g
-        image: '@docker.image@'
-        args:
-        - ozone
-        - s3g
-        envFrom:
-        - configMapRef:
-            name: config
-        volumeMounts:
-        - name: data
-          mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: data
-    spec:
-      accessModes:
-      - ReadWriteOnce
-      resources:
-        requests:
-          storage: 2Gi
+        app.kubernetes.io/component: ozone
+  path:
+    - spec
+    - template
+    - spec
+    - (initContainers|containers)
+    - "*"
+    - volumeMounts
+  value:
+    - name: data
+      mountPath: /data
+- type: Add
+  trigger:
+    metadata:
+      labels:
+        app.kubernetes.io/component: ozone
+  path:
+    - spec
+    - template
+    - spec
+    - volumes
+  value:
+    - name: data
+      emptyDir: {}

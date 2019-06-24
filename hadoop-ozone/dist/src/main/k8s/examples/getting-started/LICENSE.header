@@ -13,24 +13,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-source:
-  - path: ../../../definitions
-import:
-  - path: ozone
-    transformations:
-    - type: Image
-      image: "@docker.image@"
-    - type: ozone/prometheus
-    - type: PublishStatefulSet
-    - type: ozone/tracing
-    - type: ozone/profiler
-  - path: prometheus
-  - path: jaeger
-    transformations:
-    - type: PublishService
-  - path: ozone/freon
-    destination: freon
-    transformations:
-    - type: Image
-      image: "@docker.image@"
-    - type: ozone/tracing

@@ -39,6 +39,9 @@ spec:
         args:
         - ozone
         - s3g
+        envFrom:
+        - configMapRef:
+            name: config
         env:
         - name: JAEGER_SAMPLER_TYPE
           value: probabilistic
@@ -46,13 +49,9 @@ spec:
           value: "0.01"
         - name: JAEGER_AGENT_HOST
           value: jaeger-0.jaeger
-        envFrom:
-        - configMapRef:
-            name: config
         volumeMounts:
         - name: data
           mountPath: /data
-      initContainers: []
       volumes:
       - name: data
         emptyDir: {}
