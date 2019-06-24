@@ -22,7 +22,6 @@ package org.apache.hadoop.ozone.om.lock;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.ctc.wstx.util.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
