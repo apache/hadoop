@@ -150,7 +150,14 @@ public class TestTimelineReaderHBaseDown {
       waitForHBaseDown(htr);
 
       util.startMiniHBaseCluster(1, 1);
-      GenericTestUtils.waitFor(() -> !htr.isHBaseDown(), 1000, 150000);
+      GenericTestUtils.waitFor(() -> {
+        try {
+          htr.getTimelineStorageMonitor().checkStorageIsUp();
+          return true;
+        } catch (IOException e) {
+          return false;
+        }
+      }, 1000, 150000);
     } finally {
       util.shutdownMiniCluster();
     }
@@ -158,8 +165,15 @@ public class TestTimelineReaderHBaseDown {
 
   private static void waitForHBaseDown(HBaseTimelineReaderImpl htr) throws
       TimeoutException, InterruptedException {
-    GenericTestUtils.waitFor(() -> htr.isHBaseDown(), 1000, 150000);
     try {
+      GenericTestUtils.waitFor(() -> {
+        try {
+          htr.getTimelineStorageMonitor().checkStorageIsUp();
+          return false;
+        } catch (IOException e) {
+          return true;
+        }
+      }, 1000, 150000);
       checkQuery(htr);
       Assert.fail("Query should fail when HBase is down");
     } catch (IOException e) {
