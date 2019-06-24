@@ -146,7 +146,7 @@ public abstract class AbstractCommitTerasortIT extends
     assertEquals(stage
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
-    validateSuccessFile(getFileSystem(), dest, committerName());
+    validateSuccessFile(dest, committerName(), getFileSystem(), stage);
     return Optional.of(d);
   }
 
@@ -164,6 +164,7 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_110_teragen() throws Throwable {
     describe("Teragen to %s", sortInput);
+    getFileSystem().delete(sortInput, true);
 
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
@@ -177,7 +178,9 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_120_terasort() throws Throwable {
     describe("Terasort from %s to %s", sortInput, sortOutput);
-    loadSuccessFile(getFileSystem(), sortInput);
+    getFileSystem().delete(sortOutput, true);
+
+    loadSuccessFile(getFileSystem(), sortInput, "previous teragen stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
     // this job adds some data, so skip it.
@@ -192,7 +195,8 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_130_teravalidate() throws Throwable {
     describe("TeraValidate from %s to %s", sortOutput, sortValidate);
-    loadSuccessFile(getFileSystem(), sortOutput);
+    getFileSystem().delete(sortValidate, true);
+    loadSuccessFile(getFileSystem(), sortOutput, "previous terasort stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
     teravalidateStageDuration = executeStage("TeraValidate",

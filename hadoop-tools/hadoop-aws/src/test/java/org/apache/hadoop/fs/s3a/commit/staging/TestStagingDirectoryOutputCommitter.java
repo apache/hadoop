@@ -155,8 +155,8 @@ public class TestStagingDirectoryOutputCommitter
 
     intercept(PathExistsException.class,
         InternalCommitterConstants.E_DEST_EXISTS,
-        "Expected a PathExistsException as a the destination"
-            + " is a file",
+        "Expected a PathExistsException as the destination"
+            + " was a file",
         () -> {
           newJobCommitter().setupJob(getJob());
         });
