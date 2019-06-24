@@ -393,6 +393,8 @@ message ListVolumeResponse {
     repeated VolumeInfo volumeInfo = 2;
 }
 
+
+
 message BucketInfo {
     required string volumeName = 1;
     required string bucketName = 2;
@@ -402,6 +404,12 @@ message BucketInfo {
     optional uint64 creationTime = 6;
     repeated hadoop.hdds.KeyValue metadata = 7;
     optional BucketEncryptionInfoProto beinfo = 8;
+    repeated BucketFlags bucketFlags = 9;
+}
+
+enum BucketFlags {
+    CONFUSING_CHARS = 1;
+    PREVENT_CONFLICTING_DIRS = 2;
 }
 
 enum StorageTypeProto {

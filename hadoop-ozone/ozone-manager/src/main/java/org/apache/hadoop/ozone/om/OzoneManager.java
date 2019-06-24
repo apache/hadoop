@@ -73,12 +73,27 @@ import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
+import org.apache.hadoop.ozone.om.core.S3.S3BucketManager;
+import org.apache.hadoop.ozone.om.core.S3.S3BucketManagerImpl;
+import org.apache.hadoop.ozone.om.core.bucket.BucketManager;
+import org.apache.hadoop.ozone.om.core.bucket.BucketManagerImpl;
+import org.apache.hadoop.ozone.om.core.keys.KeyManager;
+import org.apache.hadoop.ozone.om.core.keys.KeyManagerImpl;
+import org.apache.hadoop.ozone.om.core.keys.ScmClient;
+import org.apache.hadoop.ozone.om.core.volume.VolumeManager;
+import org.apache.hadoop.ozone.om.core.volume.VolumeManagerImpl;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.om.metrics.OMMXBean;
+import org.apache.hadoop.ozone.om.metrics.OMMetrics;
+import org.apache.hadoop.ozone.om.metrics.OmMetricsInfo;
+import org.apache.hadoop.ozone.om.persistence.OMStorage;
+import org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
+import org.apache.hadoop.ozone.om.security.OMPolicyProvider;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos

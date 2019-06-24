@@ -262,6 +262,7 @@ public final class OzoneConsts {
   public static final String UPLOAD_ID = "uploadID";
   public static final String PART_NUMBER_MARKER = "partNumberMarker";
   public static final String MAX_PARTS = "maxParts";
+  public static final String BUCKET_FLAGS = "bucketFlags";
 
 
 

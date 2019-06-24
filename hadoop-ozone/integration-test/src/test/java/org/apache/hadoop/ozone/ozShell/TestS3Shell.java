@@ -27,7 +27,7 @@ import org.apache.hadoop.ozone.client.protocol.ClientProtocol;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
-import org.apache.hadoop.ozone.web.ozShell.s3.S3Shell;
+import org.apache.hadoop.ozone.commandLine.ozShell.s3.S3Shell;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -59,7 +59,7 @@ import java.util.List;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_REPLICATION;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.S3_BUCKET_NOT_FOUND;
-import static org.apache.hadoop.ozone.web.ozShell.s3.GetS3SecretHandler.OZONE_GETS3SECRET_ERROR;
+import static org.apache.hadoop.ozone.commandLine.ozShell.s3.GetS3SecretHandler.OZONE_GETS3SECRET_ERROR;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 

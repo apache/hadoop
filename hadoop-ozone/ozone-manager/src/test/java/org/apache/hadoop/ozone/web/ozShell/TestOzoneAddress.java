@@ -24,6 +24,7 @@ import java.util.Collection;
 
 import org.apache.hadoop.ozone.client.rest.OzoneException;
 
+import org.apache.hadoop.ozone.commandLine.ozShell.OzoneAddress;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;

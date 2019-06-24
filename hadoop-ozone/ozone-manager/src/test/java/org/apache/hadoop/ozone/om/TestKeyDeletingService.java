@@ -30,10 +30,14 @@ import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.server.ServerUtils;
+import org.apache.hadoop.ozone.om.core.keys.KeyDeletingService;
+import org.apache.hadoop.ozone.om.core.keys.KeyManager;
+import org.apache.hadoop.ozone.om.core.keys.KeyManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
+import org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.utils.db.DBConfigFromFile;
 

@@ -18,9 +18,9 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.BUCKET_TABLE;
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.KEY_TABLE;
-import static org.apache.hadoop.ozone.om.OmMetadataManagerImpl.VOLUME_TABLE;
+import static org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl.BUCKET_TABLE;
+import static org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl.KEY_TABLE;
+import static org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl.VOLUME_TABLE;
 
 import java.io.IOException;
 import java.util.ArrayList;

@@ -26,6 +26,7 @@ import org.apache.hadoop.hdds.security.x509.certificate.client.OMCertificateClie
 import org.apache.hadoop.hdds.security.x509.certificate.utils.CertificateCodec;
 import org.apache.hadoop.hdds.security.x509.keys.KeyCodec;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.om.persistence.OMStorage;
 import org.apache.hadoop.security.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.test.LambdaTestUtils;
 import org.bouncycastle.cert.X509CertificateHolder;

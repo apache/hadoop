@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import mockit.Mock;
 import mockit.MockUp;
+import org.apache.hadoop.ozone.om.metrics.OMMetrics;
+import org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -35,8 +37,6 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;

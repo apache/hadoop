@@ -38,6 +38,8 @@ import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.metrics.OMMetrics;
+import org.apache.hadoop.ozone.om.persistence.OMDBCheckpointServlet;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

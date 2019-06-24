@@ -29,10 +29,13 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.server.ServerUtils;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.core.bucket.BucketManager;
+import org.apache.hadoop.ozone.om.core.bucket.BucketManagerImpl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.*;
 
+import org.apache.hadoop.ozone.om.persistence.OmMetadataManagerImpl;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
