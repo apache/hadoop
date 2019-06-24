@@ -150,16 +150,22 @@ public class OzoneManagerLock {
         manager.lock(newUserResource);
         try {
           manager.lock(oldUserResource);
-        } catch (RuntimeException ex) {
-          manager.unlock(newUserResource);
+        } catch (Exception ex) {
+          // We got an exception acquiring 2nd user lock. Release already
+          // acquired user lock, and throw exception to the user.
+          manager.unlock(oldUserResource);
+          throw ex;
         }
       } else if (compare > 0) {
         // If this locking fails, we throw exception to user.
         manager.lock(oldUserResource);
         try {
           manager.lock(newUserResource);
-        } catch (RuntimeException ex) {
+        } catch (Exception ex) {
+          // We got an exception acquiring 2nd user lock. Release already
+          // acquired user lock, and throw exception to the user.
           manager.unlock(oldUserResource);
+          throw ex;
         }
       } else {
         // both users are equal.
