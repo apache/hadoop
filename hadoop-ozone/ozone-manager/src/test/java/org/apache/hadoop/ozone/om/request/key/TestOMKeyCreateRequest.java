@@ -65,7 +65,7 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
     TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
         omMetadataManager);
 
-    long id = modifiedOmRequest.getCreateKeyRequest().getID();
+    long id = modifiedOmRequest.getCreateKeyRequest().getClientID();
 
     String openKey = omMetadataManager.getOpenKey(volumeName, bucketName,
         keyName, id);
@@ -128,7 +128,7 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
     TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
         omMetadataManager);
 
-    long id = modifiedOmRequest.getCreateKeyRequest().getID();
+    long id = modifiedOmRequest.getCreateKeyRequest().getClientID();
 
     String openKey = omMetadataManager.getOpenKey(volumeName, bucketName,
         keyName, id);
@@ -164,7 +164,7 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
         new OMKeyCreateRequest(modifiedOmRequest);
 
 
-    long id = modifiedOmRequest.getCreateKeyRequest().getID();
+    long id = modifiedOmRequest.getCreateKeyRequest().getClientID();
 
     String openKey = omMetadataManager.getOpenKey(volumeName, bucketName,
         keyName, id);
@@ -202,7 +202,7 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
         new OMKeyCreateRequest(modifiedOmRequest);
 
 
-    long id = modifiedOmRequest.getCreateKeyRequest().getID();
+    long id = modifiedOmRequest.getCreateKeyRequest().getClientID();
 
     String openKey = omMetadataManager.getOpenKey(volumeName, bucketName,
         keyName, id);
@@ -259,9 +259,9 @@ public class TestOMKeyCreateRequest extends TestOMKeyRequest {
     Assert.assertTrue(keyArgs.getModificationTime() > 0);
 
 
-    // ID should be set.
-    Assert.assertTrue(createKeyRequest.hasID());
-    Assert.assertTrue(createKeyRequest.getID() > 0);
+    // Client ID should be set.
+    Assert.assertTrue(createKeyRequest.hasClientID());
+    Assert.assertTrue(createKeyRequest.getClientID() > 0);
 
 
     if (!originalOMRequest.getCreateKeyRequest().getKeyArgs()

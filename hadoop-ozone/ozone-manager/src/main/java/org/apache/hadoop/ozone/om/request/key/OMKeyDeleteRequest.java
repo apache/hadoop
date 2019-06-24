@@ -59,7 +59,7 @@ public class OMKeyDeleteRequest extends OMClientRequest
     implements OMKeyRequest {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(OMKeyCommitRequest.class);
+      LoggerFactory.getLogger(OMKeyDeleteRequest.class);
 
   public OMKeyDeleteRequest(OMRequest omRequest) {
     super(omRequest);

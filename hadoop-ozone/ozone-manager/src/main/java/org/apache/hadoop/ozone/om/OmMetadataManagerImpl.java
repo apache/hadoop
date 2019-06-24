@@ -473,10 +473,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
         bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
-      // During iteration from DB, check in mean time if this bucket is not
-      // marked for delete.
-      if (kv != null && kv.getKey().startsWith(volumePrefix) &&
-          bucketTable.get(kv.getKey()) != null) {
+      if (kv != null && kv.getKey().startsWith(volumePrefix)) {
         return false; // we found at least one bucket with this volume prefix.
       }
     }
@@ -512,10 +509,7 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
         keyTable.iterator()) {
       KeyValue<String, OmKeyInfo> kv = keyIter.seek(keyPrefix);
-      // During iteration from DB, check in mean time if this key is not
-      // marked for delete.
-      if (kv != null && kv.getKey().startsWith(keyPrefix) &&
-          keyTable.get(kv.getKey()) != null) {
+      if (kv != null && kv.getKey().startsWith(keyPrefix)) {
         return false; // we found at least one key with this vol/bucket prefix.
       }
     }

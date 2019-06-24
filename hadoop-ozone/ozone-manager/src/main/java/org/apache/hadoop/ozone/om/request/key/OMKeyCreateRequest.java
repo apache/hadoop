@@ -91,7 +91,7 @@ public class OMKeyCreateRequest extends OMClientRequest
     // allocateBlock call happen's we shall know type and factor, as we set
     // the type and factor read from multipart table, and set the KeyInfo in
     // validateAndUpdateCache and return to the client. TODO: See if we can fix
-    //  this.
+    //  this. We do not call allocateBlock in openKey for multipart upload.
 
     CreateKeyRequest.Builder newCreateKeyRequest = null;
     KeyArgs.Builder newKeyArgs = null;
@@ -106,7 +106,7 @@ public class OMKeyCreateRequest extends OMClientRequest
       final long requestedSize = keyArgs.getDataSize() > 0 ?
           keyArgs.getDataSize() : scmBlockSize;
 
-      boolean useRatis = ozoneManager.isUseRatis();
+      boolean useRatis = ozoneManager.shouldUseRatis();
 
       HddsProtos.ReplicationFactor factor = keyArgs.getFactor();
       if (factor == null) {
@@ -145,7 +145,7 @@ public class OMKeyCreateRequest extends OMClientRequest
 
     newCreateKeyRequest =
         createKeyRequest.toBuilder().setKeyArgs(newKeyArgs)
-            .setID(UniqueId.next());
+            .setClientID(UniqueId.next());
 
     return getOmRequest().toBuilder()
         .setCreateKeyRequest(newCreateKeyRequest).setUserInfo(getUserInfo())
@@ -196,7 +196,7 @@ public class OMKeyCreateRequest extends OMClientRequest
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     String dbOpenKeyName = omMetadataManager.getOpenKey(volumeName,
-        bucketName, keyName, createKeyRequest.getID());
+        bucketName, keyName, createKeyRequest.getClientID());
     String dbKeyName = omMetadataManager.getOzoneKey(volumeName, bucketName,
         keyName);
     String dbBucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
@@ -208,7 +208,7 @@ public class OMKeyCreateRequest extends OMClientRequest
     IOException exception = null;
     omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
     try {
-      validateBucket(omMetadataManager, volumeName, bucketName);
+      validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       //TODO: We can optimize this get here, if getKmsProvider is null, then
       // bucket encryptionInfo will be not set. If this assumption holds
       // true, we can avoid get from bucket table.
@@ -265,7 +265,7 @@ public class OMKeyCreateRequest extends OMClientRequest
       auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_KEY, auditMap,
           exception, getOmRequest().getUserInfo()));
 
-      long clientID = createKeyRequest.getID();
+      long clientID = createKeyRequest.getClientID();
 
       omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
           .setKeyInfo(omKeyInfo.getProtobuf())

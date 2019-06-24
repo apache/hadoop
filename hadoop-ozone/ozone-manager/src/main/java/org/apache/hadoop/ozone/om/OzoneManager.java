@@ -289,7 +289,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final long scmBlockSize;
   private final int preallocateBlocksMax;
   private final boolean grpcBlockTokenEnabled;
-  private final boolean useRatis;
+  private final boolean useRatisForReplication;
 
 
   private OzoneManager(OzoneConfiguration conf) throws IOException,
@@ -431,16 +431,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.grpcBlockTokenEnabled = conf.getBoolean(
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
-    this.useRatis = conf.getBoolean(DFS_CONTAINER_RATIS_ENABLED_KEY,
-        DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+    this.useRatisForReplication = conf.getBoolean(
+        DFS_CONTAINER_RATIS_ENABLED_KEY, DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
   }
 
   /**
    * Return configuration value of
    * {@link OzoneConfigKeys#DFS_CONTAINER_RATIS_ENABLED_KEY}.
    */
-  public boolean isUseRatis() {
-    return useRatis;
+  public boolean shouldUseRatis() {
+    return useRatisForReplication;
   }
 
   /**

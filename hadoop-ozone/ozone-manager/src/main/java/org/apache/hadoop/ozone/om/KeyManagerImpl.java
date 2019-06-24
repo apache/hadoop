@@ -632,8 +632,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volumeName, bucketName);
       OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
       if (keyInfo == null) {
-        throw new OMException("Commit a key without corresponding entry " +
-            openKey, KEY_NOT_FOUND);
+        throw new OMException("Failed to commit key, as " + openKey + "entry " +
+            "is not found in the openKey table", KEY_NOT_FOUND);
       }
       keyInfo.setDataSize(args.getDataSize());
       keyInfo.setModificationTime(Time.now());

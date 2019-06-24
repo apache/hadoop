@@ -187,7 +187,7 @@ public class OMAllocateBlockRequest extends OMClientRequest
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     try {
-      validateBucket(omMetadataManager, volumeName,
+      validateBucketAndVolume(omMetadataManager, volumeName,
           bucketName);
     } catch (IOException ex) {
       LOG.error("AllocateBlock failed for Key: {} in volume/bucket:{}/{}",
@@ -210,7 +210,7 @@ public class OMAllocateBlockRequest extends OMClientRequest
     try {
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(openKey);
       if (omKeyInfo == null) {
-        throw new OMException("Open Key not found", KEY_NOT_FOUND);
+        throw new OMException("Open Key not found " + openKey, KEY_NOT_FOUND);
       }
 
       // Append new block
@@ -229,11 +229,10 @@ public class OMAllocateBlockRequest extends OMClientRequest
       exception = ex;
     }
 
-    // Performing audit logging outside of the lock.
     auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_BLOCK, auditMap,
         exception, getOmRequest().getUserInfo()));
 
-    // return response after releasing lock.
+
     if (exception == null) {
       omResponse.setAllocateBlockResponse(AllocateBlockResponse.newBuilder()
           .setKeyLocation(blockLocation).build());

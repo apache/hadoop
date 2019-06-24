@@ -146,11 +146,11 @@ public class OMKeyCommitRequest extends OMClientRequest
     IOException exception = null;
     OmKeyInfo omKeyInfo = null;
     try {
-      validateBucket(omMetadataManager, volumeName, bucketName);
+      validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       omKeyInfo = omMetadataManager.getOpenKeyTable().get(dbOpenKey);
       if (omKeyInfo == null) {
-        throw new OMException("Commit a key without corresponding entry " +
-            dbOpenKey, KEY_NOT_FOUND);
+        throw new OMException("Failed to commit key, as " + dbOpenKey +
+            "entry is not found in the openKey table", KEY_NOT_FOUND);
       }
       omKeyInfo.setDataSize(commitKeyArgs.getDataSize());
 

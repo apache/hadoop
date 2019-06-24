@@ -137,7 +137,7 @@ public interface OMKeyRequest {
    * @param bucketName
    * @throws IOException
    */
-  default void validateBucket(OMMetadataManager omMetadataManager,
+  default void validateBucketAndVolume(OMMetadataManager omMetadataManager,
       String volumeName, String bucketName)
       throws IOException {
     String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);

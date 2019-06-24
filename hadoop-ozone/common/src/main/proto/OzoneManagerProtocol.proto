@@ -718,7 +718,7 @@ message CreateKeyRequest {
     required KeyArgs keyArgs = 1;
     // Set in OM HA during preExecute step. This way all OM's use same ID in
     // OM HA.
-    optional uint64 ID = 2;
+    optional uint64 clientID = 2;
 }
 
 message CreateKeyResponse {
