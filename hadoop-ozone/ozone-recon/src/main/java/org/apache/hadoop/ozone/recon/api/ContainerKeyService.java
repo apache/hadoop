@@ -38,6 +38,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -49,6 +50,10 @@ import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static org.apache.hadoop.ozone.recon.ReconConstants.FETCH_ALL;
+import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_QUERY_LIMIT;
+import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_QUERY_PREVKEY;
 
 
 /**
@@ -69,18 +74,20 @@ public class ContainerKeyService {
 
   /**
    * Return @{@link org.apache.hadoop.ozone.recon.api.types.ContainerMetadata}
-   * for the containers starting from the given "start" query param for the
-   * given "limit".
+   * for the containers starting from the given "prev-key" query param for the
+   * given "limit". The given "prev-key" is skipped from the results returned.
    *
+   * @param limit max no. of containers to get.
+   * @param prevKey the containerID after which results are returned.
    * @return {@link Response}
    */
   @GET
   public Response getContainers(
-      @DefaultValue("-1") @QueryParam("limit") int limit,
-      @DefaultValue("0") @QueryParam("start") long start) {
+      @DefaultValue(FETCH_ALL) @QueryParam(RECON_QUERY_LIMIT) int limit,
+      @DefaultValue("0") @QueryParam(RECON_QUERY_PREVKEY) long prevKey) {
     Map<Long, ContainerMetadata> containersMap;
     try {
-      containersMap = containerDBServiceProvider.getContainers(limit, start);
+      containersMap = containerDBServiceProvider.getContainers(limit, prevKey);
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
@@ -91,22 +98,26 @@ public class ContainerKeyService {
   /**
    * Return @{@link org.apache.hadoop.ozone.recon.api.types.KeyMetadata} for
    * all keys that belong to the container identified by the id param
-   * starting from the given "start" query param for the given "limit".
+   * starting from the given "prev-key" query param for the given "limit".
+   * The given prevKeyPrefix is skipped from the results returned.
    *
-   * @param containerId Container Id
+   * @param containerID the given containerID.
+   * @param limit max no. of keys to get.
+   * @param prevKeyPrefix the key prefix after which results are returned.
    * @return {@link Response}
    */
   @GET
   @Path("/{id}")
   public Response getKeysForContainer(
-      @PathParam("id") Long containerId,
-      @DefaultValue("-1") @QueryParam("limit") int limit,
-      @DefaultValue("") @QueryParam("start") String startKeyPrefix) {
+      @PathParam("id") Long containerID,
+      @DefaultValue(FETCH_ALL) @QueryParam(RECON_QUERY_LIMIT) int limit,
+      @DefaultValue(StringUtils.EMPTY) @QueryParam(RECON_QUERY_PREVKEY)
+          String prevKeyPrefix) {
     Map<String, KeyMetadata> keyMetadataMap = new LinkedHashMap<>();
     try {
       Map<ContainerKeyPrefix, Integer> containerKeyPrefixMap =
-          containerDBServiceProvider.getKeyPrefixesForContainer(containerId,
-              startKeyPrefix);
+          containerDBServiceProvider.getKeyPrefixesForContainer(containerID,
+              prevKeyPrefix);
 
       // Get set of Container-Key mappings for given containerId.
       for (ContainerKeyPrefix containerKeyPrefix : containerKeyPrefixMap
@@ -133,7 +144,7 @@ public class ContainerKeyService {
           List<OmKeyLocationInfo> omKeyLocationInfos = omKeyLocationInfoGroup
               .getLocationList()
               .stream()
-              .filter(c -> c.getContainerID() == containerId)
+              .filter(c -> c.getContainerID() == containerID)
               .collect(Collectors.toList());
           for (OmKeyLocationInfo omKeyLocationInfo : omKeyLocationInfos) {
             blockIds.add(new ContainerBlockMetadata(omKeyLocationInfo

@@ -70,23 +70,27 @@ public interface ContainerDBServiceProvider {
       long containerId) throws IOException;
 
   /**
-   * Get the stored key prefixes for the given containerId and keyPrefix.
+   * Get the stored key prefixes for the given containerId starting
+   * after the given keyPrefix.
    *
    * @param containerId the given containerId.
+   * @param prevKeyPrefix the key prefix to seek to and start scanning.
    * @return Map of Key prefix -> count.
    */
   Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
-      long containerId, String startKeyPrefix) throws IOException;
+      long containerId, String prevKeyPrefix) throws IOException;
 
   /**
    * Get a Map of containerID, containerMetadata of Containers only for the
    * given limit. If the limit is -1 or any integer <0, then return all
    * the containers without any limit.
    *
+   * @param limit the no. of containers to fetch.
+   * @param prevKey containerID after which the results are returned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers(int limit, long start)
+  Map<Long, ContainerMetadata> getContainers(int limit, long prevKey)
       throws IOException;
 
   /**
@@ -100,7 +104,6 @@ public interface ContainerDBServiceProvider {
   /**
    * Get iterator to the entire container DB.
    * @return TableIterator
-   * @throws IOException exception
    */
-  TableIterator getContainerTableIterator() throws IOException;
+  TableIterator getContainerTableIterator();
 }
