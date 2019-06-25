@@ -65,6 +65,7 @@ import org.apache.hadoop.util.ToolRunner;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.Invoker.LOG_EVENT;
 import static org.apache.hadoop.fs.s3a.S3AUtils.clearBucketOption;
+import static org.apache.hadoop.fs.s3a.S3AUtils.propagateBucketOptions;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.*;
 
 /**
@@ -479,6 +480,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
       if (writeCap != null && !writeCap.isEmpty()) {
         int writeCapacity = Integer.parseInt(writeCap);
         getConf().setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, writeCapacity);
+      }
+      if (!paths.isEmpty()) {
+        String s3path = paths.get(0);
+        URI fsURI = new URI(s3path);
+        Configuration bucketConf = propagateBucketOptions(getConf(),
+            fsURI.getHost());
+        setConf(bucketConf);
       }
 
       String tags = getCommandFormat().getOptValue(TAG_FLAG);
