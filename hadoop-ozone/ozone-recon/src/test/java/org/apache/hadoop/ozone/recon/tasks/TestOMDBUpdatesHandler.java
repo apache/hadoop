@@ -204,5 +204,4 @@ public class TestOMDBUpdatesHandler {
     assertEquals(OmBucketInfo.class, omdbUpdatesHandler.getValueType(
         metaMgr.getBucketTable().getName()));
   }
-
 }
