@@ -908,24 +908,17 @@ public class DiskBalancer {
           if(null == block){
             LOG.info("NextBlock call returned null.No valid block to copy. {}",
                     item.toJson());
+            return null;
+          }
+          // A valid block is a finalized block, we iterate until we get
+          // finalized blocks
+          if (!this.dataset.isValidBlock(block)) {
+            continue;
+          }
+          // We don't look for the best, we just do first fit
+          if (isLessThanNeeded(block.getNumBytes(), item)) {
             return block;
           }
-
-          if (block != null) {
-            // A valid block is a finalized block, we iterate until we get
-            // finalized blocks
-            if (!this.dataset.isValidBlock(block)) {
-              continue;
-            }
-
-            // We don't look for the best, we just do first fit
-            if (isLessThanNeeded(block.getNumBytes(), item)) {
-              return block;
-            }
-          } else {
-            LOG.info("There are no blocks in the blockPool {}", iter.getBlockPoolId());
-          }
-
         } catch (IOException e) {
           item.incErrorCount();
         }

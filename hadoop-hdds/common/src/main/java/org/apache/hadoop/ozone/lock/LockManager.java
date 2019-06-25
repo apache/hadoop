@@ -83,9 +83,10 @@ public class LockManager<T> {
     ActiveLock lock = activeLocks.get(resource);
     if (lock == null) {
       // Someone is releasing a lock which was never acquired. Log and return.
-      LOG.warn("Trying to release the lock on {}, which was never acquired.",
+      LOG.error("Trying to release the lock on {}, which was never acquired.",
           resource);
-      return;
+      throw new IllegalMonitorStateException("Releasing lock on resource "
+          + resource + " without acquiring lock");
     }
     lock.unlock();
     activeLocks.computeIfPresent(resource, (k, v) -> {
