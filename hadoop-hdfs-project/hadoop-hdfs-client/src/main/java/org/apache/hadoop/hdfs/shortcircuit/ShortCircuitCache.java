@@ -109,13 +109,8 @@ public class ShortCircuitCache implements Closeable {
         int numDemoted = demoteOldEvictableMmaped(curMs);
         int numPurged = 0;
         Long evictionTimeNs;
-        while (true) {
-          Object eldestKey;
-          try {
-            eldestKey = evictable.firstKey();
-          } catch (NoSuchElementException e) {
-            break;
-          }
+        while (!evictable.isEmpty()) {
+          Object eldestKey = evictable.firstKey();
           evictionTimeNs = (Long)eldestKey;
           long evictionTimeMs =
               TimeUnit.MILLISECONDS.convert(evictionTimeNs, TimeUnit.NANOSECONDS);
@@ -493,13 +488,8 @@ public class ShortCircuitCache implements Closeable {
     boolean needMoreSpace = false;
     Long evictionTimeNs;
 
-    while (true) {
-      Object eldestKey;
-      try {
-        eldestKey = evictableMmapped.firstKey();
-      } catch (NoSuchElementException e) {
-        break;
-      }
+    while (!evictableMmapped.isEmpty()) {
+      Object eldestKey = evictableMmapped.firstKey();
       evictionTimeNs = (Long)eldestKey;
       long evictionTimeMs =
           TimeUnit.MILLISECONDS.convert(evictionTimeNs, TimeUnit.NANOSECONDS);
@@ -533,23 +523,15 @@ public class ShortCircuitCache implements Closeable {
     long now = Time.monotonicNow();
     demoteOldEvictableMmaped(now);
 
-    while (true) {
-      long evictableSize = evictable.size();
-      long evictableMmappedSize = evictableMmapped.size();
-      if (evictableSize + evictableMmappedSize <= maxTotalSize) {
-        return;
-      }
+    while (evictable.size() + evictableMmapped.size() > maxTotalSize) {
       ShortCircuitReplica replica;
-      try {
-        if (evictableSize == 0) {
-          replica = (ShortCircuitReplica)evictableMmapped.get(evictableMmapped
-              .firstKey());
-        } else {
-          replica = (ShortCircuitReplica)evictable.get(evictable.firstKey());
-        }
-      } catch (NoSuchElementException e) {
-        break;
+      if (evictable.isEmpty()) {
+        replica = (ShortCircuitReplica) evictableMmapped
+            .get(evictableMmapped.firstKey());
+      } else {
+        replica = (ShortCircuitReplica) evictable.get(evictable.firstKey());
       }
+
       if (LOG.isTraceEnabled()) {
         LOG.trace(this + ": trimEvictionMaps is purging " + replica +
             StringUtils.getStackTrace(Thread.currentThread()));
