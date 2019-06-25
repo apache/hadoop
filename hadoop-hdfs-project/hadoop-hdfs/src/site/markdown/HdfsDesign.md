@@ -31,6 +31,7 @@ HDFS Architecture
         * [Replica Selection](#Replica_Selection)
         * [Safemode](#Safemode)
     * [Block Placement Policies](#Block_Placement_Policies)
+        * [AvailableSpaceBlockPlacementPolicy](#Available_Space_Block_Placement_Policy)
         * [BlockPlacementPolicyRackFaultTolerant](#Block_Placement_Policy_RackFault_Tolerant)
         * [BlockPlacementPolicyWithNodeGroup](#BlockPlacement_Policy_With_NodeGroup)
         * [BlockPlacementPolicyWithUpgradeDomain](#BlockPlacement_Policy_With_UpgradeDomain)
@@ -179,6 +180,11 @@ On startup, the NameNode enters a special state called Safemode. Replication of 
 Block Placement Policies
 ------------------------
 HDFS supports 3 different pluggable block placement policies with addition to default. Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault where the placement and replication will happen as mentioned previously in Replica Placement.
+
+### AvailableSpaceBlockPlacementPolicy
+During the block placement namenode won't consider the current disk utilisation and remaining disk space of the datanode, Instead it will pick up the datanode randomly which will result in unbalanaced used percent among datanodes. Also in hetrogeneous environment chances for the datanodes with less capacity will be filled fast than the datanodes with higher capacity. To resolve issue AvailableSpaceBlockPlacementPolicy is used to ensure that the block placement will begin with datanode with less used percent. AvailableSpaceBlockPlacementPolicy extends the BlockPlacementPolicyDefault, Means the selection of DN's based on the used capacity will be happen via AvailableSpaceBlockPlacementPolicy.
+https://issues.apache.org/jira/browse/HDFS-8131
+
 
 ### BlockPlacementPolicyRackFaultTolerant
 
