@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hdfs;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_CRYPTO_CODEC_CLASSES_KEY_PREFIX;
 
 import java.io.IOException;
@@ -163,19 +165,22 @@ public final class HdfsKMSUtil {
     Credentials credentials = ugi.getCredentials();
     byte[] keyProviderUriBytes =
         credentials.getSecretKey(getKeyProviderMapKey(namenodeUri));
-    if(keyProviderUriBytes != null) {
+    if (keyProviderUriBytes != null) {
       keyProviderUri =
           URI.create(DFSUtilClient.bytes2String(keyProviderUriBytes));
       return keyProviderUri;
     }
-
-    if (keyProviderUriStr != null) {
-      if (!keyProviderUriStr.isEmpty()) {
-        keyProviderUri = URI.create(keyProviderUriStr);
+    if (keyProviderUri == null) {
+      // Check if NN provided uri is not null and ignore property is false.
+      if (keyProviderUriStr != null && !conf.getBoolean(
+          DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI,
+          DFS_CLIENT_IGNORE_NAMENODE_DEFAULT_KMS_URI_DEFAULT)) {
+        if (!keyProviderUriStr.isEmpty()) {
+          keyProviderUri = URI.create(keyProviderUriStr);
+          return keyProviderUri;
+        }
       }
-      return keyProviderUri;
     }
-
     // Last thing is to trust its own conf to be backwards compatible.
     String keyProviderUriFromConf = conf.getTrimmed(
         CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH);
