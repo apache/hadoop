@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.server.ServerUtils;
@@ -35,9 +34,7 @@ import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.utils.RocksDBStore;
 import org.apache.hadoop.utils.db.RDBStore;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -208,36 +205,4 @@ public class TestOMDBUpdatesHandler {
         metaMgr.getBucketTable().getName()));
   }
 
-  @Test
-  public void testRocksDBKeyMayExistApi() throws Exception {
-    OzoneConfiguration configuration = createNewTestPath();
-    OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(configuration);
-
-    RDBStore dbStore = (RDBStore)metaMgr.getStore();
-    RocksDB db = dbStore.getDb();
-
-    for (int i = 0; i < 100; i++) {
-      db.put(StringUtils.getBytesUtf16("key" + i),
-          StringUtils.getBytesUtf16("Value" + i));
-    }
-
-    long start = System.nanoTime();
-    for (int i = 0; i < 50; i++) {
-      Assert.assertTrue(db.get(
-          StringUtils.getBytesUtf16("key" + i))!= null);
-    }
-    long end = System.nanoTime();
-    long keyGetLatency = end - start;
-
-    start = System.nanoTime();
-    for (int i = 50; i < 100; i++) {
-      Assert.assertTrue(db.get(
-          StringUtils.getBytesUtf16("key" + i))!= null);
-    }
-    end = System.nanoTime();
-    long keyMayExistLatency = end - start;
-
-    Assert.assertEquals(keyMayExistLatency, keyGetLatency);
-    Assert.assertTrue(keyMayExistLatency < keyGetLatency);
-  }
 }
