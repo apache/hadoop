@@ -363,16 +363,6 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
   }
 
   /**
-   * Load the success marker and return the data inside it.
-   * @param dir directory containing the marker
-   * @return the loaded data
-   * @throws IOException on any failure to load or validate the data
-   */
-  protected SuccessData loadSuccessMarker(Path dir) throws IOException {
-    return SuccessData.load(getFileSystem(), new Path(dir, _SUCCESS));
-  }
-
-  /**
    * Read a UTF-8 file.
    * @param path path to read
    * @return string value
@@ -487,15 +477,15 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         outputPath);
     Path success = new Path(outputPath, _SUCCESS);
     FileStatus status = ContractTestUtils.verifyPathExists(fs,
-        "job completion marker  " + outputPath
+        "job completion marker " + success
             + " from " + origin
             + " not found: Job may have failed",
-        outputPath);
+        success);
     assertTrue("_SUCCESS outout from " + origin + " is not a file " + status,
         status.isFile());
     assertTrue("0 byte success file "
             + success + " from " + origin
-            + " ; a s3guard committer was not used",
+            + "; a s3guard committer was not used",
         status.getLen() > 0);
     return SuccessData.load(fs, success);
   }
