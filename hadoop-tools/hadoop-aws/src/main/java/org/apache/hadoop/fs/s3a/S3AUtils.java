@@ -963,7 +963,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get a integer option >= the minimum allowed value.
+   * Get a integer option &gt;= the minimum allowed value.
    * @param conf configuration
    * @param key key to look up
    * @param defVal default value
@@ -981,7 +981,7 @@ public final class S3AUtils {
   }
 
   /**
-   * Get a long option >= the minimum allowed value.
+   * Get a long option &gt;= the minimum allowed value.
    * @param conf configuration
    * @param key key to look up
    * @param defVal default value
