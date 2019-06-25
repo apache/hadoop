@@ -179,7 +179,7 @@ On startup, the NameNode enters a special state called Safemode. Replication of 
 
 Block Placement Policies
 ------------------------
-HDFS supports 3 different pluggable block placement policies with addition to default. Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault where the placement and replication will happen as mentioned previously in Replica Placement.
+HDFS supports 4 different pluggable block placement policies with addition to default. Users can choose the policy based on their infrastructre and use case. By default HDFS supports BlockPlacementPolicyDefault where the placement and replication will happen as mentioned previously in Replica Placement.
 
 ### AvailableSpaceBlockPlacementPolicy
 During the block placement namenode won't consider the current disk utilisation and remaining disk space of the datanode, Instead it will pick up the datanode randomly which will result in unbalanaced used percent among datanodes. Also in hetrogeneous environment chances for the datanodes with less capacity will be filled fast than the datanodes with higher capacity. To resolve issue AvailableSpaceBlockPlacementPolicy is used to ensure that the block placement will begin with datanode with less used percent. AvailableSpaceBlockPlacementPolicy extends the BlockPlacementPolicyDefault, Means the selection of DN's based on the used capacity will be happen via AvailableSpaceBlockPlacementPolicy.
@@ -254,8 +254,6 @@ instead of returning only **/{rack}**, the script should return
 To address the limitation of block placement policy on rolling upgrade, the concept of upgrade domain has been added to HDFS via a new block placement policy. The idea is to group datanodes in a new dimension called upgrade domain, in addition to the existing rack-based grouping. For example, we can assign all datanodes in the first position of any rack to upgrade domain ud_01, nodes in the second position to upgrade domain ud_02 and so on.
 It will make sure replicas of any given block are distributed across machines from different upgrade domains. By default, 3 replicas of any given block are placed on 3 different upgrade domains. This means all datanodes belonging to a specific upgrade domain collectively won’t store more than one replica of any block.
 https://issues.apache.org/jira/browse/HDFS-9006
-
-Settings
 Detailed info about configuration https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html
 
 
