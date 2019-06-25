@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.codec.binary.StringUtils;
 import org.apache.hadoop.hdfs.DFSUtil;
 
 import org.apache.commons.lang3.RandomStringUtils;
@@ -289,4 +290,41 @@ public class TestRDBStore {
           checkpoint.getCheckpointLocation()));
     }
   }
+
+  /**
+   * Not strictly a unit test. Just a confirmation of the expected behavior
+   * of RocksDB keyMayExist API.
+   * @throws Exception if unable to read from RocksDB.
+   */
+  @Test
+  public void testRocksDBKeyMayExistApi() throws Exception {
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+      RocksDB db = newStore.getDb();
+
+      for (int i = 0; i < 100; i++) {
+        db.put(StringUtils.getBytesUtf16("key" + i),
+            StringUtils.getBytesUtf16("Value" + i));
+      }
+
+      long start = System.nanoTime();
+      for (int i = 0; i < 50; i++) {
+        Assert.assertTrue(db.get(
+            StringUtils.getBytesUtf16("key" + i))!= null);
+      }
+      long end = System.nanoTime();
+      long keyGetLatency = end - start;
+
+      start = System.nanoTime();
+      for (int i = 50; i < 100; i++) {
+        Assert.assertTrue(db.get(
+            StringUtils.getBytesUtf16("key" + i))!= null);
+      }
+      end = System.nanoTime();
+      long keyMayExistLatency = end - start;
+
+      Assert.assertTrue(keyMayExistLatency < keyGetLatency);
+    }
+  }
+
 }
