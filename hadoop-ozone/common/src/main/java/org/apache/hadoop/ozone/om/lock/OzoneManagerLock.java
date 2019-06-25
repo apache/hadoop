@@ -125,10 +125,10 @@ public class OzoneManagerLock {
    * @param resources
    */
   private String generateResourceName(Resource resource, String... resources) {
-    if (resources.length == 1 && resource.name != Resource.BUCKET.name) {
+    if (resources.length == 1 && resource != Resource.BUCKET) {
       return OzoneManagerLockUtil.generateResourceLockName(resource,
           resources[0]);
-    } else if (resources.length == 2 && resource.name == Resource.BUCKET.name) {
+    } else if (resources.length == 2 && resource == Resource.BUCKET) {
       return OzoneManagerLockUtil.generateBucketLockName(resources[0],
           resources[1]);
     } else {
