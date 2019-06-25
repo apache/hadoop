@@ -294,6 +294,8 @@ public class TestRDBStore {
   /**
    * Not strictly a unit test. Just a confirmation of the expected behavior
    * of RocksDB keyMayExist API.
+   * Expected behavior - On average, keyMayExist latency < key.get() latency
+   * for invalid keys.
    * @throws Exception if unable to read from RocksDB.
    */
   @Test
@@ -302,23 +304,19 @@ public class TestRDBStore {
              new RDBStore(folder.newFolder(), options, configSet)) {
       RocksDB db = newStore.getDb();
 
-      for (int i = 0; i < 100; i++) {
-        db.put(StringUtils.getBytesUtf16("key" + i),
-            StringUtils.getBytesUtf16("Value" + i));
-      }
-
+      //Test with 50 invalid keys.
       long start = System.nanoTime();
       for (int i = 0; i < 50; i++) {
         Assert.assertTrue(db.get(
-            StringUtils.getBytesUtf16("key" + i))!= null);
+            StringUtils.getBytesUtf16("key" + i))== null);
       }
       long end = System.nanoTime();
       long keyGetLatency = end - start;
 
       start = System.nanoTime();
-      for (int i = 50; i < 100; i++) {
-        Assert.assertTrue(db.get(
-            StringUtils.getBytesUtf16("key" + i))!= null);
+      for (int i = 0; i < 50; i++) {
+        Assert.assertFalse(db.keyMayExist(
+            StringUtils.getBytesUtf16("key" + i), new StringBuilder()));
       }
       end = System.nanoTime();
       long keyMayExistLatency = end - start;
