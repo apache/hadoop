@@ -37,7 +37,6 @@ import static org.junit.Assert.fail;
  * Class tests OzoneManagerLock.
  */
 public class TestOzoneManagerLock {
-
   @Test
   public void acquireResourceLock() {
     String resourceName;

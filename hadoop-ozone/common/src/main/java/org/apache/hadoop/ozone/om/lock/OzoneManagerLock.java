@@ -109,6 +109,8 @@ public class OzoneManagerLock {
       throw new RuntimeException(errorMessage);
     } else {
       manager.lock(resourceName);
+      LOG.debug("Acquired {} lock on resource {}", resource.name,
+          resourceName);
       lockSet.set(resource.setLock(lockSet.get()));
     }
   }
@@ -134,11 +136,10 @@ public class OzoneManagerLock {
 
   /**
    * Acquire lock on multiple users.
-   * @param oldUserResource
-   * @param newUserResource
+   * @param firstUser
+   * @param secondUser
    */
-  public void acquireMultiUserLock(String oldUserResource,
-      String newUserResource) {
+  public void acquireMultiUserLock(String firstUser, String secondUser) {
     Resource resource = Resource.USER;
     if (!resource.canLock(lockSet.get())) {
       String errorMessage = getErrorMessage(resource);
@@ -151,7 +152,6 @@ public class OzoneManagerLock {
       // Example: 1st thread acquire lock(ozone, hdfs)
       // 2nd thread acquire lock(hdfs, ozone).
       // If we don't acquire user locks in an order, there can be a deadlock.
-
       // 1st thread acquired lock on ozone, waiting for lock on hdfs, 2nd
       // thread acquired lock on hdfs, waiting for lock on ozone.
       // To avoid this when we acquire lock on multiple users, we acquire
@@ -160,30 +160,32 @@ public class OzoneManagerLock {
       // on hdfs, and first thread acquires lock on ozone. Once after first
       // thread releases user locks, 2nd thread acquires them.
 
-      int compare = newUserResource.compareTo(oldUserResource);
+      int compare = firstUser.compareTo(secondUser);
       String temp;
 
       // Order the user names in sorted order. Swap them.
       if (compare > 0) {
-        temp = newUserResource;
-        newUserResource = oldUserResource;
-        oldUserResource = temp;
+        temp = secondUser;
+        secondUser = firstUser;
+        firstUser = temp;
       }
 
       if (compare == 0) {
         // both users are equal.
-        manager.lock(oldUserResource);
+        manager.lock(firstUser);
       } else {
-        manager.lock(newUserResource);
+        manager.lock(firstUser);
         try {
-          manager.lock(oldUserResource);
+          manager.lock(secondUser);
         } catch (Exception ex) {
           // We got an exception acquiring 2nd user lock. Release already
           // acquired user lock, and throw exception to the user.
-          manager.unlock(newUserResource);
+          manager.unlock(firstUser);
           throw ex;
         }
       }
+      LOG.debug("Acquired {} lock on resource {} and {}", resource.name,
+          firstUser, secondUser);
       lockSet.set(resource.setLock(lockSet.get()));
     }
   }
@@ -191,31 +193,32 @@ public class OzoneManagerLock {
 
 
   /**
-   * Acquire lock on multiple users.
-   * @param oldUserResource
-   * @param newUserResource
+   * Release lock on multiple users.
+   * @param firstUser
+   * @param secondUser
    */
-  public void releaseMultiUserLock(String oldUserResource,
-      String newUserResource) {
+  public void releaseMultiUserLock(String firstUser, String secondUser) {
     Resource resource = Resource.USER;
-    int compare = newUserResource.compareTo(oldUserResource);
+    int compare = firstUser.compareTo(secondUser);
 
     String temp;
 
     // Order the user names in sorted order. Swap them.
     if (compare > 0) {
-      temp = newUserResource;
-      newUserResource = oldUserResource;
-      oldUserResource = temp;
+      temp = secondUser;
+      secondUser = firstUser;
+      firstUser = temp;
     }
 
     if (compare == 0) {
       // both users are equal.
-      manager.unlock(oldUserResource);
+      manager.unlock(firstUser);
     } else {
-      manager.unlock(newUserResource);
-      manager.unlock(oldUserResource);
+      manager.unlock(firstUser);
+      manager.unlock(secondUser);
     }
+    LOG.debug("Release {} lock on resource {} and {}", resource.name,
+        firstUser, secondUser);
     lockSet.set(resource.clearLock(lockSet.get()));
   }
 
@@ -227,6 +230,8 @@ public class OzoneManagerLock {
     // locks, as some locks support acquiring lock again.
     manager.unlock(resourceName);
     // clear lock
+    LOG.debug("Release {}, lock on resource {}", resource.name,
+        resource.name, resourceName);
     lockSet.set(resource.clearLock(lockSet.get()));
 
   }
@@ -267,7 +272,7 @@ public class OzoneManagerLock {
 
     Resource(byte pos, String name) {
       this.lockLevel = pos;
-      this.mask += (short) Math.pow(2, lockLevel + 1) - 1;
+      this.mask = (short) (Math.pow(2, lockLevel + 1) - 1);
       this.setMask = (short) Math.pow(2, lockLevel);
       this.name = name;
     }
@@ -304,7 +309,6 @@ public class OzoneManagerLock {
      * @return Updated value which has set lock bits.
      */
     short setLock(short lockSetVal) {
-      LOG.debug("acquire" + name + (short) (lockSetVal | setMask));
       return (short) (lockSetVal | setMask);
     }
 
@@ -315,10 +319,13 @@ public class OzoneManagerLock {
      * @return Updated value which has cleared lock bits.
      */
     short clearLock(short lockSetVal) {
-      LOG.debug("release" + name + (short) (lockSetVal & ~setMask));
       return (short) (lockSetVal & ~setMask);
     }
 
+    /**
+     * Return true, if this level is locked, else false.
+     * @param lockSetVal
+     */
     boolean isLevelLocked(short lockSetVal) {
       return (lockSetVal & setMask) == setMask;
     }
