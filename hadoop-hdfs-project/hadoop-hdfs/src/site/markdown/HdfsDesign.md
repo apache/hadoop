@@ -185,7 +185,6 @@ HDFS supports 4 different pluggable block placement policies with addition to de
 During the block placement namenode won't consider the current disk utilisation and remaining disk space of the datanode, Instead it will pick up the datanode randomly which will result in unbalanaced used percent among datanodes. Also in heterogeneous environment chances for the datanodes with less capacity will be filled fast than the datanodes with higher capacity. To resolve issue AvailableSpaceBlockPlacementPolicy is used to ensure that the block placement will begin with datanode with less used percent. AvailableSpaceBlockPlacementPolicy extends the BlockPlacementPolicyDefault, Means the selection of DN's based on the used capacity will be happen via AvailableSpaceBlockPlacementPolicy.
 For more information check [HDFS-8131](https://issues.apache.org/jira/browse/HDFS-8131)
 
-
 ### BlockPlacementPolicyRackFaultTolerant
 
 By default for a cluster with racks more than 1, the block placement will be like one replica on local rack and 2 replicas on remote rack. Totally 2 racks will be used to place a block with replication. With the BlockPlacementPolicyRackFaultTolerant we can place replicas to more than 2 racks. This ensures the block placement with best tolerance and availability. In Scenario like 2 racks going down at the same time will cause data unavailability where this placement policy will be helpful.
@@ -200,7 +199,6 @@ Configuration
   <value>org.apache.hadoop.hdfs.server.namenode.BlockPlacementPolicyRackFaultTolerant</value>
 </property>
 ```
-
 
 ### BlockPlacementPolicyWithNodeGroup
 
@@ -246,7 +244,6 @@ instead of returning only **/{rack}**, the script should return
 192.168.0.5 /rack2/nodegroup3
 192.168.0.6 /rack2/nodegroup3
 ```
-
 
 ### BlockPlacementPolicyWithUpgradeDomain
 
