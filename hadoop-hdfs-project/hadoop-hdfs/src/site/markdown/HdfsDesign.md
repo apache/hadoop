@@ -189,6 +189,7 @@ For more information check [HDFS-8131](https://issues.apache.org/jira/browse/HDF
 
 By default for a cluster with racks more than 1, the block placement will be like one replica on local rack and 2 replicas on remote rack. Totally 2 racks will be used to place a block with replication. With the BlockPlacementPolicyRackFaultTolerant we can place replicas to more than 2 racks. This ensures the block placement with best tolerance and availability. In Scenario like 2 racks going down at the same time will cause data unavailability where this placement policy will be helpful.
 For more information check [HDFS-7892](https://issues.apache.org/jira/browse/HDFS-7892)
+
 Configuration
 
 - hdfs-site.xml
@@ -203,7 +204,6 @@ Configuration
 ### BlockPlacementPolicyWithNodeGroup
 
 With new 3 layer hierarchical topology, a node group level got introduced, which maps well onto a infrastructure that is based on a virtualized environment. In Virtualized environment multiple vm's will be hosted on same physical machine. Vm's on the same physical host are affected by the same hardware failure. So mapping the physical host a node groups this block placement guarantees that it will never place more than one replica on the same node group (physical host), in case of node group failure, only one replica will be lost at the maximum. 
-https://issues.apache.org/jira/browse/HADOOP-8468
 For more information check [HADOOP-8468]( https://issues.apache.org/jira/browse/HADOOP-8468)
 
 - core-site.xml
@@ -249,7 +249,6 @@ instead of returning only **/{rack}**, the script should return
 
 To address the limitation of block placement policy on rolling upgrade, the concept of upgrade domain has been added to HDFS via a new block placement policy. The idea is to group datanodes in a new dimension called upgrade domain, in addition to the existing rack-based grouping. For example, we can assign all datanodes in the first position of any rack to upgrade domain ud_01, nodes in the second position to upgrade domain ud_02 and so on.
 It will make sure replicas of any given block are distributed across machines from different upgrade domains. By default, 3 replicas of any given block are placed on 3 different upgrade domains. This means all datanodes belonging to a specific upgrade domain collectively won’t store more than one replica of any block.
-https://issues.apache.org/jira/browse/HDFS-9006
 For more information check [HDFS-8131](https://hadoop.apache.org/docs/current/hadoop-project-dist/hadoop-hdfs/HdfsUpgradeDomain.html)
 
 The Persistence of File System Metadata
