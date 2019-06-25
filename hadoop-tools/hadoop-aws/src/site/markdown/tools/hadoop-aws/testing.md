@@ -845,7 +845,7 @@ it can be manually done:
       hadoop s3guard uploads -abort -force s3a://test-bucket/
 * If you don't need it, destroy the S3Guard DDB table.
 
-      hadoop s3guard destroy s3a://hwdev-steve-ireland-new/
+      hadoop s3guard destroy s3a://bucket-x/
 
 The S3Guard tests will automatically create the Dynamo DB table in runs with
 `-Ds3guard -Ddynamo` set; default capacity of these buckets
@@ -881,7 +881,7 @@ using an absolute XInclude reference to it.
 </configuration>
 ```
 
-#  <a name="failure-injection"></a>Failure Injection
+## <a name="failure-injection"></a>Failure Injection
 
 **Warning do not enable any type of failure injection in production.  The
 following settings are for testing only.**
@@ -1014,7 +1014,7 @@ The inconsistent client is shipped in the `hadoop-aws` JAR, so it can
 be used in applications which work with S3 to see how they handle
 inconsistent directory listings.
 
-##<a name="s3guard"></a> Testing S3Guard
+## <a name="s3guard"></a> Testing S3Guard
 
 [S3Guard](./s3guard.html) is an extension to S3A which adds consistent metadata
 listings to the S3A client. As it is part of S3A, it also needs to be tested.
@@ -1052,7 +1052,7 @@ The basic strategy for testing S3Guard correctness consists of:
     No charges are incurred for using this store, and its consistency
     guarantees are that of the underlying object store instance. <!-- :) -->
 
-## Testing S3A with S3Guard Enabled
+### Testing S3A with S3Guard Enabled
 
 All the S3A tests which work with a private repository can be configured to
 run with S3Guard by using the `s3guard` profile. When set, this will run
@@ -1099,6 +1099,51 @@ property should be configured, and the name of that table should be different
  tables. If the tests abort uncleanly, these tables may be left behind,
  incurring AWS charges.
 
+
+### How to dump the table to a CSV file
+
+There's an unstable, unsupported command to list the contents of a table
+to a CSV, or more specifically a TSV file, on the local system
+
+```
+hadoop org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable s3a://bucket-x/ out.csv
+```
+This generates a file which can then be viewed on the command line or editor:
+
+```
+"path"  "type"  "is_auth_dir"   "deleted"       "is_empty_dir"  "len"   "updated"       "updated_s"     "last_modified" "last_modified_s"       "etag"  "version"
+"s3a://bucket-x/FileSystemContractBaseTest"      "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561483826881   "Tue Jun 25 18:30:26 BST 2019"  ""      ""
+"s3a://bucket-x/Users"   "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484376835   "Tue Jun 25 18:39:36 BST 2019"  ""      ""
+"s3a://bucket-x/dest-6f578c72-eb40-4767-a89d-66a6a5b89578"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561483757615   "Tue Jun 25 18:29:17 BST 2019"  ""      ""
+"s3a://bucket-x/file.txt"        "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484382603   "Tue Jun 25 18:39:42 BST 2019"  ""      ""
+"s3a://bucket-x/fork-0001"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484378086   "Tue Jun 25 18:39:38 BST 2019"  ""      ""
+"s3a://bucket-x/fork-0002"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484380177   "Tue Jun 25 18:39:40 BST 2019"  ""      ""
+"s3a://bucket-x/fork-0003"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484379690   "Tue Jun 25 18:39:39 BST 2019"  ""      ""
+```
+
+This is unstable: the output format may change without warning.
+To understand the meaning of the fields, consult the documentation. 
+They are, currently:
+
+| field | meaning | source |
+|-------|---------| -------|
+| `path` | path of an entry | filestatus |
+| `type` | type | filestatus |
+| `is_auth_dir` | directory entry authoritative status | metadata | 
+| `deleted` | tombstone marker | metadata | 
+| `is_empty_dir` | does the entry represent an empty directory | metadata | 
+| `len` |   |
+| `len` | file length | filestatus |
+| `last_modified` | file status last modified | filestatus |
+| `last_modified_s` | file status last modified as string | filestatus |
+| `updated` | time (millis) metadata was updated | metadata |
+| `updated_s` | updated time as a string | metadata |
+| `updated` |  | metadata |
+| `etag` | any etag | filestatus |
+| `version` |  any version| filestatus |
+
+As noted: this is unstable; entry list and meaning may change, sorting of output,
+the listing algorithm, representation of types, etc. Use at your own risk.
 
 ### Scale Testing MetadataStore Directly
 
