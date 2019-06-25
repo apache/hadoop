@@ -242,7 +242,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   public void testGetKeysForContainerWithPrevKey() {
     // test if prev-key param works as expected
     Response response = containerKeyService.getKeysForContainer(
-        1L,-1,"/sampleVol/bucketOne/key_one");
+        1L, -1, "/sampleVol/bucketOne/key_one");
 
     Collection<KeyMetadata> keyMetadataList =
         (Collection<KeyMetadata>) response.getEntity();
@@ -303,7 +303,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   }
 
   @Test
-  public void testGetContainersWithPrevKey () {
+  public void testGetContainersWithPrevKey() {
 
     Response response = containerKeyService.getContainers(1, 1L);
 
