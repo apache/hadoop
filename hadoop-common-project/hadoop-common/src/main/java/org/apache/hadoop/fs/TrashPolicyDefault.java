@@ -115,6 +115,17 @@ public class TrashPolicyDefault extends TrashPolicy {
   @SuppressWarnings("deprecation")
   @Override
   public boolean moveToTrash(Path path) throws IOException {
+    boolean pathDeleted = doMoveToTrash(path);
+
+    Path crcFilePath = new Path(path.getParent(), "." + path.getName() + ".crc");
+    boolean crcFileExist = fs.exists(crcFilePath);
+    if(crcFileExist) {
+      return pathDeleted && doMoveToTrash(crcFilePath);
+    }
+    return pathDeleted;
+  }
+
+  private boolean doMoveToTrash(Path path) throws IOException {
     if (!isEnabled())
       return false;
 
@@ -133,12 +144,12 @@ public class TrashPolicyDefault extends TrashPolicy {
 
     if (trashRoot.getParent().toString().startsWith(qpath)) {
       throw new IOException("Cannot move \"" + path +
-                            "\" to the trash, as it contains the trash");
+              "\" to the trash, as it contains the trash");
     }
 
     Path trashPath = makeTrashRelativePath(trashCurrent, path);
     Path baseTrashPath = makeTrashRelativePath(trashCurrent, path.getParent());
-    
+
     IOException cause = null;
 
     // try twice, in case checkpoint between the mkdirs() & rename()
@@ -154,17 +165,16 @@ public class TrashPolicyDefault extends TrashPolicy {
         break;
       }
       try {
-        // if the target path in Trash already exists, then append with 
+        // if the target path in Trash already exists, then append with
         // a current time in millisecs.
         String orig = trashPath.toString();
-        
+
         while(fs.exists(trashPath)) {
           trashPath = new Path(orig + Time.now());
         }
-        
         // move to current trash
         fs.rename(path, trashPath,
-            Rename.TO_TRASH);
+                Rename.TO_TRASH);
         LOG.info("Moved: '" + path + "' to trash at: " + trashPath);
         return true;
       } catch (IOException e) {
@@ -172,7 +182,7 @@ public class TrashPolicyDefault extends TrashPolicy {
       }
     }
     throw (IOException)
-      new IOException("Failed to move to trash: " + path).initCause(cause);
+            new IOException("Failed to move to trash: " + path).initCause(cause);
   }
 
   @SuppressWarnings("deprecation")
