@@ -32,3 +32,6 @@ data:
   LOG4J.PROPERTIES_log4j.appender.stdout.layout: org.apache.log4j.PatternLayout
   LOG4J.PROPERTIES_log4j.appender.stdout.layout.ConversionPattern: '%d{yyyy-MM-dd
     HH:mm:ss} %-5p %c{1}:%L - %m%n'
+  OZONE-SITE.XML_ozone.csi.s3g.address: http://s3g-0.s3g:9878
+  OZONE-SITE.XML_ozone.csi.socket: /var/lib/csi/csi.sock
+  OZONE-SITE.XML_ozone.csi.owner: hadoop

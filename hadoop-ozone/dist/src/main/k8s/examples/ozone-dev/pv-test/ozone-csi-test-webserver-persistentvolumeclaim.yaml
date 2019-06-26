@@ -13,16 +13,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 apiVersion: v1
-kind: Service
+kind: PersistentVolumeClaim
 metadata:
-  name: nginx-service
+  name: ozone-csi-test-webserver
   labels: {}
   annotations: {}
 spec:
-  type: NodePort
-  ports:
-    - port: 80
-      name: web
-  selector:
-    app: csi-s3-test-nginx
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ozone

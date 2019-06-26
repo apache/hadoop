@@ -15,7 +15,15 @@
 # limitations under the License.
 
 apiVersion: v1
-kind: ServiceAccount
+kind: Service
 metadata:
-  namespace: default
-  name: csi-ozone
+  name: ozone-csi-test-webserver
+  labels: {}
+  annotations: {}
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    name: web
+  selector:
+    app: ozone-csi-test-webserver

@@ -55,6 +55,9 @@ spec:
         args:
         - ozone
         - datanode
+        envFrom:
+        - configMapRef:
+            name: config
         env:
         - name: JAEGER_SAMPLER_TYPE
           value: probabilistic
@@ -65,9 +68,6 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        envFrom:
-        - configMapRef:
-            name: config
       volumes:
       - name: data
         emptyDir: {}
