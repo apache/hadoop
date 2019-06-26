@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
+import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.util.RadixNode;
 import org.apache.hadoop.ozone.util.RadixTree;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PREFIX_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.PREFIX_LOCK;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.PREFIX;
 
 /**
@@ -91,7 +93,7 @@ public class PrefixManagerImpl implements PrefixManager {
     validateOzoneObj(obj);
 
     String prefixPath = obj.getPath();
-    metadataManager.getLock().acquirePrefixLock(prefixPath);
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
       OmPrefixInfo prefixInfo =
           metadataManager.getPrefixTable().get(prefixPath);
@@ -135,7 +137,7 @@ public class PrefixManagerImpl implements PrefixManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releasePrefixLock(prefixPath);
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
     return true;
   }
@@ -152,7 +154,7 @@ public class PrefixManagerImpl implements PrefixManager {
   public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
     validateOzoneObj(obj);
     String prefixPath = obj.getPath();
-    metadataManager.getLock().acquirePrefixLock(prefixPath);
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
       OmPrefixInfo prefixInfo =
           metadataManager.getPrefixTable().get(prefixPath);
@@ -205,7 +207,7 @@ public class PrefixManagerImpl implements PrefixManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releasePrefixLock(prefixPath);
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
     return true;
   }
@@ -222,7 +224,7 @@ public class PrefixManagerImpl implements PrefixManager {
   public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
     validateOzoneObj(obj);
     String prefixPath = obj.getPath();
-    metadataManager.getLock().acquirePrefixLock(prefixPath);
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
       OmPrefixInfo prefixInfo =
           metadataManager.getPrefixTable().get(prefixPath);
@@ -241,7 +243,7 @@ public class PrefixManagerImpl implements PrefixManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releasePrefixLock(prefixPath);
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
     return true;
   }
@@ -256,7 +258,7 @@ public class PrefixManagerImpl implements PrefixManager {
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
     validateOzoneObj(obj);
     String prefixPath = obj.getPath();
-    metadataManager.getLock().acquirePrefixLock(prefixPath);
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
       String longestPrefix = prefixTree.getLongestPrefix(prefixPath);
       if (prefixPath.equals(longestPrefix)) {
@@ -267,7 +269,7 @@ public class PrefixManagerImpl implements PrefixManager {
         }
       }
     } finally {
-      metadataManager.getLock().releasePrefixLock(prefixPath);
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
     return EMPTY_ACL_LIST;
   }
@@ -275,12 +277,12 @@ public class PrefixManagerImpl implements PrefixManager {
   @Override
   public List<OmPrefixInfo> getLongestPrefixPath(String path) {
     String prefixPath = prefixTree.getLongestPrefix(path);
-    metadataManager.getLock().acquirePrefixLock(prefixPath);
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
       return prefixTree.getLongestPrefixPath(prefixPath).stream()
           .map(c -> c.getValue()).collect(Collectors.toList());
     } finally {
-      metadataManager.getLock().releasePrefixLock(prefixPath);
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
   }
 
