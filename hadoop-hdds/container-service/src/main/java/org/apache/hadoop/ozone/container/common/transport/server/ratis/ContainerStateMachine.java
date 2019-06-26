@@ -666,6 +666,11 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   @Override
+  public void notifyLogFailed(Throwable t, LogEntryProto failedEntry) {
+    ratisServer.handleNodeLogFailure(gid, t);
+  }
+
+  @Override
   public CompletableFuture<TermIndex> notifyInstallSnapshotFromLeader(
       RoleInfoProto roleInfoProto, TermIndex firstTermIndexInLog) {
     ratisServer.handleInstallSnapshotFromLeader(gid, roleInfoProto,
