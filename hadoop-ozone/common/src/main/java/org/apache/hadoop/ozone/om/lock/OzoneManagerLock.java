@@ -105,7 +105,7 @@ public class OzoneManagerLock {
    * should be bucket name. For remaining all resource only one param should
    * be passed.
    */
-  public void acquireLock(Resource resource, String... resources) {
+  public boolean acquireLock(Resource resource, String... resources) {
     String resourceName = generateResourceName(resource, resources);
     if (!resource.canLock(lockSet.get())) {
       String errorMessage = getErrorMessage(resource);
@@ -116,6 +116,7 @@ public class OzoneManagerLock {
       LOG.debug("Acquired {} lock on resource {}", resource.name,
           resourceName);
       lockSet.set(resource.setLock(lockSet.get()));
+      return true;
     }
   }
 
@@ -160,7 +161,7 @@ public class OzoneManagerLock {
    * @param firstUser
    * @param secondUser
    */
-  public void acquireMultiUserLock(String firstUser, String secondUser) {
+  public boolean acquireMultiUserLock(String firstUser, String secondUser) {
     Resource resource = Resource.USER_LOCK;
     firstUser = generateResourceName(resource, firstUser);
     secondUser = generateResourceName(resource, secondUser);
@@ -211,6 +212,7 @@ public class OzoneManagerLock {
       LOG.debug("Acquired {} lock on resource {} and {}", resource.name,
           firstUser, secondUser);
       lockSet.set(resource.setLock(lockSet.get()));
+      return true;
     }
   }
 

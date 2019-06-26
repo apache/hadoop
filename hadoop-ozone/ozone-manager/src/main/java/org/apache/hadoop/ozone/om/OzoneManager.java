@@ -2642,12 +2642,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             null, s3BucketName, null);
       }
       metrics.incNumBucketCreates();
-      metadataManager.getLock().acquireLock(S3_BUCKET_LOCK, s3BucketName);
-      acquiredS3Lock = true;
+      acquiredS3Lock = metadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
+          s3BucketName);
       try {
-        metadataManager.getLock().acquireLock(VOLUME_LOCK,
+        acquiredVolumeLock = metadataManager.getLock().acquireLock(VOLUME_LOCK,
             s3BucketManager.formatOzoneVolumeName(userName));
-        acquiredVolumeLock = true;
         boolean newVolumeCreate = s3BucketManager.createOzoneVolumeIfNeeded(
             userName);
         if (newVolumeCreate) {

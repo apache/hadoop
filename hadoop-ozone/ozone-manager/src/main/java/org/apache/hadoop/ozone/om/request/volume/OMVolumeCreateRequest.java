@@ -143,8 +143,8 @@ public class OMVolumeCreateRequest extends OMClientRequest
     // acquire lock.
     omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
-      omMetadataManager.getLock().acquireLock(USER_LOCK, owner);
-      acquiredUserLock = true;
+      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+          owner);
       OmVolumeArgs dbVolumeArgs =
           omMetadataManager.getVolumeTable().get(dbVolumeKey);
 

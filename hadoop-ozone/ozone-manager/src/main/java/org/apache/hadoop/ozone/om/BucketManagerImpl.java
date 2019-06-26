@@ -118,9 +118,8 @@ public class BucketManagerImpl implements BucketManager {
     boolean acquiredBucketLock = false;
     metadataManager.getLock().acquireLock(VOLUME_LOCK, volumeName);
     try {
-      metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-          bucketName);
-      acquiredBucketLock = true;
+      acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
       String volumeKey = metadataManager.getVolumeKey(volumeName);
       String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 

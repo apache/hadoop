@@ -123,13 +123,12 @@ public class VolumeManagerImpl implements VolumeManager {
   public VolumeList createVolume(OmVolumeArgs omVolumeArgs) throws IOException {
     Preconditions.checkNotNull(omVolumeArgs);
 
-    boolean acquiredLock = false;
+    boolean acquiredUserLock = false;
     metadataManager.getLock().acquireLock(VOLUME_LOCK,
         omVolumeArgs.getVolume());
     try {
-      metadataManager.getLock().acquireLock(USER_LOCK,
+      acquiredUserLock = metadataManager.getLock().acquireLock(USER_LOCK,
           omVolumeArgs.getOwnerName());
-      acquiredLock = true;
       String dbVolumeKey = metadataManager.getVolumeKey(
           omVolumeArgs.getVolume());
       String dbUserKey = metadataManager.getUserKey(
@@ -163,7 +162,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      if (acquiredLock) {
+      if (acquiredUserLock) {
         metadataManager.getLock().releaseLock(USER_LOCK,
             omVolumeArgs.getOwnerName());
       }
@@ -217,7 +216,7 @@ public class VolumeManagerImpl implements VolumeManager {
       throws IOException {
     Preconditions.checkNotNull(volume);
     Preconditions.checkNotNull(owner);
-    boolean acquiredLock = false;
+    boolean acquiredUsersLock = false;
     String actualOwner = null;
     metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
@@ -236,8 +235,8 @@ public class VolumeManagerImpl implements VolumeManager {
       actualOwner = volumeArgs.getOwnerName();
       String originalOwner = metadataManager.getUserKey(actualOwner);
 
-      metadataManager.getLock().acquireMultiUserLock(owner, originalOwner);
-      acquiredLock = true;
+      acquiredUsersLock = metadataManager.getLock().acquireMultiUserLock(owner,
+          originalOwner);
       VolumeList oldOwnerVolumeList = delVolumeFromOwnerList(volume,
           originalOwner);
 
@@ -258,7 +257,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      if (acquiredLock) {
+      if (acquiredUsersLock) {
         metadataManager.getLock().releaseMultiUserLock(owner, actualOwner);
       }
       metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
@@ -403,12 +402,12 @@ public class VolumeManagerImpl implements VolumeManager {
   public OmDeleteVolumeResponse deleteVolume(String volume) throws IOException {
     Preconditions.checkNotNull(volume);
     String owner = null;
-    boolean acquiredLock = false;
+    boolean acquiredUserLock = false;
     metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
       owner = getVolumeInfo(volume).getOwnerName();
-      metadataManager.getLock().acquireLock(USER_LOCK, owner);
-      acquiredLock = true;
+      acquiredUserLock = metadataManager.getLock().acquireLock(USER_LOCK,
+          owner);
       String dbVolumeKey = metadataManager.getVolumeKey(volume);
       OmVolumeArgs volumeArgs =
           metadataManager.getVolumeTable().get(dbVolumeKey);
@@ -439,7 +438,7 @@ public class VolumeManagerImpl implements VolumeManager {
       }
       throw ex;
     } finally {
-      if (acquiredLock) {
+      if (acquiredUserLock) {
         metadataManager.getLock().releaseLock(USER_LOCK, owner);
       }
       metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);

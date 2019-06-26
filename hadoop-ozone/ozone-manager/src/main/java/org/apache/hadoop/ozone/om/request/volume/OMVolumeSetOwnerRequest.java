@@ -140,8 +140,8 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
 
       oldOwner = omVolumeArgs.getOwnerName();
 
-      omMetadataManager.getLock().acquireMultiUserLock(newOwner, oldOwner);
-      acquiredUserLocks = true;
+      acquiredUserLocks =
+          omMetadataManager.getLock().acquireMultiUserLock(newOwner, oldOwner);
 
       oldOwnerVolumeList =
           omMetadataManager.getUserTable().get(oldOwner);

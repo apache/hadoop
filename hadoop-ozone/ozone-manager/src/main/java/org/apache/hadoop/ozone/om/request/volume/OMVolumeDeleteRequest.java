@@ -112,8 +112,8 @@ public class OMVolumeDeleteRequest extends OMClientRequest
     omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
       owner = getVolumeInfo(omMetadataManager, volume).getOwnerName();
-      omMetadataManager.getLock().acquireLock(USER_LOCK, owner);
-      acquiredUserLock = true;
+      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+          owner);
 
       String dbUserKey = omMetadataManager.getUserKey(owner);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
