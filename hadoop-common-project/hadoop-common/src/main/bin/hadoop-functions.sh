@@ -1336,7 +1336,7 @@ function hadoop_add_to_classpath_tools
     # shellcheck disable=SC1090
     . "${HADOOP_LIBEXEC_DIR}/tools/${module}.sh"
   else
-    hadoop_error "ERROR: Tools helper ${HADOOP_LIBEXEC_DIR}/tools/${module}.sh was not found."
+    hadoop_debug "DEBUG: Tools helper ${HADOOP_LIBEXEC_DIR}/tools/${module}.sh was not found."
   fi
 
   if declare -f hadoop_classpath_tools_${module} >/dev/null 2>&1; then
