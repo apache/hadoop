@@ -369,8 +369,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities {
   @Retries.RetryTranslated
   protected void verifyBucketExists()
       throws FileNotFoundException, IOException {
-    if (!invoker.retry("doesBucketExist", bucket, true,
-        () -> s3.doesBucketExist(bucket))) {
+    if (!invoker.retry("doesBucketExistV2", bucket, true,
+        () -> s3.doesBucketExistV2(bucket))) {
       throw new FileNotFoundException("Bucket " + bucket + " does not exist");
     }
   }
