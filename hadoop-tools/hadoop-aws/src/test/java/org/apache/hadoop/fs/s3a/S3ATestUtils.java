@@ -27,7 +27,9 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentialBinding;
 import org.apache.hadoop.fs.s3a.auth.MarshalledCredentials;
@@ -1216,4 +1218,53 @@ public final class S3ATestUtils {
     }
     return Boolean.valueOf(persists);
   }
+
+  public static void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, lfs.getPath());
+    }
+    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      assertNotEquals("Listing was not supposed to include " + filePath,
+            filePath, fileStatus.getPath());
+    }
+    LOG.info("{}; file omitted from listStatus as expected.", filePath);
+  }
+
+  public static void checkListingContainsPath(S3AFileSystem fs, Path filePath)
+      throws IOException {
+
+    boolean listFilesHasIt = false;
+    boolean listStatusHasIt = false;
+
+    final RemoteIterator<LocatedFileStatus> listIter =
+        fs.listFiles(filePath.getParent(), false);
+
+
+    while (listIter.hasNext()) {
+      final LocatedFileStatus lfs = listIter.next();
+      if (filePath.equals(lfs.getPath())) {
+        listFilesHasIt = true;
+      }
+    }
+
+    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
+    for (FileStatus fileStatus : fileStatuses) {
+      if (filePath.equals(fileStatus.getPath())) {
+        listStatusHasIt = true;
+      }
+    }
+    assertTrue("fs.listFiles didn't include " + filePath,
+          listFilesHasIt);
+    assertTrue("fs.listStatus didn't include " + filePath,
+          listStatusHasIt);
+  }
+
 }
