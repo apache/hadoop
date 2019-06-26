@@ -65,6 +65,7 @@ public class NodeInfo {
   protected ResourceInfo availableResource;
   protected NodeAttributesInfo nodeAttributesInfo;
   private ResourceInfo totalResource;
+  private String clusterId;
 
   public NodeInfo() {
   } // JAXB needs this
@@ -135,6 +136,7 @@ public class NodeInfo {
 
     // update node and containers resource utilization
     this.resourceUtilization = new ResourceUtilizationInfo(ni);
+    this.clusterId = ni.getClusterID();
   }
 
   public String getRack() {
@@ -250,5 +252,9 @@ public class NodeInfo {
 
   public ResourceInfo getTotalResource() {
     return this.totalResource;
+  }
+
+  public String getClusterId() {
+    return clusterId;
   }
 }

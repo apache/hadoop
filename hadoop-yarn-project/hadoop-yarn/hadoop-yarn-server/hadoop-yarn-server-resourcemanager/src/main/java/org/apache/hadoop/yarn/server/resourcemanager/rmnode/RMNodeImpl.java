@@ -119,6 +119,7 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   private final NodeId nodeId;
   private final RMContext context;
   private final String hostName;
+  private String clusterId;
   private final int commandPort;
   private int httpPort;
   private final String nodeAddress; // The containerManager address
@@ -378,12 +379,12 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       int cmPort, int httpPort, Node node, Resource capability,
       String nodeManagerVersion) {
     this(nodeId, context, hostName, cmPort, httpPort, node, capability,
-        nodeManagerVersion, null);
+        nodeManagerVersion, null, "default-cluster");
   }
 
   public RMNodeImpl(NodeId nodeId, RMContext context, String hostName,
       int cmPort, int httpPort, Node node, Resource capability,
-      String nodeManagerVersion, Resource physResource) {
+      String nodeManagerVersion, Resource physResource, String clusterId) {
     this.nodeId = nodeId;
     this.context = context;
     this.hostName = hostName;
@@ -410,6 +411,8 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     this.nodeUpdateQueue = new ConcurrentLinkedQueue<UpdatedContainerInfo>();
 
     this.containerAllocationExpirer = context.getContainerAllocationExpirer();
+
+    this.clusterId = clusterId;
   }
 
   @Override
@@ -420,6 +423,11 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
   @Override
   public String getHostName() {
     return hostName;
+  }
+
+  @Override
+  public String getClusterID() {
+    return clusterId;
   }
 
   @Override

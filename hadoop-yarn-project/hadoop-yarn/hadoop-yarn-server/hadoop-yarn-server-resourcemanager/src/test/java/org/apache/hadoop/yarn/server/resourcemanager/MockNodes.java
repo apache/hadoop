@@ -120,6 +120,7 @@ public class MockNodes {
     private ResourceUtilization nodeUtilization;
     private Resource physicalResource;
     private RMContext rmContext;
+    private String clusterId;
 
     MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
         Resource perNode, String rackName, String healthReport,
@@ -141,6 +142,7 @@ public class MockNodes {
       this.containersUtilization = containersUtilization;
       this.nodeUtilization = nodeUtilization;
       this.physicalResource = pPhysicalResource;
+      this.clusterId = "default-cluster";
     }
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
@@ -163,6 +165,11 @@ public class MockNodes {
     @Override
     public String getHostName() {
       return this.hostName;
+    }
+
+    @Override
+    public String getClusterID() {
+      return clusterId;
     }
 
     @Override

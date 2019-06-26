@@ -54,7 +54,13 @@ public interface RMNode {
    * @return hostname of this node
    */
   public String getHostName();
-  
+
+  /**
+   * the clusterId of this node
+   * @return clusterId of this node
+   */
+  public String getClusterID();
+
   /**
    * the command port for this node
    * @return command port for this node
