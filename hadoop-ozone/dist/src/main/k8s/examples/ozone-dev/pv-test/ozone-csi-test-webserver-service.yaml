@@ -17,12 +17,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: om
+  name: ozone-csi-test-webserver
+  labels: {}
+  annotations: {}
 spec:
+  type: NodePort
   ports:
-  - port: 9874
-    name: ui
-  clusterIP: None
+  - port: 8000
+    name: web
   selector:
-    app: ozone
-    component: om
+    app: ozone-csi-test-webserver

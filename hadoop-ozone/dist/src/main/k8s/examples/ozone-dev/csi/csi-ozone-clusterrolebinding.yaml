@@ -13,3 +13,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: csi-ozone
+subjects:
+- kind: ServiceAccount
+  name: csi-ozone
+  namespace: weekly-test
+roleRef:
+  kind: ClusterRole
+  name: csi-ozone
+  apiGroup: rbac.authorization.k8s.io

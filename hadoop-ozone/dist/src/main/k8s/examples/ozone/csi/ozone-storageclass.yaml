@@ -14,16 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Service
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
 metadata:
-  name: nginx-service
-  labels: {}
-  annotations: {}
-spec:
-  type: NodePort
-  ports:
-  - port: 80
-    name: web
-  selector:
-    app: csi-s3-test-nginx
+  name: ozone
+provisioner: org.apache.hadoop.ozone

@@ -14,15 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Service
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: datanode
-spec:
-  ports:
-  - port: 9870
-    name: rpc
-  clusterIP: None
-  selector:
-    app: ozone
-    component: datanode
+  name: csi-ozone
+subjects:
+- kind: ServiceAccount
+  name: csi-ozone
+  namespace: weekly-test
+roleRef:
+  kind: ClusterRole
+  name: csi-ozone
+  apiGroup: rbac.authorization.k8s.io
