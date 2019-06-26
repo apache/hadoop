@@ -84,7 +84,9 @@ public class ContainersMonitorImpl extends AbstractService implements
   private static float vmemRatio;
   private Class<? extends ResourceCalculatorProcessTree> processTreeClass;
 
+  /** Maximum virtual memory in bytes. */
   private long maxVmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
+  /** Maximum physical memory in bytes. */
   private long maxPmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
 
   private boolean pmemCheckEnabled;
@@ -152,25 +154,23 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     long configuredPMemForContainers =
         NodeManagerHardwareUtils.getContainerMemoryMB(
-            this.resourceCalculatorPlugin, this.conf) * 1024 * 1024L;
+            this.resourceCalculatorPlugin, this.conf);
 
-    long configuredVCoresForContainers =
-        NodeManagerHardwareUtils.getVCores(this.resourceCalculatorPlugin,
-            this.conf);
-
-    // Setting these irrespective of whether checks are enabled. Required in
-    // the UI.
-    // ///////// Physical memory configuration //////
-    this.maxPmemAllottedForContainers = configuredPMemForContainers;
-    this.maxVCoresAllottedForContainers = configuredVCoresForContainers;
+    int configuredVCoresForContainers =
+        NodeManagerHardwareUtils.getVCores(
+            this.resourceCalculatorPlugin, this.conf);
 
     // ///////// Virtual memory configuration //////
     vmemRatio = this.conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
     Preconditions.checkArgument(vmemRatio > 0.99f,
         YarnConfiguration.NM_VMEM_PMEM_RATIO + " should be at least 1.0");
-    this.maxVmemAllottedForContainers =
-        (long) (vmemRatio * configuredPMemForContainers);
+
+    // Setting these irrespective of whether checks are enabled.
+    // Required in the UI.
+    Resource resourcesForContainers = Resource.newInstance(
+        configuredPMemForContainers, configuredVCoresForContainers);
+    setAllocatedResourcesForContainers(resourcesForContainers);
 
     pmemCheckEnabled = this.conf.getBoolean(
         YarnConfiguration.NM_PMEM_CHECK_ENABLED,
@@ -908,6 +908,16 @@ public class ContainersMonitorImpl extends AbstractService implements
     return this.maxVCoresAllottedForContainers;
   }
 
+  @Override
+  public void setAllocatedResourcesForContainers(final Resource resource) {
+    LOG.info("Setting the resources allocated to containers to {}", resource);
+    this.maxVCoresAllottedForContainers = resource.getVirtualCores();
+    this.maxPmemAllottedForContainers = convertMBytesToBytes(
+        resource.getMemorySize());
+    this.maxVmemAllottedForContainers =
+        (long) (getVmemRatio() * maxPmemAllottedForContainers);
+  }
+
   /**
    * Is the total virtual memory check enabled?
    *
@@ -973,10 +983,10 @@ public class ContainersMonitorImpl extends AbstractService implements
       }
       LOG.info("Changing resource-monitoring for {}", containerId);
       updateContainerMetrics(monitoringEvent);
-      long pmemLimit =
-          changeEvent.getResource().getMemorySize() * 1024L * 1024L;
+      Resource resource = changeEvent.getResource();
+      long pmemLimit = convertMBytesToBytes(resource.getMemorySize());
       long vmemLimit = (long) (pmemLimit * vmemRatio);
-      int cpuVcores = changeEvent.getResource().getVirtualCores();
+      int cpuVcores = resource.getVirtualCores();
       processTreeInfo.setResourceLimit(pmemLimit, vmemLimit, cpuVcores);
     }
   }
@@ -998,5 +1008,14 @@ public class ContainersMonitorImpl extends AbstractService implements
         new ProcessTreeInfo(containerId, null, null,
             startEvent.getVmemLimit(), startEvent.getPmemLimit(),
             startEvent.getCpuVcores()));
+  }
+
+  /**
+   * Convert MegaBytes to Bytes.
+   * @param mb MegaBytes (MB).
+   * @return Bytes representing the input MB.
+   */
+  private static long convertMBytesToBytes(long mb) {
+    return mb * 1024L * 1024L;
   }
 }
