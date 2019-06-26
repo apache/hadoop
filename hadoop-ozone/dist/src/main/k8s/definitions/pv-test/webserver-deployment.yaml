@@ -15,52 +15,36 @@
 # limitations under the License.
 
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: datanode
+  name: ozone-csi-test-webserver
   labels:
-    app.kubernetes.io/component: ozone
+    app: ozone-csi-test-webserver
+  annotations: {}
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: ozone
-      component: datanode
-  serviceName: datanode
-  replicas: 3
+      app: ozone-csi-test-webserver
   template:
     metadata:
       labels:
-        app: ozone
-        component: datanode
-      annotations:
-        prdatanodeetheus.io/scrape: "true"
-        prdatanodeetheus.io/port: "9882"
-        prdatanodeetheus.io/path: /prom
+        app: ozone-csi-test-webserver
     spec:
-      affinity:
-        podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: component
-                operator: In
-                values:
-                - datanode
-            topologyKey: kubernetes.io/hostname
-      securityContext:
-        fsGroup: 1000
       containers:
-      - name: datanode
-        image: '@docker.image@'
+      - name: web
+        image: python:3.7.3-alpine3.8
         args:
-        - ozone
-        - datanode
+           - python
+           - -m
+           - http.server
+           - --directory
+           - /www
         volumeMounts:
-        - name: data
-          mountPath: /data
-        envFrom:
-        - configMapRef:
-            name: config
+        - mountPath: /www
+          name: webroot
       volumes:
-      - name: data
-        emptyDir: {}
+      - name: webroot
+        persistentVolumeClaim:
+          claimName: ozone-csi-test-webserver
+          readOnly: false

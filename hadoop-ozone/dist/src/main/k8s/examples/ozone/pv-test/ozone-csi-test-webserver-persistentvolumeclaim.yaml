@@ -17,7 +17,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: nginx-storage
+  name: ozone-csi-test-webserver
   labels: {}
   annotations: {}
 spec:
