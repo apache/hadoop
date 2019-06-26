@@ -21,6 +21,8 @@ package org.apache.hadoop.fs.s3a;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.common.annotations.VisibleForTesting;
+
+import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -50,6 +52,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.translateException;
 /**
  * Place for the S3A listing classes; keeps all the small classes under control.
  */
+@InterfaceAudience.Private
 public class Listing {
 
   private final S3AFileSystem owner;
@@ -87,7 +90,7 @@ public class Listing {
    * @return the iterator
    * @throws IOException IO Problems
    */
-  FileStatusListingIterator createFileStatusListingIterator(
+  public FileStatusListingIterator createFileStatusListingIterator(
       Path listPath,
       S3ListRequest request,
       PathFilter filter,
@@ -110,7 +113,7 @@ public class Listing {
    * @throws IOException IO Problems
    */
   @Retries.RetryRaw
-  FileStatusListingIterator createFileStatusListingIterator(
+  public FileStatusListingIterator createFileStatusListingIterator(
       Path listPath,
       S3ListRequest request,
       PathFilter filter,
@@ -129,7 +132,7 @@ public class Listing {
    * @return a new remote iterator
    */
   @VisibleForTesting
-  LocatedFileStatusIterator createLocatedFileStatusIterator(
+  public LocatedFileStatusIterator createLocatedFileStatusIterator(
       RemoteIterator<S3AFileStatus> statusIterator) {
     return new LocatedFileStatusIterator(statusIterator);
   }
@@ -789,7 +792,7 @@ public class Listing {
    * Accept all entries except the base path and those which map to S3N
    * pseudo directory markers.
    */
-  static class AcceptAllButSelfAndS3nDirs implements FileStatusAcceptor {
+  public static class AcceptAllButSelfAndS3nDirs implements FileStatusAcceptor {
 
     /** Base path. */
     private final Path qualifiedPath;

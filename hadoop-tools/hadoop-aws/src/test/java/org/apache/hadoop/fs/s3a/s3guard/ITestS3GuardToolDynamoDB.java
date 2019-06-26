@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
@@ -289,15 +288,19 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testDumpTable() throws Throwable {
-    File destFile = File.createTempFile("dump", ".csv");
+    String target = System.getProperty("test.build.dir", "target");
+    File buildDir = new File(target).getAbsoluteFile();
+    String name = "dump-table";
+    File destFile = new File(buildDir, name);
     describe("Dumping metastore to {}", destFile);
     S3AFileSystem fs = getFileSystem();
     DumpS3GuardTable.dumpS3GuardStore(
         fs.getUri().toString(),
         fs.getConf(),
         destFile);
+    File storeFile = new File(buildDir, name + "-store.csv");
     try (BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(destFile), Charset.forName("UTF-8")))) {
+        new FileInputStream(storeFile), Charset.forName("UTF-8")))) {
       for (String line : IOUtils.readLines(in)) {
         LOG.info(line);
       }

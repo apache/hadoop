@@ -2439,7 +2439,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the request
    */
   @VisibleForTesting
-  S3ListRequest createListObjectsRequest(String key,
+  public S3ListRequest createListObjectsRequest(String key,
       String delimiter) {
     return createListObjectsRequest(key, delimiter, null);
   }

@@ -88,7 +88,8 @@ public class ServiceLaunchException extends ExitUtil.ExitException
    * @param format format for message to use in exception
    * @param args list of arguments
    */
-  public ServiceLaunchException(int exitCode, Throwable cause, String format, Object... args) {
+  public ServiceLaunchException(int exitCode, Throwable cause,
+      String format, Object... args) {
     super(exitCode, String.format(Locale.ENGLISH, format, args), cause);
   }
 }

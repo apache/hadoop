@@ -323,6 +323,19 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
   }
 
   @Test
+  public void testPruneCommandTombstones() throws Exception {
+    Path testPath = path("testPruneCommandTombstones");
+    getFileSystem().mkdirs(testPath);
+    getFileSystem().delete(testPath, true);
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.setMetadataStore(ms);
+    exec(cmd,
+        "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
+        "-seconds", "0",
+        testPath.toString());
+  }
+
+  @Test
   public void testPruneCommandConf() throws Exception {
     getConfiguration().setLong(Constants.S3GUARD_CLI_PRUNE_AGE,
         TimeUnit.SECONDS.toMillis(PRUNE_MAX_AGE_SECS));

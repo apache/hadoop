@@ -298,7 +298,7 @@ public final class PathMetadataDynamoDBTranslation {
     URI uri = path.toUri();
     String bucket = uri.getHost();
     Preconditions.checkArgument(!StringUtils.isEmpty(bucket),
-        "Path missing bucket");
+        "Path missing bucket %s", path);
     String pKey = "/" + bucket + uri.getPath();
 
     // Strip trailing slash

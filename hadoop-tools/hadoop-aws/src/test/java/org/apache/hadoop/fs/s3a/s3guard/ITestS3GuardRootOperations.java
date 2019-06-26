@@ -27,6 +27,7 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -121,11 +122,26 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
 
 
   @Test
-  public void test_200_MetastorePrune() throws Throwable {
+  public void test_200_MetastorePruneTombstones() throws Throwable {
     describe("Execute prune against a dynamo URL");
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
-    S3GuardTool.Prune cmd = new S3GuardTool.Prune(conf);
+    int result = S3GuardTool.run(conf,
+        S3GuardTool.Prune.NAME,
+        "-tombstone",
+        "-meta", checkNotNull(metastoreUriStr),
+        "-seconds", "1",
+        fs.qualify(new Path("/")).toString());
+    Assertions.assertThat(result)
+        .describedAs("Result of prune %s", fsUriStr)
+        .isEqualTo(0);
+  }
+
+  @Test
+  public void test_300_MetastorePrune() throws Throwable {
+    describe("Execute prune against a dynamo URL");
+    S3AFileSystem fs = getFileSystem();
+    Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
         "-meta", checkNotNull(metastoreUriStr),

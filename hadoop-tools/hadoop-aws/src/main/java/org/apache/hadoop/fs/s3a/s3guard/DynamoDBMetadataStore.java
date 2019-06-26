@@ -107,6 +107,7 @@ import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.BlockingThreadPoolExecutorService;
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import static org.apache.hadoop.fs.s3a.Constants.*;
@@ -1455,7 +1456,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void prune(PruneMode pruneMode, long cutoff, String keyPrefix)
       throws IOException {
-    LOG.debug("Prune files under {} with age {}", keyPrefix, cutoff);
+    LOG.debug("Prune {} under {} with age {}",
+        pruneMode == PruneMode.ALL_BY_MODTIME
+            ? "files and tombstones" : "tombstones",
+        keyPrefix, cutoff);
     final ItemCollection<ScanOutcome> items =
         expiredFiles(pruneMode, cutoff, keyPrefix);
     innerPrune(keyPrefix, items);
@@ -1465,7 +1469,9 @@ public class DynamoDBMetadataStore implements MetadataStore,
       throws IOException {
     int itemCount = 0;
     try (AncestorState state = initiateBulkWrite(
-        BulkOperationState.OperationType.Prune, null)) {
+        BulkOperationState.OperationType.Prune, null);
+         DurationInfo ignored =
+             new DurationInfo(LOG, "Pruning DynamoDB Store")) {
       ArrayList<Path> deletionBatch =
           new ArrayList<>(S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT);
       long delay = conf.getTimeDuration(
@@ -1478,6 +1484,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
         Path path = md.getFileStatus().getPath();
+        LOG.debug("Prune entry {}", path);
         deletionBatch.add(path);
 
         // add parent path of what we remove if it has not
@@ -1548,7 +1555,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
           return null;
         }
         DDBPathMetadata ddbPathMetadata = get(path);
-        if(ddbPathMetadata == null) {
+        if (ddbPathMetadata == null || ddbPathMetadata.isDeleted()) {
+          // there is no entry, or it has actually expired
           return null;
         }
         LOG.debug("Setting false isAuthoritativeDir on {}", ddbPathMetadata);
