@@ -470,21 +470,7 @@ public class MiniYARNCluster extends CompositeService {
   }
 
   public static String getHostname() {
-    try {
-      String hostname = InetAddress.getLocalHost().getHostName();
-      // Create InetSocketAddress to see whether it is resolved or not.
-      // If not, just return "localhost".
-      InetSocketAddress addr =
-          NetUtils.createSocketAddrForHost(hostname, 1);
-      if (addr.isUnresolved()) {
-        return "localhost";
-      } else {
-        return hostname;
-      }
-    }
-    catch (UnknownHostException ex) {
-      throw new RuntimeException(ex);
-    }
+    return "localhost";
   }
 
   private class ResourceManagerWrapper extends AbstractService {
