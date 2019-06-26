@@ -64,4 +64,10 @@ public interface ContainersMonitor extends Service,
         * containersMonitor.getVmemRatio());
     resourceUtil.subtractFrom((int)resource.getMemorySize(), vmem, vCores);
   }
+
+  /**
+   * Set the allocated resources for containers.
+   * @param resource Resources allocated for the containers.
+   */
+  void setAllocatedResourcesForContainers(Resource resource);
 }

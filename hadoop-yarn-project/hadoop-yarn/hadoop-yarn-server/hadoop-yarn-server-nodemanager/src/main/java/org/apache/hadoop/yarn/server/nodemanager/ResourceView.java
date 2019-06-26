@@ -20,10 +20,18 @@ package org.apache.hadoop.yarn.server.nodemanager;
 
 public interface ResourceView {
 
+  /**
+   * Get virtual memory allocated to the containers.
+   * @return Virtual memory in bytes.
+   */
   long getVmemAllocatedForContainers();
 
   boolean isVmemCheckEnabled();
 
+  /**
+   * Get physical memory allocated to the containers.
+   * @return Physical memory in bytes.
+   */
   long getPmemAllocatedForContainers();
 
   boolean isPmemCheckEnabled();
