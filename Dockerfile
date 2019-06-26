@@ -65,6 +65,7 @@ RUN yum install --setopt=skip_missing_names_on_install=False -y \
         which \
         jq \
         rsync \
+        openssl \
     && yum clean all \
     && rm -rf /tmp/* /var/tmp/*
 
