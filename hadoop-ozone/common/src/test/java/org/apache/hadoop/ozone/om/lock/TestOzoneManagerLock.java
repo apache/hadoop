@@ -255,7 +255,8 @@ public class TestOzoneManagerLock {
       lock.acquireMultiUserLock("user1", "user2");
       fail("reAcquireMultiUserLock failed");
     } catch (RuntimeException ex) {
-      String message = "cannot acquire USER_LOCK lock while holding [USER_LOCK] lock(s).";
+      String message = "cannot acquire USER_LOCK lock while holding " +
+          "[USER_LOCK] lock(s).";
       Assert.assertTrue(ex.getMessage(), ex.getMessage().contains(message));
     }
     lock.releaseMultiUserLock("user1", "user2");
@@ -269,7 +270,8 @@ public class TestOzoneManagerLock {
       lock.acquireMultiUserLock("user1", "user2");
       fail("acquireMultiUserLockAfterUserLock failed");
     } catch (RuntimeException ex) {
-      String message = "cannot acquire USER_LOCK lock while holding [USER_LOCK] lock(s).";
+      String message = "cannot acquire USER_LOCK lock while holding " +
+          "[USER_LOCK] lock(s).";
       Assert.assertTrue(ex.getMessage(), ex.getMessage().contains(message));
     }
     lock.releaseLock(OzoneManagerLock.Resource.USER_LOCK, "user3");
@@ -283,7 +285,8 @@ public class TestOzoneManagerLock {
       lock.acquireLock(OzoneManagerLock.Resource.USER_LOCK, "user3");
       fail("acquireUserLockAfterMultiUserLock failed");
     } catch (RuntimeException ex) {
-      String message = "cannot acquire USER_LOCK lock while holding [USER_LOCK] lock(s).";
+      String message = "cannot acquire USER_LOCK lock while holding " +
+          "[USER_LOCK] lock(s).";
       Assert.assertTrue(ex.getMessage(), ex.getMessage().contains(message));
     }
     lock.releaseMultiUserLock("user1", "user2");

@@ -150,7 +150,8 @@ public class OMBucketCreateRequest extends OMClientRequest {
     metadataManager.getLock().acquireLock(VOLUME_LOCK, volumeName);
 
     try {
-      metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
+      metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          bucketName);
       acquiredBucketLock = true;
       //Check if the volume exists
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
@@ -174,7 +175,8 @@ public class OMBucketCreateRequest extends OMClientRequest {
       exception = ex;
     } finally {
       if (acquiredBucketLock) {
-        metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName, bucketName);
+        metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
       }
       metadataManager.getLock().releaseLock(VOLUME_LOCK, volumeName);
     }

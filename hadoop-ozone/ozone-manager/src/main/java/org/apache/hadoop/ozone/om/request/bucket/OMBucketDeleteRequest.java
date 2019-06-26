@@ -104,7 +104,8 @@ public class OMBucketDeleteRequest extends OMClientRequest {
 
     IOException exception = null;
     // acquire lock
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
     try {
       // No need to check volume exists here, as bucket cannot be created
       // with out volume creation.
@@ -133,7 +134,8 @@ public class OMBucketDeleteRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     // Performing audit logging outside of the lock.

@@ -122,7 +122,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     IOException exception = null;
 
     // acquire lock
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
 
     try {
 
@@ -184,7 +185,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     // Performing audit logging outside of the lock.

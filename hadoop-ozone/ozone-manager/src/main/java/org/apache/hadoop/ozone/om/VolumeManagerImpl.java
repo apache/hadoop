@@ -124,9 +124,11 @@ public class VolumeManagerImpl implements VolumeManager {
     Preconditions.checkNotNull(omVolumeArgs);
 
     boolean acquiredLock = false;
-    metadataManager.getLock().acquireLock(VOLUME_LOCK, omVolumeArgs.getVolume());
+    metadataManager.getLock().acquireLock(VOLUME_LOCK,
+        omVolumeArgs.getVolume());
     try {
-      metadataManager.getLock().acquireLock(USER_LOCK, omVolumeArgs.getOwnerName());
+      metadataManager.getLock().acquireLock(USER_LOCK,
+          omVolumeArgs.getOwnerName());
       acquiredLock = true;
       String dbVolumeKey = metadataManager.getVolumeKey(
           omVolumeArgs.getVolume());
@@ -165,7 +167,8 @@ public class VolumeManagerImpl implements VolumeManager {
         metadataManager.getLock().releaseLock(USER_LOCK,
             omVolumeArgs.getOwnerName());
       }
-      metadataManager.getLock().releaseLock(VOLUME_LOCK, omVolumeArgs.getVolume());
+      metadataManager.getLock().releaseLock(VOLUME_LOCK,
+          omVolumeArgs.getVolume());
     }
   }
 
