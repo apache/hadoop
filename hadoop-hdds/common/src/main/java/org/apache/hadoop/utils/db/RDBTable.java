@@ -122,7 +122,11 @@ class RDBTable implements Table<byte[], byte[]> {
   @Override
   public boolean isExist(byte[] key) throws IOException {
     try {
-      return db.get(handle, key) != null;
+      // RocksDB#keyMayExist
+      // If the key definitely does not exist in the database, then this
+      // method returns false, else true.
+      return db.keyMayExist(handle, key, new StringBuilder())
+          && db.get(handle, key) != null;
     } catch (RocksDBException e) {
       throw toIOException(
           "Error in accessing DB. ", e);
