@@ -473,9 +473,18 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
         bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
-      if (kv != null && kv.getKey().startsWith(volumePrefix)) {
-        return false; // we found at least one bucket with this volume prefix.
+
+      if (kv != null) {
+        // Check the entry in db is not marked for delete. This can happen
+        // while entry is marked for delete, but it is not flushed to DB.
+        CacheValue<OmBucketInfo> cacheValue =
+            bucketTable.getCacheValue(new CacheKey(kv.getKey()));
+        if (kv.getKey().startsWith(volumePrefix)
+            && cacheValue != null && cacheValue.getCacheValue() != null) {
+          return false; // we found at least one bucket with this volume prefix.
+        }
       }
+
     }
     return true;
   }
@@ -509,9 +518,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
         keyTable.iterator()) {
       KeyValue<String, OmKeyInfo> kv = keyIter.seek(keyPrefix);
-      if (kv != null && kv.getKey().startsWith(keyPrefix)) {
-        return false; // we found at least one key with this vol/bucket prefix.
+
+      if (kv != null) {
+        // Check the entry in db is not marked for delete. This can happen
+        // while entry is marked for delete, but it is not flushed to DB.
+        CacheValue<OmKeyInfo> cacheValue =
+            keyTable.getCacheValue(new CacheKey(kv.getKey()));
+        if (kv.getKey().startsWith(keyPrefix)
+            && cacheValue != null && cacheValue.getCacheValue() != null) {
+          return false; // we found at least one key with this vol/bucket
+          // prefix.
+        }
       }
+
     }
     return true;
   }
