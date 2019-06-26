@@ -99,10 +99,14 @@ public class OzoneManagerLock {
    *
    * Special Note for UserLock: Single thread can acquire single user lock/
    * multi user lock. But not both at the same time.
-   * @param resourceName - Resource name on which user want to acquire lock.
    * @param resource - Type of the resource.
+   * @param resources - Resource names on which user want to acquire lock.
+   * For Resource type bucket, first param should be volume, second param
+   * should be bucket name. For remaining all resource only one param should
+   * be passed.
    */
-  public void acquireLock(String resourceName, Resource resource) {
+  public void acquireLock(Resource resource, String... resources) {
+    String resourceName = generateResourceName(resource, resources);
     if (!resource.canLock(lockSet.get())) {
       String errorMessage = getErrorMessage(resource);
       LOG.error(errorMessage);
@@ -115,6 +119,24 @@ public class OzoneManagerLock {
     }
   }
 
+  /**
+   * Generate resource name to be locked.
+   * @param resource
+   * @param resources
+   */
+  private String generateResourceName(Resource resource, String... resources) {
+    if (resources.length == 1 && resource != Resource.BUCKET) {
+      return OzoneManagerLockUtil.generateResourceLockName(resource,
+          resources[0]);
+    } else if (resources.length == 2 && resource == Resource.BUCKET) {
+      return OzoneManagerLockUtil.generateBucketLockName(resources[0],
+          resources[1]);
+    } else {
+      throw new IllegalArgumentException("acquire lock is supported on single" +
+          " resource for all locks except for resource bucket");
+    }
+  }
+
   private String getErrorMessage(Resource resource) {
     return "Thread '" + Thread.currentThread().getName() + "' cannot " +
         "acquire " + resource.name + " lock while holding " +
@@ -124,7 +146,6 @@ public class OzoneManagerLock {
 
   private List<String> getCurrentLocks() {
     List<String> currentLocks = new ArrayList<>();
-    int i=0;
     short lockSetVal = lockSet.get();
     for (Resource value : Resource.values()) {
       if (value.isLevelLocked(lockSetVal)) {
@@ -141,6 +162,9 @@ public class OzoneManagerLock {
    */
   public void acquireMultiUserLock(String firstUser, String secondUser) {
     Resource resource = Resource.USER;
+    firstUser = generateResourceName(resource, firstUser);
+    secondUser = generateResourceName(resource, secondUser);
+
     if (!resource.canLock(lockSet.get())) {
       String errorMessage = getErrorMessage(resource);
       LOG.error(errorMessage);
@@ -199,10 +223,12 @@ public class OzoneManagerLock {
    */
   public void releaseMultiUserLock(String firstUser, String secondUser) {
     Resource resource = Resource.USER;
+    firstUser = generateResourceName(resource, firstUser);
+    secondUser = generateResourceName(resource, secondUser);
+
     int compare = firstUser.compareTo(secondUser);
 
     String temp;
-
     // Order the user names in sorted order. Swap them.
     if (compare > 0) {
       temp = secondUser;
@@ -222,9 +248,16 @@ public class OzoneManagerLock {
     lockSet.set(resource.clearLock(lockSet.get()));
   }
 
-
-  public void releaseLock(String resourceName, Resource resource) {
-
+  /**
+   * Release lock on resource.
+   * @param resource - Type of the resource.
+   * @param resources - Resource names on which user want to acquire lock.
+   * For Resource type bucket, first param should be volume, second param
+   * should be bucket name. For remaining all resource only one param should
+   * be passed.
+   */
+  public void releaseLock(Resource resource, String... resources) {
+    String resourceName = generateResourceName(resource, resources);
     // TODO: Not checking release of higher order level lock happened while
     // releasing lower order level lock, as for that we need counter for
     // locks, as some locks support acquiring lock again.

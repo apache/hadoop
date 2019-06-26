@@ -19,6 +19,7 @@
 package org.apache.hadoop.ozone.om.lock;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_KEY_PREFIX;
+import static org.apache.hadoop.ozone.OzoneConsts.OM_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_SECRET;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
@@ -26,7 +27,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OM_USER_PREFIX;
 /**
  * Utility class contains helper functions required for OM lock.
  */
-public final class OzoneManagerLockUtil {
+final class OzoneManagerLockUtil {
 
 
   private OzoneManagerLockUtil() {
@@ -50,7 +51,7 @@ public final class OzoneManagerLockUtil {
     } else if (resource == OzoneManagerLock.Resource.S3_SECRET) {
       return OM_S3_SECRET + resourceName;
     } else if (resource == OzoneManagerLock.Resource.PREFIX) {
-      return OM_S3_PREFIX + resourceName;
+      return OM_PREFIX + resourceName;
     } else {
       // This is for developers who mistakenly call this method with resource
       // bucket type, as for bucket type we need bucket and volumeName.
