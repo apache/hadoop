@@ -1485,7 +1485,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
     try {
       int ret = run(new Configuration(), args);
       exit(ret, "");
-    } catch (CommandFormat.UnknownOptionException e) {
+    } catch (FileNotFoundException e) {
+      errorln(e.getMessage());
+      exit(SUCCESS, e.getMessage());
+    }catch (CommandFormat.UnknownOptionException e) {
       errorln(e.getMessage());
       printHelp();
       exit(E_USAGE, e.getMessage());
