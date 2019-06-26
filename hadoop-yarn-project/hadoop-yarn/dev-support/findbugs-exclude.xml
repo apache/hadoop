@@ -695,4 +695,10 @@
     <Bug pattern="NP_NONNULL_PARAM_VIOLATION"/>
   </Match>
 
+  <!-- Device files are always under /dev in production, but it's necessary to override in tests -->
+  <Match>
+    <Class name="org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.com.nec.NECVEPlugin"/>
+    <Method name="getDevices" />
+    <Bug pattern="DMI_HARDCODED_ABSOLUTE_FILENAME" />
+  </Match>
 </FindBugsFilter>

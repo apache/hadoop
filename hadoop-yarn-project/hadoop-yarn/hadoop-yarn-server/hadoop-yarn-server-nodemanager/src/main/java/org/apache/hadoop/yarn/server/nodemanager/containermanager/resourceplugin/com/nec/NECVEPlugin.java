@@ -51,23 +51,38 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
   private static final String HADOOP_COMMON_HOME = "HADOOP_COMMON_HOME";
   private static final String ENV_SCRIPT_PATH = "NEC_VE_GET_SCRIPT_PATH";
   private static final String ENV_SCRIPT_NAME = "NEC_VE_GET_SCRIPT_NAME";
+  private static final String ENV_USE_UDEV = "NEC_USE_UDEV";
   private static final String DEFAULT_SCRIPT_NAME = "nec-ve-get.py";
   private static final Logger LOG = LoggerFactory.getLogger(NECVEPlugin.class);
   private static final String[] DEFAULT_BINARY_SEARCH_DIRS = new String[]{
       "/usr/bin", "/bin", "/opt/nec/ve/bin"};
 
   private String binaryPath;
+  private boolean useUdev;
+  private VEDeviceDiscoverer discoverer;
 
   private Function<String[], CommandExecutor>
       commandExecutorProvider = this::createCommandExecutor;
 
   public NECVEPlugin() throws ResourceHandlerException {
-    this(System::getenv, DEFAULT_BINARY_SEARCH_DIRS);
+    this(System::getenv, DEFAULT_BINARY_SEARCH_DIRS, new UdevUtil());
   }
 
   @VisibleForTesting
-  NECVEPlugin(Function<String, String> envProvider, String[] scriptPaths)
-      throws ResourceHandlerException {
+  NECVEPlugin(Function<String, String> envProvider, String[] scriptPaths,
+      UdevUtil udev) throws ResourceHandlerException {
+    if (Boolean.parseBoolean(envProvider.apply(ENV_USE_UDEV))) {
+      LOG.info("Using libudev to retrieve syspath & device status");
+      useUdev = true;
+      udev.init();
+      discoverer = new VEDeviceDiscoverer(udev);
+    } else {
+      scriptBasedInit(envProvider, scriptPaths);
+    }
+  }
+
+  private void scriptBasedInit(Function<String, String> envProvider,
+      String[] scriptPaths) throws ResourceHandlerException {
     String binaryName = DEFAULT_SCRIPT_NAME;
 
     String envScriptName = envProvider.apply(ENV_SCRIPT_NAME);
@@ -125,15 +140,29 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
   public Set<Device> getDevices() {
     Set<Device> devices = null;
 
-    CommandExecutor executor =
-        commandExecutorProvider.apply(new String[]{this.binaryPath});
-    try {
-      executor.execute();
-      String output = executor.getOutput();
-      devices = parseOutput(output);
-    } catch (IOException e) {
-      LOG.warn(e.toString());
+    if (useUdev) {
+      try {
+        devices = discoverer.getDevicesFromPath("/dev");
+      } catch (IOException e) {
+        LOG.error("Error during scanning devices", e);
+      }
+    } else {
+      CommandExecutor executor =
+          commandExecutorProvider.apply(new String[]{this.binaryPath});
+      try {
+        executor.execute();
+        String output = executor.getOutput();
+        devices = parseOutput(output);
+      } catch (IOException e) {
+        LOG.error("Error during executing external binary", e);
+      }
     }
+
+    if (devices != null) {
+      LOG.info("Found devices:");
+      devices.forEach(dev -> LOG.info("{}", dev));
+    }
+
     return devices;
   }
 
@@ -301,6 +330,11 @@ public class NECVEPlugin implements DevicePlugin, DevicePluginScheduler {
   void setCommandExecutorProvider(
       Function<String[], CommandExecutor> provider) {
     this.commandExecutorProvider = provider;
+  }
+
+  @VisibleForTesting
+  void setVeDeviceDiscoverer(VEDeviceDiscoverer veDeviceDiscoverer) {
+    this.discoverer = veDeviceDiscoverer;
   }
 
   @VisibleForTesting
