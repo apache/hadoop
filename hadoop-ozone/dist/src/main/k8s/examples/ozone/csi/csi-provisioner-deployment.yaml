@@ -14,42 +14,41 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+kind: Deployment
 apiVersion: apps/v1
-kind: StatefulSet
 metadata:
-  name: s3g
-  labels:
-    app.kubernetes.io/component: ozone
+  name: csi-provisioner
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: ozone
-      component: s3g
-  serviceName: s3g
-  replicas: 1
+      app: csi-provisioner
   template:
     metadata:
       labels:
-        app: ozone
-        component: s3g
+        app: csi-provisioner
     spec:
+      serviceAccount: csi-ozone
       containers:
-      - name: s3g
-        image: '@docker.image@'
+      - name: csi-provisioner
+        image: quay.io/k8scsi/csi-provisioner:v1.0.1
         args:
-        - ozone
-        - s3g
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 9878
-          initialDelaySeconds: 30
+        - --csi-address=/var/lib/csi/csi.sock
         volumeMounts:
-        - name: data
-          mountPath: /data
+        - name: socket-dir
+          mountPath: /var/lib/csi/
+      - name: ozone-csi
+        image: '@docker.image@'
+        volumeMounts:
+        - name: socket-dir
+          mountPath: /var/lib/csi/
+        imagePullPolicy: Always
         envFrom:
         - configMapRef:
             name: config
+        args:
+        - ozone
+        - csi
       volumes:
-      - name: data
-        emptyDir: {}
+      - name: socket-dir
+        emptyDir: null
