@@ -68,7 +68,6 @@ public class RouterWebHDFSContract extends HDFSContract {
       // Start NNs and DNs and wait until ready
       cluster.startCluster(conf);
 
-      cluster.addRouterOverrides(conf);
       // Start routers with only an RPC service
       cluster.startRouters();
 
