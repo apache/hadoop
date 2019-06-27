@@ -25,8 +25,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
+import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
+import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
 import org.apache.ratis.protocol.RaftGroup;
 import org.apache.ratis.protocol.RaftGroupId;
@@ -262,12 +264,19 @@ public class ContainerStateMachine extends BaseStateMachine {
   @Override
   public TransactionContext startTransaction(RaftClientRequest request)
       throws IOException {
+    long startTime = Time.monotonicNowNanos();
     final ContainerCommandRequestProto proto =
         getContainerCommandRequestProto(request.getMessage().getContent());
     Preconditions.checkArgument(request.getRaftGroupId().equals(gid));
     try {
       dispatcher.validateContainerCommand(proto);
     } catch (IOException ioe) {
+      if (ioe instanceof ContainerNotOpenException) {
+        metrics.intNumContainerNotOpenVerifyFailures();
+      } else {
+        metrics.intNumStartTransactionVerifyFailures();
+        LOG.error("startTransaction validation failed on leader", ioe);
+      }
       TransactionContext ctxt = TransactionContext.newBuilder()
           .setClientRequest(request)
           .setStateMachine(this)
@@ -297,6 +306,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           .setClientRequest(request)
           .setStateMachine(this)
           .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineContext(startTime)
           .setStateMachineData(write.getData())
           .setLogData(commitContainerCommandProto.toByteString())
           .build();
@@ -305,6 +315,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           .setClientRequest(request)
           .setStateMachine(this)
           .setServerRole(RaftPeerRole.LEADER)
+          .setStateMachineContext(startTime)
           .setLogData(request.getMessage().getContent())
           .build();
     }
@@ -451,8 +462,10 @@ public class ContainerStateMachine extends BaseStateMachine {
   }
 
   private ByteString readStateMachineData(
-      ContainerCommandRequestProto requestProto, long term, long index)
-      throws IOException {
+      ContainerCommandRequestProto requestProto, long term, long index) {
+    // the stateMachine data is not present in the stateMachine cache,
+    // increment the stateMachine cache miss count
+    metrics.incNumReadStateMachineMissCount();
     WriteChunkRequestProto writeChunkRequestProto =
         requestProto.getWriteChunk();
     ContainerProtos.ChunkInfo chunkInfo = writeChunkRequestProto.getChunkData();
@@ -527,9 +540,6 @@ public class ContainerStateMachine extends BaseStateMachine {
       return CompletableFuture.completedFuture(ByteString.EMPTY);
     }
     try {
-      // the stateMachine data is not present in the stateMachine cache,
-      // increment the stateMachine cache miss count
-      metrics.incNumReadStateMachineMissCount();
       final ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(
               entry.getStateMachineLogEntry().getLogData());
@@ -622,6 +632,12 @@ public class ContainerStateMachine extends BaseStateMachine {
               getCommandExecutor(requestProto));
 
       future.thenAccept(m -> {
+        if (trx.getServerRole() == RaftPeerRole.LEADER) {
+          long startTime = (long) trx.getStateMachineContext();
+          metrics.incPipelineLatency(cmdType,
+              Time.monotonicNowNanos() - startTime);
+        }
+
         final Long previous =
             applyTransactionCompletionMap
                 .put(index, trx.getLogEntry().getTerm());
