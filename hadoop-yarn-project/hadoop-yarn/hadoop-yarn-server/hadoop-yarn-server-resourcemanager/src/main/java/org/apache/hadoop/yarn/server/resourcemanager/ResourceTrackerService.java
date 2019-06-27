@@ -266,7 +266,7 @@ public class ResourceTrackerService extends AbstractService implements
         YarnConfiguration.RM_RESOURCE_TRACKER_ADDRESS,
         YarnConfiguration.DEFAULT_RM_RESOURCE_TRACKER_ADDRESS,
         server.getListenerAddress());
-    clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID, "default-cluster");
+    clusterId = conf.get(YarnConfiguration.RM_CLUSTER_ID, YarnConfiguration.DEFAULT_RM_CLUSTER_ID);
   }
 
   @Override

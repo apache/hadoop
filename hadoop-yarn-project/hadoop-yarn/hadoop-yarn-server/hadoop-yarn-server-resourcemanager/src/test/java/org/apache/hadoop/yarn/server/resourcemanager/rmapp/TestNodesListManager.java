@@ -255,4 +255,18 @@ public class TestNodesListManager {
     };
   }
 
+  @Test
+  public void testClusterId() throws Exception {
+
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setStrings(YarnConfiguration.RM_CLUSTER_ID, "c1");
+
+    RMNode rmnode1 = MockNodes.newNodeInfo(1, Resource.newInstance(28000, 8),
+            1, "Host1", 1234);
+    RMNode rmnode2 = MockNodes.newNodeInfo(1, Resource.newInstance(28000, 8),
+            1, "Host2", 1234, conf.get(YarnConfiguration.RM_CLUSTER_ID));
+    Assert.assertEquals("yarn_cluster", rmnode1.getClusterID());
+    Assert.assertEquals("c1", rmnode2.getClusterID());
+
+  }
 }

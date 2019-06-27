@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.api.records.NodeState;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceUtilization;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.nodelabels.CommonNodeLabelsManager;
@@ -142,7 +143,7 @@ public class MockNodes {
       this.containersUtilization = containersUtilization;
       this.nodeUtilization = nodeUtilization;
       this.physicalResource = pPhysicalResource;
-      this.clusterId = "default-cluster";
+      this.clusterId = YarnConfiguration.DEFAULT_RM_CLUSTER_ID;
     }
 
     public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
@@ -157,6 +158,20 @@ public class MockNodes {
           containersUtilization, nodeUtilization, pPhysicalResource);
       this.rmContext = rmContext;
     }
+
+    public MockRMNodeImpl(NodeId nodeId, String nodeAddr, String httpAddress,
+        Resource perNode, String rackName, String healthReport,
+        long lastHealthReportTime, int cmdPort, String hostName,
+        NodeState state, Set<String> labels,
+        ResourceUtilization containersUtilization,
+        ResourceUtilization nodeUtilization, Resource pPhysicalResource,
+        String clusterId) {
+      this(nodeId, nodeAddr, httpAddress, perNode, rackName, healthReport,
+              lastHealthReportTime, cmdPort, hostName, state, labels,
+              containersUtilization, nodeUtilization, pPhysicalResource);
+      this.clusterId = clusterId;
+    }
+
     @Override
     public NodeId getNodeID() {
       return this.nodeId;
@@ -393,6 +408,26 @@ public class MockNodes {
         nodeUtilization, physicalResource, rmContext);
   }
 
+  private static RMNode buildRMNode(int rack, final Resource perNode,
+      NodeState state, String httpAddr, int hostnum, String hostName, int port,
+      Set<String> labels, ResourceUtilization containersUtilization,
+      ResourceUtilization nodeUtilization, Resource physicalResource,
+      String clusterId) {
+    final String rackName = "rack" + rack;
+    final int nid = hostnum;
+    final String nodeAddr = hostName + ":" + nid;
+    if (hostName == null) {
+      hostName = "host" + nid;
+    }
+    final NodeId nodeID = NodeId.newInstance(hostName, port);
+
+    final String httpAddress = httpAddr;
+    String healthReport = (state == NodeState.UNHEALTHY) ? null : "HealthyMe";
+    return new MockRMNodeImpl(nodeID, nodeAddr, httpAddress, perNode, rackName,
+            healthReport, 0, nid, hostName, state, labels, containersUtilization,
+            nodeUtilization, physicalResource, clusterId);
+  }
+
   public static RMNode nodeInfo(int rack, final Resource perNode,
       NodeState state) {
     return buildRMNode(rack, perNode, state, "N/A");
@@ -425,5 +460,11 @@ public class MockNodes {
       int hostnum, String hostName, int port, RMContext rmContext) {
     return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum,
         hostName, port, null, null, null, null, rmContext);
+  }
+
+  public static RMNode newNodeInfo(int rack, final Resource perNode,
+                                   int hostnum, String hostName, int port, String clusterID) {
+    return buildRMNode(rack, perNode, NodeState.RUNNING, "localhost:0", hostnum, hostName, port,
+      null, null, null, null, clusterID);
   }
 }
