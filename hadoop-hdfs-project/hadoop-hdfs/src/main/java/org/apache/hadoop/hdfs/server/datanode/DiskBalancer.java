@@ -906,8 +906,8 @@ public class DiskBalancer {
         try {
           ExtendedBlock block = iter.nextBlock();
           if(null == block){
-            LOG.info("NextBlock call returned null.No valid block to copy. {}",
-                    item.toJson());
+            LOG.info("NextBlock call returned null. No valid block to copy. {}",
+                item.toJson());
             return null;
           }
           // A valid block is a finalized block, we iterate until we get
@@ -923,13 +923,11 @@ public class DiskBalancer {
           item.incErrorCount();
         }
       }
-
       if (item.getErrorCount() >= getMaxError(item)) {
         item.setErrMsg("Error count exceeded.");
         LOG.info("Maximum error count exceeded. Error count: {} Max error:{} ",
             item.getErrorCount(), item.getMaxDiskErrors());
       }
-
       return null;
     }
 
