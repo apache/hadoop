@@ -35,7 +35,10 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.om.response.file.OMDirectoryCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .CreateDirectoryResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -55,6 +58,31 @@ public abstract class OMClientRequest implements RequestAuditor {
   public OMClientRequest(OMRequest omRequest) {
     Preconditions.checkNotNull(omRequest);
     this.omRequest = omRequest;
+  }
+
+  /**
+   * This method handles few requests, where for these kind of request, there is
+   * nothing to execute and it is required to return response to client, that
+   * the request is successfully happened.
+   * @return OMClientResponse - null if this request type does not have any
+   * such kind of checks, otherwise return response.
+   */
+  public OMClientResponse checksBeforeSubmit() {
+    // Why it is being done here, it is like short circuit way to handle
+    // these kind of requests with special checks. Instead of calling
+    // preExecute and then submit to ratis. We can handle it in Rpc Context
+    // itself.
+    if (getOmRequest().getCmdType() ==
+        OzoneManagerProtocolProtos.Type.CreateDirectory) {
+      OMResponse omResponse =
+          OzoneManagerProtocolProtos.OMResponse.newBuilder().setCmdType(
+              OzoneManagerProtocolProtos.Type.CreateDirectory).setStatus(
+              OzoneManagerProtocolProtos.Status.OK)
+              .setCreateDirectoryResponse(CreateDirectoryResponse.newBuilder())
+              .build();
+      return new OMDirectoryCreateResponse(null, omResponse);
+    }
+    return null;
   }
   /**
    * Perform pre-execute steps on a OMRequest.
