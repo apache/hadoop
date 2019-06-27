@@ -1,5 +1,7 @@
 ---
 title: Shell Overview
+summary: Explains the command syntax used by shell command.
+weight: 1
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,16 +19,6 @@ title: Shell Overview
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Shell.md" >}}">
-    CLI</a>
-        <li class="breadcrumb-item active" aria-current="page">
-        Shell Overview</li>
-  </ol>
-</nav>
 
 Ozone shell help can be invoked at _object_ level or at _action_ level.
 For example:
@@ -75,6 +67,3 @@ omitted the default port from ozone-site.xml will be used.
 Depending on the call, the volume/bucket/key names will be part of the URL.
 Please see volume commands, bucket commands, and key commands section for more
 detail.
-
-<a href="{{< ref "Shell/VolumeCommands.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

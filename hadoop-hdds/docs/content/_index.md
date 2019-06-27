@@ -32,7 +32,7 @@ like Kubernetes._* <p>
 Applications like Apache Spark, Hive and YARN, work without any modifications when using Ozone. Ozone comes with a [Java client library]({{<
 ref "JavaApi.md"
 >}}), [S3 protocol support] ({{< ref "S3.md" >}}), and a [command line interface]
-({{< ref "Shell.md" >}})  which makes it easy to use Ozone.
+({{< ref "shell/_index.md" >}})  which makes it easy to use Ozone.
 
 Ozone consists of volumes, buckets, and Keys:
 
@@ -40,8 +40,6 @@ Ozone consists of volumes, buckets, and Keys:
 * Buckets are similar to directories. A bucket can contain any number of keys,  but buckets cannot contain other buckets.
 * Keys are similar to files. A bucket can contain any number of keys.
 
-
-
- <a href="{{< ref "start/Start.md" >}}"> <button type="button"
+ <a href="{{< ref "start/_index.md" >}}"> <button type="button"
  class="btn  btn-success btn-lg">Next >></button>
 </div>

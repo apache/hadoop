@@ -1,7 +1,8 @@
 ---
 title: "Ozone ACLs"
 date: "2019-April-03"
-
+weight: 6
+summary: Native ACL support provides ACL functionality without Ranger integration.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,17 +20,6 @@ date: "2019-April-03"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Security.md" >}}">
-        Security</a>
-    <li class="breadcrumb-item active" aria-current="page">Ozone ACLs</li>
-  </ol>
-</nav>
-
 
 Ozone supports a set of native ACLs. These ACLs cane be used independently or
  along with Ranger. If Apache Ranger is enabled, then ACL will be checked
@@ -93,9 +83,3 @@ object and will return a list of ACLs.
 3. **RemoveAcl** - It is possible that we might support an API called RemoveACL
  as a convenience API, but in reality it is just a GetACL followed by SetACL
  with an etag to avoid conflicts.
-
-
-
-
-<a href="{{< ref "concept/Concept.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

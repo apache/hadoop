@@ -17,13 +17,7 @@ title: Minikube & Ozone
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
- <nav aria-label="breadcrumb">
-   <ol class="breadcrumb">
-     <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-     Getting Started</a>
-     <li class="breadcrumb-item active" aria-current="page">
-     Minikube & Ozone </li>
+
 
 {{< requirements >}}
  * Working minikube setup
@@ -73,7 +67,3 @@ Minikube contains a convenience command to access any of the NodePort services:
 minikube service s3g-public
 Opening kubernetes service default/s3g-public in default browser...
 ```
-
-
-<a href="{{< ref "start/RunningViaDocker.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

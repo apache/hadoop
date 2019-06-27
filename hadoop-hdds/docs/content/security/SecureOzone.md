@@ -1,7 +1,9 @@
 ---
-title: " Secure Cluster"
+title: "Securing Ozone"
 date: "2019-April-03"
-
+summary: Overview of Ozone security concepts and steps to secure Ozone Manager and SCM.
+weight: 1
+icon: tower
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -20,17 +22,10 @@ date: "2019-April-03"
   limitations under the License.
 -->
 
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Security.md" >}}">
-        Security</a>
-    <li class="breadcrumb-item active" aria-current="page">Secure Cluster</li>
-  </ol>
-</nav>
 
-# Kerberos #
-Ozone depends on [Kerberos]({{ ref https://web.mit.edu/kerberos/}}) to make the
+# Kerberos
+
+Ozone depends on [Kerberos](https://web.mit.edu/kerberos/) to make the
 clusters secure. Historically, HDFS has supported running in an isolated
 secure networks where it is possible to deploy without securing the cluster.
 
@@ -180,6 +175,3 @@ All these settings should be made in ozone-site.xml.
       </div>
   </div>
 </div>
-
-<a href="{{< ref "Security/SecuringDatanodes.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -21,44 +21,6 @@ theme: "ozonedoc"
 pygmentsCodeFences: true
 uglyurls: true
 relativeURLs: true
-
-#menu:
-#  main:
-#  - identifier: Dockerhub
-#    title: From docker image
-#    name: From docker image
-#    parent: Getting started
-#    url: start/startfromdockerhub.html
-#    weight: 2
-#  - identifier: Release
-#    name: From release
-#    title: From Release
-#    parent: Getting started
-#    url: start/runningviadocker.html
-#    weight: 3
-#  - identifier: Source
-#    name: From source
-#    title: From source
-#    parent: Getting started
-#    url: start/fromsource.html
-#    weight: 3
-#  - identifier: Next
-#    name: "Second steps"
-#    title: "Second steps"
-#    url: next/setupsecureozone.html
-#    weight: 2
-#  - identifier: Client
-#    name: Usage
-#    title: Usage
-#    url: usage/s3.html
-#    weight: 3
-#  - identifier: Tools
-#    name: Tools
-#    title: Tools
-#    url: tools/commandshell.html
-#    weight: 4
-#  - identifier: Recipes
-#    name: Recipes
-#    title: Recipes
-#    url: recipe/prometheus.html
-#    weight: 5
+disableKinds:
+- taxonomy
+- taxonomyTerm

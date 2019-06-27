@@ -1,7 +1,9 @@
 ---
 title: "Apache Ranger"
 date: "2019-April-03"
-
+weight: 5
+summary: Apache Ranger is a framework to enable, monitor and manage comprehensive data security across the Hadoop platform.
+icon: user
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -20,14 +22,6 @@ date: "2019-April-03"
   limitations under the License.
 -->
 
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Security.md" >}}">
-        Security</a>
-    <li class="breadcrumb-item active" aria-current="page">Apache Ranger</li>
-  </ol>
-</nav>
 
 Apache Ranger™ is a framework to enable, monitor and manage comprehensive data
 security across the Hadoop platform. The next version(any version after 1.20)
@@ -47,8 +41,3 @@ Property|Value
 --------|------------------------------------------------------------
 ozone.acl.enabled         | true
 ozone.acl.authorizer.class| org.apache.ranger.authorization.ozone.authorizer.RangerOzoneAuthorizer
-
-
-
-<a href="{{< ref "Security/SecurityAcls.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

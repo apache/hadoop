@@ -1,5 +1,7 @@
 ---
-title: "Docker Images"
+title: "Ozone Containers"
+summary: Ozone uses containers extensively for testing. This page documents the usage and best practices of Ozone.
+weight: 2
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -17,15 +19,6 @@ title: "Docker Images"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "BeyondBasics.md" >}}">
-        Beyond Basics</a>
-    <li class="breadcrumb-item active" aria-current="page">Docker Containers
-    </li>
-  </ol>
-</nav>
 
 Docker heavily is used at the ozone development with three principal use-cases:
 
@@ -222,7 +215,3 @@ Ozone related container images and source locations:
     </tr>
   </tbody>
 </table>
-
-
-<a href="{{< ref "BeyondBasics/Tools.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

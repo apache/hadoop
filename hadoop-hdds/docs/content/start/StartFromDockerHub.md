@@ -18,19 +18,11 @@ title: Simple Single Ozone
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-    Getting Started</a>
-    <li class="breadcrumb-item active" aria-current="page">
-    Simple Single Ozone </li>
 
 {{< requirements >}}
  * Working docker setup
  * AWS CLI (optional)
 {{< /requirements >}}
-
 
 # Ozone in a Single Container
 
@@ -117,6 +109,3 @@ bucket browser supported by Ozone S3 interface by clicking on the below link.
 <br>
 </div>
 http://localhost:9878/bucket1?browser
-
-<a href="{{< ref "start/OnPrem.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

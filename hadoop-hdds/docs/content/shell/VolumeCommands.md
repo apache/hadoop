@@ -1,6 +1,7 @@
 ---
 title: Volume Commands
-
+weight: 2
+summary: Volume commands help you to manage the life cycle of a volume.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -18,15 +19,6 @@ title: Volume Commands
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Shell.md" >}}">
-    CLI</a>
-        <li class="breadcrumb-item active" aria-current="page">
-        Volume Commands</li>
-  </ol>
-</nav>
 
 Volume commands generally need administrator privileges. The ozone shell supports the following volume commands.
 
@@ -120,6 +112,3 @@ The above command updates the volume quota to 10TB.
 
 You can try out these commands from the docker instance of the [Alpha
 Cluster](runningviadocker.html).
-
-<a href="{{< ref "Shell/BucketCommands.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -1,7 +1,8 @@
 ---
-title: "Docker-Compose Usage"
+title: "Docker Cheat Sheet"
 date: 2017-08-10
-
+summary: Docker Compose cheat sheet to help you remember the common commands to control an Ozone cluster running on top of Docker.
+weight: 4
 ---
 
 <!---
@@ -20,15 +21,6 @@ date: 2017-08-10
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "BeyondBasics.md" >}}">
-        Beyond Basics</a>
-    <li class="breadcrumb-item active" aria-current="page">Docker-Compose Usage
-    </li>
-  </ol>
-</nav>
 
 In the `compose` directory of the ozone distribution there are multiple pseudo-cluster setup which can be used to run Ozone in different way (for example with secure cluster, with tracing enabled, with prometheus etc.).
 
@@ -88,13 +80,8 @@ You can start multiple data nodes with:
 docker-compose scale datanode=3
 {{< /highlight >}}
 
-You can test the commands from the [Ozone CLI]({{< ref "Shell.md" >}}) after opening a new bash shell in one of the containers:
+You can test the commands from the [Ozone CLI]({{< ref "shell/_index.md" >}}) after opening a new bash shell in one of the containers:
 
 {{< highlight bash >}}
 docker-compose exec datanode bash
 {{< /highlight >}}
-
-
-
-<a href="{{< ref "recipe/recipe.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

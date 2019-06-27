@@ -1,7 +1,9 @@
 ---
-title: "Ozone TDE"
+title: "Transparent Data Encryption"
 date: "2019-April-03"
-
+summary: TDE allows data on the disks to be encrypted-at-rest and automatically decrypted during access. You can enable this per key or per bucket.
+weight: 3
+icon: lock
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,15 +21,6 @@ date: "2019-April-03"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Security.md" >}}">
-        Security</a>
-    <li class="breadcrumb-item active" aria-current="page">Ozone TDE</li>
-  </ol>
-</nav>
 
 ## Transparent Data Encryption
 Ozone TDE setup process and usage are very similar to HDFS TDE.
@@ -71,9 +64,3 @@ via the encKey and while reading the clients will talk to Key Management
 Server and read the key and decrypt it. In other words, the data stored
 inside Ozone is always encrypted. The fact that data is encrypted at rest
 will be completely transparent to the clients and end users.
-
-
-
-
-<a href="{{< ref "Security/SecuringS3.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

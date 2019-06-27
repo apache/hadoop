@@ -1,7 +1,8 @@
 ---
 title: "Java API"
 date: "2017-09-14"
-
+weight: 1
+summary: Ozone has a set of Native RPC based APIs. This is the lowest level API's on which all other protocols are built. This is the most performant and feature-full of all Ozone protocols.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,18 +20,6 @@ date: "2017-09-14"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Interface.md" >}}">
-        Programming Interface</a>
-    <li class="breadcrumb-item active" aria-current="page">Java API</li>
-  </ol>
-</nav>
-
-Introduction
--------------
 
 Ozone ships with its own client library that supports RPC. For generic use cases the S3
 compatible REST interface also can be used instead of the Ozone client.
@@ -165,6 +154,3 @@ introStream.close();
 // Close the client.
 ozClient.close();
 {{< /highlight >}}
-
-<a href="{{< ref "interface/OzoneFS.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -17,13 +17,6 @@ title: Ozone on Kubernetes
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-    Getting Started</a>
-    <li class="breadcrumb-item active" aria-current="page">
-    Ozone on Kubernetes </li>
 
 
 {{< requirements >}}
@@ -57,7 +50,3 @@ Now you can access any of the services. By default the services are not publishe
 kubectl port-forward s3g-0 9878:9878
 kubectl port-forward scm-0 9876:9876
 ```
-
-
-<a href="{{< ref "start/Minikube.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

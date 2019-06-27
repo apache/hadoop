@@ -19,19 +19,6 @@ title: Pseudo-cluster
   limitations under the License.
 -->
 
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-    Getting Started</a>
-    <li class="breadcrumb-item active" aria-current="page">
-    pseudo-cluster </li>
-
-
-  </ol>
-</nav>
-
 {{< requirements >}}
  * docker and docker-compose
 {{< /requirements >}}
@@ -71,5 +58,3 @@ To shutdown the cluster, please run
 docker-compose down
 {{< /highlight >}}
 
-<a href="{{< ref "start/FromSource.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

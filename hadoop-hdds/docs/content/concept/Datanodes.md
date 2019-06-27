@@ -1,7 +1,8 @@
 ---
 title: "Datanodes"
 date: "2017-09-14"
-
+weight: 4
+summary: Ozone supports Amazon's Simple Storage Service (S3) protocol. In fact, You can use S3 clients and S3 SDK based applications without any modifications with Ozone.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,16 +20,6 @@ date: "2017-09-14"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Concept.md" >}}">
-        Concepts</a>
-    <li class="breadcrumb-item active" aria-current="page">Datanodes
-    </li>
-  </ol>
-</nav>
-
 
 Datanodes are the worker bees of Ozone. All data is stored on data nodes.
 Clients write data in terms of blocks. Datanode aggregates these blocks into
@@ -82,8 +73,3 @@ blocks that get reported. That is a 40x reduction in the block reports.
 This extra indirection helps tremendously with scaling Ozone. SCM has far
 less block data to process and the name node is a different service are
 critical to scaling Ozone.
-
-
-
-<a href="{{< ref "BeyondBasics/BeyondBasics.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -1,7 +1,8 @@
 ---
 title: "Ozone Manager"
 date: "2017-09-14"
-
+weight: 2
+summary: Ozone Manager is the principal name space service of Ozone. OM manages the life cycle of volumes, buckets and Keys.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,15 +20,6 @@ date: "2017-09-14"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Concept.md" >}}">
-        Concepts</a>
-    <li class="breadcrumb-item active" aria-current="page">Ozone Manager
-    </li>
-  </ol>
-</nav>
 
 Ozone Manager or OM is the namespace manager for Ozone.
 
@@ -93,8 +85,3 @@ Manager
 allows the client to read the data from nodes.
 * Client connects to the data  node and presents the block token and reads
 the data from the data node.
-
-
-
- <a href="{{< ref "concept/Hdds.md" >}}"> <button type="button"
- class="btn  btn-success btn-lg">Next >></button>

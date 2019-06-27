@@ -1,7 +1,9 @@
 ---
 title: "Securing Datanodes"
 date: "2019-April-03"
-
+weight: 2
+summary:  Explains different modes of securing data nodes. These range from kerberos to auto approval.
+icon: th
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -20,15 +22,6 @@ date: "2019-April-03"
   limitations under the License.
 -->
 
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Security.md" >}}">
-        Security</a>
-    <li class="breadcrumb-item active" aria-current="page">Securing Datanodes</li>
-  </ol>
-</nav>
 
 Datanodes under Hadoop is traditionally secured by creating a Keytab file on
 the data nodes. With Ozone, we have moved away to using data node
@@ -75,7 +68,3 @@ issue block tokens. If there is no data node certificates or the SCM's root
 certificate is not present in the data node, then data node will register
 itself and down load the SCM's root certificate as well get the certificates
 for itself.
-
-
-<a href="{{< ref "Security/SecuringTDE.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

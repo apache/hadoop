@@ -1,8 +1,8 @@
 ---
 title: Overview
 date: "2017-10-10"
-
-
+weight: 1
+summary: Ozone's overview and components that make up Ozone.
 ---
 
 <!---
@@ -43,7 +43,7 @@ Ozone stores data as keys which live inside these buckets.
 Ozone namespace is composed of many storage volumes.
 Storage volumes are also used as the basis for storage accounting.
 
- The block diagram shows the core components of Ozone.
+The block diagram shows the core components of Ozone.
 
 ![Architecture diagram](ozoneBlockDiagram.png)
 
@@ -79,6 +79,3 @@ protocols. We currently only have S3 protocol support built via Protocol bus.
 Protocol Bus provides a generic notion that you can implement new file system
  or object store protocols that call into O3 Native protocol.
 
-
-<a href="{{< ref "concept/OzoneManager.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -1,8 +1,8 @@
 ---
 title: "Tools"
 date: "2017-10-10"
-
-
+summary: Ozone supports a set of tools that are handy for developers.Here is a quick list of command line tools.
+weight: 3
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -20,15 +20,7 @@ date: "2017-10-10"
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "BeyondBasics.md" >}}">
-        Beyond Basics</a>
-    <li class="breadcrumb-item active" aria-current="page">Tools
-    </li>
-  </ol>
-</nav>
+
 Ozone has a set of command line tools that can be used to manage ozone.
 
 All these commands are invoked via the ```ozone``` script.
@@ -55,8 +47,3 @@ The commands supported by ozone are:
    * **version** - Prints the version of Ozone and HDDS.
    * **genconf** -  Generate minimally required ozone configs and output to
    ozone-site.xml.
-
-
-
-<a href="{{< ref "BeyondBasics/DockerCheatSheet.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

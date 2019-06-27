@@ -18,14 +18,6 @@ title: Ozone On Premise Installation
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
- <nav aria-label="breadcrumb">
-   <ol class="breadcrumb">
-     <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-     Getting Started</a>
-     <li class="breadcrumb-item active" aria-current="page">
-     Ozone On Premise Installation </li>
-
 
 If you are feeling adventurous, you can setup ozone in a real cluster.
 Setting up a real cluster requires us to understand the components of Ozone.
@@ -193,7 +185,3 @@ This assumes that you have set up the slaves file correctly and ssh
 configuration that allows ssh-ing to all data nodes. This is the same as the
 HDFS configuration, so please refer to HDFS documentation on how to set this
 up.
-
-
-<a href="{{< ref "start/Kubernetes.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

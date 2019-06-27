@@ -17,14 +17,6 @@ title: From Source
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-    <li class="breadcrumb-item"><a href="{{< ref "Start.md" >}}">
-    Getting Started</a>
-    <li class="breadcrumb-item active" aria-current="page">
-    From Source </li>
-
 
 {{< requirements >}}
  * Java 1.8
@@ -73,7 +65,3 @@ cd smoketest
 
 Acceptance tests will start a small ozone cluster and verify that ozone shell and ozone file
  system is fully functional.
-
-
- <a href="{{< ref "Shell/Shell.md" >}}"> <button type="button"
- class="btn  btn-success btn-lg">Next >></button>

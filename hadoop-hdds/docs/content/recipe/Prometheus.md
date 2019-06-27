@@ -1,6 +1,7 @@
 ---
 title: Monitoring with Prometheus
-
+summary: A Simple recipe to monitor Ozone using Prometheus
+linktitle: Prometheus
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -90,6 +91,3 @@ The ozone distribution contains a ready-to-use, dockerized environment to try ou
 cd compose/ozoneperf
 docker-compose up -d
 ```
-
-<a href="{{< ref "recipe/SparkOzoneFSK8S.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>

@@ -1,6 +1,8 @@
 ---
 title: Running concurrently with HDFS
-
+linktitle: Runing with HDFS
+weight: 1
+summary: Ozone is designed to run concurrently with HDFS. This page explains how to deploy Ozone in a exisiting HDFS cluster.
 ---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
@@ -18,16 +20,6 @@ title: Running concurrently with HDFS
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-
-<nav aria-label="breadcrumb">
-  <ol class="breadcrumb">
-    <li class="breadcrumb-item"><a href="/">Home</a></li>
-     <li class="breadcrumb-item"><a href="{{< ref "BeyondBasics.md" >}}">
-        Beyond Basics</a>
-    <li class="breadcrumb-item active" aria-current="page">Running concurrently with HDFS
-    </li>
-  </ol>
-</nav>
 
 Ozone is designed to work with HDFS. So it is easy to deploy ozone in an
 existing HDFS cluster.
@@ -76,8 +68,3 @@ not. Log of datanode should contain something like this:
 <div class="alert alert-warning" role="alert">
 <b>Note:</b> The current version of Ozone is tested with Hadoop 3.1.
 </div>
-
-
-
-<a href="{{< ref "BeyondBasics/Containers.md" >}}"> <button type="button"
-class="btn  btn-success btn-lg">Next >></button>
