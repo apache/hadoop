@@ -91,7 +91,7 @@ public abstract class OMClientRequest implements RequestAuditor {
   }
 
   /**
-   * Get User information from the OMRequest.
+   * Get User information which needs to be set in the OMRequest object.
    * @return User Info.
    */
   public OzoneManagerProtocolProtos.UserInfo getUserInfo() {
