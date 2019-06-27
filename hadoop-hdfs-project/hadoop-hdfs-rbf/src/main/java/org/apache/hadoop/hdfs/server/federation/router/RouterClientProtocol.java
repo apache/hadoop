@@ -153,7 +153,7 @@ public class RouterClientProtocol implements ClientProtocol {
     this.mountStatusTimeOut = conf.getTimeDuration(
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT,
         RBFConfigKeys.DFS_ROUTER_CLIENT_MOUNT_TIME_OUT_DEFAULT,
-        TimeUnit.SECONDS);
+        TimeUnit.MILLISECONDS);
 
     // User and group for reporting
     try {
