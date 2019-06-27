@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.Map;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;

@@ -479,9 +479,17 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         // while entry is marked for delete, but it is not flushed to DB.
         CacheValue<OmBucketInfo> cacheValue =
             bucketTable.getCacheValue(new CacheKey(kv.getKey()));
-        if (kv.getKey().startsWith(volumePrefix)
-            && cacheValue != null && cacheValue.getCacheValue() != null) {
-          return false; // we found at least one bucket with this volume prefix.
+        if (cacheValue != null) {
+          if (kv.getKey().startsWith(volumePrefix)
+              && cacheValue.getCacheValue() != null) {
+            return false; // we found at least one bucket with this volume
+            // prefix.
+          }
+        } else {
+          if (kv.getKey().startsWith(volumePrefix)) {
+            return false; // we found at least one bucket with this volume
+            // prefix.
+          }
         }
       }
 
@@ -524,10 +532,17 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
         // while entry is marked for delete, but it is not flushed to DB.
         CacheValue<OmKeyInfo> cacheValue =
             keyTable.getCacheValue(new CacheKey(kv.getKey()));
-        if (kv.getKey().startsWith(keyPrefix)
-            && cacheValue != null && cacheValue.getCacheValue() != null) {
-          return false; // we found at least one key with this vol/bucket
-          // prefix.
+        if (cacheValue != null) {
+          if (kv.getKey().startsWith(keyPrefix)
+              && cacheValue.getCacheValue() != null) {
+            return false; // we found at least one key with this vol/bucket
+            // prefix.
+          }
+        } else {
+          if (kv.getKey().startsWith(keyPrefix)) {
+            return false; // we found at least one key with this vol/bucket
+            // prefix.
+          }
         }
       }
 
