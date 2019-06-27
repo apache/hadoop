@@ -51,6 +51,7 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
  * Handles rename key request.
@@ -131,7 +132,8 @@ public class OMKeyRenameRequest extends OMClientRequest
     }
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
 
     IOException exception = null;
     OmKeyInfo fromKeyValue = null;
@@ -179,7 +181,8 @@ public class OMKeyRenameRequest extends OMClientRequest
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
 
