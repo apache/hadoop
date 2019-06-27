@@ -268,6 +268,7 @@ public class ResourceTrackerService extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
+    decommissioningWatcher.stop();
     if (this.server != null) {
       this.server.stop();
     }
