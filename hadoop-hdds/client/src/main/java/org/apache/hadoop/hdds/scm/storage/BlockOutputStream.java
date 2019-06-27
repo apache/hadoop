@@ -52,6 +52,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -321,10 +322,8 @@ public class BlockOutputStream extends OutputStream {
   private void handleFullBuffer() throws IOException {
     try {
       checkOpen();
-      if (!commitWatcher.getFutureMap().isEmpty()) {
-        waitOnFlushFutures();
-      }
-    } catch (InterruptedException | ExecutionException e) {
+      commitWatcher.waitForPutBlockFutures();
+    } catch (InterruptedException | ExecutionException| TimeoutException e) {
       setIoException(e);
       adjustBuffersOnException();
       throw getIoException();
@@ -433,7 +432,7 @@ public class BlockOutputStream extends OutputStream {
         && bufferPool != null && bufferPool.getSize() > 0) {
       try {
         handleFlush();
-      } catch (InterruptedException | ExecutionException e) {
+      } catch (InterruptedException | ExecutionException| TimeoutException e) {
         // just set the exception here as well in order to maintain sanctity of
         // ioException field
         setIoException(e);
@@ -466,8 +465,8 @@ public class BlockOutputStream extends OutputStream {
     writeChunkToContainer(chunk);
   }
 
-  private void handleFlush()
-      throws IOException, InterruptedException, ExecutionException {
+  private void handleFlush() throws IOException, InterruptedException,
+      ExecutionException, TimeoutException {
     checkOpen();
     // flush the last chunk data residing on the currentBuffer
     if (totalDataFlushedLength < writtenDataLength) {
@@ -482,7 +481,7 @@ public class BlockOutputStream extends OutputStream {
       updateFlushLength();
       executePutBlock();
     }
-    waitOnFlushFutures();
+    commitWatcher.waitForPutBlockFutures();
     watchForCommit(false);
     // just check again if the exception is hit while waiting for the
     // futures to ensure flush has indeed succeeded
@@ -498,7 +497,7 @@ public class BlockOutputStream extends OutputStream {
         && bufferPool != null && bufferPool.getSize() > 0) {
       try {
         handleFlush();
-      } catch (InterruptedException | ExecutionException e) {
+      } catch (InterruptedException | ExecutionException | TimeoutException e) {
         setIoException(e);
         adjustBuffersOnException();
         throw getIoException();
@@ -511,15 +510,6 @@ public class BlockOutputStream extends OutputStream {
       // bufferPool.checkBufferPoolEmpty();
 
     }
-  }
-
-  private void waitOnFlushFutures()
-      throws InterruptedException, ExecutionException {
-    CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(
-        commitWatcher.getFutureMap().values().toArray(
-            new CompletableFuture[commitWatcher.getFutureMap().size()]));
-    // wait for all the transactions to complete
-    combinedFuture.get();
   }
 
   private void validateResponse(

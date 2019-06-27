@@ -39,6 +39,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.stream.Collectors;
@@ -218,6 +219,16 @@ public class CommitWatcher {
       CompletableFuture<ContainerProtos.
           ContainerCommandResponseProto>> getFutureMap() {
     return futureMap;
+  }
+
+  void waitForPutBlockFutures() throws InterruptedException,
+      ExecutionException, TimeoutException {
+    if (!futureMap.isEmpty()) {
+      CompletableFuture<Void> combinedFuture = CompletableFuture.allOf(
+          futureMap.values().toArray(new CompletableFuture[futureMap.size()]));
+      // wait for all the transactions to complete
+      combinedFuture.get(watchTimeout, TimeUnit.MILLISECONDS);
+    }
   }
 
   public long getTotalAckDataLength() {
