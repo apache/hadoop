@@ -190,10 +190,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
 
     switch (omRequest.getCmdType()) {
-    case AllocateBlock:
-      return handleAllocateBlock(raftClientRequest, omRequest);
-    case CreateKey:
-      return handleCreateKeyRequest(raftClientRequest, omRequest);
     case InitiateMultiPartUpload:
       return handleInitiateMultipartUpload(raftClientRequest, omRequest);
     default:
@@ -234,116 +230,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
 
     ByteString messageContent =
         ByteString.copyFrom(newOmRequest.build().toByteArray());
-
-    return TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
-        .build();
-  }
-
-  /**
-   * Handle createKey Request, which needs a special handling. This request
-   * needs to be executed on the leader, and the response received from this
-   * request we need to create a ApplyKeyRequest and create a
-   * TransactionContext object.
-   */
-  private TransactionContext handleCreateKeyRequest(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-    OMResponse omResponse = handler.handle(omRequest);
-
-    // TODO: if not success should we retry depending on the error if it is
-    //  retriable?
-    if (!omResponse.getSuccess()) {
-      TransactionContext transactionContext = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      transactionContext.setException(
-          constructExceptionForFailedRequest(omResponse));
-      return transactionContext;
-    }
-
-    // Get original request
-    OzoneManagerProtocolProtos.CreateKeyRequest createKeyRequest =
-        omRequest.getCreateKeyRequest();
-
-    // Create Applykey Request.
-    OzoneManagerProtocolProtos.ApplyCreateKeyRequest applyCreateKeyRequest =
-        OzoneManagerProtocolProtos.ApplyCreateKeyRequest.newBuilder()
-            .setCreateKeyRequest(createKeyRequest)
-            .setCreateKeyResponse(omResponse.getCreateKeyResponse()).build();
-
-    OMRequest.Builder newOmRequest =
-        OMRequest.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.ApplyCreateKey)
-            .setApplyCreateKeyRequest(applyCreateKeyRequest)
-            .setClientId(omRequest.getClientId());
-
-    if (omRequest.hasTraceID()) {
-      newOmRequest.setTraceID(omRequest.getTraceID());
-    }
-
-    ByteString messageContent =
-        ByteString.copyFrom(newOmRequest.build().toByteArray());
-
-    return TransactionContext.newBuilder()
-        .setClientRequest(raftClientRequest)
-        .setStateMachine(this)
-        .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
-        .build();
-  }
-
-  /**
-   * Handle AllocateBlock Request, which needs a special handling. This
-   * request needs to be executed on the leader, where it connects to SCM and
-   * get Block information.
-   * @param raftClientRequest
-   * @param omRequest
-   * @return TransactionContext
-   */
-  private TransactionContext handleAllocateBlock(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-    OMResponse omResponse = handler.handle(omRequest);
-
-    // If request is failed, no need to proceed further.
-    // Setting the exception with omResponse message and code.
-
-    // TODO: the allocate block fails when scm is in safe mode or when scm is
-    //  down, but that error is not correctly received in OM end, once that
-    //  is fixed, we need to see how to handle this failure case or how we
-    //  need to retry or how to handle this scenario. For other errors like
-    //  KEY_NOT_FOUND, we don't need a retry/
-    if (!omResponse.getSuccess()) {
-      TransactionContext transactionContext = TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .build();
-      transactionContext.setException(
-          constructExceptionForFailedRequest(omResponse));
-      return transactionContext;
-    }
-
-    // Get original request
-    OzoneManagerProtocolProtos.AllocateBlockRequest allocateBlockRequest =
-        omRequest.getAllocateBlockRequest();
-
-    // Create new AllocateBlockRequest with keyLocation set.
-    OzoneManagerProtocolProtos.AllocateBlockRequest newAllocateBlockRequest =
-        OzoneManagerProtocolProtos.AllocateBlockRequest.newBuilder().
-            mergeFrom(allocateBlockRequest)
-            .setKeyLocation(
-                omResponse.getAllocateBlockResponse().getKeyLocation()).build();
-
-    OMRequest newOmRequest = omRequest.toBuilder().setCmdType(
-        OzoneManagerProtocolProtos.Type.AllocateBlock)
-        .setAllocateBlockRequest(newAllocateBlockRequest).build();
-
-    ByteString messageContent = ByteString.copyFrom(newOmRequest.toByteArray());
 
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)

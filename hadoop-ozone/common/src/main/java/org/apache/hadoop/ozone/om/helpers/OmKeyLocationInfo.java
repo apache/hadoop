@@ -23,6 +23,8 @@ import org.apache.hadoop.hdds.security.token.OzoneBlockTokenIdentifier;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.KeyLocation;
 import org.apache.hadoop.security.token.Token;
 
+import java.util.Objects;
+
 /**
  * One key can be too huge to fit in one container. In which case it gets split
  * into a number of subkeys. This class represents one such subkey instance.
@@ -201,5 +203,28 @@ public final class OmKeyLocationInfo {
         ", token=" + token +
         ", pipeline=" + pipeline +
         ", createVersion=" + createVersion + '}';
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    OmKeyLocationInfo that = (OmKeyLocationInfo) o;
+    return length == that.length &&
+        offset == that.offset &&
+        createVersion == that.createVersion &&
+        Objects.equals(blockID, that.blockID) &&
+        Objects.equals(token, that.token) &&
+        Objects.equals(pipeline, that.pipeline);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(blockID, length, offset, token, createVersion,
+        pipeline);
   }
 }

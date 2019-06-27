@@ -479,7 +479,7 @@ public class TestOzoneManagerHA {
         }
       }
       Assert.assertTrue("There is no OM Client Proxy corresponding to OM " +
-              "node" + cluster.getOzoneManager(i).getOMNodId(),
+              "node" + cluster.getOzoneManager(i).getOMNodeId(),
           omClientProxyExists);
     }
   }
@@ -604,7 +604,7 @@ public class TestOzoneManagerHA {
 
       // Failover to the OM node that the objectStore points to
       omFailoverProxyProvider.performFailoverIfRequired(
-          ozoneManager.getOMNodId());
+          ozoneManager.getOMNodeId());
 
       // A read request should result in the proxyProvider failing over to
       // leader node.

@@ -124,6 +124,14 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
   }
 
   /**
+   * Get the cache value from table cache.
+   * @param cacheKey
+   */
+  default CacheValue<VALUE> getCacheValue(CacheKey<KEY> cacheKey) {
+    throw new NotImplementedException("getCacheValue is not implemented");
+  }
+
+  /**
    * Removes all the entries from the table cache which are having epoch value
    * less
    * than or equal to specified epoch value.

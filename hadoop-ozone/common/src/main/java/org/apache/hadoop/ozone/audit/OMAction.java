@@ -30,7 +30,6 @@ public enum OMAction implements AuditAction {
   COMMIT_KEY,
   CREATE_VOLUME,
   CREATE_BUCKET,
-  CREATE_KEY,
   DELETE_VOLUME,
   DELETE_BUCKET,
   DELETE_KEY,

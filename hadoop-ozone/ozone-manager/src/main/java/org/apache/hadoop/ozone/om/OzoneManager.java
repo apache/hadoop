@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Objects;
 
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -101,6 +102,7 @@ import org.apache.hadoop.ozone.audit.AuditLoggerType;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
@@ -170,6 +172,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
+import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForBlockClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForClients;
 import static org.apache.hadoop.hdds.HddsUtils.getScmAddressForSecurityProtocol;
@@ -177,9 +181,15 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY
 import static org.apache.hadoop.hdds.security.x509.certificates.utils.CertificateSignRequest.getEncodedString;
 import static org.apache.hadoop.hdds.server.ServerUtils.updateRPCListenAddress;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_FILE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_METRICS_TEMP_FILE;
 import static org.apache.hadoop.ozone.OzoneConsts.OM_RATIS_SNAPSHOT_INDEX;
@@ -273,6 +283,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   // Adding parameters needed for VolumeRequests here, so that during request
   // execution, we can get from ozoneManager.
   private long maxUserVolumeCount;
+
+
+  private final ScmClient scmClient;
+  private final long scmBlockSize;
+  private final int preallocateBlocksMax;
+  private final boolean grpcBlockTokenEnabled;
+  private final boolean useRatisForReplication;
 
 
   private OzoneManager(OzoneConfiguration conf) throws IOException,
@@ -385,8 +402,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcServer = getRpcServer(conf);
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
-    keyManager = new KeyManagerImpl(
-        new ScmClient(scmBlockClient, scmContainerClient), metadataManager,
+    this.scmClient = new ScmClient(scmBlockClient, scmContainerClient);
+    keyManager = new KeyManagerImpl(scmClient, metadataManager,
         configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
 
     prefixManager = new PrefixManagerImpl(metadataManager);
@@ -404,6 +421,63 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       accessAuthorizer = null;
     }
     omMetaDir = OmUtils.getOmDbDir(configuration);
+
+    this.scmBlockSize = (long) conf
+        .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
+            StorageUnit.BYTES);
+    this.preallocateBlocksMax = conf.getInt(
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
+    this.grpcBlockTokenEnabled = conf.getBoolean(
+        HDDS_BLOCK_TOKEN_ENABLED,
+        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.useRatisForReplication = conf.getBoolean(
+        DFS_CONTAINER_RATIS_ENABLED_KEY, DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Return configuration value of
+   * {@link OzoneConfigKeys#DFS_CONTAINER_RATIS_ENABLED_KEY}.
+   */
+  public boolean shouldUseRatis() {
+    return useRatisForReplication;
+  }
+
+  /**
+   * Return scmClient.
+   */
+  public ScmClient getScmClient() {
+    return scmClient;
+  }
+
+  /**
+   * Return SecretManager for OM.
+   */
+  public OzoneBlockTokenSecretManager getBlockTokenSecretManager() {
+    return blockTokenMgr;
+  }
+
+  /**
+   * Return config value of {@link OzoneConfigKeys#OZONE_SCM_BLOCK_SIZE}.
+   */
+  public long getScmBlockSize() {
+    return scmBlockSize;
+  }
+
+  /**
+   * Return config value of
+   * {@link OzoneConfigKeys#OZONE_KEY_PREALLOCATION_BLOCKS_MAX}.
+   */
+  public int getPreallocateBlocksMax() {
+    return preallocateBlocksMax;
+  }
+
+  /**
+   * Return config value of
+   * {@link HddsConfigKeys#HDDS_BLOCK_TOKEN_ENABLED}.
+   */
+  public boolean isGrpcBlockTokenEnabled() {
+    return grpcBlockTokenEnabled;
   }
 
   /**
@@ -3057,7 +3131,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     OzoneManager.testSecureOmFlag = testSecureOmFlag;
   }
 
-  public String getOMNodId() {
+  public String getOMNodeId() {
     return omNodeDetails.getOMNodeId();
   }
 

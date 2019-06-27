@@ -86,17 +86,26 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           return submitReadRequestToOM(request);
         } else {
           // PreExecute if needed.
-          try {
-            OMClientRequest omClientRequest =
-                OzoneManagerRatisUtils.createClientRequest(request);
-            if (omClientRequest != null) {
-              request = omClientRequest.preExecute(ozoneManager);
+          if (omRatisServer.isLeader()) {
+            try {
+              OMClientRequest omClientRequest =
+                  OzoneManagerRatisUtils.createClientRequest(request);
+              if (omClientRequest != null) {
+                request = omClientRequest.preExecute(ozoneManager);
+              }
+            } catch (IOException ex) {
+              // As some of the preExecute returns error. So handle here.
+              return createErrorResponse(request, ex);
             }
-          } catch (IOException ex) {
-            // As some of the preExecute returns error. So handle here.
-            return createErrorResponse(request, ex);
+            return submitRequestToRatis(request);
+          } else {
+            // throw not leader exception. This is being done, so to avoid
+            // unnecessary execution of preExecute on follower OM's. This
+            // will be helpful in the case like where we we reduce the
+            // chance of allocate blocks on follower OM's. Right now our
+            // leader status is updated every 1 second.
+            throw createNotLeaderException();
           }
-          return submitRequestToRatis(request);
         }
       } else {
         return submitRequestDirectlyToOM(request);
@@ -153,24 +162,28 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     if (omRatisServer.isLeader()) {
       return handler.handle(request);
     } else {
-      RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
-      Optional<RaftPeerId> leaderRaftPeerId = omRatisServer
-          .getCachedLeaderPeerId();
-
-      NotLeaderException notLeaderException;
-      if (leaderRaftPeerId.isPresent()) {
-        notLeaderException = new NotLeaderException(raftPeerId.toString());
-      } else {
-        notLeaderException = new NotLeaderException(
-            raftPeerId.toString(), leaderRaftPeerId.toString());
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug(notLeaderException.getMessage());
-      }
-
-      throw new ServiceException(notLeaderException);
+      throw createNotLeaderException();
     }
+  }
+
+  private ServiceException createNotLeaderException() {
+    RaftPeerId raftPeerId = omRatisServer.getRaftPeerId();
+    Optional<RaftPeerId> leaderRaftPeerId = omRatisServer
+        .getCachedLeaderPeerId();
+
+    NotLeaderException notLeaderException;
+    if (leaderRaftPeerId.isPresent()) {
+      notLeaderException = new NotLeaderException(raftPeerId.toString());
+    } else {
+      notLeaderException = new NotLeaderException(
+          raftPeerId.toString(), leaderRaftPeerId.toString());
+    }
+
+    if (LOG.isDebugEnabled()) {
+      LOG.debug(notLeaderException.getMessage());
+    }
+
+    return new ServiceException(notLeaderException);
   }
 
   /**

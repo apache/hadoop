@@ -282,7 +282,7 @@ public class KeyManagerImpl implements KeyManager {
 
     OmKeyLocationInfo omKeyLocationInfo =
         OmKeyLocationInfo.getFromProtobuf(keyLocation);
-    keyInfo.appendNewBlocks(Collections.singletonList(omKeyLocationInfo));
+    keyInfo.appendNewBlocks(Collections.singletonList(omKeyLocationInfo), true);
     keyInfo.updateModifcationTime();
     metadataManager.getOpenKeyTable().put(openKey, keyInfo);
     return omKeyLocationInfo;
@@ -317,7 +317,7 @@ public class KeyManagerImpl implements KeyManager {
     // If om is not managing via ratis, write to db, otherwise write to DB
     // will happen via ratis apply transaction.
     if (!isRatisEnabled) {
-      keyInfo.appendNewBlocks(locationInfos);
+      keyInfo.appendNewBlocks(locationInfos, true);
       keyInfo.updateModifcationTime();
       metadataManager.getOpenKeyTable().put(openKey, keyInfo);
     }
@@ -486,7 +486,7 @@ public class KeyManagerImpl implements KeyManager {
     if (size > 0) {
       List<OmKeyLocationInfo> locationInfos =
           allocateBlock(keyInfo, new ExcludeList(), size);
-      keyInfo.appendNewBlocks(locationInfos);
+      keyInfo.appendNewBlocks(locationInfos, true);
     }
 
     // When OM is not managed via ratis we should write in to Om db in
@@ -509,7 +509,7 @@ public class KeyManagerImpl implements KeyManager {
       // the key already exist, the new blocks will be added as new version
       // when locations.size = 0, the new version will have identical blocks
       // as its previous version
-      keyInfo.addNewVersion(locations);
+      keyInfo.addNewVersion(locations, true);
       keyInfo.setDataSize(size + keyInfo.getDataSize());
     }
     return keyInfo;
@@ -632,8 +632,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volumeName, bucketName);
       OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
       if (keyInfo == null) {
-        throw new OMException("Commit a key without corresponding entry " +
-            objectKey, KEY_NOT_FOUND);
+        throw new OMException("Failed to commit key, as " + openKey + "entry " +
+            "is not found in the openKey table", KEY_NOT_FOUND);
       }
       keyInfo.setDataSize(args.getDataSize());
       keyInfo.setModificationTime(Time.now());

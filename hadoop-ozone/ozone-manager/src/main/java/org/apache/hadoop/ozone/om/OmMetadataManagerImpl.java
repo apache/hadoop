@@ -473,12 +473,26 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     try (TableIterator<String, ? extends KeyValue<String, OmBucketInfo>>
         bucketIter = bucketTable.iterator()) {
       KeyValue<String, OmBucketInfo> kv = bucketIter.seek(volumePrefix);
-      // During iteration from DB, check in mean time if this bucket is not
-      // marked for delete.
-      if (kv != null && kv.getKey().startsWith(volumePrefix) &&
-          bucketTable.get(kv.getKey()) != null) {
-        return false; // we found at least one bucket with this volume prefix.
+
+      if (kv != null) {
+        // Check the entry in db is not marked for delete. This can happen
+        // while entry is marked for delete, but it is not flushed to DB.
+        CacheValue<OmBucketInfo> cacheValue =
+            bucketTable.getCacheValue(new CacheKey(kv.getKey()));
+        if (cacheValue != null) {
+          if (kv.getKey().startsWith(volumePrefix)
+              && cacheValue.getCacheValue() != null) {
+            return false; // we found at least one bucket with this volume
+            // prefix.
+          }
+        } else {
+          if (kv.getKey().startsWith(volumePrefix)) {
+            return false; // we found at least one bucket with this volume
+            // prefix.
+          }
+        }
       }
+
     }
     return true;
   }
@@ -495,14 +509,43 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   public boolean isBucketEmpty(String volume, String bucket)
       throws IOException {
     String keyPrefix = getBucketKey(volume, bucket);
-    //TODO: When Key ops are converted in to HA model, use cache also to
-    // determine bucket is empty or not.
+
+    // First check in key table cache.
+    Iterator<Map.Entry<CacheKey<String>, CacheValue<OmKeyInfo>>> iterator =
+        ((TypedTable< String, OmKeyInfo>) keyTable).cacheIterator();
+    while (iterator.hasNext()) {
+      Map.Entry< CacheKey<String>, CacheValue<OmKeyInfo>> entry =
+          iterator.next();
+      String key = entry.getKey().getCacheKey();
+      OmKeyInfo omKeyInfo = entry.getValue().getCacheValue();
+      // Making sure that entry is not for delete key request.
+      if (key.startsWith(keyPrefix) && omKeyInfo != null) {
+        return false;
+      }
+    }
     try (TableIterator<String, ? extends KeyValue<String, OmKeyInfo>> keyIter =
         keyTable.iterator()) {
       KeyValue<String, OmKeyInfo> kv = keyIter.seek(keyPrefix);
-      if (kv != null && kv.getKey().startsWith(keyPrefix)) {
-        return false; // we found at least one key with this vol/bucket prefix.
+
+      if (kv != null) {
+        // Check the entry in db is not marked for delete. This can happen
+        // while entry is marked for delete, but it is not flushed to DB.
+        CacheValue<OmKeyInfo> cacheValue =
+            keyTable.getCacheValue(new CacheKey(kv.getKey()));
+        if (cacheValue != null) {
+          if (kv.getKey().startsWith(keyPrefix)
+              && cacheValue.getCacheValue() != null) {
+            return false; // we found at least one key with this vol/bucket
+            // prefix.
+          }
+        } else {
+          if (kv.getKey().startsWith(keyPrefix)) {
+            return false; // we found at least one key with this vol/bucket
+            // prefix.
+          }
+        }
       }
+
     }
     return true;
   }
