@@ -165,17 +165,21 @@ public final class OmKeyInfo extends WithMetadata {
    * part of the latest version, not a new version.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime if true, will update modification time.
    * @throws IOException
    */
   public synchronized void appendNewBlocks(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     if (keyLocationVersions.size() == 0) {
       throw new IOException("Appending new block, but no version exist");
     }
     OmKeyLocationInfoGroup currentLatestVersion =
         keyLocationVersions.get(keyLocationVersions.size() - 1);
     currentLatestVersion.appendNewBlocks(newLocationList);
-    setModificationTime(Time.now());
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
   }
 
   /**
@@ -183,10 +187,12 @@ public final class OmKeyInfo extends WithMetadata {
    * version to the all version list.
    *
    * @param newLocationList the list of new blocks to be added.
+   * @param updateTime - if true, updates modification time.
    * @throws IOException
    */
   public synchronized long addNewVersion(
-      List<OmKeyLocationInfo> newLocationList) throws IOException {
+      List<OmKeyLocationInfo> newLocationList, boolean updateTime)
+      throws IOException {
     long latestVersionNum;
     if (keyLocationVersions.size() == 0) {
       // no version exist, these blocks are the very first version.
@@ -202,7 +208,10 @@ public final class OmKeyInfo extends WithMetadata {
       keyLocationVersions.add(newVersion);
       latestVersionNum = newVersion.getVersion();
     }
-    setModificationTime(Time.now());
+
+    if (updateTime) {
+      setModificationTime(Time.now());
+    }
     return latestVersionNum;
   }
 
