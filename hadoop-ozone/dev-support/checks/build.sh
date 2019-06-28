@@ -14,5 +14,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 export MAVEN_OPTS="-Xmx4096m"
-mvn -am -pl :hadoop-ozone-dist -P hdds -Dmaven.javadoc.skip=true -DskipTests clean install
+mvn -B -f pom.ozone.xml -Dmaven.javadoc.skip=true -DskipTests clean install
 exit $?
