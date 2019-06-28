@@ -54,6 +54,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
 import org.apache.hadoop.util.Time;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOCK;
+
 /**
  * Handles volume create request.
  */
@@ -134,13 +137,14 @@ public class OMVolumeCreateRequest extends OMClientRequest
     String dbUserKey = omMetadataManager.getUserKey(owner);
     String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
     VolumeList volumeList = null;
+    boolean acquiredUserLock = false;
+    IOException exception = null;
 
     // acquire lock.
-    omMetadataManager.getLock().acquireUserLock(owner);
-    omMetadataManager.getLock().acquireVolumeLock(volume);
-
-    IOException exception = null;
+    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
+      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+          owner);
       OmVolumeArgs dbVolumeArgs =
           omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -166,8 +170,10 @@ public class OMVolumeCreateRequest extends OMClientRequest
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volumeInfo.getVolume());
-      omMetadataManager.getLock().releaseUserLock(dbUserKey);
+      if (acquiredUserLock) {
+        omMetadataManager.getLock().releaseLock(USER_LOCK, owner);
+      }
+      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
     }
 
     // Performing audit logging outside of the lock.

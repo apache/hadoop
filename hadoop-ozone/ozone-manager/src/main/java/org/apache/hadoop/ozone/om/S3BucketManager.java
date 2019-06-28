@@ -78,4 +78,10 @@ public interface S3BucketManager {
    * @throws IOException - incase of volume creation failure.
    */
   boolean createOzoneVolumeIfNeeded(String userName) throws IOException;
+
+  /**
+   * Return volume name from userName.
+   * @param userName
+   */
+  String formatOzoneVolumeName(String userName);
 }

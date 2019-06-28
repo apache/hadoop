@@ -210,6 +210,8 @@ import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_USER_MAX_VOLUME_D
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_AUTH_METHOD;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.TOKEN_ERROR_OTHER;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.S3_BUCKET_LOCK;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
 import static org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneManagerService
     .newReflectiveBlockingService;
@@ -2631,13 +2633,20 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public void createS3Bucket(String userName, String s3BucketName)
       throws IOException {
+
+    boolean acquiredS3Lock = false;
+    boolean acquiredVolumeLock = false;
     try {
       if(isAclEnabled) {
         checkAcls(ResourceType.BUCKET, StoreType.S3, ACLType.CREATE,
             null, s3BucketName, null);
       }
       metrics.incNumBucketCreates();
+      acquiredS3Lock = metadataManager.getLock().acquireLock(S3_BUCKET_LOCK,
+          s3BucketName);
       try {
+        acquiredVolumeLock = metadataManager.getLock().acquireLock(VOLUME_LOCK,
+            s3BucketManager.formatOzoneVolumeName(userName));
         boolean newVolumeCreate = s3BucketManager.createOzoneVolumeIfNeeded(
             userName);
         if (newVolumeCreate) {
@@ -2652,12 +2661,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         metrics.incNumVolumeCreateFails();
         throw ex;
       }
-
       s3BucketManager.createS3Bucket(userName, s3BucketName);
       metrics.incNumBuckets();
     } catch (IOException ex) {
       metrics.incNumBucketCreateFails();
       throw ex;
+    } finally {
+      if (acquiredVolumeLock) {
+        metadataManager.getLock().releaseLock(VOLUME_LOCK,
+            s3BucketManager.formatOzoneVolumeName(userName));
+      }
+      if (acquiredS3Lock) {
+        metadataManager.getLock().releaseLock(S3_BUCKET_LOCK, s3BucketName);
+      }
     }
   }
 
