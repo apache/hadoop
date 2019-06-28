@@ -112,11 +112,8 @@ public class OMDirectoryCreateRequest extends OMClientRequest
             OzoneManagerProtocolProtos.Type.CreateDirectory).setStatus(
             OzoneManagerProtocolProtos.Status.OK);
 
-
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumCreateDirectory();
-
-
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
@@ -188,13 +185,15 @@ public class OMDirectoryCreateRequest extends OMClientRequest
         auditMap, exception, userInfo));
 
     if (exception == null) {
+      LOG.debug("Directory is successfully created for Key: {} in " +
+              "volume/bucket:{}/{}", keyName, volumeName, bucketName);
       omResponse.setCreateDirectoryResponse(
           CreateDirectoryResponse.newBuilder());
       return new OMDirectoryCreateResponse(dirKeyInfo,
           omResponse.build());
     } else {
       LOG.error("CreateDirectory failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, exception);
+          keyName, volumeName, bucketName, exception);
       omMetrics.incNumCreateDirectoryFails();
       return new OMDirectoryCreateResponse(null,
           createErrorOMResponse(omResponse, exception));
