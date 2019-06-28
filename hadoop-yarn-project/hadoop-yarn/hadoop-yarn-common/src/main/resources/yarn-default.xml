@@ -4209,6 +4209,6 @@
   <property>
     <description>Max queue length for app activities.</description>
     <name>yarn.resourcemanager.activities-manager.app-activities.max-queue-length</name>
-    <value>1000</value>
+    <value>100</value>
   </property>
 </configuration>
