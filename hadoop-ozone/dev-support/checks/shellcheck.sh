@@ -16,6 +16,13 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-export MAVEN_OPTS="-Xmx4096m"
-mvn -B -f pom.ozone.xml -Dmaven.javadoc.skip=true -DskipTests clean install
-exit $?
+OUTPUT_FILE="$DIR/../../../target/shell-problems.txt"
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+echo "" > "$OUTPUT_FILE"
+find "./hadoop-hdds" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
+find "./hadoop-ozone" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
+
+
+if [ "$(cat "$OUTPUT_FILE")" ]; then
+   exit 1
+fi
