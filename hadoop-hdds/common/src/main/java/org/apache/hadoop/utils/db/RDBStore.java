@@ -45,6 +45,8 @@ import org.rocksdb.DBOptions;
 import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
+import org.rocksdb.TransactionLogIterator;
+import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -316,6 +318,39 @@ public class RDBStore implements DBStore {
   @Override
   public CodecRegistry getCodecRegistry() {
     return codecRegistry;
+  }
+
+  @Override
+  public DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
+      throws DataNotFoundException {
+
+    DBUpdatesWrapper dbUpdatesWrapper = new DBUpdatesWrapper();
+    try {
+      TransactionLogIterator transactionLogIterator =
+          db.getUpdatesSince(sequenceNumber);
+
+      boolean flag = true;
+
+      while (transactionLogIterator.isValid()) {
+        TransactionLogIterator.BatchResult result =
+            transactionLogIterator.getBatch();
+        if (flag && result.sequenceNumber() > 1 + sequenceNumber) {
+          throw new DataNotFoundException("Unable to read data from " +
+              "RocksDB wal to get delta updates. It may have already been" +
+              "flushed to SSTs.");
+        }
+        flag = false;
+        WriteBatch writeBatch = result.writeBatch();
+        byte[] writeBatchData = writeBatch.data();
+        dbUpdatesWrapper.addWriteBatch(writeBatchData,
+            result.sequenceNumber());
+        transactionLogIterator.next();
+      }
+    } catch (RocksDBException e) {
+      LOG.error("Unable to get delta updates since sequenceNumber {} ",
+          sequenceNumber, e);
+    }
+    return dbUpdatesWrapper;
   }
 
   @VisibleForTesting

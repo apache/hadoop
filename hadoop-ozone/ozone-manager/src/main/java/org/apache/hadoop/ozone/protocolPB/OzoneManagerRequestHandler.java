@@ -126,6 +126,9 @@ import org.apache.hadoop.security.proto.SecurityProtos.RenewDelegationTokenReque
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
+
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.DataNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -314,6 +317,11 @@ public class OzoneManagerRequestHandler implements RequestHandler {
             request.getServiceListRequest());
         responseBuilder.setServiceListResponse(serviceListResponse);
         break;
+      case DBUpdates:
+        DBUpdatesResponse dbUpdatesResponse = getOMDBUpdates(
+            request.getDbUpdatesRequest());
+        responseBuilder.setDbUpdatesResponse(dbUpdatesResponse);
+        break;
       case GetDelegationToken:
         GetDelegationTokenResponseProto getDtResp = getDelegationToken(
             request.getGetDelegationTokenRequest());
@@ -391,6 +399,21 @@ public class OzoneManagerRequestHandler implements RequestHandler {
       }
     }
     return responseBuilder.build();
+  }
+
+  private DBUpdatesResponse getOMDBUpdates(
+      DBUpdatesRequest dbUpdatesRequest)
+      throws DataNotFoundException {
+
+    DBUpdatesResponse.Builder builder = DBUpdatesResponse
+        .newBuilder();
+    DBUpdatesWrapper dbUpdatesWrapper =
+        impl.getDBUpdates(dbUpdatesRequest);
+    for (int i = 0; i < dbUpdatesWrapper.getData().size(); i++) {
+      builder.setData(i,
+          OMPBHelper.getByteString(dbUpdatesWrapper.getData().get(i)));
+    }
+    return builder.build();
   }
 
   private GetAclResponse getAcl(GetAclRequest req) throws IOException {
