@@ -258,6 +258,11 @@ public final class XceiverServerRatis extends XceiverServer {
     RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
         false);
 
+    int purgeGap = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT);
+    RaftServerConfigKeys.Log.setPurgeGap(properties, purgeGap);
+
     return properties;
   }
 
