@@ -81,7 +81,7 @@ http://localhost:9090/targets
 
 http://localhost:9090/graph?g0.range_input=1h&g0.expr=om_metrics_num_key_allocate&g0.tab=1
 
-![Prometheus target page example](prometheus-key-allocate.png)
+![Prometheus metrics page example](prometheus-key-allocate.png)
 
 ## Note
 
