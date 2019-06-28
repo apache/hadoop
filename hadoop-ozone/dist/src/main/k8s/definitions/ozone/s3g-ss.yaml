@@ -36,3 +36,8 @@ spec:
       - name: s3g
         image: "@docker.image@"
         args: ["ozone","s3g"]
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9878
+          initialDelaySeconds: 30

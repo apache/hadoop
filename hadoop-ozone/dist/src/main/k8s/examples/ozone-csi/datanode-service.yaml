@@ -14,42 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: apps/v1
-kind: StatefulSet
+apiVersion: v1
+kind: Service
 metadata:
-  name: s3g
-  labels:
-    app.kubernetes.io/component: ozone
+  name: datanode
 spec:
+  ports:
+  - port: 9870
+    name: rpc
+  clusterIP: None
   selector:
-    matchLabels:
-      app: ozone
-      component: s3g
-  serviceName: s3g
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: ozone
-        component: s3g
-    spec:
-      containers:
-      - name: s3g
-        image: '@docker.image@'
-        args:
-        - ozone
-        - s3g
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 9878
-          initialDelaySeconds: 30
-        volumeMounts:
-        - name: data
-          mountPath: /data
-        envFrom:
-        - configMapRef:
-            name: config
-      volumes:
-      - name: data
-        emptyDir: {}
+    app: ozone
+    component: datanode

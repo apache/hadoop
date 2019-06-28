@@ -46,3 +46,7 @@ spec:
       - name: scm
         image: "@docker.image@"
         args: ["ozone","scm"]
+        livenessProbe:
+          tcpSocket:
+            port: 9861
+          initialDelaySeconds: 30

@@ -21,5 +21,6 @@ import:
   - path: ozone
     transformations:
       - type: ozone/csi
+      - type: ozone/emptydir
   - path: pv-test
     destination: pv-test
