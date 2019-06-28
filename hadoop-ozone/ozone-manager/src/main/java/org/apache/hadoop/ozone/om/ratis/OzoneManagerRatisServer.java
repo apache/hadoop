@@ -569,7 +569,13 @@ public final class OzoneManagerRatisServer {
       } else if (thisNodeRole.equals(RaftPeerRole.FOLLOWER)) {
         ByteString leaderNodeId = roleInfoProto.getFollowerInfo()
             .getLeaderInfo().getId().getId();
-        RaftPeerId leaderPeerId = RaftPeerId.valueOf(leaderNodeId);
+        // There may be a chance, here we get leaderNodeId as null. For
+        // example, in 3 node OM Ratis, if 2 OM nodes are down, there will
+        // be no leader.
+        RaftPeerId leaderPeerId = null;
+        if (leaderNodeId != null && !leaderNodeId.isEmpty()) {
+          leaderPeerId = RaftPeerId.valueOf(leaderNodeId);
+        }
 
         setServerRole(thisNodeRole, leaderPeerId);
 

@@ -23,6 +23,12 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyZeroInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyString;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,6 +44,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
+import org.apache.commons.compress.utils.Sets;
 import org.apache.commons.io.FileUtils;
 import org.apache.curator.shaded.com.google.common.collect.Lists;
 import org.apache.hadoop.util.Shell.CommandExecutor;
@@ -69,6 +76,9 @@ public class TestNECVEPlugin {
 
   @Mock
   private CommandExecutor mockCommandExecutor;
+
+  @Mock
+  private UdevUtil udevUtil;
 
   private String defaultScriptOutput;
 
@@ -104,7 +114,7 @@ public class TestNECVEPlugin {
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     plugin.setCommandExecutorProvider(commandExecutorProvider);
     when(mockCommandExecutor.getOutput()).thenReturn(defaultScriptOutput);
 
@@ -125,7 +135,7 @@ public class TestNECVEPlugin {
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     plugin.setCommandExecutorProvider(commandExecutorProvider);
 
     defaultScriptOutput += "\n";
@@ -183,7 +193,7 @@ public class TestNECVEPlugin {
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     plugin.setCommandExecutorProvider(commandExecutorProvider);
     defaultScriptOutput = getOutputForDevice(
         0,
@@ -204,7 +214,7 @@ public class TestNECVEPlugin {
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     plugin.setCommandExecutorProvider(commandExecutorProvider);
 
     defaultScriptOutput += "\n";
@@ -254,7 +264,7 @@ public class TestNECVEPlugin {
     Files.delete(Paths.get(testFolder, DEFAULT_SCRIPT_NAME));
     env.put("NEC_VE_GET_SCRIPT_NAME", dummyScriptName);
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
 
     verifyBinaryPathSet(scriptPath);
   }
@@ -272,7 +282,7 @@ public class TestNECVEPlugin {
     env.put("NEC_VE_GET_SCRIPT_PATH",
         testFolder + "/" + DEFAULT_SCRIPT_NAME);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS);
+    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
 
     verifyBinaryPathSet(scriptPath);
   }
@@ -284,7 +294,7 @@ public class TestNECVEPlugin {
 
     env.put("NEC_VE_GET_SCRIPT_PATH", testFolder);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS);
+    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
   }
 
   @Test(expected = ResourceHandlerException.class)
@@ -300,7 +310,7 @@ public class TestNECVEPlugin {
     env.put("NEC_VE_GET_SCRIPT_PATH",
         testFolder + "/" + DEFAULT_SCRIPT_NAME);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS);
+    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
   }
 
   @Test
@@ -317,7 +327,7 @@ public class TestNECVEPlugin {
 
     env.put("HADOOP_COMMON_HOME", testFolder);
 
-    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS);
+    plugin = new NECVEPlugin(envProvider, EMPTY_SEARCH_DIRS, udevUtil);
     verifyBinaryPathSet(scriptPath);
   }
 
@@ -326,7 +336,7 @@ public class TestNECVEPlugin {
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
 
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
 
     Path scriptPath = Paths.get(testFolder, DEFAULT_SCRIPT_NAME);
     verifyBinaryPathSet(scriptPath);
@@ -336,7 +346,7 @@ public class TestNECVEPlugin {
   public void testAllocateSingleDevice()
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     Set<Device> available = new HashSet<>();
     Device device = getTestDevice(0);
     available.add(device);
@@ -352,7 +362,7 @@ public class TestNECVEPlugin {
   public void testAllocateMultipleDevices()
       throws ResourceHandlerException, IOException {
     setupTestDirectoryWithScript();
-    plugin = new NECVEPlugin(envProvider, defaultSearchDirs);
+    plugin = new NECVEPlugin(envProvider, defaultSearchDirs, udevUtil);
     Set<Device> available = new HashSet<>();
     Device device0 = getTestDevice(0);
     Device device1 = getTestDevice(1);
@@ -364,6 +374,29 @@ public class TestNECVEPlugin {
     assertEquals("No. of devices", 2, allocated.size());
     assertTrue("Device missing", allocated.contains(device0));
     assertTrue("Device missing", allocated.contains(device1));
+  }
+
+  @Test
+  public void testFindDevicesWithUdev()
+      throws ResourceHandlerException, IOException {
+    @SuppressWarnings("unchecked")
+    Function<String, String> mockEnvProvider = mock(Function.class);
+    VEDeviceDiscoverer veDeviceDiscoverer = mock(VEDeviceDiscoverer.class);
+    when(mockEnvProvider.apply(eq("NEC_USE_UDEV"))).thenReturn("true");
+    Device testDevice = getTestDevice(0);
+    when(veDeviceDiscoverer.getDevicesFromPath(anyString()))
+      .thenReturn(Sets.newHashSet(testDevice));
+    plugin = new NECVEPlugin(mockEnvProvider, defaultSearchDirs, udevUtil);
+    plugin.setVeDeviceDiscoverer(veDeviceDiscoverer);
+
+    Set<Device> devices = plugin.getDevices();
+
+    assertEquals("No. of devices", 1, devices.size());
+    Device device = devices.iterator().next();
+    assertSame("Device", device, testDevice);
+    verifyZeroInteractions(mockCommandExecutor);
+    verify(mockEnvProvider).apply(eq("NEC_USE_UDEV"));
+    verifyNoMoreInteractions(mockEnvProvider);
   }
 
   private void setupTestDirectoryWithScript() throws IOException {
@@ -409,5 +442,6 @@ public class TestNECVEPlugin {
   private void verifyBinaryPathSet(Path expectedPath) {
     assertEquals("Binary path", expectedPath.toString(),
         plugin.getBinaryPath());
+    verifyZeroInteractions(udevUtil);
   }
 }

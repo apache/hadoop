@@ -617,6 +617,10 @@ message KeyArgs {
     optional uint32 multipartNumber = 10;
     repeated hadoop.hdds.KeyValue metadata = 11;
     repeated OzoneAclInfo acls = 12;
+    // This will be set when the request is received in pre-Execute. This
+    // value is used in setting creation/modification time depending on the
+    // request type.
+    optional uint64 modificationTime = 13;
 }
 
 message KeyLocation {
@@ -712,6 +716,9 @@ message ListStatusResponse {
 
 message CreateKeyRequest {
     required KeyArgs keyArgs = 1;
+    // Set in OM HA during preExecute step. This way all OM's use same ID in
+    // OM HA.
+    optional uint64 clientID = 2;
 }
 
 message CreateKeyResponse {
