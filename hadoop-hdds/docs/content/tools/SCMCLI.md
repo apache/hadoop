@@ -1,3 +1,8 @@
+---
+title: "SCMCLI"
+date: 2017-08-10
+
+---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -14,24 +19,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-{{ partial "header.html" . }}
 
-  <body>
+SCM is the block service for Ozone. It is also the workhorse for ozone. But user process never talks to SCM. However, being able to read the state of SCM is useful.
 
-{{ partial "navbar.html" . }}
+SCMCLI allows the developer to access SCM directly. Please note: Improper usage of this tool can destroy your cluster. Unless you know exactly what you are doing, Please do *not* use this tool. In other words, this is a developer only tool. We might even remove this command in future to prevent improper use.
 
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-10 col-sm-offset-2 col-md-10 col-md-offset-2 main">
-                    {{ .Content }}
-
-
-        </div>
-      </div>
-    </div>
-
-{{ partial "footer.html" . }}
-
-  </body>
-</html>
+[^1]: This assumes that you have a working docker installation on the development machine.

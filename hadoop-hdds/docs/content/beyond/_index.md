@@ -1,3 +1,10 @@
+---
+title: "Beyond Basics"
+date: "2017-10-10"
+menu: main
+weight: 7
+
+---
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -14,24 +21,10 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-{{ partial "header.html" . }}
 
-  <body>
-
-{{ partial "navbar.html" . }}
-
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-10 col-sm-offset-2 col-md-10 col-md-offset-2 main">
-                    {{ .Content }}
-
-
-        </div>
-      </div>
-    </div>
-
-{{ partial "footer.html" . }}
-
-  </body>
-</html>
+{{<jumbotron title="Beyond Basics">}}
+  Beyond Basics pages go into custom configurations of Ozone, including how
+  to run Ozone concurrently with an existing HDFS cluster. These pages also
+  take deep into how to run profilers and leverage tracing support built into
+  Ozone.
+{{</jumbotron>}}
