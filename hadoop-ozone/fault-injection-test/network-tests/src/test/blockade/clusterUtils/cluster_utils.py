@@ -75,7 +75,7 @@ class ClusterUtils(object):
                 freon_client='om'):
     # run freon
     cmd = "docker-compose -f %s " \
-          "exec %s /opt/hadoop/bin/ozone " \
+          "exec -T %s /opt/hadoop/bin/ozone " \
           "freon rk " \
           "--numOfVolumes %s " \
           "--numOfBuckets %s " \
@@ -116,7 +116,7 @@ class ClusterUtils(object):
   @classmethod
   def get_ozone_confkey_value(cls, docker_compose_file, key_name):
     cmd = "docker-compose -f %s " \
-          "exec om /opt/hadoop/bin/ozone " \
+          "exec -T om /opt/hadoop/bin/ozone " \
           "getconf -confKey %s" \
           % (docker_compose_file, key_name)
     exit_code, output = cls.run_cmd(cmd)
@@ -131,7 +131,7 @@ class ClusterUtils(object):
     """
     ozone_metadata_dir = cls.get_ozone_confkey_value(docker_compose_file,
                                                      "ozone.metadata.dirs")
-    cmd = "docker-compose -f %s exec scm cat %s/scm/current/VERSION" % \
+    cmd = "docker-compose -f %s exec -T scm cat %s/scm/current/VERSION" % \
           (docker_compose_file, ozone_metadata_dir)
     exit_code, output = cls.run_cmd(cmd)
     assert exit_code == 0, "get scm UUID failed with output=[%s]" % output
@@ -158,7 +158,7 @@ class ClusterUtils(object):
     scm_uuid = cls.find_scm_uuid(docker_compose_file)
     container_parent_path = "%s/hdds/%s/current/containerDir0" % \
                             (datanode_dir, scm_uuid)
-    cmd = "docker-compose -f %s exec --index=%s datanode find %s -type f " \
+    cmd = "docker-compose -T -f %s exec --index=%s datanode find %s -type f " \
           "-name '*.container'" \
           % (docker_compose_file, datanode_index, container_parent_path)
     exit_code, output = cls.run_cmd(cmd)
@@ -166,7 +166,7 @@ class ClusterUtils(object):
     if exit_code == 0 and output:
       container_list = map(str.strip, output.split("\n"))
       for container_path in container_list:
-        cmd = "docker-compose -f %s exec --index=%s datanode cat %s" \
+        cmd = "docker-compose -f %s exec -T --index=%s datanode cat %s" \
               % (docker_compose_file, datanode_index, container_path)
         exit_code, output = cls.run_cmd(cmd)
         assert exit_code == 0, \
@@ -205,7 +205,7 @@ class ClusterUtils(object):
   @classmethod
   def create_volume(cls, docker_compose_file, volume_name):
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh volume create /%s --user root" % \
               (docker_compose_file, volume_name)
     logger.info("Creating Volume %s", volume_name)
@@ -216,7 +216,7 @@ class ClusterUtils(object):
   @classmethod
   def delete_volume(cls, docker_compose_file, volume_name):
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh volume delete /%s" % (docker_compose_file, volume_name)
     logger.info("Deleting Volume %s", volume_name)
     exit_code, output = cls.run_cmd(command)
@@ -225,7 +225,7 @@ class ClusterUtils(object):
   @classmethod
   def create_bucket(cls, docker_compose_file, bucket_name, volume_name):
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh bucket create /%s/%s" % (docker_compose_file,
                                            volume_name, bucket_name)
     logger.info("Creating Bucket %s in volume %s",
@@ -237,7 +237,7 @@ class ClusterUtils(object):
   @classmethod
   def delete_bucket(cls, docker_compose_file, bucket_name, volume_name):
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh bucket delete /%s/%s" % (docker_compose_file,
                                            volume_name, bucket_name)
     logger.info("Running delete bucket of %s/%s", volume_name, bucket_name)
@@ -248,13 +248,13 @@ class ClusterUtils(object):
   def put_key(cls, docker_compose_file, bucket_name, volume_name,
               filepath, key_name=None, replication_factor=None):
     command = "docker-compose -f %s " \
-              "exec ozone_client ls  %s" % (docker_compose_file, filepath)
+              "exec -T ozone_client ls  %s" % (docker_compose_file, filepath)
     exit_code, output = cls.run_cmd(command)
     assert exit_code == 0, "%s does not exist" % filepath
     if key_name is None:
       key_name = os.path.basename(filepath)
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec ozone_client -T /opt/hadoop/bin/ozone " \
               "sh key put /%s/%s/%s %s" % (docker_compose_file,
                                            volume_name, bucket_name,
                                            key_name, filepath)
@@ -269,7 +269,7 @@ class ClusterUtils(object):
   def delete_key(cls, docker_compose_file, bucket_name, volume_name,
                  key_name):
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh key delete /%s/%s/%s" \
               % (docker_compose_file, volume_name, bucket_name, key_name)
     logger.info("Running delete key %s in %s/%s",
@@ -283,7 +283,7 @@ class ClusterUtils(object):
     if filepath is None:
       filepath = '.'
     command = "docker-compose -f %s " \
-              "exec ozone_client /opt/hadoop/bin/ozone " \
+              "exec -T ozone_client /opt/hadoop/bin/ozone " \
               "sh key get /%s/%s/%s %s" % (docker_compose_file,
                                            volume_name, bucket_name,
                                            key_name, filepath)
@@ -299,7 +299,7 @@ class ClusterUtils(object):
     Before running any 'putKey' operation, this function is called to store
     the original checksum of the file. The file is then uploaded as a key.
     """
-    command = "docker-compose -f %s " \
+    command = "docker-compose -T -f %s " \
               "exec %s md5sum  %s" % \
               (docker_compose_file, client, filepath)
     exit_code, output = cls.run_cmd(command)
@@ -318,7 +318,7 @@ class ClusterUtils(object):
   @classmethod
   def get_pipelines(cls, docker_compose_file):
     command = "docker-compose -f %s " \
-                         + "exec ozone_client /opt/hadoop/bin/ozone scmcli " \
+                         + "exec -T ozone_client /opt/hadoop/bin/ozone scmcli " \
                          + "listPipelines" % (docker_compose_file)
     exit_code, output = cls.run_cmd(command)
     assert exit_code == 0, "list pipeline command failed"
