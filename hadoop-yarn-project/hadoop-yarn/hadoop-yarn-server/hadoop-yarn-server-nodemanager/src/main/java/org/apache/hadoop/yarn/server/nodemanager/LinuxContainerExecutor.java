@@ -46,6 +46,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DelegatingLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.LinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerCommandExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker.DockerRmCommand;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.ContainerLocalizer;
@@ -94,14 +95,14 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * appropriate {@link LinuxContainerRuntime} instance. This class uses a
  * {@link DelegatingLinuxContainerRuntime} instance, which will delegate calls
  * to either a {@link DefaultLinuxContainerRuntime} instance or a
- * {@link DockerLinuxContainerRuntime} instance, depending on the job's
+ * {@link OCIContainerRuntime} instance, depending on the job's
  * configuration.</p>
  *
  * @see LinuxContainerRuntime
  * @see DelegatingLinuxContainerRuntime
  * @see DefaultLinuxContainerRuntime
  * @see DockerLinuxContainerRuntime
- * @see DockerLinuxContainerRuntime#isDockerContainerRequested
+ * @see OCIContainerRuntime#isOCICompliantContainerRequested
  */
 public class LinuxContainerExecutor extends ContainerExecutor {
 

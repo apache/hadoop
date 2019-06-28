@@ -36,7 +36,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileg
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.CGroupsHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandler;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.ResourceHandlerException;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -153,7 +153,7 @@ public class DeviceResourceHandlerImpl implements ResourceHandler {
     cGroupsHandler.createCGroup(CGroupsHandler.CGroupController.DEVICES,
         containerIdStr);
     // non-Docker, use cgroups to do isolation
-    if (!DockerLinuxContainerRuntime.isDockerContainerRequested(
+    if (!OCIContainerRuntime.isOCICompliantContainerRequested(
         nmContext.getConf(),
         container.getLaunchContext().getEnvironment())) {
       tryIsolateDevices(allocation, containerIdStr);
