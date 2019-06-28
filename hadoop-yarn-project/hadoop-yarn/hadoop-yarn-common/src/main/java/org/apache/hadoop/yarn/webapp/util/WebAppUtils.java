@@ -102,8 +102,16 @@ public class WebAppUtils {
       return func.apply(rm1Address, arg);
     } catch (Exception e) {
       if (HAUtil.isHAEnabled(conf)) {
-        String rm2Address = getRMWebAppURLWithScheme(conf, 1);
-        return func.apply(rm2Address, arg);
+        int rms = HAUtil.getRMHAIds(conf).size();
+        for (int i=1; i<rms; i++) {
+          try {
+            rm1Address = getRMWebAppURLWithScheme(conf, i);
+            return func.apply(rm1Address, arg);
+          } catch (Exception e1) {
+            // ignore and try next one when RM is down
+            e = e1;
+          }
+        }
       }
       throw e;
     }
