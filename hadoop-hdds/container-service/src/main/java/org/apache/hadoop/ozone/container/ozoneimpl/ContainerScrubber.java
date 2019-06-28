@@ -18,13 +18,14 @@
 
 package org.apache.hadoop.ozone.container.ozoneimpl;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.net.ntp.TimeStamp;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.container.common.interfaces.Container;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
@@ -56,11 +57,7 @@ public class ContainerScrubber implements Runnable {
     LOG.info("Background ContainerScrubber starting up");
     while (true) {
 
-      try {
-        scrub();
-      } catch (StorageContainerException e) {
-        LOG.error("Scrubber encountered StorageContainerException.");
-      }
+      scrub();
 
       if (this.halt) {
         break; // stop and exit if requested
@@ -129,27 +126,33 @@ public class ContainerScrubber implements Runnable {
     }
   }
 
-  private void scrub() throws StorageContainerException {
+  private void scrub() {
     Iterator<Container> containerIt = controller.getContainers();
     long count = 0;
 
     while (containerIt.hasNext() && !halt) {
       TimeStamp startTime = new TimeStamp(System.currentTimeMillis());
       Container container = containerIt.next();
-
       try {
-        container.check();
-      } catch (StorageContainerException e) {
-        LOG.error("Error unexpected exception {} for Container {}", e,
-            container.getContainerData().getContainerID());
-        container.markContainerUnhealthy();
-        // XXX Action required here
+        scrub(container);
+      } catch (IOException e) {
+        LOG.info("Unexpected error while scrubbing container {}",
+                container.getContainerData().getContainerID());
       }
+
       count++;
 
       throttleScrubber(startTime);
     }
 
     LOG.debug("iterator ran integrity checks on {} containers", count);
+  }
+
+  @VisibleForTesting
+  public void scrub(Container container) throws IOException {
+    if (!container.check()) {
+      controller.markContainerUnhealthy(
+              container.getContainerData().getContainerID());
+    }
   }
 }

@@ -154,6 +154,8 @@ public interface Container<CONTAINERDATA extends ContainerData> extends RwLock {
 
   /**
    * check and report the structural integrity of the container.
+   * @return true if the integrity checks pass
+   *         false otherwise
    */
-  void check() throws StorageContainerException;
+  boolean check();
 }

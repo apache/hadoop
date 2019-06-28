@@ -72,37 +72,22 @@ public class KeyValueContainerCheck {
    * These checks do not look inside the metadata files.
    * Applicable for OPEN containers.
    *
-   * @return true : corruption detected, false : no corruption.
+   * @return true : integrity checks pass, false : otherwise.
    */
   public boolean fastCheck() {
-    boolean corruption = false;
+    LOG.info("Running basic checks for container {};", containerID);
+    boolean valid = false;
     try {
-      basicChecks();
+      loadContainerData();
+      checkLayout();
+      checkContainerFile();
+      valid = true;
 
     } catch (IOException e) {
       handleCorruption(e);
-      corruption = true;
     }
 
-    return corruption;
-  }
-
-  /**
-   * Checks :
-   * 1. check directory layout
-   * 2. check container file
-   *
-   * @return void
-   */
-
-  private void basicChecks() throws IOException {
-
-    LOG.trace("Running basic checks for container {};", containerID);
-
-    loadContainerData();
-
-    checkLayout();
-    checkContainerFile();
+    return valid;
   }
 
   /**
@@ -114,21 +99,22 @@ public class KeyValueContainerCheck {
    * <p>
    * fullCheck is a superset of fastCheck
    *
-   * @return true : corruption detected, false : no corruption.
+   * @return true : integrity checks pass, false : otherwise.
    */
   public boolean fullCheck() {
-    boolean corruption = false;
+    boolean valid = false;
 
     try {
-      basicChecks();
-      checkBlockDB();
-
+      valid = fastCheck();
+      if (valid) {
+        checkBlockDB();
+      }
     } catch (IOException e) {
       handleCorruption(e);
-      corruption = true;
+      valid = false;
     }
 
-    return corruption;
+    return valid;
   }
 
   /**
