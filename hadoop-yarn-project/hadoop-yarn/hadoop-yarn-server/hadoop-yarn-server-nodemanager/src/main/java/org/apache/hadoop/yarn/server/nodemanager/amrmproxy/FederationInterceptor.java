@@ -1446,6 +1446,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
+    if (otherResponse.getApplicationPriority() != null) {
+      homeResponse.setApplicationPriority(
+          otherResponse.getApplicationPriority());
+    }
+
     homeResponse.setNumClusterNodes(
         homeResponse.getNumClusterNodes() + otherResponse.getNumClusterNodes());
 
