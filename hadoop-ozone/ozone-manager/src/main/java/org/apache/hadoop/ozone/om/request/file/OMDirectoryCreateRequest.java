@@ -66,7 +66,7 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
-
+import static  org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 /**
  * Handle create directory request.
  */
@@ -136,8 +136,8 @@ public class OMDirectoryCreateRequest extends OMClientRequest
       }
 
       // acquire lock
-      omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-      acquiredLock = true;
+      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
 
       // TODO: Not checking volume exist here, once we have full cache we can
       //  add volume exist check also.
@@ -179,7 +179,8 @@ public class OMDirectoryCreateRequest extends OMClientRequest
       exception = ex;
     } finally {
       if (acquiredLock) {
-        omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
       }
     }
 
