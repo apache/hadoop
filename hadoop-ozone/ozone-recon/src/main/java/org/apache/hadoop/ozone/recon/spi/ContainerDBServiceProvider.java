@@ -86,11 +86,11 @@ public interface ContainerDBServiceProvider {
    * the containers without any limit.
    *
    * @param limit the no. of containers to fetch.
-   * @param prevKey containerID after which the results are returned.
+   * @param prevContainer containerID after which the results are returned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers(int limit, long prevKey)
+  Map<Long, ContainerMetadata> getContainers(int limit, long prevContainer)
       throws IOException;
 
   /**

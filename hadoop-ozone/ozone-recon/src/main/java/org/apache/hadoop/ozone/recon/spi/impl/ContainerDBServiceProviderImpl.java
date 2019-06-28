@@ -214,28 +214,32 @@ public class ContainerDBServiceProviderImpl
    * Return all the containers if limit < 0.
    *
    * @param limit No of containers to get.
-   * @param prevKey containerID after which the list of containers are scanned.
+   * @param prevContainer containerID after which the
+   *                      list of containers are scanned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
   @Override
-  public Map<Long, ContainerMetadata> getContainers(int limit, long prevKey)
+  public Map<Long, ContainerMetadata> getContainers(int limit,
+                                                    long prevContainer)
       throws IOException {
     Map<Long, ContainerMetadata> containers = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
-    boolean skipPrevKey = false;
     ContainerKeyPrefix seekKey;
-    if (prevKey > 0L) {
-      skipPrevKey = true;
-      seekKey = new ContainerKeyPrefix(prevKey);
+    if (prevContainer > 0L) {
+      seekKey = new ContainerKeyPrefix(prevContainer);
       KeyValue<ContainerKeyPrefix,
           Integer> seekKeyValue = containerIterator.seek(seekKey);
       // Check if RocksDB was able to correctly seek to the given
-      // prevKey containerId. If not, then return empty result
+      // prevContainer containerId. If not, then return empty result
       if (seekKeyValue != null &&
-          seekKeyValue.getKey().getContainerId() != prevKey) {
+          seekKeyValue.getKey().getContainerId() != prevContainer) {
         return containers;
+      } else {
+        // seek to the prevContainer+1 containerID to start scan
+        seekKey = new ContainerKeyPrefix(prevContainer + 1);
+        containerIterator.seek(seekKey);
       }
     }
     while (containerIterator.hasNext()) {
@@ -243,11 +247,6 @@ public class ContainerDBServiceProviderImpl
       ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
       Long containerID = containerKeyPrefix.getContainerId();
       Integer numberOfKeys = keyValue.getValue();
-
-      // skip the start key if start key is present
-      if (skipPrevKey && containerID == prevKey) {
-        continue;
-      }
 
       // break the loop if limit has been reached
       // and one more new entity needs to be added to the containers map
