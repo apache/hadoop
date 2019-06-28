@@ -96,15 +96,17 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
               // length is zero, we don't need to do anything just return
               // response to client. Do it here, instead of submitting it
               // to ratis.
-              omClientResponse = omClientRequest.checksBeforeSubmit();
-              if (omClientResponse == null) {
-                if (omClientRequest != null) {
+              if (omClientRequest != null) {
+                omClientResponse = omClientRequest.checksBeforeSubmit();
+                if (omClientResponse == null) {
+                  // There is no special handling for the request. Do
+                  // preExecute and submit request to ratis.
                   request = omClientRequest.preExecute(ozoneManager);
+                } else {
+                  return omClientResponse.getOMResponse();
                 }
-                return submitRequestToRatis(request);
-              } else {
-                return omClientResponse.getOMResponse();
               }
+              return submitRequestToRatis(request);
             } catch(IOException ex) {
               // As some of the preExecute returns error. So handle here.
               return createErrorResponse(request, ex);
