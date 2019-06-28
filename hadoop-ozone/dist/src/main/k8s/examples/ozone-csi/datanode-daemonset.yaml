@@ -44,12 +44,16 @@ spec:
         ports:
         - containerPort: 9870
           name: rpc
-        envFrom:
-        - configMapRef:
-            name: config
+        livenessProbe:
+          tcpSocket:
+            port: 9858
+          initialDelaySeconds: 30
         volumeMounts:
         - name: data
           mountPath: /data
+        envFrom:
+        - configMapRef:
+            name: config
       initContainers: []
       volumes:
       - name: data
