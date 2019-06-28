@@ -16,7 +16,10 @@
 
 mkdir -p target
 rm target/rat-aggregated.txt
-mvn -fn org.apache.rat:apache-rat-plugin:0.13:check -am -pl :hadoop-ozone-dist -Phdds
+cd hadoop-hdds
+mvn -B -fn org.apache.rat:apache-rat-plugin:0.13:check
+cd ../hadoop-ozone
+mvn -B -fn org.apache.rat:apache-rat-plugin:0.13:check
 grep -r --include=rat.txt "!????" | tee ./target/rat-aggregated.txt
 if [ "$(cat target/rat-aggregated.txt)" ]; then
    exit -1
