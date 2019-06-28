@@ -66,6 +66,7 @@ import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.proto.RaftProtos.RoleInfoProto;
 import org.apache.ratis.proto.RaftProtos.ReplicationLevel;
 import org.apache.ratis.server.protocol.TermIndex;
+import org.apache.ratis.server.impl.RaftServerProxy;
 import org.apache.ratis.util.SizeInBytes;
 import org.apache.ratis.util.TimeDuration;
 import org.slf4j.Logger;
@@ -101,7 +102,7 @@ public final class XceiverServerRatis extends XceiverServer {
     return CALL_ID_COUNTER.getAndIncrement() & Long.MAX_VALUE;
   }
 
-  private final int port;
+  private int port;
   private final RaftServer server;
   private ThreadPoolExecutor chunkExecutor;
   private final List<ExecutorService> executors;
@@ -112,6 +113,7 @@ public final class XceiverServerRatis extends XceiverServer {
   private long nodeFailureTimeoutMs;
   private final long cacheEntryExpiryInteval;
   private boolean isStarted = false;
+  private DatanodeDetails datanodeDetails;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
@@ -119,6 +121,7 @@ public final class XceiverServerRatis extends XceiverServer {
       throws IOException {
     super(conf, caClient);
     Objects.requireNonNull(dd, "id == null");
+    datanodeDetails = dd;
     this.port = port;
     RaftProperties serverProperties = newRaftProperties(conf);
     final int numWriteChunkThreads = conf.getInt(
@@ -403,21 +406,11 @@ public final class XceiverServerRatis extends XceiverServer {
     if (ozoneConf.getBoolean(OzoneConfigKeys
             .DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket()) {
-        socket.setReuseAddress(true);
-        SocketAddress address = new InetSocketAddress(0);
-        socket.bind(address);
-        localPort = socket.getLocalPort();
-        LOG.info("Found a free port for the server : {}", localPort);
-      } catch (IOException e) {
-        LOG.error("Unable find a random free port for the server, "
-            + "fallback to use default port {}", localPort, e);
-      }
+      localPort = 0;
     }
     GrpcTlsConfig tlsConfig = RatisHelper.createTlsServerConfig(
           new SecurityConfig(ozoneConf));
-    datanodeDetails.setPort(
-        DatanodeDetails.newPort(DatanodeDetails.Port.Name.RATIS, localPort));
+
     return new XceiverServerRatis(datanodeDetails, localPort,
         dispatcher, ozoneConf, context, tlsConfig, caClient);
   }
@@ -429,6 +422,22 @@ public final class XceiverServerRatis extends XceiverServer {
           server.getId(), getIPCPort());
       chunkExecutor.prestartAllCoreThreads();
       server.start();
+
+      int realPort =
+          ((RaftServerProxy) server).getServerRpc().getInetSocketAddress()
+              .getPort();
+
+      if (port == 0) {
+        LOG.info("{} {} is started using port {}", getClass().getSimpleName(),
+            server.getId(), realPort);
+        port = realPort;
+      }
+
+      //register the real port to the datanode details.
+      datanodeDetails.setPort(DatanodeDetails
+          .newPort(DatanodeDetails.Port.Name.RATIS,
+              realPort));
+
       isStarted = true;
     }
   }
