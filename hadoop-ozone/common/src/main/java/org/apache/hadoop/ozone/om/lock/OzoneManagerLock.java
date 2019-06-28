@@ -91,21 +91,21 @@ public class OzoneManagerLock {
   /**
    * Acquire lock on resource.
    *
-   * For S3_Bucket, VOLUME, BUCKET type resource, same thread acquiring lock
-   * again is allowed.
+   * For S3_BUCKET_LOCK, VOLUME_LOCK, BUCKET_LOCK type resource, same
+   * thread acquiring lock again is allowed.
    *
-   * For USER, PREFIX, S3_SECRET type resource, same thread acquiring lock
-   * again is not allowed.
+   * For USER_LOCK, PREFIX_LOCK, S3_SECRET_LOCK type resource, same thread
+   * acquiring lock again is not allowed.
    *
-   * Special Note for UserLock: Single thread can acquire single user lock/
+   * Special Note for USER_LOCK: Single thread can acquire single user lock/
    * multi user lock. But not both at the same time.
    * @param resource - Type of the resource.
    * @param resources - Resource names on which user want to acquire lock.
-   * For Resource type bucket, first param should be volume, second param
+   * For Resource type BUCKET_LOCK, first param should be volume, second param
    * should be bucket name. For remaining all resource only one param should
    * be passed.
    */
-  public void acquireLock(Resource resource, String... resources) {
+  public boolean acquireLock(Resource resource, String... resources) {
     String resourceName = generateResourceName(resource, resources);
     if (!resource.canLock(lockSet.get())) {
       String errorMessage = getErrorMessage(resource);
@@ -116,6 +116,7 @@ public class OzoneManagerLock {
       LOG.debug("Acquired {} lock on resource {}", resource.name,
           resourceName);
       lockSet.set(resource.setLock(lockSet.get()));
+      return true;
     }
   }
 
@@ -125,10 +126,10 @@ public class OzoneManagerLock {
    * @param resources
    */
   private String generateResourceName(Resource resource, String... resources) {
-    if (resources.length == 1 && resource != Resource.BUCKET) {
+    if (resources.length == 1 && resource != Resource.BUCKET_LOCK) {
       return OzoneManagerLockUtil.generateResourceLockName(resource,
           resources[0]);
-    } else if (resources.length == 2 && resource == Resource.BUCKET) {
+    } else if (resources.length == 2 && resource == Resource.BUCKET_LOCK) {
       return OzoneManagerLockUtil.generateBucketLockName(resources[0],
           resources[1]);
     } else {
@@ -160,8 +161,8 @@ public class OzoneManagerLock {
    * @param firstUser
    * @param secondUser
    */
-  public void acquireMultiUserLock(String firstUser, String secondUser) {
-    Resource resource = Resource.USER;
+  public boolean acquireMultiUserLock(String firstUser, String secondUser) {
+    Resource resource = Resource.USER_LOCK;
     firstUser = generateResourceName(resource, firstUser);
     secondUser = generateResourceName(resource, secondUser);
 
@@ -211,6 +212,7 @@ public class OzoneManagerLock {
       LOG.debug("Acquired {} lock on resource {} and {}", resource.name,
           firstUser, secondUser);
       lockSet.set(resource.setLock(lockSet.get()));
+      return true;
     }
   }
 
@@ -222,7 +224,7 @@ public class OzoneManagerLock {
    * @param secondUser
    */
   public void releaseMultiUserLock(String firstUser, String secondUser) {
-    Resource resource = Resource.USER;
+    Resource resource = Resource.USER_LOCK;
     firstUser = generateResourceName(resource, firstUser);
     secondUser = generateResourceName(resource, secondUser);
 
@@ -252,7 +254,7 @@ public class OzoneManagerLock {
    * Release lock on resource.
    * @param resource - Type of the resource.
    * @param resources - Resource names on which user want to acquire lock.
-   * For Resource type bucket, first param should be volume, second param
+   * For Resource type BUCKET_LOCK, first param should be volume, second param
    * should be bucket name. For remaining all resource only one param should
    * be passed.
    */
@@ -274,21 +276,21 @@ public class OzoneManagerLock {
    */
   public enum Resource {
     // For S3 Bucket need to allow only for S3, that should be means only 1.
-    S3_BUCKET((byte) 0, "S3_BUCKET"), // = 1
+    S3_BUCKET_LOCK((byte) 0, "S3_BUCKET_LOCK"), // = 1
 
     // For volume need to allow both s3 bucket and volume. 01 + 10 = 11 (3)
-    VOLUME((byte) 1, "VOLUME"), // = 2
+    VOLUME_LOCK((byte) 1, "VOLUME_LOCK"), // = 2
 
     // For bucket we need to allow both s3 bucket, volume and bucket. Which
     // is equal to 100 + 010 + 001 = 111 = 4 + 2 + 1 = 7
-    BUCKET((byte) 2, "BUCKET"), // = 4
+    BUCKET_LOCK((byte) 2, "BUCKET_LOCK"), // = 4
 
     // For user we need to allow s3 bucket, volume, bucket and user lock.
     // Which is 8  4 + 2 + 1 = 15
-    USER((byte) 3, "USER"), // 15
+    USER_LOCK((byte) 3, "USER_LOCK"), // 15
 
-    S3_SECRET((byte) 4, "S3_SECRET"), // 31
-    PREFIX((byte) 5, "PREFIX"); //63
+    S3_SECRET_LOCK((byte) 4, "S3_SECRET_LOCK"), // 31
+    PREFIX_LOCK((byte) 5, "PREFIX_LOCK"); //63
 
     // level of the resource
     private byte lockLevel;
@@ -312,13 +314,13 @@ public class OzoneManagerLock {
 
     boolean canLock(short lockSetVal) {
 
-      // For USER, S3_SECRET and  PREFIX we shall not allow re-acquire locks at
-      // from single thread. 2nd condition is we have acquired one of these
-      // locks, but after that trying to acquire a lock with less than equal of
-      // lockLevel, we should disallow.
-      if (((USER.setMask & lockSetVal) == USER.setMask ||
-          (S3_SECRET.setMask & lockSetVal) == S3_SECRET.setMask ||
-          (PREFIX.setMask & lockSetVal) == PREFIX.setMask)
+      // For USER_LOCK, S3_SECRET_LOCK and  PREFIX_LOCK we shall not allow
+      // re-acquire locks from single thread. 2nd condition is we have
+      // acquired one of these locks, but after that trying to acquire a lock
+      // with less than equal of lockLevel, we should disallow.
+      if (((USER_LOCK.setMask & lockSetVal) == USER_LOCK.setMask ||
+          (S3_SECRET_LOCK.setMask & lockSetVal) == S3_SECRET_LOCK.setMask ||
+          (PREFIX_LOCK.setMask & lockSetVal) == PREFIX_LOCK.setMask)
           && setMask <= lockSetVal) {
         return false;
       }

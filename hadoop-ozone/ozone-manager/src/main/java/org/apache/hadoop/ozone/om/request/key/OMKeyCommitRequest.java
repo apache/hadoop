@@ -55,10 +55,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
-
-
-
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
  * Handles CommitKey request.
@@ -140,7 +138,8 @@ public class OMKeyCommitRequest extends OMClientRequest
     String dbOpenKey = omMetadataManager.getOpenKey(volumeName, bucketName,
         keyName, commitKeyRequest.getClientID());
 
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
 
     IOException exception = null;
     OmKeyInfo omKeyInfo = null;
@@ -170,7 +169,8 @@ public class OMKeyCommitRequest extends OMClientRequest
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     // Performing audit logging outside of the lock.

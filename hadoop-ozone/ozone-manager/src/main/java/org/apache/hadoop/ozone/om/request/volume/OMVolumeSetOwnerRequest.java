@@ -53,6 +53,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+
 /**
  * Handle set owner request for volume.
  */
@@ -123,11 +125,9 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
     OzoneManagerProtocolProtos.VolumeList newOwnerVolumeList = null;
     OmVolumeArgs omVolumeArgs = null;
     IOException exception = null;
+    boolean acquiredUserLocks = false;
 
-    omMetadataManager.getLock().acquireUserLock(newOwner);
-    omMetadataManager.getLock().acquireVolumeLock(volume);
-
-    boolean needToreleaseOldOwnerLock = false;
+    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -140,24 +140,14 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
 
       oldOwner = omVolumeArgs.getOwnerName();
 
+      acquiredUserLocks =
+          omMetadataManager.getLock().acquireMultiUserLock(newOwner, oldOwner);
 
-      // Release and reacquire lock for now it will not be a problem, as
-      // applyTransaction serializes the operation's.
-      // TODO: Revisit this logic once HDDS-1672 checks in.
-
-      // releasing volume lock, as to acquire user lock we need to release
-      // volume lock.
-      omMetadataManager.getLock().releaseVolumeLock(volume);
-      omMetadataManager.getLock().acquireUserLock(oldOwner);
-      omMetadataManager.getLock().acquireVolumeLock(volume);
-
-      needToreleaseOldOwnerLock = true;
       oldOwnerVolumeList =
           omMetadataManager.getUserTable().get(oldOwner);
 
       oldOwnerVolumeList = delVolumeFromOwnerList(
           oldOwnerVolumeList, volume, oldOwner);
-
 
       newOwnerVolumeList = omMetadataManager.getUserTable().get(newOwner);
       newOwnerVolumeList = addVolumeToOwnerList(
@@ -182,11 +172,10 @@ public class OMVolumeSetOwnerRequest extends OMClientRequest
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volume);
-      omMetadataManager.getLock().releaseUserLock(newOwner);
-      if (needToreleaseOldOwnerLock) {
-        omMetadataManager.getLock().releaseUserLock(oldOwner);
+      if (acquiredUserLocks) {
+        omMetadataManager.getLock().releaseMultiUserLock(newOwner, oldOwner);
       }
+      omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     }
 
     // Performing audit logging outside of the lock.
