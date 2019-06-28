@@ -118,6 +118,7 @@ import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
@@ -446,9 +447,8 @@ public class KeyManagerImpl implements KeyManager {
         args.getVolumeName(), args.getBucketName(), args.getKeyName());
 
     FileEncryptionInfo encInfo;
-
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
       OmBucketInfo bucketInfo = getBucketInfo(volumeName, bucketName);
       encInfo = getFileEncryptionInfo(bucketInfo);
       keyInfo = prepareKeyInfo(args, dbKeyName, size, locations, encInfo);
@@ -459,7 +459,8 @@ public class KeyManagerImpl implements KeyManager {
           volumeName, bucketName, keyName, ex);
       throw new OMException(ex.getMessage(), ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
     if (keyInfo == null) {
       // the key does not exist, create a new object, the new blocks are the
@@ -558,7 +559,7 @@ public class KeyManagerImpl implements KeyManager {
     // check?
     validateBucket(volumeName, bucketName);
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     String keyName = omKeyArgs.getKeyName();
 
     // TODO: here if on OM machines clocks are skewed and there is a chance
@@ -577,7 +578,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -628,7 +630,8 @@ public class KeyManagerImpl implements KeyManager {
         .getOpenKey(volumeName, bucketName, keyName, clientID);
     Preconditions.checkNotNull(locationInfoList);
     try {
-      metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+      metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+          bucketName);
       validateBucket(volumeName, bucketName);
       OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
       if (keyInfo == null) {
@@ -654,7 +657,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.KEY_ALLOCATION_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -664,7 +668,7 @@ public class KeyManagerImpl implements KeyManager {
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       String keyBytes = metadataManager.getOzoneKey(
           volumeName, bucketName, keyName);
@@ -720,7 +724,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           KEY_NOT_FOUND);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -738,7 +743,7 @@ public class KeyManagerImpl implements KeyManager {
           ResultCodes.INVALID_KEY_NAME);
     }
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       // fromKeyName should exist
       String fromKey = metadataManager.getOzoneKey(
@@ -791,7 +796,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.KEY_RENAME_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -801,7 +807,7 @@ public class KeyManagerImpl implements KeyManager {
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       String objectKey = metadataManager.getOzoneKey(
           volumeName, bucketName, keyName);
@@ -829,7 +835,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(), ex,
           ResultCodes.KEY_DELETION_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -902,7 +909,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     validateS3Bucket(volumeName, bucketName);
     try {
 
@@ -961,7 +968,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.INITIATE_MULTIPART_UPLOAD_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -975,7 +983,7 @@ public class KeyManagerImpl implements KeyManager {
     String uploadID = omKeyArgs.getMultipartUploadID();
     int partNumber = omKeyArgs.getMultipartUploadPartNumber();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     validateS3Bucket(volumeName, bucketName);
     String partName;
     try {
@@ -1047,7 +1055,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(),
           ResultCodes.MULTIPART_UPLOAD_PARTFILE_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     return new OmMultipartCommitUploadPartInfo(partName);
@@ -1055,6 +1064,7 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
+  @SuppressWarnings("methodlength")
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
       OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
       throws IOException {
@@ -1064,7 +1074,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = omKeyArgs.getBucketName();
     String keyName = omKeyArgs.getKeyName();
     String uploadID = omKeyArgs.getMultipartUploadID();
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     validateS3Bucket(volumeName, bucketName);
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
@@ -1204,7 +1214,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(), ResultCodes
           .COMPLETE_MULTIPART_UPLOAD_ERROR);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -1218,7 +1229,7 @@ public class KeyManagerImpl implements KeyManager {
     String uploadID = omKeyArgs.getMultipartUploadID();
     Preconditions.checkNotNull(uploadID, "uploadID cannot be null");
     validateS3Bucket(volumeName, bucketName);
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
 
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
@@ -1268,7 +1279,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(), ResultCodes
           .ABORT_MULTIPART_UPLOAD_FAILED);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
   }
@@ -1285,7 +1297,7 @@ public class KeyManagerImpl implements KeyManager {
     boolean isTruncated = false;
     int nextPartNumberMarker = 0;
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       String multipartKey = metadataManager.getMultipartKey(volumeName,
           bucketName, keyName, uploadID);
@@ -1346,7 +1358,8 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException(ex.getMessage(), ResultCodes
               .LIST_MULTIPART_UPLOAD_PARTS_FAILED);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -1365,7 +1378,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucket = obj.getBucketName();
     String keyName = obj.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volume, bucket);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
@@ -1425,7 +1438,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseBucketLock(volume, bucket);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
     return true;
   }
@@ -1445,7 +1458,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucket = obj.getBucketName();
     String keyName = obj.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volume, bucket);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
@@ -1513,7 +1526,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseBucketLock(volume, bucket);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
     return true;
   }
@@ -1533,7 +1546,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucket = obj.getBucketName();
     String keyName = obj.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volume, bucket);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
@@ -1576,7 +1589,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseBucketLock(volume, bucket);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
     return true;
   }
@@ -1594,7 +1607,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucket = obj.getBucketName();
     String keyName = obj.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volume, bucket);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
@@ -1619,7 +1632,7 @@ public class KeyManagerImpl implements KeyManager {
       }
       throw ex;
     } finally {
-      metadataManager.getLock().releaseBucketLock(volume, bucket);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
   }
 
@@ -1664,7 +1677,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       // Check if this is the root of the filesystem.
       if (keyName.length() == 0) {
@@ -1702,7 +1715,8 @@ public class KeyManagerImpl implements KeyManager {
           volumeName + " bucket: " + bucketName + " key: " + keyName,
           ResultCodes.FILE_NOT_FOUND);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -1722,7 +1736,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
 
       // Check if this is the root of the filesystem.
@@ -1744,7 +1758,8 @@ public class KeyManagerImpl implements KeyManager {
           .getOzoneKey(volumeName, bucketName, dirDbKeyInfo.getKeyName());
       metadataManager.getKeyTable().put(dirDbKey, dirDbKeyInfo);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
   }
 
@@ -1796,7 +1811,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = args.getKeyName();
     OpenKeySession keySession;
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       OzoneFileStatus fileStatus;
       try {
@@ -1822,7 +1837,8 @@ public class KeyManagerImpl implements KeyManager {
       // filestatus. We can avoid some operations in openKey call.
       keySession = openKey(args);
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     return keySession;
@@ -1844,7 +1860,7 @@ public class KeyManagerImpl implements KeyManager {
     String bucketName = args.getBucketName();
     String keyName = args.getKeyName();
 
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       OzoneFileStatus fileStatus = getFileStatus(args);
       if (fileStatus.isFile()) {
@@ -1852,7 +1868,8 @@ public class KeyManagerImpl implements KeyManager {
       }
       //if key is not of type file or if key is not found we throw an exception
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     throw new OMException("Can not write to directory: " + keyName,
@@ -1878,7 +1895,7 @@ public class KeyManagerImpl implements KeyManager {
     String keyName = args.getKeyName();
 
     List<OzoneFileStatus> fileStatusList = new ArrayList<>();
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
     try {
       if (Strings.isNullOrEmpty(startKey)) {
         OzoneFileStatus fileStatus = getFileStatus(args);
@@ -1940,7 +1957,8 @@ public class KeyManagerImpl implements KeyManager {
         }
       }
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
     return fileStatusList;
   }

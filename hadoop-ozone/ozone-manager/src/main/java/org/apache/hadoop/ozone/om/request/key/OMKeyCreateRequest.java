@@ -65,6 +65,8 @@ import org.apache.hadoop.utils.UniqueId;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
+
 /**
  * Handles CreateKey request.
  */
@@ -205,7 +207,8 @@ public class OMKeyCreateRequest extends OMClientRequest
     FileEncryptionInfo encryptionInfo = null;
     long openVersion = 0L;
     IOException exception = null;
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
     try {
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       //TODO: We can optimize this get here, if getKmsProvider is null, then
@@ -221,7 +224,8 @@ public class OMKeyCreateRequest extends OMClientRequest
           volumeName, bucketName, keyName, ex);
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
 

@@ -52,6 +52,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+
 
 /**
  * Handles set Quota request for volume.
@@ -121,7 +123,7 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
     IOException exception = null;
     OmVolumeArgs omVolumeArgs = null;
 
-    omMetadataManager.getLock().acquireVolumeLock(volume);
+    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
@@ -141,7 +143,7 @@ public class OMVolumeSetQuotaRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volume);
+      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
     }
 
     // Performing audit logging outside of the lock.

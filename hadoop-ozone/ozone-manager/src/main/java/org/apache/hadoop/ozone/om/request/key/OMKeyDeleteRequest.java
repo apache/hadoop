@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .KEY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
  * Handles DeleteKey request.
@@ -111,7 +112,8 @@ public class OMKeyDeleteRequest extends OMClientRequest
     String objectKey = omMetadataManager.getOzoneKey(
         volumeName, bucketName, keyName);
 
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
     IOException exception = null;
     OmKeyInfo omKeyInfo = null;
     try {
@@ -140,7 +142,8 @@ public class OMKeyDeleteRequest extends OMClientRequest
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     // Performing audit logging outside of the lock.

@@ -50,7 +50,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
-
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOCK;
 /**
  * Handles volume delete request.
  */
@@ -104,37 +105,19 @@ public class OMVolumeDeleteRequest extends OMClientRequest
 
     OmVolumeArgs omVolumeArgs = null;
     String owner = null;
-
-    omMetadataManager.getLock().acquireVolumeLock(volume);
-    try {
-      owner = getVolumeInfo(omMetadataManager, volume).getOwnerName();
-    } catch (IOException ex) {
-      LOG.error("Volume deletion failed for volume:{}", volume, ex);
-      omMetrics.incNumVolumeDeleteFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.DELETE_VOLUME,
-          buildVolumeAuditMap(volume), ex, userInfo));
-      return new OMVolumeDeleteResponse(null, null, null,
-          createErrorOMResponse(omResponse, ex));
-    } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volume);
-    }
-
-    // Release and reacquire lock for now it will not be a problem for now, as
-    // applyTransaction serializes the operation's.
-    // TODO: Revisit this logic once HDDS-1672 checks in.
-
-    // We cannot acquire user lock holding volume lock, so released volume
-    // lock, and acquiring user and volume lock.
-
-    omMetadataManager.getLock().acquireUserLock(owner);
-    omMetadataManager.getLock().acquireVolumeLock(volume);
-
-    String dbUserKey = omMetadataManager.getUserKey(owner);
-    String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
-
+    boolean acquiredUserLock = false;
     IOException exception = null;
     OzoneManagerProtocolProtos.VolumeList newVolumeList = null;
+
+    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
     try {
+      owner = getVolumeInfo(omMetadataManager, volume).getOwnerName();
+      acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
+          owner);
+
+      String dbUserKey = omMetadataManager.getUserKey(owner);
+      String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
+
       if (!omMetadataManager.isVolumeEmpty(volume)) {
         LOG.debug("volume:{} is not empty", volume);
         throw new OMException(OMException.ResultCodes.VOLUME_NOT_EMPTY);
@@ -155,10 +138,11 @@ public class OMVolumeDeleteRequest extends OMClientRequest
 
     } catch (IOException ex) {
       exception = ex;
-
     } finally {
-      omMetadataManager.getLock().releaseVolumeLock(volume);
-      omMetadataManager.getLock().releaseUserLock(owner);
+      if (acquiredUserLock) {
+        omMetadataManager.getLock().releaseLock(USER_LOCK, owner);
+      }
+      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
     }
 
     // Performing audit logging outside of the lock.
