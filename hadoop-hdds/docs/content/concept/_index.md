@@ -1,3 +1,11 @@
+---
+title: Concepts
+date: "2017-10-10"
+menu: main
+weight: 6
+
+---
+
 <!---
   Licensed to the Apache Software Foundation (ASF) under one or more
   contributor license agreements.  See the NOTICE file distributed with
@@ -14,24 +22,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-{{ partial "header.html" . }}
 
-  <body>
+{{<jumbotron title="Ozone Architecture">}}
 
-{{ partial "navbar.html" . }}
+Ozone's architectural elements are explained in the following pages. The
+metadata layer, data layer, protocol bus, replication layer and Recon  are
+discussed in the following pages. These concepts are useful if you want to
+understand how ozone works in depth.
 
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-10 col-sm-offset-2 col-md-10 col-md-offset-2 main">
-                    {{ .Content }}
-
-
-        </div>
-      </div>
-    </div>
-
-{{ partial "footer.html" . }}
-
-  </body>
-</html>
+{{</jumbotron>}}

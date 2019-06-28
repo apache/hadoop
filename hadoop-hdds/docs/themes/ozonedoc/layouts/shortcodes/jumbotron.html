@@ -14,24 +14,12 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 -->
-{{ partial "header.html" . }}
 
-  <body>
-
-{{ partial "navbar.html" . }}
-
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-10 col-sm-offset-2 col-md-10 col-md-offset-2 main">
-                    {{ .Content }}
-
-
-        </div>
-      </div>
+<div class="jumbotron jumbotron-fluid">
+    <div class="container">
+        <h3 class="display-4">{{ .Get "title"}} </h3>
+        <p class="lead">
+            {{ .Inner }}
+        </p>
     </div>
-
-{{ partial "footer.html" . }}
-
-  </body>
-</html>
+</div>
