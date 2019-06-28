@@ -3185,4 +3185,12 @@ public class CapacityScheduler extends
   public void resetSchedulerMetrics() {
     CapacitySchedulerMetrics.destroy();
   }
+
+  public boolean isMultiNodePlacementEnabled() {
+    return multiNodePlacementEnabled;
+  }
+
+  public int getNumAsyncSchedulerThreads() {
+    return asyncSchedulerThreads == null ? 0 : asyncSchedulerThreads.size();
+  }
 }
