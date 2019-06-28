@@ -35,7 +35,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerExitEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.deletion.task.DockerContainerDeletionTask;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.DockerLinuxContainerRuntime;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.OCIContainerRuntime;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerReapContext;
 import org.apache.hadoop.yarn.server.nodemanager.executor.ContainerSignalContext;
 import org.slf4j.Logger;
@@ -147,7 +147,7 @@ public class ContainerCleanup implements Runnable {
       }
 
       // rm container in docker
-      if (DockerLinuxContainerRuntime.isDockerContainerRequested(conf,
+      if (OCIContainerRuntime.isOCICompliantContainerRequested(conf,
           container.getLaunchContext().getEnvironment())) {
         rmDockerContainerDelayed();
       }
