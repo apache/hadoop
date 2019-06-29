@@ -52,6 +52,9 @@ RUN scl enable rh-maven33 'mvn dependency:get -Dartifact=io.prometheus.jmx:jmx_p
 
 FROM centos:7
 
+# our copy of faq and jq
+COPY faq.repo /etc/yum.repos.d/ecnahc515-faq-epel-7.repo
+
 RUN yum install --setopt=skip_missing_names_on_install=False -y \
         epel-release \
     && yum install --setopt=skip_missing_names_on_install=False -y \
@@ -66,6 +69,7 @@ RUN yum install --setopt=skip_missing_names_on_install=False -y \
         jq \
         rsync \
         openssl \
+        faq \
     && yum clean all \
     && rm -rf /tmp/* /var/tmp/*
 
