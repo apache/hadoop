@@ -46,66 +46,66 @@ public class ConfigFileGenerator extends AbstractProcessor {
   @Override
   public boolean process(Set<? extends TypeElement> annotations,
       RoundEnvironment roundEnv) {
-//    if (roundEnv.processingOver()) {
-//      return false;
-//    }
-//
-//    Filer filer = processingEnv.getFiler();
-//
-//    try {
-//
-//      //load existing generated config (if exists)
-//      ConfigFileAppender appender = new ConfigFileAppender();
-//      try (InputStream input = filer
-//          .getResource(StandardLocation.CLASS_OUTPUT, "",
-//              OUTPUT_FILE_NAME).openInputStream()) {
-//        appender.load(input);
-//      } catch (FileNotFoundException ex) {
-//        appender.init();
-//      }
-//
-//      Set<? extends Element> annotatedElements =
-//          roundEnv.getElementsAnnotatedWith(ConfigGroup.class);
-//      for (Element annotatedElement : annotatedElements) {
-//        TypeElement configGroup = (TypeElement) annotatedElement;
-//
-//        //check if any of the setters are annotated with @Config
-//        for (Element element : configGroup.getEnclosedElements()) {
-//          if (element.getKind() == ElementKind.METHOD) {
-//            processingEnv.getMessager()
-//                .printMessage(Kind.WARNING, element.getSimpleName().toString());
-//            if (element.getSimpleName().toString().startsWith("set")
-//                && element.getAnnotation(Config.class) != null) {
-//
-//              //update the ozone-site-generated.xml
-//              Config configAnnotation = element.getAnnotation(Config.class);
-//              ConfigGroup configGroupAnnotation =
-//                  configGroup.getAnnotation(ConfigGroup.class);
-//
-//              String key = configGroupAnnotation.prefix() + "."
-//                  + configAnnotation.key();
-//
-//              appender.addConfig(key,
-//                  configAnnotation.defaultValue(),
-//                  configAnnotation.description(),
-//                  configAnnotation.tags());
-//            }
-//          }
-//
-//        }
-//        FileObject resource = filer
-//            .createResource(StandardLocation.CLASS_OUTPUT, "",
-//                OUTPUT_FILE_NAME);
-//
-//        try (Writer writer = new OutputStreamWriter(
-//            resource.openOutputStream(), StandardCharsets.UTF_8)) {
-//          appender.write(writer);
-//        }
-//      }
-//    } catch (IOException e) {
-//      processingEnv.getMessager().printMessage(Kind.ERROR,
-//          "Can't generate the config file from annotation: " + e.getMessage());
-//    }
+    if (roundEnv.processingOver()) {
+      return false;
+    }
+
+    Filer filer = processingEnv.getFiler();
+
+    try {
+
+      //load existing generated config (if exists)
+      ConfigFileAppender appender = new ConfigFileAppender();
+      try (InputStream input = filer
+          .getResource(StandardLocation.CLASS_OUTPUT, "",
+              OUTPUT_FILE_NAME).openInputStream()) {
+        appender.load(input);
+      } catch (FileNotFoundException ex) {
+        appender.init();
+      }
+
+      Set<? extends Element> annotatedElements =
+          roundEnv.getElementsAnnotatedWith(ConfigGroup.class);
+      for (Element annotatedElement : annotatedElements) {
+        TypeElement configGroup = (TypeElement) annotatedElement;
+
+        //check if any of the setters are annotated with @Config
+        for (Element element : configGroup.getEnclosedElements()) {
+          if (element.getKind() == ElementKind.METHOD) {
+            processingEnv.getMessager()
+                .printMessage(Kind.WARNING, element.getSimpleName().toString());
+            if (element.getSimpleName().toString().startsWith("set")
+                && element.getAnnotation(Config.class) != null) {
+
+              //update the ozone-site-generated.xml
+              Config configAnnotation = element.getAnnotation(Config.class);
+              ConfigGroup configGroupAnnotation =
+                  configGroup.getAnnotation(ConfigGroup.class);
+
+              String key = configGroupAnnotation.prefix() + "."
+                  + configAnnotation.key();
+
+              appender.addConfig(key,
+                  configAnnotation.defaultValue(),
+                  configAnnotation.description(),
+                  configAnnotation.tags());
+            }
+          }
+
+        }
+        FileObject resource = filer
+            .createResource(StandardLocation.CLASS_OUTPUT, "",
+                OUTPUT_FILE_NAME);
+
+        try (Writer writer = new OutputStreamWriter(
+            resource.openOutputStream(), StandardCharsets.UTF_8)) {
+          appender.write(writer);
+        }
+      }
+    } catch (IOException e) {
+      processingEnv.getMessager().printMessage(Kind.ERROR,
+          "Can't generate the config file from annotation: " + e.getMessage());
+    }
     return false;
   }
 

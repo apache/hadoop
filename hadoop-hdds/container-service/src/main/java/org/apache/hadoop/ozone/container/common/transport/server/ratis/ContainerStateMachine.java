@@ -33,6 +33,7 @@ import org.apache.ratis.server.RaftServer;
 import org.apache.ratis.server.impl.RaftServerConstants;
 import org.apache.ratis.server.impl.RaftServerProxy;
 import org.apache.ratis.server.protocol.TermIndex;
+import org.apache.ratis.server.raftlog.RaftLog;
 import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
 import org.apache.ratis.thirdparty.com.google.protobuf
     .InvalidProtocolBufferException;
@@ -194,12 +195,12 @@ public class ContainerStateMachine extends BaseStateMachine {
       throws IOException {
     if (snapshot == null) {
       TermIndex empty =
-          TermIndex.newTermIndex(0, RaftServerConstants.INVALID_LOG_INDEX);
+          TermIndex.newTermIndex(0, RaftLog.INVALID_LOG_INDEX);
       LOG.info(
           "The snapshot info is null." + "Setting the last applied index to:"
               + empty);
       setLastAppliedTermIndex(empty);
-      return RaftServerConstants.INVALID_LOG_INDEX;
+      return RaftLog.INVALID_LOG_INDEX;
     }
 
     final File snapshotFile = snapshot.getFile().getPath().toFile();
@@ -242,7 +243,7 @@ public class ContainerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     TermIndex ti = getLastAppliedTermIndex();
     LOG.info("Taking snapshot at termIndex:" + ti);
-    if (ti != null && ti.getIndex() != RaftServerConstants.INVALID_LOG_INDEX) {
+    if (ti != null && ti.getIndex() != RaftLog.INVALID_LOG_INDEX) {
       final File snapshotFile =
           storage.getSnapshotFile(ti.getTerm(), ti.getIndex());
       LOG.info("Taking a snapshot to file {}", snapshotFile);
