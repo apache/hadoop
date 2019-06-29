@@ -156,7 +156,7 @@ public class OMAllocateBlockRequest extends OMClientRequest
     long clientID = allocateBlockRequest.getClientID();
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
-    omMetrics.incNumAddAllocateBlockCalls();
+    omMetrics.incNumBlockAllocateCalls();
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
 

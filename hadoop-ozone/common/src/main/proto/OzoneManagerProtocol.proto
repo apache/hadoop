@@ -60,7 +60,6 @@ enum Type {
   ListKeys = 35;
   CommitKey = 36;
   AllocateBlock = 37;
-  ApplyCreateKey = 38;
 
   CreateS3Bucket = 41;
   DeleteS3Bucket = 42;
@@ -125,7 +124,6 @@ message OMRequest {
   optional ListKeysRequest                  listKeysRequest                = 35;
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
-  optional ApplyCreateKeyRequest            applyCreateKeyRequest          = 38;
 
 
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
@@ -720,11 +718,6 @@ message CreateKeyResponse {
     // (similar to a cookie).
     optional uint64 ID = 3;
     optional uint64 openVersion = 4;
-}
-
-message ApplyCreateKeyRequest {
-    required CreateKeyRequest createKeyRequest = 1;
-    required CreateKeyResponse createKeyResponse = 2;
 }
 
 message LookupKeyRequest {

@@ -73,12 +73,6 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyLocation;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -264,36 +258,6 @@ public class KeyManagerImpl implements KeyManager {
       throw new OMException("Bucket not found",
           BUCKET_NOT_FOUND);
     }
-  }
-
-  @Override
-  public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      KeyLocation keyLocation) throws IOException {
-    Preconditions.checkNotNull(args);
-    Preconditions.checkNotNull(keyLocation);
-
-
-    String volumeName = args.getVolumeName();
-    String bucketName = args.getBucketName();
-    String keyName = args.getKeyName();
-    validateBucket(volumeName, bucketName);
-    String openKey = metadataManager.getOpenKey(
-        volumeName, bucketName, keyName, clientID);
-
-    OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
-    if (keyInfo == null) {
-      LOG.error("Allocate block for a key not in open status in meta store" +
-          " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
-      throw new OMException("Open Key not found",
-          KEY_NOT_FOUND);
-    }
-
-    OmKeyLocationInfo omKeyLocationInfo =
-        OmKeyLocationInfo.getFromProtobuf(keyLocation);
-    keyInfo.appendNewBlocks(Collections.singletonList(omKeyLocationInfo), true);
-    keyInfo.updateModifcationTime();
-    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    return omKeyLocationInfo;
   }
 
   @Override
@@ -553,41 +517,6 @@ public class KeyManagerImpl implements KeyManager {
     // For this upload part we don't need to check in KeyTable. As this
     // is not an actual key, it is a part of the key.
     return createKeyInfo(args, locations, factor, type, size, encInfo);
-  }
-
-  public void applyOpenKey(KeyArgs omKeyArgs,
-      KeyInfo keyInfo, long clientID) throws IOException {
-    Preconditions.checkNotNull(omKeyArgs);
-    String volumeName = omKeyArgs.getVolumeName();
-    String bucketName = omKeyArgs.getBucketName();
-
-    // Do we need to call again validateBucket, as this is just called after
-    // start Transaction from applyTransaction. Can we remove this double
-    // check?
-    validateBucket(volumeName, bucketName);
-
-    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
-    String keyName = omKeyArgs.getKeyName();
-
-    // TODO: here if on OM machines clocks are skewed and there is a chance
-    //  for override of the openKey entries.
-    try {
-      String openKey = metadataManager.getOpenKey(
-          volumeName, bucketName, keyName, clientID);
-
-      OmKeyInfo omKeyInfo = OmKeyInfo.getFromProtobuf(keyInfo);
-
-      metadataManager.getOpenKeyTable().put(openKey,
-          omKeyInfo);
-    } catch (IOException ex) {
-      LOG.error("Apply Open Key failed for volume:{} bucket:{} key:{}",
-          volumeName, bucketName, keyName, ex);
-      throw new OMException(ex.getMessage(),
-          ResultCodes.KEY_ALLOCATION_ERROR);
-    } finally {
-      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
-    }
   }
 
   /**

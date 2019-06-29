@@ -278,17 +278,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   }
 
   /**
-   * Construct IOException message for failed requests in StartTransaction.
-   * @param omResponse
-   * @return
-   */
-  private IOException constructExceptionForFailedRequest(
-      OMResponse omResponse) {
-    return new IOException(omResponse.getMessage() + " " +
-        STATUS_CODE + omResponse.getStatus());
-  }
-
-  /**
    * Submits write request to OM and returns the response Message.
    * @param request OMRequest
    * @return response from OM
