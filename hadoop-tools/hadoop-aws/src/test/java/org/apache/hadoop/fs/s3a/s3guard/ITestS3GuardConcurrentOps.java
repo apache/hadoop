@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
 
 /**
  * Tests concurrent operations on S3Guard.
@@ -54,6 +56,23 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
   @Rule
   public final Timeout timeout = new Timeout(5 * 60 * 1000);
+
+  protected Configuration createConfiguration() {
+    Configuration conf =  super.createConfiguration();
+    //patch the read/write capacity
+    boolean scaleCapacityLimitEnabled = conf.getBoolean("fs.s3a.s3guard.ddb.table.scale.capacity.limit", true);
+    if(scaleCapacityLimitEnabled) {
+      LOG.info("Enable the capacity limit : {} -> {}, {} -> {}",
+        S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 1, S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,1);
+      conf.set(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, "1");
+      conf.set(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, "1");
+    }
+    if(scaleCapacityLimitEnabled) {
+      assertEquals("The Read Capacity limit should be 1",1,conf.getInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,0));
+      assertEquals("The Write Capacity limit should be 1",1,conf.getInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,0));
+    }
+    return conf;
+  }
 
   private void failIfTableExists(DynamoDB db, String tableName) {
     boolean tableExists = true;
