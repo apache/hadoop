@@ -15,11 +15,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 set -e
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 
 COMPOSE_ENV_NAME=$(basename "$COMPOSE_DIR")
 COMPOSE_FILE=$COMPOSE_DIR/docker-compose.yaml
-RESULT_DIR="$COMPOSE_DIR/result"
+RESULT_DIR=${RESULT_DIR:-"$COMPOSE_DIR/result"}
 RESULT_DIR_INSIDE="/tmp/smoketest/$(basename "$COMPOSE_ENV_NAME")/result"
 SMOKETEST_DIR_INSIDE="${OZONE_DIR:-/opt/hadoop}/smoketest"
 
@@ -75,14 +74,15 @@ execute_robot_test(){
   CONTAINER="$1"
   TEST="$2"
   TEST_NAME=$(basename "$TEST")
-  TEST_NAME="$(basename $COMPOSE_DIR)-${TEST_NAME%.*}"
+  TEST_NAME="$(basename "$COMPOSE_DIR")-${TEST_NAME%.*}"
   set +e
   OUTPUT_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
+  OUTPUT_PATH="$RESULT_DIR_INSIDE/robot-$OUTPUT_NAME.xml"
   docker-compose -f "$COMPOSE_FILE" exec -T "$CONTAINER" mkdir -p "$RESULT_DIR_INSIDE"
-  docker-compose -f "$COMPOSE_FILE" exec -e  SECURITY_ENABLED="${SECURITY_ENABLED}" -T "$CONTAINER" python -m robot --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$RESULT_DIR_INSIDE/robot-$OUTPUT_NAME.xml" "$SMOKETEST_DIR_INSIDE/$TEST"
+  docker-compose -f "$COMPOSE_FILE" exec -e  SECURITY_ENABLED="${SECURITY_ENABLED}" -T "$CONTAINER" python -m robot --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" "$SMOKETEST_DIR_INSIDE/$TEST"
 
-  export FULL_CONTAINER_NAME=$(docker-compose -f "$COMPOSE_FILE" ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
-  docker cp $FULL_CONTAINER_NAME:$RESULT_DIR_INSIDE "$COMPOSE_DIR"
+  FULL_CONTAINER_NAME=$(docker-compose -f "$COMPOSE_FILE" ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
+  docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
   set -e
 
 }
@@ -97,8 +97,8 @@ stop_docker_env(){
 
 ## @description  Generate robot framework reports based on the saved results.
 generate_report(){
-  which rebot > /dev/null 2>&1
-  if [ "$?" == "0" ]; then
+
+  if command -v rebot > /dev/null 2>&1; then
      #Generate the combined output and return with the right exit code (note: robot = execute test, rebot = generate output)
      rebot -d "$RESULT_DIR" "$RESULT_DIR/robot-*.xml"
   else
