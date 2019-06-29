@@ -132,6 +132,12 @@ public class OMDirectoryCreateRequest extends OMClientRequest
             volumeName, bucketName, keyName);
       }
 
+      // Check if this is the root of the filesystem.
+      if (keyName.length() == 0) {
+        return new OMDirectoryCreateResponse(null,
+            omResponse.setCreateDirectoryResponse(
+                CreateDirectoryResponse.newBuilder()).build());
+      }
       // acquire lock
       acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);

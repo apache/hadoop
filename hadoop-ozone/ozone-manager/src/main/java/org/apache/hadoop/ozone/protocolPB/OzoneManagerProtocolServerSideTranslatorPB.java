@@ -25,7 +25,6 @@ import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
-import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -86,31 +85,18 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         if (OmUtils.isReadOnly(request)) {
           return submitReadRequestToOM(request);
         } else {
-          // PreExecute if needed.
-          OMClientResponse omClientResponse = null;
           if (omRatisServer.isLeader()) {
             try {
               OMClientRequest omClientRequest =
                   OzoneManagerRatisUtils.createClientRequest(request);
-              // For some requests, there is a special case like when key
-              // length is zero, we don't need to do anything just return
-              // response to client. Do it here, instead of submitting it
-              // to ratis.
               if (omClientRequest != null) {
-                omClientResponse = omClientRequest.checksBeforeSubmit();
-                if (omClientResponse == null) {
-                  // There is no special handling for the request. Do
-                  // preExecute and submit request to ratis.
-                  request = omClientRequest.preExecute(ozoneManager);
-                } else {
-                  return omClientResponse.getOMResponse();
-                }
+                request = omClientRequest.preExecute(ozoneManager);
               }
-              return submitRequestToRatis(request);
             } catch(IOException ex) {
               // As some of the preExecute returns error. So handle here.
               return createErrorResponse(request, ex);
             }
+            return submitRequestToRatis(request);
           } else {
             // throw not leader exception. This is being done, so to avoid
             // unnecessary execution of preExecute on follower OM's. This

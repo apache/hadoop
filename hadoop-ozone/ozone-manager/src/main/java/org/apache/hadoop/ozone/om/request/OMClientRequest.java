@@ -59,31 +59,6 @@ public abstract class OMClientRequest implements RequestAuditor {
     Preconditions.checkNotNull(omRequest);
     this.omRequest = omRequest;
   }
-
-  /**
-   * This method handles few requests, where for these kind of request, there is
-   * nothing to execute and it is required to return response to client, that
-   * the request is successfully happened.
-   * @return OMClientResponse - null if this request type does not have any
-   * such kind of checks, otherwise return response.
-   */
-  public OMClientResponse checksBeforeSubmit() {
-    // Why it is being done here, it is like short circuit way to handle
-    // these kind of requests with special checks. Instead of calling
-    // preExecute and then submit to ratis. We can handle it in Rpc Context
-    // itself.
-    if (getOmRequest().getCmdType() ==
-        OzoneManagerProtocolProtos.Type.CreateDirectory) {
-      OMResponse omResponse =
-          OzoneManagerProtocolProtos.OMResponse.newBuilder().setCmdType(
-              OzoneManagerProtocolProtos.Type.CreateDirectory).setStatus(
-              OzoneManagerProtocolProtos.Status.OK)
-              .setCreateDirectoryResponse(CreateDirectoryResponse.newBuilder())
-              .build();
-      return new OMDirectoryCreateResponse(null, omResponse);
-    }
-    return null;
-  }
   /**
    * Perform pre-execute steps on a OMRequest.
    *
