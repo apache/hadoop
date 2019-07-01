@@ -100,6 +100,17 @@ public interface OMMetadataManager {
 
   String getOzoneKey(String volume, String bucket, String key);
 
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB directory
+   * key.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key    - key name
+   * @return DB directory key as String.
+   */
+  String getOzoneDirKey(String volume, String bucket, String key);
+
 
   /**
    * Returns the DB key name of a open key in OM metadata store. Should be
