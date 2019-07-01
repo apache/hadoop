@@ -35,6 +35,7 @@
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <guice.version>4.0</guice.version>
+    <docker.image>apache/ozone:${project.version}</docker.image>
   </properties>
   <modules>
     <module>common</module>
@@ -365,6 +366,12 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>docker-build</id>
+      <properties>
+        <docker.image>${user.name}/ozone:${project.version}</docker.image>
+      </properties>
+    </profile>
     <profile>
       <id>parallel-tests</id>
       <build>
