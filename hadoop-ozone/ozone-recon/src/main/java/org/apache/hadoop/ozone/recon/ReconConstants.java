@@ -38,4 +38,8 @@ public final class ReconConstants {
   public static final String CONTAINER_KEY_TABLE =
       "containerKeyTable";
 
+  public static final String FETCH_ALL = "-1";
+  public static final String RECON_QUERY_PREVKEY = "prev-key";
+  public static final String RECON_QUERY_LIMIT = "limit";
+
 }

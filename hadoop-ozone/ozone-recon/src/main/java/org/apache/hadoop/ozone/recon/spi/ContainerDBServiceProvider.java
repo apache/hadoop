@@ -66,26 +66,32 @@ public interface ContainerDBServiceProvider {
    * @param containerId the given containerId.
    * @return Map of Key prefix -> count.
    */
-  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(long containerId)
-      throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId) throws IOException;
 
   /**
-   * Get a Map of containerID, containerMetadata of all the Containers.
+   * Get the stored key prefixes for the given containerId starting
+   * after the given keyPrefix.
    *
-   * @return Map of containerID -> containerMetadata.
-   * @throws IOException
+   * @param containerId the given containerId.
+   * @param prevKeyPrefix the key prefix to seek to and start scanning.
+   * @return Map of Key prefix -> count.
    */
-  Map<Long, ContainerMetadata> getContainers() throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId, String prevKeyPrefix) throws IOException;
 
   /**
    * Get a Map of containerID, containerMetadata of Containers only for the
    * given limit. If the limit is -1 or any integer <0, then return all
    * the containers without any limit.
    *
+   * @param limit the no. of containers to fetch.
+   * @param prevContainer containerID after which the results are returned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers(int limit) throws IOException;
+  Map<Long, ContainerMetadata> getContainers(int limit, long prevContainer)
+      throws IOException;
 
   /**
    * Delete an entry in the container DB.
@@ -98,7 +104,6 @@ public interface ContainerDBServiceProvider {
   /**
    * Get iterator to the entire container DB.
    * @return TableIterator
-   * @throws IOException exception
    */
-  TableIterator getContainerTableIterator() throws IOException;
+  TableIterator getContainerTableIterator();
 }

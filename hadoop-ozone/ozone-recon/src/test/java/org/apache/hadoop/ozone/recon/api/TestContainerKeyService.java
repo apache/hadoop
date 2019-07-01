@@ -36,6 +36,7 @@ import java.util.Map;
 
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
@@ -132,7 +133,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     OmKeyLocationInfoGroup omKeyLocationInfoGroup = new
         OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
 
-    //key = key_one, Blocks = [ {CID = 1, LID = 1}, {CID = 2, LID = 1} ]
+    //key = key_one, Blocks = [ {CID = 1, LID = 101}, {CID = 2, LID = 102} ]
     writeDataToOm(omMetadataManager,
         "key_one", "bucketOne", "sampleVol",
         Collections.singletonList(omKeyLocationInfoGroup));
@@ -156,7 +157,7 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     infoGroups.add(new OmKeyLocationInfoGroup(1,
         omKeyLocationInfoListNew));
 
-    //key = key_two, Blocks = [ {CID = 1, LID = 2}, {CID = 1, LID = 3} ]
+    //key = key_two, Blocks = [ {CID = 1, LID = 103}, {CID = 1, LID = 104} ]
     writeDataToOm(omMetadataManager,
         "key_two", "bucketOne", "sampleVol", infoGroups);
 
@@ -201,46 +202,83 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   @Test
   public void testGetKeysForContainer() {
 
-    Response response = containerKeyService.getKeysForContainer(1L, -1);
+    Response response = containerKeyService.getKeysForContainer(1L, -1, "");
 
     Collection<KeyMetadata> keyMetadataList =
         (Collection<KeyMetadata>) response.getEntity();
-    assertEquals(keyMetadataList.size(), 2);
+    assertEquals(2, keyMetadataList.size());
 
     Iterator<KeyMetadata> iterator = keyMetadataList.iterator();
 
     KeyMetadata keyMetadata = iterator.next();
-    assertEquals(keyMetadata.getKey(), "key_one");
-    assertEquals(keyMetadata.getVersions().size(), 1);
-    assertEquals(keyMetadata.getBlockIds().size(), 1);
+    assertEquals("key_one", keyMetadata.getKey());
+    assertEquals(1, keyMetadata.getVersions().size());
+    assertEquals(1, keyMetadata.getBlockIds().size());
     Map<Long, List<KeyMetadata.ContainerBlockMetadata>> blockIds =
         keyMetadata.getBlockIds();
-    assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 101);
+    assertEquals(101, blockIds.get(0L).iterator().next().getLocalID());
 
     keyMetadata = iterator.next();
-    assertEquals(keyMetadata.getKey(), "key_two");
-    assertEquals(keyMetadata.getVersions().size(), 2);
+    assertEquals("key_two", keyMetadata.getKey());
+    assertEquals(2, keyMetadata.getVersions().size());
     assertTrue(keyMetadata.getVersions().contains(0L) && keyMetadata
         .getVersions().contains(1L));
-    assertEquals(keyMetadata.getBlockIds().size(), 2);
+    assertEquals(2, keyMetadata.getBlockIds().size());
     blockIds = keyMetadata.getBlockIds();
-    assertEquals(blockIds.get(0L).iterator().next().getLocalID(), 103);
-    assertEquals(blockIds.get(1L).iterator().next().getLocalID(), 104);
+    assertEquals(103, blockIds.get(0L).iterator().next().getLocalID());
+    assertEquals(104, blockIds.get(1L).iterator().next().getLocalID());
 
-    response = containerKeyService.getKeysForContainer(3L, -1);
+    response = containerKeyService.getKeysForContainer(3L, -1, "");
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
     assertTrue(keyMetadataList.isEmpty());
 
     // test if limit works as expected
-    response = containerKeyService.getKeysForContainer(1L, 1);
+    response = containerKeyService.getKeysForContainer(1L, 1, "");
     keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
-    assertEquals(keyMetadataList.size(), 1);
+    assertEquals(1, keyMetadataList.size());
+  }
+
+  @Test
+  public void testGetKeysForContainerWithPrevKey() {
+    // test if prev-key param works as expected
+    Response response = containerKeyService.getKeysForContainer(
+        1L, -1, "/sampleVol/bucketOne/key_one");
+
+    Collection<KeyMetadata> keyMetadataList =
+        (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(1, keyMetadataList.size());
+
+    Iterator<KeyMetadata> iterator = keyMetadataList.iterator();
+    KeyMetadata keyMetadata = iterator.next();
+
+    assertEquals("key_two", keyMetadata.getKey());
+    assertEquals(2, keyMetadata.getVersions().size());
+    assertEquals(2, keyMetadata.getBlockIds().size());
+
+    response = containerKeyService.getKeysForContainer(
+        1L, -1, StringUtils.EMPTY);
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(2, keyMetadataList.size());
+    iterator = keyMetadataList.iterator();
+    keyMetadata = iterator.next();
+    assertEquals("key_one", keyMetadata.getKey());
+
+    // test for negative cases
+    response = containerKeyService.getKeysForContainer(
+        1L, -1, "/sampleVol/bucketOne/invalid_key");
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(0, keyMetadataList.size());
+
+    response = containerKeyService.getKeysForContainer(
+        5L, -1, "");
+    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    assertEquals(0, keyMetadataList.size());
   }
 
   @Test
   public void testGetContainers() {
 
-    Response response = containerKeyService.getContainers(-1);
+    Response response = containerKeyService.getContainers(-1, 0L);
 
     List<ContainerMetadata> containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
@@ -248,20 +286,55 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     Iterator<ContainerMetadata> iterator = containers.iterator();
 
     ContainerMetadata containerMetadata = iterator.next();
-    assertEquals(containerMetadata.getContainerID(), 1L);
+    assertEquals(1L, containerMetadata.getContainerID());
     // Number of keys for CID:1 should be 3 because of two different versions
     // of key_two stored in CID:1
-    assertEquals(containerMetadata.getNumberOfKeys(), 3L);
+    assertEquals(3L, containerMetadata.getNumberOfKeys());
 
     containerMetadata = iterator.next();
-    assertEquals(containerMetadata.getContainerID(), 2L);
-    assertEquals(containerMetadata.getNumberOfKeys(), 2L);
+    assertEquals(2L, containerMetadata.getContainerID());
+    assertEquals(2L, containerMetadata.getNumberOfKeys());
 
     // test if limit works as expected
-    response = containerKeyService.getContainers(1);
+    response = containerKeyService.getContainers(1, 0L);
     containers = new ArrayList<>(
         (Collection<ContainerMetadata>) response.getEntity());
-    assertEquals(containers.size(), 1);
+    assertEquals(1, containers.size());
+  }
+
+  @Test
+  public void testGetContainersWithPrevKey() {
+
+    Response response = containerKeyService.getContainers(1, 1L);
+
+    List<ContainerMetadata> containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+
+    Iterator<ContainerMetadata> iterator = containers.iterator();
+
+    ContainerMetadata containerMetadata = iterator.next();
+
+    assertEquals(1, containers.size());
+    assertEquals(2L, containerMetadata.getContainerID());
+
+    response = containerKeyService.getContainers(-1, 0L);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(2, containers.size());
+    iterator = containers.iterator();
+    containerMetadata = iterator.next();
+    assertEquals(1L, containerMetadata.getContainerID());
+
+    // test for negative cases
+    response = containerKeyService.getContainers(-1, 5L);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(0, containers.size());
+
+    response = containerKeyService.getContainers(-1, -1L);
+    containers = new ArrayList<>(
+        (Collection<ContainerMetadata>) response.getEntity());
+    assertEquals(2, containers.size());
   }
 
   /**
