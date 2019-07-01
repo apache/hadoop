@@ -46,6 +46,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
@@ -379,6 +380,12 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
       }
     }
     return builder.toString();
+  }
+
+  @Override
+  public String getOzoneDirKey(String volume, String bucket, String key) {
+    key = OzoneFSUtils.addTrailingSlashIfNeeded(key);
+    return getOzoneKey(volume, bucket, key);
   }
 
   @Override
