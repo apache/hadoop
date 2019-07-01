@@ -1,0 +1,10 @@
+[ecnahc515-faq]
+name=Copr repo for faq owned by ecnahc515
+baseurl=https://copr-be.cloud.fedoraproject.org/results/ecnahc515/faq/epel-7-$basearch/
+type=rpm-md
+skip_if_unavailable=False
+gpgcheck=1
+gpgkey=https://copr-be.cloud.fedoraproject.org/results/ecnahc515/faq/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
