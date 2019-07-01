@@ -128,8 +128,7 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Use the DB's prefix seek iterator to start the scan from the given
-   * container ID prefix.
+   * Get key prefixes for the given container ID.
    *
    * @param containerId the given containerId.
    * @return Map of (Key-Prefix,Count of Keys).
@@ -137,14 +136,57 @@ public class ContainerDBServiceProviderImpl
   @Override
   public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
       long containerId) throws IOException {
+    // set the default startKeyPrefix to empty string
+    return getKeyPrefixesForContainer(containerId, StringUtils.EMPTY);
+  }
+
+  /**
+   * Use the DB's prefix seek iterator to start the scan from the given
+   * container ID and prev key prefix. The prev key prefix is skipped from
+   * the result.
+   *
+   * @param containerId the given containerId.
+   * @param prevKeyPrefix the given key prefix to start the scan from.
+   * @return Map of (Key-Prefix,Count of Keys).
+   */
+  @Override
+  public Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId, String prevKeyPrefix) throws IOException {
 
     Map<ContainerKeyPrefix, Integer> prefixes = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
-    containerIterator.seek(new ContainerKeyPrefix(containerId));
+    ContainerKeyPrefix seekKey;
+    boolean skipPrevKey = false;
+    if (StringUtils.isNotBlank(prevKeyPrefix)) {
+      skipPrevKey = true;
+      seekKey = new ContainerKeyPrefix(containerId, prevKeyPrefix);
+    } else {
+      seekKey = new ContainerKeyPrefix(containerId);
+    }
+    KeyValue<ContainerKeyPrefix, Integer> seekKeyValue =
+        containerIterator.seek(seekKey);
+
+    // check if RocksDB was able to seek correctly to the given key prefix
+    // if not, then return empty result
+    // In case of an empty prevKeyPrefix, all the keys in the container are
+    // returned
+    if (seekKeyValue == null ||
+        (StringUtils.isNotBlank(prevKeyPrefix) &&
+            !seekKeyValue.getKey().getKeyPrefix().equals(prevKeyPrefix))) {
+      return prefixes;
+    }
+
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
       ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
+
+      // skip the prev key if prev key is present
+      if (skipPrevKey &&
+          containerKeyPrefix.getKeyPrefix().equals(prevKeyPrefix)) {
+        continue;
+      }
+
       // The prefix seek only guarantees that the iterator's head will be
       // positioned at the first prefix match. We still have to check the key
       // prefix.
@@ -165,35 +207,45 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Get all the containers.
-   *
-   * @return Map of containerID -> containerMetadata.
-   * @throws IOException
-   */
-  @Override
-  public Map<Long, ContainerMetadata> getContainers() throws IOException {
-    // Set a negative limit to get all the containers.
-    return getContainers(-1);
-  }
-
-  /**
    * Iterate the DB to construct a Map of containerID -> containerMetadata
-   * only for the given limit.
+   * only for the given limit from the given start key. The start containerID
+   * is skipped from the result.
    *
    * Return all the containers if limit < 0.
    *
+   * @param limit No of containers to get.
+   * @param prevContainer containerID after which the
+   *                      list of containers are scanned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
   @Override
-  public Map<Long, ContainerMetadata> getContainers(int limit)
+  public Map<Long, ContainerMetadata> getContainers(int limit,
+                                                    long prevContainer)
       throws IOException {
     Map<Long, ContainerMetadata> containers = new LinkedHashMap<>();
     TableIterator<ContainerKeyPrefix, ? extends KeyValue<ContainerKeyPrefix,
         Integer>> containerIterator = containerKeyTable.iterator();
+    ContainerKeyPrefix seekKey;
+    if (prevContainer > 0L) {
+      seekKey = new ContainerKeyPrefix(prevContainer);
+      KeyValue<ContainerKeyPrefix,
+          Integer> seekKeyValue = containerIterator.seek(seekKey);
+      // Check if RocksDB was able to correctly seek to the given
+      // prevContainer containerId. If not, then return empty result
+      if (seekKeyValue != null &&
+          seekKeyValue.getKey().getContainerId() != prevContainer) {
+        return containers;
+      } else {
+        // seek to the prevContainer+1 containerID to start scan
+        seekKey = new ContainerKeyPrefix(prevContainer + 1);
+        containerIterator.seek(seekKey);
+      }
+    }
     while (containerIterator.hasNext()) {
       KeyValue<ContainerKeyPrefix, Integer> keyValue = containerIterator.next();
-      Long containerID = keyValue.getKey().getContainerId();
+      ContainerKeyPrefix containerKeyPrefix = keyValue.getKey();
+      Long containerID = containerKeyPrefix.getContainerId();
       Integer numberOfKeys = keyValue.getValue();
 
       // break the loop if limit has been reached
@@ -220,7 +272,7 @@ public class ContainerDBServiceProviderImpl
   }
 
   @Override
-  public TableIterator getContainerTableIterator() throws IOException {
+  public TableIterator getContainerTableIterator() {
     return containerKeyTable.iterator();
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.recon.spi.impl;
 
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
@@ -29,6 +30,7 @@ import java.util.Map;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
+import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.utils.db.DBStore;
 import org.junit.After;
@@ -202,6 +204,112 @@ public class TestContainerDBServiceProviderImpl {
         nextContainerId);
     assertTrue(keyPrefixMap.size() == 1);
     assertTrue(keyPrefixMap.get(containerKeyPrefix3) == 3);
+  }
+
+  @Test
+  public void testGetKeyPrefixesForContainerWithKeyPrefix() throws Exception {
+    long containerId = System.currentTimeMillis();
+
+    String keyPrefix1 = "V3/B1/K1";
+    String keyPrefix2 = "V3/B1/K2";
+    String keyPrefix3 = "V3/B2/K1";
+
+    ContainerKeyPrefix containerKeyPrefix1 = new
+        ContainerKeyPrefix(containerId, keyPrefix1, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
+        1);
+
+    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
+        containerId, keyPrefix2, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
+        2);
+
+    long nextContainerId = containerId + 1000L;
+    ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
+        nextContainerId, keyPrefix3, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
+        3);
+
+    Map<ContainerKeyPrefix, Integer> keyPrefixMap =
+        containerDbServiceProvider.getKeyPrefixesForContainer(containerId,
+            keyPrefix1);
+    assertEquals(1, keyPrefixMap.size());
+    assertEquals(2, keyPrefixMap.get(containerKeyPrefix2).longValue());
+
+    keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
+        nextContainerId, keyPrefix3);
+    assertEquals(0, keyPrefixMap.size());
+
+    // test for negative cases
+    keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
+        containerId, "V3/B1/invalid");
+    assertEquals(0, keyPrefixMap.size());
+
+    keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
+        containerId, keyPrefix3);
+    assertEquals(0, keyPrefixMap.size());
+
+    keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
+        1L, "");
+    assertEquals(0, keyPrefixMap.size());
+  }
+
+  @Test
+  public void testGetContainersWithPrevKey() throws Exception {
+    long containerId = System.currentTimeMillis();
+
+    String keyPrefix1 = "V3/B1/K1";
+    String keyPrefix2 = "V3/B1/K2";
+    String keyPrefix3 = "V3/B2/K1";
+
+    ContainerKeyPrefix containerKeyPrefix1 = new
+        ContainerKeyPrefix(containerId, keyPrefix1, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
+        1);
+
+    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
+        containerId, keyPrefix2, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
+        2);
+
+    long nextContainerId = containerId + 1000L;
+    ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
+        nextContainerId, keyPrefix3, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
+        3);
+
+    Map<Long, ContainerMetadata> containerMap =
+        containerDbServiceProvider.getContainers(-1, 0L);
+    assertEquals(2, containerMap.size());
+
+    assertEquals(3, containerMap.get(containerId).getNumberOfKeys());
+    assertEquals(3, containerMap.get(nextContainerId).getNumberOfKeys());
+
+    // test if limit works
+    containerMap = containerDbServiceProvider.getContainers(
+        1, 0L);
+    assertEquals(1, containerMap.size());
+    assertNull(containerMap.get(nextContainerId));
+
+    // test for prev key
+    containerMap = containerDbServiceProvider.getContainers(
+        -1, containerId);
+    assertEquals(1, containerMap.size());
+    // containerId must be skipped from containerMap result
+    assertNull(containerMap.get(containerId));
+
+    containerMap = containerDbServiceProvider.getContainers(
+        -1, nextContainerId);
+    assertEquals(0, containerMap.size());
+
+    // test for negative cases
+    containerMap = containerDbServiceProvider.getContainers(
+        -1, 1L);
+    assertEquals(0, containerMap.size());
+
+    containerMap = containerDbServiceProvider.getContainers(
+        0, containerId);
+    assertEquals(0, containerMap.size());
   }
 
   @Test
