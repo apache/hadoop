@@ -107,6 +107,11 @@ public final class ScmConfigKeys {
       "dfs.container.ratis.log.appender.queue.byte-limit";
   public static final String
       DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT = "32MB";
+  public static final String DFS_CONTAINER_RATIS_LOG_PURGE_GAP =
+      "dfs.container.ratis.log.purge.gap";
+  // TODO: Set to 1024 once RATIS issue around purge is fixed.
+  public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
+      1000000000;
   // expiry interval stateMachineData cache entry inside containerStateMachine
   public static final String
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL =
@@ -146,7 +151,7 @@ public final class ScmConfigKeys {
 
   public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
       "dfs.ratis.snapshot.threshold";
-  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 10000;
+  public static final long DFS_RATIS_SNAPSHOT_THRESHOLD_DEFAULT = 100000;
 
   public static final String DFS_RATIS_SERVER_FAILURE_DURATION_KEY =
       "dfs.ratis.server.failure.duration";
