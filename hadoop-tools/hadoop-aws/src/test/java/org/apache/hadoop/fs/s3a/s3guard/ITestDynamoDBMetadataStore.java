@@ -94,6 +94,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  */
 public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
+  public static final int MINUTE = 60_000;
+
   public ITestDynamoDBMetadataStore() {
     super();
   }
@@ -1125,13 +1127,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // over the subdirectory
 
     long now = getTime();
-    long oldTime = now - 60_000;
+    long oldTime = now - MINUTE;
     putFile(subdir, oldTime, null);
-    final DDBPathMetadata subDirAsFile = ms.get(subDirPath);
-
-    Assertions.assertThat(subDirAsFile.getFileStatus().isFile())
-        .describedAs("Subdirectory entry %s is now file", subDirMetadataOrig)
-        .isTrue();
+    getFile(subdir);
 
     Path basePath = strToPath(base);
     DirListingMetadata listing = ms.listChildren(basePath);
@@ -1147,13 +1145,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Assertions.assertThat(status.isFile())
         .as("Entry %s", (Object)pm)
         .isTrue();
-    DDBPathMetadata subFilePm = checkNotNull(ms.get(subFilePath));
-    LOG.info("Pruning");
+    getNonNull(subFile);
 
+    LOG.info("Pruning");
     // now prune
     ms.prune(PruneMode.ALL_BY_MODTIME,
-        now + 60_000, subdir);
-    DDBPathMetadata prunedFile = ms.get(subFilePath);
+        now + MINUTE, subdir);
+    ms.get(subFilePath);
 
     final PathMetadata subDirMetadataFinal = getNonNull(subdir);
 
@@ -1165,7 +1163,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testPutFileDirectlyUnderTombstone() throws Throwable {
-    describe("Put a file under a tombstone");
+    describe("Put a file under a tombstone; verify the tombstone");
     String base = "/testPutFileDirectlyUnderTombstone";
     long now = getTime();
     putTombstone(base, now, null);
@@ -1175,35 +1173,102 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         .isTrue();
     String child = base + "/file";
     putFile(child, now, null);
-    PathMetadata baseMeta2 = get(base);
-    Assertions.assertThat(baseMeta2.isDeleted())
-        .as("Metadata %s", baseMeta2)
-        .isFalse();
+    getDirectory(base);
   }
 
+  @Test
+  public void testPruneTombstoneUnderTombstone() throws Throwable {
+    describe("Put a tombsteone under a tombstone, prune the pair");
+    String base = "/testPruneTombstoneUnderTombstone";
+    long now = getTime();
+    String dir = base + "/dir";
+    putTombstone(dir, now, null);
+    assertIsTombstone(dir);
+    // parent dir is created
+    assertCached(base);
+    String child = dir + "/file";
+    String child2 = dir + "/file2";
+
+    // this will actually mark the parent as a dir,
+    // so that lists of that dir will pick up the tombstone
+    putTombstone(child, now, null);
+    getDirectory(dir);
+    // put a tombstone
+    putTombstone(dir, now, null);
+    putFile(child2, now, null);
+    getDynamoMetadataStore().prune(PruneMode.TOMBSTONES_BY_LASTUPDATED,
+        now + MINUTE);
+    // the child is gone
+    assertNotFound(child);
+    // *AND* the parent dir has not been created
+    assertNotFound(dir);
+    // the child2 entry is still there, though it's now orphan (the store isn't
+    // meeting the rule "all entries must have a parent which exists"
+    getFile(child2);
+    // a full prune will still find and delete it, as this
+    // doesn't walk the tree
+    getDynamoMetadataStore().prune(PruneMode.ALL_BY_MODTIME,
+        now + MINUTE);
+    assertNotFound(child2);
+    assertNotFound(dir);
+  }
+
+  @Test
+  public void testPruneFileUnderTombstone() throws Throwable {
+    describe("Put a file under a tombstone, prune the pair");
+    String base = "/testPruneFileUnderTombstone";
+    long now = getTime();
+    String dir = base + "/dir";
+    putTombstone(dir, now, null);
+    assertIsTombstone(dir);
+    // parent dir is created
+    assertCached(base);
+    String child = dir + "/file";
+
+    // this will actually mark the parent as a dir,
+    // so that lists of that dir will pick up the tombstone
+    putFile(child, now, null);
+    // dir is reinstated
+    getDirectory(dir);
+
+    // put a tombstone
+    putTombstone(dir, now, null);
+    // prune all entries
+    getDynamoMetadataStore().prune(PruneMode.ALL_BY_MODTIME,
+        now + MINUTE);
+    // the child is gone
+    assertNotFound(child);
+
+    // *AND* the parent dir has not been created
+    assertNotFound(dir);
+  }
+
+  /**
+   * Keep in sync with code changes in S3AFileSystem.finishedWrite() so that
+   * code can be tested here.
+   * @throws Throwable
+   */
   @Test
   public void testPutFileDeepUnderTombstone() throws Throwable {
     describe("Put a file two levels under a tombstone");
     String base = "/testPutFileDeepUnderTombstone";
-    String subdir = base + "/subdir";
+    String dir = base + "/dir";
     long now = getTime();
     // creating a file MUST create its parents
-    String child = subdir + "/file";
+    String child = dir + "/file";
     Path childPath = strToPath(child);
     putFile(child, now, null);
     getFile(child);
-    getDirectory(subdir);
+    getDirectory(dir);
     getDirectory(base);
 
     // now put the tombstone
     putTombstone(base, now, null);
-    PathMetadata baseMeta1 = getNonNull(base);
-    Assertions.assertThat(baseMeta1.isDeleted())
-        .as("Metadata %s", baseMeta1)
-        .isTrue();
+    assertIsTombstone(base);
 
-    // this is the same ordering as S3FileSystem.finishedWrite()
-
+    /*- --------------------------------------------*/
+    /* Begin S3FileSystem.finishedWrite() sequence. */
+    /* ---------------------------------------------*/
     AncestorState ancestorState = getDynamoMetadataStore()
         .initiateBulkWrite(BulkOperationState.OperationType.Put,
             childPath);
@@ -1213,8 +1278,28 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         ancestorState);
     // now write the file again.
     putFile(child, now, ancestorState);
+    /* -------------------------------------------*/
+    /* End S3FileSystem.finishedWrite() sequence. */
+    /* -------------------------------------------*/
+
+    getFile(child);
     // the ancestor will now exist.
+    getDirectory(dir);
     getDirectory(base);
   }
 
+
+  /**
+   * Assert that an entry exists and is a directory.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata verifyAuthDirStatus(String pathStr, boolean authDirFlag)
+      throws IOException {
+    DDBPathMetadata md = (DDBPathMetadata) getDirectory(pathStr);
+    assertEquals("isAuthoritativeDir() mismatch in " + md,
+        authDirFlag,
+        md.isAuthoritativeDir());
+    return md;
+  }
 }

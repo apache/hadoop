@@ -755,13 +755,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getOwner());
           dirCache.add(child.getPath());
         } else {
-          child = new S3AFileStatus(located.getLen(),
-              located.getModificationTime(),
-              located.getPath(),
-              located.getBlockSize(),
-              located.getOwner(),
-              located.getETag(),
-              located.getVersionId());
+          child = located.toS3AFileStatus();
         }
         putParentsIfNotPresent(child, operationState);
         S3Guard.putWithTtl(getStore(),

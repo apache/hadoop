@@ -224,20 +224,9 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
         .listFilesAndEmptyDirectories(path, true);
     while (iterator.hasNext()) {
       S3ALocatedFileStatus status = iterator.next();
-      csv.entry(toS3AStatus(status));
+      csv.entry(status.toS3AFileStatus());
     }
     return count;
-  }
-
-  private S3AFileStatus toS3AStatus(S3ALocatedFileStatus located) {
-    return new S3AFileStatus(
-        located.getLen(),
-        located.getModificationTime(),
-        located.getPath(),
-        located.getBlockSize(),
-        located.getOwner(),
-        located.getETag(),
-        located.getVersionId());
   }
 
   /**

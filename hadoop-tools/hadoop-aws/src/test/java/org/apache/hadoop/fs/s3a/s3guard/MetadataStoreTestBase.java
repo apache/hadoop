@@ -1050,6 +1050,11 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return checkNotNull(get(pathStr), "No metastore entry for %s", pathStr);
   }
 
+  /**
+   * Assert that either a path has no entry or that it is marked as deleted.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
   protected void assertDeleted(String pathStr) throws IOException {
     PathMetadata meta = get(pathStr);
     boolean cached = meta != null && !meta.isDeleted();
@@ -1071,6 +1076,39 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertFalse(pathStr + " was found but marked deleted: "+ meta,
         meta.isDeleted());
     return meta;
+  }
+
+  /**
+   * Assert that an entry exists and is a file.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata verifyIsFile(String pathStr) throws IOException {
+    PathMetadata md = verifyCached(pathStr);
+    assertTrue("Not a file: " + md,
+        md.getFileStatus().isFile());
+    return md;
+  }
+
+  /**
+   * Assert that an entry exists and is a tombstone.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertIsTombstone(String pathStr) throws IOException {
+    PathMetadata meta = getNonNull(pathStr);
+    assertTrue(pathStr + " must be a tombstone: " + meta, meta.isDeleted());
+  }
+
+  /**
+   * Assert that an entry does not exist.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertNotFound(String pathStr) throws IOException {
+    PathMetadata meta = get(pathStr);
+    assertNull("Unexpectedly found entry at path " + pathStr + ": " + meta,
+        meta);
   }
 
   /**

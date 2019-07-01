@@ -833,7 +833,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         if (!oldEntry.getFileStatus().isDirectory()
             || !entry.getFileStatus().isDirectory()) {
           // check for and warn if the existing bulk operation overwrote it.
-          // this should never occur outside tests explicitly crating it
+          // this should never occur outside tests explicitly creating it
           LOG.warn("Overwriting a S3Guard file created in the operation: {}",
               oldEntry);
           LOG.warn("With new entry: {}", entry);
@@ -1321,7 +1321,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public void put(
       final DirListingMetadata meta,
       @Nullable final BulkOperationState operationState) throws IOException {
-    LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
+    LOG.debug("Saving {} dir meta for {} to table {} in region {}: {}",
+        tableName,
+        meta.isAuthoritative() ? "auth" : "nonauth",
+        meta.getPath(),
+        tableName, region, meta);
 
     // directory path
     Path path = meta.getPath();
@@ -1484,13 +1488,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
         DDBPathMetadata md = PathMetadataDynamoDBTranslation
             .itemToPathMetadata(item, username);
         Path path = md.getFileStatus().getPath();
+        boolean tombstone = md.isDeleted();
         LOG.debug("Prune entry {}", path);
         deletionBatch.add(path);
 
-        // add parent path of what we remove if it has not
-        // already been processed
+        // add parent path of item so it can be marked as non-auth.
+        // this is only done if
+        // * it has not already been processed
+        // * the entry pruned is not a tombstone (no need to update
+        // * the file is not in the root dir
         Path parentPath = path.getParent();
-        if (parentPath != null && !clearedParentPathSet.contains(parentPath)) {
+        if (!tombstone
+            && parentPath != null
+            && !clearedParentPathSet.contains(parentPath)) {
           parentPathSet.add(parentPath);
         }
 
@@ -1534,6 +1544,20 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * Remove the Authoritative Directory Marker from a set of paths, if
    * those paths are in the store.
+   * <p>
+   * This operation is <i>only</i>for pruning; it does not raise an error
+   * if, during the prune phase, the table appears inconsistent.
+   * This is not unusual as it can happen in a number of ways
+   * <ol>
+   *   <li>The state of the table changes during a slow prune operation which
+   *   deliberately inserts pauses to avoid overloading prepaid IO capacity.
+   *   </li>
+   *   <li>Tombstone markers have been left in the table after many other
+   *   operations have taken place, including deleting/replacing
+   *   parents.</li>
+   * </ol>
+   * <p>
+   *
    * If an exception is raised in the get/update process, then the exception
    * is caught and only rethrown after all the other paths are processed.
    * This is to ensure a best-effort attempt to update the store.
@@ -1555,11 +1579,22 @@ public class DynamoDBMetadataStore implements MetadataStore,
           return null;
         }
         DDBPathMetadata ddbPathMetadata = get(path);
-        if (ddbPathMetadata == null || ddbPathMetadata.isDeleted()) {
-          // there is no entry, or it has actually expired
+        if (ddbPathMetadata == null) {
+          // there is no entry.
+          LOG.debug("No parent {}; skipping", path);
           return null;
         }
-        LOG.debug("Setting false isAuthoritativeDir on {}", ddbPathMetadata);
+        if (ddbPathMetadata.isDeleted()) {
+          // the parent itself is deleted
+          LOG.debug("Parent has been deleted {}; skipping", path);
+          return null;
+        }
+        if (!ddbPathMetadata.getFileStatus().isDirectory()) {
+          // the parent itself is deleted
+          LOG.debug("Parent is not a directory {}; skipping", path);
+          return null;
+        }
+        LOG.debug("Setting isAuthoritativeDir==false on {}", ddbPathMetadata);
         ddbPathMetadata.setAuthoritativeDir(false);
         return ddbPathMetadata;
       } catch (IOException e) {
