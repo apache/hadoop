@@ -41,6 +41,8 @@ public final class OzoneConfigKeys {
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;
 
+  public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
+
   /**
    *
    * When set to true, allocate a random free port for ozone container,

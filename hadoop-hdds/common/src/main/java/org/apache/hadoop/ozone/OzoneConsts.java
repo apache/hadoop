@@ -299,4 +299,8 @@ public final class OzoneConsts {
   // from OM leader to follower
   public static final String OM_RATIS_SNAPSHOT_BEFORE_DB_CHECKPOINT =
       "snapshotBeforeCheckpoint";
+
+  public static final String JAVA_TMP_DIR = "java.io.tmpdir";
+  public static final String LOCALHOST = "localhost";
+
 }
