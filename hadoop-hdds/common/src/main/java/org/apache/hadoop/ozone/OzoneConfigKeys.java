@@ -41,7 +41,7 @@ public final class OzoneConfigKeys {
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;
 
-  public static final String OZONE_METADATA_DIRS="ozone.metadata.dirs";
+  public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
 
   /**
    *
