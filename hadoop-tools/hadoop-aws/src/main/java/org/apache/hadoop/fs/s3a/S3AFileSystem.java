@@ -238,7 +238,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private volatile boolean isClosed = false;
   private MetadataStore metadataStore;
   private boolean allowAuthoritativeMetadataStore;
-  private Collection<String> allowAuthoritativePaths = new ArrayList<>();
+  private Collection<String> allowAuthoritativePaths;
 
   /** Delegation token integration; non-empty when DT support is enabled. */
   private Optional<S3ADelegationTokens> delegationTokens = Optional.empty();
@@ -400,15 +400,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       setMetadataStore(S3Guard.getMetadataStore(this));
       allowAuthoritativeMetadataStore = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
           DEFAULT_METADATASTORE_AUTHORITATIVE);
-
-      String[] authoritativePaths =
-            conf.getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
-      if (authoritativePaths.length > 0) {
-        for (int i = 0; i < authoritativePaths.length; i++) {
-          Path qualified = qualify(new Path(authoritativePaths[i]));
-          allowAuthoritativePaths.add(maybeAddTrailingSlash(qualified.toString()));
-        }
-      }
+      allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
 
       if (hasMetadataStore()) {
         LOG.debug("Using metadata store {}, authoritative store={}, authoritative path={}",
@@ -419,23 +411,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throw translateException("initializing ", new Path(name), e);
     }
 
-  }
-
-  @VisibleForTesting
-  boolean allowAuthoritative(Path p) {
-    String haystack = maybeAddTrailingSlash(p.toString());
-    if (allowAuthoritativeMetadataStore) {
-      return true;
-    }
-    if (!allowAuthoritativePaths.isEmpty()) {
-      for (String needle : allowAuthoritativePaths) {
-
-        if (haystack.startsWith(needle)) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 
   /**
@@ -868,7 +843,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param key s3 key or ""
    * @return the with a trailing "/", or, if it is the root key, "",
    */
-  private String maybeAddTrailingSlash(String key) {
+  @InterfaceAudience.Private
+  public String maybeAddTrailingSlash(String key) {
     if (!key.isEmpty() && !key.endsWith("/")) {
       return key + '/';
     } else {
@@ -2426,7 +2402,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
 
       DirListingMetadata dirMeta =
           S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
-      if (allowAuthoritative(f) && dirMeta != null && dirMeta.isAuthoritative()) {
+      boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
+          allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+      if (allowAuthoritative && dirMeta != null && dirMeta.isAuthoritative()) {
         return S3Guard.dirMetaToStatuses(dirMeta);
       }
 
@@ -2443,8 +2421,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         result.add(files.next());
       }
       // merge the results. This will update the store as needed
+
       return S3Guard.dirListingUnion(metadataStore, path, result, dirMeta,
-          allowAuthoritative(f), ttlTimeProvider);
+          allowAuthoritative, ttlTimeProvider);
     } else {
       LOG.debug("Adding: rd (not a dir): {}", path);
       FileStatus[] stats = new FileStatus[1];
@@ -2657,8 +2636,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // dest is also a directory, there's no difference.
       // TODO After HADOOP-16085 the modification detection can be done with
       //  etags or object version instead of modTime
+      boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
+          allowAuthoritativeMetadataStore, allowAuthoritativePaths);
       if (!pm.getFileStatus().isDirectory() &&
-          !allowAuthoritative(f)) {
+          !allowAuthoritative) {
         LOG.debug("Metadata for {} found in the non-auth metastore.", path);
         final long msModTime = pm.getFileStatus().getModificationTime();
 
@@ -3823,13 +3804,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             key, delimiter);
         final RemoteIterator<S3AFileStatus> cachedFilesIterator;
         final Set<Path> tombstones;
+        boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
+            allowAuthoritativeMetadataStore, allowAuthoritativePaths);
         if (recursive) {
           final PathMetadata pm = metadataStore.get(path, true);
           // shouldn't need to check pm.isDeleted() because that will have
           // been caught by getFileStatus above.
+
           MetadataStoreListFilesIterator metadataStoreListFilesIterator =
               new MetadataStoreListFilesIterator(metadataStore, pm,
-                  allowAuthoritative(f));
+                  allowAuthoritative);
           tombstones = metadataStoreListFilesIterator.listTombstones();
           cachedFilesIterator = metadataStoreListFilesIterator;
         } else {
@@ -3842,7 +3826,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           }
           cachedFilesIterator = listing.createProvidedFileStatusIterator(
               S3Guard.dirMetaToStatuses(meta), ACCEPT_ALL, acceptor);
-          if (allowAuthoritative(f) && meta != null && meta.isAuthoritative()) {
+          if (allowAuthoritative && meta != null && meta.isAuthoritative()) {
             // metadata listing is authoritative, so return it directly
             return listing.createLocatedFileStatusIterator(cachedFilesIterator);
           }
@@ -3915,7 +3899,9 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
               final RemoteIterator<S3AFileStatus> cachedFileStatusIterator =
                   listing.createProvidedFileStatusIterator(
                       S3Guard.dirMetaToStatuses(meta), filter, acceptor);
-              return (allowAuthoritative(f) && meta != null
+              boolean allowAuthoritative = S3Guard.allowAuthoritative(f, this,
+                  allowAuthoritativeMetadataStore, allowAuthoritativePaths);
+              return (allowAuthoritative && meta != null
                   && meta.isAuthoritative())
                   ? listing.createLocatedFileStatusIterator(
                   cachedFileStatusIterator)

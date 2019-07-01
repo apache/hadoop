@@ -20,8 +20,10 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.Collection;
 
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +47,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
   public Path testRoot;
 
   private S3AFileSystem fullyAuthFS;
-  private S3AFileSystem unguardedFS;
+  private S3AFileSystem rawFS;
 
   private MetadataStore ms;
 
@@ -75,9 +77,9 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     assertTrue("Authoritative mode off in fullyAuthFS",
         fullyAuthFS.hasAuthoritativeMetadataStore());
 
-    unguardedFS = createUnguardedFS();
+    rawFS = createRawFS();
     assertFalse("UnguardedFS still has S3Guard",
-        unguardedFS.hasMetadataStore());
+        rawFS.hasMetadataStore());
   }
 
   private void cleanUpFS(S3AFileSystem fs) {
@@ -92,7 +94,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     fullyAuthFS.delete(testRoot, true);
 
     cleanUpFS(fullyAuthFS);
-    cleanUpFS(unguardedFS);
+    cleanUpFS(rawFS);
     super.teardown();
   }
 
@@ -141,20 +143,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     return newFS;
   }
 
-  private S3AFileSystem createNonAuthFS() throws Exception {
-    S3AFileSystem testFS = getFileSystem();
-    Configuration config = new Configuration(testFS.getConf());
-    URI uri = testFS.getUri();
-
-    removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE, AUTHORITATIVE_PATH);
-    final S3AFileSystem newFS = createFS(uri, config);
-    // set back the same metadata store instance
-    newFS.setMetadataStore(ms);
-    return newFS;
-  }
-
-  private S3AFileSystem createUnguardedFS() throws Exception {
+  private S3AFileSystem createRawFS() throws Exception {
     S3AFileSystem testFS = getFileSystem();
     Configuration config = new Configuration(testFS.getConf());
     URI uri = testFS.getUri();
@@ -190,7 +179,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     // trigger an authoritative write-back
     fullyAuthFS.listStatus(inBandPath.getParent());
 
-    touch(unguardedFS, outOfBandPath);
+    touch(rawFS, outOfBandPath);
 
     // listing lacks outOfBandPath => short-circuited by auth mode
     checkListingDoesNotContainPath(fullyAuthFS, outOfBandPath);
@@ -213,7 +202,7 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
     // trigger an authoritative write-back
     fullyAuthFS.listStatus(inBandPath.getParent());
 
-    touch(unguardedFS, outOfBandPath);
+    touch(rawFS, outOfBandPath);
 
     // listing lacks outOfBandPath => short-circuited by auth mode
     checkListingDoesNotContainPath(fullyAuthFS, outOfBandPath);
@@ -291,16 +280,20 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
   @Test
   public void testPrefixVsDirectory() throws Exception {
     S3AFileSystem fs = createSinglePathAuthFS("/auth");
+    Collection<String> authPaths = S3Guard.getAuthoritativePaths(fs);
 
     try{
       Path totalMismatch = new Path(testRoot, "/non-auth");
-      assertFalse(fs.allowAuthoritative(totalMismatch));
+      assertFalse(S3Guard.allowAuthoritative(totalMismatch, fs,
+          false, authPaths));
 
       Path prefixMatch = new Path(testRoot, "/authoritative");
-      assertFalse(fs.allowAuthoritative(prefixMatch));
+      assertFalse(S3Guard.allowAuthoritative(prefixMatch, fs,
+          false, authPaths));
 
       Path directoryMatch = new Path(testRoot, "/auth/oritative");
-      assertTrue(fs.allowAuthoritative(directoryMatch));
+      assertTrue(S3Guard.allowAuthoritative(directoryMatch, fs,
+          false, authPaths));
     } finally {
       cleanUpFS(fs);
     }
