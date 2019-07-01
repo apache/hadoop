@@ -451,8 +451,11 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.volumeFailureSummary = volumeFailureSummary;
     for (StorageReport report : reports) {
 
-      DatanodeStorageInfo storage =
-          storageMap.get(report.getStorage().getStorageID());
+      DatanodeStorageInfo storage = null;
+      synchronized (storageMap) {
+        storage =
+            storageMap.get(report.getStorage().getStorageID());
+      }
       if (checkFailedStorages) {
         failedStorageInfos.remove(storage);
       }
