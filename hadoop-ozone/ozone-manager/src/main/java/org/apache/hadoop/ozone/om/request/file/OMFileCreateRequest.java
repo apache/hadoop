@@ -1,6 +1,37 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.hadoop.ozone.om.request.file;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -30,14 +61,6 @@ import org.apache.hadoop.utils.db.TableIterator;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.DIRECTORY_EXISTS;
 import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.DIRECTORY_EXISTS_IN_GIVENPATH;
@@ -52,6 +75,8 @@ import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryR
 public class OMFileCreateRequest extends OMKeyCreateRequest
     implements OMKeyRequest, OMFileRequest {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(OMFileCreateRequest.class);
   public OMFileCreateRequest(OMRequest omRequest) {
     super(omRequest);
   }
@@ -218,7 +243,7 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
         // happen if keys are directly created using key requests.)
 
         // We need to do this check only in the case of non-recursive, so
-        // not included the checks done in checkKeysInPath in
+        // not included the checks done in checkKeysUnderPath in
         // verifyFilesInPath method, as that method is common method for
         // directory and file create request. This also avoid's this
         // unnecessary check which is not required for those cases.
@@ -263,18 +288,19 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
    * @param volumeName
    * @param bucketName
    * @param keyName
-   * @return if exists true, else false
+   * @return if exists true, else false. If key name is one level path return
+   * true.
    * @throws IOException
    */
   private boolean checkKeysUnderPath(OMMetadataManager omMetadataManager,
-      String volumeName, String bucketName, String keyName) throws IOException {
+      @Nonnull String volumeName, @Nonnull String bucketName,
+      @Nonnull String keyName) throws IOException {
 
-    Path keyPath = Paths.get(keyName);
+    Path parentPath =  Paths.get(keyName).getParent();
 
-    String dbKeyPath;
-    if (keyPath.getParent() != null) {
-      dbKeyPath = omMetadataManager.getOzoneDirKey(volumeName, bucketName,
-          keyPath.getParent().toString());
+    if (parentPath != null) {
+      String dbKeyPath = omMetadataManager.getOzoneDirKey(volumeName,
+          bucketName, parentPath.toString());
 
       // First check in key table cache.
       Iterator< Map.Entry<CacheKey<String>, CacheValue<OmKeyInfo>>> iterator =

@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
+import javax.annotation.Nonnull;
 
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
@@ -54,8 +55,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-
-import javax.annotation.Nonnull;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .BUCKET_NOT_FOUND;

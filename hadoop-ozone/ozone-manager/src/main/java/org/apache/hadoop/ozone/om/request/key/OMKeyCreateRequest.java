@@ -243,6 +243,7 @@ public class OMKeyCreateRequest extends OMClientRequest
 
     Map<String, String> auditMap = buildKeyArgsAuditMap(keyArgs);
 
+    OMClientResponse omClientResponse = null;
     if (exception == null) {
       if (omKeyInfo == null) {
         // the key does not exist, create a new object, the new blocks are the
@@ -261,72 +262,76 @@ public class OMKeyCreateRequest extends OMClientRequest
             .collect(Collectors.toList()), false);
 
       } catch (IOException ex) {
-        LOG.error("{} failed for Key: {} in volume/bucket:{}/{}",
-            omAction.getAction(), keyName, bucketName, volumeName, ex);
-        ozoneManager.getMetrics().incNumKeyAllocateFails();
-        auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(
-            omAction, auditMap, ex, getOmRequest().getUserInfo()));
+        exception = ex;
+      }
 
-        if (omAction == OMAction.ALLOCATE_KEY) {
-          omResponse.setCmdType(CreateKey);
-          return new OMKeyCreateResponse(null, -1L,
-              createErrorOMResponse(omResponse, ex));
+      if (exception != null) {
+        LOG.error("{} failed for Key: {} in volume/bucket:{}/{}",
+            omAction.getAction(), keyName, bucketName, volumeName, exception);
+        omClientResponse = createKeyErrorResponse(ozoneManager.getMetrics(),
+            omAction, exception, omResponse);
+      } else {
+        String dbOpenKeyName = omMetadataManager.getOpenKey(volumeName,
+            bucketName, keyName, clientID);
+
+        // Add to cache entry can be done outside of lock for this openKey.
+        // Even if bucket gets deleted, when commitKey we shall identify if
+        // bucket gets deleted.
+        omMetadataManager.getOpenKeyTable().addCacheEntry(
+            new CacheKey<>(dbOpenKeyName),
+            new CacheValue<>(Optional.of(omKeyInfo), transactionLogIndex));
+
+        LOG.debug("{} for Key: {} in volume/bucket: {}/{}",
+            omAction.getAction(), keyName, volumeName, bucketName);
+
+
+        if (omAction == OMAction.CREATE_FILE) {
+          ozoneManager.getMetrics().incNumCreateFile();
+          omResponse.setCreateFileResponse(
+              OzoneManagerProtocolProtos.CreateFileResponse.newBuilder()
+                  .setKeyInfo(omKeyInfo.getProtobuf())
+                  .setID(clientID)
+                  .setOpenVersion(openVersion).build());
+          omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateFile);
+          omClientResponse = new OMFileCreateResponse(omKeyInfo, clientID,
+              omResponse.build());
         } else {
-          omResponse.setCmdType(CreateFile);
-          return new OMFileCreateResponse(null, -1L,
-              createErrorOMResponse(omResponse, ex));
+          ozoneManager.getMetrics().incNumKeyAllocates();
+          omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
+              .setKeyInfo(omKeyInfo.getProtobuf())
+              .setID(clientID).setOpenVersion(openVersion)
+              .build());
+          omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateKey);
+          omClientResponse = new OMKeyCreateResponse(omKeyInfo, clientID,
+            omResponse.build());
         }
       }
 
-      String dbOpenKeyName = omMetadataManager.getOpenKey(volumeName,
-          bucketName, keyName, clientID);
-
-      // Add to cache entry can be done outside of lock for this openKey.
-      // Even if bucket gets deleted, when commitKey we shall identify if
-      // bucket gets deleted.
-      omMetadataManager.getOpenKeyTable().addCacheEntry(
-          new CacheKey<>(dbOpenKeyName),
-          new CacheValue<>(Optional.of(omKeyInfo), transactionLogIndex));
-
-      LOG.debug("{} for Key: {} in volume/bucket: {}/{}", omAction.getAction(),
-          keyName, volumeName, bucketName);
-
-      auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(omAction,
-          auditMap, exception, getOmRequest().getUserInfo()));
-
-      if (omAction == OMAction.CREATE_FILE) {
-        omResponse.setCreateFileResponse(
-            OzoneManagerProtocolProtos.CreateFileResponse.newBuilder()
-            .setKeyInfo(omKeyInfo.getProtobuf()).setID(clientID)
-            .setOpenVersion(openVersion).build());
-        omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateFile);
-        return new OMFileCreateResponse(omKeyInfo, clientID,
-            omResponse.build());
-      } else {
-        omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
-            .setKeyInfo(omKeyInfo.getProtobuf())
-            .setID(clientID).setOpenVersion(openVersion)
-            .build());
-        omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateKey);
-        return new OMKeyCreateResponse(omKeyInfo, clientID, omResponse.build());
-      }
     } else {
-      auditLog(ozoneManager.getAuditLogger(),
-          buildAuditMessage(omAction, auditMap, exception,
-              getOmRequest().getUserInfo()));
       LOG.error("{} failed for Key: {} in volume/bucket:{}/{}",
           omAction.getAction(), keyName, volumeName, bucketName, exception);
-      if (omAction == OMAction.CREATE_FILE) {
-        ozoneManager.getMetrics().incNumCreateFileFails();
-        omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateFile);
-        return new OMFileCreateResponse(null, -1L,
-            createErrorOMResponse(omResponse, exception));
-      } else {
-        ozoneManager.getMetrics().incNumKeyAllocateFails();
-        omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateKey);
-        return new OMKeyCreateResponse(null, -1L,
-            createErrorOMResponse(omResponse, exception));
-      }
+      omClientResponse = createKeyErrorResponse(ozoneManager.getMetrics(),
+          omAction, exception, omResponse);
+    }
+    // audit log
+    auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(omAction,
+        auditMap, exception, getOmRequest().getUserInfo()));
+    return omClientResponse;
+  }
+
+  private OMClientResponse createKeyErrorResponse(@Nonnull OMMetrics omMetrics,
+      @Nonnull OMAction omAction, @Nonnull IOException exception,
+      @Nonnull OMResponse.Builder omResponse) {
+    if (omAction == OMAction.CREATE_FILE) {
+      omMetrics.incNumCreateFileFails();
+      omResponse.setCmdType(CreateFile);
+      return new OMFileCreateResponse(null, -1L,
+          createErrorOMResponse(omResponse, exception));
+    } else {
+      omMetrics.incNumKeyAllocateFails();
+      omResponse.setCmdType(CreateKey);
+      return new OMKeyCreateResponse(null, -1L,
+          createErrorOMResponse(omResponse, exception));
     }
   }
 
