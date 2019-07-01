@@ -28,6 +28,7 @@ import org.apache.hadoop.utils.db.BatchOperation;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 /**
@@ -39,7 +40,7 @@ public class OMDirectoryCreateResponse extends OMClientResponse {
       LoggerFactory.getLogger(OMDirectoryCreateResponse.class);
   private OmKeyInfo dirKeyInfo;
 
-  public OMDirectoryCreateResponse(OmKeyInfo dirKeyInfo,
+  public OMDirectoryCreateResponse(@Nullable OmKeyInfo dirKeyInfo,
       OMResponse omResponse) {
     super(omResponse);
     this.dirKeyInfo = dirKeyInfo;
