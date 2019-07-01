@@ -23,6 +23,7 @@ import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.request.file.OMDirectoryCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMAllocateBlockRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyCommitRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyCreateRequest;
@@ -90,6 +91,8 @@ public final class OzoneManagerRatisUtils {
       return new OMKeyDeleteRequest(omRequest);
     case RenameKey:
       return new OMKeyRenameRequest(omRequest);
+    case CreateDirectory:
+      return new OMDirectoryCreateRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;
