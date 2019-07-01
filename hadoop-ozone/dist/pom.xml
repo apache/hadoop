@@ -28,7 +28,6 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.image>apache/ozone:${project.version}</docker.image>
     <docker.hadoop-runner.version>jdk11</docker.hadoop-runner.version>
   </properties>
 
@@ -315,9 +314,6 @@
   <profiles>
     <profile>
       <id>docker-build</id>
-      <properties>
-        <docker.image>${user.name}/ozone:${project.version}</docker.image>
-      </properties>
       <build>
         <plugins>
           <plugin>
