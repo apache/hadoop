@@ -84,7 +84,33 @@ message UserInfo {
 
 enum Status {
   OK = 1;
-  UNKNOWN = 2;
+  FAILED_TO_LOAD_NODEPOOL = 2;
+  FAILED_TO_FIND_NODE_IN_POOL = 3;
+  FAILED_TO_FIND_HEALTHY_NODES = 4;
+  FAILED_TO_FIND_NODES_WITH_SPACE = 5;
+  FAILED_TO_FIND_SUITABLE_NODE = 6;
+  INVALID_CAPACITY = 7;
+  INVALID_BLOCK_SIZE = 8;
+  SAFE_MODE_EXCEPTION = 9;
+  FAILED_TO_LOAD_OPEN_CONTAINER = 10;
+  FAILED_TO_ALLOCATE_CONTAINER = 11;
+  FAILED_TO_CHANGE_CONTAINER_STATE = 12;
+  FAILED_TO_CHANGE_PIPELINE_STATE = 13;
+  CONTAINER_EXISTS = 14;
+  FAILED_TO_FIND_CONTAINER = 15;
+  FAILED_TO_FIND_CONTAINER_WITH_SPACE = 16;
+  BLOCK_EXISTS = 17;
+  FAILED_TO_FIND_BLOCK = 18;
+  IO_EXCEPTION = 19;
+  UNEXPECTED_CONTAINER_STATE = 20;
+  SCM_NOT_INITIALIZED = 21;
+  DUPLICATE_DATANODE = 22;
+  NO_SUCH_DATANODE = 23;
+  NO_REPLICA_FOUND = 24;
+  FAILED_TO_FIND_ACTIVE_PIPELINE = 25;
+  FAILED_TO_INIT_CONTAINER_PLACEMENT_POLICY = 26;
+  FAILED_TO_ALLOCATE_ENOUGH_BLOCKS = 27;
+  INTERNAL_ERROR = 29;
 }
 
 /**
@@ -156,14 +182,6 @@ message AllocateBlockResponse {
  * Reply from SCM indicating that the container.
  */
 message AllocateScmBlockResponseProto {
-  enum Error {
-    success = 1;
-    errorNotEnoughSpace = 2;
-    errorSizeTooBig = 3;
-    unknownFailure = 4;
-  }
-  required Error errorCode = 1;
-  optional string errorMessage = 2;
   repeated AllocateBlockResponse blocks = 3;
 }
 
