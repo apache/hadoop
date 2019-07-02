@@ -28,7 +28,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.hadoop-runner.version>jdk11</docker.hadoop-runner.version>
+    <docker.ozone-runner.version>20190617-2</docker.ozone-runner.version>
   </properties>
 
   <build>
@@ -191,6 +191,22 @@
               <resources>
                 <resource>
                   <directory>src/main/compose</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>copy-and-filter-dockerfile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/docker</directory>
                   <filtering>true</filtering>
                 </resource>
               </resources>

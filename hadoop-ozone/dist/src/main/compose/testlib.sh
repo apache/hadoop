@@ -94,5 +94,5 @@ stop_docker_env(){
 ## @description  Generate robot framework reports based on the saved results.
 generate_report(){
   #Generate the combined output and return with the right exit code (note: robot = execute test, rebot = generate output)
-  docker run --rm -v "$DIR/..:${OZONE_DIR:-/opt/hadoop}" apache/hadoop-runner rebot -d "$RESULT_DIR_INSIDE" "$RESULT_DIR_INSIDE/robot-*.xml"
+  docker run --rm -v "$DIR/..:${OZONE_DIR:-/opt/hadoop}" apache/ozone-runner rebot -d "$RESULT_DIR_INSIDE" "$RESULT_DIR_INSIDE/robot-*.xml"
 }
