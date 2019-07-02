@@ -25,7 +25,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
   </parent>
 
   <artifactId>hadoop-hdds</artifactId>
-  <version>0.5.0-SNAPSHOT</version>
+  <version>0.4.1-SNAPSHOT</version>
   <description>Apache Hadoop Distributed Data Store Project</description>
   <name>Apache Hadoop HDDS</name>
   <packaging>pom</packaging>
@@ -44,7 +44,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   <properties>
     <!-- version for hdds/ozone components -->
-    <hdds.version>0.5.0-SNAPSHOT</hdds.version>
+    <hdds.version>0.4.1-SNAPSHOT</hdds.version>
 
     <!-- Apache Ratis version -->
     <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>

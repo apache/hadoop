@@ -48,7 +48,7 @@ node("ubuntu") {
         }, 'checkstyleResult')
 
         stageRunner('Acceptance', "acceptance", {
-             archiveArtifacts 'hadoop-ozone/dist/target/ozone-0.4.0-SNAPSHOT/smoketest/result/**'
+             archiveArtifacts 'hadoop-ozone/dist/target/ozone-0.4.1-SNAPSHOT/smoketest/result/**'
         })
 
         stageRunner('Unit test', "unit", {

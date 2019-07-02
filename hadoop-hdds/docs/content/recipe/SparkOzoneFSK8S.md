@@ -84,7 +84,7 @@ _Note_: You may also use `org.apache.hadoop.fs.ozone.OzoneFileSystem` without th
 Copy the `ozonefs.jar` file from an ozone distribution (__use the legacy version!__)
 
 ```
-kubectl cp om-0:/opt/hadoop/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-0.4.0-SNAPSHOT.jar .
+kubectl cp om-0:/opt/hadoop/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-0.4.1-SNAPSHOT.jar .
 ```
 
 
@@ -95,7 +95,7 @@ ADD core-site.xml /opt/hadoop/conf/core-site.xml
 ADD ozone-site.xml /opt/hadoop/conf/ozone-site.xml
 ENV HADOOP_CONF_DIR=/opt/hadoop/conf
 ENV SPARK_EXTRA_CLASSPATH=/opt/hadoop/conf
-ADD hadoop-ozone-filesystem-lib-legacy-0.4.0-SNAPSHOT.jar /opt/hadoop-ozone-filesystem-lib-legacy.jar
+ADD hadoop-ozone-filesystem-lib-legacy-0.4.1-SNAPSHOT.jar /opt/hadoop-ozone-filesystem-lib-legacy.jar
 ```
 
 ```

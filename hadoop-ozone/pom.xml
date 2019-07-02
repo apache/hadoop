@@ -20,15 +20,15 @@
     <relativePath/>
   </parent>
   <artifactId>hadoop-ozone</artifactId>
-  <version>0.5.0-SNAPSHOT</version>
+  <version>0.4.1-SNAPSHOT</version>
   <description>Apache Hadoop Ozone Project</description>
   <name>Apache Hadoop Ozone</name>
   <packaging>pom</packaging>
 
   <properties>
     <hadoop.version>3.2.0</hadoop.version>
-    <hdds.version>0.5.0-SNAPSHOT</hdds.version>
-    <ozone.version>0.5.0-SNAPSHOT</ozone.version>
+    <hdds.version>0.4.1-SNAPSHOT</hdds.version>
+    <ozone.version>0.4.1-SNAPSHOT</ozone.version>
     <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Crater Lake</ozone.release>
