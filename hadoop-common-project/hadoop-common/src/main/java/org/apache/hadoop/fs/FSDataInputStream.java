@@ -38,7 +38,8 @@ import org.apache.hadoop.util.IdentityHashStore;
 public class FSDataInputStream extends DataInputStream
     implements Seekable, PositionedReadable, 
       ByteBufferReadable, HasFileDescriptor, CanSetDropBehind, CanSetReadahead,
-      HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities {
+    HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities,
+    ByteBufferPositionedReadable {
   /**
    * Map ByteBuffers that we have handed out to readers to ByteBufferPool 
    * objects
@@ -245,5 +246,14 @@ public class FSDataInputStream extends DataInputStream
   @Override
   public String toString() {
     return super.toString() + ": " + in;
+  }
+
+  @Override
+  public int read(long position, ByteBuffer buf) throws IOException {
+    if (in instanceof ByteBufferPositionedReadable) {
+      return ((ByteBufferPositionedReadable)in).read(position, buf);
+    }
+    throw new UnsupportedOperationException("Byte-buffer pread unsupported " +
+        "by input stream");
   }
 }

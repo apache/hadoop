@@ -50,6 +50,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import com.google.common.base.Preconditions;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.fs.ByteBufferPositionedReadable;
 import org.apache.hadoop.fs.ByteBufferReadable;
 import org.apache.hadoop.fs.ByteBufferUtil;
 import org.apache.hadoop.fs.CanSetDropBehind;
@@ -100,7 +101,8 @@ import javax.annotation.Nonnull;
 @InterfaceAudience.Private
 public class DFSInputStream extends FSInputStream
     implements ByteBufferReadable, CanSetDropBehind, CanSetReadahead,
-               HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities {
+    HasEnhancedByteBufferAccess, CanUnbuffer, StreamCapabilities,
+    ByteBufferPositionedReadable {
   @VisibleForTesting
   public static boolean tcpReadsDisabledForTesting = false;
   private long hedgedReadOpsLoopNumForTesting = 0;
@@ -1761,6 +1763,14 @@ public class DFSInputStream extends FSInputStream
     throw new IOException("Mark/reset not supported");
   }
 
+  @Override
+  public int read(long position, final ByteBuffer buf) throws IOException {
+    if (!buf.hasRemaining()) {
+      return 0;
+    }
+    return pread(position, buf);
+  }
+
   /** Utility class to encapsulate data node info and its address. */
   static final class DNAddrPair {
     final DatanodeInfo info;
@@ -1983,6 +1993,8 @@ public class DFSInputStream extends FSInputStream
     case StreamCapabilities.READAHEAD:
     case StreamCapabilities.DROPBEHIND:
     case StreamCapabilities.UNBUFFER:
+    case StreamCapabilities.READBYTEBUFFER:
+    case StreamCapabilities.PREADBYTEBUFFER:
       return true;
     default:
       return false;
