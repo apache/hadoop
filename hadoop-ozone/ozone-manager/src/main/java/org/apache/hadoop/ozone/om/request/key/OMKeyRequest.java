@@ -18,17 +18,7 @@
 
 package org.apache.hadoop.ozone.om.request.key;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-
 import com.google.common.base.Preconditions;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension
     .EncryptedKeyVersion;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
@@ -49,6 +39,15 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.List;
 
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
     .BUCKET_NOT_FOUND;
@@ -202,4 +201,5 @@ public interface OMKeyRequest {
     Preconditions.checkNotNull(edek);
     return edek;
   }
+
 }
