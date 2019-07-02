@@ -28,7 +28,6 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.image>apache/hadoop:${project.version}</docker.image>
     <docker.ozone-runner.version>20190617-2</docker.ozone-runner.version>
   </properties>
 
