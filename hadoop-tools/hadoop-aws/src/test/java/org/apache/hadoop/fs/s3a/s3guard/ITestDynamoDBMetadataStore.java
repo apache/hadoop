@@ -929,43 +929,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testProvisionTable() throws Exception {
-    final String tableName
-        = getTestTableName("testProvisionTable-" + UUID.randomUUID());
-    final Configuration conf = getTableCreationConfig();
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 2);
-    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 2);
-    DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
-    try {
-      ddbms.initialize(conf);
-      DynamoDB dynamoDB = ddbms.getDynamoDB();
-      final DDBCapacities oldProvision = DDBCapacities.extractCapacities(
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
-      Assume.assumeFalse("Table is on-demand", oldProvision.isOnDemandTable());
-      long desiredReadCapacity = oldProvision.getRead() - 1;
-      long desiredWriteCapacity = oldProvision.getWrite() - 1;
-      ddbms.provisionTable(desiredReadCapacity,
-          desiredWriteCapacity);
-      ddbms.initTable();
-      // we have to wait until the provisioning settings are applied,
-      // so until the table is ACTIVE again and not in UPDATING
-      ddbms.getTable().waitForActive();
-      final DDBCapacities newProvision = DDBCapacities.extractCapacities(
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
-      assertEquals("Check newly provisioned table read capacity units.",
-          desiredReadCapacity,
-          newProvision.getRead());
-      assertEquals("Check newly provisioned table write capacity units.",
-          desiredWriteCapacity,
-          newProvision.getWrite());
-    } finally {
-      ddbms.destroy();
-      ddbms.close();
-    }
-  }
-
-  @Test
   public void testDeleteTable() throws Exception {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
