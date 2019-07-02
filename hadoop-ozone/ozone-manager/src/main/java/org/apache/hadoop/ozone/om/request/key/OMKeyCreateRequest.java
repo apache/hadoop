@@ -185,6 +185,8 @@ public class OMKeyCreateRequest extends OMClientRequest
             volumeName, bucketName, keyName);
       }
 
+      acquireLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       //TODO: We can optimize this get here, if getKmsProvider is null, then
       // bucket encryptionInfo will be not set. If this assumption holds
