@@ -32,8 +32,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
  */
 public class OMFileCreateResponse extends OMKeyCreateResponse {
 
-  public OMFileCreateResponse(@Nullable OmKeyInfo omKeyInfo, long openKeySessionID,
-      OMResponse omResponse) {
+  public OMFileCreateResponse(@Nullable OmKeyInfo omKeyInfo,
+      long openKeySessionID, OMResponse omResponse) {
     super(omKeyInfo, openKeySessionID, omResponse);
   }
 
