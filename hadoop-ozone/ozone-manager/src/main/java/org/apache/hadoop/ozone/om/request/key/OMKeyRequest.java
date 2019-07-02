@@ -276,7 +276,7 @@ public interface OMKeyRequest {
    * @param type
    * @param size
    * @param encInfo
-   * @return
+   * @return OmKeyInfo
    */
   default OmKeyInfo createKeyInfo(@Nonnull KeyArgs keyArgs,
       @Nonnull List<OmKeyLocationInfo> locations,
