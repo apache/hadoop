@@ -29,7 +29,7 @@ rm "$ALL_RESULT_DIR/*"
 RESULT=0
 IFS=$'\n'
 # shellcheck disable=SC2044
-for test in $(find $SCRIPT_DIR -name test.sh); do
+for test in $(find "$SCRIPT_DIR" -name test.sh); do
   echo "Executing test in $(dirname "$test")"
 
   #required to read the .env file from the right location
@@ -43,5 +43,5 @@ for test in $(find $SCRIPT_DIR -name test.sh); do
   cp "$RESULT_DIR"/robot-*.xml "$ALL_RESULT_DIR"
 done
 
-docker run --rm -v "$SCRIPT_DIR/result:/opt/result" apache/ozone-runner rebot -N "smoketests" -d "/opt/result" "/opt/result/robot-*.xml"
+rebot -N "smoketests" -d "$SCRIPT_DIR/result" "$SCRIPT_DIR/result/robot-*.xml"
 exit $RESULT
