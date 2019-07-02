@@ -23,20 +23,22 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
+import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -55,13 +57,18 @@ import org.apache.hadoop.service.launcher.ServiceLauncher;
 import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
- * This is a new diagnostics entry point which does a TSV dump of
- * the DDB treewalk.
+ * This is a low-level diagnostics entry point which does a CVE/TSV dump of
+ * the DDB state.
+ * As it also lists the filesystem, it actually changes the state of the store
+ * during the operation.
  */
+@InterfaceAudience.Private
+@InterfaceStability.Unstable
 public class DumpS3GuardTable extends AbstractLaunchableService {
 
   private static final Logger LOG =
@@ -72,9 +79,26 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
   private static final String USAGE_MESSAGE = NAME
       + " <filesystem> <dest-file>";
 
+  public static final String FLAT_CSV = "-flat.csv";
+
+  public static final String RAW_CSV = "-raw.csv";
+
+  public static final String SCAN_CSV = "-scan.csv";
+  public static final String SCAN2_CSV = "-scan-2.csv";
+
+  public static final String TREE_CSV = "-tree.csv";
+
+  public static final String STORE_CSV = "-store.csv";
+
   private List<String> arguments;
 
   private DynamoDBMetadataStore store;
+
+  private S3AFileSystem fs;
+
+  private URI uri;
+
+  private String destPath;
 
   public DumpS3GuardTable(final String name) {
     super(name);
@@ -82,6 +106,22 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
 
   public DumpS3GuardTable() {
     this("DumpS3GuardTable");
+  }
+
+  /**
+   * Bind to a specific FS + store.
+   * @param fs filesystem
+   * @param store metastore to use
+   * @param destFile the base filename for output
+   */
+  public DumpS3GuardTable(
+      final S3AFileSystem fs,
+      final DynamoDBMetadataStore store,
+      final File destFile) {
+    this();
+    this.fs = fs;
+    this.store = checkNotNull(store, "store");
+    this.destPath = destFile.getAbsolutePath();
   }
 
   @Override
@@ -96,6 +136,41 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
     return arguments;
   }
 
+  @Override
+  protected void serviceStart() throws Exception {
+    String fsURI = null;
+    if (store == null) {
+      checkNotNull(arguments, "No arguments");
+      Preconditions.checkState(arguments.size() == 2,
+          "Wrong number of arguments: %s", arguments.size());
+      fsURI = arguments.get(0);
+      destPath = arguments.get(1);
+      Configuration conf = getConfig();
+      uri = new URI(fsURI);
+      FileSystem fileSystem = FileSystem.get(uri, conf);
+      require(fileSystem instanceof S3AFileSystem,
+          "Not an S3A Filesystem:  " + fsURI);
+      fs = (S3AFileSystem) fileSystem;
+      require(fs.hasMetadataStore(),
+          "Filesystem has no metadata store:  " + fsURI);
+      MetadataStore ms = fs.getMetadataStore();
+      require(ms instanceof DynamoDBMetadataStore,
+          "Filesystem " + fsURI
+              + "does not have a DynamoDB metadata store:  " + ms);
+      store = (DynamoDBMetadataStore) ms;
+    } else {
+      if (fs != null) {
+        fsURI = fs.getUri().toString();
+      }
+    }
+    if (fsURI != null) {
+      if (!fsURI.endsWith("/")) {
+        fsURI += "/";
+      }
+      uri = new URI(fsURI);
+    }
+  }
+
   /**
    * Dump the filesystem and the metastore.
    * @return the exit code.
@@ -105,69 +180,65 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
   @Override
   public int execute() throws ServiceLaunchException, IOException {
 
-    Preconditions.checkNotNull(arguments, "No arguments");
-    Preconditions.checkState(arguments.size() == 2,
-        "Wrong number of arguments: %s", arguments.size());
-
-    String fsURI = arguments.get(0);
-    String destFilename = arguments.get(1);
-    Configuration conf = getConfig();
-    URI uri;
     try {
-      uri = new URI(fsURI);
-    } catch (URISyntaxException e) {
-      throw fail("Bad URI " + fsURI, e);
-    }
-    try {
-      FileSystem fileSystem = FileSystem.get(uri, conf);
-      require(fileSystem instanceof S3AFileSystem,
-          "Not an S3A Filesystem:  " + fsURI);
-      S3AFileSystem fs = (S3AFileSystem) fileSystem;
-      require(fs.hasMetadataStore(),
-          "Filesystem has no metadata store:  " + fsURI);
-      MetadataStore ms = fs.getMetadataStore();
-      require(ms instanceof DynamoDBMetadataStore,
-          "Filesystem " + fsURI
-              + "does not have a DynamoDB metadata store:  " + ms);
-      store = (DynamoDBMetadataStore) ms;
-      Path basePath = fs.qualify(new Path(uri));
+      final File scanFile = new File(
+          destPath + SCAN_CSV).getCanonicalFile();
 
-      final File destFile = new File(destFilename + "-store.csv")
-          .getCanonicalFile();
-      LOG.info("Writing Store details to {}", destFile);
-      try (CsvFile csv = new CsvFile(destFile);
-           DurationInfo ignored = new DurationInfo(LOG, "List metastore")) {
-        csv.header();
-
-        LOG.info("Base path: {}", basePath);
-        dumpMetastore(csv, basePath);
-      }
-      final File treewalkFile = new File(destFilename + "-tree.csv")
-          .getCanonicalFile();
-
-      try (CsvFile csv = new CsvFile(treewalkFile);
+      try (CsvFile csv = new CsvFile(scanFile);
            DurationInfo ignored = new DurationInfo(LOG,
-               "Treewalk to %s", treewalkFile)) {
-        csv.header();
-        treewalkFilesystem(csv, fs, basePath);
+               "scanFile dump to %s", scanFile)) {
+        scanMetastore(csv);
       }
-      final File flatlistFile = new File(
-          destFilename + "-flat.csv").getCanonicalFile();
 
-      try (CsvFile csv = new CsvFile(flatlistFile);
-           DurationInfo ignored = new DurationInfo(LOG,
-               "Flat list to %s", flatlistFile)) {
-        csv.header();
-        listStatusFilesystem(csv, fs, basePath);
-      }
-      final File rawFile = new File(
-          destFilename + "-raw.csv").getCanonicalFile();
+      if (fs != null) {
 
-      try (CsvFile csv = new CsvFile(rawFile);
-           DurationInfo ignored = new DurationInfo(LOG,
-               "Raw dump to %s", rawFile)) {
-        csv.header();
-        rawDump(csv, fs);
+        Path basePath = fs.qualify(new Path(uri));
+
+        final File destFile = new File(destPath + STORE_CSV)
+            .getCanonicalFile();
+        LOG.info("Writing Store details to {}", destFile);
+        try (CsvFile csv = new CsvFile(destFile);
+             DurationInfo ignored = new DurationInfo(LOG, "List metastore")) {
+
+          LOG.info("Base path: {}", basePath);
+          dumpMetastore(csv, basePath);
+        }
+
+        // these operations all update the metastore as they list,
+        // that is: they are side-effecting.
+        final File treewalkFile = new File(destPath + TREE_CSV)
+            .getCanonicalFile();
+
+        try (CsvFile csv = new CsvFile(treewalkFile);
+             DurationInfo ignored = new DurationInfo(LOG,
+                 "Treewalk to %s", treewalkFile)) {
+          treewalkFilesystem(csv, basePath);
+        }
+        final File flatlistFile = new File(
+            destPath + FLAT_CSV).getCanonicalFile();
+
+        try (CsvFile csv = new CsvFile(flatlistFile);
+             DurationInfo ignored = new DurationInfo(LOG,
+                 "Flat list to %s", flatlistFile)) {
+          listStatusFilesystem(csv, basePath);
+        }
+        final File rawFile = new File(
+            destPath + RAW_CSV).getCanonicalFile();
+
+        try (CsvFile csv = new CsvFile(rawFile);
+             DurationInfo ignored = new DurationInfo(LOG,
+                 "Raw dump to %s", rawFile)) {
+          dumpRawS3ObjectStore(csv);
+        }
+        final File scanFile2 = new File(
+            destPath + SCAN2_CSV).getCanonicalFile();
+
+        try (CsvFile csv = new CsvFile(scanFile);
+             DurationInfo ignored = new DurationInfo(LOG,
+                 "scanFile dump to %s", scanFile2)) {
+          scanMetastore(csv);
+        }
+
       }
 
       return LauncherExitCodes.EXIT_SUCCESS;
@@ -189,7 +260,6 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
 
   protected int treewalkFilesystem(
       final CsvFile csv,
-      final S3AFileSystem fs,
       final Path path) throws IOException {
     int count = 1;
     FileStatus[] fileStatuses = fs.listStatus(path);
@@ -200,7 +270,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
     for (FileStatus fileStatus : fileStatuses) {
       if (fileStatus.isDirectory()
           && !(fileStatus.getPath().equals(path))) {
-        count += treewalkFilesystem(csv, fs, fileStatus.getPath());
+        count += treewalkFilesystem(csv, fileStatus.getPath());
       } else {
         count++;
       }
@@ -211,13 +281,11 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
   /**
    * Dump the filesystem via a recursive listStatus call.
    * @param csv destination.
-   * @param fs filesystem.
    * @return number of entries found.
    * @throws IOException IO failure.
    */
   protected int listStatusFilesystem(
       final CsvFile csv,
-      final S3AFileSystem fs,
       final Path path) throws IOException {
     int count = 0;
     RemoteIterator<S3ALocatedFileStatus> iterator = fs
@@ -232,13 +300,11 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
   /**
    * Dump the raw S3 Object Store.
    * @param csv destination.
-   * @param fs filesystem.
    * @return number of entries found.
    * @throws IOException IO failure.
    */
-  protected int rawDump(
-      final CsvFile csv,
-      final S3AFileSystem fs) throws IOException {
+  protected int dumpRawS3ObjectStore(
+      final CsvFile csv) throws IOException {
     Path rootPath = fs.qualify(new Path("/"));
     Listing listing = new Listing(fs);
     S3ListRequest request = fs.createListObjectsRequest("", null);
@@ -257,6 +323,13 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
     return count;
   }
 
+  /**
+   * list children under the metastore from a base path, through
+   * a recursive query + walk strategy.
+   * @param csv dest
+   * @param basePath base path
+   * @throws IOException failure.
+   */
   protected void dumpMetastore(final CsvFile csv,
       final Path basePath) throws IOException {
     dumpRecursively(csv, store.listChildren(basePath));
@@ -305,6 +378,29 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
     LOG.info("{}", md.prettyPrint());
     csv.entry(md);
   }
+
+  /**
+   * Scan the metastore for all entries and dump them.
+   * There's no attempt to sort the output.
+   * @param csv file
+   * @return count of the number of entries.
+   */
+  private int scanMetastore(CsvFile csv) {
+    S3GuardTableAccess tableAccess = new S3GuardTableAccess(store);
+    ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+    Iterable<DDBPathMetadata> results = tableAccess.scanMetadata(
+        builder);
+    int count = 0;
+    for (DDBPathMetadata md : results) {
+      if (!(md instanceof S3GuardTableAccess.VersionMarker)) {
+        count++;
+        // print it
+        csv.entry(md);
+      }
+    }
+    return count;
+  }
+
 
   private static String stringify(long millis) {
     return new Date(millis).toString();
@@ -366,25 +462,33 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
   }
 
   /**
-   * Entry point to dump.
-   * @param filesystem filesystem path
-   * @param conf configuration to instantiate with.
+   * Entry point to dump the metastore and s3 store world views
+   * <p>
+   * Both the FS and the store will be dumped: the store is scanned
+   * before and after the sequence to show what changes were made to
+   * the store during the list operation.
+   * @param fs fs to dump. If null a store must be provided.
+   * @param store store to dump (fallback to FS)
+   * @param conf configuration to use (fallback to fs)
    * @param destFile base name of the output files.
    * @throws ExitUtil.ExitException failure.
    */
-  public static void dumpS3GuardStore(String filesystem,
+  public static void dumpS3GuardStore(
+      final S3AFileSystem fs,
+      final DynamoDBMetadataStore store,
       Configuration conf,
       File destFile) throws ExitUtil.ExitException {
     ServiceLauncher<Service> serviceLauncher =
         new ServiceLauncher<>("");
-    if (!filesystem.endsWith("/")) {
-      filesystem += "/";
-    }
 
     ExitUtil.ExitException ex = serviceLauncher.launchService(
-        conf,
-        new DumpS3GuardTable(),
-        Lists.newArrayList(filesystem, destFile.getAbsolutePath()),
+        conf == null ? fs.getConf() : conf,
+        new DumpS3GuardTable(fs,
+            (store == null
+                ? (DynamoDBMetadataStore) fs.getMetadataStore()
+                : store),
+            destFile),
+        Collections.emptyList(),
         false,
         true);
     if (ex != null && ex.getExitCode() != 0) {
@@ -398,7 +502,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    * Quotes are manged by passing in a long whose specific bits control
    * whether or not a row is quoted, bit 0 for column 0, etc.
    */
-  private static class CsvFile implements Closeable {
+  private static final class CsvFile implements Closeable {
 
 
     /** constant to quote all columns. */
@@ -426,11 +530,12 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
         final String separator,
         final String eol,
         final String quote) throws IOException {
-      this.separator = Preconditions.checkNotNull(separator);
-      this.eol = Preconditions.checkNotNull(eol);
-      this.quote = Preconditions.checkNotNull(quote);
+      this.separator = checkNotNull(separator);
+      this.eol = checkNotNull(eol);
+      this.quote = checkNotNull(quote);
       this.path = path;
-      this.out = Preconditions.checkNotNull(out);
+      this.out = checkNotNull(out);
+      header();
     }
 
     private CsvFile(File file) throws IOException {
@@ -469,7 +574,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
      * @return self for ease of chaining.
      */
     public CsvFile row(long quotes, Object... columns) {
-      Preconditions.checkNotNull(out);
+      checkNotNull(out);
       for (int i = 0; i < columns.length; i++) {
         if (i != 0) {
           out.write(separator);

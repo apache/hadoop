@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.File;
 import java.net.URI;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
@@ -28,6 +30,7 @@ import org.junit.runners.MethodSorters;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
@@ -39,10 +42,11 @@ import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_BACKGROUND_SLEEP_MS
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.assume;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
 
 /**
  * This test run against the root of the FS, and operations which span the DDB
- * table.
+ * table and the filesystem.
  * For this reason, these tests are executed in the sequential phase of the
  * integration tests.
  * <p>
@@ -108,6 +112,21 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   }
 
   @Test
+  public void test_050_dump_metastore() throws Throwable {
+    String target = System.getProperty("test.build.dir", "target");
+    File buildDir = new File(target,
+        this.getClass().getSimpleName()).getAbsoluteFile();
+    buildDir.mkdirs();
+    File destFile = new File(buildDir, getMethodName());
+    describe("Dumping S3Guard store under %s", destFile);
+    DumpS3GuardTable.dumpS3GuardStore(
+        null,
+        metastore,
+        getConfiguration(),
+        destFile);
+  }
+
+  @Test
   public void test_100_FilesystemPrune() throws Throwable {
     describe("Execute prune against a filesystem URI");
     S3AFileSystem fs = getFileSystem();
@@ -151,4 +170,57 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
         .isEqualTo(0);
   }
 
+  @Test
+  public void test_400_rm_root_recursive() throws Throwable {
+    describe("Remove the root directory");
+    //extra sanity checks here to avoid support calls about complete loss of data
+    S3AFileSystem fs = getFileSystem();
+    Path root = new Path("/");
+    Path file = new Path("/test_400_rm_root_recursive-01");
+    Path file2 = new Path("/test_400_rm_root_recursive-02");
+    // recursive treewalk to delete all files
+    // does not delete directories.
+    applyLocatedFiles(fs.listFilesAndEmptyDirectories(root, true),
+      f -> {
+        Path p = f.getPath();
+        fs.delete(p, true);
+        assertPathDoesNotExist("expected file to be deleted", p);
+      });
+    ContractTestUtils.deleteChildren(fs, root, true);
+    // everything must be done by now
+    StringBuffer sb = new StringBuffer();
+    AtomicInteger foundFile = new AtomicInteger(0);
+    applyLocatedFiles(fs.listFilesAndEmptyDirectories(root, true),
+        f -> {
+          foundFile.addAndGet(1);
+          Path p = f.getPath();
+          sb.append(f.isDirectory()
+              ? "Dir  "
+              : "File ")
+            .append(p);
+          if (!f.isDirectory()) {
+            sb.append("[").append(f.getLen()).append("]");
+          }
+
+          fs.delete(p, true);
+        });
+
+    assertEquals("Remaining files " + sb,
+        0, foundFile.get());
+    try {
+      ContractTestUtils.touch(fs, file);
+      assertDeleted(file, false);
+
+
+      assertTrue("Root directory delete failed",
+          fs.delete(root, true));
+
+      ContractTestUtils.touch(fs, file2);
+      assertFalse("Root directory delete should have failed",
+          fs.delete(root, true));
+    } finally {
+      fs.delete(file, false);
+      fs.delete(file2, false);
+    }
+  }
 }

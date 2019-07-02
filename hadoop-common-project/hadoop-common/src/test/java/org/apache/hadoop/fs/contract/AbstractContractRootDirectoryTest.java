@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.contract;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -149,14 +150,18 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     Path root = new Path("/");
     assertIsDirectory(root);
     Path file = new Path("/testRmRootRecursive");
-    ContractTestUtils.touch(getFileSystem(), file);
-    boolean deleted = getFileSystem().delete(root, true);
-    assertIsDirectory(root);
-    LOG.info("rm -rf / result is {}", deleted);
-    if (deleted) {
-      assertPathDoesNotExist("expected file to be deleted", file);
-    } else {
-      assertPathExists("expected file to be preserved", file);;
+    try {
+      ContractTestUtils.touch(getFileSystem(), file);
+      boolean deleted = getFileSystem().delete(root, true);
+      assertIsDirectory(root);
+      LOG.info("rm -rf / result is {}", deleted);
+      if (deleted) {
+        assertPathDoesNotExist("expected file to be deleted", file);
+      } else {
+        assertPathExists("expected file to be preserved", file);;
+      }
+    } finally{
+      getFileSystem().delete(file, false);
     }
   }
 
@@ -185,8 +190,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     for (FileStatus status : statuses) {
       ContractTestUtils.assertDeleted(fs, status.getPath(), true);
     }
-    assertEquals("listStatus on empty root-directory returned a non-empty list",
-        0, fs.listStatus(root).length);
+    FileStatus[] list1 = fs.listStatus(root);
+    assertEquals("listStatus on empty root-directory returned found: "
+        + StringUtils.join(list1, "\n"),
+        0, list1.length);
     assertFalse("listFiles(/, false).hasNext",
         fs.listFiles(root, false).hasNext());
     assertFalse("listFiles(/, true).hasNext",

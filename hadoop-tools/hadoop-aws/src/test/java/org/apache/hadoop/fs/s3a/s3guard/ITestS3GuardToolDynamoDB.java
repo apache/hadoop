@@ -72,6 +72,12 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         ms instanceof DynamoDBMetadataStore);
   }
 
+
+  @Override
+  protected DynamoDBMetadataStore getMetadataStore() {
+    return (DynamoDBMetadataStore) super.getMetadataStore();
+  }
+
   // Check the existence of a given DynamoDB table.
   private static boolean exist(DynamoDB dynamoDB, String tableName) {
     assertNotNull(dynamoDB);
@@ -292,11 +298,14 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     File buildDir = new File(target).getAbsoluteFile();
     String name = "dump-table";
     File destFile = new File(buildDir, name);
-    describe("Dumping metastore to {}", destFile);
     S3AFileSystem fs = getFileSystem();
+    describe("Dumping metastore %s to %s",
+        fs.getMetadataStore(),
+        destFile);
     DumpS3GuardTable.dumpS3GuardStore(
-        fs.getUri().toString(),
-        fs.getConf(),
+        fs,
+        null,
+        null,
         destFile);
     File storeFile = new File(buildDir, name + "-store.csv");
     try (BufferedReader in = new BufferedReader(new InputStreamReader(
