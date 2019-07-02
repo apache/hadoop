@@ -904,6 +904,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
       }
     }
 
+    if (otherResponse.getApplicationPriority() != null) {
+      homeResponse.setApplicationPriority(
+          otherResponse.getApplicationPriority());
+    }
+
     PreemptionMessage homePreempMessage = homeResponse.getPreemptionMessage();
     PreemptionMessage otherPreempMessage = otherResponse.getPreemptionMessage();
 
