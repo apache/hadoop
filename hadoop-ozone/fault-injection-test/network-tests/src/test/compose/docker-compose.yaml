@@ -17,14 +17,14 @@
 version: "3"
 services:
    datanode:
-      image: ${user.name}/ozone:${project.version}
+      image: ${docker.image}
       ports:
         - 9864
       command: ["/opt/hadoop/bin/ozone","datanode"]
       env_file:
         - ./docker-config
    om:
-      image: ${user.name}/ozone:${project.version}
+      image: ${docker.image}
       ports:
          - 9874:9874
       environment:
@@ -33,7 +33,7 @@ services:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
    scm:
-      image: ${user.name}/ozone:${project.version}
+      image: ${docker.image}
       ports:
          - 9876:9876
       env_file:
@@ -42,7 +42,7 @@ services:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/ozone","scm"]
    ozone_client:
-       image: ${user.name}/ozone:${project.version}
+       image: ${docker.image}
        ports:
          - 9869
        command: ["tail", "-f","/etc/passwd"]
