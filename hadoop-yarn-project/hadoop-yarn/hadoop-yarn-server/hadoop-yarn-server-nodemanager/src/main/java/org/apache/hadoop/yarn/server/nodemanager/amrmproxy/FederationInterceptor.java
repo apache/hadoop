@@ -1295,6 +1295,11 @@ public class FederationInterceptor extends AbstractRequestInterceptor {
     homeResponse.setNumClusterNodes(
         homeResponse.getNumClusterNodes() + otherResponse.getNumClusterNodes());
 
+    if (otherResponse.getApplicationPriority() != null) {
+      homeResponse.setApplicationPriority(
+          otherResponse.getApplicationPriority());
+    }
+
     PreemptionMessage homePreempMessage = homeResponse.getPreemptionMessage();
     PreemptionMessage otherPreempMessage = otherResponse.getPreemptionMessage();
 
