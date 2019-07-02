@@ -74,7 +74,7 @@ import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryR
  * Handle create directory request.
  */
 public class OMDirectoryCreateRequest extends OMClientRequest
-    implements OMKeyRequest, OMFileRequest {
+    implements OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDirectoryCreateRequest.class);
@@ -159,7 +159,8 @@ public class OMDirectoryCreateRequest extends OMClientRequest
 
       // Need to check if any files exist in the given path, if they exist we
       // cannot create a directory with the given key.
-      OMDirectoryResult omDirectoryResult = verifyFilesInPath(omMetadataManager,
+      OMFileRequest.OMDirectoryResult omDirectoryResult =
+          OMFileRequest.verifyFilesInPath(omMetadataManager,
           volumeName, bucketName, keyName, Paths.get(keyName));
 
       if (omDirectoryResult == FILE_EXISTS ||

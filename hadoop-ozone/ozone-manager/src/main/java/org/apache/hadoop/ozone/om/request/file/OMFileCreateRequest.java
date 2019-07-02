@@ -73,7 +73,7 @@ import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryR
  * Handles create file request.
  */
 public class OMFileCreateRequest extends OMKeyCreateRequest
-    implements OMKeyRequest, OMFileRequest {
+    implements OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMFileCreateRequest.class);
@@ -203,9 +203,9 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
             OMException.ResultCodes.NOT_A_FILE);
       }
 
-      OMDirectoryResult omDirectoryResult =
-          verifyFilesInPath(omMetadataManager, volumeName, bucketName,
-              keyName, Paths.get(keyName));
+      OMFileRequest.OMDirectoryResult omDirectoryResult =
+          OMFileRequest.verifyFilesInPath(omMetadataManager, volumeName,
+              bucketName, keyName, Paths.get(keyName));
 
       // Check if a file or directory exists with same key name.
       if (omDirectoryResult == FILE_EXISTS) {

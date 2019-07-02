@@ -28,7 +28,10 @@ import javax.annotation.Nonnull;
 /**
  * Base class for file requests.
  */
-public interface OMFileRequest {
+public final class OMFileRequest {
+
+  private OMFileRequest() {
+  }
   /**
    * Verify any files exist in the given path in the specified volume/bucket.
    * @param omMetadataManager
@@ -38,8 +41,9 @@ public interface OMFileRequest {
    * @return true - if file exist in the given path, else false.
    * @throws IOException
    */
-  default OMDirectoryResult verifyFilesInPath(
-      @Nonnull OMMetadataManager omMetadataManager, @Nonnull String volumeName,
+  public static OMDirectoryResult verifyFilesInPath(
+      @Nonnull OMMetadataManager omMetadataManager,
+      @Nonnull String volumeName,
       @Nonnull String bucketName, @Nonnull String keyName,
       @Nonnull Path keyPath) throws IOException {
 
@@ -84,10 +88,29 @@ public interface OMFileRequest {
    * Return codes used by verifyFilesInPath method.
    */
   enum OMDirectoryResult {
+
+    // In below examples path is assumed as "a/b/c" in volume volume1 and
+    // bucket b1.
+
+    // When a directory exists in given path.
+    // If we have a directory with name "a/b" we return this enum value.
     DIRECTORY_EXISTS_IN_GIVENPATH,
+
+    // When a file exists in given path.
+    // If we have a file with name "a/b" we return this enum value.
     FILE_EXISTS_IN_GIVENPATH,
+
+    // When file already exists with the given path.
+    // If we have a file with name "a/b/c" we return this enum value.
     FILE_EXISTS,
+
+    // When directory exists with the given path.
+    // If we have a file with name "a/b/c" we return this enum value.
     DIRECTORY_EXISTS,
+
+    // If no file/directory exists with the given path.
+    // If we don't have any file/directory name with "a/b/c" or any
+    // sub-directory or file name from the given path we return this enum value.
     NONE
   }
 }

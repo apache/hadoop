@@ -20,13 +20,14 @@ package org.apache.hadoop.ozone.om.request.key;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
-import org.apache.hadoop.ozone.om.response.file.OMFileCreateResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +44,9 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.response.file.OMFileCreateResponse;
 import org.apache.hadoop.ozone.om.response.key.OMKeyCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -61,8 +65,6 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.UniqueId;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
-
-import javax.annotation.Nonnull;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type.CreateKey;
@@ -333,6 +335,121 @@ public class OMKeyCreateRequest extends OMClientRequest
       return new OMKeyCreateResponse(null, -1L,
           createErrorOMResponse(omResponse, exception));
     }
+  }
+
+  /**
+   * Prepare OmKeyInfo which will be persisted to openKeyTable.
+   * @param omMetadataManager
+   * @param keyArgs
+   * @param dbKeyName
+   * @param size
+   * @param locations
+   * @param encInfo
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  protected OmKeyInfo prepareKeyInfo(
+      @Nonnull OMMetadataManager omMetadataManager,
+      @Nonnull KeyArgs keyArgs, @Nonnull String dbKeyName, long size,
+      @Nonnull List<OmKeyLocationInfo> locations, FileEncryptionInfo encInfo)
+      throws IOException {
+    OmKeyInfo keyInfo = null;
+    if (keyArgs.getIsMultipartKey()) {
+      keyInfo = prepareMultipartKeyInfo(omMetadataManager, keyArgs, size,
+          locations, encInfo);
+      //TODO args.getMetadata
+    } else if (omMetadataManager.getKeyTable().isExist(dbKeyName)) {
+      // TODO: Need to be fixed, as when key already exists, we are
+      //  appending new blocks to existing key.
+      keyInfo = omMetadataManager.getKeyTable().get(dbKeyName);
+      // the key already exist, the new blocks will be added as new version
+      // when locations.size = 0, the new version will have identical blocks
+      // as its previous version
+      keyInfo.addNewVersion(locations, false);
+      keyInfo.setDataSize(size + keyInfo.getDataSize());
+      // The modification time is set in preExecute, use the same as
+      // modification time when key already exists.
+      keyInfo.setModificationTime(keyArgs.getModificationTime());
+    }
+    return keyInfo;
+  }
+
+  /**
+   * Prepare OmKeyInfo for multi-part upload part key which will be persisted
+   * to openKeyTable.
+   * @param omMetadataManager
+   * @param args
+   * @param size
+   * @param locations
+   * @param encInfo
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  private OmKeyInfo prepareMultipartKeyInfo(
+      @Nonnull OMMetadataManager omMetadataManager,
+      @Nonnull KeyArgs args, long size,
+      @Nonnull List<OmKeyLocationInfo> locations,
+      FileEncryptionInfo encInfo) throws IOException {
+    HddsProtos.ReplicationFactor factor;
+    HddsProtos.ReplicationType type;
+
+    Preconditions.checkArgument(args.getMultipartNumber() > 0,
+        "PartNumber Should be greater than zero");
+    // When key is multipart upload part key, we should take replication
+    // type and replication factor from original key which has done
+    // initiate multipart upload. If we have not found any such, we throw
+    // error no such multipart upload.
+    String uploadID = args.getMultipartUploadID();
+    Preconditions.checkNotNull(uploadID);
+    String multipartKey = omMetadataManager
+        .getMultipartKey(args.getVolumeName(), args.getBucketName(),
+            args.getKeyName(), uploadID);
+    OmKeyInfo partKeyInfo = omMetadataManager.getOpenKeyTable().get(
+        multipartKey);
+    if (partKeyInfo == null) {
+      throw new OMException("No such Multipart upload is with specified " +
+          "uploadId " + uploadID,
+          OMException.ResultCodes.NO_SUCH_MULTIPART_UPLOAD_ERROR);
+    } else {
+      factor = partKeyInfo.getFactor();
+      type = partKeyInfo.getType();
+    }
+    // For this upload part we don't need to check in KeyTable. As this
+    // is not an actual key, it is a part of the key.
+    return createKeyInfo(args, locations, factor, type, size, encInfo);
+  }
+
+  /**
+   * Create OmKeyInfo object.
+   * @param keyArgs
+   * @param locations
+   * @param factor
+   * @param type
+   * @param size
+   * @param encInfo
+   * @return OmKeyInfo
+   */
+  private OmKeyInfo createKeyInfo(@Nonnull KeyArgs keyArgs,
+      @Nonnull List<OmKeyLocationInfo> locations,
+      @Nonnull HddsProtos.ReplicationFactor factor,
+      @Nonnull HddsProtos.ReplicationType type, long size,
+      FileEncryptionInfo encInfo) {
+    OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setOmKeyLocationInfos(Collections.singletonList(
+            new OmKeyLocationInfoGroup(0, locations)))
+        .setCreationTime(keyArgs.getModificationTime())
+        .setModificationTime(keyArgs.getModificationTime())
+        .setDataSize(size)
+        .setReplicationType(type)
+        .setReplicationFactor(factor)
+        .setFileEncryptionInfo(encInfo);
+    if(keyArgs.getAclsList() != null) {
+      builder.setAcls(keyArgs.getAclsList());
+    }
+    return builder.build();
   }
 
 }
