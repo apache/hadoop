@@ -26,8 +26,8 @@ import java.util.Collection;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
 import org.apache.ratis.protocol.RaftClientRequest;
@@ -87,7 +88,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
         ozoneManagerDoubleBuffer);
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("OM StateMachine ApplyTransaction Thread - %d").build();
-    this.executorService = Executors.newSingleThreadExecutor(build);
+    this.executorService = HadoopExecutors.newSingleThreadExecutor(build);
   }
 
   /**
@@ -338,6 +339,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
 
   public void stop() {
     ozoneManagerDoubleBuffer.stop();
+    HadoopExecutors.shutdown(executorService, LOG, 5, TimeUnit.SECONDS);
   }
 
 }
