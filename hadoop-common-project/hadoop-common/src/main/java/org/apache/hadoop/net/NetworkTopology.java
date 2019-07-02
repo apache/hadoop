@@ -569,10 +569,11 @@ public class NetworkTopology {
   private Node chooseRandom(final InnerNode parentNode,
       final Node excludedScopeNode, final Collection<Node> excludedNodes,
       final int totalInScopeNodes, final int availableNodes) {
-    Preconditions.checkArgument(
-        totalInScopeNodes >= availableNodes && availableNodes > 0, String
-            .format("%d should >= %d, and both should be positive.",
-                totalInScopeNodes, availableNodes));
+    if (totalInScopeNodes < availableNodes) {
+      LOG.warn("Total Nodes in scope : {} are less than Available Nodes : {}",
+          totalInScopeNodes, availableNodes);
+      return null;
+    }
     if (excludedNodes == null || excludedNodes.isEmpty()) {
       // if there are no excludedNodes, randomly choose a node
       final int index = r.nextInt(totalInScopeNodes);
