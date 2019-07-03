@@ -13,9 +13,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
+
 grep -r --include="*.java" "@author" .
-if [ $? -gt 0 ]; then
+if grep -r --include="*.java" "@author" .; then
   exit 0
 else
-  exit -1
+  exit 1
 fi

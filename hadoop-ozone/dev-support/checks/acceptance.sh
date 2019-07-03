@@ -14,7 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+cd "$DIR/../../.." || exit 1
+
 export HADOOP_VERSION=3
-OZONE_VERSION=$(cat $DIR/../../pom.xml  | grep "<ozone.version>" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
-"$DIR/../../dist/target/ozone-$OZONE_VERSION/compose/test-all.sh"
+OZONE_VERSION=$(grep "<ozone.version>" "$DIR/../../pom.xml" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
+cd "$DIR/../../dist/target/ozone-$OZONE_VERSION/compose" || exit 1
+./test-all.sh
 exit $?
