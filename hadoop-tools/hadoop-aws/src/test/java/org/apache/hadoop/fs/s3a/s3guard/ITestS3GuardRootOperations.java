@@ -64,7 +64,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
 
   private String metastoreUriStr;
 
-  private boolean cleaning = true;
+  private boolean cleaning = false;
 
   /**
    * The test timeout is increased in case previous tests have created
@@ -131,6 +131,18 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   }
 
   @Test
+  public void test_060_dump_metastore_and_s3() throws Throwable {
+    File destFile = calculateDumpFileBase();
+    describe("Dumping S3Guard store under %s", destFile);
+    DumpS3GuardTable.dumpS3GuardStore(
+        getFileSystem(),
+        metastore,
+        getConfiguration(),
+        destFile,
+        getFileSystem().getUri());
+  }
+
+  @Test
   public void test_100_FilesystemPrune() throws Throwable {
     describe("Execute prune against a filesystem URI");
     assumeCleaningOperation();
@@ -181,7 +193,6 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_400_rm_root_recursive() throws Throwable {
     describe("Remove the root directory");
     assumeCleaningOperation();
-    //extra sanity checks here to avoid support calls about complete loss of data
     S3AFileSystem fs = getFileSystem();
     Path root = new Path("/");
     Path file = new Path("/test_400_rm_root_recursive-01");
