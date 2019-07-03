@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.container.common.transport.server;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails.Port.Name;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos
     .ContainerCommandRequestProto;
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.container.common.interfaces.ContainerDispatcher;
 
 import io.opentracing.Scope;
+import org.apache.ratis.server.impl.RaftServerProxy;
 import org.apache.ratis.thirdparty.io.grpc.BindableService;
 import org.apache.ratis.thirdparty.io.grpc.Server;
 import org.apache.ratis.thirdparty.io.grpc.ServerBuilder;
@@ -70,6 +72,8 @@ public final class XceiverServerGrpc extends XceiverServer {
   private Server server;
   private final ContainerDispatcher storageContainer;
   private boolean isStarted;
+  private DatanodeDetails datanodeDetails;
+
 
   /**
    * Constructs a Grpc server class.
@@ -83,25 +87,15 @@ public final class XceiverServerGrpc extends XceiverServer {
     Preconditions.checkNotNull(conf);
 
     this.id = datanodeDetails.getUuid();
+    this.datanodeDetails = datanodeDetails;
     this.port = conf.getInt(OzoneConfigKeys.DFS_CONTAINER_IPC_PORT,
         OzoneConfigKeys.DFS_CONTAINER_IPC_PORT_DEFAULT);
-    // Get an available port on current node and
-    // use that as the container port
+
     if (conf.getBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT,
         OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT_DEFAULT)) {
-      try (ServerSocket socket = new ServerSocket()) {
-        socket.setReuseAddress(true);
-        SocketAddress address = new InetSocketAddress(0);
-        socket.bind(address);
-        this.port = socket.getLocalPort();
-        LOG.info("Found a free port for the server : {}", this.port);
-      } catch (IOException e) {
-        LOG.error("Unable find a random free port for the server, "
-            + "fallback to use default port {}", this.port, e);
-      }
+      this.port = 0;
     }
-    datanodeDetails.setPort(
-        DatanodeDetails.newPort(DatanodeDetails.Port.Name.STANDALONE, port));
+
     NettyServerBuilder nettyServerBuilder =
         ((NettyServerBuilder) ServerBuilder.forPort(port))
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE);
@@ -164,6 +158,19 @@ public final class XceiverServerGrpc extends XceiverServer {
   public void start() throws IOException {
     if (!isStarted) {
       server.start();
+      int realPort = server.getPort();
+
+      if (port == 0) {
+        LOG.info("{} {} is started using port {}", getClass().getSimpleName(),
+            this.id, realPort);
+        port = realPort;
+      }
+
+      //register the real port to the datanode details.
+      datanodeDetails.setPort(DatanodeDetails
+          .newPort(Name.STANDALONE,
+              realPort));
+
       isStarted = true;
     }
   }
