@@ -24,8 +24,8 @@ touch "$FINDBUGS_ALL_FILE"
 
 mvn -B compile -fn findbugs:check -Dfindbugs.failOnError=false  -f pom.ozone.xml
 
-find hadoop-ozone -name findbugsXml.xml -print0 | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
-find hadoop-hdds -name findbugsXml.xml -print0  | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+find hadoop-ozone -name findbugsXml.xml -print0 | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
+find hadoop-hdds -name findbugsXml.xml -print0  | xargs -0 -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
 
 bugs=$(wc -l < "$FINDBUGS_ALL_FILE")
 
