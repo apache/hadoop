@@ -258,8 +258,15 @@ public final class XceiverClientRatis extends XceiverClientSpi {
           .sendWatchAsync(index, RaftProtos.ReplicationLevel.ALL_COMMITTED);
       replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
+      String nodes = " with Datanodes : ";
       Throwable t = HddsClientUtils.checkForException(e);
-      LOG.warn("3 way commit failed ", e);
+      for (DatanodeDetails datanodeDetails : pipeline.getNodes()) {
+        nodes += datanodeDetails.getHostName() + "["
+            + datanodeDetails.getIpAddress() + "] ";
+      }
+      LOG.warn("3 way commit failed on pipeline "
+          + pipeline.getId().getId()
+          + nodes, e);
       if (t instanceof GroupMismatchException) {
         throw e;
       }
@@ -278,8 +285,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         // replication.
         commitInfoMap.remove(address);
         LOG.info(
-            "Could not commit " + index + " to all the nodes. Server " + address
-                + " has failed." + " Committed by majority.");
+            "Could not commit " + index + " on pipeline "
+                + pipeline.getId().getId() + " to all the nodes. Server "
+                + address + " has failed. Committed by majority.");
       });
     }
     clientReply.setLogIndex(index);
