@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,9 +50,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
@@ -772,4 +772,33 @@ public final class S3Guard {
     return dlm;
   }
 
+  public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    String[] rawAuthoritativePaths =
+        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+    Collection<String> authoritativePaths = new ArrayList<>();
+    if (rawAuthoritativePaths.length > 0) {
+      for (int i = 0; i < rawAuthoritativePaths.length; i++) {
+        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
+        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+      }
+    }
+    return authoritativePaths;
+  }
+
+  public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
+      boolean authMetadataStore, Collection<String> authPaths) {
+    String haystack = fs.maybeAddTrailingSlash(p.toString());
+    if (authMetadataStore) {
+      return true;
+    }
+    if (!authPaths.isEmpty()) {
+      for (String needle : authPaths) {
+
+        if (haystack.startsWith(needle)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 }

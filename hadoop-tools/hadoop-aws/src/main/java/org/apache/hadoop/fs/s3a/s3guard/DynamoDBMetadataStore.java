@@ -1321,7 +1321,6 @@ public class DynamoDBMetadataStore implements MetadataStore,
       final DirListingMetadata meta,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.debug("Saving to table {} in region {}: {}", tableName, region, meta);
-
     // directory path
     Path path = meta.getPath();
     DDBPathMetadata ddbPathMeta =
