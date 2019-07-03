@@ -38,7 +38,16 @@ public interface OzoneManagerFS extends IOzoneAcl {
   OpenKeySession createFile(OmKeyArgs args, boolean isOverWrite,
       boolean isRecursive) throws IOException;
 
-  OmKeyInfo lookupFile(OmKeyArgs args) throws IOException;
+  /**
+   * Look up a file. Return the info of the file to client side.
+   *
+   * @param args the args of the key provided by client.
+   * @param clientAddress a hint to key manager, order the datanode in returned
+   *                      pipeline by distance between client and datanode.
+   * @return a OmKeyInfo instance client uses to talk to container.
+   * @throws IOException
+   */
+  OmKeyInfo lookupFile(OmKeyArgs args, String clientAddress) throws IOException;
 
   List<OzoneFileStatus> listStatus(OmKeyArgs keyArgs, boolean recursive,
       String startKey, long numEntries) throws IOException;
