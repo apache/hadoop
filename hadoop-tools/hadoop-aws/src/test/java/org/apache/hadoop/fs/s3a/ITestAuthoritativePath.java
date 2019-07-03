@@ -294,6 +294,10 @@ public class ITestAuthoritativePath extends AbstractS3ATestBase {
       Path directoryMatch = new Path(testRoot, "/auth/oritative");
       assertTrue(S3Guard.allowAuthoritative(directoryMatch, fs,
           false, authPaths));
+
+      Path unqualifiedMatch = new Path(testRoot.toUri().getPath(), "/auth/oritative");
+      assertTrue(S3Guard.allowAuthoritative(unqualifiedMatch, fs,
+          false, authPaths));
     } finally {
       cleanUpFS(fs);
     }
