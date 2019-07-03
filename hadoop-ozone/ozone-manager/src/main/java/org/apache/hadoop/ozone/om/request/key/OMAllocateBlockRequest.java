@@ -39,7 +39,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.key.OMAllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -65,8 +64,7 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes
 /**
  * Handles allocate block request.
  */
-public class OMAllocateBlockRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMAllocateBlockRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMAllocateBlockRequest.class);

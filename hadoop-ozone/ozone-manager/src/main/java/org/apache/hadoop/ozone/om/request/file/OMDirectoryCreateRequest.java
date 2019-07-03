@@ -41,7 +41,6 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.file.OMDirectoryCreateResponse;
@@ -73,8 +72,7 @@ import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryR
 /**
  * Handle create directory request.
  */
-public class OMDirectoryCreateRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMDirectoryCreateRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMDirectoryCreateRequest.class);
@@ -214,8 +212,8 @@ public class OMDirectoryCreateRequest extends OMClientRequest
       OmBucketInfo omBucketInfo, String volumeName, String bucketName,
       String keyName, KeyArgs keyArgs)
       throws IOException {
-    FileEncryptionInfo encryptionInfo = getFileEncryptionInfo(ozoneManager,
-        omBucketInfo);
+    Optional<FileEncryptionInfo> encryptionInfo =
+        getFileEncryptionInfo(ozoneManager, omBucketInfo);
     String dirName = OzoneFSUtils.addTrailingSlashIfNeeded(keyName);
 
     return new OmKeyInfo.Builder()
@@ -229,7 +227,7 @@ public class OMDirectoryCreateRequest extends OMClientRequest
         .setDataSize(0)
         .setReplicationType(HddsProtos.ReplicationType.RATIS)
         .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
-        .setFileEncryptionInfo(encryptionInfo)
+        .setFileEncryptionInfo(encryptionInfo.orNull())
         .setAcls(keyArgs.getAclsList())
         .build();
   }
