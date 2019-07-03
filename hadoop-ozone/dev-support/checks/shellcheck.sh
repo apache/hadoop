@@ -16,13 +16,13 @@
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
-export MAVEN_OPTS="-Xmx4096m"
-mvn -B install -f pom.ozone.xml -DskipTests
-mvn -B -fn test -f pom.ozone.xml -pl :hadoop-ozone-integration-test,:hadoop-ozone-filesystem
-module_failed_tests=$(find "." -name 'TEST*.xml' -print0 \
-    | xargs -0 -n1 "grep" -l -E "<failure|<error"\
-    | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}')
-if [[ -n "${module_failed_tests}" ]] ; then
-    exit 1
+OUTPUT_FILE="$DIR/../../../target/shell-problems.txt"
+mkdir -p "$(dirname "$OUTPUT_FILE")"
+echo "" > "$OUTPUT_FILE"
+find "./hadoop-hdds" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
+find "./hadoop-ozone" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
+
+
+if [ "$(cat "$OUTPUT_FILE")" ]; then
+   exit 1
 fi
-exit 0
