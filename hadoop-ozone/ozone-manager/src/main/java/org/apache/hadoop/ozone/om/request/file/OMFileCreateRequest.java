@@ -316,15 +316,16 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
           return true;
         }
       }
-      try (TableIterator< String, ? extends Table.KeyValue<String, OmKeyInfo>>
+      try (TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
                keyIter = omMetadataManager.getKeyTable().iterator()) {
-        Table.KeyValue< String, OmKeyInfo > kv = keyIter.seek(dbKeyPath);
+        Table.KeyValue<String, OmKeyInfo> kv = keyIter.seek(dbKeyPath);
+
 
         if (kv != null) {
           // Check the entry in db is not marked for delete. This can happen
           // while entry is marked for delete, but it is not flushed to DB.
-          CacheValue< OmKeyInfo > cacheValue = omMetadataManager.getKeyTable()
-              .getCacheValue(new CacheKey(kv.getKey()));
+          CacheValue<OmKeyInfo> cacheValue = omMetadataManager.getKeyTable()
+              .getCacheValue(new CacheKey<>(kv.getKey()));
           if (cacheValue != null) {
             if (kv.getKey().startsWith(dbKeyPath)
                 && cacheValue.getCacheValue() != null) {

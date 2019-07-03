@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -236,7 +237,7 @@ public class OMKeyCreateRequest extends OMClientRequest
   @SuppressWarnings("parameternumber")
   protected OMClientResponse prepareCreateKeyResponse(@Nonnull KeyArgs keyArgs,
       OmKeyInfo omKeyInfo, @Nonnull List<OmKeyLocationInfo> locations,
-      FileEncryptionInfo encryptionInfo, IOException exception,
+      FileEncryptionInfo encryptionInfo, @Nullable IOException exception,
       long clientID, long transactionLogIndex, @Nonnull String volumeName,
       @Nonnull String bucketName, @Nonnull String keyName,
       @Nonnull OzoneManager ozoneManager, @Nonnull OMAction omAction) {
