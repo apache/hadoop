@@ -2611,4 +2611,43 @@ public class TestLogAggregationService extends BaseContainerManagerTest {
       return this.logFileTypesInLastCycle;
     }
   }
+
+  @Test
+  public void testRollingMonitorIntervalDefault() {
+    LogAggregationService logAggregationService =
+        new LogAggregationService(dispatcher, this.context, this.delSrvc,
+            super.dirsHandler);
+    logAggregationService.init(this.conf);
+
+    long interval = logAggregationService.getRollingMonitorInterval();
+    assertEquals(-1L, interval);
+  }
+
+  @Test
+  public void testRollingMonitorIntervalGreaterThanSet() {
+    this.conf.set(YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS, "1800");
+    this.conf.set(YarnConfiguration
+        .NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS, "2700");
+    LogAggregationService logAggregationService =
+            new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                    super.dirsHandler);
+    logAggregationService.init(this.conf);
+
+    long interval = logAggregationService.getRollingMonitorInterval();
+    assertEquals(2700L, interval);
+  }
+
+  @Test
+  public void testRollingMonitorIntervalLessThanSet() {
+    this.conf.set(YarnConfiguration.MIN_LOG_ROLLING_INTERVAL_SECONDS, "1800");
+    this.conf.set(YarnConfiguration
+        .NM_LOG_AGGREGATION_ROLL_MONITORING_INTERVAL_SECONDS, "600");
+    LogAggregationService logAggregationService =
+            new LogAggregationService(dispatcher, this.context, this.delSrvc,
+                    super.dirsHandler);
+    logAggregationService.init(this.conf);
+
+    long interval = logAggregationService.getRollingMonitorInterval();
+    assertEquals(1800L, interval);
+  }
 }
