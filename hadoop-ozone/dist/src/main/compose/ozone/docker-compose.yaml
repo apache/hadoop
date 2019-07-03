@@ -44,6 +44,7 @@ services:
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
+         - /etc/passwd:/root/passwd
       ports:
          - 9876:9876
       env_file:
