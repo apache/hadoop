@@ -94,7 +94,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
       "\t" + Diff.NAME + " - " + Diff.PURPOSE + "\n" +
       "\t" + Prune.NAME + " - " + Prune.PURPOSE + "\n" +
       "\t" + SetCapacity.NAME + " - " + SetCapacity.PURPOSE + "\n" +
-      "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n";
+      "\t" + SelectTool.NAME + " - " + SelectTool.PURPOSE + "\n" +
+      "\t" + Fsck.NAME + " - " + Fsck.PURPOSE + "\n";
   private static final String DATA_IN_S3_IS_PRESERVED
       = "(all data in S3 is preserved)";
 
@@ -1485,6 +1486,70 @@ public abstract class S3GuardTool extends Configured implements Tool {
     }
   }
 
+  /**
+   * Prune metadata that has not been modified recently.
+   */
+  static class Fsck extends S3GuardTool {
+    public static final String CHECK_FLAG = "check";
+
+    public static final String NAME = "fsck";
+    public static final String PURPOSE = "Compares S3 with MetadataStore, and "
+        + "returns a failure status if any rules or invariants are violated. "
+        + "Only works with DynamoDbMetadataStore.";
+    private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
+        "\t" + PURPOSE + "\n\n" +
+        "Common options:\n" +
+        "  " + CHECK_FLAG + " Check the metadata store for errors, but do "
+        + "not fix any issues.\n";
+
+    Fsck(Configuration conf) {
+      super(conf, CHECK_FLAG);
+      addAgeOptions();
+    }
+
+    @Override
+    public String getName() {
+      return NAME;
+    }
+
+    @Override
+    public String getUsage() {
+      return USAGE;
+    }
+
+    public int run(String[] args, PrintStream out) throws
+        InterruptedException, IOException {
+      List<String> paths = parseArgs(args);
+      try {
+        parseDynamoDBRegion(paths);
+      } catch (ExitUtil.ExitException e) {
+        errorln(USAGE);
+        throw e;
+      }
+
+      if (paths.size() == 0) {
+        errorln(USAGE);
+        return ERROR;
+      }
+
+      final MetadataStore ms = initMetadataStore(false);
+      String tableName = getConf().getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
+      initS3AFileSystem("s3a://" + tableName);
+      final S3AFileSystem fs = getFilesystem();
+
+      if (paths.get(0).equals(CHECK_FLAG)) {
+        // do the check
+        S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms, false);
+        s3GuardFsck.compareS3toMs(fs.qualify(new Path("/")));
+      } else {
+        errorln(USAGE);
+        return ERROR;
+      }
+
+      return SUCCESS;
+    }
+  }
+
   private static S3GuardTool command;
 
   /**
@@ -1663,6 +1728,9 @@ public abstract class S3GuardTool extends Configured implements Tool {
       // the select tool is not technically a S3Guard tool, but it's on the CLI
       // because this is the defacto S3 CLI.
       command = new SelectTool(conf);
+      break;
+    case Fsck.NAME:
+      command = new Fsck(conf);
       break;
     default:
       printHelp();

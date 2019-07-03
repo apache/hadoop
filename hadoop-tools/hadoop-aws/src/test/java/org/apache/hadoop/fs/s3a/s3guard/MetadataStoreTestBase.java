@@ -1199,7 +1199,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return basicFileStatus(path, size, isDir, modTime);
   }
 
-  protected S3AFileStatus basicFileStatus(int size, boolean isDir,
+  public static S3AFileStatus basicFileStatus(int size, boolean isDir,
       long blockSize, long modificationTime, Path path) {
     if (isDir) {
       return new S3AFileStatus(Tristate.UNKNOWN, path, null);
