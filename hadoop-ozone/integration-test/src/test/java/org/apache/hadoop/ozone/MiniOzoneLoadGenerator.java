@@ -130,6 +130,11 @@ public class MiniOzoneLoadGenerator {
         break;
       }
 
+      try {
+        bucket.deleteKey(keyName);
+      } catch (Exception e) {
+        LOG.error("LOADGEN: Unable to delete key:{}", keyName, e);
+      }
     }
     // This will terminate other threads too.
     isWriteThreadRunning.set(false);

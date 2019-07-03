@@ -711,7 +711,8 @@ public class KeyManagerImpl implements KeyManager {
                   k.setPipeline(cp.getPipeline());
                 }
               } catch (IOException e) {
-                LOG.debug("Unable to update pipeline for container");
+                LOG.error("Unable to update pipeline for container:{}",
+                    k.getContainerID());
               }
             }
           });
