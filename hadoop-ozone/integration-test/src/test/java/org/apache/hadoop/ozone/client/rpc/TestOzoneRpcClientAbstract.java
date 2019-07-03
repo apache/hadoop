@@ -83,7 +83,6 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
 import org.apache.hadoop.ozone.s3.util.OzoneS3Util;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -133,7 +132,7 @@ public abstract class TestOzoneRpcClientAbstract {
       LoggerFactory.getLogger(TestOzoneRpcClientAbstract.class);
   private static MiniOzoneCluster cluster = null;
   private static OzoneClient ozClient = null;
-  static ObjectStore store = null;
+  private static ObjectStore store = null;
   private static OzoneManager ozoneManager;
   private static StorageContainerLocationProtocolClientSideTranslatorPB
       storageContainerLocationClient;
@@ -721,7 +720,7 @@ public abstract class TestOzoneRpcClientAbstract {
     }
 
     // read key with topology aware read disabled
-    Configuration conf = new Configuration();
+    Configuration conf = cluster.getConf();
     conf.set(ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED, "false");
     OzoneClient newClient = OzoneClientFactory.getRpcClient(conf);
     ObjectStore newStore = newClient.getObjectStore();

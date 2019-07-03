@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.UUID;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
@@ -85,8 +84,8 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
     String bucketName = UUID.randomUUID().toString();
 
     String value = "sample value";
-    store.createVolume(volumeName);
-    OzoneVolume volume = store.getVolume(volumeName);
+    getStore().createVolume(volumeName);
+    OzoneVolume volume = getStore().getVolume(volumeName);
     volume.createBucket(bucketName);
     OzoneBucket bucket = volume.getBucket(bucketName);
     String keyName = UUID.randomUUID().toString();

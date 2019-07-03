@@ -94,7 +94,7 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
 
   @Override
   public SCMBlockLocationResponse send(RpcController controller,
-                                       SCMBlockLocationRequest request) throws ServiceException {
+      SCMBlockLocationRequest request) throws ServiceException {
     String traceId = request.getTraceID();
 
     SCMBlockLocationResponse.Builder response = createSCMBlockResponse(
@@ -107,26 +107,26 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
         .importAndCreateScope("ScmBlockLocationProtocol."+request.getCmdType(),
             request.getTraceID())) {
       switch (request.getCmdType()) {
-        case AllocateScmBlock:
-          response.setAllocateScmBlockResponse(
-              allocateScmBlock(request.getAllocateScmBlockRequest()));
-          break;
-        case DeleteScmKeyBlocks:
-          response.setDeleteScmKeyBlocksResponse(
-              deleteScmKeyBlocks(request.getDeleteScmKeyBlocksRequest()));
-          break;
-        case GetScmInfo:
-          response.setGetScmInfoResponse(
-              getScmInfo(request.getGetScmInfoRequest()));
-          break;
-        case SortDatanodes:
-          response.setSortDatanodesResponse(
-              sortDatanodes(request.getSortDatanodesRequest()));
-          break;
-        default:
-          // Should never happen
-          throw new IOException("Unknown Operation "+request.getCmdType()+
-              " in ScmBlockLocationProtocol");
+      case AllocateScmBlock:
+        response.setAllocateScmBlockResponse(
+            allocateScmBlock(request.getAllocateScmBlockRequest()));
+        break;
+      case DeleteScmKeyBlocks:
+        response.setDeleteScmKeyBlocksResponse(
+            deleteScmKeyBlocks(request.getDeleteScmKeyBlocksRequest()));
+        break;
+      case GetScmInfo:
+        response.setGetScmInfoResponse(
+            getScmInfo(request.getGetScmInfoRequest()));
+        break;
+      case SortDatanodes:
+        response.setSortDatanodesResponse(
+            sortDatanodes(request.getSortDatanodesRequest()));
+        break;
+      default:
+        // Should never happen
+        throw new IOException("Unknown Operation "+request.getCmdType()+
+            " in ScmBlockLocationProtocol");
       }
     } catch (IOException e) {
       response.setSuccess(false);
