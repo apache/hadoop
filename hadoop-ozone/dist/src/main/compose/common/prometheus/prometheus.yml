@@ -22,4 +22,4 @@ scrape_configs:
     static_configs:
      - targets:
         - "scm:9876"
-        - "ozoneManager:9874"
+        - "om:9874"
