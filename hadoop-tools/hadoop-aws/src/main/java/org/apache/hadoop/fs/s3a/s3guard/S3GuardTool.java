@@ -1177,8 +1177,10 @@ public abstract class S3GuardTool extends Configured implements Tool {
       if (usingS3Guard) {
         out.printf("Filesystem %s is using S3Guard with store %s%n",
             fsUri, store.toString());
-        printOption(out, "Authoritative S3Guard",
+        printOption(out, "Authoritative Metadata Store",
             METADATASTORE_AUTHORITATIVE, "false");
+        printOption(out, "Authoritative Path",
+              AUTHORITATIVE_PATH, "");
         authMode = conf.getBoolean(METADATASTORE_AUTHORITATIVE, false);
         printStoreDiagnostics(out, store);
       } else {
