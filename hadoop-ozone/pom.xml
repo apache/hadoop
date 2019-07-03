@@ -29,12 +29,13 @@
     <hadoop.version>3.2.0</hadoop.version>
     <hdds.version>0.5.0-SNAPSHOT</hdds.version>
     <ozone.version>0.5.0-SNAPSHOT</ozone.version>
-    <ratis.version>0.4.0-fe2b15d-SNAPSHOT</ratis.version>
+    <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
     <ozone.release>Crater Lake</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <guice.version>4.0</guice.version>
+    <docker.image>apache/ozone:${project.version}</docker.image>
   </properties>
   <modules>
     <module>common</module>
@@ -365,6 +366,12 @@
   </build>
 
   <profiles>
+    <profile>
+      <id>docker-build</id>
+      <properties>
+        <docker.image>${user.name}/ozone:${project.version}</docker.image>
+      </properties>
+    </profile>
     <profile>
       <id>parallel-tests</id>
       <build>

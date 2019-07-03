@@ -21,7 +21,10 @@ package org.apache.hadoop.ozone.genconf;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
+import org.apache.hadoop.ozone.OzoneConsts;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.PicocliException;
@@ -106,9 +109,19 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli {
 
     for (OzoneConfiguration.Property p : allProperties) {
       if (p.getTag() != null && p.getTag().contains("REQUIRED")) {
-        if(p.getName().equalsIgnoreCase(OzoneConfigKeys.OZONE_ENABLED)) {
+        if (p.getName().equalsIgnoreCase(OzoneConfigKeys.OZONE_ENABLED)) {
           p.setValue(String.valueOf(Boolean.TRUE));
+        } else if (p.getName().equalsIgnoreCase(
+            OzoneConfigKeys.OZONE_METADATA_DIRS)) {
+          p.setValue(System.getProperty(OzoneConsts.JAVA_TMP_DIR));
+        } else if (p.getName().equalsIgnoreCase(
+            OMConfigKeys.OZONE_OM_ADDRESS_KEY)
+            || p.getName().equalsIgnoreCase(ScmConfigKeys.OZONE_SCM_NAMES)
+            || p.getName().equalsIgnoreCase(
+              ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY)) {
+          p.setValue(OzoneConsts.LOCALHOST);
         }
+
         requiredProperties.add(p);
       }
     }
@@ -157,4 +170,5 @@ public final class GenerateOzoneRequiredConfigurations extends GenericCli {
     File file = new File(path);
     return file.canWrite();
   }
+
 }

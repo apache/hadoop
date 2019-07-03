@@ -132,7 +132,9 @@ class PendingReconstructionBlocks {
   public void clear() {
     synchronized (pendingReconstructions) {
       pendingReconstructions.clear();
-      timedOutItems.clear();
+      synchronized (timedOutItems) {
+        timedOutItems.clear();
+      }
       timedOutCount = 0L;
     }
   }

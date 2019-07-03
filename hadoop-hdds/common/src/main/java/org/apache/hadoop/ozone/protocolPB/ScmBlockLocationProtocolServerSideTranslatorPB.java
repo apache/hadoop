@@ -28,6 +28,7 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocol.StorageContainerLocationProtocol;
 import org.apache.hadoop.hdds.scm.protocolPB.ScmBlockLocationProtocolPB;
@@ -78,7 +79,6 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     this.impl = impl;
   }
 
-
   private SCMBlockLocationResponse.Builder createSCMBlockResponse(
       ScmBlockLocationProtocolProtos.Type cmdType,
       String traceID) {
@@ -95,100 +95,99 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
     SCMBlockLocationResponse.Builder response = createSCMBlockResponse(
         request.getCmdType(),
         traceId);
+    response.setSuccess(true);
+    response.setStatus(Status.OK);
 
-    switch (request.getCmdType()) {
-    case AllocateScmBlock:
-      response.setAllocateScmBlockResponse(
-          allocateScmBlock(traceId, request.getAllocateScmBlockRequest()));
-      break;
-    case DeleteScmKeyBlocks:
-      response.setDeleteScmKeyBlocksResponse(
-          deleteScmKeyBlocks(traceId, request.getDeleteScmKeyBlocksRequest()));
-      break;
-    case GetScmInfo:
-      response.setGetScmInfoResponse(
-          getScmInfo(traceId, request.getGetScmInfoRequest()));
-      break;
-    default:
-      throw new ServiceException("Unknown Operation");
+    try(Scope scope = TracingUtil
+        .importAndCreateScope("ScmBlockLocationProtocol."+request.getCmdType(),
+            request.getTraceID())) {
+      switch (request.getCmdType()) {
+      case AllocateScmBlock:
+        response.setAllocateScmBlockResponse(
+            allocateScmBlock(request.getAllocateScmBlockRequest()));
+        break;
+      case DeleteScmKeyBlocks:
+        response.setDeleteScmKeyBlocksResponse(
+            deleteScmKeyBlocks(request.getDeleteScmKeyBlocksRequest()));
+        break;
+      case GetScmInfo:
+        response.setGetScmInfoResponse(
+            getScmInfo(request.getGetScmInfoRequest()));
+        break;
+      default:
+        // Should never happen
+        throw new IOException("Unknown Operation "+request.getCmdType()+
+            " in ScmBlockLocationProtocol");
+      }
+    } catch (IOException e) {
+      response.setSuccess(false);
+      response.setStatus(exceptionToResponseStatus(e));
+      if (e.getMessage() != null) {
+        response.setMessage(e.getMessage());
+      }
     }
-    response.setSuccess(true)
-        .setStatus(Status.OK);
     return response.build();
   }
 
-  public AllocateScmBlockResponseProto allocateScmBlock(
-      String traceId, AllocateScmBlockRequestProto request)
-      throws ServiceException {
-    try(Scope scope = TracingUtil
-        .importAndCreateScope("ScmBlockLocationProtocol.allocateBlock",
-            traceId)) {
-      List<AllocatedBlock> allocatedBlocks =
-          impl.allocateBlock(request.getSize(),
-              request.getNumBlocks(), request.getType(),
-              request.getFactor(), request.getOwner(),
-              ExcludeList.getFromProtoBuf(request.getExcludeList()));
-
-      AllocateScmBlockResponseProto.Builder builder =
-          AllocateScmBlockResponseProto.newBuilder();
-
-      if (allocatedBlocks.size() < request.getNumBlocks()) {
-        return builder
-            .setErrorCode(AllocateScmBlockResponseProto.Error.unknownFailure)
-            .build();
-      }
-
-      for (AllocatedBlock block : allocatedBlocks) {
-        builder.addBlocks(AllocateBlockResponse.newBuilder()
-            .setContainerBlockID(block.getBlockID().getProtobuf())
-            .setPipeline(block.getPipeline().getProtobufMessage()));
-      }
-
-      return builder
-          .setErrorCode(AllocateScmBlockResponseProto.Error.success)
-          .build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+  private Status exceptionToResponseStatus(IOException ex) {
+    if (ex instanceof SCMException) {
+      return Status.values()[((SCMException) ex).getResult().ordinal()];
+    } else {
+      return Status.INTERNAL_ERROR;
     }
   }
 
+  public AllocateScmBlockResponseProto allocateScmBlock(
+      AllocateScmBlockRequestProto request)
+      throws IOException {
+    List<AllocatedBlock> allocatedBlocks =
+        impl.allocateBlock(request.getSize(),
+            request.getNumBlocks(), request.getType(),
+            request.getFactor(), request.getOwner(),
+            ExcludeList.getFromProtoBuf(request.getExcludeList()));
+
+    AllocateScmBlockResponseProto.Builder builder =
+        AllocateScmBlockResponseProto.newBuilder();
+
+    if (allocatedBlocks.size() < request.getNumBlocks()) {
+      throw new SCMException("Allocated " + allocatedBlocks.size() +
+          " blocks. Requested " + request.getNumBlocks() + " blocks",
+          SCMException.ResultCodes.FAILED_TO_ALLOCATE_ENOUGH_BLOCKS);
+    }
+    for (AllocatedBlock block : allocatedBlocks) {
+      builder.addBlocks(AllocateBlockResponse.newBuilder()
+          .setContainerBlockID(block.getBlockID().getProtobuf())
+          .setPipeline(block.getPipeline().getProtobufMessage()));
+    }
+
+    return builder.build();
+  }
+
   public DeleteScmKeyBlocksResponseProto deleteScmKeyBlocks(
-      String traceId, DeleteScmKeyBlocksRequestProto req)
-      throws ServiceException {
+      DeleteScmKeyBlocksRequestProto req)
+      throws IOException {
     DeleteScmKeyBlocksResponseProto.Builder resp =
         DeleteScmKeyBlocksResponseProto.newBuilder();
-    try(Scope scope = TracingUtil
-        .importAndCreateScope("ScmBlockLocationProtocol.deleteKeyBlocks",
-            traceId)) {
-      List<BlockGroup> infoList = req.getKeyBlocksList().stream()
-          .map(BlockGroup::getFromProto).collect(Collectors.toList());
-      final List<DeleteBlockGroupResult> results =
-          impl.deleteKeyBlocks(infoList);
-      for (DeleteBlockGroupResult result: results) {
-        DeleteKeyBlocksResultProto.Builder deleteResult =
-            DeleteKeyBlocksResultProto
-            .newBuilder()
-            .setObjectKey(result.getObjectKey())
-            .addAllBlockResults(result.getBlockResultProtoList());
-        resp.addResults(deleteResult.build());
-      }
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
+
+    List<BlockGroup> infoList = req.getKeyBlocksList().stream()
+        .map(BlockGroup::getFromProto).collect(Collectors.toList());
+    final List<DeleteBlockGroupResult> results =
+        impl.deleteKeyBlocks(infoList);
+    for (DeleteBlockGroupResult result: results) {
+      DeleteKeyBlocksResultProto.Builder deleteResult =
+          DeleteKeyBlocksResultProto
+          .newBuilder()
+          .setObjectKey(result.getObjectKey())
+          .addAllBlockResults(result.getBlockResultProtoList());
+      resp.addResults(deleteResult.build());
     }
     return resp.build();
   }
 
   public HddsProtos.GetScmInfoResponseProto getScmInfo(
-      String traceId, HddsProtos.GetScmInfoRequestProto req)
-      throws ServiceException {
-    ScmInfo scmInfo;
-    try(Scope scope = TracingUtil
-        .importAndCreateScope("ScmBlockLocationProtocol.getInfo",
-            traceId)) {
-      scmInfo = impl.getScmInfo();
-    } catch (IOException ex) {
-      throw new ServiceException(ex);
-    }
+      HddsProtos.GetScmInfoRequestProto req)
+      throws IOException {
+    ScmInfo scmInfo = impl.getScmInfo();
     return HddsProtos.GetScmInfoResponseProto.newBuilder()
         .setClusterId(scmInfo.getClusterId())
         .setScmId(scmInfo.getScmId())

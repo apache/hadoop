@@ -1,5 +1,5 @@
 ---
-title: Ozone Overview
+title: Overview
 menu: main
 weight: -10
 ---
@@ -22,18 +22,24 @@ weight: -10
 
 # Apache Hadoop Ozone
 
-Ozone is a scalable, distributed object store for Hadoop.  Applications like
-Apache Spark, Hive and YARN, can run against Ozone without any
-modifications. Ozone comes with a [Java client library]({{< ref "JavaApi.md"
->}}), a [S3]({{< ref "S3.md" >}}) and a  [command line interface] 
-({{< ref "CommandShell.md#shell" >}})  which makes it easy to use Ozone.
+<img src="ozone-usage.png" style="max-width: 60%;"/>
 
-Ozone consists of volumes, buckets, and Keys:
+*_Ozone is a scalable, redundant, and distributed object store for Hadoop. <p>
+Apart from scaling to billions of objects of varying sizes,
+Ozone can function effectively in containerized environments
+like Kubernetes._* <p>
+
+Applications like Apache Spark, Hive and YARN, work without any modifications when using Ozone. Ozone comes with a [Java client library]({{<
+ref "JavaApi.md"
+>}}), [S3 protocol support] ({{< ref "S3.md" >}}), and a [command line interface]
+({{< ref "shell/_index.md" >}})  which makes it easy to use Ozone.
+
+Ozone consists of volumes, buckets, and keys:
 
 * Volumes are similar to user accounts. Only administrators can create or delete volumes.
-* Buckets are similar to directories. A bucket can contain any number of keys,  but buckets cannot contain other buckets.
-* Keys are similar to files. A bucket can contain any number of keys.
+* Buckets are similar to directories. A bucket can contain any number of keys, but buckets cannot contain other buckets.
+* Keys are similar to files.
 
-
-
-<a href="{{< ref "RunningViaDocker.md" >}}"><button class="btn btn-danger btn-lg">Getting started</button></a>
+ <a href="{{< ref "start/_index.md" >}}"> <button type="button"
+ class="btn  btn-success btn-lg">Next >></button>
+</div>

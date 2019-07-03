@@ -37,9 +37,11 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyB
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
+import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
+import org.apache.hadoop.ipc.ProtobufHelper;
 import org.apache.hadoop.ipc.ProtocolTranslator;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -48,6 +50,8 @@ import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
 import com.google.common.base.Preconditions;
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
+
+import static org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Status.OK;
 
 /**
  * This class is the client-side translator to translate the requests made on
@@ -86,6 +90,32 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
   }
 
   /**
+   * Submits client request to SCM server.
+   * @param req client request
+   * @return response from SCM
+   * @throws IOException thrown if any Protobuf service exception occurs
+   */
+  private SCMBlockLocationResponse submitRequest(
+      SCMBlockLocationRequest req) throws IOException {
+    try {
+      SCMBlockLocationResponse response =
+          rpcProxy.send(NULL_RPC_CONTROLLER, req);
+      return response;
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  private SCMBlockLocationResponse handleError(SCMBlockLocationResponse resp)
+      throws SCMException {
+    if (resp.getStatus() != OK) {
+      throw new SCMException(resp.getMessage(),
+          SCMException.ResultCodes.values()[resp.getStatus().ordinal()]);
+    }
+    return resp;
+  }
+
+  /**
    * Asks SCM where a block should be allocated. SCM responds with the
    * set of datanodes that should be used creating this block.
    * @param size - size of the block.
@@ -117,19 +147,10 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .setAllocateScmBlockRequest(request)
         .build();
 
-    final AllocateScmBlockResponseProto response;
-    final SCMBlockLocationResponse wrappedResponse;
-    try {
-      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
-      response = wrappedResponse.getAllocateScmBlockResponse();
-    } catch (ServiceException e) {
-      throw transformServiceException(e);
-    }
-    if (response.getErrorCode() !=
-        AllocateScmBlockResponseProto.Error.success) {
-      throw new IOException(response.hasErrorMessage() ?
-          response.getErrorMessage() : "Allocate block failed.");
-    }
+    final SCMBlockLocationResponse wrappedResponse =
+        handleError(submitRequest(wrapper));
+    final AllocateScmBlockResponseProto response =
+        wrappedResponse.getAllocateScmBlockResponse();
 
     List<AllocatedBlock> blocks = new ArrayList<>(response.getBlocksCount());
     for (AllocateBlockResponse resp : response.getBlocksList()) {
@@ -166,14 +187,11 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .setDeleteScmKeyBlocksRequest(request)
         .build();
 
-    final DeleteScmKeyBlocksResponseProto resp;
-    final SCMBlockLocationResponse wrappedResponse;
-    try {
-      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
-      resp = wrappedResponse.getDeleteScmKeyBlocksResponse();
-    } catch (ServiceException e) {
-      throw transformServiceException(e);
-    }
+    final SCMBlockLocationResponse wrappedResponse =
+        handleError(submitRequest(wrapper));
+    final DeleteScmKeyBlocksResponseProto resp =
+        wrappedResponse.getDeleteScmKeyBlocksResponse();
+
     List<DeleteBlockGroupResult> results =
         new ArrayList<>(resp.getResultsCount());
     results.addAll(resp.getResultsList().stream().map(
@@ -182,30 +200,6 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
                 .convertBlockResultProto(result.getBlockResultsList())))
         .collect(Collectors.toList()));
     return results;
-  }
-
-  private IOException transformServiceException(
-      ServiceException se) throws IOException {
-    //TODO SCM has no perfect way to return with business exceptions. All
-    //the exceptions will be mapped to ServiceException.
-    //ServiceException is handled in a special way in hadoop rpc: the message
-    //contains the whole stack trace which is not required for the business
-    //exception. As of now I remove the stack trace (use first line only).
-    //Long term we need a proper way of the exception propagation.
-    Throwable cause = se.getCause();
-    if (cause == null) {
-      return new IOException(
-          new ServiceException(useFirstLine(se.getMessage()), se.getCause()));
-    }
-    return new IOException(useFirstLine(cause.getMessage()), cause.getCause());
-  }
-
-  private String useFirstLine(String message) {
-    if (message == null) {
-      return null;
-    } else {
-      return message.split("\n")[0];
-    }
   }
 
   /**
@@ -224,13 +218,9 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .setGetScmInfoRequest(request)
         .build();
 
-    final SCMBlockLocationResponse wrappedResponse;
-    try {
-      wrappedResponse = rpcProxy.send(NULL_RPC_CONTROLLER, wrapper);
-      resp = wrappedResponse.getGetScmInfoResponse();
-    } catch (ServiceException e) {
-      throw transformServiceException(e);
-    }
+    final SCMBlockLocationResponse wrappedResponse =
+        handleError(submitRequest(wrapper));
+    resp = wrappedResponse.getGetScmInfoResponse();
     ScmInfo.Builder builder = new ScmInfo.Builder()
         .setClusterId(resp.getClusterId())
         .setScmId(resp.getScmId());

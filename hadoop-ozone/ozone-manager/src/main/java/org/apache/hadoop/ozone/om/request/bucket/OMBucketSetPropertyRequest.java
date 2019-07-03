@@ -58,6 +58,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
+
 /**
  * Handle SetBucketProperty Request.
  */
@@ -120,7 +122,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     IOException exception = null;
 
     // acquire lock
-    omMetadataManager.getLock().acquireBucketLock(volumeName, bucketName);
+    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
+        bucketName);
 
     try {
 
@@ -182,7 +185,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseBucketLock(volumeName, bucketName);
+      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
     }
 
     // Performing audit logging outside of the lock.
