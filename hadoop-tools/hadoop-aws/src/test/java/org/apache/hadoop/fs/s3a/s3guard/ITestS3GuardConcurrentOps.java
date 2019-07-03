@@ -60,17 +60,8 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
   protected Configuration createConfiguration() {
     Configuration conf =  super.createConfiguration();
     //patch the read/write capacity
-    boolean scaleCapacityLimitEnabled = conf.getBoolean("fs.s3a.s3guard.ddb.table.scale.capacity.limit", true);
-    if(scaleCapacityLimitEnabled) {
-      LOG.info("Enable the capacity limit : {} -> {}, {} -> {}",
-        S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 1, S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,1);
-      conf.set(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, "1");
-      conf.set(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, "1");
-    }
-    if(scaleCapacityLimitEnabled) {
-      assertEquals("The Read Capacity limit should be 1",1,conf.getInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY,0));
-      assertEquals("The Write Capacity limit should be 1",1,conf.getInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY,0));
-    }
+    conf.set(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, "0");
+    conf.set(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, "0");
     return conf;
   }
 
