@@ -546,7 +546,7 @@ public final class XceiverServerRatis extends XceiverServer {
     }
 
     triggerPipelineClose(groupId, msg,
-        ClosePipelineInfo.Reason.PIPELINE_FAILED,false);
+        ClosePipelineInfo.Reason.PIPELINE_FAILED, false);
   }
 
   private void triggerPipelineClose(RaftGroupId groupId, String detail,
@@ -652,6 +652,6 @@ public final class XceiverServerRatis extends XceiverServer {
         : t.getMessage();
 
     triggerPipelineClose(groupId, msg,
-        ClosePipelineInfo.Reason.PIPELINE_LOG_FAILED,true);
+        ClosePipelineInfo.Reason.PIPELINE_LOG_FAILED, true);
   }
 }
