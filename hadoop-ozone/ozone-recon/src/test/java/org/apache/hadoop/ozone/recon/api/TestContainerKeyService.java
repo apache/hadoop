@@ -34,6 +34,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import javax.sql.DataSource;
 import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang3.StringUtils;
@@ -47,7 +48,12 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
+import org.apache.hadoop.ozone.recon.api.types.ContainersResponse;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
+import org.apache.hadoop.ozone.recon.api.types.KeysResponse;
+import org.apache.hadoop.ozone.recon.persistence.AbstractSqlDatabaseTest;
+import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
+import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
@@ -58,8 +64,12 @@ import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
+import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.powermock.api.mockito.PowerMockito;
@@ -72,6 +82,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
 
+import org.junit.rules.TemporaryFolder;
+
 /**
  * Test for container key service.
  */
@@ -80,41 +92,77 @@ import com.google.inject.Singleton;
 @PrepareForTest(ReconUtils.class)
 public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private ContainerDBServiceProvider containerDbServiceProvider;
   private OMMetadataManager omMetadataManager;
   private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
   private ContainerKeyService containerKeyService;
+  private boolean setUpIsDone = false;
+
+  private Injector getInjector() {
+    return injector;
+  }
 
   @Before
   public void setUp() throws Exception {
     omMetadataManager = initializeNewOmMetadataManager();
-    injector = Guice.createInjector(new AbstractModule() {
-      @Override
-      protected void configure() {
-        try {
-          bind(OzoneConfiguration.class).toInstance(
-              getTestOzoneConfiguration());
-          reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
-          bind(ReconOMMetadataManager.class).toInstance(reconOMMetadataManager);
-          bind(DBStore.class).toProvider(ReconContainerDBProvider.class).
-              in(Singleton.class);
-          bind(ContainerDBServiceProvider.class).to(
-              ContainerDBServiceProviderImpl.class).in(Singleton.class);
-          ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
-              getTestOzoneConfiguration());
-          bind(OzoneManagerServiceProvider.class)
-              .toInstance(ozoneManagerServiceProvider);
-          containerKeyService = new ContainerKeyService();
-          bind(ContainerKeyService.class).toInstance(containerKeyService);
-        } catch (IOException e) {
-          Assert.fail();
+    File tempDir = temporaryFolder.newFolder();
+    AbstractSqlDatabaseTest.DataSourceConfigurationProvider
+        configurationProvider =
+        new AbstractSqlDatabaseTest.DataSourceConfigurationProvider(tempDir);
+
+    JooqPersistenceModule jooqPersistenceModule =
+        new JooqPersistenceModule(configurationProvider);
+
+    injector = Guice.createInjector(jooqPersistenceModule,
+        new AbstractModule() {
+        @Override
+        public void configure() {
+          try {
+            bind(DataSourceConfiguration.class)
+                .toProvider(configurationProvider);
+            OzoneConfiguration configuration = getTestOzoneConfiguration();
+            bind(OzoneConfiguration.class).toInstance(configuration);
+
+            ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
+                configuration);
+
+            reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
+            bind(ReconOMMetadataManager.class)
+                .toInstance(reconOMMetadataManager);
+
+            bind(DBStore.class).toProvider(ReconContainerDBProvider.class).
+                in(Singleton.class);
+            bind(ContainerDBServiceProvider.class)
+                .to(ContainerDBServiceProviderImpl.class).in(Singleton.class);
+
+            bind(OzoneManagerServiceProvider.class)
+                .toInstance(ozoneManagerServiceProvider);
+            containerKeyService = new ContainerKeyService();
+            bind(ContainerKeyService.class).toInstance(containerKeyService);
+          } catch (IOException e) {
+            Assert.fail();
+          }
         }
-      }
-    });
-    containerDbServiceProvider = injector.getInstance(
-        ContainerDBServiceProvider.class);
+      });
+
+    // The following setup is run only once
+    if (!setUpIsDone) {
+      DSL.using(new DefaultConfiguration().set(
+          injector.getInstance(DataSource.class)));
+
+      containerDbServiceProvider = injector.getInstance(
+          ContainerDBServiceProvider.class);
+
+      StatsSchemaDefinition schemaDefinition = getInjector().getInstance(
+          StatsSchemaDefinition.class);
+      schemaDefinition.initializeSchema();
+
+      setUpIsDone = true;
+    }
 
     //Write Data to OM
     Pipeline pipeline = getRandomPipeline();
@@ -204,8 +252,11 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     Response response = containerKeyService.getKeysForContainer(1L, -1, "");
 
-    Collection<KeyMetadata> keyMetadataList =
-        (Collection<KeyMetadata>) response.getEntity();
+    KeysResponse responseObject = (KeysResponse) response.getEntity();
+    KeysResponse.KeysResponseData data = responseObject.getKeysResponseData();
+    Collection<KeyMetadata> keyMetadataList = data.getKeys();
+
+    assertEquals(3, data.getTotalCount());
     assertEquals(2, keyMetadataList.size());
 
     Iterator<KeyMetadata> iterator = keyMetadataList.iterator();
@@ -229,13 +280,19 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     assertEquals(104, blockIds.get(1L).iterator().next().getLocalID());
 
     response = containerKeyService.getKeysForContainer(3L, -1, "");
-    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    responseObject = (KeysResponse) response.getEntity();
+    data = responseObject.getKeysResponseData();
+    keyMetadataList = data.getKeys();
     assertTrue(keyMetadataList.isEmpty());
+    assertEquals(0, data.getTotalCount());
 
     // test if limit works as expected
     response = containerKeyService.getKeysForContainer(1L, 1, "");
-    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    responseObject = (KeysResponse) response.getEntity();
+    data = responseObject.getKeysResponseData();
+    keyMetadataList = data.getKeys();
     assertEquals(1, keyMetadataList.size());
+    assertEquals(3, data.getTotalCount());
   }
 
   @Test
@@ -244,8 +301,14 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     Response response = containerKeyService.getKeysForContainer(
         1L, -1, "/sampleVol/bucketOne/key_one");
 
-    Collection<KeyMetadata> keyMetadataList =
-        (Collection<KeyMetadata>) response.getEntity();
+    KeysResponse responseObject =
+        (KeysResponse) response.getEntity();
+
+    KeysResponse.KeysResponseData data =
+        responseObject.getKeysResponseData();
+    assertEquals(3, data.getTotalCount());
+
+    Collection<KeyMetadata> keyMetadataList = data.getKeys();
     assertEquals(1, keyMetadataList.size());
 
     Iterator<KeyMetadata> iterator = keyMetadataList.iterator();
@@ -257,7 +320,11 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     response = containerKeyService.getKeysForContainer(
         1L, -1, StringUtils.EMPTY);
-    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    responseObject = (KeysResponse) response.getEntity();
+    data = responseObject.getKeysResponseData();
+    keyMetadataList = data.getKeys();
+
+    assertEquals(3, data.getTotalCount());
     assertEquals(2, keyMetadataList.size());
     iterator = keyMetadataList.iterator();
     keyMetadata = iterator.next();
@@ -266,13 +333,19 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     // test for negative cases
     response = containerKeyService.getKeysForContainer(
         1L, -1, "/sampleVol/bucketOne/invalid_key");
-    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    responseObject = (KeysResponse) response.getEntity();
+    data = responseObject.getKeysResponseData();
+    keyMetadataList = data.getKeys();
+    assertEquals(3, data.getTotalCount());
     assertEquals(0, keyMetadataList.size());
 
     response = containerKeyService.getKeysForContainer(
         5L, -1, "");
-    keyMetadataList = (Collection<KeyMetadata>) response.getEntity();
+    responseObject = (KeysResponse) response.getEntity();
+    data = responseObject.getKeysResponseData();
+    keyMetadataList = data.getKeys();
     assertEquals(0, keyMetadataList.size());
+    assertEquals(0, data.getTotalCount());
   }
 
   @Test
@@ -280,8 +353,14 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     Response response = containerKeyService.getContainers(-1, 0L);
 
-    List<ContainerMetadata> containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    ContainersResponse responseObject =
+        (ContainersResponse) response.getEntity();
+
+    ContainersResponse.ContainersResponseData data =
+        responseObject.getContainersResponseData();
+    assertEquals(2, data.getTotalCount());
+
+    List<ContainerMetadata> containers = new ArrayList<>(data.getContainers());
 
     Iterator<ContainerMetadata> iterator = containers.iterator();
 
@@ -297,9 +376,11 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     // test if limit works as expected
     response = containerKeyService.getContainers(1, 0L);
-    containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    responseObject = (ContainersResponse) response.getEntity();
+    data = responseObject.getContainersResponseData();
+    containers = new ArrayList<>(data.getContainers());
     assertEquals(1, containers.size());
+    assertEquals(2, data.getTotalCount());
   }
 
   @Test
@@ -307,8 +388,14 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
 
     Response response = containerKeyService.getContainers(1, 1L);
 
-    List<ContainerMetadata> containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    ContainersResponse responseObject =
+        (ContainersResponse) response.getEntity();
+
+    ContainersResponse.ContainersResponseData data =
+        responseObject.getContainersResponseData();
+    assertEquals(2, data.getTotalCount());
+
+    List<ContainerMetadata> containers = new ArrayList<>(data.getContainers());
 
     Iterator<ContainerMetadata> iterator = containers.iterator();
 
@@ -318,23 +405,29 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     assertEquals(2L, containerMetadata.getContainerID());
 
     response = containerKeyService.getContainers(-1, 0L);
-    containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    responseObject = (ContainersResponse) response.getEntity();
+    data = responseObject.getContainersResponseData();
+    containers = new ArrayList<>(data.getContainers());
     assertEquals(2, containers.size());
+    assertEquals(2, data.getTotalCount());
     iterator = containers.iterator();
     containerMetadata = iterator.next();
     assertEquals(1L, containerMetadata.getContainerID());
 
     // test for negative cases
     response = containerKeyService.getContainers(-1, 5L);
-    containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    responseObject = (ContainersResponse) response.getEntity();
+    data = responseObject.getContainersResponseData();
+    containers = new ArrayList<>(data.getContainers());
     assertEquals(0, containers.size());
+    assertEquals(2, data.getTotalCount());
 
     response = containerKeyService.getContainers(-1, -1L);
-    containers = new ArrayList<>(
-        (Collection<ContainerMetadata>) response.getEntity());
+    responseObject = (ContainersResponse) response.getEntity();
+    data = responseObject.getContainersResponseData();
+    containers = new ArrayList<>(data.getContainers());
     assertEquals(2, containers.size());
+    assertEquals(2, data.getTotalCount());
   }
 
   /**
