@@ -41,7 +41,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Listing;
@@ -50,7 +49,6 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3ListRequest;
 import org.apache.hadoop.service.Service;
-import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
 import org.apache.hadoop.service.launcher.ServiceLauncher;
@@ -69,7 +67,7 @@ import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class DumpS3GuardTable extends AbstractLaunchableService {
+public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(DumpS3GuardTable.class);
@@ -81,7 +79,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
 
   public static final String FLAT_CSV = "-flat.csv";
 
-  public static final String RAW_CSV = "-raw.csv";
+  public static final String RAW_CSV = "-s3.csv";
 
   public static final String SCAN_CSV = "-scan.csv";
   public static final String SCAN2_CSV = "-scan-2.csv";
@@ -90,22 +88,14 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
 
   public static final String STORE_CSV = "-store.csv";
 
-  private List<String> arguments;
-
-  private DynamoDBMetadataStore store;
-
-  private S3AFileSystem fs;
-
-  private URI uri;
-
-  private String destPath;
+  protected String destPath;
 
   public DumpS3GuardTable(final String name) {
     super(name);
   }
 
   public DumpS3GuardTable() {
-    this("DumpS3GuardTable");
+    this(NAME);
   }
 
   /**
@@ -113,61 +103,27 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    * @param fs filesystem
    * @param store metastore to use
    * @param destFile the base filename for output
+   * @param uri URI of store -only needed if FS is null.
    */
   public DumpS3GuardTable(
       final S3AFileSystem fs,
       final DynamoDBMetadataStore store,
-      final File destFile) {
-    this();
-    this.fs = fs;
-    this.store = checkNotNull(store, "store");
+      final File destFile,
+      final URI uri) {
+    super(NAME, fs, store, uri);
     this.destPath = destFile.getAbsolutePath();
   }
 
-  @Override
-  public Configuration bindArgs(final Configuration config,
-      final List<String> args)
-      throws Exception {
-    this.arguments = args;
-    return super.bindArgs(config, args);
-  }
-
-  public List<String> getArguments() {
-    return arguments;
-  }
 
   @Override
   protected void serviceStart() throws Exception {
-    String fsURI = null;
-    if (store == null) {
+    if (getStore()== null) {
+      List<String> arguments = getArguments();
       checkNotNull(arguments, "No arguments");
       Preconditions.checkState(arguments.size() == 2,
           "Wrong number of arguments: %s", arguments.size());
-      fsURI = arguments.get(0);
+      bindFromCLI(arguments.get(0));
       destPath = arguments.get(1);
-      Configuration conf = getConfig();
-      uri = new URI(fsURI);
-      FileSystem fileSystem = FileSystem.get(uri, conf);
-      require(fileSystem instanceof S3AFileSystem,
-          "Not an S3A Filesystem:  " + fsURI);
-      fs = (S3AFileSystem) fileSystem;
-      require(fs.hasMetadataStore(),
-          "Filesystem has no metadata store:  " + fsURI);
-      MetadataStore ms = fs.getMetadataStore();
-      require(ms instanceof DynamoDBMetadataStore,
-          "Filesystem " + fsURI
-              + "does not have a DynamoDB metadata store:  " + ms);
-      store = (DynamoDBMetadataStore) ms;
-    } else {
-      if (fs != null) {
-        fsURI = fs.getUri().toString();
-      }
-    }
-    if (fsURI != null) {
-      if (!fsURI.endsWith("/")) {
-        fsURI += "/";
-      }
-      uri = new URI(fsURI);
     }
   }
 
@@ -190,9 +146,9 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
         scanMetastore(csv);
       }
 
-      if (fs != null) {
+      if (getFilesystem() != null) {
 
-        Path basePath = fs.qualify(new Path(uri));
+        Path basePath = getFilesystem().qualify(new Path(getUri()));
 
         final File destFile = new File(destPath + STORE_CSV)
             .getCanonicalFile();
@@ -253,16 +209,14 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    * If metastore entries mark directories as deleted, this
    * walk will not explore them.
    * @param csv destination.
-   * @param fs filesystem.
    * @return number of entries found.
    * @throws IOException IO failure.
    */
-
   protected int treewalkFilesystem(
       final CsvFile csv,
       final Path path) throws IOException {
     int count = 1;
-    FileStatus[] fileStatuses = fs.listStatus(path);
+    FileStatus[] fileStatuses = getFilesystem().listStatus(path);
     // entries
     for (FileStatus fileStatus : fileStatuses) {
       csv.entry((S3AFileStatus) fileStatus);
@@ -288,7 +242,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
       final CsvFile csv,
       final Path path) throws IOException {
     int count = 0;
-    RemoteIterator<S3ALocatedFileStatus> iterator = fs
+    RemoteIterator<S3ALocatedFileStatus> iterator = getFilesystem()
         .listFilesAndEmptyDirectories(path, true);
     while (iterator.hasNext()) {
       S3ALocatedFileStatus status = iterator.next();
@@ -305,6 +259,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    */
   protected int dumpRawS3ObjectStore(
       final CsvFile csv) throws IOException {
+    S3AFileSystem fs = getFilesystem();
     Path rootPath = fs.qualify(new Path("/"));
     Listing listing = new Listing(fs);
     S3ListRequest request = fs.createListObjectsRequest("", null);
@@ -332,7 +287,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    */
   protected void dumpMetastore(final CsvFile csv,
       final Path basePath) throws IOException {
-    dumpRecursively(csv, store.listChildren(basePath));
+    dumpRecursively(csv, getStore().listChildren(basePath));
   }
 
   /**
@@ -362,7 +317,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
       }
     }
     for (DDBPathMetadata childDir : childDirs) {
-      DirListingMetadata children = store.listChildren(
+      DirListingMetadata children = getStore().listChildren(
           childDir.getFileStatus().getPath());
       Pair<Integer, Integer> pair = dumpRecursively(csv,
           children);
@@ -386,7 +341,7 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    * @return count of the number of entries.
    */
   private int scanMetastore(CsvFile csv) {
-    S3GuardTableAccess tableAccess = new S3GuardTableAccess(store);
+    S3GuardTableAccess tableAccess = new S3GuardTableAccess(getStore());
     ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
     Iterable<DDBPathMetadata> results = tableAccess.scanMetadata(
         builder);
@@ -404,20 +359,6 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
 
   private static String stringify(long millis) {
     return new Date(millis).toString();
-  }
-
-  private static void require(boolean condition, String error) {
-    if (!condition) {
-      throw fail(error);
-    }
-  }
-
-  private static ServiceLaunchException fail(String message, Throwable ex) {
-    return new ServiceLaunchException(LauncherExitCodes.EXIT_FAIL, message, ex);
-  }
-
-  private static ServiceLaunchException fail(String message) {
-    return new ServiceLaunchException(LauncherExitCodes.EXIT_FAIL, message);
   }
 
   /**
@@ -471,23 +412,31 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
    * @param store store to dump (fallback to FS)
    * @param conf configuration to use (fallback to fs)
    * @param destFile base name of the output files.
+   * @param uri URI of store -only needed if FS is null.
    * @throws ExitUtil.ExitException failure.
    */
   public static void dumpS3GuardStore(
       final S3AFileSystem fs,
-      final DynamoDBMetadataStore store,
+      DynamoDBMetadataStore store,
       Configuration conf,
-      File destFile) throws ExitUtil.ExitException {
+      final File destFile,
+      URI uri) throws ExitUtil.ExitException {
     ServiceLauncher<Service> serviceLauncher =
         new ServiceLauncher<>("");
 
+    if (conf == null) {
+      conf = checkNotNull(fs, "No filesystem").getConf();
+    }
+    if (store == null) {
+      store = (DynamoDBMetadataStore) checkNotNull(fs, "No filesystem")
+          .getMetadataStore();
+    }
     ExitUtil.ExitException ex = serviceLauncher.launchService(
-        conf == null ? fs.getConf() : conf,
+        conf,
         new DumpS3GuardTable(fs,
-            (store == null
-                ? (DynamoDBMetadataStore) fs.getMetadataStore()
-                : store),
-            destFile),
+            store,
+            destFile,
+            uri),
         Collections.emptyList(),
         false,
         true);
@@ -619,9 +568,9 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
      */
     void header() {
       row(CsvFile.ALL_QUOTES,
-          "path",
           "type",
           "deleted",
+          "path",
           "is_auth_dir",
           "is_empty_dir",
           "len",
@@ -640,9 +589,9 @@ public class DumpS3GuardTable extends AbstractLaunchableService {
     void entry(DDBPathMetadata md) {
       S3AFileStatus fileStatus = md.getFileStatus();
       row(ROW_QUOTE_MAP,
-          fileStatus.getPath().toString(),
           fileStatus.isDirectory() ? "dir" : "file",
           md.isDeleted(),
+          fileStatus.getPath().toString(),
           md.isAuthoritativeDir(),
           md.isEmptyDirectory().name(),
           fileStatus.getLen(),

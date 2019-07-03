@@ -1161,15 +1161,28 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // so that lists of that dir will pick up the tombstone
     putTombstone(child, now, null);
     getDirectory(dir);
-    // put a tombstone
+    // tombstone the dir
     putTombstone(dir, now, null);
+    // add another child entry; this will update the dir entry from being
+    // tombstone to dir
     putFile(child2, now, null);
+    getDirectory(dir);
+
+    // put a tombstone over the directory again
+    putTombstone(dir, now, null);
+    // verify
+    assertIsTombstone(dir);
+
+    //prune all tombstones
     getDynamoMetadataStore().prune(PruneMode.TOMBSTONES_BY_LASTUPDATED,
         now + MINUTE);
+
     // the child is gone
     assertNotFound(child);
+
     // *AND* the parent dir has not been created
     assertNotFound(dir);
+
     // the child2 entry is still there, though it's now orphan (the store isn't
     // meeting the rule "all entries must have a parent which exists"
     getFile(child2);
@@ -1213,8 +1226,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   /**
    * Keep in sync with code changes in S3AFileSystem.finishedWrite() so that
-   * code can be tested here.
-   * @throws Throwable
+   * the production code can be tested here.
    */
   @Test
   public void testPutFileDeepUnderTombstone() throws Throwable {
@@ -1258,6 +1270,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testDumpTable() throws Throwable {
+    describe("Dump the table contents, but not the S3 Store");
     String target = System.getProperty("test.build.dir", "target");
     File buildDir = new File(target).getAbsoluteFile();
     String name = "ITestDynamoDBMetadataStore";
@@ -1265,9 +1278,10 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     DumpS3GuardTable.dumpS3GuardStore(
         null,
         ddbmsStatic,
-        null,
-        destFile);
-    File storeFile = new File(buildDir, name + "-scan.csv");
+        getFileSystem().getConf(),
+        destFile,
+        fsUri);
+    File storeFile = new File(buildDir, name + DumpS3GuardTable.SCAN_CSV);
     try (BufferedReader in = new BufferedReader(new InputStreamReader(
         new FileInputStream(storeFile), Charset.forName("UTF-8")))) {
       for (String line : org.apache.commons.io.IOUtils.readLines(in)) {
@@ -1281,7 +1295,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
    * @param pathStr path
    * @throws IOException IO failure.
    */
-  protected PathMetadata verifyAuthDirStatus(String pathStr, boolean authDirFlag)
+  protected DDBPathMetadata verifyAuthDirStatus(String pathStr,
+      boolean authDirFlag)
       throws IOException {
     DDBPathMetadata md = (DDBPathMetadata) getDirectory(pathStr);
     assertEquals("isAuthoritativeDir() mismatch in " + md,

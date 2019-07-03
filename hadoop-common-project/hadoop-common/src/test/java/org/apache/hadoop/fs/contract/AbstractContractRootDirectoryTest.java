@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.fs.contract;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -32,8 +31,10 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import static org.apache.commons.lang3.StringUtils.join;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.deleteChildren;
@@ -192,15 +193,32 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     }
     FileStatus[] list1 = fs.listStatus(root);
     assertEquals("listStatus on empty root-directory returned found: "
-        + StringUtils.join(list1, "\n"),
+        + join("\n", list1),
         0, list1.length);
-    assertFalse("listFiles(/, false).hasNext",
-        fs.listFiles(root, false).hasNext());
-    assertFalse("listFiles(/, true).hasNext",
-        fs.listFiles(root, true).hasNext());
-    assertFalse("listLocatedStatus(/).hasNext",
-        fs.listLocatedStatus(root).hasNext());
+    assertNoElements("listFiles(/, false)",
+        fs.listFiles(root, false));
+    assertNoElements("listFiles(/, true)",
+        fs.listFiles(root, true));
+    assertNoElements("listLocatedStatus(/)",
+        fs.listLocatedStatus(root));
     assertIsDirectory(root);
+  }
+
+  /**
+   * Assert that an iterator has no elements; the raised exception
+   * will include the element list.
+   * @param operation operation for assertion text.
+   * @param iter iterator
+   * @throws IOException failure retrieving the values.
+   */
+  protected void assertNoElements(String operation,
+      RemoteIterator<LocatedFileStatus> iter) throws IOException {
+    List<LocatedFileStatus> resultList = toList(iter);
+    if (!resultList.isEmpty()) {
+      fail("Expected no results from " + operation + ", but got "
+          + resultList.size() + " elements:\n"
+          + join(resultList, "\n"));
+    }
   }
 
   @Test
@@ -209,11 +227,21 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     FileSystem fs = getFileSystem();
     Path root = new Path("/");
     FileStatus[] statuses = fs.listStatus(root);
+    String listStatusResult = join(statuses, "\n");
     List<LocatedFileStatus> locatedStatusList = toList(
         fs.listLocatedStatus(root));
-    assertEquals(statuses.length, locatedStatusList.size());
+    String locatedStatusResult = join(locatedStatusList, "\n");
+
+    assertEquals("listStatus(/) vs listLocatedStatus(/) with \n"
+            + "listStatus =" + listStatusResult
+            +" listLocatedStatus = " + locatedStatusResult,
+        statuses.length, locatedStatusList.size());
     List<LocatedFileStatus> fileList = toList(fs.listFiles(root, false));
-    assertTrue(fileList.size() <= statuses.length);
+    String listFilesResult = join(fileList, "\n");
+    assertTrue("listStatus(/) vs listFiles(/, false) with \n"
+            + "listStatus = " + listStatusResult
+            + "listFiles = " + listFilesResult,
+        fileList.size() <= statuses.length);
   }
 
   @Test

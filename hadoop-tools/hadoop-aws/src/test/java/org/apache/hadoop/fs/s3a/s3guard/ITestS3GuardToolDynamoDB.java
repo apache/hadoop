@@ -306,7 +306,8 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         fs,
         null,
         null,
-        destFile);
+        destFile,
+        getFileSystem().getUri());
     File storeFile = new File(buildDir, name + "-store.csv");
     try (BufferedReader in = new BufferedReader(new InputStreamReader(
         new FileInputStream(storeFile), Charset.forName("UTF-8")))) {

@@ -1107,7 +1107,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
    */
   protected void assertNotFound(String pathStr) throws IOException {
     PathMetadata meta = get(pathStr);
-    assertNull("Unexpectedly found entry at path " + pathStr + ": " + meta,
+    assertNull("Unexpectedly found entry at path " + pathStr,
         meta);
   }
 

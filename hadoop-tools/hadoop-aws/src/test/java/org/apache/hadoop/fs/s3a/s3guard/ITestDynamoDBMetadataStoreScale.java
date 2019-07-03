@@ -174,21 +174,23 @@ public class ITestDynamoDBMetadataStoreScale
 
   @Override
   public void teardown() throws Exception {
-    S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
-    ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
-    builder.withKeyCondition(
-        ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
+    if (ddbms != null) {
+      S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
+      ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+      builder.withKeyCondition(
+          ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
 
-    Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
-    List<Path> list = new ArrayList<>();
-    entries.iterator().forEachRemaining(e -> {
-      if (!(e instanceof S3GuardTableAccess.VersionMarker)) {
-        Path p = e.getFileStatus().getPath();
-        LOG.info("Deleting {}", p);
-        list.add(p);
-      }
-    });
-    tableAccess.delete(list);
+      Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
+      List<Path> list = new ArrayList<>();
+      entries.iterator().forEachRemaining(e -> {
+        if (!(e instanceof S3GuardTableAccess.VersionMarker)) {
+          Path p = e.getFileStatus().getPath();
+          LOG.info("Deleting {}", p);
+          list.add(p);
+        }
+      });
+      tableAccess.delete(list);
+    }
     IOUtils.cleanupWithLogger(LOG, ddbms);
     super.teardown();
   }

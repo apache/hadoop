@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
@@ -62,6 +63,8 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   private DynamoDBMetadataStore metastore;
 
   private String metastoreUriStr;
+
+  private boolean cleaning = true;
 
   /**
    * The test timeout is increased in case previous tests have created
@@ -111,24 +114,26 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
     super.teardown();
   }
 
+  private void assumeCleaningOperation() {
+    assume("Cleaning operation skipped", cleaning);
+  }
+
   @Test
   public void test_050_dump_metastore() throws Throwable {
-    String target = System.getProperty("test.build.dir", "target");
-    File buildDir = new File(target,
-        this.getClass().getSimpleName()).getAbsoluteFile();
-    buildDir.mkdirs();
-    File destFile = new File(buildDir, getMethodName());
+    File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
     DumpS3GuardTable.dumpS3GuardStore(
         null,
         metastore,
         getConfiguration(),
-        destFile);
+        destFile,
+        getFileSystem().getUri());
   }
 
   @Test
   public void test_100_FilesystemPrune() throws Throwable {
     describe("Execute prune against a filesystem URI");
+    assumeCleaningOperation();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
@@ -143,6 +148,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   @Test
   public void test_200_MetastorePruneTombstones() throws Throwable {
     describe("Execute prune against a dynamo URL");
+    assumeCleaningOperation();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
@@ -159,6 +165,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   @Test
   public void test_300_MetastorePrune() throws Throwable {
     describe("Execute prune against a dynamo URL");
+    assumeCleaningOperation();
     S3AFileSystem fs = getFileSystem();
     Configuration conf = fs.getConf();
     int result = S3GuardTool.run(conf,
@@ -173,6 +180,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   @Test
   public void test_400_rm_root_recursive() throws Throwable {
     describe("Remove the root directory");
+    assumeCleaningOperation();
     //extra sanity checks here to avoid support calls about complete loss of data
     S3AFileSystem fs = getFileSystem();
     Path root = new Path("/");
@@ -222,5 +230,25 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
       fs.delete(file, false);
       fs.delete(file2, false);
     }
+  }
+
+  @Test
+  public void test_600_dump_metastore() throws Throwable {
+    File destFile = calculateDumpFileBase();
+    describe("Dumping S3Guard store under %s", destFile);
+    DumpS3GuardTable.dumpS3GuardStore(
+        getFileSystem(),
+        metastore,
+        getConfiguration(),
+        destFile,
+        getFileSystem().getUri());
+  }
+
+  protected File calculateDumpFileBase() {
+    String target = System.getProperty("test.build.dir", "target");
+    File buildDir = new File(target,
+        this.getClass().getSimpleName()).getAbsoluteFile();
+    buildDir.mkdirs();
+    return new File(buildDir, getMethodName());
   }
 }

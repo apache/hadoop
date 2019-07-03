@@ -94,7 +94,7 @@ public abstract class RenameTracker extends AbstractStoreOperation {
    * Constructor.
    * @param name tracker name for logs.
    * @param storeContext store context.
-   * @param metadataStore the stopre
+   * @param metadataStore the store
    * @param sourceRoot source path.
    * @param dest destination path.
    * @param operationState ongoing move state.
@@ -220,7 +220,9 @@ public abstract class RenameTracker extends AbstractStoreOperation {
    * @throws IOException failure.
    */
   public void completeRename() throws IOException {
-    IOUtils.cleanupWithLogger(LOG, operationState);
+    // if the state is doing any final actions, it should be
+    // completed now.
+    operationState.close();
     noteRenameFinished();
   }
 
