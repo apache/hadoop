@@ -748,7 +748,7 @@ public class TestFederationInterceptor extends BaseAMRMProxyTest {
     Assert.assertEquals(1, response.getNMTokens().size());
     Assert.assertEquals(1, response.getUpdatedContainers().size());
     Assert.assertEquals(1, response.getUpdateErrors().size());
-    Assert.assertNotNull(response.getApplicationPriority());
+    Assert.assertEquals(0, response.getApplicationPriority().getPriority());
   }
 
   @Test
