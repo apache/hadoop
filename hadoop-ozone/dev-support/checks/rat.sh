@@ -17,12 +17,16 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd "$DIR/../../.." || exit 1
 
 mkdir -p target
-rm target/rat-aggregated.txt
+REPORT_FILE="$DIR/../../../target/rat-aggretaged.txt"
+mkdir -p "$(dirname "$REPORT_FILE")"
+
 cd hadoop-hdds || exit 1
 mvn -B -fn org.apache.rat:apache-rat-plugin:0.13:check
 cd ../hadoop-ozone || exit 1
 mvn -B -fn org.apache.rat:apache-rat-plugin:0.13:check
-grep -r --include=rat.txt "!????" | tee ./target/rat-aggregated.txt
+
+cd "$DIR/../../.." || exit 1
+grep -r --include=rat.txt "!????" | tee "$REPORT_FILE"
 if [ "$(cat target/rat-aggregated.txt)" ]; then
    exit 1
 fi
