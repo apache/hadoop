@@ -23,6 +23,7 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -194,25 +195,50 @@ public class TestMiniOzoneCluster {
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_IPC_RANDOM_PORT, true);
     ozoneConf.setBoolean(OzoneConfigKeys.DFS_CONTAINER_RATIS_IPC_RANDOM_PORT,
         true);
-    try (
-        DatanodeStateMachine sm1 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null);
-        DatanodeStateMachine sm2 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null);
-        DatanodeStateMachine sm3 = new DatanodeStateMachine(
-            TestUtils.randomDatanodeDetails(), ozoneConf,  null, null)
-    ) {
+    List<DatanodeStateMachine> stateMachines = new ArrayList<>();
+    try {
+
+      for (int i = 0; i < 3; i++) {
+        stateMachines.add(new DatanodeStateMachine(
+            TestUtils.randomDatanodeDetails(), ozoneConf, null, null));
+      }
+
+      //we need to start all the servers to get the fix ports
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.getContainer().getReadChannel().start();
+        dsm.getContainer().getWriteChannel().start();
+
+      }
+
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.getContainer().getWriteChannel().stop();
+        dsm.getContainer().getReadChannel().stop();
+
+      }
+
+      //after the start the real port numbers should be available AND unique
       HashSet<Integer> ports = new HashSet<Integer>();
-      assertTrue(ports.add(sm1.getContainer().getReadChannel().getIPCPort()));
-      assertTrue(ports.add(sm2.getContainer().getReadChannel().getIPCPort()));
-      assertTrue(ports.add(sm3.getContainer().getReadChannel().getIPCPort()));
+      for (DatanodeStateMachine dsm : stateMachines) {
+        int readPort = dsm.getContainer().getReadChannel().getIPCPort();
 
-      // Assert that ratis is also on a different port.
-      assertTrue(ports.add(sm1.getContainer().getWriteChannel().getIPCPort()));
-      assertTrue(ports.add(sm2.getContainer().getWriteChannel().getIPCPort()));
-      assertTrue(ports.add(sm3.getContainer().getWriteChannel().getIPCPort()));
+        assertNotEquals("Port number of the service is not updated", 0,
+            readPort);
 
+        assertTrue("Port of datanode service is conflicted with other server.",
+            ports.add(readPort));
 
+        int writePort = dsm.getContainer().getWriteChannel().getIPCPort();
+
+        assertNotEquals("Port number of the service is not updated", 0,
+            writePort);
+        assertTrue("Port of datanode service is conflicted with other server.",
+            ports.add(writePort));
+      }
+
+    } finally {
+      for (DatanodeStateMachine dsm : stateMachines) {
+        dsm.close();
+      }
     }
 
     // Turn off the random port flag and test again
