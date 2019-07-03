@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.request.file;
 
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -67,6 +66,10 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
 import static  org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
+import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.DIRECTORY_EXISTS_IN_GIVENPATH;
+import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.FILE_EXISTS_IN_GIVENPATH;
+import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.NONE;
+import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryResult.FILE_EXISTS;
 /**
  * Handle create directory request.
  */
@@ -156,16 +159,17 @@ public class OMDirectoryCreateRequest extends OMClientRequest
 
       // Need to check if any files exist in the given path, if they exist we
       // cannot create a directory with the given key.
-      OMDirectoryResult omDirectoryResult = verifyFilesInPath(omMetadataManager,
-          volumeName, bucketName, omMetadataManager.getOzoneDirKey(volumeName,
-              bucketName, keyName), Paths.get(keyName));
+      OMFileRequest.OMDirectoryResult omDirectoryResult =
+          OMFileRequest.verifyFilesInPath(omMetadataManager,
+          volumeName, bucketName, keyName, Paths.get(keyName));
 
-      if (omDirectoryResult == OMDirectoryResult.FILE_ALREADY_EXISTS) {
+      if (omDirectoryResult == FILE_EXISTS ||
+          omDirectoryResult == FILE_EXISTS_IN_GIVENPATH) {
         throw new OMException("Unable to create directory: " +keyName
             + " in volume/bucket: " + volumeName + "/" + bucketName,
             FILE_ALREADY_EXISTS);
-      } else if (omDirectoryResult == OMDirectoryResult.SUB_DIRECTORY_EXISTS ||
-          omDirectoryResult == OMDirectoryResult.NONE) {
+      } else if (omDirectoryResult == DIRECTORY_EXISTS_IN_GIVENPATH ||
+          omDirectoryResult == NONE) {
         dirKeyInfo = createDirectoryKeyInfo(ozoneManager, omBucketInfo,
             volumeName, bucketName, keyName, keyArgs);
 
@@ -206,45 +210,6 @@ public class OMDirectoryCreateRequest extends OMClientRequest
     }
   }
 
-  /**
-   * Verify any files exist in the given path in the specified volume/bucket.
-   * @param omMetadataManager
-   * @param volumeName
-   * @param bucketName
-   * @param keyPath
-   * @return true - if file exist in the given path, else false.
-   * @throws IOException
-   */
-  private OMDirectoryResult verifyFilesInPath(
-      OMMetadataManager omMetadataManager, String volumeName, String bucketName,
-      String directoryName, Path keyPath) throws IOException {
-
-    while (keyPath != null) {
-      String keyName = keyPath.toString();
-
-      String dbKeyName = omMetadataManager.getOzoneKey(volumeName,
-          bucketName, keyName);
-      String dbDirKeyName = omMetadataManager.getOzoneDirKey(volumeName,
-          bucketName, keyName);
-
-      if (omMetadataManager.getKeyTable().get(dbKeyName) != null) {
-        // Found a file in the given path.
-        return OMDirectoryResult.FILE_ALREADY_EXISTS;
-      } else if (omMetadataManager.getKeyTable().get(dbDirKeyName) != null) {
-        if (dbDirKeyName.equals(directoryName)) {
-          return OMDirectoryResult.DIRECTORY_ALREADY_EXISTS;
-        } else {
-          return OMDirectoryResult.SUB_DIRECTORY_EXISTS;
-        }
-      }
-      keyPath = keyPath.getParent();
-    }
-
-    // Found no files/ directories in the given path.
-    return OMDirectoryResult.NONE;
-  }
-
-
   private OmKeyInfo createDirectoryKeyInfo(OzoneManager ozoneManager,
       OmBucketInfo omBucketInfo, String volumeName, String bucketName,
       String keyName, KeyArgs keyArgs)
@@ -267,16 +232,6 @@ public class OMDirectoryCreateRequest extends OMClientRequest
         .setFileEncryptionInfo(encryptionInfo)
         .setAcls(keyArgs.getAclsList())
         .build();
-  }
-
-  /**
-   * Return codes used by verifyFilesInPath method.
-   */
-  enum OMDirectoryResult {
-    DIRECTORY_ALREADY_EXISTS,
-    FILE_ALREADY_EXISTS,
-    SUB_DIRECTORY_EXISTS,
-    NONE
   }
 
 }

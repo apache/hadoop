@@ -16,6 +16,23 @@
  */
 package org.apache.hadoop.ozone.om;
 
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.Timeout;
+import org.apache.log4j.Logger;
+
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
@@ -30,6 +47,7 @@ import org.apache.hadoop.ozone.client.BucketArgs;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -41,22 +59,7 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.util.Time;
-import org.apache.log4j.Logger;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.Timeout;
 
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
@@ -69,6 +72,9 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_RETRY_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.NOT_A_FILE;
+import static org.junit.Assert.fail;
 
 /**
  * Test Ozone Manager operation in distributed handler scenario.
@@ -285,6 +291,141 @@ public class TestOzoneManagerHA {
 
   }
 
+
+  @Test
+  public void testFileOperationsWithRecursive() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+
+    String data = "random data";
+
+    // one level key name
+    String keyName = UUID.randomUUID().toString();
+    testCreateFile(ozoneBucket, keyName, data, true, false);
+
+    // multi level key name
+    keyName = "dir1/dir2/dir3/file1";
+    testCreateFile(ozoneBucket, keyName, data, true, false);
+
+
+    data = "random data random data";
+
+    // multi level key name with over write set.
+    testCreateFile(ozoneBucket, keyName, data, true, true);
+
+
+    try {
+      testCreateFile(ozoneBucket, keyName, data, true, false);
+      fail("testFileOperationsWithRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(FILE_ALREADY_EXISTS, ex.getResult());
+    }
+
+    // Try now with a file name which is same as a directory.
+    try {
+      keyName = "folder/folder2";
+      ozoneBucket.createDirectory(keyName);
+      testCreateFile(ozoneBucket, keyName, data, true, false);
+      fail("testFileOperationsWithNonRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+  }
+
+
+  @Test
+  public void testFileOperationsWithNonRecursive() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+
+    String data = "random data";
+
+    // one level key name
+    String keyName = UUID.randomUUID().toString();
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    // multi level key name
+    keyName = "dir1/dir2/dir3/file1";
+
+    // Should fail, as this is non-recursive and no parent directories exist
+    try {
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+    // create directory, now this should pass.
+    ozoneBucket.createDirectory("dir1/dir2/dir3");
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+    data = "random data random data";
+
+    // multi level key name with over write set.
+    testCreateFile(ozoneBucket, keyName, data, false, true);
+
+    try {
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+      fail("testFileOperationsWithRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(FILE_ALREADY_EXISTS, ex.getResult());
+    }
+
+
+    // Try now with a file which already exists under the path
+    ozoneBucket.createDirectory("folder1/folder2/folder3/folder4");
+
+    keyName = "folder1/folder2/folder3/folder4/file1";
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    keyName = "folder1/folder2/folder3/file1";
+    testCreateFile(ozoneBucket, keyName, data, false, false);
+
+    // Try now with a file under path already. This should fail.
+    try {
+      keyName = "folder/folder2";
+      ozoneBucket.createDirectory(keyName);
+      testCreateFile(ozoneBucket, keyName, data, false, false);
+      fail("testFileOperationsWithNonRecursive");
+    } catch (OMException ex) {
+      Assert.assertEquals(NOT_A_FILE, ex.getResult());
+    }
+
+  }
+
+  /**
+   * This method createFile and verifies the file is successfully created or
+   * not.
+   * @param ozoneBucket
+   * @param keyName
+   * @param data
+   * @param recursive
+   * @param overwrite
+   * @throws Exception
+   */
+  public void testCreateFile(OzoneBucket ozoneBucket, String keyName,
+      String data, boolean recursive, boolean overwrite)
+      throws Exception {
+
+    OzoneOutputStream ozoneOutputStream = ozoneBucket.createFile(keyName,
+        data.length(), ReplicationType.RATIS, ReplicationFactor.ONE,
+        overwrite, recursive);
+
+    ozoneOutputStream.write(data.getBytes(), 0, data.length());
+    ozoneOutputStream.close();
+
+    OzoneKeyDetails ozoneKeyDetails = ozoneBucket.getKey(keyName);
+
+    Assert.assertEquals(keyName, ozoneKeyDetails.getName());
+    Assert.assertEquals(ozoneBucket.getName(), ozoneKeyDetails.getBucketName());
+    Assert.assertEquals(ozoneBucket.getVolumeName(),
+        ozoneKeyDetails.getVolumeName());
+    Assert.assertEquals(data.length(), ozoneKeyDetails.getDataSize());
+
+    OzoneInputStream ozoneInputStream = ozoneBucket.readKey(keyName);
+
+    byte[] fileContent = new byte[data.getBytes().length];
+    ozoneInputStream.read(fileContent);
+    Assert.assertEquals(data, new String(fileContent));
+  }
+
   @Test
   public void testMultipartUploadWithOneOmNodeDown() throws Exception {
 
@@ -437,7 +578,7 @@ public class TestOzoneManagerHA {
         Assert.assertTrue(retVolumeinfo.getAdmin().equals(adminName));
       } else {
         // Verify that the request failed
-        Assert.fail("There is no quorum. Request should have failed");
+        fail("There is no quorum. Request should have failed");
       }
     } catch (ConnectException | RemoteException e) {
       if (!checkSuccess) {
@@ -566,7 +707,7 @@ public class TestOzoneManagerHA {
 
     try {
       createVolumeTest(true);
-      Assert.fail("TestOMRetryProxy should fail when there are no OMs running");
+      fail("TestOMRetryProxy should fail when there are no OMs running");
     } catch (ConnectException e) {
       // Each retry attempt tries upto 10 times to connect. So there should be
       // 10*10 "Retrying connect to server" messages

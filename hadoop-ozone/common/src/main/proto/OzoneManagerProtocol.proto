@@ -684,6 +684,9 @@ message CreateFileRequest {
     required KeyArgs keyArgs = 1;
     required bool isRecursive = 2;
     required bool isOverwrite = 3;
+    // Set in OM HA during preExecute step. This way all OM's use same ID in
+    // OM HA.
+    optional uint64 clientID = 4;
 }
 
 message CreateFileResponse {

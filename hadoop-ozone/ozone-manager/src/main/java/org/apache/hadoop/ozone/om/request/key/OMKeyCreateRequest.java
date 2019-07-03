@@ -24,6 +24,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -34,18 +36,18 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
-import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
+import org.apache.hadoop.ozone.om.response.file.OMFileCreateResponse;
 import org.apache.hadoop.ozone.om.response.key.OMKeyCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -66,7 +68,8 @@ import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
-
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type.CreateKey;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type.CreateFile;
 /**
  * Handles CreateKey request.
  */
@@ -162,7 +165,6 @@ public class OMKeyCreateRequest extends OMClientRequest
 
     KeyArgs keyArgs = createKeyRequest.getKeyArgs();
 
-
     String volumeName = keyArgs.getVolumeName();
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();
@@ -170,14 +172,12 @@ public class OMKeyCreateRequest extends OMClientRequest
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumKeyAllocates();
 
-    AuditLogger auditLogger = ozoneManager.getAuditLogger();
-
-    Map<String, String> auditMap = buildKeyArgsAuditMap(keyArgs);
-
-    OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.CreateKey).setStatus(
-            OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
-
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    OmKeyInfo omKeyInfo = null;
+    final List< OmKeyLocationInfo > locations = new ArrayList<>();
+    FileEncryptionInfo encryptionInfo = null;
+    IOException exception = null;
+    boolean acquireLock = false;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -185,50 +185,70 @@ public class OMKeyCreateRequest extends OMClientRequest
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
             volumeName, bucketName, keyName);
       }
-    } catch (IOException ex) {
-      LOG.error("Open failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, ex);
-      omMetrics.incNumKeyAllocateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_KEY, auditMap,
-          ex, getOmRequest().getUserInfo()));
-      return new OMKeyCreateResponse(null, -1L,
-          createErrorOMResponse(omResponse, ex));
-    }
 
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    String dbOpenKeyName = omMetadataManager.getOpenKey(volumeName,
-        bucketName, keyName, createKeyRequest.getClientID());
-    String dbKeyName = omMetadataManager.getOzoneKey(volumeName, bucketName,
-        keyName);
-    String dbBucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
-
-    OmKeyInfo omKeyInfo = null;
-    final List< OmKeyLocationInfo > locations = new ArrayList<>();
-    FileEncryptionInfo encryptionInfo = null;
-    long openVersion = 0L;
-    IOException exception = null;
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-        bucketName);
-    try {
+      acquireLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
       validateBucketAndVolume(omMetadataManager, volumeName, bucketName);
       //TODO: We can optimize this get here, if getKmsProvider is null, then
       // bucket encryptionInfo will be not set. If this assumption holds
       // true, we can avoid get from bucket table.
-      OmBucketInfo bucketInfo =
-          omMetadataManager.getBucketTable().get(dbBucketKey);
+
+      OmBucketInfo bucketInfo = omMetadataManager.getBucketTable().get(
+              omMetadataManager.getBucketKey(volumeName, bucketName));
+
       encryptionInfo = getFileEncryptionInfo(ozoneManager, bucketInfo);
-      omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs, dbKeyName,
+
+      omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
+          omMetadataManager.getOzoneKey(volumeName, bucketName, keyName),
           keyArgs.getDataSize(), locations, encryptionInfo);
+
     } catch (IOException ex) {
       LOG.error("Key open failed for volume:{} bucket:{} key:{}",
           volumeName, bucketName, keyName, ex);
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
+      if (acquireLock) {
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
     }
 
+    return prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
+        encryptionInfo, exception, createKeyRequest.getClientID(),
+        transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
+        OMAction.ALLOCATE_KEY);
+  }
 
+  /**
+   * Prepare the response returned to the client.
+   * @param keyArgs
+   * @param omKeyInfo
+   * @param locations
+   * @param encryptionInfo
+   * @param exception
+   * @param clientID
+   * @param transactionLogIndex
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param ozoneManager
+   * @return OMClientResponse
+   */
+  @SuppressWarnings("parameternumber")
+  protected OMClientResponse prepareCreateKeyResponse(@Nonnull KeyArgs keyArgs,
+      OmKeyInfo omKeyInfo, @Nonnull List<OmKeyLocationInfo> locations,
+      FileEncryptionInfo encryptionInfo, @Nullable IOException exception,
+      long clientID, long transactionLogIndex, @Nonnull String volumeName,
+      @Nonnull String bucketName, @Nonnull String keyName,
+      @Nonnull OzoneManager ozoneManager, @Nonnull OMAction omAction) {
+
+    OMResponse.Builder omResponse = OMResponse.newBuilder().setStatus(
+        OzoneManagerProtocolProtos.Status.OK);
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+
+    Map<String, String> auditMap = buildKeyArgsAuditMap(keyArgs);
+
+    OMClientResponse omClientResponse = null;
     if (exception == null) {
       if (omKeyInfo == null) {
         // the key does not exist, create a new object, the new blocks are the
@@ -238,59 +258,103 @@ public class OMKeyCreateRequest extends OMClientRequest
             encryptionInfo);
       }
 
-      openVersion = omKeyInfo.getLatestVersionLocations().getVersion();
+      long openVersion = omKeyInfo.getLatestVersionLocations().getVersion();
 
+      // Append blocks
       try {
         omKeyInfo.appendNewBlocks(keyArgs.getKeyLocationsList().stream()
             .map(OmKeyLocationInfo::getFromProtobuf)
             .collect(Collectors.toList()), false);
 
       } catch (IOException ex) {
-        LOG.error("Open failed for Key: {} in volume/bucket:{}/{}",
-            keyName, bucketName, volumeName, ex);
-        omMetrics.incNumKeyAllocateFails();
-        auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_KEY, auditMap,
-            ex, getOmRequest().getUserInfo()));
-        return new OMKeyCreateResponse(null, -1L,
-            createErrorOMResponse(omResponse, ex));
+        exception = ex;
       }
 
-      // Add to cache entry can be done outside of lock for this openKey.
-      // Even if bucket gets deleted, when commitKey we shall identify if
-      // bucket gets deleted.
-      omMetadataManager.getOpenKeyTable().addCacheEntry(
-          new CacheKey<>(dbOpenKeyName),
-          new CacheValue<>(Optional.of(omKeyInfo), transactionLogIndex));
+      if (exception != null) {
+        LOG.error("{} failed for Key: {} in volume/bucket:{}/{}",
+            omAction.getAction(), keyName, bucketName, volumeName, exception);
+        omClientResponse = createKeyErrorResponse(ozoneManager.getMetrics(),
+            omAction, exception, omResponse);
+      } else {
+        String dbOpenKeyName = omMetadataManager.getOpenKey(volumeName,
+            bucketName, keyName, clientID);
 
-      LOG.debug("Key {} allocated in volume/bucket: {}/{}", keyName, volumeName,
-          bucketName);
+        // Add to cache entry can be done outside of lock for this openKey.
+        // Even if bucket gets deleted, when commitKey we shall identify if
+        // bucket gets deleted.
+        omMetadataManager.getOpenKeyTable().addCacheEntry(
+            new CacheKey<>(dbOpenKeyName),
+            new CacheValue<>(Optional.of(omKeyInfo), transactionLogIndex));
 
-      auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_KEY, auditMap,
-          exception, getOmRequest().getUserInfo()));
+        LOG.debug("{} for Key: {} in volume/bucket: {}/{}",
+            omAction.getAction(), keyName, volumeName, bucketName);
 
-      long clientID = createKeyRequest.getClientID();
 
-      omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
-          .setKeyInfo(omKeyInfo.getProtobuf())
-          .setID(clientID).setOpenVersion(openVersion)
-          .build());
-
-      return new OMKeyCreateResponse(omKeyInfo, clientID, omResponse.build());
+        if (omAction == OMAction.CREATE_FILE) {
+          ozoneManager.getMetrics().incNumCreateFile();
+          omResponse.setCreateFileResponse(
+              OzoneManagerProtocolProtos.CreateFileResponse.newBuilder()
+                  .setKeyInfo(omKeyInfo.getProtobuf())
+                  .setID(clientID)
+                  .setOpenVersion(openVersion).build());
+          omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateFile);
+          omClientResponse = new OMFileCreateResponse(omKeyInfo, clientID,
+              omResponse.build());
+        } else {
+          ozoneManager.getMetrics().incNumKeyAllocates();
+          omResponse.setCreateKeyResponse(CreateKeyResponse.newBuilder()
+              .setKeyInfo(omKeyInfo.getProtobuf())
+              .setID(clientID).setOpenVersion(openVersion)
+              .build());
+          omResponse.setCmdType(OzoneManagerProtocolProtos.Type.CreateKey);
+          omClientResponse = new OMKeyCreateResponse(omKeyInfo, clientID,
+            omResponse.build());
+        }
+      }
 
     } else {
-      auditLog(auditLogger, buildAuditMessage(OMAction.ALLOCATE_KEY, auditMap,
-          exception, getOmRequest().getUserInfo()));
-      LOG.error("Open failed for Key: {} in volume/bucket:{}/{}",
-          keyName, bucketName, volumeName, exception);
+      LOG.error("{} failed for Key: {} in volume/bucket:{}/{}",
+          omAction.getAction(), keyName, volumeName, bucketName, exception);
+      omClientResponse = createKeyErrorResponse(ozoneManager.getMetrics(),
+          omAction, exception, omResponse);
+    }
+    // audit log
+    auditLog(ozoneManager.getAuditLogger(), buildAuditMessage(omAction,
+        auditMap, exception, getOmRequest().getUserInfo()));
+    return omClientResponse;
+  }
+
+  private OMClientResponse createKeyErrorResponse(@Nonnull OMMetrics omMetrics,
+      @Nonnull OMAction omAction, @Nonnull IOException exception,
+      @Nonnull OMResponse.Builder omResponse) {
+    if (omAction == OMAction.CREATE_FILE) {
+      omMetrics.incNumCreateFileFails();
+      omResponse.setCmdType(CreateFile);
+      return new OMFileCreateResponse(null, -1L,
+          createErrorOMResponse(omResponse, exception));
+    } else {
       omMetrics.incNumKeyAllocateFails();
+      omResponse.setCmdType(CreateKey);
       return new OMKeyCreateResponse(null, -1L,
           createErrorOMResponse(omResponse, exception));
     }
   }
 
-  private OmKeyInfo prepareKeyInfo(OMMetadataManager omMetadataManager,
-      KeyArgs keyArgs, String dbKeyName, long size,
-      List<OmKeyLocationInfo> locations, FileEncryptionInfo encInfo)
+  /**
+   * Prepare OmKeyInfo which will be persisted to openKeyTable.
+   * @param omMetadataManager
+   * @param keyArgs
+   * @param dbKeyName
+   * @param size
+   * @param locations
+   * @param encInfo
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  protected OmKeyInfo prepareKeyInfo(
+      @Nonnull OMMetadataManager omMetadataManager,
+      @Nonnull KeyArgs keyArgs, @Nonnull String dbKeyName, long size,
+      @Nonnull List<OmKeyLocationInfo> locations, FileEncryptionInfo encInfo)
       throws IOException {
     OmKeyInfo keyInfo = null;
     if (keyArgs.getIsMultipartKey()) {
@@ -313,8 +377,21 @@ public class OMKeyCreateRequest extends OMClientRequest
     return keyInfo;
   }
 
-  private OmKeyInfo prepareMultipartKeyInfo(OMMetadataManager omMetadataManager,
-      KeyArgs args, long size, List<OmKeyLocationInfo> locations,
+  /**
+   * Prepare OmKeyInfo for multi-part upload part key which will be persisted
+   * to openKeyTable.
+   * @param omMetadataManager
+   * @param args
+   * @param size
+   * @param locations
+   * @param encInfo
+   * @return OmKeyInfo
+   * @throws IOException
+   */
+  private OmKeyInfo prepareMultipartKeyInfo(
+      @Nonnull OMMetadataManager omMetadataManager,
+      @Nonnull KeyArgs args, long size,
+      @Nonnull List<OmKeyLocationInfo> locations,
       FileEncryptionInfo encInfo) throws IOException {
     HddsProtos.ReplicationFactor factor;
     HddsProtos.ReplicationType type;
@@ -353,11 +430,13 @@ public class OMKeyCreateRequest extends OMClientRequest
    * @param type
    * @param size
    * @param encInfo
-   * @return
+   * @return OmKeyInfo
    */
-  private OmKeyInfo createKeyInfo(KeyArgs keyArgs,
-      List<OmKeyLocationInfo> locations, HddsProtos.ReplicationFactor factor,
-      HddsProtos.ReplicationType type, long size, FileEncryptionInfo encInfo) {
+  private OmKeyInfo createKeyInfo(@Nonnull KeyArgs keyArgs,
+      @Nonnull List<OmKeyLocationInfo> locations,
+      @Nonnull HddsProtos.ReplicationFactor factor,
+      @Nonnull HddsProtos.ReplicationType type, long size,
+      FileEncryptionInfo encInfo) {
     OmKeyInfo.Builder builder = new OmKeyInfo.Builder()
         .setVolumeName(keyArgs.getVolumeName())
         .setBucketName(keyArgs.getBucketName())
@@ -375,4 +454,5 @@ public class OMKeyCreateRequest extends OMClientRequest
     }
     return builder.build();
   }
+
 }

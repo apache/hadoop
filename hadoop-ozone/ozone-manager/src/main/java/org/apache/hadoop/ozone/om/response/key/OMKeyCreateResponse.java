@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.ozone.om.response.key;
 
+import java.io.IOException;
+import javax.annotation.Nullable;
+
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -25,8 +28,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.utils.db.BatchOperation;
-
-import java.io.IOException;
 
 /**
  * Response for CreateKey request.
@@ -36,8 +37,8 @@ public class OMKeyCreateResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
   private long openKeySessionID;
 
-  public OMKeyCreateResponse(OmKeyInfo omKeyInfo, long openKeySessionID,
-      OMResponse omResponse) {
+  public OMKeyCreateResponse(@Nullable OmKeyInfo omKeyInfo,
+      long openKeySessionID, OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
     this.openKeySessionID = openKeySessionID;
