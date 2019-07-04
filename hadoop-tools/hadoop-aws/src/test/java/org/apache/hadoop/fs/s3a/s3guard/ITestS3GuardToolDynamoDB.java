@@ -302,7 +302,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     describe("Dumping metastore %s to %s",
         fs.getMetadataStore(),
         destFile);
-    DumpS3GuardTable.dumpS3GuardStore(
+    DumpS3GuardTable.dumpStore(
         fs,
         null,
         null,

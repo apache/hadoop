@@ -120,6 +120,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   @Before
   public void setUp() throws Exception {
+    Thread.currentThread().setName("setup");
     LOG.debug("== Setup. ==");
     contract = createContract();
     ms = contract.getMetadataStore();
@@ -132,6 +133,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   @After
   public void tearDown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.debug("== Tear down. ==");
     if (ms != null) {
       try {

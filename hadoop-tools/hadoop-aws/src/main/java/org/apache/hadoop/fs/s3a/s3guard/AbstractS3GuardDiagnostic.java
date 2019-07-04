@@ -18,23 +18,20 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
-import com.google.common.base.Preconditions;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.service.launcher.AbstractLaunchableService;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
 
@@ -50,36 +47,62 @@ public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
     super(name);
   }
 
-  public AbstractS3GuardDiagnostic(final String name,
-      final S3AFileSystem filesystem,
-      final DynamoDBMetadataStore store,
-      final URI uri) {
+  /**
+   * Constructor. If the store is set then that is the store for the operation,
+   * otherwise the filesystem's binding is used instead.
+   * @param name entry point name.
+   * @param filesystem filesystem
+   * @param store optional metastore.
+   * @param uri URI. Must be set if filesystem == null.
+   */
+  public AbstractS3GuardDiagnostic(
+      final String name,
+      @Nullable final S3AFileSystem filesystem,
+      @Nullable final DynamoDBMetadataStore store,
+      @Nullable final URI uri) {
     super(name);
     this.store = store;
     this.filesystem = filesystem;
+    if (store == null) {
+      require(filesystem != null, "No filesystem or URI");
+      bindStore(filesystem);
+    }
     if (uri == null) {
-      checkArgument(filesystem != null, "No filesystem or URI");
-        // URI always gets a trailing /
-        setUri(filesystem.getUri().toString());
+      require(filesystem != null, "No filesystem or URI");
+      setUri(filesystem.getUri());
     } else {
       setUri(uri);
     }
-    if (store == null) {
-      bindStore(filesystem);
-    }
   }
 
-  private static void require(boolean condition, String error) {
+  /**
+   * Require a condition to hold, otherwise an exception is thrown.
+   * @param condition condition to be true
+   * @param error text on failure.
+   * @throws ServiceLaunchException if the condition is not met
+   */
+  protected static void require(boolean condition, String error) {
     if (!condition) {
-      throw fail(error);
+      throw failure(error);
     }
   }
 
-  private static ServiceLaunchException fail(String message, Throwable ex) {
+  /**
+   * Generate a failure exception for throwing.
+   * @param message message
+   * @param ex optional nested exception.
+   * @return an exception to throw
+   */
+  protected static ServiceLaunchException failure(String message, Throwable ex) {
     return new ServiceLaunchException(LauncherExitCodes.EXIT_FAIL, message, ex);
   }
 
-  private static ServiceLaunchException fail(String message) {
+  /**
+   * Generate a failure exception for throwing.
+   * @param message message
+   * @return an exception to throw
+   */
+  protected static ServiceLaunchException failure(String message) {
     return new ServiceLaunchException(LauncherExitCodes.EXIT_FAIL, message);
   }
 
@@ -91,12 +114,21 @@ public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
     return super.bindArgs(config, args);
   }
 
-  public List<String> getArguments() {
+  /**
+   * Get the argument list.
+   * @return the argument list.
+   */
+  protected List<String> getArguments() {
     return arguments;
   }
 
-  protected void bindFromCLI(String fsURI )
-      throws IOException, URISyntaxException {
+  /**
+   * Bind to the store from a CLI argument.
+   * @param fsURI filesystem URI
+   * @throws IOException failure
+   */
+  protected void bindFromCLI(String fsURI)
+      throws IOException {
     Configuration conf = getConfig();
     setUri(fsURI);
     FileSystem fs = FileSystem.get(getUri(), conf);
@@ -104,9 +136,14 @@ public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
         "Not an S3A Filesystem:  " + fsURI);
     filesystem = (S3AFileSystem) fs;
     bindStore(filesystem);
-
+    setUri(fs.getUri());
   }
 
+  /**
+   * Binds the {@link #store} field to the metastore of
+   * the filesystem -which must have a DDB metastore.
+   * @param fs filesystem to bind the store to.
+   */
   private void bindStore(final S3AFileSystem fs) {
     require(fs.hasMetadataStore(),
         "Filesystem has no metadata store: " + fs.getUri());
@@ -154,5 +191,24 @@ public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
         throw new RuntimeException(e);
       }
     }
+  }
+
+  /**
+   * Get the list of arguments, after validating the list size.
+   * @param argMin minimum number of entries.
+   * @param argMax maximum number of entries.
+   * @param usage Usage message.
+   * @return the argument list, which will be in the range.
+   * @throws ServiceLaunchException if the argument list is not valid.
+   */
+  protected List<String> getArgumentList(final int argMin,
+      final int argMax,
+      final String usage) {
+    List<String> arg = getArguments();
+    if (arg == null || arg.size() < argMin || arg.size() > argMax) {
+      // no arguments: usage message
+      throw new ServiceLaunchException(EXIT_USAGE, usage);
+    }
+    return arg;
   }
 }

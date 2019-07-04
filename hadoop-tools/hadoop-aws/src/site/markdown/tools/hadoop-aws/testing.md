@@ -1100,25 +1100,24 @@ property should be configured, and the name of that table should be different
  incurring AWS charges.
 
 
-### How to dump the table to a CSV file
+### How to Dump the Table and Metastore State
 
-There's an unstable, unsupported command to list the contents of a table
-to a CSV, or more specifically a TSV file, on the local system
-
-```
-hadoop org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable s3a://bucket-x/ out.csv
-```
-This generates a file which can then be viewed on the command line or editor:
+There's an unstable entry point to list the contents of a table
+and S3 filesystem ot a set of TSV files
 
 ```
-"path"  "type"  "is_auth_dir"   "deleted"       "is_empty_dir"  "len"   "updated"       "updated_s"     "last_modified" "last_modified_s"       "etag"  "version"
-"s3a://bucket-x/FileSystemContractBaseTest"      "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561483826881   "Tue Jun 25 18:30:26 BST 2019"  ""      ""
-"s3a://bucket-x/Users"   "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484376835   "Tue Jun 25 18:39:36 BST 2019"  ""      ""
-"s3a://bucket-x/dest-6f578c72-eb40-4767-a89d-66a6a5b89578"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561483757615   "Tue Jun 25 18:29:17 BST 2019"  ""      ""
-"s3a://bucket-x/file.txt"        "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484382603   "Tue Jun 25 18:39:42 BST 2019"  ""      ""
-"s3a://bucket-x/fork-0001"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484378086   "Tue Jun 25 18:39:38 BST 2019"  ""      ""
-"s3a://bucket-x/fork-0002"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484380177   "Tue Jun 25 18:39:40 BST 2019"  ""      ""
-"s3a://bucket-x/fork-0003"       "file"  "false" "true"  "UNKNOWN"       0       1561484415455   "Tue Jun 25 18:40:15 BST 2019"  1561484379690   "Tue Jun 25 18:39:39 BST 2019"  ""      ""
+hadoop org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable s3a://bucket-x/ dir/out
+```
+
+This generates a set of files prefixed `dir/out-` with different views of the worl. 
+ which can then be viewed on the command line or editor:
+
+```
+"type"	"deleted"	"path"	"is_auth_dir"	"is_empty_dir"	"len"	"updated"	"updated_s"	"last_modified"	"last_modified_s"	"etag"	"version"
+"file"	"true"	"s3a://bucket/fork-0001/test/ITestS3AContractDistCp/testDirectWrite/remote"	"false"	"UNKNOWN"	0	1562171244451	"Wed Jul 03 17:27:24 BST 2019"	1562171244451	"Wed Jul 03 17:27:24 BST 2019"	""	""
+"file"	"true"	"s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/file1"	"false"	"UNKNOWN"	0	1562171518435	"Wed Jul 03 17:31:58 BST 2019"	1562171518435	"Wed Jul 03 17:31:58 BST 2019"	""	""
+"file"	"true"	"s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/subdir"	"false"	"UNKNOWN"	0	1562171518535	"Wed Jul 03 17:31:58 BST 2019"	1562171518535	"Wed Jul 03 17:31:58 BST 2019"	""	""
+"file"	"true"	"s3a://bucket/test/DELAY_LISTING_ME/testMRJob"	"false"	"UNKNOWN"	0	1562172036299	"Wed Jul 03 17:40:36 BST 2019"	1562172036299	"Wed Jul 03 17:40:36 BST 2019"	""	""
 ```
 
 This is unstable: the output format may change without warning.
@@ -1127,23 +1126,60 @@ They are, currently:
 
 | field | meaning | source |
 |-------|---------| -------|
-| `path` | path of an entry | filestatus |
 | `type` | type | filestatus |
-| `is_auth_dir` | directory entry authoritative status | metadata | 
 | `deleted` | tombstone marker | metadata | 
+| `path` | path of an entry | filestatus |
+| `is_auth_dir` | directory entry authoritative status | metadata | 
 | `is_empty_dir` | does the entry represent an empty directory | metadata | 
-| `len` |   |
 | `len` | file length | filestatus |
 | `last_modified` | file status last modified | filestatus |
 | `last_modified_s` | file status last modified as string | filestatus |
 | `updated` | time (millis) metadata was updated | metadata |
 | `updated_s` | updated time as a string | metadata |
-| `updated` |  | metadata |
 | `etag` | any etag | filestatus |
 | `version` |  any version| filestatus |
 
-As noted: this is unstable; entry list and meaning may change, sorting of output,
-the listing algorithm, representation of types, etc. Use at your own risk.
+Files generated
+
+| suffix        | content |
+|---------------|---------|
+| `-scan.csv`   | Full scan/dump of the metastore |
+| `-store.csv`  | Recursive walk through the metastore |
+| `-tree.csv`   | Treewalk through filesystem `listStatus("/")` calls |
+| `-flat.csv`   | Flat listing through filesystem `listFiles("/", recursive)` |
+| `-s3.csv`     | Dump of the S3 Store *only* |
+| `-scan-2.csv` | Scan of the store after the previous operations |
+
+Why the two scan entries? The S3Guard+S3 listing/treewalk operations
+may add new entries to the store. 
+
+Note 1: this is unstable; entry list and meaning may change, sorting of output,
+the listing algorithm, representation of types, etc. It's expected
+uses are: diagnostics, support calls and helping us developers
+work out what we've just broken.
+
+Note 2: This *is* safe to use against an active store; the tables may be inconsistent
+due to changes taking place during the dump sequence.
+
+### Resetting the Metastore: `PurgeS3GuardTable`
+
+The `PurgeS3GuardTable` entry point `org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable` can
+list all entries in a store for a specific filesystem, and delete them.
+It *only* deletes those entries in the store for that specific filesystem,
+even if the store is shared.
+
+```bash
+hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable \
+  -force s3a://example-bucket/
+```
+
+Without the `-force` option the table is scanned, but no entries deleted;
+with it then all entries for that filesystem are deleted.
+No attempt is made to order the deletion; while the operation is under way
+the store is not fully connected (i.e. there may be entries whose parent has
+already been deleted).
+
+Needless to say: *it is not safe to use this against a table in active use.*
 
 ### Scale Testing MetadataStore Directly
 

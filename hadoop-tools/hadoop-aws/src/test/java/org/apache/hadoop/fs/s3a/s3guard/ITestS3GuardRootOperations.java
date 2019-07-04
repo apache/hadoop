@@ -25,7 +25,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
@@ -64,7 +63,9 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
 
   private String metastoreUriStr;
 
-  private boolean cleaning = false;
+  // this is a switch you can change in your IDE to enable
+  // or disable those tests which clean up the metastore.
+  private final boolean cleaning = false;
 
   /**
    * The test timeout is increased in case previous tests have created
@@ -122,7 +123,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_050_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpS3GuardStore(
+    DumpS3GuardTable.dumpStore(
         null,
         metastore,
         getConfiguration(),
@@ -134,7 +135,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_060_dump_metastore_and_s3() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpS3GuardStore(
+    DumpS3GuardTable.dumpStore(
         getFileSystem(),
         metastore,
         getConfiguration(),
@@ -247,7 +248,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_600_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpS3GuardStore(
+    DumpS3GuardTable.dumpStore(
         getFileSystem(),
         metastore,
         getConfiguration(),

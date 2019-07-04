@@ -18,29 +18,43 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.IOException;
+import javax.annotation.Nullable;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
+import org.apache.hadoop.service.Service;
 import org.apache.hadoop.service.launcher.LauncherExitCodes;
 import org.apache.hadoop.service.launcher.ServiceLaunchException;
+import org.apache.hadoop.service.launcher.ServiceLauncher;
+import org.apache.hadoop.util.DurationInfo;
+import org.apache.hadoop.util.ExitUtil;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable.serviceMain;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 
 /**
  * Purge the S3Guard table of a FileSystem from all entries related to
  * that table.
- * Will fail if there is no table, or the store is in auth mode
+ * Will fail if there is no table, or the store is in auth mode.
+ * <pre>
+ *   hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable \
+ *   -force s3a://example-bucket/
+ * </pre>
+ *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -51,6 +65,16 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
 
   public static final String NAME = "PurgeS3GuardTable";
 
+  public static final String FORCE = "-force";
+
+  private static final String USAGE_MESSAGE = NAME
+      + " [-force] <filesystem>";
+
+  private boolean force;
+
+  private long filesFound;
+  private long filesDeleted;
+
   public PurgeS3GuardTable(final String name) {
     super(name);
   }
@@ -59,14 +83,29 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
     this(NAME);
   }
 
+  public PurgeS3GuardTable(
+      final S3AFileSystem filesystem,
+      final DynamoDBMetadataStore store,
+      final URI uri,
+      final boolean force) {
+    super(NAME, filesystem, store, uri);
+    this.force = force;
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     if (getStore() == null) {
-      List<String> arguments = getArguments();
-      checkNotNull(arguments, "No arguments");
-      Preconditions.checkState(arguments.size() == 1,
-          "Wrong number of arguments: %s", arguments.size());
-      bindFromCLI(arguments.get(0));
+      List<String> arg = getArgumentList(1, 2, USAGE_MESSAGE);
+      String fsURI = arg.get(0);
+      if (arg.size() == 2) {
+        if (!arg.get(0).equals(FORCE)) {
+          throw new ServiceLaunchException(LauncherExitCodes.EXIT_USAGE,
+              USAGE_MESSAGE);
+        }
+        force = true;
+        fsURI = arg.get(1);
+      }
+      bindFromCLI(fsURI);
     }
   }
 
@@ -75,10 +114,9 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
    * delete all entries from thtat bucket
    * @return the exit code.
    * @throws ServiceLaunchException on failure.
-   * @throws IOException IO failure.
    */
   @Override
-  public int execute() throws ServiceLaunchException, IOException {
+  public int execute() throws ServiceLaunchException {
 
     URI uri = getUri();
     String host = uri.getHost();
@@ -98,8 +136,87 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
         list.add(p);
       }
     });
-    LOG.info("Deleting {} entries", list.size());
-    tableAccess.delete(list);
+    int count = list.size();
+    filesFound = count;
+    LOG.info("Found {} entries", count);
+    if (count > 0) {
+      if (force) {
+        DurationInfo duration =
+            new DurationInfo(LOG,
+                "deleting %s entries from %s",
+                count, ddbms.toString());
+        tableAccess.delete(list);
+        duration.close();
+        long durationMillis = duration.value();
+        long timePerEntry = durationMillis / count;
+        LOG.info("Time per entry: {} ms", timePerEntry);
+        filesDeleted = count;
+      } else {
+        LOG.info("Delete process will only be executed when "
+            + FORCE + " is set");
+      }
+    }
     return LauncherExitCodes.EXIT_SUCCESS;
+  }
+
+  /**
+   * This is the JVM entry point for the service launcher.
+   *
+   * Converts the arguments to a list, instantiates a instance of the class
+   * then executes it.
+   * @param args command line arguments.
+   */
+  public static void main(String[] args) {
+    try {
+      serviceMain(Arrays.asList(args), new PurgeS3GuardTable());
+    } catch (ExitUtil.ExitException e) {
+      ExitUtil.terminate(e);
+    }
+  }
+
+  /**
+   * Entry point to dump the metastore and s3 store world views
+   * <p>
+   * Both the FS and the store will be dumped: the store is scanned
+   * before and after the sequence to show what changes were made to
+   * the store during the list operation.
+   * @param fs fs to dump. If null a store must be provided.
+   * @param store store to dump (fallback to FS)
+   * @param conf configuration to use (fallback to fs)
+   * @param uri URI of store -only needed if FS is null.
+   * @param force force the actual delete
+   * @return (filesFound, filesDeleted)
+   * @throws ExitUtil.ExitException failure.
+   */
+  public static Pair<Long, Long> purgeStore(
+      @Nullable final S3AFileSystem fs,
+      @Nullable DynamoDBMetadataStore store,
+      @Nullable Configuration conf,
+      @Nullable URI uri,
+      boolean force) throws ExitUtil.ExitException {
+    ServiceLauncher<Service> serviceLauncher =
+        new ServiceLauncher<>(NAME);
+
+    if (conf == null) {
+      conf = checkNotNull(fs, "No filesystem").getConf();
+    }
+    if (store == null) {
+      store = (DynamoDBMetadataStore) checkNotNull(fs, "No filesystem")
+          .getMetadataStore();
+    }
+    PurgeS3GuardTable purge = new PurgeS3GuardTable(fs,
+        store,
+        uri,
+        force);
+    ExitUtil.ExitException ex = serviceLauncher.launchService(
+        conf,
+        purge,
+        Collections.emptyList(),
+        false,
+        true);
+    if (ex != null && ex.getExitCode() != 0) {
+      throw ex;
+    }
+    return Pair.of(purge.filesFound, purge.filesDeleted);
   }
 }

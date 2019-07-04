@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
@@ -28,11 +29,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +56,6 @@ import org.apache.hadoop.util.ExitUtil;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
-import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
 /**
  * This is a low-level diagnostics entry point which does a CVE/TSV dump of
@@ -117,13 +115,10 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
 
   @Override
   protected void serviceStart() throws Exception {
-    if (getStore()== null) {
-      List<String> arguments = getArguments();
-      checkNotNull(arguments, "No arguments");
-      Preconditions.checkState(arguments.size() == 2,
-          "Wrong number of arguments: %s", arguments.size());
-      bindFromCLI(arguments.get(0));
-      destPath = arguments.get(1);
+    if (getStore() == null) {
+      List<String> arg = getArgumentList(2, 2, USAGE_MESSAGE);
+      bindFromCLI(arg.get(0));
+      destPath = arg.get(1);
     }
   }
 
@@ -369,8 +364,8 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    */
   public static void main(String[] args) {
     try {
-      LinkedList<String> argsList = new LinkedList<>(Arrays.asList(args));
-      serviceMain(argsList);
+      serviceMain(Arrays.asList(args),
+          new DumpS3GuardTable());
     } catch (ExitUtil.ExitException e) {
       ExitUtil.terminate(e);
     }
@@ -380,25 +375,22 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    * The real main function, which takes the arguments as a list.
    * Argument 0 MUST be the service classname
    * @param argsList the list of arguments
+   * @param service service to launch.
    */
-  public static void serviceMain(List<String> argsList) {
-    if (argsList.size() != 2) {
-      // no arguments: usage message
-      ExitUtil.terminate(new ServiceLaunchException(EXIT_USAGE, USAGE_MESSAGE));
+  static void serviceMain(
+      final List<String> argsList,
+      final AbstractS3GuardDiagnostic service) {
+    ServiceLauncher<Service> serviceLauncher =
+        new ServiceLauncher<>(service.getName());
 
-    } else {
-      ServiceLauncher<Service> serviceLauncher =
-          new ServiceLauncher<>(NAME);
-
-      ExitUtil.ExitException ex = serviceLauncher.launchService(
-          new Configuration(),
-          new DumpS3GuardTable(),
-          argsList,
-          false,
-          true);
-      if (ex != null) {
-        throw ex;
-      }
+    ExitUtil.ExitException ex = serviceLauncher.launchService(
+        new Configuration(),
+        service,
+        argsList,
+        false,
+        true);
+    if (ex != null) {
+      throw ex;
     }
   }
 
@@ -415,14 +407,14 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    * @param uri URI of store -only needed if FS is null.
    * @throws ExitUtil.ExitException failure.
    */
-  public static void dumpS3GuardStore(
-      final S3AFileSystem fs,
-      DynamoDBMetadataStore store,
-      Configuration conf,
+  public static void dumpStore(
+      @Nullable final S3AFileSystem fs,
+      @Nullable DynamoDBMetadataStore store,
+      @Nullable Configuration conf,
       final File destFile,
-      URI uri) throws ExitUtil.ExitException {
+      @Nullable URI uri) throws ExitUtil.ExitException {
     ServiceLauncher<Service> serviceLauncher =
-        new ServiceLauncher<>("");
+        new ServiceLauncher<>(NAME);
 
     if (conf == null) {
       conf = checkNotNull(fs, "No filesystem").getConf();

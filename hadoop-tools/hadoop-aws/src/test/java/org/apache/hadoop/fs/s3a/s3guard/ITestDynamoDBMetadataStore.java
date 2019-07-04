@@ -46,6 +46,7 @@ import org.assertj.core.api.Assertions;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -1077,7 +1078,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     describe("Create an Invalid listing and prune it");
     DynamoDBMetadataStore ms
         = ITestDynamoDBMetadataStore.ddbmsStatic;
-    String base = "/testPruneAgainstInvalidTable";
+    String base = "/" + getMethodName();
     String subdir = base + "/subdir";
     Path subDirPath = strToPath(subdir);
     createNewDirs(base, subdir);
@@ -1132,7 +1133,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testPutFileDirectlyUnderTombstone() throws Throwable {
     describe("Put a file under a tombstone; verify the tombstone");
-    String base = "/testPutFileDirectlyUnderTombstone";
+    String base = "/" + getMethodName();
     long now = getTime();
     putTombstone(base, now, null);
     PathMetadata baseMeta1 = get(base);
@@ -1147,7 +1148,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testPruneTombstoneUnderTombstone() throws Throwable {
     describe("Put a tombsteone under a tombstone, prune the pair");
-    String base = "/testPruneTombstoneUnderTombstone";
+    String base = "/" + getMethodName();
     long now = getTime();
     String dir = base + "/dir";
     putTombstone(dir, now, null);
@@ -1197,7 +1198,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testPruneFileUnderTombstone() throws Throwable {
     describe("Put a file under a tombstone, prune the pair");
-    String base = "/testPruneFileUnderTombstone";
+    String base = "/" + getMethodName();
     long now = getTime();
     String dir = base + "/dir";
     putTombstone(dir, now, null);
@@ -1231,7 +1232,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   @Test
   public void testPutFileDeepUnderTombstone() throws Throwable {
     describe("Put a file two levels under a tombstone");
-    String base = "/testPutFileDeepUnderTombstone";
+    String base = "/" + getMethodName();
     String dir = base + "/dir";
     long now = getTime();
     // creating a file MUST create its parents
@@ -1275,7 +1276,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     File buildDir = new File(target).getAbsoluteFile();
     String name = "ITestDynamoDBMetadataStore";
     File destFile = new File(buildDir, name);
-    DumpS3GuardTable.dumpS3GuardStore(
+    DumpS3GuardTable.dumpStore(
         null,
         ddbmsStatic,
         getFileSystem().getConf(),
@@ -1288,6 +1289,59 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         LOG.info(line);
       }
     }
+  }
+
+  @Test
+  public void testPurgeTableNoForce() throws Throwable {
+    describe("Purge the table");
+
+    putTombstone("/" + getMethodName(), getTime(), null);
+    Pair<Long, Long> r = PurgeS3GuardTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        false);
+
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isGreaterThanOrEqualTo(1);
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isZero();
+  }
+
+  @Test
+  public void testPurgeTableForce() throws Throwable {
+    describe("Purge the table -force");
+    putTombstone("/" + getMethodName(), getTime(), null);
+    Pair<Long, Long> r = PurgeS3GuardTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        true);
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isGreaterThanOrEqualTo(1);
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isEqualTo(r.getLeft());
+
+    // second iteration will have zero entries; this ensures that
+
+    r = PurgeS3GuardTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        true);
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isZero();
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isZero();
   }
 
   /**
