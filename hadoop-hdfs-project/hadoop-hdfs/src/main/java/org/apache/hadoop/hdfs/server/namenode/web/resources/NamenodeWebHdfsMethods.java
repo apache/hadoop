@@ -1205,9 +1205,8 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      final String js = JsonUtil.toJsonString("Path",
-          FileSystem.get(conf != null ? conf : new Configuration())
-              .getHomeDirectory().toUri().getPath());
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETACLSTATUS: {
