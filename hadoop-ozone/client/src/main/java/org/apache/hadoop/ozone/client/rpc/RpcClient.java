@@ -223,8 +223,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
     retryInterval = OzoneUtils.getTimeDurationInMS(conf,
         OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL,
         OzoneConfigKeys.OZONE_CLIENT_RETRY_INTERVAL_DEFAULT);
-    dtService =
-        getOMProxyProvider().getProxy().getDelegationTokenService();
+    dtService = getOMProxyProvider().getCurrentProxyDelegationToken();
     boolean isUnsafeByteOperationsEnabled = conf.getBoolean(
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
