@@ -2253,6 +2253,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Username.
+   * @return the current username
+   */
+  String getUsername() {
+    return username;
+  }
+
+  /**
    * Take an {@code IllegalArgumentException} raised by a DDB operation
    * and if it contains an inner SDK exception, unwrap it.
    * @param ex exception.
