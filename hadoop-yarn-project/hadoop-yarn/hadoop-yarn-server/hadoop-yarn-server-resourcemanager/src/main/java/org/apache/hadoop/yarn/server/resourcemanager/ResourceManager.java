@@ -616,6 +616,7 @@ public class ResourceManager extends CompositeService
     private ResourceManager rm;
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
+    private RMNMInfo rmnmInfo;
 
     RMActiveServices(ResourceManager rm) {
       super("RMActiveServices");
@@ -806,7 +807,7 @@ public class ResourceManager extends CompositeService
         LOG.info("Initialized Federation membership.");
       }
 
-      new RMNMInfo(rmContext, scheduler);
+      rmnmInfo = new RMNMInfo(rmContext, scheduler);
 
       if (conf.getBoolean(YarnConfiguration.YARN_API_SERVICES_ENABLE,
           false)) {
@@ -875,6 +876,10 @@ public class ResourceManager extends CompositeService
       super.serviceStop();
 
       DefaultMetricsSystem.shutdown();
+      // unregister rmnmInfo bean
+      if (rmnmInfo != null) {
+        rmnmInfo.unregister();
+      }
       if (rmContext != null) {
         RMStateStore store = rmContext.getStateStore();
         try {
@@ -1132,9 +1137,9 @@ public class ResourceManager extends CompositeService
       params.put("com.sun.jersey.config.property.packages", apiPackages);
     }
 
-    Builder<ApplicationMasterService> builder = 
+    Builder<ResourceManager> builder =
         WebApps
-            .$for("cluster", ApplicationMasterService.class, masterService,
+            .$for("cluster", ResourceManager.class, this,
                 "ws")
             .with(conf)
             .withServlet("API-Service", "/app/*",
