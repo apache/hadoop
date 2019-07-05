@@ -172,13 +172,76 @@ public final class FSImageFormatProtobuf {
       return ctx;
     }
 
+    /**
+     * Thread to compute the MD5 of a file as this can be in parallel while
+     * loading the image without interfering much.
+     */
+    private static class DigestThread extends Thread {
+
+      /**
+       * Exception thrown when computing the digest if it cannot be calculated.
+       */
+      private volatile IOException ioe = null;
+
+      /**
+       * Calculated digest if there are no error.
+       */
+      private volatile MD5Hash digest = null;
+
+      /**
+       * FsImage file computed MD5.
+       */
+      private final File file;
+
+      DigestThread(File inFile) {
+        file = inFile;
+        setName(inFile.getName() + " MD5 compute");
+        setDaemon(true);
+      }
+
+      public MD5Hash getDigest() throws IOException {
+        if (ioe != null) {
+          throw ioe;
+        }
+        return digest;
+      }
+
+      public IOException getException() {
+        return ioe;
+      }
+
+      @Override
+      public void run() {
+        try {
+          digest = MD5FileUtils.computeMd5ForFile(file);
+        } catch (IOException e) {
+          ioe = e;
+        } catch (Throwable t) {
+          ioe = new IOException(t);
+        }
+      }
+
+      @Override
+      public String toString() {
+        return "DigestThread{ ThreadName=" + getName() + ", digest=" + digest
+            + ", file=" + file + '}';
+      }
+    }
+
     void load(File file) throws IOException {
       long start = Time.monotonicNow();
-      imgDigest = MD5FileUtils.computeMd5ForFile(file);
+      DigestThread dt = new DigestThread(file);
+      dt.start();
       RandomAccessFile raFile = new RandomAccessFile(file, "r");
       FileInputStream fin = new FileInputStream(file);
       try {
         loadInternal(raFile, fin);
+        try {
+          dt.join();
+          imgDigest = dt.getDigest();
+        } catch (InterruptedException ie) {
+          throw new IOException(ie);
+        }
         long end = Time.monotonicNow();
         LOG.info("Loaded FSImage in {} seconds.", (end - start) / 1000);
       } finally {
