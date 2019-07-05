@@ -60,10 +60,10 @@ public class CSMMetrics {
   private @Metric MutableCounterLong numContainerNotOpenVerifyFailures;
 
   public CSMMetrics() {
-    int numEnumEntries = ContainerProtos.Type.values().length;
-    this.opsLatency = new MutableRate[numEnumEntries];
-    this.registry = new MetricsRegistry("CSMMetrics");
-    for (int i = 0; i < numEnumEntries; i++) {
+    int numCmdTypes = ContainerProtos.Type.values().length;
+    this.opsLatency = new MutableRate[numCmdTypes];
+    this.registry = new MetricsRegistry(CSMMetrics.class.getName());
+    for (int i = 0; i < numCmdTypes; i++) {
       opsLatency[i] = registry.newRate(
           ContainerProtos.Type.forNumber(i + 1).toString(),
           ContainerProtos.Type.forNumber(i + 1) + " op");
@@ -176,11 +176,11 @@ public class CSMMetrics {
     transactionLatency.add(latencyNanos);
   }
 
-  public void intNumStartTransactionVerifyFailures() {
+  public void incNumStartTransactionVerifyFailures() {
     numStartTransactionVerifyFailures.incr();
   }
 
-  public void intNumContainerNotOpenVerifyFailures() {
+  public void incNumContainerNotOpenVerifyFailures() {
     numContainerNotOpenVerifyFailures.incr();
   }
 

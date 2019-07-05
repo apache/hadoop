@@ -272,9 +272,9 @@ public class ContainerStateMachine extends BaseStateMachine {
       dispatcher.validateContainerCommand(proto);
     } catch (IOException ioe) {
       if (ioe instanceof ContainerNotOpenException) {
-        metrics.intNumContainerNotOpenVerifyFailures();
+        metrics.incNumContainerNotOpenVerifyFailures();
       } else {
-        metrics.intNumStartTransactionVerifyFailures();
+        metrics.incNumStartTransactionVerifyFailures();
         LOG.error("startTransaction validation failed on leader", ioe);
       }
       TransactionContext ctxt = TransactionContext.newBuilder()
