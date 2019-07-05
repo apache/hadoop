@@ -2231,6 +2231,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException, AmazonClientException {
     Path f = status.getPath();
     LOG.debug("Delete path {} - recursive {}", f, recursive);
+    LOG.debug("Type = {}",
+        status.isFile() ? "File"
+            : (status.isEmptyDirectory() == Tristate.TRUE
+                ? "Empty Directory"
+                : "Directory"));
 
     String key = pathToKey(f);
 
@@ -2290,7 +2295,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         metadataStore.deleteSubtree(f, ttlTimeProvider);
       }
     } else {
-      LOG.debug("delete: Path is a file");
+      LOG.debug("delete: Path is a file: {}", key);
       deleteObjectAtPath(f, key, true);
     }
 

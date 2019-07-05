@@ -218,6 +218,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
   public static final Logger LOG = LoggerFactory.getLogger(
       DynamoDBMetadataStore.class);
 
+  /**
+   * Name of the operations log.
+   */
+  public static final String OPERATIONS_LOG_NAME =
+      "org.apache.hadoop.fs.s3a.s3guard.Operations";
+
+  /**
+   * A log of all state changing operations to the store;
+   * only updated at debug level.
+   */
+  public static final Logger OPERATIONS_LOG = LoggerFactory.getLogger(
+      OPERATIONS_LOG_NAME);
+
   /** parent/child name to use in the version marker. */
   public static final String VERSION_MARKER = "../VERSION";
 
@@ -529,14 +542,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @Retries.RetryTranslated
   public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
       throws IOException {
-    innerDelete(path, true, ttlTimeProvider);
+    innerDelete(path, true, ttlTimeProvider, null);
   }
 
   @Override
   @Retries.RetryTranslated
   public void forgetMetadata(Path path) throws IOException {
     LOG.debug("Forget metadata for {}", path);
-    innerDelete(path, false, null);
+    innerDelete(path, false, null, null);
   }
 
   /**
@@ -547,11 +560,14 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @param tombstone flag to create a tombstone marker
    * @param ttlTimeProvider The time provider to set last_updated. Must not
    *                        be null if tombstone is true.
+   * @param ancestorState
    * @throws IOException I/O error.
    */
   @Retries.RetryTranslated
-  private void innerDelete(final Path path, boolean tombstone,
-      ITtlTimeProvider ttlTimeProvider)
+  private void innerDelete(final Path path,
+      boolean tombstone,
+      ITtlTimeProvider ttlTimeProvider,
+      final AncestorState ancestorState)
       throws IOException {
     checkPath(path);
     LOG.debug("Deleting from table {} in region {}: {}",
@@ -573,24 +589,28 @@ public class DynamoDBMetadataStore implements MetadataStore,
       pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
           new DDBPathMetadata(pmTombstone));
+      Item[] items = new Item[1];
       writeOp.retry(
           "Put tombstone",
           path.toString(),
           idempotent,
           () -> {
-            LOG.debug("Adding tombstone to {}", path);
+            logPut(ancestorState, items);
             recordsWritten(1);
             table.putItem(item);
+            items[0] = item;
           });
     } else {
       PrimaryKey key = pathToKey(path);
+      PrimaryKey[] keys = new PrimaryKey[1];
       writeOp.retry(
           "Delete key",
           path.toString(),
           idempotent,
           () -> {
             // record the attempt so even on retry the counter goes up.
-            LOG.debug("Delete key {}", path);
+            keys[0] = key;
+            logDelete(ancestorState, keys);
             recordsDeleted(1);
             table.deleteItem(key);
           });
@@ -611,31 +631,35 @@ public class DynamoDBMetadataStore implements MetadataStore,
       LOG.debug("Subtree path {} does not exist; this will be a no-op", path);
       return;
     }
+    ;
 
-    // REVISIT
-    for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-        desc.hasNext(); ) {
-      innerDelete(desc.next().getPath(), true, ttlTimeProvider);
-    }
-    /*
-    // Execute via the bounded threadpool.
-    final List<CompletableFuture<Void>> futures = new ArrayList<>();
-    for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-         desc.hasNext();) {
-      final Path pathToDelete = desc.next().getPath();
-      futures.add(submit(executor, () -> {
-        innerDelete(pathToDelete, true, ttlTimeProvider);
-        return null;
-      }));
-      if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
-        // first batch done; block for completion.
-        waitForCompletion(futures);
-        futures.clear();
+    try(AncestorState state = new AncestorState(this,
+        BulkOperationState.OperationType.Delete, path)) {
+      // REVISIT
+      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
+          desc.hasNext(); ) {
+        innerDelete(desc.next().getPath(), true, ttlTimeProvider, state);
       }
+      /*
+      // Execute via the bounded threadpool.
+      final List<CompletableFuture<Void>> futures = new ArrayList<>();
+      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
+           desc.hasNext();) {
+        final Path pathToDelete = desc.next().getPath();
+        futures.add(submit(executor, () -> {
+          innerDelete(pathToDelete, true, ttlTimeProvider);
+          return null;
+        }));
+        if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+          // first batch done; block for completion.
+          waitForCompletion(futures);
+          futures.clear();
+        }
+      }
+      // now wait for the final set.
+      waitForCompletion(futures);
+      */
     }
-    // now wait for the final set.
-    waitForCompletion(futures);
-    */
   }
 
   /**
@@ -859,7 +883,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       ancestry.put(path, entry);
       Path parent = path.getParent();
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
-        if (!ancestorState.findEntry(parent, true)) {
+        // REVISIT
+        if (true /*!ancestorState.findEntry(parent, true)*/) {
           // don't add this entry, but carry on with the parents
           LOG.debug("auto-create ancestor path {} for child path {}",
               parent, path);
@@ -1039,7 +1064,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       newItems.addAll(tombstones);
     }
 
-    processBatchWriteRequest(null, pathMetadataToItem(newItems));
+    processBatchWriteRequest(ancestorState,
+        null, pathMetadataToItem(newItems));
   }
 
   /**
@@ -1050,12 +1076,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * </ol>
    * As well as retrying on the operation invocation, incomplete
    * batches are retried until all have been processed.
+   *
+   * @param ancestorState ancestor state for logging
    * @param keysToDelete primary keys to be deleted; can be null
    * @param itemsToPut new items to be put; can be null
    * @return the number of iterations needed to complete the call.
    */
   @Retries.RetryTranslated("Outstanding batch items are updated with backoff")
-  private int processBatchWriteRequest(PrimaryKey[] keysToDelete,
+  private int processBatchWriteRequest(
+      @Nullable AncestorState ancestorState,
+      PrimaryKey[] keysToDelete,
       Item[] itemsToPut) throws IOException {
     final int totalToDelete = (keysToDelete == null ? 0 : keysToDelete.length);
     final int totalToPut = (itemsToPut == null ? 0 : itemsToPut.length);
@@ -1120,9 +1150,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     if (itemsToPut != null) {
       recordsWritten(itemsToPut.length);
+      logPut(ancestorState, itemsToPut);
     }
     if (keysToDelete != null) {
       recordsDeleted(keysToDelete.length);
+      logDelete(ancestorState, keysToDelete);
+
     }
     return batches;
   }
@@ -1241,7 +1274,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     }
     LOG.debug("Saving batch of {} items to table {}, region {}", items.length,
         tableName, region);
-    processBatchWriteRequest(null, items);
+    processBatchWriteRequest(ancestorState, null, items);
   }
 
   /**
@@ -1304,7 +1337,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
    * @return true iff the item isn't null and, if there is an is_deleted
    * column, that its value is false.
    */
-  private boolean itemExists(Item item) {
+  private static boolean itemExists(Item item) {
     if (item == null) {
       return false;
     }
@@ -1323,7 +1356,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   /**
    * {@inheritDoc}.
    * There is retry around building the list of paths to update, but
-   * the call to {@link #processBatchWriteRequest(PrimaryKey[], Item[])}
+   * the call to {@link #processBatchWriteRequest(DynamoDBMetadataStore.AncestorState, PrimaryKey[], Item[])}
    * is only tried once.
    * @param meta Directory listing metadata.
    * @param operationState operational state for a bulk update
@@ -1345,8 +1378,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     DDBPathMetadata ddbPathMeta =
         new DDBPathMetadata(makeDirStatus(path, username), meta.isEmpty(),
             false, meta.isAuthoritative(), meta.getLastUpdated());
-    // put all its ancestors if not present; as an optimization we return at its
-    // first existent ancestor
+    // put all its ancestors if not present
     final AncestorState ancestorState = extractOrCreate(operationState,
         BulkOperationState.OperationType.Put);
     // First add any missing ancestors...
@@ -1359,7 +1391,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     // sort so highest-level entries are written to the store first.
     // if a sequence fails, no orphan entries will have been written.
     metasToPut.sort(PathOrderComparators.TOPMOST_PM_FIRST);
-    processBatchWriteRequest(null, pathMetadataToItem(metasToPut));
+    processBatchWriteRequest(ancestorState,
+        null, pathMetadataToItem(metasToPut));
     // and add the ancestors
     synchronized (ancestorState) {
       metasToPut.forEach(ancestorState::put);
@@ -1521,7 +1554,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         if (deletionBatch.size() == S3GUARD_DDB_BATCH_WRITE_REQUEST_LIMIT) {
           // lowest path entries get deleted first.
           deletionBatch.sort(PathOrderComparators.TOPMOST_PATH_LAST);
-          processBatchWriteRequest(pathToKey(deletionBatch), null);
+          processBatchWriteRequest(state, pathToKey(deletionBatch), null);
 
           // set authoritative false for each pruned dir listing
           removeAuthoritativeDirFlag(parentPathSet, state);
@@ -1537,7 +1570,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       }
       // final batch of deletes
       if (!deletionBatch.isEmpty()) {
-        processBatchWriteRequest(pathToKey(deletionBatch), null);
+        processBatchWriteRequest(state, pathToKey(deletionBatch), null);
 
         // set authoritative false for each pruned dir listing
         removeAuthoritativeDirFlag(parentPathSet, state);
@@ -2360,6 +2393,41 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Log a PUT into the operations log at debug level.
+   * @param state optional ancestor state.
+   * @param items items which have been PUT
+   */
+  private static void logPut(@Nullable AncestorState state, Item[] items) {
+    if (OPERATIONS_LOG.isDebugEnabled()) {
+      // log the operations
+      String stateStr = AncestorState.stateAsString(state);
+      for (Item item : items) {
+        boolean tombstone = itemExists(item);
+        OPERATIONS_LOG.debug("{} {} {}",
+            stateStr,
+            tombstone ? "TOMBSTONE" : "PUT",
+            itemPrimaryKeyToString(item));
+      }
+    }
+  }
+
+  /**
+   * Log a DELETE into the operations log at debug level.
+   * @param state optional ancestor state.
+   * @param keysDeleted keys which were deleted.
+   */
+  private static void logDelete(
+      @Nullable AncestorState state, PrimaryKey[] keysDeleted) {
+    if (OPERATIONS_LOG.isDebugEnabled()) {
+      // log the operations
+      String stateStr = AncestorState.stateAsString(state);
+      for (PrimaryKey key : keysDeleted) {
+        OPERATIONS_LOG.debug("{} DELETE {}", stateStr, primaryKeyToString(key));
+      }
+    }
+  }
+
+  /**
    * Get the move state passed in; create a new one if needed.
    * @param state state.
    * @param operation the type of the operation to use if the state is created.
@@ -2383,10 +2451,25 @@ public class DynamoDBMetadataStore implements MetadataStore,
   @VisibleForTesting
   static final class AncestorState extends BulkOperationState {
 
+    /**
+     * Counter of IDs issued.
+     */
+    private static final AtomicLong ID_COUNTER = new AtomicLong(0);
+
+    /** Owning store. */
     private final DynamoDBMetadataStore store;
 
+    /** The ID of the state; for logging. */
+    private final long id;
+
+    /**
+     * Map of ancestors.
+     */
     private final Map<Path, DDBPathMetadata> ancestry = new HashMap<>();
 
+    /**
+     * Destination path.
+     */
     private final Path dest;
 
     /**
@@ -2403,6 +2486,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       super(operation);
       this.store = store;
       this.dest = dest;
+      this.id = ID_COUNTER.addAndGet(1);
     }
 
     int size() {
@@ -2413,11 +2497,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
       return dest;
     }
 
+    long getId() {
+      return id;
+    }
+
     @Override
     public String toString() {
       final StringBuilder sb = new StringBuilder(
           "AncestorState{");
       sb.append("operation=").append(getOperation());
+      sb.append("id=").append(id);
       sb.append("; dest=").append(dest);
       sb.append("; size=").append(size());
       sb.append("; paths={")
@@ -2492,6 +2581,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     @Override
     public void close() throws IOException {
       if (LOG.isDebugEnabled() && store != null) {
+        LOG.debug("Auditing {}",stateAsString(this));
         for (Map.Entry<Path, DDBPathMetadata> entry : ancestry
             .entrySet()) {
           Path path = entry.getKey();
@@ -2521,6 +2611,23 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
         }
       }
+    }
+
+    /**
+     * Create a string from the state including operation and ID.
+     * @param state state to use -may be null
+     * @return a string for logging.
+     */
+    private static String stateAsString(@Nullable AncestorState state) {
+      String stateStr;
+      if (state != null) {
+        stateStr = String.format("#(%s-%04d)",
+            state.getOperation(),
+            state.getId());
+      } else {
+        stateStr = "#()";
+      }
+      return stateStr;
     }
   }
 

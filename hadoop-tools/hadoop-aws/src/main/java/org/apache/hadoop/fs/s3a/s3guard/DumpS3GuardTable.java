@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
@@ -212,7 +213,13 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
       final CsvFile csv,
       final Path path) throws IOException {
     int count = 1;
-    FileStatus[] fileStatuses = getFilesystem().listStatus(path);
+    FileStatus[] fileStatuses;
+    try {
+      fileStatuses = getFilesystem().listStatus(path);
+    } catch (FileNotFoundException e) {
+      LOG.warn("File {} was not found", path);
+      return 0;
+    }
     // entries
     for (FileStatus fileStatus : fileStatuses) {
       csv.entry((S3AFileStatus) fileStatus);
@@ -602,9 +609,9 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
      */
     void entry(S3AFileStatus fileStatus) {
       row(ROW_QUOTE_MAP,
-          fileStatus.getPath().toString(),
           fileStatus.isDirectory() ? "dir" : "file",
           "false",
+          fileStatus.getPath().toString(),
           "",
           fileStatus.isEmptyDirectory().name(),
           fileStatus.getLen(),

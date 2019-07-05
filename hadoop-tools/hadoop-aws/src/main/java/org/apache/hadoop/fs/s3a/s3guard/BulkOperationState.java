@@ -80,5 +80,7 @@ public class BulkOperationState implements Closeable {
     Prune,
     /** Commit operation. */
     Commit,
+    /** Deletion operation. */
+    Delete,
   }
 }
