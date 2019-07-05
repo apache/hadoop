@@ -134,6 +134,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
     try {
       final File scanFile = new File(
           destPath + SCAN_CSV).getCanonicalFile();
+      scanFile.getParentFile().mkdirs();
 
       try (CsvFile csv = new CsvFile(scanFile);
            DurationInfo ignored = new DurationInfo(LOG,

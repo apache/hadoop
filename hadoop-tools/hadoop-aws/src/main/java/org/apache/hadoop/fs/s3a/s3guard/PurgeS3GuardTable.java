@@ -127,18 +127,28 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
     builder.withKeyCondition(
         ExpressionSpecBuilder.S(PARENT).beginsWith(prefix));
 
+    LOG.info("Scanning for entries with prefix {} to delete from {}",
+        prefix, ddbms);
+
     Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
     List<Path> list = new ArrayList<>();
     entries.iterator().forEachRemaining(e -> {
       if (!(e instanceof S3GuardTableAccess.VersionMarker)) {
         Path p = e.getFileStatus().getPath();
-        LOG.info("Deleting {}", p);
+        String type = e.getFileStatus().isFile() ? "file" : "directory";
+        boolean tombstone = e.isDeleted();
+        if (tombstone) {
+          type = "tombstone " + type;
+        }
+        LOG.info("{} {}", type, p);
         list.add(p);
       }
     });
     int count = list.size();
     filesFound = count;
-    LOG.info("Found {} entries", count);
+    LOG.info("Found {} entries{}",
+        count,
+        (count == 0 ? " -nothing to purge": ""));
     if (count > 0) {
       if (force) {
         DurationInfo duration =
