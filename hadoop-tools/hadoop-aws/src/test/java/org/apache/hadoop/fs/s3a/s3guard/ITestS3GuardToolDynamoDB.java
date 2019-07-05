@@ -274,4 +274,9 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "-meta", "dynamodb://" + getTestTableName(DYNAMODB_TABLE));
   }
 
+  @Test
+  public void testFsck() throws Exception {
+    run(S3GuardTool.Fsck.NAME, "check");
+  }
+
 }

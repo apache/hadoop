@@ -158,123 +158,12 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
   }
 
   @Test
-  public void compareS3toMs() throws Exception {
-    final FileStatus root = rawFS.getFileStatus(path("/"));
-
-    final Queue<FileStatus> queue = new ArrayDeque<>();
-    queue.add(root);
-
-    while (!queue.isEmpty()) {
-      // pop front node from the queue
-      final FileStatus currentDir = queue.poll();
-
-      // get a listing of that dir from s3
-      final Path currentDirPath = currentDir.getPath();
-      final List<FileStatus> children =
-          Arrays.asList(rawFS.listStatus(currentDirPath));
-
-      compareS3DirToMs(currentDir, children);
-
-      // add each dir to queue
-      children.stream().filter(pm -> pm.isDirectory())
-          .forEach(pm -> queue.add(pm));
-    }
-  }
-
-  private void compareS3DirToMs(FileStatus s3CurrentDir,
-      List<FileStatus> children) throws Exception {
-    final Path path = s3CurrentDir.getPath();
-    final PathMetadata pathMetadata = metadataStore.get(path);
-    final DirListingMetadata dirListingMetadata =
-        metadataStore.listChildren(path);
-
-    compareFileStatusToPathMetadata(s3CurrentDir, pathMetadata);
-
-    children.forEach(s3ChildMeta -> {
-      try {
-        final PathMetadata msChildMeta =
-            metadataStore.get(s3ChildMeta.getPath());
-        compareFileStatusToPathMetadata(s3ChildMeta, msChildMeta);
-      } catch (Exception e) {
-        e.printStackTrace();
-      }
-    });
-
-  }
-
-  private void compareFileStatusToPathMetadata(FileStatus s3FileStatus,
-      PathMetadata msPathMetadata) throws Exception {
-    final Path path = s3FileStatus.getPath();
-    System.out.println("== Path: " + path);
-
-    if (!path.equals(path("/"))) {
-      final Path parentPath = path.getParent();
-      final PathMetadata parentPm = metadataStore.get(parentPath);
-
-      if (parentPm == null) {
-        LOG.error("Entry does not have a parent entry");
-      } else {
-        if (!parentPm.getFileStatus().isDirectory()) {
-          LOG.error("An entry’s parent is a file");
-        }
-        if (parentPm.isDeleted()) {
-          LOG.error("The entry's parent tombstoned");
-        }
-      }
-    } else {
-      System.out.println("Root does not have a parent.");
-    }
-
-    if(msPathMetadata == null) {
-      LOG.error("No PathMetadata for this path in the MS.");
-      return;
-    }
-    final S3AFileStatus msFileStatus = msPathMetadata.getFileStatus();
-    if (s3FileStatus.isDirectory() && !msFileStatus.isDirectory()) {
-      LOG.error("A directory in S3 is a file entry in the MS");
-    }
-    if (!s3FileStatus.isDirectory() && msFileStatus.isDirectory()) {
-      LOG.error("A file in S3 is a directory entry in the MS");
-    }
-
-    // Attribute check
-    if (msPathMetadata.isDeleted()) {
-      LOG.error("Path exists where the parent has a tombstone marker.");
-    }
-
-    if(s3FileStatus.getLen() != msFileStatus.getLen()) {
-      LOG.error("getLen mismatch - s3: {}, ms: {}",
-          s3FileStatus.getLen(), msFileStatus.getLen());
-    }
-
-    if(s3FileStatus.getModificationTime() != msFileStatus.getModificationTime()) {
-      LOG.error("getModificationTime mismatch - s3: {}, ms: {}",
-          s3FileStatus.getModificationTime(), msFileStatus.getModificationTime());
-    }
-
-    if(s3FileStatus.getBlockSize() != msFileStatus.getBlockSize()) {
-      LOG.error("getBlockSize mismatch - s3: {}, ms: {}",
-          s3FileStatus.getBlockSize(), msFileStatus.getBlockSize());
-    }
-
-    if(s3FileStatus.getOwner() != msFileStatus.getOwner()) {
-      LOG.error("getOwner mismatch - s3: {}, ms: {}",
-          s3FileStatus.getOwner(), msFileStatus.getOwner());
-    }
-
-    if(s3FileStatus.getLen() != msFileStatus.getLen()) {
-      LOG.error("getLen mismatch - s3: {}, ms: {}",
-          s3FileStatus.getLen(), msFileStatus.getLen());
-    }
-  }
-
-  @Test
   public void testBuildGraphFromDynamo() throws Exception {
     S3GuardTableAccess tableAccess = new S3GuardTableAccess(
         (DynamoDBMetadataStore) metadataStore);
 
     ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
-    builder.withKeyCondition(
+    builder.withCondition(
         ExpressionSpecBuilder.S("parent")
         .beginsWith("/")
     );
@@ -282,10 +171,7 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
         tableAccess.scanMetadata(builder);
 
     ddbPathMetadata.iterator().forEachRemaining(pmd -> {
-      if(!(pmd instanceof S3GuardTableAccess.VersionMarker)) {
-        System.out.println(pmd.getFileStatus().getPath());
-        // add node ...
-      }
+      System.out.println(pmd.getFileStatus().getPath());
     });
   }
 }
