@@ -165,6 +165,8 @@ public class StandbyCheckpointer {
     // Acquire cpLock to make sure no one is modifying the name system.
     // It does not need the full namesystem write lock, since the only thing
     // that modifies namesystem on standby node is edit log replaying.
+    // checkpoint是namespace的一个快照，所以在dump快照的时候需要锁，避免修改namespace的内容，
+    // 这也是checkpoint要在snn上执行的一个原因
     namesystem.cpLockInterruptibly();
     try {
       assert namesystem.getEditLog().isOpenForRead() :
@@ -265,8 +267,8 @@ public class StandbyCheckpointer {
       //Update only when response from remote about success or
       lastUploadTime = monotonicNow();
       // we are primary if we successfully updated the ANN
-      this.isPrimaryCheckPointer = success;
     }
+    this.isPrimaryCheckPointer = success;
     // cleaner than copying code for multiple catch statements and better than catching all
     // exceptions, so we just handle the ones we expect.
     if (ie != null || ioe != null) {
