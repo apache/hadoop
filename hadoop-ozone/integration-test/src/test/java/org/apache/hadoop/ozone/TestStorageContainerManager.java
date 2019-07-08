@@ -520,6 +520,11 @@ public class TestStorageContainerManager {
 
     // Stop processing HB
     scm.getDatanodeProtocolServer().stop();
+
+    scm.getContainerManager().updateContainerState(selectedContainer
+        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
+    cluster.restartStorageContainerManager(true);
+    scm = cluster.getStorageContainerManager();
     EventPublisher publisher = mock(EventPublisher.class);
     ReplicationManager replicationManager = scm.getReplicationManager();
     Field f = replicationManager.getClass().getDeclaredField("eventPublisher");
@@ -528,13 +533,6 @@ public class TestStorageContainerManager {
     modifiersField.setAccessible(true);
     modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
     f.set(replicationManager, publisher);
-
-    doNothing().when(publisher).fireEvent(any(TypedEvent.class),
-        any(CommandForDatanode.class));
-
-    scm.getContainerManager().updateContainerState(selectedContainer
-        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
-    cluster.restartStorageContainerManager(true);
     scm.getReplicationManager().start();
     Thread.sleep(2000);
 
@@ -572,7 +570,7 @@ public class TestStorageContainerManager {
           (CloseContainerCommand) cmdRight.getCommand();
       return cmdRight.getDatanodeId().equals(uuid)
           && left.getContainerID() == right.getContainerID()
-          && left.getPipelineID() == right.getPipelineID()
+          && left.getPipelineID().equals(right.getPipelineID())
           && left.getType() == right.getType()
           && left.getProto().equals(right.getProto());
     }
