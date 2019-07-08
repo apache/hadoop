@@ -108,24 +108,24 @@ import org.slf4j.LoggerFactory;
  * for them to be accessed by the YARN app, then launches an
  * {@link ApplicationMaster}, which is responsible for managing the lifetime of
  * the application.
- *
- * <p/>The Dynamometer YARN application starts up the DataNodes of an HDFS
+ * <p>
+ * The Dynamometer YARN application starts up the DataNodes of an HDFS
  * cluster. If the namenode_servicerpc_addr option is specified, it should point
  * to the service RPC address of an existing namenode, which the datanodes will
  * talk to. Else, a namenode will be launched internal to this YARN application.
  * The ApplicationMaster's logs contain links to the NN / DN containers to be
  * able to access their logs. Some of this information is also printed by the
  * client.
- *
- * <p/>The application will store files in the submitting user's home directory
+ * <p>
+ * The application will store files in the submitting user's home directory
  * under a `.dynamometer/applicationID/` folder. This is mostly for uses
  * internal to the application, but if the NameNode is launched through YARN,
  * the NameNode's metrics will also be uploaded to a file `namenode_metrics`
  * within this folder. This file is also accessible as part of the NameNode's
  * logs, but this centralized location is easier to access for subsequent
  * parsing.
- *
- * <p/>If the NameNode is launched internally, this Client will monitor the
+ * <p>
+ * If the NameNode is launched internally, this Client will monitor the
  * status of the NameNode, printing information about its availability as the
  * DataNodes register (e.g., outstanding under replicated blocks as block
  * reports arrive). If this is configured to launch the workload job, once the
@@ -134,8 +134,8 @@ import org.slf4j.LoggerFactory;
  * NameNode. Once the workload job completes, the infrastructure application
  * will be shut down. At this time only the audit log replay
  * ({@link AuditReplayMapper}) workload is supported.
- *
- * <p/>If there is no workload job configured, this application will, by
+ * <p>
+ * If there is no workload job configured, this application will, by
  * default, persist indefinitely until killed by YARN. You can specify the
  * timeout option to have it exit automatically after some time. This timeout
  * will enforced if there is a workload job configured as well.
@@ -248,8 +248,8 @@ public class Client extends Configured implements Tool {
   private Options opts;
 
   /**
-   * @param args
-   *          Command line arguments
+   * @param args Command line arguments
+   * @throws Exception on error
    */
   public static void main(String[] args) throws Exception {
     Client client = new Client(
@@ -386,6 +386,8 @@ public class Client extends Configured implements Tool {
    *
    * @param args Parsed command line options
    * @return Whether the init was successful to run the client
+   * @throws ParseException on error while parsing
+   * @throws IOException for other errors
    */
   public boolean init(String[] args) throws ParseException, IOException {
 
@@ -506,6 +508,8 @@ public class Client extends Configured implements Tool {
    * Main run function for the client.
    *
    * @return true if application completed successfully
+   * @throws IOException for general issues
+   * @throws YarnException for issues while contacting YARN daemons
    */
   public boolean run() throws IOException, YarnException {
 
