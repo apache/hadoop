@@ -75,4 +75,6 @@ public interface PipelineManager extends Closeable, PipelineManagerMXBean {
   void startPipelineCreator();
 
   void triggerPipelineCreation();
+
+  void incNumBlocksAllocatedMetric(PipelineID id);
 }
