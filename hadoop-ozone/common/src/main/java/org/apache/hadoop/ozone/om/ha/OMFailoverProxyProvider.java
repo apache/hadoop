@@ -178,7 +178,7 @@ public class OMFailoverProxyProvider implements
     }
   }
 
-  public Text getCurrentProxyDelegationToken() {
+  public synchronized Text getCurrentProxyDelegationToken() {
     return omProxyInfos.get(currentProxyOMNodeId).getDelegationTokenService();
   }
 
