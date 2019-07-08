@@ -787,13 +787,12 @@ public final class S3Guard {
 
   public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
       boolean authMetadataStore, Collection<String> authPaths) {
-    String haystack = fs.maybeAddTrailingSlash(p.toString());
+    String haystack = fs.maybeAddTrailingSlash(fs.qualify(p).toString());
     if (authMetadataStore) {
       return true;
     }
     if (!authPaths.isEmpty()) {
       for (String needle : authPaths) {
-
         if (haystack.startsWith(needle)) {
           return true;
         }
