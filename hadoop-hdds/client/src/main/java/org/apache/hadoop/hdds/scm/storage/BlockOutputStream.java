@@ -357,16 +357,15 @@ public class BlockOutputStream extends OutputStream {
         List<DatanodeDetails> dnList = reply.getDatanodes();
         if (!dnList.isEmpty()) {
           Pipeline pipe = xceiverClient.getPipeline();
-          String err = "Failed to commit BlockId " + blockID
-              + " on Pipeline " + pipe.getId().getId()
-              + " to Datanodes : ";
-          if (failedServers.isEmpty()) {
-            failedServers = new ArrayList<>();
-          }
-          for (DatanodeDetails dn : dnList) {
-            err += dn.getHostName() + "[" + dn.getIpAddress() + "] ";
-          }
-          LOG.warn(err);
+
+          StringBuilder err = new StringBuilder();
+          err.append("Failed to commit BlockId ").append(blockID);
+          err.append(" on Pipeline ").append(pipe);
+
+          err.append(" failed nodes: ");
+          dnList.forEach(err::append);
+
+          LOG.warn(err.toString());
           failedServers.addAll(dnList);
         }
       }
