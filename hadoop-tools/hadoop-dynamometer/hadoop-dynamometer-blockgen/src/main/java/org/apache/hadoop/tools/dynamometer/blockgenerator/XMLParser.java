@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.dynamometer.blockgenerator;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -67,6 +68,13 @@ class XMLParser {
    * @return {@code BlockInfo}s for any blocks found.
    */
   List<BlockInfo> parseLine(String line) throws IOException {
+    if (currentState == State.DEFAULT) {
+      if (line.contains("<INodeSection>")) {
+        transitionTo(State.INODE_SECTION);
+      } else {
+        return Collections.emptyList();
+      }
+    }
     if (line.contains("<inode>")) {
       transitionTo(State.INODE);
     }
@@ -95,6 +103,9 @@ class XMLParser {
       blockInfos.add(new BlockInfo(id, gs, size, currentReplication));
     }
     if (line.contains("</inode>")) {
+      transitionTo(State.INODE_SECTION);
+    }
+    if (line.contains("</INodeSection>")) {
       transitionTo(State.DEFAULT);
     }
     return blockInfos;
@@ -132,14 +143,19 @@ class XMLParser {
   }
 
   private enum State {
-    DEFAULT, INODE, FILE, FILE_WITH_REPLICATION;
+    DEFAULT,
+    INODE_SECTION,
+    INODE,
+    FILE,
+    FILE_WITH_REPLICATION;
 
     private final Set<State> allowedTransitions = new HashSet<>();
     static {
-      DEFAULT.addTransitions(DEFAULT, INODE);
-      INODE.addTransitions(DEFAULT, FILE);
-      FILE.addTransitions(DEFAULT, FILE_WITH_REPLICATION);
-      FILE_WITH_REPLICATION.addTransitions(DEFAULT);
+      DEFAULT.addTransitions(DEFAULT, INODE_SECTION);
+      INODE_SECTION.addTransitions(DEFAULT, INODE);
+      INODE.addTransitions(INODE_SECTION, FILE);
+      FILE.addTransitions(INODE_SECTION, FILE_WITH_REPLICATION);
+      FILE_WITH_REPLICATION.addTransitions(INODE_SECTION);
     }
 
     private void addTransitions(State... nextState) {
