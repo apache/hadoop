@@ -24,6 +24,10 @@ import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Violation handler for the S3Guard's fsck
+ * 
+ */
 public class S3GuardFsckViolationHandler {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3GuardFsckViolationHandler.class);
@@ -113,12 +117,6 @@ public class S3GuardFsckViolationHandler {
     final PathMetadata pathMetadata;
     final S3AFileStatus s3FileStatus;
     final S3AFileStatus msFileStatus;
-
-    private ViolationHandler () {
-      pathMetadata = null;
-      s3FileStatus = null;
-      msFileStatus = null;
-    }
 
     public ViolationHandler(S3GuardFsck.ComparePair comparePair) {
       pathMetadata = comparePair.getMsPathMetadata();

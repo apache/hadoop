@@ -29,14 +29,24 @@ import java.security.InvalidParameterException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Main class for the Fsck factored out from S3GuardTool
+ * The implementation uses fixed DynamoDBMetadataStore as the backing store
+ * for the metadatas.
+ *
+ * Functions:
+ * <ul>
+ *   <li>Checking metadata consistency between S3 and metadatastore</li>
+ * </ul>
+ */
 public class S3GuardFsck {
   private static final Logger LOG = LoggerFactory.getLogger(S3GuardFsck.class);
   public static final String ROOT_PATH_STRING = "/";
@@ -65,30 +75,49 @@ public class S3GuardFsck {
     }
   }
 
+  /**
+   * Compares S3 to MS.
+   * Iterative breadth first walk on the S3 structure from a given root.
+   * Creates a list of pairs (metadata in S3 and in the MetadataStore) where
+   * the consistency or any rule is violated.
+   * Uses {@link S3GuardFsckViolationHandler} to handle violations.
+   * The violations are listed in Enums: {@link Violation}
+   *
+   * Todo add parameters to provide fixing, not just logging.
+   *
+   * @param rootPath the root path to start the traversal
+   * @throws IOException
+   */
   public void compareS3toMs(final Path rootPath) throws IOException {
     final S3AFileStatus root =
         (S3AFileStatus) rawFS.getFileStatus(rootPath);
-
+    final List<ComparePair> comparePairs = new ArrayList<>();
     final Queue<S3AFileStatus> queue = new ArrayDeque<>();
     queue.add(root);
-
-    final List<ComparePair> comparePairs = new ArrayList<>();
 
     while (!queue.isEmpty()) {
       // pop front node from the queue
       final S3AFileStatus currentDir = queue.poll();
 
-      // get a listing of that dir from s3 and check just the files.
-      // each directory will be added as a root.
+      // Get a listing of that dir from s3 and add just the files.
+      // (Each directory will be added as a root.)
+      // Files should be casted to S3AFileStatus instead of plain FileStatus
+      // to get the VersionID and Etag.
       final Path currentDirPath = currentDir.getPath();
+      // TODO Do we need to do a HEAD for each children in the path if we
+      //  want the versionID? In the listing it is empty.
       final List<S3AFileStatus> children =
           Arrays.asList(rawFS.listStatus(currentDirPath)).stream()
               .filter(status -> !status.isDirectory())
               .map(S3AFileStatus.class::cast).collect(toList());
 
-      comparePairs.addAll(compareS3DirToMs(currentDir, children));
+      comparePairs.addAll(
+          compareS3DirToMs(currentDir, children).stream()
+              .filter(comparePair -> comparePair.containsViolation())
+              .collect(Collectors.toList())
+      );
 
-      // add each dir to queue
+      // Add each dir to queue
       children.stream().filter(pm -> pm.isDirectory())
           .forEach(pm -> queue.add(pm));
     }
@@ -182,14 +211,12 @@ public class S3GuardFsck {
     }
 
     if(s3FileStatus.getETag() == null) {
-      // LOG.error("No ETag");
       comparePair.violations.add(Violation.NO_ETAG);
     } else if (!s3FileStatus.getETag().equals(msFileStatus.getETag())) {
       comparePair.violations.add(Violation.ETAG_MISMATCH);
     }
 
     if(s3FileStatus.getVersionId() == null) {
-      // LOG.error("No versionid.");
       comparePair.violations.add(Violation.NO_VERSIONID);
     } else if(s3FileStatus.getVersionId() != msFileStatus.getVersionId()) {
       comparePair.violations.add(Violation.VERSIONID_MISMATCH);
