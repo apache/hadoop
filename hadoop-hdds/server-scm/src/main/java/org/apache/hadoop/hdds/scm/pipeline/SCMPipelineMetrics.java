@@ -93,7 +93,7 @@ public final class SCMPipelineMetrics implements MetricsSource {
         .forEach((pid, metric) -> metric.snapshot(recordBuilder, true));
   }
 
-  void createNumBlocksAllocatedMetric(Pipeline pipeline) {
+  void createPerPipelineMetrics(Pipeline pipeline) {
     numBlocksAllocated.put(pipeline.getId(), new MutableCounterLong(Interns
         .info(getBlockAllocationMetricName(pipeline),
             "Number of blocks allocated in pipeline " + pipeline.getId()), 0L));
@@ -104,7 +104,7 @@ public final class SCMPipelineMetrics implements MetricsSource {
         .getFactor() + "-" + pipeline.getId().getId();
   }
 
-  void clearMetrics(PipelineID pipelineID) {
+  void removePipelineMetrics(PipelineID pipelineID) {
     numBlocksAllocated.remove(pipelineID);
   }
 

@@ -152,7 +152,7 @@ public class SCMPipelineManager implements PipelineManager {
       stateManager.addPipeline(pipeline);
       nodeManager.addPipeline(pipeline);
       metrics.incNumPipelineCreated();
-      metrics.createNumBlocksAllocatedMetric(pipeline);
+      metrics.createPerPipelineMetrics(pipeline);
       return pipeline;
     } catch (InsufficientDatanodesException idEx) {
       throw idEx;
@@ -287,7 +287,7 @@ public class SCMPipelineManager implements PipelineManager {
     lock.writeLock().lock();
     try {
       Pipeline pipeline = stateManager.openPipeline(pipelineId);
-      metrics.createNumBlocksAllocatedMetric(pipeline);
+      metrics.createPerPipelineMetrics(pipeline);
     } finally {
       lock.writeLock().unlock();
     }
@@ -364,7 +364,7 @@ public class SCMPipelineManager implements PipelineManager {
       for (ContainerID containerID : containerIDs) {
         eventPublisher.fireEvent(SCMEvents.CLOSE_CONTAINER, containerID);
       }
-      metrics.clearMetrics(pipelineId);
+      metrics.removePipelineMetrics(pipelineId);
     } finally {
       lock.writeLock().unlock();
     }
