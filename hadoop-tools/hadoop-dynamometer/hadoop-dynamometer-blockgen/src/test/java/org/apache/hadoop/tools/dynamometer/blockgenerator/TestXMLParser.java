@@ -47,7 +47,8 @@ public class TestXMLParser {
         "<replication>12</replication>",
         "<blocks><block><id>13</id><genstamp>14</genstamp>"
             + "<numBytes>15</numBytes></block>",
-        "</inode>"
+        "</inode>",
+        "</INodeSection>"
     };
 
     Map<BlockInfo, Short> expectedBlockCount = new HashMap<>();
@@ -65,6 +66,27 @@ public class TestXMLParser {
 
     for (Map.Entry<BlockInfo, Short> expect : expectedBlockCount.entrySet()) {
       assertEquals(expect.getValue(), actualBlockCount.get(expect.getKey()));
+    }
+  }
+
+  @Test
+  public void testNonInodeSectionIgnored() throws Exception {
+    String[] lines = {
+        "<INodeSection>",
+        "</INodeSection>",
+        "<OtherSection>",
+        "<inode><id>1</id><type>FILE</type><name>fake-file</name>"
+            + "<replication>1</replication>",
+        "<blocks><block><id>2</id><genstamp>1</genstamp>"
+            + "<numBytes>1</numBytes></block>",
+        "</inode>",
+        "<replication>3</replication>",
+        "</OtherSection>"
+    };
+
+    XMLParser parser = new XMLParser();
+    for (String line : lines) {
+      assertTrue((parser.parseLine(line).isEmpty()));
     }
   }
 }
