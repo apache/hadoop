@@ -39,10 +39,12 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
@@ -66,10 +68,13 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   @Override
   public void setup() throws Exception {
     super.setup();
-    MetadataStore ms = getMetadataStore();
-    Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard;"
-        + "Store is " + (ms == null ? "none" : ms.toString()),
-        ms instanceof DynamoDBMetadataStore);
+    try {
+      getMetadataStore();
+    } catch (ClassCastException e) {
+      throw new AssumptionViolatedException(
+          "Test only applies when DynamoDB is used for S3Guard Store",
+          e);
+    }
   }
 
 

@@ -286,23 +286,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     super.teardown();
   }
 
-  /**
-   * Directory cleanup includes pruning everything under the path.
-   * This ensures that any in the tree from failed tests don't fill up
-   * the store with many, many, deleted entries.
-   * @throws IOException failure.
-   */
-  @Override
-  protected void deleteTestDirInTeardown() throws IOException {
-    super.deleteTestDirInTeardown();
-    Path path = getContract().getTestPath();
-    try {
-      prune(path);
-    } catch (IOException e) {
-      LOG.warn("When pruning the test directory {}", path, e);
-    }
-  }
-
   private void assumeRoleTests() {
     assume("No ARN for role tests", !getAssumedRoleARN().isEmpty());
   }
@@ -692,10 +675,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
     Assertions.assertThat(readOnlyListing)
         .as("ReadOnly directory " + directoryList)
         .containsAll(readOnlyFiles);
-
-    // do this prune in the test as well as teardown, so that the test
-    // reporting includes it in the runtime of a successful run.
-    prune(basePath);
   }
 
   /**
@@ -751,25 +730,6 @@ public class ITestPartialRenamesDeletes extends AbstractS3ATestBase {
    */
   private void pathMustExist(Path p) {
     eval(() -> assertPathExists("Missing path", p));
-  }
-
-  /**
-   * Prune the store for everything under the test path.
-   * @param path path.
-   * @throws IOException on failure.
-   */
-  private void prune(Path path) throws IOException {
-    S3AFileSystem fs = getFileSystem();
-    if (fs.hasMetadataStore()) {
-      MetadataStore store = fs.getMetadataStore();
-      try (DurationInfo ignored =
-              new DurationInfo(LOG, true, "prune %s", path)) {
-        store.prune(
-            MetadataStore.PruneMode.ALL_BY_MODTIME,
-            System.currentTimeMillis(),
-            PathMetadataDynamoDBTranslation.pathToParentKey(fs.qualify(path)));
-      }
-    }
   }
 
   /**

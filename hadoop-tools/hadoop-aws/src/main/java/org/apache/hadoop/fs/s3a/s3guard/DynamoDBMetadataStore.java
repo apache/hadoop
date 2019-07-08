@@ -589,28 +589,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
       pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
           new DDBPathMetadata(pmTombstone));
-      Item[] items = new Item[1];
       writeOp.retry(
           "Put tombstone",
           path.toString(),
           idempotent,
           () -> {
-            logPut(ancestorState, items);
+            logPut(ancestorState, item);
             recordsWritten(1);
             table.putItem(item);
-            items[0] = item;
           });
     } else {
       PrimaryKey key = pathToKey(path);
-      PrimaryKey[] keys = new PrimaryKey[1];
       writeOp.retry(
           "Delete key",
           path.toString(),
           idempotent,
           () -> {
             // record the attempt so even on retry the counter goes up.
-            keys[0] = key;
-            logDelete(ancestorState, keys);
+            logDelete(ancestorState, key);
             recordsDeleted(1);
             table.deleteItem(key);
           });
@@ -2412,6 +2408,20 @@ public class DynamoDBMetadataStore implements MetadataStore,
   }
 
   /**
+   * Log a PUT into the operations log at debug level.
+   * @param state optional ancestor state.
+   * @param item item PUT.
+   */
+  private static void logPut(@Nullable AncestorState state, Item item) {
+    if (OPERATIONS_LOG.isDebugEnabled()) {
+      // log the operations
+      Item[] items = new Item[1];
+      items[0] = item;
+      logPut(state, items);
+    }
+  }
+
+  /**
    * Log a DELETE into the operations log at debug level.
    * @param state optional ancestor state.
    * @param keysDeleted keys which were deleted.
@@ -2424,6 +2434,19 @@ public class DynamoDBMetadataStore implements MetadataStore,
       for (PrimaryKey key : keysDeleted) {
         OPERATIONS_LOG.debug("{} DELETE {}", stateStr, primaryKeyToString(key));
       }
+    }
+  }
+  /**
+   * Log a DELETE into the operations log at debug level.
+   * @param state optional ancestor state.
+   * @param key Deleted key
+   */
+  private static void logDelete(
+      @Nullable AncestorState state, PrimaryKey key) {
+    if (OPERATIONS_LOG.isDebugEnabled()) {
+      PrimaryKey[] keys = new PrimaryKey[1];
+      keys[0] = key;
+      logDelete(state, keys);
     }
   }
 

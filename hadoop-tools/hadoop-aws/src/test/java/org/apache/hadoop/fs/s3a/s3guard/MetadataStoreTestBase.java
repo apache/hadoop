@@ -1140,6 +1140,38 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   }
 
   /**
+   * Get an entry which must not be marked as an empty directory:
+   * its empty directory field must be FALSE or UNKNOWN.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getNonEmptyDirectory(final String pathStr) throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertNotEquals("Path " + pathStr
+            + " is considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must be an empty directory.
+   * its empty directory field must be TRUE.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getEmptyDirectory(final String pathStr) throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertEquals("Path " + pathStr
+            + " is not considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
+    return meta;
+  }
+
+  /**
    * Convenience to create a fully qualified Path from string.
    */
   protected Path strToPath(String p) throws IOException {

@@ -289,22 +289,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public static void deleteMetadataUnderPath(final DynamoDBMetadataStore ms,
       final Path path, final boolean suppressErrors) throws IOException {
     ThrottleTracker throttleTracker = new ThrottleTracker(ms);
-    try (DurationInfo ignored = new DurationInfo(LOG, true, "prune")) {
-      ms.prune(PruneMode.ALL_BY_MODTIME,
-          System.currentTimeMillis(),
-          PathMetadataDynamoDBTranslation.pathToParentKey(path));
-      LOG.info("Throttle statistics: {}", throttleTracker);
-    } catch (FileNotFoundException fnfe) {
-      // there is no table.
-      return;
-    } catch (IOException ioe) {
-      // prune failed. warn and then fall back to forget.
-      LOG.warn("Failed to prune {}", path, ioe);
-      if (!suppressErrors) {
-        throw ioe;
-      }
-    }
-    // and after the pruning, make sure all other metadata is gone
     int forgotten = 0;
     try (DurationInfo ignored = new DurationInfo(LOG, true, "forget")) {
       PathMetadata meta = ms.get(path);
