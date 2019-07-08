@@ -286,6 +286,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private static ValueMap deleteTrackingValueMap =
       new ValueMap().withBoolean(":false", false);
 
+  private static final boolean NEW_OPERATIONS = true;
+
   /**
    * The maximum number of outstanding operations to submit
    * before blocking to await completion of all the executors.
@@ -623,38 +625,44 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     final PathMetadata meta = get(path);
     // REVISIT
-    if (meta == null /*|| meta.isDeleted()*/) {
+    if (meta == null) {
       LOG.debug("Subtree path {} does not exist; this will be a no-op", path);
       return;
     }
-    ;
+    if (meta.isDeleted()) {
+      LOG.debug("Subtree path {} is deleted; this will be a no-op", path);
+      return;
+    }
 
     try(AncestorState state = new AncestorState(this,
         BulkOperationState.OperationType.Delete, path)) {
       // REVISIT
-      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-          desc.hasNext(); ) {
-        innerDelete(desc.next().getPath(), true, ttlTimeProvider, state);
-      }
-      /*
-      // Execute via the bounded threadpool.
-      final List<CompletableFuture<Void>> futures = new ArrayList<>();
-      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-           desc.hasNext();) {
-        final Path pathToDelete = desc.next().getPath();
-        futures.add(submit(executor, () -> {
-          innerDelete(pathToDelete, true, ttlTimeProvider);
-          return null;
-        }));
-        if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
-          // first batch done; block for completion.
-          waitForCompletion(futures);
-          futures.clear();
+      if (!NEW_OPERATIONS) {
+
+        for (DescendantsIterator desc = new DescendantsIterator(this, meta);
+            desc.hasNext(); ) {
+          innerDelete(desc.next().getPath(), true, ttlTimeProvider, state);
         }
+      } else {
+
+        // Execute via the bounded threadpool.
+        final List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (DescendantsIterator desc = new DescendantsIterator(this, meta);
+            desc.hasNext(); ) {
+          final Path pathToDelete = desc.next().getPath();
+          futures.add(submit(executor, () -> {
+            innerDelete(pathToDelete, true, ttlTimeProvider, state);
+            return null;
+          }));
+          if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+            // first batch done; block for completion.
+            waitForCompletion(futures);
+            futures.clear();
+          }
+        }
+        // now wait for the final set.
+        waitForCompletion(futures);
       }
-      // now wait for the final set.
-      waitForCompletion(futures);
-      */
     }
   }
 
@@ -880,7 +888,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       Path parent = path.getParent();
       while (!parent.isRoot() && !ancestry.containsKey(parent)) {
         // REVISIT
-        if (true /*!ancestorState.findEntry(parent, true)*/) {
+        if (!NEW_OPERATIONS || !ancestorState.findEntry(parent, true)) {
           // don't add this entry, but carry on with the parents
           LOG.debug("auto-create ancestor path {} for child path {}",
               parent, path);
@@ -2415,9 +2423,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private static void logPut(@Nullable AncestorState state, Item item) {
     if (OPERATIONS_LOG.isDebugEnabled()) {
       // log the operations
-      Item[] items = new Item[1];
-      items[0] = item;
-      logPut(state, items);
+      logPut(state, new Item[]{ item });
     }
   }
 
@@ -2444,9 +2450,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
   private static void logDelete(
       @Nullable AncestorState state, PrimaryKey key) {
     if (OPERATIONS_LOG.isDebugEnabled()) {
-      PrimaryKey[] keys = new PrimaryKey[1];
-      keys[0] = key;
-      logDelete(state, keys);
+      logDelete(state, new PrimaryKey[]{key});
     }
   }
 
@@ -2558,8 +2562,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     DDBPathMetadata get(Path p) {
       // REVISIT: reinstate
-      return null;
-//      return ancestry.get(p);
+      if (NEW_OPERATIONS) {
+        return ancestry.get(p);
+      } else {
+        return null;
+      }
     }
 
     /**
@@ -2596,10 +2603,10 @@ public class DynamoDBMetadataStore implements MetadataStore,
      * If debug logging is enabled, this does an audit of the store state.
      * it only logs this; the error messages are created so as they could
      * be turned into exception messages.
-     * There reason the audit failures aren't being turned into IOEs is that
+     * Audit failures aren't being turned into IOEs is that
      * rename operations delete the source entry and that ends up in the
      * ancestor state as present
-     * @throws IOException
+     * @throws IOException failure
      */
     @Override
     public void close() throws IOException {
