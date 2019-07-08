@@ -36,8 +36,8 @@ import org.apache.hadoop.io.Text;
  * It requires setting the {@value AUDIT_START_TIMESTAMP_KEY} configuration to
  * specify what the start time of the audit log was to determine when events
  * occurred relative to this start time.
- *
- * <p/>By default, this assumes that the audit log is in the default log format
+ * <p>
+ * By default, this assumes that the audit log is in the default log format
  * set up by Hadoop, like:
  * <pre>{@code
  *   1970-01-01 00:00:00,000 INFO FSNamesystem.audit: allowed=true ...
