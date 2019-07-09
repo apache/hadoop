@@ -88,7 +88,7 @@ services:
          service_network:
             ipv4_address: 10.5.0.70
    scm:
-      image: apache/ozone-runner::${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
       volumes:
          - ../..:/opt/hadoop
