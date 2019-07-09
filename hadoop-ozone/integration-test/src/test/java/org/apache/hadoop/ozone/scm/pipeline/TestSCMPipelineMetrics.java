@@ -19,6 +19,9 @@
 package org.apache.hadoop.ozone.scm.pipeline;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
+import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineManager;
 import org.apache.hadoop.hdds.scm.pipeline.SCMPipelineMetrics;
@@ -90,6 +93,38 @@ public class TestSCMPipelineMetrics {
     assertCounter("NumPipelineDestroyed", 1L, metrics);
   }
 
+  @Test
+  public void testNumBlocksAllocated() throws IOException {
+    AllocatedBlock block =
+        cluster.getStorageContainerManager().getScmBlockManager()
+            .allocateBlock(5, HddsProtos.ReplicationType.RATIS,
+                HddsProtos.ReplicationFactor.ONE, "Test", new ExcludeList());
+    MetricsRecordBuilder metrics =
+        getMetrics(SCMPipelineMetrics.class.getSimpleName());
+    Pipeline pipeline = block.getPipeline();
+    long numBlocksAllocated = getLongCounter(
+        SCMPipelineMetrics.getBlockAllocationMetricName(pipeline), metrics);
+    Assert.assertEquals(numBlocksAllocated, 1);
+
+    // destroy the pipeline
+    try {
+      cluster.getStorageContainerManager().getClientProtocolServer()
+          .closePipeline(pipeline.getId().getProtobuf());
+    } catch (IOException e) {
+      e.printStackTrace();
+      Assert.fail();
+    }
+    metrics = getMetrics(SCMPipelineMetrics.class.getSimpleName());
+    try {
+      getLongCounter(SCMPipelineMetrics.getBlockAllocationMetricName(pipeline),
+          metrics);
+      Assert.fail("Metric should not be present for closed pipeline.");
+    } catch (AssertionError e) {
+      Assert.assertTrue(e.getMessage().contains(
+          "Expected exactly one metric for name " + SCMPipelineMetrics
+              .getBlockAllocationMetricName(block.getPipeline())));
+    }
+  }
 
   @After
   public void teardown() {
