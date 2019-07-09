@@ -76,6 +76,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.ha.OMProxyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -205,8 +206,7 @@ public abstract class TestOzoneRpcClientAbstract {
   public void testOMClientProxyProvider() {
     OMFailoverProxyProvider omFailoverProxyProvider = store.getClientProxy()
         .getOMProxyProvider();
-    List<OMFailoverProxyProvider.OMProxyInfo> omProxies =
-        omFailoverProxyProvider.getOMProxies();
+    List<OMProxyInfo> omProxies = omFailoverProxyProvider.getOMProxyInfos();
 
     // For a non-HA OM service, there should be only one OM proxy.
     Assert.assertEquals(1, omProxies.size());
