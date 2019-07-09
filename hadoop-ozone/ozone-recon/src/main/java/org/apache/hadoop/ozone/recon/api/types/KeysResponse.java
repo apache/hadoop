@@ -64,7 +64,7 @@ public class KeysResponse {
   /**
    * Class that encapsulates the data presented in Keys API Response.
    */
-  public class KeysResponseData {
+  public static class KeysResponseData {
     /**
      * Total count of the keys.
      */
@@ -77,7 +77,7 @@ public class KeysResponse {
     @JsonProperty("keys")
     private Collection<KeyMetadata> keys;
 
-    public KeysResponseData(long totalCount, Collection<KeyMetadata> keys) {
+    KeysResponseData(long totalCount, Collection<KeyMetadata> keys) {
       this.totalCount = totalCount;
       this.keys = keys;
     }

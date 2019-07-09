@@ -18,39 +18,29 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.IOException;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.recon.GuiceInjectorTestImpl;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
-import org.apache.hadoop.ozone.recon.persistence.AbstractSqlDatabaseTest;
-import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
-import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
-import org.apache.hadoop.utils.db.DBStore;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Singleton;
 
 import javax.sql.DataSource;
 
@@ -59,21 +49,16 @@ import javax.sql.DataSource;
  */
 public class TestContainerDBServiceProviderImpl {
 
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
-  private File dbDir;
-  private ContainerDBServiceProvider containerDbServiceProvider;
-  private Injector injector;
-
-  private boolean setUpIsDone = false;
+  @ClassRule
+  public static TemporaryFolder tempFolder = new TemporaryFolder();
+  private static ContainerDBServiceProvider containerDbServiceProvider;
+  private static Injector injector;
+  private static GuiceInjectorTestImpl guiceInjectorTest =
+      new GuiceInjectorTestImpl();
 
   private String keyPrefix1 = "V3/B1/K1";
   private String keyPrefix2 = "V3/B1/K2";
   private String keyPrefix3 = "V3/B2/K1";
-
-  private Injector getInjector() {
-    return injector;
-  }
 
   private void populateKeysInContainers(long containerId1, long containerId2)
       throws Exception {
@@ -95,45 +80,31 @@ public class TestContainerDBServiceProviderImpl {
         3);
   }
 
+  private static void initializeInjector() throws Exception {
+    injector = guiceInjectorTest.getInjector(
+        null, null, tempFolder);
+  }
+
+  @BeforeClass
+  public static void setupOnce() throws Exception {
+
+    initializeInjector();
+
+    DSL.using(new DefaultConfiguration().set(
+        injector.getInstance(DataSource.class)));
+
+    containerDbServiceProvider = injector.getInstance(
+        ContainerDBServiceProvider.class);
+
+    StatsSchemaDefinition schemaDefinition = injector.getInstance(
+        StatsSchemaDefinition.class);
+    schemaDefinition.initializeSchema();
+  }
+
   @Before
-  public void setUp() throws IOException, SQLException {
-    dbDir = tempFolder.newFolder();
-    AbstractSqlDatabaseTest.DataSourceConfigurationProvider
-        configurationProvider =
-        new AbstractSqlDatabaseTest.DataSourceConfigurationProvider(dbDir);
-
-    JooqPersistenceModule jooqPersistenceModule =
-        new JooqPersistenceModule(configurationProvider);
-
-    injector = Guice.createInjector(jooqPersistenceModule,
-        new AbstractModule() {
-        @Override
-        protected void configure() {
-          bind(DataSourceConfiguration.class).toProvider(configurationProvider);
-          OzoneConfiguration configuration = new OzoneConfiguration();
-          configuration.set(OZONE_RECON_DB_DIR, dbDir.getAbsolutePath());
-          bind(OzoneConfiguration.class).toInstance(configuration);
-          bind(DBStore.class).toProvider(ReconContainerDBProvider.class).in(
-              Singleton.class);
-          bind(ContainerDBServiceProvider.class).to(
-              ContainerDBServiceProviderImpl.class).in(Singleton.class);
-        }
-      });
-
-    // The following setup is run only once
-    if (!setUpIsDone) {
-      DSL.using(new DefaultConfiguration().set(
-          injector.getInstance(DataSource.class)));
-
-      containerDbServiceProvider = injector.getInstance(
-          ContainerDBServiceProvider.class);
-
-      StatsSchemaDefinition schemaDefinition = getInjector().getInstance(
-          StatsSchemaDefinition.class);
-      schemaDefinition.initializeSchema();
-
-      setUpIsDone = true;
-    }
+  public void setUp() throws Exception {
+    // Reset containerDB before running each test
+    containerDbServiceProvider.initNewContainerDB(null);
   }
 
   @Test
@@ -249,16 +220,16 @@ public class TestContainerDBServiceProviderImpl {
   }
 
   @Test
-  public void testIsContainerExists() throws Exception {
+  public void testDoesContainerExists() throws Exception {
     long containerId = 1L;
     long nextContainerId = 2L;
     containerDbServiceProvider.storeContainerKeyCount(containerId, 2L);
     containerDbServiceProvider.storeContainerKeyCount(nextContainerId, 3L);
 
-    assertTrue(containerDbServiceProvider.isContainerExists(containerId));
-    assertTrue(containerDbServiceProvider.isContainerExists(nextContainerId));
-    assertFalse(containerDbServiceProvider.isContainerExists(0L));
-    assertFalse(containerDbServiceProvider.isContainerExists(3L));
+    assertTrue(containerDbServiceProvider.doesContainerExists(containerId));
+    assertTrue(containerDbServiceProvider.doesContainerExists(nextContainerId));
+    assertFalse(containerDbServiceProvider.doesContainerExists(0L));
+    assertFalse(containerDbServiceProvider.doesContainerExists(3L));
   }
 
   @Test
@@ -404,7 +375,7 @@ public class TestContainerDBServiceProviderImpl {
     containerDbServiceProvider.storeContainerCount(5L);
 
     assertEquals(5L, containerDbServiceProvider.getCountForContainers());
-    containerDbServiceProvider.incrementContainerCount();
+    containerDbServiceProvider.incrementContainerCountBy(1L);
 
     assertEquals(6L, containerDbServiceProvider.getCountForContainers());
 
@@ -422,14 +393,13 @@ public class TestContainerDBServiceProviderImpl {
   }
 
   @Test
-  public void testIncrementContainerCount() throws Exception {
+  public void testIncrementContainerCountBy() throws Exception {
     assertEquals(0, containerDbServiceProvider.getCountForContainers());
 
-    containerDbServiceProvider.incrementContainerCount();
+    containerDbServiceProvider.incrementContainerCountBy(1L);
     assertEquals(1L, containerDbServiceProvider.getCountForContainers());
 
-    containerDbServiceProvider.incrementContainerCount();
-    containerDbServiceProvider.incrementContainerCount();
-    assertEquals(3L, containerDbServiceProvider.getCountForContainers());
+    containerDbServiceProvider.incrementContainerCountBy(3L);
+    assertEquals(4L, containerDbServiceProvider.getCountForContainers());
   }
 }

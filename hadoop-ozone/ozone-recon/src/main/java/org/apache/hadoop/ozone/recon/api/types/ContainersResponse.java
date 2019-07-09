@@ -64,7 +64,7 @@ public class ContainersResponse {
   /**
    * Class that encapsulates the data presented in Containers API Response.
    */
-  public class ContainersResponseData {
+  public static class ContainersResponseData {
     /**
      * Total count of the containers.
      */
@@ -77,8 +77,8 @@ public class ContainersResponse {
     @JsonProperty("containers")
     private Collection<ContainerMetadata> containers;
 
-    public ContainersResponseData(long totalCount,
-                                  Collection<ContainerMetadata> containers) {
+    ContainersResponseData(long totalCount,
+                           Collection<ContainerMetadata> containers) {
       this.totalCount = totalCount;
       this.containers = containers;
     }

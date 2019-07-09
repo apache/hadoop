@@ -185,6 +185,7 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
    */
   private void  writeOMKeyToContainerDB(String key, OmKeyInfo omKeyInfo)
       throws IOException {
+    long containerCountToIncrement = 0;
     for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : omKeyInfo
         .getKeyLocationVersions()) {
       long keyVersion = omKeyLocationInfoGroup.getVersion();
@@ -202,8 +203,8 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
 
           // check if container already exists and
           // increment the count of containers if it does not exist
-          if (!containerDBServiceProvider.isContainerExists(containerId)) {
-            containerDBServiceProvider.incrementContainerCount();
+          if (!containerDBServiceProvider.doesContainerExists(containerId)) {
+            containerCountToIncrement++;
           }
 
           // update the count of keys for the given containerID
@@ -217,6 +218,11 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
               ++keyCount);
         }
       }
+    }
+
+    if (containerCountToIncrement > 0) {
+      containerDBServiceProvider
+          .incrementContainerCountBy(containerCountToIncrement);
     }
   }
 

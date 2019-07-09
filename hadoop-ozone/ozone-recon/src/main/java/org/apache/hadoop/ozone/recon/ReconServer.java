@@ -36,7 +36,6 @@ import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
 import org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
-import org.jooq.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,9 +55,6 @@ public class ReconServer extends GenericCli {
   private Injector injector;
 
   @Inject
-  private Configuration sqlConfiguration;
-
-  @Inject
   private ReconHttpServer httpServer;
 
   public static void main(String[] args) {
@@ -69,8 +65,6 @@ public class ReconServer extends GenericCli {
   public Void call() throws Exception {
     OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
     OzoneConfigurationProvider.setConfiguration(ozoneConfiguration);
-
-    JooqConfigurationProvider.setConfiguration(sqlConfiguration);
 
     injector =  Guice.createInjector(new
         ReconControllerModule(), new ReconRestServletModule() {

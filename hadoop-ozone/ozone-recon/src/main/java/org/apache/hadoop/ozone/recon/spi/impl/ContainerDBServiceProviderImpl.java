@@ -110,9 +110,12 @@ public class ContainerDBServiceProviderImpl
           oldDBLocation.getAbsolutePath());
       FileUtils.deleteDirectory(oldDBLocation);
     }
-    for (Map.Entry<ContainerKeyPrefix, Integer> entry :
-        containerKeyPrefixCounts.entrySet()) {
-      containerKeyTable.put(entry.getKey(), entry.getValue());
+
+    if (containerKeyPrefixCounts != null) {
+      for (Map.Entry<ContainerKeyPrefix, Integer> entry :
+          containerKeyPrefixCounts.entrySet()) {
+        containerKeyTable.put(entry.getKey(), entry.getValue());
+      }
     }
 
     // reset total count of containers to zero
@@ -168,9 +171,8 @@ public class ContainerDBServiceProviderImpl
    * @throws IOException
    */
   @Override
-  public boolean isContainerExists(Long containerID) throws IOException {
-    Long keyCount = containerKeyCountTable.get(containerID);
-    return keyCount != null;
+  public boolean doesContainerExists(Long containerID) throws IOException {
+    return containerKeyCountTable.get(containerID) != null;
   }
 
   /**
@@ -375,11 +377,13 @@ public class ContainerDBServiceProviderImpl
   }
 
   /**
-   * Increment the total count for containers in the system.
+   * Increment the total count for containers in the system by the given count.
+   *
+   * @param count no. of new containers to add to containers total count.
    */
   @Override
-  public void incrementContainerCount() {
+  public void incrementContainerCountBy(long count) {
     long containersCount = getCountForContainers();
-    storeContainerCount(++containersCount);
+    storeContainerCount(containersCount + count);
   }
 }

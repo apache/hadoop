@@ -18,14 +18,11 @@
 
 package org.apache.hadoop.ozone.recon.api;
 
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,28 +43,21 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
+import org.apache.hadoop.ozone.recon.GuiceInjectorTestImpl;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.api.types.ContainersResponse;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeysResponse;
-import org.apache.hadoop.ozone.recon.persistence.AbstractSqlDatabaseTest;
-import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
-import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
-import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
-import org.apache.hadoop.ozone.recon.spi.impl.ContainerDBServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
-import org.apache.hadoop.ozone.recon.spi.impl.ReconContainerDBProvider;
 import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
 import org.apache.hadoop.utils.db.DBCheckpoint;
-import org.apache.hadoop.utils.db.DBStore;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -78,9 +68,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Singleton;
 
 import org.junit.rules.TemporaryFolder;
 
@@ -96,72 +84,52 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
   private ContainerDBServiceProvider containerDbServiceProvider;
   private OMMetadataManager omMetadataManager;
-  private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
   private ContainerKeyService containerKeyService;
-  private boolean setUpIsDone = false;
+  private GuiceInjectorTestImpl guiceInjectorTest =
+      new GuiceInjectorTestImpl();
+  private boolean isSetupDone = false;
 
-  private Injector getInjector() {
-    return injector;
+  private void initializeInjector() throws Exception {
+    omMetadataManager = initializeNewOmMetadataManager();
+    OzoneConfiguration configuration =
+        guiceInjectorTest.getTestOzoneConfiguration(temporaryFolder);
+
+    ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
+        configuration);
+    ReconOMMetadataManager reconOMMetadataManager =
+        getTestMetadataManager(omMetadataManager);
+
+    Injector parentInjector = guiceInjectorTest.getInjector(
+        ozoneManagerServiceProvider, reconOMMetadataManager, temporaryFolder);
+
+    injector = parentInjector.createChildInjector(new AbstractModule() {
+      @Override
+      protected void configure() {
+        containerKeyService = new ContainerKeyService();
+        bind(ContainerKeyService.class).toInstance(containerKeyService);
+      }
+    });
   }
 
   @Before
   public void setUp() throws Exception {
-    omMetadataManager = initializeNewOmMetadataManager();
-    File tempDir = temporaryFolder.newFolder();
-    AbstractSqlDatabaseTest.DataSourceConfigurationProvider
-        configurationProvider =
-        new AbstractSqlDatabaseTest.DataSourceConfigurationProvider(tempDir);
+    // The following setup runs only once
+    if (!isSetupDone) {
+      initializeInjector();
 
-    JooqPersistenceModule jooqPersistenceModule =
-        new JooqPersistenceModule(configurationProvider);
-
-    injector = Guice.createInjector(jooqPersistenceModule,
-        new AbstractModule() {
-        @Override
-        public void configure() {
-          try {
-            bind(DataSourceConfiguration.class)
-                .toProvider(configurationProvider);
-            OzoneConfiguration configuration = getTestOzoneConfiguration();
-            bind(OzoneConfiguration.class).toInstance(configuration);
-
-            ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
-                configuration);
-
-            reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
-            bind(ReconOMMetadataManager.class)
-                .toInstance(reconOMMetadataManager);
-
-            bind(DBStore.class).toProvider(ReconContainerDBProvider.class).
-                in(Singleton.class);
-            bind(ContainerDBServiceProvider.class)
-                .to(ContainerDBServiceProviderImpl.class).in(Singleton.class);
-
-            bind(OzoneManagerServiceProvider.class)
-                .toInstance(ozoneManagerServiceProvider);
-            containerKeyService = new ContainerKeyService();
-            bind(ContainerKeyService.class).toInstance(containerKeyService);
-          } catch (IOException e) {
-            Assert.fail();
-          }
-        }
-      });
-
-    // The following setup is run only once
-    if (!setUpIsDone) {
       DSL.using(new DefaultConfiguration().set(
           injector.getInstance(DataSource.class)));
 
       containerDbServiceProvider = injector.getInstance(
           ContainerDBServiceProvider.class);
 
-      StatsSchemaDefinition schemaDefinition = getInjector().getInstance(
+      StatsSchemaDefinition schemaDefinition = injector.getInstance(
           StatsSchemaDefinition.class);
       schemaDefinition.initializeSchema();
 
-      setUpIsDone = true;
+      isSetupDone = true;
     }
 
     //Write Data to OM
@@ -428,20 +396,5 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
     containers = new ArrayList<>(data.getContainers());
     assertEquals(2, containers.size());
     assertEquals(2, data.getTotalCount());
-  }
-
-  /**
-   * Get Test OzoneConfiguration instance.
-   * @return OzoneConfiguration
-   * @throws IOException ioEx.
-   */
-  private OzoneConfiguration getTestOzoneConfiguration()
-      throws IOException {
-    OzoneConfiguration configuration = new OzoneConfiguration();
-    configuration.set(OZONE_RECON_OM_SNAPSHOT_DB_DIR,
-        temporaryFolder.newFolder().getAbsolutePath());
-    configuration.set(OZONE_RECON_DB_DIR, temporaryFolder.newFolder()
-        .getAbsolutePath());
-    return configuration;
   }
 }

@@ -92,7 +92,7 @@ public interface ContainerDBServiceProvider {
    * @return if the given ContainerID exists or not.
    * @throws IOException
    */
-  boolean isContainerExists(Long containerID) throws IOException;
+  boolean doesContainerExists(Long containerID) throws IOException;
 
   /**
    * Get the stored key prefixes for the given containerId.
@@ -129,6 +129,7 @@ public interface ContainerDBServiceProvider {
 
   /**
    * Delete an entry in the container DB.
+   *
    * @param containerKeyPrefix container key prefix to be deleted.
    * @throws IOException exception.
    */
@@ -150,7 +151,9 @@ public interface ContainerDBServiceProvider {
   long getCountForContainers() throws IOException;
 
   /**
-   * Increment the total count for containers in the system.
+   * Increment the total count for containers in the system by the given count.
+   *
+   * @param count no. of new containers to add to containers total count.
    */
-  void incrementContainerCount();
+  void incrementContainerCountBy(long count);
 }
