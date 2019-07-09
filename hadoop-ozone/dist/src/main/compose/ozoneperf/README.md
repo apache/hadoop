@@ -15,7 +15,8 @@
 # Compose files for local performance tests
 
 This directory contains docker-compose definition for an ozone cluster where
-all the metrics are saved to a prometheus instance.
+all the metrics are saved to a prometheus instance, and profiling and Jaeger
+tracing is turned on and set up.
 
 Prometheus follows a pull based approach where the metrics are published
  on a HTTP endpoint.
@@ -36,8 +37,8 @@ Note: The freon test will be started after 30 seconds.
 
 You can check the ozone web ui:
 
-OzoneManager: https://localhost:9874
-SCM: https://localhost:9876
+OzoneManager: http://localhost:9874
+SCM: http://localhost:9876
 
 You can check the ozone metrics from the prometheus web ui.
 
@@ -50,3 +51,6 @@ http://localhost:3000
 Default dashboards available are:
 Ozone - Object Metrics
 Ozone - RPC Metrics
+
+You can access the Jaeger UI at:
+http://localhost:16686
