@@ -29,7 +29,8 @@ OZONE-SITE.XML_hdds.profiler.endpoint.enabled=true
 HDFS-SITE.XML_rpc.metrics.quantile.enable=true
 HDFS-SITE.XML_rpc.metrics.percentiles.intervals=60,300
 HDFS-SITE.XML_net.topology.node.switch.mapping.impl=org.apache.hadoop.net.TableMapping
-HDFS-SITE.XML_net.topology.table.file.name=/opt/hadoop/compose/ozone-net-topology/network-config
+HDFS-SITE.XML_net.topology.table.file.name=/opt/hadoop/compose/ozone-topology/network-config
+HDFS-SITE.XML_dfs.network.topology.aware.read.enable=true
 ASYNC_PROFILER_HOME=/opt/profiler
 LOG4J.PROPERTIES_log4j.rootLogger=DEBUG, ARF
 LOG4J.PROPERTIES_log4j.appender.stdout=org.apache.log4j.ConsoleAppender
@@ -46,6 +47,8 @@ LOG4J.PROPERTIES_log4j.appender.ARF.file=/opt/hadoop/logs/${module.name}-${user.
 HDDS_DN_OPTS=-Dmodule.name=datanode
 HDFS_OM_OPTS=-Dmodule.name=om
 HDFS_STORAGECONTAINERMANAGER_OPTS=-Dmodule.name=scm
+HDFS_OM_SH_OPTS=-Dmodule.name=sh
+HDFS_SCM_CLI_OPTS=-Dmodule.name=scmcli
 
 #Enable this variable to print out all hadoop rpc traffic to the stdout. See http://byteman.jboss.org/ to define your own instrumentation.
 #BYTEMAN_SCRIPT_URL=https://raw.githubusercontent.com/apache/hadoop/trunk/dev-support/byteman/hadooprpc.btm

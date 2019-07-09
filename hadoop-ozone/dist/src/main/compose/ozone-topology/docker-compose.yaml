@@ -19,6 +19,7 @@ services:
    datanode_1:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: datanode_1
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -28,11 +29,12 @@ services:
       env_file:
         - ./docker-config
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.4
    datanode_2:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: datanode_2
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -42,11 +44,12 @@ services:
       env_file:
         - ./docker-config
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.5
    datanode_3:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: datanode_3
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -56,11 +59,12 @@ services:
       env_file:
         - ./docker-config
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.6
    datanode_4:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: datanode_4
       volumes:
         - ../..:/opt/hadoop
       ports:
@@ -70,11 +74,12 @@ services:
       env_file:
         - ./docker-config
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.7
    om:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: om
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -85,11 +90,12 @@ services:
           - ./docker-config
       command: ["/opt/hadoop/bin/ozone","om"]
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.70
    scm:
-      image: apache/ozone-runner::${HADOOP_RUNNER_VERSION}
+      image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       privileged: true #required by the profiler
+      container_name: scm
       volumes:
          - ../..:/opt/hadoop
       ports:
@@ -100,10 +106,10 @@ services:
           ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
       command: ["/opt/hadoop/bin/ozone","scm"]
       networks:
-         service_network:
+         net:
             ipv4_address: 10.5.0.71
 networks:
-   service_network:
+   net:
      driver: bridge
      ipam:
        config:

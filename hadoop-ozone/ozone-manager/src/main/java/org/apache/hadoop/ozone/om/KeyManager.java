@@ -127,10 +127,12 @@ public interface KeyManager extends OzoneManagerFS {
    * DistributedStorageHandler will use to access the data on datanode.
    *
    * @param args the args of the key provided by client.
+   * @param clientAddress a hint to key manager, order the datanode in returned
+   *                      pipeline by distance between client and datanode.
    * @return a OmKeyInfo instance client uses to talk to container.
    * @throws IOException
    */
-  OmKeyInfo lookupKey(OmKeyArgs args) throws IOException;
+  OmKeyInfo lookupKey(OmKeyArgs args, String clientAddress) throws IOException;
 
   /**
    * Renames an existing key within a bucket.

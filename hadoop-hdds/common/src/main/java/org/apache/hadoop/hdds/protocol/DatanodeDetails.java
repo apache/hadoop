@@ -76,6 +76,7 @@ public class DatanodeDetails extends NodeImpl implements
     this.ipAddress = datanodeDetails.ipAddress;
     this.hostName = datanodeDetails.hostName;
     this.ports = datanodeDetails.ports;
+    this.setNetworkName(datanodeDetails.getNetworkName());
   }
 
   /**
@@ -192,6 +193,12 @@ public class DatanodeDetails extends NodeImpl implements
       builder.addPort(newPort(
           Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
     }
+    if (datanodeDetailsProto.hasNetworkLocation()) {
+      builder.setNetworkLocation(datanodeDetailsProto.getNetworkLocation());
+    }
+    if (datanodeDetailsProto.hasNetworkName()) {
+      builder.setNetworkName(datanodeDetailsProto.getNetworkName());
+    }
     return builder.build();
   }
 
@@ -213,6 +220,7 @@ public class DatanodeDetails extends NodeImpl implements
       builder.setCertSerialId(certSerialId);
     }
     builder.setNetworkLocation(getNetworkLocation());
+    builder.setNetworkName(getNetworkName());
 
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()
@@ -268,6 +276,7 @@ public class DatanodeDetails extends NodeImpl implements
     private String id;
     private String ipAddress;
     private String hostName;
+    private String networkName;
     private String networkLocation;
     private List<Port> ports;
     private String certSerialId;
@@ -310,6 +319,17 @@ public class DatanodeDetails extends NodeImpl implements
      */
     public Builder setHostName(String host) {
       this.hostName = host;
+      return this;
+    }
+
+    /**
+     * Sets the network name of DataNode.
+     *
+     * @param name network name
+     * @return DatanodeDetails.Builder
+     */
+    public Builder setNetworkName(String name) {
+      this.networkName = name;
       return this;
     }
 
@@ -358,8 +378,12 @@ public class DatanodeDetails extends NodeImpl implements
       if (networkLocation == null) {
         networkLocation = NetConstants.DEFAULT_RACK;
       }
-      return new DatanodeDetails(id, ipAddress, hostName, networkLocation,
-          ports, certSerialId);
+      DatanodeDetails dn = new DatanodeDetails(id, ipAddress, hostName,
+          networkLocation, ports, certSerialId);
+      if (networkName != null) {
+        dn.setNetworkName(networkName);
+      }
+      return dn;
     }
   }
 
