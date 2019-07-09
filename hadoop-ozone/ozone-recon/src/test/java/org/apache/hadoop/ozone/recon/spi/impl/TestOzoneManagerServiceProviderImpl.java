@@ -31,7 +31,7 @@ import java.nio.file.Paths;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
-import org.apache.hadoop.ozone.recon.GuiceInjectorTestImpl;
+import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.utils.db.DBCheckpoint;
@@ -61,7 +61,8 @@ public class TestOzoneManagerServiceProviderImpl extends
   private OMMetadataManager omMetadataManager;
   private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
-  private GuiceInjectorTestImpl guiceInjectorTest = new GuiceInjectorTestImpl();
+  private GuiceInjectorUtilsForTestsImpl guiceInjectorTest =
+      new GuiceInjectorUtilsForTestsImpl();
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
   private boolean isSetupDone = false;
 

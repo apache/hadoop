@@ -45,7 +45,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM
 /**
  * Utility methods to get guice injector and ozone configuration.
  */
-public interface GuiceInjectorTest {
+public interface GuiceInjectorUtilsForTests {
 
   /**
    * Get Guice Injector with bindings.

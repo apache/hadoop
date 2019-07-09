@@ -26,7 +26,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.ozone.recon.GuiceInjectorTestImpl;
+import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
@@ -53,8 +53,8 @@ public class TestContainerDBServiceProviderImpl {
   public static TemporaryFolder tempFolder = new TemporaryFolder();
   private static ContainerDBServiceProvider containerDbServiceProvider;
   private static Injector injector;
-  private static GuiceInjectorTestImpl guiceInjectorTest =
-      new GuiceInjectorTestImpl();
+  private static GuiceInjectorUtilsForTestsImpl guiceInjectorTest =
+      new GuiceInjectorUtilsForTestsImpl();
 
   private String keyPrefix1 = "V3/B1/K1";
   private String keyPrefix2 = "V3/B1/K2";

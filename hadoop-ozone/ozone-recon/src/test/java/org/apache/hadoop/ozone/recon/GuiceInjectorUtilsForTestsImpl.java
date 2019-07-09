@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.ozone.recon;
 
-import org.apache.hadoop.ozone.recon.types.GuiceInjectorTest;
+import org.apache.hadoop.ozone.recon.types.GuiceInjectorUtilsForTests;
 
 /**
- * Implementation for GuiceInjectorTest.
+ * Implementation for GuiceInjectorUtilsForTests.
  */
-public class GuiceInjectorTestImpl implements GuiceInjectorTest {
+public class GuiceInjectorUtilsForTestsImpl implements
+    GuiceInjectorUtilsForTests {
 }
