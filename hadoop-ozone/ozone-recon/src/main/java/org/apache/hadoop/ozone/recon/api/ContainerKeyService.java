@@ -44,14 +44,17 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
+import org.apache.hadoop.ozone.recon.api.types.ContainersResponse;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata.ContainerBlockMetadata;
+import org.apache.hadoop.ozone.recon.api.types.KeysResponse;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static org.apache.hadoop.ozone.recon.ReconConstants.FETCH_ALL;
+import static org.apache.hadoop.ozone.recon.ReconConstants.PREV_CONTAINER_ID_DEFAULT_VALUE;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_QUERY_LIMIT;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_QUERY_PREVKEY;
 
@@ -84,15 +87,20 @@ public class ContainerKeyService {
   @GET
   public Response getContainers(
       @DefaultValue(FETCH_ALL) @QueryParam(RECON_QUERY_LIMIT) int limit,
-      @DefaultValue("0") @QueryParam(RECON_QUERY_PREVKEY) long prevKey) {
+      @DefaultValue(PREV_CONTAINER_ID_DEFAULT_VALUE)
+      @QueryParam(RECON_QUERY_PREVKEY) long prevKey) {
     Map<Long, ContainerMetadata> containersMap;
+    long containersCount;
     try {
       containersMap = containerDBServiceProvider.getContainers(limit, prevKey);
+      containersCount = containerDBServiceProvider.getCountForContainers();
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
-    return Response.ok(containersMap.values()).build();
+    ContainersResponse containersResponse =
+        new ContainersResponse(containersCount, containersMap.values());
+    return Response.ok(containersResponse).build();
   }
 
   /**
@@ -107,13 +115,14 @@ public class ContainerKeyService {
    * @return {@link Response}
    */
   @GET
-  @Path("/{id}")
+  @Path("/{id}/keys")
   public Response getKeysForContainer(
       @PathParam("id") Long containerID,
       @DefaultValue(FETCH_ALL) @QueryParam(RECON_QUERY_LIMIT) int limit,
       @DefaultValue(StringUtils.EMPTY) @QueryParam(RECON_QUERY_PREVKEY)
           String prevKeyPrefix) {
     Map<String, KeyMetadata> keyMetadataMap = new LinkedHashMap<>();
+    long totalCount;
     try {
       Map<ContainerKeyPrefix, Integer> containerKeyPrefixMap =
           containerDBServiceProvider.getKeyPrefixesForContainer(containerID,
@@ -187,10 +196,15 @@ public class ContainerKeyService {
             }});
         }
       }
+
+      totalCount =
+          containerDBServiceProvider.getKeyCountForContainer(containerID);
     } catch (IOException ioEx) {
       throw new WebApplicationException(ioEx,
           Response.Status.INTERNAL_SERVER_ERROR);
     }
-    return Response.ok(keyMetadataMap.values()).build();
+    KeysResponse keysResponse =
+        new KeysResponse(totalCount, keyMetadataMap.values());
+    return Response.ok(keysResponse).build();
   }
 }
