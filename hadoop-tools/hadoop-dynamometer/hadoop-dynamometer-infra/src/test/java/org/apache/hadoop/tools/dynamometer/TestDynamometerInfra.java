@@ -20,6 +20,7 @@ package org.apache.hadoop.tools.dynamometer;
 import com.google.common.collect.Sets;
 import java.util.Optional;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import org.apache.hadoop.test.PlatformAssumptions;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogDirectParser;
@@ -315,16 +316,30 @@ public class TestDynamometerInfra {
 
     awaitApplicationStartup();
 
-    Supplier<Boolean> falseSupplier = () -> false;
+    long startTime = System.currentTimeMillis();
+    long maxWaitTimeMs = TimeUnit.MINUTES.toMillis(10);
+    Supplier<Boolean> exitCheckSupplier = () -> {
+      if (System.currentTimeMillis() - startTime > maxWaitTimeMs) {
+        // Wait at most 10 minutes for the NameNode to start and be ready
+        return true;
+      }
+      try {
+        // Exit immediately if the YARN app fails
+        return yarnClient.getApplicationReport(infraAppId)
+            .getYarnApplicationState() == YarnApplicationState.FAILED;
+      } catch (IOException | YarnException e) {
+        return true;
+      }
+    };
     Optional<Properties> namenodeProperties = DynoInfraUtils
-        .waitForAndGetNameNodeProperties(falseSupplier, localConf,
+        .waitForAndGetNameNodeProperties(exitCheckSupplier, localConf,
             client.getNameNodeInfoPath(), LOG);
     if (!namenodeProperties.isPresent()) {
       fail("Unable to fetch NameNode properties");
     }
 
     DynoInfraUtils.waitForNameNodeReadiness(namenodeProperties.get(), 3, false,
-        falseSupplier, localConf, LOG);
+        exitCheckSupplier, localConf, LOG);
 
     assertClusterIsFunctional(localConf, namenodeProperties.get());
 
