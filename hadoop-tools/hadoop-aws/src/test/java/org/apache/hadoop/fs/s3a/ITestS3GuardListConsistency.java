@@ -87,9 +87,6 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     // this is a long value to guarantee that the inconsistency holds
     // even over long-haul connections, and in the debugger too/
     conf.setLong(FAIL_INJECT_INCONSISTENCY_MSEC, (long) (60 * 1000));
-
-    // ask for a new filesystem instance.
-
     return new S3AContract(conf);
   }
 
@@ -154,19 +151,13 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
   public void testConsistentListAfterRename() throws Exception {
     Path d1f = path("d1/f");
     Path d1f2 = path("d1/f" + DEFAULT_DELAY_KEY_SUBSTRING);
-    Path[] mkdirs = {
-        d1f,
-        d1f2
-    };
+    Path[] mkdirs = {d1f, d1f2};
     Path d1 = path("d1");
     Path[] srcdirs = {d1};
     Path d2 = path("d2");
     Path[] dstdirs = {d2};
     Path d2f2 = path("d2/f" + DEFAULT_DELAY_KEY_SUBSTRING);
-    Path[] yesdirs = {
-        d2, path("d2/f"),
-        d2f2
-    };
+    Path[] yesdirs = {d2, path("d2/f"), d2f2};
     Path[] nodirs = {
         d1, d1f, d1f2};
     try {

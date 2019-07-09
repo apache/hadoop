@@ -1312,7 +1312,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         describedAs("entries deleted in %s", r)
         .isEqualTo(r.getLeft());
 
-    // second iteration will have zero entries; this ensures that
+    // second iteration will have zero entries
 
     r = PurgeS3GuardTable.purgeStore(
         null,

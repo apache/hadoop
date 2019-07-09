@@ -82,5 +82,7 @@ public class BulkOperationState implements Closeable {
     Commit,
     /** Deletion operation. */
     Delete,
+    /** FSCK operation. */
+    Fsck
   }
 }

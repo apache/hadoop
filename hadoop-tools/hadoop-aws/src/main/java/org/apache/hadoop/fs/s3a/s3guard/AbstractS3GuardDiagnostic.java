@@ -33,6 +33,9 @@ import org.apache.hadoop.service.launcher.ServiceLaunchException;
 
 import static org.apache.hadoop.service.launcher.LauncherExitCodes.EXIT_USAGE;
 
+/**
+ * Entry point for diagnostics operations.
+ */
 public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
 
   private S3AFileSystem filesystem;
@@ -43,6 +46,10 @@ public class AbstractS3GuardDiagnostic extends AbstractLaunchableService {
 
   private List<String> arguments;
 
+  /**
+   * Constructor.
+   * @param name entry point name.
+   */
   public AbstractS3GuardDiagnostic(final String name) {
     super(name);
   }

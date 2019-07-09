@@ -29,7 +29,6 @@ import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.document.internal.IteratorSupport;
 import com.amazonaws.services.dynamodbv2.document.spec.QuerySpec;
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
-import com.amazonaws.services.dynamodbv2.xspec.ScanExpressionSpec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +63,7 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.i
  *   </li>
  *   <li>
  *     If a scan or query includes the version marker in the result, it
- *     is converted to a VersionMarker instance.
+ *     is converted to a {@link VersionMarker} instance.
  *   </li>
  * </ol>
  *
@@ -76,24 +75,49 @@ class S3GuardTableAccess {
   private static final Logger LOG =
       LoggerFactory.getLogger(S3GuardTableAccess.class);
 
+  /**
+   * Store instance to work with.
+   */
   private final DynamoDBMetadataStore store;
 
+  /**
+   * Table; retrieved from the store.
+   */
   private final Table table;
 
+  /**
+   * Construct.
+   * @param store store to work with.
+   */
   S3GuardTableAccess(final DynamoDBMetadataStore store) {
     this.store = checkNotNull(store);
-    this.table = store.getTable();
+    this.table = checkNotNull(store.getTable());
   }
 
+  /**
+   * Username of user in store.
+   * @return a string.
+   */
   private String getUsername() {
     return store.getUsername();
   }
 
-
+  /**
+   * Execute a query.
+   * @param spec query spec.
+   * @return the outcome.
+   */
   ItemCollection<QueryOutcome> query(QuerySpec spec) {
     return table.query(spec);
   }
 
+  /**
+   * Issue a query where the result is to be an iterator over
+   * the entries
+   * of DDBPathMetadata instances.
+   * @param spec query spec.
+   * @return an iterator over path entries.
+   */
   Iterable<DDBPathMetadata> queryMetadata(QuerySpec spec) {
     return new DDBPathMetadataCollection<>(query(spec));
   }
@@ -112,15 +136,32 @@ class S3GuardTableAccess {
         .forEach(table::deleteItem);
   }
 
+  /**
+   * A collection which wraps the result of a query or scan.
+   * Important: iterate through this only once; the outcome
+   * of repeating an iteration is "undefined"
+   * @param <T> type of outcome.
+   */
   private final class DDBPathMetadataCollection<T>
       implements Iterable<DDBPathMetadata> {
 
+    /**
+     * Query/scan result.
+     */
     private final ItemCollection<T> outcome;
 
+    /**
+     * Instantiate.
+     * @param outcome query/scan outcome.
+     */
     private DDBPathMetadataCollection(final ItemCollection<T> outcome) {
       this.outcome = outcome;
     }
 
+    /**
+     * Get the iterator.
+     * @return the iterator.
+     */
     @Override
     public Iterator<DDBPathMetadata> iterator() {
       return new DDBPathMetadataIterator<>(outcome.iterator());
@@ -128,11 +169,23 @@ class S3GuardTableAccess {
 
   }
 
+  /**
+   * An iterator which converts the iterated-over result of
+   * a query or scan into a {@code DDBPathMetadataIterator} entry.
+   * @param <T> type of source.
+   */
   private final class DDBPathMetadataIterator<T> implements
       Iterator<DDBPathMetadata> {
 
+    /**
+     * Iterator to invoke.
+     */
     private final IteratorSupport<Item, T> it;
 
+    /**
+     * Instantiate.
+     * @param it Iterator to invoke.
+     */
     private DDBPathMetadataIterator(final IteratorSupport<Item, T> it) {
       this.it = it;
     }
@@ -157,15 +210,32 @@ class S3GuardTableAccess {
 
   }
 
+  /**
+   * DDBPathMetadata subclass returned when a query returns
+   * the version marker.
+   * There is a FileStatus returned where the owner field contains
+   * the table version; the path is always the unqualified path "/VERSION".
+   * Because it is unqualified, operations which treat this as a normal
+   * DDB metadata entry usually fail.
+   */
   static final class VersionMarker extends DDBPathMetadata {
 
+    /**
+     * Instantiate.
+     * @param versionMarker the version marker.
+     */
     VersionMarker(Item versionMarker) {
       super(new S3AFileStatus(true, new Path("/VERSION"),
           "" + versionMarker.getString(TABLE_VERSION)));
     }
   }
 
-  private static Pair<String, String> primaryKey(Item it) {
-    return Pair.of(it.getString(PARENT), it.getString(CHILD));
+  /**
+   * Given an item, split it to the parent and child fields.
+   * @param item item to split.
+   * @return (parent, child).
+   */
+  private static Pair<String, String> primaryKey(Item item) {
+    return Pair.of(item.getString(PARENT), item.getString(CHILD));
   }
 }

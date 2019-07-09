@@ -92,6 +92,10 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
     this.force = force;
   }
 
+  /**
+   * Bind to the argument list, including validating the CLI
+   * @throws Exception failure.
+   */
   @Override
   protected void serviceStart() throws Exception {
     if (getStore() == null) {
@@ -111,7 +115,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
 
   /**
    * Extract the host from the FS URI, then scan and
-   * delete all entries from thtat bucket
+   * delete all entries from that bucket
    * @return the exit code.
    * @throws ServiceLaunchException on failure.
    */
@@ -170,7 +174,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
   /**
-   * This is the JVM entry point for the service launcher.
+   * This is the Main entry point for the service launcher.
    *
    * Converts the arguments to a list, instantiates a instance of the class
    * then executes it.
@@ -185,7 +189,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
   /**
-   * Entry point to dump the metastore and s3 store world views
+   * API Entry point to dump the metastore and S3 store world views
    * <p>
    * Both the FS and the store will be dumped: the store is scanned
    * before and after the sequence to show what changes were made to
@@ -198,6 +202,8 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
    * @return (filesFound, filesDeleted)
    * @throws ExitUtil.ExitException failure.
    */
+  @InterfaceAudience.Private
+  @InterfaceStability.Unstable
   public static Pair<Long, Long> purgeStore(
       @Nullable final S3AFileSystem fs,
       @Nullable DynamoDBMetadataStore store,

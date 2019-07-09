@@ -77,7 +77,6 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     }
   }
 
-
   @Override
   protected DynamoDBMetadataStore getMetadataStore() {
     return (DynamoDBMetadataStore) super.getMetadataStore();

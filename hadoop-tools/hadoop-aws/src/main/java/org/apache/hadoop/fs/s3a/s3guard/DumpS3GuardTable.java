@@ -71,28 +71,63 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   private static final Logger LOG =
       LoggerFactory.getLogger(DumpS3GuardTable.class);
 
+  /**
+   * Application name.
+   */
   public static final String NAME = "DumpS3GuardTable";
 
+  /**
+   * Usage.
+   */
   private static final String USAGE_MESSAGE = NAME
       + " <filesystem> <dest-file>";
 
+  /**
+   * Suffix for the flat list: {@value}.
+   */
   public static final String FLAT_CSV = "-flat.csv";
 
+  /**
+   * Suffix for the raw S3 dump: {@value}.
+   */
   public static final String RAW_CSV = "-s3.csv";
 
+  /**
+   * Suffix for the DDB scan: {@value}.
+   */
   public static final String SCAN_CSV = "-scan.csv";
+
+  /**
+   * Suffix for the second DDB scan: : {@value}.
+   */
   public static final String SCAN2_CSV = "-scan-2.csv";
 
+  /**
+   * Suffix for the treewalk scan of the S3A Filesystem: {@value}.
+   */
   public static final String TREE_CSV = "-tree.csv";
 
+  /**
+   * Suffix for a recursive treewalk through the metastore: {@value}.
+   */
   public static final String STORE_CSV = "-store.csv";
 
+  /**
+   * Path in the local filesystem to save the data.
+   */
   protected String destPath;
 
+  /**
+   * Instantiate.
+   * @param name application name.
+   */
   public DumpS3GuardTable(final String name) {
     super(name);
   }
 
+  /**
+   * Instantiate with default name.
+   */
   public DumpS3GuardTable() {
     this(NAME);
   }
@@ -113,7 +148,10 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
     this.destPath = destFile.getAbsolutePath();
   }
 
-
+  /**
+   * Bind to the argument list, including validating the CLI
+   * @throws Exception failure.
+   */
   @Override
   protected void serviceStart() throws Exception {
     if (getStore() == null) {
@@ -332,6 +370,11 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
 
+  /**
+   * Dump a single entry, and log it.
+   * @param csv CSV output file.
+   * @param md metadata to log.
+   */
   private void dumpEntry(CsvFile csv, DDBPathMetadata md) {
     LOG.info("{}", md.prettyPrint());
     csv.entry(md);
@@ -360,6 +403,11 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
 
+  /**
+   * Convert a timestamp in milliseconds to a human string.
+   * @param millis epoch time in millis
+   * @return a string for the CSV file.
+   */
   private static String stringify(long millis) {
     return new Date(millis).toString();
   }
@@ -372,8 +420,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    */
   public static void main(String[] args) {
     try {
-      serviceMain(Arrays.asList(args),
-          new DumpS3GuardTable());
+      serviceMain(Arrays.asList(args), new DumpS3GuardTable());
     } catch (ExitUtil.ExitException e) {
       ExitUtil.terminate(e);
     }
@@ -450,6 +497,8 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    *
    * Quotes are manged by passing in a long whose specific bits control
    * whether or not a row is quoted, bit 0 for column 0, etc.
+   *
+   * There is no escaping of values here.
    */
   private static final class CsvFile implements Closeable {
 
@@ -473,6 +522,15 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
 
     private final String quote;
 
+    /**
+     * Create.
+     * @param path filesystem path.
+     * @param out output write.
+     * @param separator separator of entries.
+     * @param eol EOL marker.
+     * @param quote quote marker.
+     * @throws IOException failure.
+     */
     private CsvFile(
         final Path path,
         final PrintWriter out,
@@ -487,6 +545,12 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
       header();
     }
 
+    /**
+     * Create to a file, with UTF-8 output and the standard
+     * options of the TSV file.
+     * @param file destination file.
+     * @throws IOException failure.
+     */
     private CsvFile(File file) throws IOException {
       this(null,
           new PrintWriter(file, "UTF-8"), "\t", "\n", "\"");
