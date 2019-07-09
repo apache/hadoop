@@ -19,6 +19,7 @@ package org.apache.hadoop.tools.dynamometer;
 
 import com.google.common.collect.Sets;
 import java.util.Optional;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import org.apache.hadoop.test.PlatformAssumptions;
 import org.apache.hadoop.tools.dynamometer.workloadgenerator.audit.AuditLogDirectParser;
@@ -307,59 +308,12 @@ public class TestDynamometerInfra {
 
   @Test(timeout = 15 * 60 * 1000)
   public void testNameNodeInYARN() throws Exception {
-    final Client client = new Client(JarFinder.getJar(ApplicationMaster.class),
-        JarFinder.getJar(Assert.class));
     Configuration localConf = new Configuration(yarnConf);
     localConf.setLong(AuditLogDirectParser.AUDIT_START_TIMESTAMP_KEY, 60000);
-    client.setConf(localConf);
 
-    Thread appThread = new Thread(() -> {
-      try {
-        client.run(new String[] {"-" + Client.MASTER_MEMORY_MB_ARG, "128",
-            "-" + Client.CONF_PATH_ARG, confZip.toString(),
-            "-" + Client.BLOCK_LIST_PATH_ARG,
-            blockImageOutputDir.toString(), "-" + Client.FS_IMAGE_DIR_ARG,
-            fsImageTmpPath.getParent().toString(),
-            "-" + Client.HADOOP_BINARY_PATH_ARG,
-            hadoopTarballPath.getAbsolutePath(),
-            "-" + AMOptions.DATANODES_PER_CLUSTER_ARG, "2",
-            "-" + AMOptions.DATANODE_MEMORY_MB_ARG, "128",
-            "-" + AMOptions.DATANODE_NODELABEL_ARG, DATANODE_NODELABEL,
-            "-" + AMOptions.NAMENODE_MEMORY_MB_ARG, "256",
-            "-" + AMOptions.NAMENODE_METRICS_PERIOD_ARG, "1",
-            "-" + AMOptions.NAMENODE_NODELABEL_ARG, NAMENODE_NODELABEL,
-            "-" + AMOptions.SHELL_ENV_ARG,
-            "HADOOP_HOME=" + getHadoopHomeLocation(),
-            "-" + AMOptions.SHELL_ENV_ARG,
-            "HADOOP_CONF_DIR=" + getHadoopHomeLocation() + "/etc/hadoop",
-            "-" + Client.WORKLOAD_REPLAY_ENABLE_ARG,
-            "-" + Client.WORKLOAD_INPUT_PATH_ARG,
-            fs.makeQualified(new Path("/tmp/audit_trace_direct")).toString(),
-            "-" + Client.WORKLOAD_THREADS_PER_MAPPER_ARG, "1",
-            "-" + Client.WORKLOAD_START_DELAY_ARG, "10s",
-            "-" + AMOptions.NAMENODE_ARGS_ARG,
-            "-Ddfs.namenode.safemode.extension=0"});
-      } catch (Exception e) {
-        LOG.error("Error running client", e);
-      }
-    });
+    final Client client = createAndStartClient(localConf);
 
-    appThread.start();
-    LOG.info("Waiting for application ID to become available");
-    GenericTestUtils.waitFor(() -> {
-      try {
-        List<ApplicationReport> apps = yarnClient.getApplications();
-        if (apps.size() == 1) {
-          infraAppId = apps.get(0).getApplicationId();
-          return true;
-        } else if (apps.size() > 1) {
-          fail("Unexpected: more than one application");
-        }
-      } catch (IOException | YarnException e) {
-        fail("Unexpected exception: " + e);
-      }
-      return false;
-    }, 1000, 60000);
+    awaitApplicationStartup();
 
     Supplier<Boolean> falseSupplier = () -> false;
     Optional<Properties> namenodeProperties = DynoInfraUtils
@@ -372,25 +326,7 @@ public class TestDynamometerInfra {
     DynoInfraUtils.waitForNameNodeReadiness(namenodeProperties.get(), 3, false,
         falseSupplier, localConf, LOG);
 
-    // Test that we can successfully write to / read from the cluster
-    try {
-      URI nameNodeUri =
-          DynoInfraUtils.getNameNodeHdfsUri(namenodeProperties.get());
-      DistributedFileSystem dynoFS =
-          (DistributedFileSystem) FileSystem.get(nameNodeUri, localConf);
-      Path testFile = new Path("/tmp/test/foo");
-      dynoFS.mkdir(testFile.getParent(), FsPermission.getDefault());
-      FSDataOutputStream out = dynoFS.create(testFile, (short) 1);
-      out.write(42);
-      out.hsync();
-      out.close();
-      FileStatus[] stats = dynoFS.listStatus(testFile.getParent());
-      assertEquals(1, stats.length);
-      assertEquals("foo", stats[0].getPath().getName());
-    } catch (IOException e) {
-      LOG.error("Failed to write or read", e);
-      throw e;
-    }
+    assertClusterIsFunctional(localConf, namenodeProperties.get());
 
     Map<ContainerId, Container> namenodeContainers = miniYARNCluster
         .getNodeManager(0).getNMContext().getContainers();
@@ -457,6 +393,86 @@ public class TestDynamometerInfra {
         return false;
       }
     }, 3000, 60000);
+  }
+
+  private void assertClusterIsFunctional(Configuration localConf,
+      Properties namenodeProperties) throws IOException {
+    // Test that we can successfully write to / read from the cluster
+    try {
+      URI nameNodeUri = DynoInfraUtils.getNameNodeHdfsUri(namenodeProperties);
+      DistributedFileSystem dynoFS =
+          (DistributedFileSystem) FileSystem.get(nameNodeUri, localConf);
+      Path testFile = new Path("/tmp/test/foo");
+      dynoFS.mkdir(testFile.getParent(), FsPermission.getDefault());
+      FSDataOutputStream out = dynoFS.create(testFile, (short) 1);
+      out.write(42);
+      out.hsync();
+      out.close();
+      FileStatus[] stats = dynoFS.listStatus(testFile.getParent());
+      assertEquals(1, stats.length);
+      assertEquals("foo", stats[0].getPath().getName());
+    } catch (IOException e) {
+      LOG.error("Failed to write or read", e);
+      throw e;
+    }
+  }
+
+  private void awaitApplicationStartup()
+      throws TimeoutException, InterruptedException {
+    LOG.info("Waiting for application ID to become available");
+    GenericTestUtils.waitFor(() -> {
+      try {
+        List<ApplicationReport> apps = yarnClient.getApplications();
+        if (apps.size() == 1) {
+          infraAppId = apps.get(0).getApplicationId();
+          return true;
+        } else if (apps.size() > 1) {
+          fail("Unexpected: more than one application");
+        }
+      } catch (IOException | YarnException e) {
+        fail("Unexpected exception: " + e);
+      }
+      return false;
+    }, 1000, 60000);
+  }
+
+  private Client createAndStartClient(Configuration localConf) {
+    final Client client = new Client(JarFinder.getJar(ApplicationMaster.class),
+        JarFinder.getJar(Assert.class));
+    client.setConf(localConf);
+    Thread appThread = new Thread(() -> {
+      try {
+        client.run(new String[] {"-" + Client.MASTER_MEMORY_MB_ARG, "128",
+            "-" + Client.CONF_PATH_ARG, confZip.toString(),
+            "-" + Client.BLOCK_LIST_PATH_ARG,
+            blockImageOutputDir.toString(), "-" + Client.FS_IMAGE_DIR_ARG,
+            fsImageTmpPath.getParent().toString(),
+            "-" + Client.HADOOP_BINARY_PATH_ARG,
+            hadoopTarballPath.getAbsolutePath(),
+            "-" + AMOptions.DATANODES_PER_CLUSTER_ARG, "2",
+            "-" + AMOptions.DATANODE_MEMORY_MB_ARG, "128",
+            "-" + AMOptions.DATANODE_NODELABEL_ARG, DATANODE_NODELABEL,
+            "-" + AMOptions.NAMENODE_MEMORY_MB_ARG, "256",
+            "-" + AMOptions.NAMENODE_METRICS_PERIOD_ARG, "1",
+            "-" + AMOptions.NAMENODE_NODELABEL_ARG, NAMENODE_NODELABEL,
+            "-" + AMOptions.SHELL_ENV_ARG,
+            "HADOOP_HOME=" + getHadoopHomeLocation(),
+            "-" + AMOptions.SHELL_ENV_ARG,
+            "HADOOP_CONF_DIR=" + getHadoopHomeLocation() + "/etc/hadoop",
+            "-" + Client.WORKLOAD_REPLAY_ENABLE_ARG,
+            "-" + Client.WORKLOAD_INPUT_PATH_ARG,
+            fs.makeQualified(new Path("/tmp/audit_trace_direct")).toString(),
+            "-" + Client.WORKLOAD_THREADS_PER_MAPPER_ARG, "1",
+            "-" + Client.WORKLOAD_START_DELAY_ARG, "10s",
+            "-" + AMOptions.NAMENODE_ARGS_ARG,
+            "-Ddfs.namenode.safemode.extension=0"});
+      } catch (Exception e) {
+        LOG.error("Error running client", e);
+      }
+    });
+
+    appThread.start();
+    return client;
   }
 
   private static URI getResourcePath(String resourceName) {

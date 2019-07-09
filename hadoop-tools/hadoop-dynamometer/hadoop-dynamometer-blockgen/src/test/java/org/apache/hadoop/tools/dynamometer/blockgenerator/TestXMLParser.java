@@ -51,10 +51,11 @@ public class TestXMLParser {
         "</INodeSection>"
     };
 
+    short replCount = 0; // This is ignored
     Map<BlockInfo, Short> expectedBlockCount = new HashMap<>();
-    expectedBlockCount.put(new BlockInfo(6, 7, 8), (short) 3);
-    expectedBlockCount.put(new BlockInfo(9, 10, 11), (short) 3);
-    expectedBlockCount.put(new BlockInfo(13, 14, 15), (short) 12);
+    expectedBlockCount.put(new BlockInfo(6, 7, 8, replCount), (short) 3);
+    expectedBlockCount.put(new BlockInfo(9, 10, 11, replCount), (short) 3);
+    expectedBlockCount.put(new BlockInfo(13, 14, 15, replCount), (short) 12);
 
     final Map<BlockInfo, Short> actualBlockCount = new HashMap<>();
     XMLParser parser = new XMLParser();

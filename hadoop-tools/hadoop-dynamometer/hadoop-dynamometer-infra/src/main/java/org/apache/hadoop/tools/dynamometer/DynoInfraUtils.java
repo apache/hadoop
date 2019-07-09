@@ -139,7 +139,11 @@ public final class DynoInfraUtils {
           APACHE_DOWNLOAD_MIRROR_DEFAULT);
     }
 
-    destinationDir.mkdirs();
+    if (!destinationDir.exists()) {
+      if (!destinationDir.mkdirs()) {
+        throw new IOException("Unable to create local dir: " + destinationDir);
+      }
+    }
     URL downloadURL = new URL(apacheMirror + String
         .format(APACHE_DOWNLOAD_MIRROR_SUFFIX_FORMAT, version, version));
     log.info("Downloading tarball from: <{}> to <{}>", downloadURL,
@@ -441,6 +445,7 @@ public final class DynoInfraUtils {
    * @param shouldExit Should return true iff this should stop waiting.
    * @param log Where to log information.
    */
+  @SuppressWarnings("checkstyle:parameternumber")
   private static void waitForNameNodeJMXValue(String valueName,
       String jmxBeanQuery, String jmxProperty, double threshold,
       double printThreshold, boolean decreasing, Properties nameNodeProperties,
