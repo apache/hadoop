@@ -292,7 +292,7 @@ public abstract class TestOzoneRpcClientAbstract {
   public void testCreateS3Bucket()
       throws IOException, OzoneException {
     long currentTime = Time.now();
-    String userName = "ozone";
+    String userName = UserGroupInformation.getCurrentUser().getUserName();
     String bucketName = UUID.randomUUID().toString();
     store.createS3Bucket(userName, bucketName);
     String volumeName = store.getOzoneVolumeName(bucketName);
@@ -2319,7 +2319,8 @@ public abstract class TestOzoneRpcClientAbstract {
       assertTrue(acls.size() == expectedAcls.size());
       for(OzoneAcl acl: acls) {
         if(acl.getName().equals(newAcl.getName())) {
-          assertFalse(acl.getAclList().contains(ACLType.READ_ACL));
+          assertFalse("READ_ACL should not exist in current acls:" +
+              acls, acl.getAclList().contains(ACLType.READ_ACL));
           aclVerified = true;
         }
       }

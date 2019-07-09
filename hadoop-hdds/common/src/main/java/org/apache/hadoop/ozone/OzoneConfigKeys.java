@@ -120,6 +120,10 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS =
       "ozone.administrators";
+  /**
+   * Used only for testing purpose. Results in making every user an admin.
+   * */
+  public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
 
   public static final String OZONE_CLIENT_PROTOCOL =
       "ozone.client.protocol";
@@ -390,6 +394,8 @@ public final class OzoneConfigKeys {
       "ozone.acl.authorizer.class";
   public static final String OZONE_ACL_AUTHORIZER_CLASS_DEFAULT =
       "org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer";
+  public static final String OZONE_ACL_AUTHORIZER_CLASS_NATIVE =
+      "org.apache.hadoop.ozone.security.acl.OzoneNativeAuthorizer";
   public static final String OZONE_ACL_ENABLED =
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =

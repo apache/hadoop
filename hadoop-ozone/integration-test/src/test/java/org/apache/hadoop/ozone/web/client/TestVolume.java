@@ -37,6 +37,7 @@ import org.apache.hadoop.ozone.client.rest.RestClient;
 import org.apache.hadoop.ozone.client.rpc.RpcClient;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 
@@ -232,7 +233,8 @@ public class TestVolume {
       clientProtocol.createVolume(volumeName);
     }
 
-    List<OzoneVolume> ovols = clientProtocol.listVolumes(null, null, 100);
+    List<OzoneVolume> ovols = clientProtocol.listVolumes(
+        UserGroupInformation.getCurrentUser().getUserName(), null, null, 100);
     assertTrue(ovols.size() >= 10);
   }
 

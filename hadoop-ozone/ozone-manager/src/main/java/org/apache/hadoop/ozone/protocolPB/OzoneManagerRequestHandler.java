@@ -410,11 +410,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
   }
 
   private SetAclResponse setAcl(SetAclRequest req) throws IOException {
-    List<OzoneAcl> ozoneAcl = new ArrayList<>();
-    req.getAclList().forEach(a ->
-        ozoneAcl.add(OzoneAcl.fromProtobuf(a)));
     boolean response = impl.setAcl(OzoneObjInfo.fromProtobuf(req.getObj()),
-        ozoneAcl);
+        req.getAclList().stream().map(a -> OzoneAcl.fromProtobuf(a)).
+            collect(Collectors.toList()));
     return SetAclResponse.newBuilder().setResponse(response).build();
   }
 

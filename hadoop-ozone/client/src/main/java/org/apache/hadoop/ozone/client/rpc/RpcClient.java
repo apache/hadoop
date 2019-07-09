@@ -893,6 +893,7 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setMultipartUploadID(uploadID)
+        .setAcls(getAclList())
         .build();
 
     OmMultipartUploadList omMultipartUploadList = new OmMultipartUploadList(
