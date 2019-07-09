@@ -34,7 +34,7 @@
         <dependency>
             <groupId>com.linkedin.tony</groupId>
             <artifactId>tony-core</artifactId>
-            <version>0.3.11</version>
+            <version>0.3.19</version>
             <exclusions>
                 <exclusion>
                     <groupId>com.linkedin.tony</groupId>

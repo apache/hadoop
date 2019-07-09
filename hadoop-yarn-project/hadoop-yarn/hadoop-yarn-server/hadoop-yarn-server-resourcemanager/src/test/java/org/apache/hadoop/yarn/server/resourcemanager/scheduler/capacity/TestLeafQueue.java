@@ -177,6 +177,7 @@ public class TestLeafQueue {
     setupQueueConfiguration(csConf, newRoot);
     YarnConfiguration conf = new YarnConfiguration();
     cs.setConf(conf);
+    when(spyRMContext.getYarnConfiguration()).thenReturn(conf);
 
     csContext = mock(CapacitySchedulerContext.class);
     when(csContext.getConfiguration()).thenReturn(csConf);

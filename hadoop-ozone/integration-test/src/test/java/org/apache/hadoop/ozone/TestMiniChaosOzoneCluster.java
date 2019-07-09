@@ -62,7 +62,7 @@ public class TestMiniChaosOzoneCluster implements Runnable {
 
   @Option(names = {"-i", "--failureInterval"},
       description = "time between failure events in seconds")
-  private static int failureInterval = 5; // 5 second period between failures.
+  private static int failureInterval = 300; // 5 second period between failures.
 
   private static MiniOzoneChaosCluster cluster;
   private static MiniOzoneLoadGenerator loadGenerator;

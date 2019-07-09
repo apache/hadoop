@@ -116,9 +116,13 @@ public final class DynoInfraUtils {
    * (checked in that order) is set, use that as the mirror; else use
    * {@value APACHE_DOWNLOAD_MIRROR_DEFAULT}.
    *
+   * @param destinationDir destination directory to save a tarball
    * @param version The version of Hadoop to download, like "2.7.4"
    *                or "3.0.0-beta1"
+   * @param conf configuration
+   * @param log logger instance
    * @return The path to the tarball.
+   * @throws IOException on failure
    */
   public static File fetchHadoopTarball(File destinationDir, String version,
       Configuration conf, Logger log) throws IOException {

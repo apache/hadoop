@@ -363,6 +363,10 @@ public final class Constants {
 
   public static final String USER_AGENT_PREFIX = "fs.s3a.user.agent.prefix";
 
+  /** Whether or not to allow MetadataStore to be source of truth for a path prefix */
+  public static final String AUTHORITATIVE_PATH = "fs.s3a.authoritative.path";
+  public static final String[] DEFAULT_AUTHORITATIVE_PATH = {};
+
   /** Whether or not to allow MetadataStore to be source of truth. */
   public static final String METADATASTORE_AUTHORITATIVE =
       "fs.s3a.metadatastore.authoritative";

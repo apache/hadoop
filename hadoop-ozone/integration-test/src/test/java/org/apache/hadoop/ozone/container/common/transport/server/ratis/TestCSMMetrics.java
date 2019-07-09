@@ -115,6 +115,9 @@ public class TestCSMMetrics {
       assertCounter("NumApplyTransactionOps", 0L, metric);
       assertCounter("NumBytesWrittenCount", 0L, metric);
       assertCounter("NumBytesCommittedCount", 0L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 0L, metric);
 
       // Write Chunk
       BlockID blockID = ContainerTestHelper.getTestBlockID(ContainerTestHelper.
@@ -133,6 +136,9 @@ public class TestCSMMetrics {
       assertCounter("NumBytesWrittenCount", 1024L, metric);
       assertCounter("NumApplyTransactionOps", 1L, metric);
       assertCounter("NumBytesCommittedCount", 1024L, metric);
+      assertCounter("NumStartTransactionVerifyFailures", 0L, metric);
+      assertCounter("NumContainerNotOpenVerifyFailures", 0L, metric);
+      assertCounter("WriteChunkNumOps", 1L, metric);
 
       //Read Chunk
       ContainerProtos.ContainerCommandRequestProto readChunkRequest =
