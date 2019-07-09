@@ -566,6 +566,8 @@ public class SCMNodeManager implements NodeManager {
       node = clusterMap.getNode(location + NetConstants.PATH_SEPARATOR_STR +
           address);
     }
+    LOG.debug("Get node for {} return {}", address, (node == null ?
+        "not found" : node.getNetworkFullPath()));
     return node == null ? null : (DatanodeDetails)node;
   }
 

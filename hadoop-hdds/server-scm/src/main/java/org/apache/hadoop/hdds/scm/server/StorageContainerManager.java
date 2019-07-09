@@ -374,7 +374,11 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private void initializeSystemManagers(OzoneConfiguration conf,
                                        SCMConfigurator configurator)
       throws IOException {
-    clusterMap = new NetworkTopologyImpl(conf);
+    if (configurator.getNetworkTopology() != null) {
+      clusterMap = configurator.getNetworkTopology();
+    } else {
+      clusterMap = new NetworkTopologyImpl(conf);
+    }
 
     if(configurator.getScmNodeManager() != null) {
       scmNodeManager = configurator.getScmNodeManager();

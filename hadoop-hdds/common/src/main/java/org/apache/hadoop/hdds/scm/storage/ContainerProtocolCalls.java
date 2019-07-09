@@ -230,7 +230,7 @@ public final class ContainerProtocolCalls  {
         ReadChunkRequestProto.newBuilder()
             .setBlockID(blockID.getDatanodeBlockIDProtobuf())
             .setChunkData(chunk);
-    String id = xceiverClient.getPipeline().getFirstNode().getUuidString();
+    String id = xceiverClient.getPipeline().getClosestNode().getUuidString();
     ContainerCommandRequestProto.Builder builder =
         ContainerCommandRequestProto.newBuilder().setCmdType(Type.ReadChunk)
             .setContainerID(blockID.getContainerID())
@@ -494,7 +494,7 @@ public final class ContainerProtocolCalls  {
         GetSmallFileRequestProto
             .newBuilder().setBlock(getBlock)
             .build();
-    String id = client.getPipeline().getFirstNode().getUuidString();
+    String id = client.getPipeline().getClosestNode().getUuidString();
 
     ContainerCommandRequestProto.Builder builder = ContainerCommandRequestProto
         .newBuilder()

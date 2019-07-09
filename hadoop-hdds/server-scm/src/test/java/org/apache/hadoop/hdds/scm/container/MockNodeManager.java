@@ -19,6 +19,9 @@ package org.apache.hadoop.hdds.scm.container;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.TestUtils;
+import org.apache.hadoop.hdds.scm.net.NetConstants;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
+import org.apache.hadoop.hdds.scm.net.Node;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.container.placement.metrics.SCMNodeMetric;
@@ -83,6 +86,7 @@ public class MockNodeManager implements NodeManager {
   private final Map<UUID, List<SCMCommand>> commandMap;
   private final Node2PipelineMap node2PipelineMap;
   private final Node2ContainerMap node2ContainerMap;
+  private NetworkTopology clusterMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
@@ -366,6 +370,9 @@ public class MockNodeManager implements NodeManager {
     try {
       node2ContainerMap.insertNewDatanode(datanodeDetails.getUuid(),
           Collections.emptySet());
+      if (clusterMap != null) {
+        clusterMap.add(datanodeDetails);
+      }
     } catch (SCMException e) {
       e.printStackTrace();
     }
@@ -453,7 +460,12 @@ public class MockNodeManager implements NodeManager {
 
   @Override
   public DatanodeDetails getNode(String address) {
-    return null;
+    Node node = clusterMap.getNode(NetConstants.DEFAULT_RACK + "/" + address);
+    return node == null ? null : (DatanodeDetails)node;
+  }
+
+  public void setNetworkTopology(NetworkTopology topology) {
+    this.clusterMap = topology;
   }
 
   /**

@@ -2346,6 +2346,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.network.topology.aware.read.enable</name>
+    <value>true</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Whether to enable topology aware read to improve the read performance.
+    </description>
+  </property>
+  <property>
     <name>ozone.recon.container.db.impl</name>
     <value>RocksDB</value>
     <tag>OZONE, RECON, STORAGE</tag>

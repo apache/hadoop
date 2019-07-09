@@ -51,6 +51,7 @@ import org.junit.rules.ExpectedException;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
@@ -1147,6 +1148,15 @@ public class TestSCMNodeManager {
       List<DatanodeDetails> nodeList = nodeManager.getAllNodes();
       nodeList.stream().forEach(node ->
           Assert.assertTrue(node.getNetworkLocation().equals("/rack1")));
+
+      // test get node
+      if (useHostname) {
+        Arrays.stream(hostNames).forEach(hostname ->
+            Assert.assertNotNull(nodeManager.getNode(hostname)));
+      } else {
+        Arrays.stream(ipAddress).forEach(ip ->
+            Assert.assertNotNull(nodeManager.getNode(ip)));
+      }
     }
   }
 }
