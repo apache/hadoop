@@ -75,9 +75,9 @@ int main(int argc, char **argv) {
     const char *userPath = "/tmp/usertestfile.txt";
 
     char buffer[32], buffer2[256], rdbuffer[32];
-    tSize num_written_bytes, num_read_bytes, num_pread_bytes;
+    tSize num_written_bytes, num_read_bytes;
     hdfsFS fs, lfs;
-    hdfsFile writeFile, readFile, preadFile, localFile, appendFile, userFile;
+    hdfsFile writeFile, readFile, localFile, appendFile, userFile;
     tOffset currentPos, seekPos;
     int exists, totalResult, result, numEntries, i, j;
     const char *resp;
@@ -206,7 +206,6 @@ int main(int argc, char **argv) {
         }
         fprintf(stderr, "Read (direct) following %d bytes:\n%s\n",
                 num_read_bytes, buffer);
-        memset(buffer, 0, strlen(fileContents + 1));
         if (hdfsSeek(fs, readFile, 0L)) {
             fprintf(stderr, "Failed to seek to file start!\n");
             exit(-1);
@@ -216,16 +215,17 @@ int main(int argc, char **argv) {
         // read path
         hdfsFileDisableDirectRead(readFile);
 
-        num_read_bytes = hdfsRead(fs, readFile, (void*)buffer,
+        num_read_bytes = hdfsRead(fs, readFile, (void*)buffer, 
                 sizeof(buffer));
-        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
-            fprintf(stderr, "Failed to read. Expected %s but got %s (%d bytes)\n",
-                    fileContents, buffer, num_read_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Read following %d bytes:\n%s\n",
+        fprintf(stderr, "Read following %d bytes:\n%s\n", 
                 num_read_bytes, buffer);
+
         memset(buffer, 0, strlen(fileContents + 1));
+
+        num_read_bytes = hdfsPread(fs, readFile, 0, (void*)buffer, 
+                sizeof(buffer));
+        fprintf(stderr, "Read following %d bytes:\n%s\n", 
+                num_read_bytes, buffer);
 
         hdfsCloseFile(fs, readFile);
 
@@ -246,104 +246,6 @@ int main(int argc, char **argv) {
           fprintf(stderr, "Direct read support incorrectly detected for local "
                   "filesystem\n");
           exit(-1);
-        }
-
-        hdfsCloseFile(lfs, localFile);
-    }
-
-    {
-        // Pread tests
-
-        exists = hdfsExists(fs, readPath);
-
-        if (exists) {
-            fprintf(stderr, "Failed to validate existence of %s\n", readPath);
-            exit(-1);
-        }
-
-        preadFile = hdfsOpenFile(fs, readPath, O_RDONLY, 0, 0, 0);
-        if (!preadFile) {
-            fprintf(stderr, "Failed to open %s for reading!\n", readPath);
-            exit(-1);
-        }
-
-        if (!hdfsFileIsOpenForRead(preadFile)) {
-            fprintf(stderr, "hdfsFileIsOpenForRead: we just opened a file "
-                            "with O_RDONLY, and it did not show up as 'open for "
-                            "read'\n");
-            exit(-1);
-        }
-
-        fprintf(stderr, "hdfsAvailable: %d\n", hdfsAvailable(fs, preadFile));
-
-        num_pread_bytes = hdfsPread(fs, preadFile, 0, (void*)buffer, sizeof(buffer));
-        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
-            fprintf(stderr, "Failed to pread (direct). Expected %s but got %s (%d bytes)\n",
-                    fileContents, buffer, num_read_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Pread (direct) following %d bytes:\n%s\n",
-                num_pread_bytes, buffer);
-        memset(buffer, 0, strlen(fileContents + 1));
-        if (hdfsTell(fs, preadFile) != 0) {
-            fprintf(stderr, "Pread changed position of file\n");
-            exit(-1);
-        }
-
-        // Test pread midway through the file rather than at the beginning
-        const char *fileContentsChunk = "World!";
-        num_pread_bytes = hdfsPread(fs, preadFile, 7, (void*)buffer, sizeof(buffer));
-        if (strncmp(fileContentsChunk, buffer, strlen(fileContentsChunk)) != 0) {
-            fprintf(stderr, "Failed to pread (direct). Expected %s but got %s (%d bytes)\n",
-                    fileContentsChunk, buffer, num_read_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Pread (direct) following %d bytes:\n%s\n", num_pread_bytes, buffer);
-        memset(buffer, 0, strlen(fileContents + 1));
-        if (hdfsTell(fs, preadFile) != 0) {
-            fprintf(stderr, "Pread changed position of file\n");
-            exit(-1);
-        }
-
-        // Disable the direct pread path so that we really go through the slow
-        // read path
-        hdfsFileDisableDirectPread(preadFile);
-
-        num_pread_bytes = hdfsPread(fs, preadFile, 0, (void*)buffer, sizeof(buffer));
-        if (strncmp(fileContents, buffer, strlen(fileContents)) != 0) {
-            fprintf(stderr, "Failed to pread. Expected %s but got %s (%d bytes)\n",
-                    fileContents, buffer, num_pread_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Pread following %d bytes:\n%s\n", num_pread_bytes, buffer);
-        memset(buffer, 0, strlen(fileContents + 1));
-        if (hdfsTell(fs, preadFile) != 0) {
-            fprintf(stderr, "Pread changed position of file\n");
-            exit(-1);
-        }
-
-        num_pread_bytes = hdfsPread(fs, preadFile, 7, (void*)buffer, sizeof(buffer));
-        if (strncmp(fileContentsChunk, buffer, strlen(fileContentsChunk)) != 0) {
-            fprintf(stderr, "Failed to pread (direct). Expected %s but got %s (%d bytes)\n",
-                    fileContentsChunk, buffer, num_read_bytes);
-            exit(-1);
-        }
-        fprintf(stderr, "Pread (direct) following %d bytes:\n%s\n", num_pread_bytes, buffer);
-        memset(buffer, 0, strlen(fileContents + 1));
-        if (hdfsTell(fs, preadFile) != 0) {
-            fprintf(stderr, "Pread changed position of file\n");
-            exit(-1);
-        }
-
-        hdfsCloseFile(fs, preadFile);
-
-        // Test correct behaviour for unsupported filesystems
-        localFile = hdfsOpenFile(lfs, writePath, O_RDONLY, 0, 0, 0);
-
-        if (hdfsFileUsesDirectPread(localFile)) {
-            fprintf(stderr, "Direct pread support incorrectly detected for local "
-                            "filesystem\n");
-            exit(-1);
         }
 
         hdfsCloseFile(lfs, localFile);
