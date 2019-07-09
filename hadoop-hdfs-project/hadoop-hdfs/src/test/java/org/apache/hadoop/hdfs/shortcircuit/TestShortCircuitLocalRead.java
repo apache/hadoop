@@ -622,11 +622,12 @@ public class TestShortCircuitLocalRead {
     stm.write(fileData);
     stm.close();
     try {
-      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, conf,
-          shortCircuitFails);
-      assertFalse(true);
-    } catch (UnsupportedOperationException unex) {
-      // RemoteBlockReader have unsupported method read(ByteBuffer bf)
+      checkFileContent(uri, file1, fileData, readOffset, shortCircuitUser, 
+          conf, shortCircuitFails);
+      //RemoteBlockReader have unsupported method read(ByteBuffer bf)
+      assertTrue(
+          "RemoteBlockReader unsupported method read(ByteBuffer bf) error",
+          checkUnsupportedMethod(fs, file1, fileData, readOffset));
     } catch(IOException e) {
       throw new IOException(
           "doTestShortCircuitReadWithRemoteBlockReader ex error ", e);
@@ -636,6 +637,20 @@ public class TestShortCircuitLocalRead {
       fs.close();
       cluster.shutdown();
     }
+  }
+
+  private boolean checkUnsupportedMethod(FileSystem fs, Path file,
+      byte[] expected, int readOffset) throws IOException {
+    HdfsDataInputStream stm = (HdfsDataInputStream)fs.open(file);
+    ByteBuffer actual =
+        ByteBuffer.allocateDirect(expected.length - readOffset);
+    IOUtils.skipFully(stm, readOffset);
+    try {
+      stm.read(actual);
+    } catch(UnsupportedOperationException unex) {
+      return true;
+    }
+    return false;
   }
 
 }
