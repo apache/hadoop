@@ -18,34 +18,11 @@
 
 package org.apache.hadoop.ozone.recon;
 
-import static org.apache.hadoop.ozone.OzoneConsts.CONTAINER_DB_SUFFIX;
+import org.apache.hadoop.ozone.recon.types.GuiceInjectorUtilsForTests;
 
 /**
- * Recon Server constants file.
+ * Implementation for GuiceInjectorUtilsForTests.
  */
-public final class ReconConstants {
-
-  private ReconConstants() {
-    // Never Constructed
-  }
-
-  public static final String RECON_CONTAINER_DB = "recon-" +
-      CONTAINER_DB_SUFFIX;
-
-  public static final String CONTAINER_COUNT_KEY = "totalCount";
-
-  public static final String RECON_OM_SNAPSHOT_DB =
-      "om.snapshot.db";
-
-  public static final String CONTAINER_KEY_TABLE =
-      "containerKeyTable";
-
-  public static final String CONTAINER_KEY_COUNT_TABLE =
-      "containerKeyCountTable";
-
-  public static final String FETCH_ALL = "-1";
-  public static final String RECON_QUERY_PREVKEY = "prevKey";
-  public static final String PREV_CONTAINER_ID_DEFAULT_VALUE = "0";
-  public static final String RECON_QUERY_LIMIT = "limit";
-
+public class GuiceInjectorUtilsForTestsImpl implements
+    GuiceInjectorUtilsForTests {
 }

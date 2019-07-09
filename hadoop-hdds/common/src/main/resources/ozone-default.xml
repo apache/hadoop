@@ -659,7 +659,7 @@
     <value/>
     <tag>OZONE, OM, SCM, CONTAINER, STORAGE, REQUIRED</tag>
     <description>
-      This setting is the fallback location for SCM, OM and DataNodes
+      This setting is the fallback location for SCM, OM, Recon and DataNodes
       to store their metadata. This setting may be used only in test/PoC
       clusters to simplify configuration.
 
@@ -2457,7 +2457,7 @@
     <value/>
     <tag>OZONE, RECON</tag>
     <description>
-      Ozone Recon datbase password.
+      Ozone Recon database password.
     </description>
   </property>
   <property>
@@ -2484,7 +2484,7 @@
     <description>
       The max active connections to the SQL database. The default SQLite
       database only allows single active connection, set this to a
-      resonable value like 10, for external production database.
+      reasonable value like 10, for external production database.
     </description>
   </property>
   <property>
