@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_OM_SNAPSHOT_DB_DIR;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -26,17 +25,15 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
+import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
-import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.junit.Assert;
@@ -50,8 +47,6 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
 
 /**
@@ -66,7 +61,10 @@ public class TestOzoneManagerServiceProviderImpl extends
   private OMMetadataManager omMetadataManager;
   private ReconOMMetadataManager reconOMMetadataManager;
   private Injector injector;
+  private GuiceInjectorUtilsForTestsImpl guiceInjectorTest =
+      new GuiceInjectorUtilsForTestsImpl();
   private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
+  private boolean isSetupDone = false;
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -74,25 +72,17 @@ public class TestOzoneManagerServiceProviderImpl extends
   @Before
   public void setUp() throws Exception {
     omMetadataManager = initializeNewOmMetadataManager();
-    injector = Guice.createInjector(new AbstractModule() {
-      @Override
-      protected void configure() {
-        try {
-          initializeNewOmMetadataManager();
-          writeDataToOm(omMetadataManager, "key_one");
-          bind(OzoneConfiguration.class).toInstance(
-              getTestOzoneConfiguration());
-          reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
-          bind(ReconOMMetadataManager.class).toInstance(reconOMMetadataManager);
-          ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
-              getTestOzoneConfiguration());
-          bind(OzoneManagerServiceProvider.class)
-              .toInstance(ozoneManagerServiceProvider);
-        } catch (IOException e) {
-          Assert.fail();
-        }
-      }
-    });
+    writeDataToOm(omMetadataManager, "key_one");
+    reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
+    ozoneManagerServiceProvider =
+        new OzoneManagerServiceProviderImpl(
+            guiceInjectorTest.getTestOzoneConfiguration(temporaryFolder));
+    if (!isSetupDone) {
+      injector = guiceInjectorTest.getInjector(ozoneManagerServiceProvider,
+          reconOMMetadataManager, temporaryFolder);
+
+      isSetupDone = true;
+    }
   }
 
   @Test
@@ -168,17 +158,4 @@ public class TestOzoneManagerServiceProviderImpl extends
     assertTrue(checkpoint.getCheckpointLocation().toFile()
         .listFiles().length == 2);
   }
-
-  /**
-   * Get Test OzoneConfiguration instance.
-   * @return OzoneConfiguration
-   * @throws IOException ioEx.
-   */
-  private OzoneConfiguration getTestOzoneConfiguration() throws IOException {
-    OzoneConfiguration configuration = new OzoneConfiguration();
-    configuration.set(OZONE_RECON_OM_SNAPSHOT_DB_DIR,
-        temporaryFolder.newFolder().getAbsolutePath());
-    return configuration;
-  }
-
 }

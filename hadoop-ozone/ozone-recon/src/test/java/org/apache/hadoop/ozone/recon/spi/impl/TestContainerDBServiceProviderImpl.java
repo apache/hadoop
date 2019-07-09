@@ -18,67 +18,93 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
-import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
 import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
-import org.apache.hadoop.utils.db.DBStore;
-import org.junit.After;
+import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
+import org.jooq.impl.DSL;
+import org.jooq.impl.DefaultConfiguration;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Rule;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Singleton;
+
+import javax.sql.DataSource;
 
 /**
  * Unit Tests for ContainerDBServiceProviderImpl.
  */
 public class TestContainerDBServiceProviderImpl {
 
-  @Rule
-  public TemporaryFolder tempFolder = new TemporaryFolder();
+  @ClassRule
+  public static TemporaryFolder tempFolder = new TemporaryFolder();
+  private static ContainerDBServiceProvider containerDbServiceProvider;
+  private static Injector injector;
+  private static GuiceInjectorUtilsForTestsImpl guiceInjectorTest =
+      new GuiceInjectorUtilsForTestsImpl();
 
-  private ContainerDBServiceProvider containerDbServiceProvider;
-  private Injector injector;
+  private String keyPrefix1 = "V3/B1/K1";
+  private String keyPrefix2 = "V3/B1/K2";
+  private String keyPrefix3 = "V3/B2/K1";
 
-  @Before
-  public void setUp() throws IOException {
-    tempFolder.create();
-    injector = Guice.createInjector(new AbstractModule() {
-      @Override
-      protected void configure() {
-        File dbDir = tempFolder.getRoot();
-        OzoneConfiguration configuration = new OzoneConfiguration();
-        configuration.set(OZONE_RECON_DB_DIR, dbDir.getAbsolutePath());
-        bind(OzoneConfiguration.class).toInstance(configuration);
-        bind(DBStore.class).toProvider(ReconContainerDBProvider.class).in(
-            Singleton.class);
-        bind(ContainerDBServiceProvider.class).to(
-            ContainerDBServiceProviderImpl.class).in(Singleton.class);
-      }
-    });
-    containerDbServiceProvider = injector.getInstance(
-        ContainerDBServiceProvider.class);
+  private void populateKeysInContainers(long containerId1, long containerId2)
+      throws Exception {
+
+    ContainerKeyPrefix containerKeyPrefix1 = new
+        ContainerKeyPrefix(containerId1, keyPrefix1, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
+        1);
+
+    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
+        containerId1, keyPrefix2, 0);
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
+        2);
+
+    ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
+        containerId2, keyPrefix3, 0);
+
+    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
+        3);
   }
 
-  @After
-  public void tearDown() throws Exception {
-    tempFolder.delete();
+  private static void initializeInjector() throws Exception {
+    injector = guiceInjectorTest.getInjector(
+        null, null, tempFolder);
+  }
+
+  @BeforeClass
+  public static void setupOnce() throws Exception {
+
+    initializeInjector();
+
+    DSL.using(new DefaultConfiguration().set(
+        injector.getInstance(DataSource.class)));
+
+    containerDbServiceProvider = injector.getInstance(
+        ContainerDBServiceProvider.class);
+
+    StatsSchemaDefinition schemaDefinition = injector.getInstance(
+        StatsSchemaDefinition.class);
+    schemaDefinition.initializeSchema();
+  }
+
+  @Before
+  public void setUp() throws Exception {
+    // Reset containerDB before running each test
+    containerDbServiceProvider.initNewContainerDB(null);
   }
 
   @Test
@@ -104,7 +130,7 @@ public class TestContainerDBServiceProviderImpl {
     }
 
     assertEquals(1, containerDbServiceProvider
-        .getCountForForContainerKeyPrefix(ckp1).intValue());
+        .getCountForContainerKeyPrefix(ckp1).intValue());
 
     prefixCounts.clear();
     prefixCounts.put(ckp2, 12);
@@ -127,7 +153,7 @@ public class TestContainerDBServiceProviderImpl {
     assertEquals(15, keyPrefixesForContainer.get(ckp5).intValue());
 
     assertEquals(0, containerDbServiceProvider
-        .getCountForForContainerKeyPrefix(ckp1).intValue());
+        .getCountForContainerKeyPrefix(ckp1).intValue());
   }
 
   @Test
@@ -135,9 +161,9 @@ public class TestContainerDBServiceProviderImpl {
 
     long containerId = System.currentTimeMillis();
     Map<String, Integer> prefixCounts = new HashMap<>();
-    prefixCounts.put("V1/B1/K1", 1);
-    prefixCounts.put("V1/B1/K2", 2);
-    prefixCounts.put("V1/B2/K3", 3);
+    prefixCounts.put(keyPrefix1, 1);
+    prefixCounts.put(keyPrefix2, 2);
+    prefixCounts.put(keyPrefix3, 3);
 
     for (String prefix : prefixCounts.keySet()) {
       ContainerKeyPrefix containerKeyPrefix = new ContainerKeyPrefix(
@@ -146,89 +172,119 @@ public class TestContainerDBServiceProviderImpl {
           containerKeyPrefix, prefixCounts.get(prefix));
     }
 
-    Assert.assertTrue(
-        containerDbServiceProvider.getCountForForContainerKeyPrefix(
-            new ContainerKeyPrefix(containerId, "V1/B1/K1",
-                0)) == 1);
-    Assert.assertTrue(
-        containerDbServiceProvider.getCountForForContainerKeyPrefix(
-            new ContainerKeyPrefix(containerId, "V1/B1/K2",
-                0)) == 2);
-    Assert.assertTrue(
-        containerDbServiceProvider.getCountForForContainerKeyPrefix(
-            new ContainerKeyPrefix(containerId, "V1/B2/K3",
-                0)) == 3);
+    Assert.assertEquals(1,
+        containerDbServiceProvider.getCountForContainerKeyPrefix(
+            new ContainerKeyPrefix(containerId, keyPrefix1,
+                0)).longValue());
+    Assert.assertEquals(2,
+        containerDbServiceProvider.getCountForContainerKeyPrefix(
+            new ContainerKeyPrefix(containerId, keyPrefix2,
+                0)).longValue());
+    Assert.assertEquals(3,
+        containerDbServiceProvider.getCountForContainerKeyPrefix(
+            new ContainerKeyPrefix(containerId, keyPrefix3,
+                0)).longValue());
   }
 
   @Test
-  public void testGetCountForForContainerKeyPrefix() throws Exception {
+  public void testStoreContainerKeyCount() throws Exception {
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    containerDbServiceProvider.storeContainerKeyCount(containerId, 2L);
+    containerDbServiceProvider.storeContainerKeyCount(nextContainerId, 3L);
+
+    assertEquals(2,
+        containerDbServiceProvider.getKeyCountForContainer(containerId));
+    assertEquals(3,
+        containerDbServiceProvider.getKeyCountForContainer(nextContainerId));
+
+    containerDbServiceProvider.storeContainerKeyCount(containerId, 20L);
+    assertEquals(20,
+        containerDbServiceProvider.getKeyCountForContainer(containerId));
+  }
+
+  @Test
+  public void testGetKeyCountForContainer() throws Exception {
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    containerDbServiceProvider.storeContainerKeyCount(containerId, 2L);
+    containerDbServiceProvider.storeContainerKeyCount(nextContainerId, 3L);
+
+    assertEquals(2,
+        containerDbServiceProvider.getKeyCountForContainer(containerId));
+    assertEquals(3,
+        containerDbServiceProvider.getKeyCountForContainer(nextContainerId));
+
+    assertEquals(0,
+        containerDbServiceProvider.getKeyCountForContainer(5L));
+  }
+
+  @Test
+  public void testDoesContainerExists() throws Exception {
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    containerDbServiceProvider.storeContainerKeyCount(containerId, 2L);
+    containerDbServiceProvider.storeContainerKeyCount(nextContainerId, 3L);
+
+    assertTrue(containerDbServiceProvider.doesContainerExists(containerId));
+    assertTrue(containerDbServiceProvider.doesContainerExists(nextContainerId));
+    assertFalse(containerDbServiceProvider.doesContainerExists(0L));
+    assertFalse(containerDbServiceProvider.doesContainerExists(3L));
+  }
+
+  @Test
+  public void testGetCountForContainerKeyPrefix() throws Exception {
     long containerId = System.currentTimeMillis();
 
     containerDbServiceProvider.storeContainerKeyMapping(new
-        ContainerKeyPrefix(containerId, "V2/B1/K1"), 2);
+        ContainerKeyPrefix(containerId, keyPrefix1), 2);
 
     Integer count = containerDbServiceProvider.
-        getCountForForContainerKeyPrefix(new ContainerKeyPrefix(containerId,
-            "V2/B1/K1"));
-    assertTrue(count == 2);
+        getCountForContainerKeyPrefix(new ContainerKeyPrefix(containerId,
+            keyPrefix1));
+    assertEquals(2L, count.longValue());
+
+    count = containerDbServiceProvider.
+        getCountForContainerKeyPrefix(new ContainerKeyPrefix(containerId,
+            "invalid"));
+    assertEquals(0L, count.longValue());
   }
 
   @Test
   public void testGetKeyPrefixesForContainer() throws Exception {
-    long containerId = System.currentTimeMillis();
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    populateKeysInContainers(containerId, nextContainerId);
 
     ContainerKeyPrefix containerKeyPrefix1 = new
-        ContainerKeyPrefix(containerId, "V3/B1/K1", 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
-        1);
-
+        ContainerKeyPrefix(containerId, keyPrefix1, 0);
     ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
-        containerId, "V3/B1/K2", 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
-        2);
-
-    long nextContainerId = containerId + 1000L;
+        containerId, keyPrefix2, 0);
     ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
-        nextContainerId, "V3/B2/K1", 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
-        3);
+        nextContainerId, keyPrefix3, 0);
+
 
     Map<ContainerKeyPrefix, Integer> keyPrefixMap =
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
-    assertTrue(keyPrefixMap.size() == 2);
+    assertEquals(2, keyPrefixMap.size());
 
-    assertTrue(keyPrefixMap.get(containerKeyPrefix1) == 1);
-    assertTrue(keyPrefixMap.get(containerKeyPrefix2) == 2);
+    assertEquals(1, keyPrefixMap.get(containerKeyPrefix1).longValue());
+    assertEquals(2, keyPrefixMap.get(containerKeyPrefix2).longValue());
 
     keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
         nextContainerId);
-    assertTrue(keyPrefixMap.size() == 1);
-    assertTrue(keyPrefixMap.get(containerKeyPrefix3) == 3);
+    assertEquals(1, keyPrefixMap.size());
+    assertEquals(3, keyPrefixMap.get(containerKeyPrefix3).longValue());
   }
 
   @Test
   public void testGetKeyPrefixesForContainerWithKeyPrefix() throws Exception {
-    long containerId = System.currentTimeMillis();
-
-    String keyPrefix1 = "V3/B1/K1";
-    String keyPrefix2 = "V3/B1/K2";
-    String keyPrefix3 = "V3/B2/K1";
-
-    ContainerKeyPrefix containerKeyPrefix1 = new
-        ContainerKeyPrefix(containerId, keyPrefix1, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
-        1);
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    populateKeysInContainers(containerId, nextContainerId);
 
     ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
         containerId, keyPrefix2, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
-        2);
-
-    long nextContainerId = containerId + 1000L;
-    ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
-        nextContainerId, keyPrefix3, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
-        3);
 
     Map<ContainerKeyPrefix, Integer> keyPrefixMap =
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId,
@@ -250,33 +306,15 @@ public class TestContainerDBServiceProviderImpl {
     assertEquals(0, keyPrefixMap.size());
 
     keyPrefixMap = containerDbServiceProvider.getKeyPrefixesForContainer(
-        1L, "");
+        10L, "");
     assertEquals(0, keyPrefixMap.size());
   }
 
   @Test
-  public void testGetContainersWithPrevKey() throws Exception {
-    long containerId = System.currentTimeMillis();
-
-    String keyPrefix1 = "V3/B1/K1";
-    String keyPrefix2 = "V3/B1/K2";
-    String keyPrefix3 = "V3/B2/K1";
-
-    ContainerKeyPrefix containerKeyPrefix1 = new
-        ContainerKeyPrefix(containerId, keyPrefix1, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
-        1);
-
-    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
-        containerId, keyPrefix2, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
-        2);
-
-    long nextContainerId = containerId + 1000L;
-    ContainerKeyPrefix containerKeyPrefix3 = new ContainerKeyPrefix(
-        nextContainerId, keyPrefix3, 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix3,
-        3);
+  public void testGetContainersWithPrevContainer() throws Exception {
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    populateKeysInContainers(containerId, nextContainerId);
 
     Map<Long, ContainerMetadata> containerMap =
         containerDbServiceProvider.getContainers(-1, 0L);
@@ -304,7 +342,7 @@ public class TestContainerDBServiceProviderImpl {
 
     // test for negative cases
     containerMap = containerDbServiceProvider.getContainers(
-        -1, 1L);
+        -1, 10L);
     assertEquals(0, containerMap.size());
 
     containerMap = containerDbServiceProvider.getContainers(
@@ -313,27 +351,55 @@ public class TestContainerDBServiceProviderImpl {
   }
 
   @Test
-  public void testDeleteContainerMapping() throws IOException {
-    long containerId = System.currentTimeMillis();
-
-    ContainerKeyPrefix containerKeyPrefix1 = new
-        ContainerKeyPrefix(containerId, "V3/B1/K1", 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix1,
-        1);
-
-    ContainerKeyPrefix containerKeyPrefix2 = new ContainerKeyPrefix(
-        containerId, "V3/B1/K2", 0);
-    containerDbServiceProvider.storeContainerKeyMapping(containerKeyPrefix2,
-        2);
+  public void testDeleteContainerMapping() throws Exception {
+    long containerId = 1L;
+    long nextContainerId = 2L;
+    populateKeysInContainers(containerId, nextContainerId);
 
     Map<ContainerKeyPrefix, Integer> keyPrefixMap =
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
-    assertTrue(keyPrefixMap.size() == 2);
+    assertEquals(2, keyPrefixMap.size());
 
     containerDbServiceProvider.deleteContainerMapping(new ContainerKeyPrefix(
-        containerId, "V3/B1/K2", 0));
+        containerId, keyPrefix2, 0));
     keyPrefixMap =
         containerDbServiceProvider.getKeyPrefixesForContainer(containerId);
-    assertTrue(keyPrefixMap.size() == 1);
+    assertEquals(1, keyPrefixMap.size());
+  }
+
+  @Test
+  public void testGetCountForContainers() throws Exception {
+
+    assertEquals(0, containerDbServiceProvider.getCountForContainers());
+
+    containerDbServiceProvider.storeContainerCount(5L);
+
+    assertEquals(5L, containerDbServiceProvider.getCountForContainers());
+    containerDbServiceProvider.incrementContainerCountBy(1L);
+
+    assertEquals(6L, containerDbServiceProvider.getCountForContainers());
+
+    containerDbServiceProvider.storeContainerCount(10L);
+    assertEquals(10L, containerDbServiceProvider.getCountForContainers());
+  }
+
+  @Test
+  public void testStoreContainerCount() throws Exception {
+    containerDbServiceProvider.storeContainerCount(3L);
+    assertEquals(3L, containerDbServiceProvider.getCountForContainers());
+
+    containerDbServiceProvider.storeContainerCount(5L);
+    assertEquals(5L, containerDbServiceProvider.getCountForContainers());
+  }
+
+  @Test
+  public void testIncrementContainerCountBy() throws Exception {
+    assertEquals(0, containerDbServiceProvider.getCountForContainers());
+
+    containerDbServiceProvider.incrementContainerCountBy(1L);
+    assertEquals(1L, containerDbServiceProvider.getCountForContainers());
+
+    containerDbServiceProvider.incrementContainerCountBy(3L);
+    assertEquals(4L, containerDbServiceProvider.getCountForContainers());
   }
 }
