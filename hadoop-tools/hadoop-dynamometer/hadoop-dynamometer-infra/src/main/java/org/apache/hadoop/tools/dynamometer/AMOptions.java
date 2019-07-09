@@ -30,7 +30,7 @@ import org.apache.hadoop.conf.Configuration;
  * Options supplied to the Client which are then passed through to the
  * ApplicationMaster.
  */
-class AMOptions {
+final class AMOptions {
 
   public static final String NAMENODE_MEMORY_MB_ARG = "namenode_memory_mb";
   public static final String NAMENODE_MEMORY_MB_DEFAULT = "2048";
@@ -75,9 +75,10 @@ class AMOptions {
   // Extended shellEnv including custom environment variables
   private final Map<String, String> shellEnv;
 
-  AMOptions(int datanodeMemoryMB, int datanodeVirtualCores, String datanodeArgs,
-      String datanodeNodeLabelExpression, int datanodesPerCluster,
-      String datanodeLaunchDelay, int namenodeMemoryMB,
+  @SuppressWarnings("checkstyle:parameternumber")
+  private AMOptions(int datanodeMemoryMB, int datanodeVirtualCores,
+      String datanodeArgs, String datanodeNodeLabelExpression,
+      int datanodesPerCluster, String datanodeLaunchDelay, int namenodeMemoryMB,
       int namenodeVirtualCores, String namenodeArgs,
       String namenodeNodeLabelExpression, int namenodeMetricsPeriod,
       String namenodeNameDir, String namenodeEditsDir,

@@ -124,7 +124,7 @@ public class WorkloadDriver extends Configured implements Tool {
       startTimestampMs = tmpConf.getTimeDuration(tmpConfKey, 0,
           TimeUnit.MILLISECONDS) + System.currentTimeMillis();
     }
-    Class<? extends WorkloadMapper> mapperClass = getMapperClass(
+    Class<? extends WorkloadMapper<?, ?>> mapperClass = getMapperClass(
         cli.getOptionValue(MAPPER_CLASS_NAME));
     if (!mapperClass.newInstance().verifyConfigurations(getConf())) {
       System.err
@@ -140,9 +140,8 @@ public class WorkloadDriver extends Configured implements Tool {
   }
 
   public static Job getJobForSubmission(Configuration baseConf, String nnURI,
-      long startTimestampMs, Class<? extends WorkloadMapper> mapperClass)
-      throws IOException, ClassNotFoundException, InstantiationException,
-      IllegalAccessException {
+      long startTimestampMs, Class<? extends WorkloadMapper<?, ?>> mapperClass)
+      throws IOException, InstantiationException, IllegalAccessException {
     Configuration conf = new Configuration(baseConf);
     conf.set(NN_URI, nnURI);
     conf.setBoolean(MRJobConfig.MAP_SPECULATIVE, false);
@@ -173,7 +172,10 @@ public class WorkloadDriver extends Configured implements Tool {
     System.exit(ToolRunner.run(driver, args));
   }
 
-  private Class<? extends WorkloadMapper> getMapperClass(String className)
+  // The cast is actually checked via isAssignableFrom but the compiler doesn't
+  // recognize this
+  @SuppressWarnings("unchecked")
+  private Class<? extends WorkloadMapper<?, ?>> getMapperClass(String className)
       throws ClassNotFoundException {
     if (!className.contains(".")) {
       className = WorkloadDriver.class.getPackage().getName() + "." + className;
@@ -183,7 +185,7 @@ public class WorkloadDriver extends Configured implements Tool {
       throw new IllegalArgumentException(className + " is not a subclass of "
           + WorkloadMapper.class.getCanonicalName());
     }
-    return (Class<? extends WorkloadMapper>) mapperClass;
+    return (Class<? extends WorkloadMapper<?, ?>>) mapperClass;
   }
 
   private String getMapperUsageInfo(String mapperClassName)

@@ -27,6 +27,10 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+// Checkstyle complains about the XML tags even though they are wrapped
+// within <pre> and {@code} tags. The SupressWarnings has to go before the
+// Javadoc to take effect.
+@SuppressWarnings("checkstyle:javadocstyle")
 /**
  * This class parses an fsimage file in XML format. It accepts the file
  * line-by-line and maintains an internal state machine to keep track of

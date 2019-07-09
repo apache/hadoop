@@ -860,11 +860,11 @@ public class Client extends Configured implements Tool {
       String relativePath = file.getAbsolutePath()
           .substring(root.getAbsolutePath().length() + 1);
       try {
-        FileInputStream in = new FileInputStream(file.getAbsolutePath());
-        out.putNextEntry(new ZipEntry(relativePath));
-        IOUtils.copyBytes(in, out, getConf(), false);
-        out.closeEntry();
-        in.close();
+        try (FileInputStream in = new FileInputStream(file.getAbsolutePath())) {
+          out.putNextEntry(new ZipEntry(relativePath));
+          IOUtils.copyBytes(in, out, getConf(), false);
+          out.closeEntry();
+        }
       } catch (FileNotFoundException fnfe) {
         LOG.warn("Skipping file; it is a symlink with a nonexistent target: {}",
             file);
