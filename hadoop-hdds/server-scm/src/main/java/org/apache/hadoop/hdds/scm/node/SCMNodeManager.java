@@ -207,6 +207,7 @@ public class SCMNodeManager implements NodeManager {
   public void close() throws IOException {
     unregisterMXBean();
     metrics.unRegister();
+    nodeStateManager.close();
   }
 
   /**
