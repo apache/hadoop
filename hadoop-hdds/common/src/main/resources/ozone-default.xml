@@ -270,10 +270,10 @@
   </property>
   <property>
     <name>dfs.ratis.leader.election.minimum.timeout.duration</name>
-    <value>1s</value>
+    <value>5s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The minimum timeout duration for ratis leader election.
-        Default is 1s.
+        Default is 5s.
     </description>
   </property>
   <property>
