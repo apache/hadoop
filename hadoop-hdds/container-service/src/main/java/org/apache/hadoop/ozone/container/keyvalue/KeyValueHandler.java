@@ -159,6 +159,11 @@ public class KeyValueHandler extends Handler {
   }
 
   @Override
+  public void stop() {
+    blockDeletingService.shutdown();
+  }
+
+  @Override
   public ContainerCommandResponseProto handle(
       ContainerCommandRequestProto request, Container container,
       DispatcherContext dispatcherContext) {
