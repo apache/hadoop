@@ -37,6 +37,7 @@ enum Type {
   AllocateScmBlock   = 11;
   DeleteScmKeyBlocks = 12;
   GetScmInfo         = 13;
+  SortDatanodes      = 14;
 }
 
 message SCMBlockLocationRequest {
@@ -51,6 +52,7 @@ message SCMBlockLocationRequest {
   optional AllocateScmBlockRequestProto       allocateScmBlockRequest   = 11;
   optional DeleteScmKeyBlocksRequestProto     deleteScmKeyBlocksRequest = 12;
   optional hadoop.hdds.GetScmInfoRequestProto getScmInfoRequest         = 13;
+  optional SortDatanodesRequestProto          sortDatanodesRequest      = 14;
 }
 
 message SCMBlockLocationResponse {
@@ -71,6 +73,7 @@ message SCMBlockLocationResponse {
   optional AllocateScmBlockResponseProto       allocateScmBlockResponse   = 11;
   optional DeleteScmKeyBlocksResponseProto     deleteScmKeyBlocksResponse = 12;
   optional hadoop.hdds.GetScmInfoResponseProto getScmInfoResponse         = 13;
+  optional SortDatanodesResponseProto          sortDatanodesResponse      = 14;
 }
 
 /**
@@ -183,6 +186,19 @@ message AllocateBlockResponse {
  */
 message AllocateScmBlockResponseProto {
   repeated AllocateBlockResponse blocks = 3;
+}
+
+/**
+ * Datanode sort request sent by OM to SCM, it contains
+ * multiple number of datanodes.
+ */
+message SortDatanodesRequestProto{
+  required string client = 1;
+  repeated string nodeNetworkName = 2;
+}
+
+message SortDatanodesResponseProto{
+  repeated DatanodeDetailsProto node = 1;
 }
 
 /**

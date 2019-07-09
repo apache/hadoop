@@ -124,8 +124,8 @@ public final class TestUtils {
         + "." + random.nextInt(256)
         + "." + random.nextInt(256)
         + "." + random.nextInt(256);
-    return createDatanodeDetails(uuid.toString(), "localhost", ipAddress,
-        null);
+    return createDatanodeDetails(uuid.toString(), "localhost" + "-" + ipAddress,
+        ipAddress, null);
   }
 
   /**
