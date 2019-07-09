@@ -147,7 +147,7 @@ public final class ScmConfigKeys {
       "dfs.ratis.leader.election.minimum.timeout.duration";
   public static final TimeDuration
       DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_DEFAULT =
-      TimeDuration.valueOf(1, TimeUnit.SECONDS);
+      TimeDuration.valueOf(5, TimeUnit.SECONDS);
 
   public static final String DFS_RATIS_SNAPSHOT_THRESHOLD_KEY =
       "dfs.ratis.snapshot.threshold";
