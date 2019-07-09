@@ -340,18 +340,19 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       ozoneManager.join();
     }
 
+    if (!hddsDatanodes.isEmpty()) {
+      LOG.info("Shutting the HddsDatanodes");
+      hddsDatanodes.parallelStream()
+          .forEach(dn -> {
+            dn.stop();
+            dn.join();
+          });
+    }
+
     if (scm != null) {
       LOG.info("Stopping the StorageContainerManager");
       scm.stop();
       scm.join();
-    }
-
-    if (!hddsDatanodes.isEmpty()) {
-      LOG.info("Shutting the HddsDatanodes");
-      for (HddsDatanodeService hddsDatanode : hddsDatanodes) {
-        hddsDatanode.stop();
-        hddsDatanode.join();
-      }
     }
   }
 
@@ -568,6 +569,8 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
       conf.set(ScmConfigKeys.OZONE_SCM_DATANODE_ADDRESS_KEY, "127.0.0.1:0");
       conf.set(ScmConfigKeys.OZONE_SCM_HTTP_ADDRESS_KEY, "127.0.0.1:0");
       conf.setInt(ScmConfigKeys.OZONE_SCM_HANDLER_COUNT_KEY, numOfScmHandlers);
+      conf.set(HddsConfigKeys.HDDS_SCM_WAIT_TIME_AFTER_SAFE_MODE_EXIT,
+          "3s");
       configureSCMheartbeat();
     }
 

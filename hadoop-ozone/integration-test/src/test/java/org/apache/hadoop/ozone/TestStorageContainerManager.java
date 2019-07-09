@@ -20,10 +20,8 @@ package org.apache.hadoop.ozone;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.junit.Assert.fail;
-import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -65,7 +63,6 @@ import org.apache.hadoop.hdds.scm.server.SCMClientProtocolServer;
 import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
-import org.apache.hadoop.hdds.server.events.TypedEvent;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
@@ -520,6 +517,11 @@ public class TestStorageContainerManager {
 
     // Stop processing HB
     scm.getDatanodeProtocolServer().stop();
+
+    scm.getContainerManager().updateContainerState(selectedContainer
+        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
+    cluster.restartStorageContainerManager(true);
+    scm = cluster.getStorageContainerManager();
     EventPublisher publisher = mock(EventPublisher.class);
     ReplicationManager replicationManager = scm.getReplicationManager();
     Field f = replicationManager.getClass().getDeclaredField("eventPublisher");
@@ -528,13 +530,6 @@ public class TestStorageContainerManager {
     modifiersField.setAccessible(true);
     modifiersField.setInt(f, f.getModifiers() & ~Modifier.FINAL);
     f.set(replicationManager, publisher);
-
-    doNothing().when(publisher).fireEvent(any(TypedEvent.class),
-        any(CommandForDatanode.class));
-
-    scm.getContainerManager().updateContainerState(selectedContainer
-        .containerID(), HddsProtos.LifeCycleEvent.FINALIZE);
-    cluster.restartStorageContainerManager(true);
     scm.getReplicationManager().start();
     Thread.sleep(2000);
 
@@ -572,7 +567,7 @@ public class TestStorageContainerManager {
           (CloseContainerCommand) cmdRight.getCommand();
       return cmdRight.getDatanodeId().equals(uuid)
           && left.getContainerID() == right.getContainerID()
-          && left.getPipelineID() == right.getPipelineID()
+          && left.getPipelineID().equals(right.getPipelineID())
           && left.getType() == right.getType()
           && left.getProto().equals(right.getProto());
     }

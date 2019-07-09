@@ -84,6 +84,7 @@ import org.apache.hadoop.hdds.server.events.EventQueue;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -189,6 +190,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
   private final OzoneConfiguration configuration;
   private final SafeModeHandler safeModeHandler;
   private SCMContainerMetrics scmContainerMetrics;
+  private MetricsSystem ms;
 
   /**
    *  Network topology Map.
@@ -754,7 +756,7 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         buildRpcServerStartMessage(
             "StorageContainerLocationProtocol RPC server",
             getClientRpcAddress()));
-    DefaultMetricsSystem.initialize("StorageContainerManager");
+    ms = DefaultMetricsSystem.initialize("StorageContainerManager");
 
     commandWatcherLeaseManager.start();
     getClientProtocolServer().start();
@@ -872,6 +874,10 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
       scmMetadataStore.stop();
     } catch (Exception ex) {
       LOG.error("SCM Metadata store stop failed", ex);
+    }
+
+    if (ms != null) {
+      ms.stop();
     }
 
     scmSafeModeManager.stop();

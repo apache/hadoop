@@ -57,6 +57,7 @@ import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Creates a Grpc server endpoint that acts as the communication layer for
@@ -172,6 +173,11 @@ public final class XceiverServerGrpc extends XceiverServer {
   public void stop() {
     if (isStarted) {
       server.shutdown();
+      try {
+        server.awaitTermination(5, TimeUnit.SECONDS);
+      } catch (Exception e) {
+        LOG.error("failed to shutdown XceiverServerGrpc", e);
+      }
       isStarted = false;
     }
   }
