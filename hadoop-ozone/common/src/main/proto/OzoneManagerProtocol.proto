@@ -90,6 +90,7 @@ enum Type {
   SetAcl = 77;
   GetAcl = 78;
 
+  PurgeKeys = 81;
 }
 
 message OMRequest {
@@ -125,7 +126,6 @@ message OMRequest {
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
 
-
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
   optional S3DeleteBucketRequest            deleteS3BucketRequest          = 42;
   optional S3BucketInfoRequest              infoS3BucketRequest            = 43;
@@ -153,6 +153,8 @@ message OMRequest {
   optional RemoveAclRequest                 removeAclRequest               = 76;
   optional SetAclRequest                    setAclRequest                  = 77;
   optional GetAclRequest                    getAclRequest                  = 78;
+
+  optional PurgeKeysRequest                 purgeKeysRequest               = 81;
 }
 
 message OMResponse {
@@ -217,6 +219,8 @@ message OMResponse {
   optional RemoveAclResponse                 removeAclResponse             = 76;
   optional SetAclResponse                   setAclResponse                 = 77;
   optional GetAclResponse                    getAclResponse                = 78;
+
+  optional PurgeKeysResponse                  purgeKeysResponse            = 81;
 }
 
 enum Status {
@@ -760,6 +764,14 @@ message DeleteKeyResponse {
     // (similar to a cookie).
     optional uint64 ID = 3;
     optional uint64 openVersion = 4;
+}
+
+message PurgeKeysRequest {
+    repeated string keys = 1;
+}
+
+message PurgeKeysResponse {
+
 }
 
 message OMTokenProto {

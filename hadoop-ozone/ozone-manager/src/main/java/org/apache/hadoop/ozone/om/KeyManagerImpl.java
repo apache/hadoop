@@ -138,6 +138,7 @@ public class KeyManagerImpl implements KeyManager {
   /**
    * A SCM block client, used to talk to SCM to allocate block during putKey.
    */
+  private final OzoneManager ozoneManager;
   private final ScmClient scmClient;
   private final OMMetadataManager metadataManager;
   private final long scmBlockSize;
@@ -157,18 +158,20 @@ public class KeyManagerImpl implements KeyManager {
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
-    this(new ScmClient(scmBlockClient, null), metadataManager,
+    this(null, new ScmClient(scmBlockClient, null), metadataManager,
         conf, omId, secretManager, null, null);
   }
 
-  public KeyManagerImpl(ScmClient scmClient,
+  public KeyManagerImpl(OzoneManager om, ScmClient scmClient,
+      OzoneConfiguration conf, String omId) {
+    this (om, scmClient, om.getMetadataManager(), conf, omId,
+        om.getBlockTokenMgr(), om.getKmsProvider(), om.getPrefixManager());
+  }
+
+  public KeyManagerImpl(OzoneManager om, ScmClient scmClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager,
-      KeyProviderCryptoExtension kmsProvider,
-      PrefixManager prefixManager) {
-    this.scmClient = scmClient;
-    this.metadataManager = metadataManager;
-    this.prefixManager = prefixManager;
+      KeyProviderCryptoExtension kmsProvider, PrefixManager prefixManager) {
     this.scmBlockSize = (long) conf
         .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
             StorageUnit.BYTES);
@@ -177,13 +180,22 @@ public class KeyManagerImpl implements KeyManager {
     this.preallocateBlocksMax = conf.getInt(
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
-    this.omId = omId;
-    start(conf);
-    this.secretManager = secretManager;
     this.grpcBlockTokenEnabled = conf.getBoolean(
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+
+    this.ozoneManager = om;
+    this.omId = omId;
+    this.scmClient = scmClient;
+    this.metadataManager = metadataManager;
+    this.prefixManager = prefixManager;
+    this.secretManager = secretManager;
     this.kmsProvider = kmsProvider;
+
+    start(conf);
   }
 
   @Override
@@ -197,8 +209,9 @@ public class KeyManagerImpl implements KeyManager {
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
           TimeUnit.MILLISECONDS);
-      keyDeletingService = new KeyDeletingService(scmClient.getBlockClient(),
-          this, blockDeleteInterval, serviceTimeout, configuration);
+      keyDeletingService = new KeyDeletingService(ozoneManager,
+          scmClient.getBlockClient(), this, blockDeleteInterval,
+          serviceTimeout, configuration);
       keyDeletingService.start();
     }
   }

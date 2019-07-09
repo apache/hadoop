@@ -470,4 +470,15 @@ public final class OmUtils {
     }
     return dirFile;
   }
+
+  /**
+   * Returns the DB key name of a deleted key in OM metadata store. The
+   * deleted key name is the <keyName>_<deletionTimestamp>.
+   * @param key Original key name
+   * @param timestamp timestamp of deletion
+   * @return Deleted key name
+   */
+  public static String getDeletedKey(String key, long timestamp) {
+    return key + "_" + timestamp;
+  }
 }
