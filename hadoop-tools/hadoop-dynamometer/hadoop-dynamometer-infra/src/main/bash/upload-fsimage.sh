@@ -38,12 +38,12 @@ else
   name_dir="$(pwd)"
 fi
 
-image_file_count="$(find -H "${name_dir}" -depth 1 -name "fsimage_*$image_txid" -type f | wc -l)"
+image_file_count="$(find -H "${name_dir}" -maxdepth 1 -mindepth 1 -name "fsimage_*$image_txid" -type f | wc -l)"
 if [[ "$image_file_count" != 1 ]]; then
   echo "Error; found $image_file_count matching fsimage files."
   exit 1
 fi
-image_file="$(find -H "${name_dir}" -depth 1 -name "fsimage_*$image_txid" -type f)"
+image_file="$(find -H "${name_dir}" -maxdepth 1 -mindepth 1 -name "fsimage_*$image_txid" -type f)"
 image_file_name="$(basename "${image_file}")"
 echo "Using fsimage: $image_file_name"
 image_file_md5="${image_file}.md5"

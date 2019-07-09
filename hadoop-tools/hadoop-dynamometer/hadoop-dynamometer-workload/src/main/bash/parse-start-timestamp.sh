@@ -38,12 +38,12 @@ else
   edits_dir="$(pwd)"
 fi
 
-edits_file_count="$(find -H "${edits_dir}" -depth 1 -type f -name "edits_*-*$image_txid" | wc -l)"
+edits_file_count="$(find -H "${edits_dir}" -maxdepth 1 -type f -name "edits_*-*$image_txid" | wc -l)"
 if [[ "$edits_file_count" != 1 ]]; then
   echo "Error; found $edits_file_count matching edit files."
   exit 1
 fi
-edits_file="$(find -H "${edits_dir}" -depth 1 -type f -name "edits_*-*$image_txid")"
+edits_file="$(find -H "${edits_dir}" -maxdepth 1 -type f -name "edits_*-*$image_txid")"
 
 # Shellcheck complains about the $ in the single-quote because it won't expand, but this is intentional
 # shellcheck disable=SC2016
