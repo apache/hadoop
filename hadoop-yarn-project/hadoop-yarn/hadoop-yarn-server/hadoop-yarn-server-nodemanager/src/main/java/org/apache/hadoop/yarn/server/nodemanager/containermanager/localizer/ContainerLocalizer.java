@@ -132,7 +132,7 @@ public class ContainerLocalizer {
     this.localDirs = localDirs;
     this.localizerId = localizerId;
     this.recordFactory = recordFactory;
-    this.conf = new YarnConfiguration();
+    this.conf = initConfiguration();
     this.diskValidator = DiskValidatorFactory.getInstance(
         conf.get(YarnConfiguration.DISK_VALIDATOR,
             YarnConfiguration.DEFAULT_DISK_VALIDATOR));
@@ -140,6 +140,12 @@ public class ContainerLocalizer {
         " is loaded.");
     this.appCacheDirContextName = String.format(APPCACHE_CTXT_FMT, appId);
     this.pendingResources = new HashMap<LocalResource,Future<Path>>();
+  }
+
+  @VisibleForTesting
+  @Private
+  Configuration initConfiguration() {
+    return new YarnConfiguration();
   }
 
   @Private
@@ -251,7 +257,8 @@ public class ContainerLocalizer {
     if (rsrc.getVisibility() == LocalResourceVisibility.PRIVATE) {
       createParentDirs(destDirPath);
     }
-    diskValidator.checkStatus(new File(destDirPath.toUri().getRawPath()));
+    diskValidator
+        .checkStatus(new File(destDirPath.getParent().toUri().getRawPath()));
     return new FSDownloadWrapper(lfs, ugi, conf, destDirPath, rsrc);
   }
 
