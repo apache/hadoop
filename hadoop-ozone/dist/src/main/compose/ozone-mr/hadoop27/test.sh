@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -14,7 +15,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-HDDS_VERSION=${hdds.version}
-HADOOP_IMAGE=apache/hadoop
-HADOOP_VERSION=3
-HADOOP_RUNNER_VERSION=${docker.ozone-runner.version}
+COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export COMPOSE_DIR
+
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../../testlib.sh"
+
+start_docker_env
+
+execute_robot_test scm createmrenv.robot
+
+
+#rm is the container name (resource manager) and not the rm command
+execute_command_in_container rm sudo apk add --update py-pip
+execute_command_in_container rm sudo pip install robotframework
+
+# reinitialize the directories to use
+export OZONE_DIR=/opt/ozone
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../../testlib.sh"
+
+execute_robot_test rm ozonefs/hadoopo3fs.robot
+
+execute_robot_test rm -v hadoop.version:2.7.7 mapreduce.robot
+
+stop_docker_env
+
+generate_report

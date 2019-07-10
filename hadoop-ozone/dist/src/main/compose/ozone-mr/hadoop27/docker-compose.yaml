@@ -1,0 +1,102 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+version: "3"
+services:
+  datanode:
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    volumes:
+      - ../../..:/opt/hadoop
+    ports:
+      - 9864
+    command: ["/opt/hadoop/bin/ozone","datanode"]
+    env_file:
+      - docker-config
+      - ../common-config
+  om:
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    hostname: om
+    volumes:
+      - ../../..:/opt/hadoop
+    ports:
+      - 9874:9874
+    environment:
+      WAITFOR: scm:9876
+      ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+    env_file:
+      - docker-config
+      - ../common-config
+    command: ["/opt/hadoop/bin/ozone","om"]
+  s3g:
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    hostname: s3g
+    volumes:
+      - ../../..:/opt/hadoop
+    ports:
+      - 9878:9878
+    env_file:
+      - ./docker-config
+      - ../common-config
+    command: ["/opt/hadoop/bin/ozone","s3g"]
+  scm:
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    hostname: scm
+    volumes:
+      - ../../..:/opt/hadoop
+    ports:
+      - 9876:9876
+    env_file:
+      - docker-config
+      - ../common-config
+    environment:
+      ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
+    command: ["/opt/hadoop/bin/ozone","scm"]
+  rm:
+    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
+    hostname: rm
+    volumes:
+      - ../../..:/opt/ozone
+    ports:
+      - 8088:8088
+    env_file:
+      - ./docker-config
+      - ../common-config
+    environment:
+      HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+    command: ["yarn", "resourcemanager"]
+  nm:
+    image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
+    hostname: nm
+    volumes:
+      - ../../..:/opt/ozone
+    env_file:
+      - ./docker-config
+      - ../common-config
+    environment:
+      HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-legacy-@project.version@.jar
+      WAIT_FOR: rm:8088
+    command: ["yarn","nodemanager"]
+# Optional section: comment out this part to get DNS resolution for all the containers.
+#  dns:
+#    image: andyshinn/dnsmasq:2.76
+#    ports:
+#        - 53:53/udp
+#        - 53:53/tcp
+#    volumes:
+#      - "/var/run/docker.sock:/var/run/docker.sock"
+#    command:
+#      - "-k"
+#      - "-d"
