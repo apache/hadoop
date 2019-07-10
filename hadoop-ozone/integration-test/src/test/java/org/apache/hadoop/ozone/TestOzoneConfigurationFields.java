@@ -24,6 +24,8 @@ import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.ozone.recon.ReconServerConfigKeys;
 import org.apache.hadoop.ozone.s3.S3GatewayConfigKeys;
 
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS_NATIVE;
+
 /**
  * Tests if configuration constants documented in ozone-defaults.xml.
  */
@@ -49,6 +51,7 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_SECURITY_PROVIDER);
     configurationPropsToSkipCompare.add(HddsConfigKeys.HDDS_GRPC_TLS_TEST_CERT);
     configurationPropsToSkipCompare.add(OMConfigKeys.OZONE_OM_NODES_KEY);
+    configurationPropsToSkipCompare.add(OZONE_ACL_AUTHORIZER_CLASS_NATIVE);
     configurationPropsToSkipCompare.add(OzoneConfigKeys.
         OZONE_S3_TOKEN_MAX_LIFETIME_KEY);
   }

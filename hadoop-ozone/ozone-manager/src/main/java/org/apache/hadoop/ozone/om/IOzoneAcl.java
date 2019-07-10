@@ -17,7 +17,9 @@
 package org.apache.hadoop.ozone.om;
 
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 
 import java.io.IOException;
 import java.util.List;
@@ -64,4 +66,15 @@ public interface IOzoneAcl {
    * @throws IOException if there is error.
    * */
   List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
+
+  /**
+   * Check access for given ozoneObject.
+   *
+   * @param ozObject object for which access needs to be checked.
+   * @param context Context object encapsulating all user related information.
+   * @throws org.apache.hadoop.ozone.om.exceptions.OMException
+   * @return true if user has access else false.
+   */
+  boolean checkAccess(OzoneObj ozObject, RequestContext context)
+      throws OMException;
 }

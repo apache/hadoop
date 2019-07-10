@@ -18,15 +18,17 @@
 
 package org.apache.hadoop.ozone.om.helpers;
 
+import com.google.protobuf.ByteString;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
-import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import java.util.BitSet;
 import java.util.List;
@@ -38,7 +40,8 @@ import java.util.Objects;
 
 import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_REQUEST;
-import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights.ALL;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.NONE;
 
 /**
  * This helper class keeps a map of all user and their permissions.
@@ -92,7 +95,7 @@ public class OmOzoneAclMap {
         throw new OMException("Acl " + acl + " already exist.",
             INVALID_REQUEST);
       }
-      getMap(aclType).get(acl.getName()).or(acl.getAclBitSet());
+      getMap(aclType).replace(acl.getName(), temp);
     }
   }
 
@@ -143,8 +146,7 @@ public class OmOzoneAclMap {
   public void addAcl(OzoneAclInfo acl) throws OMException {
     Objects.requireNonNull(acl, "Acl should not be null.");
     if (!getMap(acl.getType()).containsKey(acl.getName())) {
-      BitSet acls = new BitSet(OzoneAclRights.values().length);
-      acl.getRightsList().parallelStream().forEach(a -> acls.set(a.ordinal()));
+      BitSet acls = BitSet.valueOf(acl.getRights().toByteArray());
       getMap(acl.getType()).put(acl.getName(), acls);
     } else {
       // throw exception if acl is already added.
@@ -163,11 +165,66 @@ public class OmOzoneAclMap {
     if (aclBitSet == null) {
       return false;
     }
+    BitSet result = BitSet.valueOf(acl.getRights().toByteArray());
+    result.and(aclBitSet);
+    return (!result.equals(ZERO_BITSET) || aclBitSet.get(ALL.ordinal()))
+        && !aclBitSet.get(NONE.ordinal());
+  }
 
-    for (OzoneAclRights right : acl.getRightsList()) {
-      if (aclBitSet.get(right.ordinal()) || aclBitSet.get(ALL.ordinal())) {
+  /**
+   * For a given acl, check if the user has access rights.
+   * Acl's are checked in followoing order:
+   * 1. Acls for USER.
+   * 2. Acls for GROUPS.
+   * 3. Acls for WORLD.
+   * 4. Acls for ANONYMOUS.
+   * @param acl
+   * @param ugi
+   *
+   * @return true if given ugi has acl set, else false.
+   * */
+  public boolean hasAccess(ACLType acl, UserGroupInformation ugi) {
+    if (acl == null) {
+      return false;
+    }
+    if (ugi == null) {
+      return false;
+    }
+
+    // Check acls in user acl list.
+    return checkAccessForOzoneAclType(OzoneAclType.USER, acl, ugi)
+        || checkAccessForOzoneAclType(OzoneAclType.GROUP, acl, ugi)
+        || checkAccessForOzoneAclType(OzoneAclType.WORLD, acl, ugi)
+        || checkAccessForOzoneAclType(OzoneAclType.ANONYMOUS, acl, ugi);
+  }
+
+  /**
+   * Helper function to check acl access for OzoneAclType.
+   * */
+  private boolean checkAccessForOzoneAclType(OzoneAclType identityType,
+      ACLType acl, UserGroupInformation ugi) {
+
+    switch (identityType) {
+    case USER:
+      return OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+          ugi.getUserName()));
+    case GROUP:
+      // Check access for user groups.
+      for (String userGroup : ugi.getGroupNames()) {
+        if (OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+            userGroup))) {
+          // Return true if any user group has required permission.
+          return true;
+        }
+      }
+      break;
+    default:
+      // For type WORLD and ANONYMOUS we set acl type as name.
+      if(OzoneUtils.checkIfAclBitIsSet(acl, getAcl(identityType,
+          identityType.name()))) {
         return true;
       }
+
     }
     return false;
   }
@@ -180,13 +237,12 @@ public class OmOzoneAclMap {
           aclMaps.get(type.ordinal()).entrySet()) {
         OzoneAclInfo.Builder builder = OzoneAclInfo.newBuilder()
             .setName(entry.getKey())
-            .setType(type);
-        entry.getValue().stream().forEach(a ->
-            builder.addRights(OzoneAclRights.values()[a]));
+            .setType(type)
+            .setRights(ByteString.copyFrom(entry.getValue().toByteArray()));
+
         aclList.add(builder.build());
       }
     }
-
     return aclList;
   }
 

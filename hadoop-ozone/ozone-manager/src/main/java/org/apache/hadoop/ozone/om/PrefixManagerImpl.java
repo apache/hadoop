@@ -21,8 +21,10 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.util.RadixNode;
 import org.apache.hadoop.ozone.util.RadixTree;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.db.*;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.slf4j.Logger;
@@ -271,6 +273,43 @@ public class PrefixManagerImpl implements PrefixManager {
       metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
     return EMPTY_ACL_LIST;
+  }
+
+  /**
+   * Check access for given ozoneObject.
+   *
+   * @param ozObject object for which access needs to be checked.
+   * @param context Context object encapsulating all user related information.
+   * @return true if user has access else false.
+   */
+  @Override
+  public boolean checkAccess(OzoneObj ozObject, RequestContext context)
+      throws OMException {
+    Objects.requireNonNull(ozObject);
+    Objects.requireNonNull(context);
+
+    String prefixPath = ozObject.getPath();
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
+    try {
+      String longestPrefix = prefixTree.getLongestPrefix(prefixPath);
+      if (prefixPath.equals(longestPrefix)) {
+        RadixNode<OmPrefixInfo> lastNode =
+            prefixTree.getLastNodeInPrefixPath(prefixPath);
+        if (lastNode != null && lastNode.getValue() != null) {
+          boolean hasAccess = OzoneUtils.checkAclRights(lastNode.getValue().
+              getAcls(), context);
+          LOG.debug("user:{} has access rights for ozObj:{} ::{} ",
+              context.getClientUgi(), ozObject, hasAccess);
+          return hasAccess;
+        } else {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    } finally {
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
+    }
   }
 
   @Override

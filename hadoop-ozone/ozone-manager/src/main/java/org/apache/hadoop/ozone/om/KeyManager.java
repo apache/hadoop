@@ -43,7 +43,7 @@ import java.util.List;
 /**
  * Handles key level commands.
  */
-public interface KeyManager extends OzoneManagerFS {
+public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
 
   /**
    * Start key manager.

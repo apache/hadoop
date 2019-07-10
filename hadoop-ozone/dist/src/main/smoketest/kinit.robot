@@ -22,4 +22,4 @@ Test Timeout        2 minute
 
 *** Test Cases ***
 Kinit
-   Kinit test user
+   Kinit test user     testuser     testuser.keytab

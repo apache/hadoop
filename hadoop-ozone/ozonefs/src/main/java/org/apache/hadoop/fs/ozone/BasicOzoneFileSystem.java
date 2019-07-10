@@ -43,6 +43,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -589,7 +593,7 @@ public class BasicOzoneFileSystem extends FileSystem {
           throw new FileAlreadyExistsException(String.format(
               "Can't make directory for path '%s', it is a file.", fPart));
         }
-      } catch (FileNotFoundException fnfe) {
+      } catch (FileNotFoundException | OMException fnfe) {
         LOG.trace("creating directory for fpart:{}", fPart);
         String key = pathToKey(fPart);
         String dirKey = addTrailingSlashIfNeeded(key);
@@ -626,9 +630,16 @@ public class BasicOzoneFileSystem extends FileSystem {
     LOG.trace("getFileStatus() path:{}", f);
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
-    FileStatus status = convertFileStatus(
-        adapter.getFileStatus(key, uri, qualifiedPath, getUsername()));
-    return status;
+    FileStatus fileStatus = null;
+    try {
+      fileStatus = adapter.getFileStatus(key)
+        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
+    } catch (OMException ex) {
+      if (ex.getResult().equals(OMException.ResultCodes.KEY_NOT_FOUND)) {
+        throw new FileNotFoundException("File not found. path:" + f);
+      }
+    }
+    return fileStatus;
   }
 
   /**

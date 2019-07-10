@@ -41,7 +41,7 @@ File upload and directory list
                         Should not contain        ${result}         testfile
                         Should not contain        ${result}         dir1
                         Should contain            ${result}         dir2
-    ${result} =         Execute AWSS3Cli          ls s3://${BUCKET}/dir1/dir2/
+    ${result} =         Execute AWSS3Cli          ls s3://${BUCKET}/dir1/dir2/file
                         Should not contain        ${result}         testfile
                         Should not contain        ${result}         dir1
                         Should contain            ${result}         file

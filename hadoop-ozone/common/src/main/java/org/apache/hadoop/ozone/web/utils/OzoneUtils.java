@@ -24,6 +24,7 @@ import java.nio.charset.Charset;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
@@ -37,11 +38,16 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.ratis.util.TimeDuration;
 
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.GROUP;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.NONE;
 
 /**
  * Set of Utility functions used in ozone.
@@ -260,9 +266,103 @@ public final class OzoneUtils {
     listOfAcls.add(new OzoneAcl(USER, userName, userRights));
     if(userGroups != null) {
       // Group ACLs of the User.
-      userGroups.stream().forEach((group) -> listOfAcls.add(
+      userGroups.forEach((group) -> listOfAcls.add(
           new OzoneAcl(GROUP, group, groupRights)));
     }
     return listOfAcls;
+  }
+
+  /**
+   * Check if acl right requested for given RequestContext exist
+   * in provided acl list.
+   * Acl validation rules:
+   * 1. If user/group has ALL bit set than all user should have all rights.
+   * 2. If user/group has NONE bit set than user/group will not have any right.
+   * 3. For all other individual rights individual bits should be set.
+   *
+   * @param acls
+   * @param context
+   * @return return true if acl list contains right requsted in context.
+   * */
+  public static boolean checkAclRight(List<OzoneAclInfo> acls,
+      RequestContext context) throws OMException {
+    String[] userGroups = context.getClientUgi().getGroupNames();
+    String userName = context.getClientUgi().getUserName();
+    ACLType aclToCheck = context.getAclRights();
+    for (OzoneAclInfo a : acls) {
+      if(checkAccessInAcl(a, userGroups, userName, aclToCheck)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean checkAccessInAcl(OzoneAclInfo a, String[] groups,
+      String username, ACLType aclToCheck) {
+    BitSet rights = BitSet.valueOf(a.getRights().toByteArray());
+    switch (a.getType()) {
+    case USER:
+      if (a.getName().equals(username)) {
+        return checkIfAclBitIsSet(aclToCheck, rights);
+      }
+      break;
+    case GROUP:
+      for (String grp : groups) {
+         // TODO: Convert ozone acls to proto map format for efficient
+        //  acl checks.
+        if (a.getName().equals(grp)) {
+          return checkIfAclBitIsSet(aclToCheck, rights);
+        }
+      }
+      break;
+
+    default:
+      return checkIfAclBitIsSet(aclToCheck, rights);
+    }
+    return false;
+  }
+
+  /**
+   * Check if acl right requested for given RequestContext exist
+   * in provided acl list.
+   * Acl validation rules:
+   * 1. If user/group has ALL bit set than all user should have all rights.
+   * 2. If user/group has NONE bit set than user/group will not have any right.
+   * 3. For all other individual rights individual bits should be set.
+   *
+   * @param acls
+   * @param context
+   * @return return true if acl list contains right requsted in context.
+   * */
+  public static boolean checkAclRights(List<OzoneAcl> acls,
+      RequestContext context) throws OMException {
+    String[] userGroups = context.getClientUgi().getGroupNames();
+    String userName = context.getClientUgi().getUserName();
+    ACLType aclToCheck = context.getAclRights();
+    // TODO: All ozone types should use one data type for acls. i.e Store
+    //  and maintain acls in proto format only.
+    for (OzoneAcl a : acls) {
+      if (checkAccessInAcl(OzoneAcl.toProtobuf(a), userGroups,
+          userName, aclToCheck)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Helper function to check if bit for given acl is set.
+   * @param acl
+   * @param bitset
+   * @return True of acl bit is set else false.
+   * */
+  public static boolean checkIfAclBitIsSet(ACLType acl, BitSet bitset) {
+    if (bitset == null) {
+      return false;
+    }
+
+    return ((bitset.get(acl.ordinal())
+        || bitset.get(ALL.ordinal()))
+        && !bitset.get(NONE.ordinal()));
   }
 }
