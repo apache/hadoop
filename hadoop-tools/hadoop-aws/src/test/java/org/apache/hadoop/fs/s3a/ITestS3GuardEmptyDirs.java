@@ -19,12 +19,19 @@
 package org.apache.hadoop.fs.s3a;
 
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.junit.Assume;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getStatusWithEmptyDirFlag;
 
 /**
  * Test logic around whether or not a directory is empty, with S3Guard enabled.
@@ -81,5 +88,92 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       configuredMs.forgetMetadata(existingFile);
       configuredMs.forgetMetadata(existingDir);
     }
+  }
+
+  @Test
+  public void testEmptyDirsTombstoneMisleadAboutDirectoryStatus()
+      throws Exception {
+    S3AFileSystem fs = getFileSystem();
+    Assume.assumeTrue(fs.hasMetadataStore());
+    MetadataStore configuredMs = fs.getMetadataStore();
+    String parentDir = "existing-dir";
+    Path existingDir = path(parentDir);
+
+    List<Path> rawS3FsCreatedFiles = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      rawS3FsCreatedFiles.add(
+          path(parentDir+"/ZZZZ-"+i+"-rawS3File-"+ UUID.randomUUID())
+      );
+    }
+
+    List<Path> guardedS3FsCreatedFiles = new ArrayList<>();
+    for (int i = 0; i < 10; i++) {
+      guardedS3FsCreatedFiles.add(
+          path(parentDir+"/AAAA-"+i+"guardedFile-" + UUID.randomUUID())
+      );
+    }
+
+    try {
+      // 1. Simulate files already existing in the bucket before we started our
+      // cluster.  Temporarily disable the MetadataStore so it doesn't witness
+      // us creating these files.
+
+      fs.setMetadataStore(new NullMetadataStore());
+      assertTrue(fs.mkdirs(existingDir));
+      for (Path existingFile : rawS3FsCreatedFiles) {
+        touch(fs, existingFile);
+      }
+
+      // 2. Simulate (from MetadataStore's perspective) starting our cluster and
+      // creating a file in an existing directory.
+      fs.setMetadataStore(configuredMs);  // "start cluster"
+
+      for (Path guardedS3FsCreatedFile : guardedS3FsCreatedFiles) {
+        touch(fs, guardedS3FsCreatedFile);
+      }
+
+      S3AFileStatus status = getStatusWithEmptyDirFlag(fs, existingDir);
+      assertNonEmptyDir(status);
+      System.out.println(status);
+
+      // 3. Assert that removing the only file the MetadataStore witnessed
+      // being created doesn't cause it to think the directory is now empty.
+      for (Path newFile : guardedS3FsCreatedFiles) {
+        fs.delete(newFile, false);
+      }
+      status = getStatusWithEmptyDirFlag(fs, existingDir);
+      assertEquals("Should be empty dir: " + status,
+          Tristate.FALSE,
+          status.isEmptyDirectory());
+
+      for (Path newFile : guardedS3FsCreatedFiles) {
+        PathMetadata newFileMD = configuredMs.get(newFile);
+        assertNotNull("No metadata entry for " + newFile,
+            newFileMD);
+        assertTrue("Not a tombstone: "+ newFileMD,
+            newFileMD.isDeleted());
+      }
+
+      // 4. Assert that removing the final file, that existed "before"
+      // MetadataStore started, *does* cause the directory to be marked empty.
+      for (Path existingFile : rawS3FsCreatedFiles) {
+        fs.delete(existingFile, false);
+      }
+      status = getStatusWithEmptyDirFlag(fs, existingDir);
+      assertEquals("Should be empty dir now: " + status, Tristate.TRUE,
+          status.isEmptyDirectory());
+
+    } finally {
+      for (Path existingFile : rawS3FsCreatedFiles) {
+        configuredMs.forgetMetadata(existingFile);
+      }
+      configuredMs.forgetMetadata(existingDir);
+      fs.setMetadataStore(configuredMs);
+    }
+  }
+
+  protected void assertNonEmptyDir(final S3AFileStatus status) {
+    assertEquals("Should not be empty dir: " + status, Tristate.FALSE,
+        status.isEmptyDirectory());
   }
 }
