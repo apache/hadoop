@@ -583,7 +583,8 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
     S3AFileSystem fs = getFileSystem();
 
     // write simple file
-    Path file = path("file1");
+    Path parent = path(getMethodName());
+    Path file = new Path(parent, "file1");
     try (FSDataOutputStream outputStream = fs.create(file)) {
       outputStream.writeChars("hello");
     }
@@ -598,7 +599,7 @@ public class ITestS3GuardListConsistency extends AbstractS3ATestBase {
 
     // get status through recursive directory listing
     RemoteIterator<LocatedFileStatus> filesIterator = fs.listFiles(
-        file.getParent(), true);
+        parent, true);
     List<LocatedFileStatus> files = Lists.newArrayList();
     while (filesIterator.hasNext()) {
       files.add(filesIterator.next());

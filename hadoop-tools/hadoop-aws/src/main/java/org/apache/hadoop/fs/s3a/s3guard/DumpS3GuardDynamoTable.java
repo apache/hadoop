@@ -25,14 +25,17 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.URI;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.List;
 
 import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
+import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,6 +121,16 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    */
   private String destPath;
 
+  private Pair<Long, Long> scanEntryResult;
+
+  private Pair<Long, Long> secondScanResult;
+
+  private long rawObjectStoreCount;
+
+  private long listStatusCount;
+
+  private long treewalkCount;
+
   /**
    * Instantiate.
    * @param name application name.
@@ -183,7 +196,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
       try (CsvFile csv = new CsvFile(scanFile);
            DurationInfo ignored = new DurationInfo(LOG,
                "scanFile dump to %s", scanFile)) {
-        scanMetastore(csv);
+        scanEntryResult = scanMetastore(csv);
       }
 
       if (getFilesystem() != null) {
@@ -208,7 +221,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
         try (CsvFile csv = new CsvFile(treewalkFile);
              DurationInfo ignored = new DurationInfo(LOG,
                  "Treewalk to %s", treewalkFile)) {
-          treewalkFilesystem(csv, basePath);
+          treewalkCount = treewalkFilesystem(csv, basePath);
         }
         final File flatlistFile = new File(
             destPath + FLAT_CSV).getCanonicalFile();
@@ -216,7 +229,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
         try (CsvFile csv = new CsvFile(flatlistFile);
              DurationInfo ignored = new DurationInfo(LOG,
                  "Flat list to %s", flatlistFile)) {
-          listStatusFilesystem(csv, basePath);
+          listStatusCount = listStatusFilesystem(csv, basePath);
         }
         final File rawFile = new File(
             destPath + RAW_CSV).getCanonicalFile();
@@ -224,7 +237,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
         try (CsvFile csv = new CsvFile(rawFile);
              DurationInfo ignored = new DurationInfo(LOG,
                  "Raw dump to %s", rawFile)) {
-          dumpRawS3ObjectStore(csv);
+          rawObjectStoreCount = dumpRawS3ObjectStore(csv);
         }
         final File scanFile2 = new File(
             destPath + SCAN2_CSV).getCanonicalFile();
@@ -232,9 +245,8 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
         try (CsvFile csv = new CsvFile(scanFile);
              DurationInfo ignored = new DurationInfo(LOG,
                  "scanFile dump to %s", scanFile2)) {
-          scanMetastore(csv);
+          secondScanResult = scanMetastore(csv);
         }
-
       }
 
       return LauncherExitCodes.EXIT_SUCCESS;
@@ -245,34 +257,63 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
   }
 
   /**
-   * Dump the filesystem via a recursive treewalk.
+   * Push all elements of a list to a queue, such that the first entry
+   * on the list becomes the head of the queue.
+   * @param queue queue to update
+   * @param entries list of entries to add.
+   * @param <T> type of queue
+   */
+  private <T> void pushAll(Deque<T> queue, List<T> entries) {
+    List<T> reversed = Lists.reverse(entries);
+    for (T t : reversed) {
+      queue.push(t);
+    }
+  }
+
+  /**
+   * Dump the filesystem via a treewalk.
    * If metastore entries mark directories as deleted, this
    * walk will not explore them.
    * @param csv destination.
+   * @param base base path.
    * @return number of entries found.
    * @throws IOException IO failure.
    */
-  protected int treewalkFilesystem(
+  protected long treewalkFilesystem(
       final CsvFile csv,
-      final Path path) throws IOException {
-    int count = 1;
-    FileStatus[] fileStatuses;
-    try {
-      fileStatuses = getFilesystem().listStatus(path);
-    } catch (FileNotFoundException e) {
-      LOG.warn("File {} was not found", path);
-      return 0;
-    }
-    // entries
-    for (FileStatus fileStatus : fileStatuses) {
-      csv.entry((S3AFileStatus) fileStatus);
-    }
-    for (FileStatus fileStatus : fileStatuses) {
-      if (fileStatus.isDirectory()
-          && !(fileStatus.getPath().equals(path))) {
-        count += treewalkFilesystem(csv, fileStatus.getPath());
-      } else {
-        count++;
+      final Path base) throws IOException {
+    ArrayDeque<Path> queue = new ArrayDeque<>();
+    queue.add(base);
+    long count = 0;
+    while (!queue.isEmpty()) {
+      Path path = queue.pop();
+      count++;
+      FileStatus[] fileStatuses;
+      try {
+        fileStatuses = getFilesystem().listStatus(path);
+      } catch (FileNotFoundException e) {
+        LOG.warn("File {} was not found", path);
+        continue;
+      }
+      // entries
+      for (FileStatus fileStatus : fileStatuses) {
+        csv.entry((S3AFileStatus) fileStatus);
+      }
+      // scan through the list, building up a reverse list of all directories
+      // found.
+      List<Path> dirs = new ArrayList<>(fileStatuses.length);
+      for (FileStatus fileStatus : fileStatuses) {
+        if (fileStatus.isDirectory()
+            && !(fileStatus.getPath().equals(path))) {
+          // directory: add to the end of the queue.
+          dirs.add(fileStatus.getPath());
+        } else {
+          // file: just increment the count
+          count++;
+        }
+        // now push the dirs list in reverse
+        // so that they have been added in the sort order as returned.
+        pushAll(queue, dirs);
       }
     }
     return count;
@@ -284,10 +325,10 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @return number of entries found.
    * @throws IOException IO failure.
    */
-  protected int listStatusFilesystem(
+  protected long listStatusFilesystem(
       final CsvFile csv,
       final Path path) throws IOException {
-    int count = 0;
+    long count = 0;
     RemoteIterator<S3ALocatedFileStatus> iterator = getFilesystem()
         .listFilesAndEmptyDirectories(path, true);
     while (iterator.hasNext()) {
@@ -303,13 +344,13 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @return number of entries found.
    * @throws IOException IO failure.
    */
-  protected int dumpRawS3ObjectStore(
+  protected long dumpRawS3ObjectStore(
       final CsvFile csv) throws IOException {
     S3AFileSystem fs = getFilesystem();
     Path rootPath = fs.qualify(new Path("/"));
     Listing listing = new Listing(fs);
     S3ListRequest request = fs.createListObjectsRequest("", null);
-    int count = 0;
+    long count = 0;
     RemoteIterator<S3AFileStatus> st =
         listing.createFileStatusListingIterator(rootPath, request,
             ACCEPT_ALL,
@@ -333,7 +374,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    */
   protected void dumpMetastore(final CsvFile csv,
       final Path basePath) throws IOException {
-    dumpRecursively(csv, getStore().listChildren(basePath));
+    dumpStoreEntries(csv, getStore().listChildren(basePath));
   }
 
   /**
@@ -343,32 +384,36 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @return (directories, files)
    * @throws IOException failure
    */
-  private Pair<Integer, Integer> dumpRecursively(
-      CsvFile csv, DirListingMetadata dir) throws IOException {
-    int files = 0, dirs = 1;
-    List<DDBPathMetadata> childDirs = new ArrayList<>();
-    Collection<PathMetadata> listing = dir.getListing();
-    // sort by name
-    List<PathMetadata> sorted = new ArrayList<>(listing);
-    sorted.sort(new PathOrderComparators.PathMetadataComparator(
-        (l, r) -> l.compareTo(r)));
+  private Pair<Long, Long> dumpStoreEntries(
+      CsvFile csv,
+      DirListingMetadata dir) throws IOException {
+    ArrayDeque<DirListingMetadata> queue = new ArrayDeque<>();
+    queue.add(dir);
+    long files = 0, dirs = 1;
+    while (!queue.isEmpty()) {
+      DirListingMetadata next = queue.pop();
+      List<DDBPathMetadata> childDirs = new ArrayList<>();
+      Collection<PathMetadata> listing = next.getListing();
+      // sort by name
+      List<PathMetadata> sorted = new ArrayList<>(listing);
+      sorted.sort(new PathOrderComparators.PathMetadataComparator(
+          (l, r) -> l.compareTo(r)));
 
-    for (PathMetadata pmd : sorted) {
-      DDBPathMetadata ddbMd = (DDBPathMetadata) pmd;
-      dumpEntry(csv, ddbMd);
-      if (ddbMd.getFileStatus().isDirectory()) {
-        childDirs.add(ddbMd);
-      } else {
-        files++;
+      for (PathMetadata pmd : sorted) {
+        DDBPathMetadata ddbMd = (DDBPathMetadata) pmd;
+        dumpEntry(csv, ddbMd);
+        if (ddbMd.getFileStatus().isDirectory()) {
+          childDirs.add(ddbMd);
+        } else {
+          files++;
+        }
       }
-    }
-    for (DDBPathMetadata childDir : childDirs) {
-      DirListingMetadata children = getStore().listChildren(
-          childDir.getFileStatus().getPath());
-      Pair<Integer, Integer> pair = dumpRecursively(csv,
-          children);
-      dirs += pair.getLeft();
-      files += pair.getRight();
+      List<DirListingMetadata> childMD = new ArrayList<>(childDirs.size());
+      for (DDBPathMetadata childDir : childDirs) {
+        childMD.add(getStore().listChildren(
+            childDir.getFileStatus().getPath()));
+      }
+      pushAll(queue, childMD);
     }
 
     return Pair.of(dirs, files);
@@ -381,7 +426,7 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @param md metadata to log.
    */
   private void dumpEntry(CsvFile csv, DDBPathMetadata md) {
-    LOG.info("{}", md.prettyPrint());
+    LOG.debug("{}", md.prettyPrint());
     csv.entry(md);
   }
 
@@ -389,24 +434,49 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * Scan the metastore for all entries and dump them.
    * There's no attempt to sort the output.
    * @param csv file
-   * @return count of the number of entries.
+   * @return tuple of (live entries, tombstones).
    */
-  private int scanMetastore(CsvFile csv) {
+  private Pair<Long, Long> scanMetastore(CsvFile csv) {
     S3GuardTableAccess tableAccess = new S3GuardTableAccess(getStore());
     ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
     Iterable<DDBPathMetadata> results = tableAccess.scanMetadata(
         builder);
-    int count = 0;
+    long live = 0;
+    long tombstone = 0;
     for (DDBPathMetadata md : results) {
       if (!(md instanceof S3GuardTableAccess.VersionMarker)) {
-        count++;
         // print it
         csv.entry(md);
+        if (md.isDeleted()) {
+          tombstone++;
+        } else {
+          live++;
+        }
+
       }
     }
-    return count;
+    return Pair.of(live, tombstone);
   }
 
+  public Pair<Long, Long> getScanEntryResult() {
+    return scanEntryResult;
+  }
+
+  public Pair<Long, Long> getSecondScanResult() {
+    return secondScanResult;
+  }
+
+  public long getRawObjectStoreCount() {
+    return rawObjectStoreCount;
+  }
+
+  public long getListStatusCount() {
+    return listStatusCount;
+  }
+
+  public long getTreewalkCount() {
+    return treewalkCount;
+  }
 
   /**
    * Convert a timestamp in milliseconds to a human string.
@@ -467,8 +537,9 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
    * @param destFile base name of the output files.
    * @param uri URI of store -only needed if FS is null.
    * @throws ExitUtil.ExitException failure.
+   * @return the store
    */
-  public static void dumpStore(
+  public static DumpS3GuardDynamoTable dumpStore(
       @Nullable final S3AFileSystem fs,
       @Nullable DynamoDBMetadataStore store,
       @Nullable Configuration conf,
@@ -484,18 +555,37 @@ public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
       store = (DynamoDBMetadataStore) checkNotNull(fs, "No filesystem")
           .getMetadataStore();
     }
+    DumpS3GuardDynamoTable dump = new DumpS3GuardDynamoTable(fs,
+        store,
+        destFile,
+        uri);
     ExitUtil.ExitException ex = serviceLauncher.launchService(
         conf,
-        new DumpS3GuardDynamoTable(fs,
-            store,
-            destFile,
-            uri),
+        dump,
         Collections.emptyList(),
         false,
         true);
     if (ex != null && ex.getExitCode() != 0) {
       throw ex;
     }
+    LOG.info("Results:");
+    Pair<Long, Long> r = dump.getScanEntryResult();
+    LOG.info("Metastore entries: {}", r);
+    LOG.info("Metastore scan total {}, entries {}, tombstones {}",
+        r.getLeft() + r.getRight(),
+        r.getLeft(),
+        r.getRight());
+    LOG.info("S3 count {}", dump.getRawObjectStoreCount());
+    LOG.info("Treewalk Count {}", dump.getTreewalkCount());
+    LOG.info("List Status Count {}", dump.getListStatusCount());
+    r = dump.getSecondScanResult();
+    if (r != null) {
+      LOG.info("Second metastore scan total {}, entries {}, tombstones {}",
+          r.getLeft() + r.getRight(),
+          r.getLeft(),
+          r.getRight());
+    }
+    return dump;
   }
 
   /**

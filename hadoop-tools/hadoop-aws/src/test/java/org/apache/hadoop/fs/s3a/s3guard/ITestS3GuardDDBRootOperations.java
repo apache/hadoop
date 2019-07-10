@@ -65,7 +65,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
 
   // this is a switch you can change in your IDE to enable
   // or disable those tests which clean up the metastore.
-  private final boolean cleaning = false;
+  private final boolean cleaning = true;
 
   /**
    * The test timeout is increased in case previous tests have created
