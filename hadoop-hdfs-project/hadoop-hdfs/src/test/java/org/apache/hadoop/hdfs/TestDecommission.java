@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -35,6 +36,7 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Pattern;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -1178,6 +1180,56 @@ public class TestDecommission extends AdminStatesBaseTest {
     // Recommission all nodes
     for (DatanodeInfo dn : decommissionedNodes) {
       putNodeInService(0, dn);
+    }
+  }
+
+  /**
+   * Test DatanodeAdminManager#monitor can swallow any exceptions by default.
+   */
+  @Test(timeout=120000)
+  public void testPendingNodeButDecommissioned() throws Exception {
+    // Only allow one node to be decom'd at a time
+    getConf().setInt(
+        DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_MAX_CONCURRENT_TRACKED_NODES,
+        1);
+    // Disable the normal monitor runs
+    getConf().setInt(DFSConfigKeys.DFS_NAMENODE_DECOMMISSION_INTERVAL_KEY,
+        Integer.MAX_VALUE);
+    startCluster(1, 2);
+    final DatanodeManager datanodeManager =
+        getCluster().getNamesystem().getBlockManager().getDatanodeManager();
+    final DatanodeAdminManager decomManager =
+        datanodeManager.getDatanodeAdminManager();
+
+    ArrayList<DatanodeInfo> decommissionedNodes = Lists.newArrayList();
+    List<DataNode> dns = getCluster().getDataNodes();
+    // Try to decommission 2 datanodes
+    for (int i = 0; i < 2; i++) {
+      DataNode d = dns.get(i);
+      DatanodeInfo dn = takeNodeOutofService(0, d.getDatanodeUuid(), 0,
+          decommissionedNodes, AdminStates.DECOMMISSION_INPROGRESS);
+      decommissionedNodes.add(dn);
+    }
+
+    assertEquals(2, decomManager.getNumPendingNodes());
+
+    // Set one datanode state to Decommissioned after decommission ops.
+    DatanodeDescriptor dn = datanodeManager.getDatanode(dns.get(0)
+        .getDatanodeId());
+    dn.setDecommissioned();
+
+    try {
+      // Trigger DatanodeAdminManager#monitor
+      BlockManagerTestUtil.recheckDecommissionState(datanodeManager);
+
+      // Wait for OutOfServiceNodeBlocks to be 0
+      GenericTestUtils.waitFor(() -> decomManager.getNumTrackedNodes() == 0,
+          500, 30000);
+      assertTrue(GenericTestUtils.anyThreadMatching(
+          Pattern.compile("DatanodeAdminMonitor-.*")));
+    } catch (ExecutionException e) {
+      GenericTestUtils.assertExceptionContains("in an invalid state!", e);
+      fail("DatanodeAdminManager#monitor does not swallow exceptions.");
     }
   }
 
