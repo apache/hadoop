@@ -105,6 +105,10 @@ public class TestOzoneAcls {
 
     testMatrix.put(" world:bilbo:w", Boolean.FALSE);
     testMatrix.put(" world:bilbo:rw", Boolean.FALSE);
+    testMatrix.put(" anonymous:bilbo:w", Boolean.FALSE);
+    testMatrix.put(" anonymous:ANONYMOUS:w", Boolean.TRUE);
+    testMatrix.put(" anonymous::rw", Boolean.TRUE);
+    testMatrix.put(" world:WORLD:rw", Boolean.TRUE);
 
     Set<String> keys = testMatrix.keySet();
     for (String key : keys) {
@@ -157,7 +161,7 @@ public class TestOzoneAcls {
     assertEquals(ACLIdentityType.GROUP, acl.getType());
 
     acl = OzoneAcl.parseAcl("world::a");
-    assertEquals(acl.getName(), "");
+    assertEquals(acl.getName(), "WORLD");
     assertTrue(acl.getAclBitSet().get(ALL.ordinal()));
     assertFalse(acl.getAclBitSet().get(WRITE.ordinal()));
     assertEquals(ACLIdentityType.WORLD, acl.getType());
@@ -188,7 +192,7 @@ public class TestOzoneAcls {
     assertEquals(ACLIdentityType.GROUP, acl.getType());
 
     acl = OzoneAcl.parseAcl("world::rwdlncxy");
-    assertEquals(acl.getName(), "");
+    assertEquals(acl.getName(), "WORLD");
     assertTrue(acl.getAclBitSet().get(READ.ordinal()));
     assertTrue(acl.getAclBitSet().get(WRITE.ordinal()));
     assertTrue(acl.getAclBitSet().get(DELETE.ordinal()));

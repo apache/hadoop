@@ -20,17 +20,22 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmDeleteVolumeResponse;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeOwnerChangeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
+import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.db.BatchOperation;
 
 import com.google.common.base.Preconditions;
@@ -53,6 +58,7 @@ public class VolumeManagerImpl implements VolumeManager {
   private final OMMetadataManager metadataManager;
   private final int maxUserVolumeCount;
   private final boolean isRatisEnabled;
+  private final boolean aclEnabled;
 
   /**
    * Constructor.
@@ -67,6 +73,8 @@ public class VolumeManagerImpl implements VolumeManager {
     isRatisEnabled = conf.getBoolean(
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+    aclEnabled = conf.getBoolean(OzoneConfigKeys.OZONE_ACL_ENABLED,
+        OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT);
   }
 
   // Helpers to add and delete volume from user list
@@ -504,8 +512,7 @@ public class VolumeManagerImpl implements VolumeManager {
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Check volume access failed for volume:{} user:{} rights:{}",
-            volume, userAcl.getName(),
-            StringUtils.join(userAcl.getRightsList(), ","), ex);
+            volume, userAcl.getName(), userAcl.getRights().toString(), ex);
       }
       throw ex;
     } finally {
@@ -521,8 +528,19 @@ public class VolumeManagerImpl implements VolumeManager {
       String prefix, String startKey, int maxKeys) throws IOException {
     metadataManager.getLock().acquireLock(USER_LOCK, userName);
     try {
-      return metadataManager.listVolumes(
+      List<OmVolumeArgs> volumes = metadataManager.listVolumes(
           userName, prefix, startKey, maxKeys);
+      UserGroupInformation userUgi = ProtobufRpcEngine.Server.
+          getRemoteUser();
+      if (userUgi == null || !aclEnabled) {
+        return volumes;
+      }
+
+      List<OmVolumeArgs> filteredVolumes = volumes.stream().
+          filter(v -> v.getAclMap().
+              hasAccess(IAccessAuthorizer.ACLType.LIST, userUgi))
+          .collect(Collectors.toList());
+      return filteredVolumes;
     } finally {
       metadataManager.getLock().releaseLock(USER_LOCK, userName);
     }
@@ -707,6 +725,46 @@ public class VolumeManagerImpl implements VolumeManager {
         LOG.error("Get acl operation failed for volume:{}", volume, ex);
       }
       throw ex;
+    } finally {
+      metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+    }
+  }
+
+  /**
+   * Check access for given ozoneObject.
+   *
+   * @param ozObject object for which access needs to be checked.
+   * @param context Context object encapsulating all user related information.
+   * @return true if user has access else false.
+   */
+  @Override
+  public boolean checkAccess(OzoneObj ozObject, RequestContext context)
+      throws OMException {
+    Objects.requireNonNull(ozObject);
+    Objects.requireNonNull(context);
+
+    String volume = ozObject.getVolumeName();
+    metadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+    try {
+      String dbVolumeKey = metadataManager.getVolumeKey(volume);
+      OmVolumeArgs volumeArgs =
+          metadataManager.getVolumeTable().get(dbVolumeKey);
+      if (volumeArgs == null) {
+        LOG.debug("volume:{} does not exist", volume);
+        throw new OMException("Volume " + volume + " is not found",
+            ResultCodes.VOLUME_NOT_FOUND);
+      }
+
+      Preconditions.checkState(volume.equals(volumeArgs.getVolume()));
+      boolean hasAccess = volumeArgs.getAclMap().hasAccess(
+          context.getAclRights(), context.getClientUgi());
+      LOG.debug("user:{} has access rights for volume:{} :{} ",
+          context.getClientUgi(), ozObject.getVolumeName(), hasAccess);
+      return hasAccess;
+    } catch (IOException ex) {
+      LOG.error("Check access operation failed for volume:{}", volume, ex);
+      throw new OMException("Check access operation failed for " +
+          "volume:" + volume, ex, ResultCodes.INTERNAL_ERROR);
     } finally {
       metadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
     }

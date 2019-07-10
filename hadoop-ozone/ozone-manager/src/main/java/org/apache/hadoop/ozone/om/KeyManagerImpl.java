@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -35,11 +36,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Strings;
+import com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -79,10 +80,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyLocation;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.ozone.common.BlockGroup;
@@ -102,6 +103,7 @@ import org.apache.hadoop.utils.db.Table;
 
 import com.google.common.base.Preconditions;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLED_DEFAULT;
@@ -117,6 +119,10 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAU
 import static org.apache.hadoop.ozone.OzoneConsts.OM_MULTIPART_MIN_SIZE;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.DIRECTORY_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_NOT_FOUND;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INTERNAL_ERROR;
+import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INVALID_KMS_PROVIDER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
@@ -1402,15 +1408,13 @@ public class KeyManagerImpl implements KeyManager {
       OzoneAclInfo newAcl = null;
       for(OzoneAclInfo a: keyInfo.getAcls()) {
         if(a.getName().equals(acl.getName())) {
-          List<OzoneAclRights> rights =
-              new ArrayList<>(a.getRightsList());
-          for (IAccessAuthorizer.ACLType aclType : acl.getAclList()) {
-            rights.add(OzoneAclRights.valueOf(aclType.name()));
-          }
+          BitSet currentAcls = BitSet.valueOf(a.getRights().toByteArray());
+          currentAcls.or(acl.getAclBitSet());
+
           newAcl = OzoneAclInfo.newBuilder()
               .setType(a.getType())
               .setName(a.getName())
-              .addAllRights(rights)
+              .setRights(ByteString.copyFrom(currentAcls.toByteArray()))
               .build();
           newAcls.remove(a);
           newAcls.add(newAcl);
@@ -1488,15 +1492,13 @@ public class KeyManagerImpl implements KeyManager {
         // Acl to be removed might be a subset of existing acls.
         for(OzoneAclInfo a: keyInfo.getAcls()) {
           if(a.getName().equals(acl.getName())) {
-            List<OzoneAclRights> rights =
-                new ArrayList<>(a.getRightsList());
-            for (IAccessAuthorizer.ACLType aclType : acl.getAclList()) {
-              rights.remove(OzoneAclRights.valueOf(aclType.name()));
-            }
+            BitSet currentAcls = BitSet.valueOf(a.getRights().toByteArray());
+            acl.getAclBitSet().xor(currentAcls);
+            currentAcls.and(acl.getAclBitSet());
             newAcl = OzoneAclInfo.newBuilder()
                 .setType(a.getType())
                 .setName(a.getName())
-                .addAllRights(rights)
+                .setRights(ByteString.copyFrom(currentAcls.toByteArray()))
                 .build();
             newAcls.remove(a);
             newAcls.add(newAcl);
@@ -1641,6 +1643,58 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   /**
+   * Check access for given ozoneObject.
+   *
+   * @param ozObject object for which access needs to be checked.
+   * @param context Context object encapsulating all user related information.
+   * @return true if user has access else false.
+   */
+  @Override
+  public boolean checkAccess(OzoneObj ozObject, RequestContext context)
+      throws OMException {
+    Objects.requireNonNull(ozObject);
+    Objects.requireNonNull(context);
+    Objects.requireNonNull(context.getClientUgi());
+
+    String volume = ozObject.getVolumeName();
+    String bucket = ozObject.getBucketName();
+    String keyName = ozObject.getKeyName();
+
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
+    try {
+      validateBucket(volume, bucket);
+      String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
+      OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
+      if (keyInfo == null) {
+        objectKey = OzoneFSUtils.addTrailingSlashIfNeeded(objectKey);
+        keyInfo = metadataManager.getKeyTable().get(objectKey);
+        
+        if(keyInfo == null) {
+          keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
+          if (keyInfo == null) {
+            throw new OMException("Key not found, checkAccess failed. Key:" +
+                objectKey, KEY_NOT_FOUND);
+          }
+        }
+      }
+      boolean hasAccess = OzoneUtils.checkAclRight(keyInfo.getAcls(), context);
+      LOG.debug("user:{} has access rights for key:{} :{} ",
+          context.getClientUgi(), ozObject.getKeyName(), hasAccess);
+      return hasAccess;
+    } catch (IOException ex) {
+      if(ex instanceof OMException) {
+        throw (OMException) ex;
+      }
+      LOG.error("CheckAccess operation failed for key:{}/{}/{}", volume,
+          bucket, keyName, ex);
+      throw new OMException("Check access operation failed for " +
+          "key:" + keyName, ex, INTERNAL_ERROR);
+    } finally {
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
+    }
+  }
+
+  /**
    * Helper method to validate ozone object.
    * @param obj
    * */
@@ -1717,7 +1771,7 @@ public class KeyManagerImpl implements KeyManager {
           "such file exists:");
       throw new OMException("Unable to get file status: volume: " +
           volumeName + " bucket: " + bucketName + " key: " + keyName,
-          ResultCodes.FILE_NOT_FOUND);
+          FILE_NOT_FOUND);
     } finally {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
           bucketName);
@@ -1830,7 +1884,7 @@ public class KeyManagerImpl implements KeyManager {
           }
         }
       } catch (OMException ex) {
-        if (ex.getResult() != ResultCodes.FILE_NOT_FOUND) {
+        if (ex.getResult() != FILE_NOT_FOUND) {
           throw ex;
         }
       }
@@ -2022,12 +2076,12 @@ public class KeyManagerImpl implements KeyManager {
           return fileStatus;
         }
       } catch (OMException ex) {
-        if (ex.getResult() != ResultCodes.FILE_NOT_FOUND) {
+        if (ex.getResult() != FILE_NOT_FOUND) {
           throw ex;
-        } else if (ex.getResult() == ResultCodes.FILE_NOT_FOUND) {
+        } else if (ex.getResult() == FILE_NOT_FOUND) {
           if (directoryMustExist) {
             throw new OMException("Parent directory does not exist",
-                ex.getCause(), ResultCodes.DIRECTORY_NOT_FOUND);
+                ex.getCause(), DIRECTORY_NOT_FOUND);
           }
         }
       }
@@ -2043,8 +2097,8 @@ public class KeyManagerImpl implements KeyManager {
     if (ezInfo != null) {
       if (getKMSProvider() == null) {
         throw new OMException("Invalid KMS provider, check configuration " +
-            CommonConfigurationKeys.HADOOP_SECURITY_KEY_PROVIDER_PATH,
-            OMException.ResultCodes.INVALID_KMS_PROVIDER);
+            HADOOP_SECURITY_KEY_PROVIDER_PATH,
+            INVALID_KMS_PROVIDER);
       }
 
       final String ezKeyName = ezInfo.getKeyName();

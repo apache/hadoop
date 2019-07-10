@@ -507,20 +507,9 @@ message OzoneAclInfo {
         CLIENT_IP = 5;
     }
 
-    enum OzoneAclRights {
-        READ = 1;
-        WRITE = 2;
-        CREATE = 3;
-        LIST = 4;
-        DELETE = 5;
-        READ_ACL = 6;
-        WRITE_ACL = 7;
-        ALL = 8;
-        NONE = 9;
-    }
     required OzoneAclType type = 1;
     required string name = 2;
-    repeated OzoneAclRights rights = 3;
+    required bytes rights = 3;
 }
 
 message GetAclRequest {
