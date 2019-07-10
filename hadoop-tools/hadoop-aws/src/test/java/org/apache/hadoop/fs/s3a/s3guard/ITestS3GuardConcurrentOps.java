@@ -46,6 +46,8 @@ import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_READ_KEY;
+import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY;
 
 /**
  * Tests concurrent operations on S3Guard.
@@ -54,6 +56,14 @@ public class ITestS3GuardConcurrentOps extends AbstractS3ATestBase {
 
   @Rule
   public final Timeout timeout = new Timeout(5 * 60 * 1000);
+
+  protected Configuration createConfiguration() {
+    Configuration conf =  super.createConfiguration();
+    //patch the read/write capacity
+    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 0);
+    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 0);
+    return conf;
+  }
 
   private void failIfTableExists(DynamoDB db, String tableName) {
     boolean tableExists = true;
