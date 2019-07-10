@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.CryptoInputStream;
 import org.apache.hadoop.crypto.CryptoOutputStream;
 import org.apache.hadoop.crypto.key.KeyProvider;
-import org.apache.hadoop.crypto.key.KeyProviderTokenIssuer;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.StorageType;
@@ -109,7 +108,7 @@ import java.util.stream.Collectors;
  * to execute client calls. This uses RPC protocol for communication
  * with the servers.
  */
-public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
+public class RpcClient implements ClientProtocol {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(RpcClient.class);
@@ -1136,10 +1135,5 @@ public class RpcClient implements ClientProtocol, KeyProviderTokenIssuer {
   @Override
   public String getCanonicalServiceName() {
     return (dtService != null) ? dtService.toString() : null;
-  }
-
-  @Override
-  public Token<?> getDelegationToken(String renewer) throws IOException {
-    return getDelegationToken(renewer == null ? null : new Text(renewer));
   }
 }

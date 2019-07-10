@@ -24,11 +24,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -42,7 +43,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -497,13 +497,18 @@ public class BasicOzoneFileSystem extends FileSystem {
     statistics.incrementReadOps(1);
     LOG.trace("listStatus() path:{}", f);
     int numEntries = LISTING_PAGE_SIZE;
-    LinkedList<OzoneFileStatus> statuses = new LinkedList<>();
-    List<OzoneFileStatus> tmpStatusList;
+    LinkedList<FileStatus> statuses = new LinkedList<>();
+    List<FileStatus> tmpStatusList;
     String startKey = "";
 
     do {
       tmpStatusList =
-          adapter.listStatus(pathToKey(f), false, startKey, numEntries);
+          adapter.listStatus(pathToKey(f), false, startKey, numEntries, uri,
+              workingDir, getUsername())
+              .stream()
+              .map(this::convertFileStatus)
+              .collect(Collectors.toList());
+
       if (!tmpStatusList.isEmpty()) {
         if (startKey.isEmpty()) {
           statuses.addAll(tmpStatusList);
@@ -517,10 +522,7 @@ public class BasicOzoneFileSystem extends FileSystem {
       // exhausted.
     } while (tmpStatusList.size() == numEntries);
 
-    for (OzoneFileStatus status : statuses) {
-      status.makeQualified(uri, status.getPath().makeQualified(uri, workingDir),
-          getUsername(), getUsername());
-    }
+
     return statuses.toArray(new FileStatus[0]);
   }
 
@@ -624,9 +626,9 @@ public class BasicOzoneFileSystem extends FileSystem {
     LOG.trace("getFileStatus() path:{}", f);
     Path qualifiedPath = f.makeQualified(uri, workingDir);
     String key = pathToKey(qualifiedPath);
-
-    return adapter.getFileStatus(key)
-        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
+    FileStatus status = convertFileStatus(
+        adapter.getFileStatus(key, uri, qualifiedPath, getUsername()));
+    return status;
   }
 
   /**
@@ -758,5 +760,31 @@ public class BasicOzoneFileSystem extends FileSystem {
       return false;
     }
     return true;
+  }
+
+  private FileStatus convertFileStatus(
+      FileStatusAdapter fileStatusAdapter) {
+
+    Path symLink = null;
+    try {
+      fileStatusAdapter.getSymlink();
+    } catch (Exception ex) {
+      //NOOP: If not symlink symlink remains null.
+    }
+
+    return new FileStatus(
+        fileStatusAdapter.getLength(),
+        fileStatusAdapter.isDir(),
+        fileStatusAdapter.getBlockReplication(),
+        fileStatusAdapter.getBlocksize(),
+        fileStatusAdapter.getModificationTime(),
+        fileStatusAdapter.getAccessTime(),
+        new FsPermission(fileStatusAdapter.getPermission()),
+        fileStatusAdapter.getOwner(),
+        fileStatusAdapter.getGroup(),
+        symLink,
+        fileStatusAdapter.getPath()
+    );
+
   }
 }
