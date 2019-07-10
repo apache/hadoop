@@ -819,6 +819,22 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Get a file status from S3A with the {@code needEmptyDirectoryFlag}
+   * state probed.
+   * This accesses a package-private method in the
+   * S3A filesystem.
+   * @param fs filesystem
+   * @param dir directory
+   * @return a status
+   * @throws IOException
+   */
+  public static S3AFileStatus getStatusWithEmptyDirFlag(
+      final S3AFileSystem fs,
+      final Path dir) throws IOException {
+    return fs.innerGetFileStatus(dir, true);
+  }
+
+  /**
    * Helper class to do diffs of metrics.
    */
   public static final class MetricDiff {
