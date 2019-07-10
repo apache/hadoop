@@ -493,13 +493,22 @@ public class TestHASafeMode {
     int numNodes, int nodeThresh) {
     String status = nn.getNamesystem().getSafemode();
     if (safe == total) {
-      assertTrue("Bad safemode status: '" + status + "'",
-          status.startsWith(
-            "Safe mode is ON. The reported blocks " + safe + " has reached the "
-            + "threshold 0.9990 of total blocks " + total + ". The number of "
-            + "live datanodes " + numNodes + " has reached the minimum number "
-            + nodeThresh + ". In safe mode extension. "
-            + "Safe mode will be turned off automatically"));
+      if (nodeThresh == 0) {
+        assertTrue("Bad safemode status: '" + status + "'",
+            status.startsWith("Safe mode is ON. The reported blocks " + safe
+                + " has reached the " + "threshold 0.9990 of total blocks "
+                + total + ". The minimum number of live datanodes is not "
+                + "required. In safe mode extension. Safe mode will be turned "
+                + "off automatically"));
+      } else {
+        assertTrue("Bad safemode status: '" + status + "'",
+            status.startsWith(
+                "Safe mode is ON. The reported blocks " + safe + " has reached "
+                    + "the threshold 0.9990 of total blocks " + total + ". The "
+                    + "number of live datanodes " + numNodes + " has reached "
+                    + "the minimum number " + nodeThresh + ". In safe mode "
+                    + "extension. Safe mode will be turned off automatically"));
+      }
     } else {
       int additional = (int) (total * 0.9990) - safe;
       assertTrue("Bad safemode status: '" + status + "'",
@@ -568,9 +577,9 @@ public class TestHASafeMode {
     assertTrue("Bad safemode status: '" + status + "'",
       status.startsWith(
         "Safe mode is ON. The reported blocks 10 has reached the threshold "
-        + "0.9990 of total blocks 10. The number of live datanodes 3 has "
-        + "reached the minimum number 0. In safe mode extension. "
-        + "Safe mode will be turned off automatically"));
+        + "0.9990 of total blocks 10. The minimum number of live datanodes is "
+        + "not required. In safe mode extension. Safe mode will be turned off "
+        + "automatically"));
 
     // Delete those blocks while the SBN is in safe mode.
     // Immediately roll the edit log before the actual deletions are sent
