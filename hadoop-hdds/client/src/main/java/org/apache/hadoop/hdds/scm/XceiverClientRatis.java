@@ -259,7 +259,7 @@ public final class XceiverClientRatis extends XceiverClientSpi {
       replyFuture.get(timeout, TimeUnit.MILLISECONDS);
     } catch (Exception e) {
       Throwable t = HddsClientUtils.checkForException(e);
-      LOG.warn("3 way commit failed ", e);
+      LOG.warn("3 way commit failed on pipeline {}", pipeline, e);
       if (t instanceof GroupMismatchException) {
         throw e;
       }
@@ -278,8 +278,9 @@ public final class XceiverClientRatis extends XceiverClientSpi {
         // replication.
         commitInfoMap.remove(address);
         LOG.info(
-            "Could not commit " + index + " to all the nodes. Server " + address
-                + " has failed." + " Committed by majority.");
+            "Could not commit index {} on pipeline {} to all the nodes. " +
+            "Server {} has failed. Committed by majority.",
+            index, pipeline, address);
       });
     }
     clientReply.setLogIndex(index);
