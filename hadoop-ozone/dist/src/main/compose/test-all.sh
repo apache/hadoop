@@ -37,7 +37,8 @@ for test in $(find "$SCRIPT_DIR" -name test.sh); do
   ./test.sh
   ret=$?
   if [[ $ret -ne 0 ]]; then
-      RESULT=-1
+      RESULT=1
+      echo "ERROR: Test execution of $(dirname "$test") is FAILED!!!!"
   fi
   RESULT_DIR="$(dirname "$test")/result"
   cp "$RESULT_DIR"/robot-*.xml "$ALL_RESULT_DIR"
