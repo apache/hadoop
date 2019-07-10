@@ -469,6 +469,31 @@ public class TestBlockManagerSafeMode {
   }
 
   /**
+   * Test get safe mode tip without minimum number of live datanodes required.
+   */
+  @Test
+  public void testGetSafeModeTipsWithoutNumLiveDatanode() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    conf.setDouble(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_THRESHOLD_PCT_KEY,
+        THRESHOLD);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
+        EXTENSION);
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_SAFEMODE_MIN_DATANODES_KEY, 0);
+
+    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
+
+    BlockManager blockManager = spy(new BlockManager(fsn, false, conf));
+
+    BlockManagerSafeMode safeMode = new BlockManagerSafeMode(blockManager,
+        fsn, false, conf);
+    safeMode.activate(BLOCK_TOTAL);
+    String tip = safeMode.getSafeModeTip();
+
+    assertTrue(tip.contains("The minimum number of live datanodes is not "
+        + "required."));
+  }
+
+  /**
    * Test get safe mode tip in case of blocks with future GS.
    */
   @Test(timeout = 30000)
