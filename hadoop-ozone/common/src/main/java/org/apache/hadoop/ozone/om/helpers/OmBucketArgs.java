@@ -27,7 +27,6 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketArgs;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import com.google.common.base.Preconditions;
 
@@ -227,11 +226,11 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
         .setBucketName(bucketName);
     if(addAcls != null && !addAcls.isEmpty()) {
       builder.addAllAddAcls(addAcls.stream().map(
-          OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+          OzoneAcl::toProtobuf).collect(Collectors.toList()));
     }
     if(removeAcls != null && !removeAcls.isEmpty()) {
       builder.addAllRemoveAcls(removeAcls.stream().map(
-          OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+          OzoneAcl::toProtobuf).collect(Collectors.toList()));
     }
     if(isVersionEnabled != null) {
       builder.setIsVersionEnabled(isVersionEnabled);
@@ -251,9 +250,9 @@ public final class OmBucketArgs extends WithMetadata implements Auditable {
     return new OmBucketArgs(bucketArgs.getVolumeName(),
         bucketArgs.getBucketName(),
         bucketArgs.getAddAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+            OzoneAcl::fromProtobuf).collect(Collectors.toList()),
         bucketArgs.getRemoveAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+            OzoneAcl::fromProtobuf).collect(Collectors.toList()),
         bucketArgs.hasIsVersionEnabled() ?
             bucketArgs.getIsVersionEnabled() : null,
         bucketArgs.hasStorageType() ? StorageType.valueOf(

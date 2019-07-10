@@ -80,9 +80,8 @@ public class S3BucketManagerImpl implements S3BucketManager {
   @Override
   public void createS3Bucket(String userName, String bucketName)
       throws IOException {
-    Preconditions.checkArgument(
-        Strings.isNotBlank(bucketName), "Bucket name cannot be null or empty.");
-
+    Preconditions.checkArgument(Strings.isNotBlank(bucketName), "Bucket" +
+        " name cannot be null or empty.");
     Preconditions.checkArgument(Strings.isNotBlank(userName), "User name " +
         "cannot be null or empty.");
 

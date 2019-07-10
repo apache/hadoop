@@ -42,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.*;
 
 /**
@@ -220,7 +221,7 @@ public class TestBucketManagerImpl {
 
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl ozoneAcl = new OzoneAcl(ACLIdentityType.USER,
-        "root", ACLType.READ);
+        "root", ACLType.READ, ACCESS);
     acls.add(ozoneAcl);
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);
     OmBucketInfo bucketInfo = OmBucketInfo.newBuilder()
@@ -238,7 +239,7 @@ public class TestBucketManagerImpl {
     Assert.assertEquals(1, result.getAcls().size());
     List<OzoneAcl> addAcls = new LinkedList<>();
     OzoneAcl newAcl = new OzoneAcl(ACLIdentityType.USER,
-        "ozone", ACLType.READ);
+        "ozone", ACLType.READ, ACCESS);
     addAcls.add(newAcl);
     OmBucketArgs bucketArgs = OmBucketArgs.newBuilder()
         .setVolumeName("sampleVol")
@@ -259,9 +260,9 @@ public class TestBucketManagerImpl {
 
     List<OzoneAcl> acls = new LinkedList<>();
     OzoneAcl aclOne = new OzoneAcl(ACLIdentityType.USER,
-        "root", ACLType.READ);
+        "root", ACLType.READ, ACCESS);
     OzoneAcl aclTwo = new OzoneAcl(ACLIdentityType.USER,
-        "ozone", ACLType.READ);
+        "ozone", ACLType.READ, ACCESS);
     acls.add(aclOne);
     acls.add(aclTwo);
     BucketManager bucketManager = new BucketManagerImpl(metaMgr);

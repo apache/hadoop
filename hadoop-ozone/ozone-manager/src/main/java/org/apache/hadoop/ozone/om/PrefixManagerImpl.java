@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om;
 import com.google.common.base.Strings;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
@@ -230,11 +231,25 @@ public class PrefixManagerImpl implements PrefixManager {
       OmPrefixInfo prefixInfo =
           metadataManager.getPrefixTable().get(prefixPath);
       OmPrefixInfo.Builder upiBuilder = OmPrefixInfo.newBuilder();
-      upiBuilder.setName(prefixPath).setAcls(acls);
+      List<OzoneAcl> aclsToBeSet = new ArrayList<>(acls.size());
+      aclsToBeSet.addAll(acls);
+      upiBuilder.setName(prefixPath);
       if (prefixInfo != null && prefixInfo.getMetadata() != null) {
         upiBuilder.addAllMetadata(prefixInfo.getMetadata());
       }
-      prefixInfo = upiBuilder.build();
+      String bucketKey = metadataManager.getBucketKey(obj.getVolumeName(), 
+          obj.getBucketName());
+      OmBucketInfo bucketInfo = metadataManager.getBucketTable().
+          get(bucketKey);
+      if(bucketInfo != null) {
+        bucketInfo.getAcls().forEach(a -> {
+          if (a.getAclScope().equals(OzoneAcl.AclScope.DEFAULT)) {
+            aclsToBeSet.add(new OzoneAcl(a.getType(), a.getName(),
+                a.getAclBitSet(), OzoneAcl.AclScope.ACCESS));
+          }
+        });
+      }
+      prefixInfo = upiBuilder.setAcls(aclsToBeSet).build();
       prefixTree.insert(prefixPath, prefixInfo);
       metadataManager.getPrefixTable().put(prefixPath, prefixInfo);
     } catch (IOException ex) {

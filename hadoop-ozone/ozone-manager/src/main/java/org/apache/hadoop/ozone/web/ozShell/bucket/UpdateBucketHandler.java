@@ -75,7 +75,8 @@ public class UpdateBucketHandler extends Handler {
     if (addAcl != null) {
       String[] aclArray = addAcl.split(",");
       List<OzoneAcl> aclList =
-          Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl))
+          Arrays.stream(aclArray).map(acl -> OzoneAcl.parseAcl(acl
+          ))
               .collect(Collectors.toList());
       bucket.addAcls(aclList);
     }
