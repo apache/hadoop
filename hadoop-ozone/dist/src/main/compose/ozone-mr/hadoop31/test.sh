@@ -19,20 +19,26 @@ COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export COMPOSE_DIR
 
 # shellcheck source=/dev/null
-source "$COMPOSE_DIR/../testlib.sh"
+source "$COMPOSE_DIR/../../testlib.sh"
 
 start_docker_env
 
-execute_robot_test scm ozonefs/ozonefs.robot
+execute_robot_test scm createmrenv.robot
 
 
-## TODO: As of now the o3fs tests are unstable.
+#rm is the container name (resource manager) and not the rm command
+execute_command_in_container rm sudo apk add --update py-pip
+execute_command_in_container rm sudo pip install robotframework
 
-export OZONE_HOME=/opt/ozone
+# reinitialize the directories to use
+export OZONE_DIR=/opt/ozone
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../../testlib.sh"
 
-#execute_robot_test hadoop32 ozonefs/hadoopo3fs.robot
+execute_robot_test rm ozonefs/hadoopo3fs.robot
 
-#execute_robot_test hadoop31 ozonefs/hadoopo3fs.robot
+execute_robot_test rm  -v hadoop.version:3.1.2 mapreduce.robot
+
 
 stop_docker_env
 

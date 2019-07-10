@@ -19,17 +19,18 @@ services:
   datanode:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     volumes:
-      - ../..:/opt/hadoop
+      - ../../..:/opt/hadoop
     ports:
       - 9864
     command: ["/opt/hadoop/bin/ozone","datanode"]
     env_file:
       - docker-config
+      - ../common-config
   om:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     hostname: om
     volumes:
-      - ../..:/opt/hadoop
+      - ../../..:/opt/hadoop
     ports:
       - 9874:9874
     environment:
@@ -37,26 +38,29 @@ services:
       ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
     env_file:
       - docker-config
+      - ../common-config
     command: ["/opt/hadoop/bin/ozone","om"]
   s3g:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     hostname: s3g
     volumes:
-      - ../..:/opt/hadoop
+      - ../../..:/opt/hadoop
     ports:
       - 9878:9878
     env_file:
       - ./docker-config
+      - ../common-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     hostname: scm
     volumes:
-      - ../..:/opt/hadoop
+      - ../../..:/opt/hadoop
     ports:
       - 9876:9876
     env_file:
       - docker-config
+      - ../common-config
     environment:
       ENSURE_SCM_INITIALIZED: /data/metadata/scm/current/VERSION
     command: ["/opt/hadoop/bin/ozone","scm"]
@@ -64,11 +68,12 @@ services:
     image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
     hostname: rm
     volumes:
-      - ../..:/opt/ozone
+      - ../../..:/opt/ozone
     ports:
       - 8088:8088
     env_file:
       - ./docker-config
+      - ../common-config
     environment:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
     command: ["yarn", "resourcemanager"]
@@ -76,20 +81,24 @@ services:
     image: ${HADOOP_IMAGE}:${HADOOP_VERSION}
     hostname: nm
     volumes:
-      - ../..:/opt/ozone
+      - ../../..:/opt/ozone
     env_file:
       - ./docker-config
+      - ../common-config
     environment:
       HADOOP_CLASSPATH: /opt/ozone/share/ozone/lib/hadoop-ozone-filesystem-lib-current-@project.version@.jar
       WAIT_FOR: rm:8088
     command: ["yarn","nodemanager"]
-  dns:
-    image: andyshinn/dnsmasq:2.76
-    ports:
-        - 53:53/udp
-        - 53:53/tcp
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
-    command:
-      - "-k"
-      - "-d"
+# Optional section: comment out this part to get DNS resolution for all the containers.
+#    Add 127.0.0.1 (or the ip of your docker machine) to the resolv.conf to get local DNS resolution
+#    For all the containers (including resource managers and Node manager UI)
+#  dns:
+#    image: andyshinn/dnsmasq:2.76
+#    ports:
+#        - 53:53/udp
+#        - 53:53/tcp
+#    volumes:
+#      - "/var/run/docker.sock:/var/run/docker.sock"
+#    command:
+#      - "-k"
+#      - "-d"
