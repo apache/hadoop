@@ -20,7 +20,6 @@
 from subprocess import call
 import logging
 import util
-from clusterUtils.cluster_utils import ClusterUtils
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +33,13 @@ class Blockade(object):
 
     @classmethod
     def blockade_up(cls):
+        logger.info("Running blockade up")
         call(["blockade", "up"])
 
     @classmethod
     def blockade_status(cls):
-        exit_code, output = util.run_cmd("blockade status")
-        return exit_code, output
+        logger.info("Running blockade status")
+        return call(["blockade", "status"])
 
     @classmethod
     def make_flaky(cls, flaky_node):
@@ -58,15 +58,15 @@ class Blockade(object):
         for node_list in args:
             nodes = nodes + ','.join(node_list) + " "
         exit_code, output = \
-            util.run_cmd("blockade partition %s" % nodes)
+            util.run_command("blockade partition %s" % nodes)
         assert exit_code == 0, \
             "blockade partition command failed with exit code=[%s]" % output
 
     @classmethod
     def blockade_join(cls):
-        output = call(["blockade", "join"])
-        assert output == 0, "blockade join command failed with exit code=[%s]" \
-                            % output
+        exit_code = call(["blockade", "join"])
+        assert exit_code == 0, "blockade join command failed with exit code=[%s]" \
+                               % exit_code
 
     @classmethod
     def blockade_stop(cls, node, all_nodes=False):
