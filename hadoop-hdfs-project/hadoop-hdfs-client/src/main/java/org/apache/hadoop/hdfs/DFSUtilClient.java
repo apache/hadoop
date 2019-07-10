@@ -40,6 +40,11 @@ import java.util.Locale;
 import java.util.Map;
 
 import javax.net.SocketFactory;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
@@ -56,6 +61,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.ReconfigurationProtocol;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.DataEncryptionKeyFactory;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferClient;
@@ -64,6 +70,7 @@ import org.apache.hadoop.hdfs.protocolPB.ReconfigurationProtocolTranslatorPB;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.util.IOUtilsClient;
 import org.apache.hadoop.hdfs.web.WebHdfsConstants;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -681,5 +688,47 @@ public class DFSUtilClient {
     final InterruptedIOException iioe = new InterruptedIOException(message);
     iioe.initCause(e);
     return iioe;
+  }
+
+  /**
+   * Connect to the given datanode's datantrasfer port, and return
+   * the resulting IOStreamPair. This includes encryption wrapping, etc.
+   */
+  public static IOStreamPair connectToDN(DatanodeInfo dn, int timeout,
+                                         Configuration conf,
+                                         SaslDataTransferClient saslClient,
+                                         SocketFactory socketFactory,
+                                         boolean connectToDnViaHostname,
+                                         DataEncryptionKeyFactory dekFactory,
+                                         Token<BlockTokenIdentifier> blockToken)
+      throws IOException {
+
+    boolean success = false;
+    Socket sock = null;
+    try {
+      sock = socketFactory.createSocket();
+      String dnAddr = dn.getXferAddr(connectToDnViaHostname);
+      LOG.debug("Connecting to datanode {}", dnAddr);
+      NetUtils.connect(sock, NetUtils.createSocketAddr(dnAddr), timeout);
+      sock.setSoTimeout(timeout);
+
+      OutputStream unbufOut = NetUtils.getOutputStream(sock);
+      InputStream unbufIn = NetUtils.getInputStream(sock);
+      IOStreamPair pair = saslClient.newSocketSend(sock, unbufOut,
+          unbufIn, dekFactory, blockToken, dn);
+
+      IOStreamPair result = new IOStreamPair(
+          new DataInputStream(pair.in),
+          new DataOutputStream(new BufferedOutputStream(pair.out,
+              DFSUtilClient.getSmallBufferSize(conf)))
+      );
+
+      success = true;
+      return result;
+    } finally {
+      if (!success) {
+        IOUtils.closeSocket(sock);
+      }
+    }
   }
 }

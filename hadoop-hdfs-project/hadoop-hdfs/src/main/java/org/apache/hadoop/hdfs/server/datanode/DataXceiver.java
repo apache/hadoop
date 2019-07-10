@@ -17,42 +17,15 @@
  */
 package org.apache.hadoop.hdfs.server.datanode;
 
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_ACCESS_TOKEN;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_INVALID;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_UNSUPPORTED;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
-import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
-import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
-import static org.apache.hadoop.util.Time.monotonicNow;
-
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketException;
-import java.net.SocketTimeoutException;
-import java.nio.channels.ClosedChannelException;
-import java.security.MessageDigest;
-import java.util.Arrays;
-import java.util.concurrent.TimeUnit;
-
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
+import com.google.protobuf.ByteString;
 import org.apache.commons.logging.Log;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.net.Peer;
+import org.apache.hadoop.hdfs.protocol.BlockChecksumOptions;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
@@ -73,25 +46,51 @@ import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitShmR
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status;
 import org.apache.hadoop.hdfs.protocolPB.PBHelperClient;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
+import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.BlockChecksumComputer;
+import org.apache.hadoop.hdfs.server.datanode.BlockChecksumHelper.ReplicatedBlockChecksumComputer;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsUnsupportedException;
 import org.apache.hadoop.hdfs.server.datanode.DataNode.ShortCircuitFdsVersionException;
 import org.apache.hadoop.hdfs.server.datanode.ShortCircuitRegistry.NewShmInfo;
-import org.apache.hadoop.hdfs.server.datanode.fsdataset.LengthInputStream;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.shortcircuit.ShortCircuitShm.SlotId;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.unix.DomainSocket;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.StopWatch;
-
-import com.google.common.base.Preconditions;
-import com.google.protobuf.ByteString;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.EOFException;
+import java.io.FileDescriptor;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.SocketTimeoutException;
+import java.nio.channels.ClosedChannelException;
+import java.util.Arrays;
+import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.DO_NOT_USE_RECEIPT_VERIFICATION;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ShortCircuitFdResponse.USE_RECEIPT_VERIFICATION;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_ACCESS_TOKEN;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_INVALID;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.ERROR_UNSUPPORTED;
+import static org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.Status.SUCCESS;
+import static org.apache.hadoop.hdfs.server.datanode.DataNode.DN_CLIENTTRACE_FORMAT;
+import static org.apache.hadoop.util.Time.monotonicNow;
 
 
 /**
@@ -941,90 +940,35 @@ class DataXceiver extends Receiver implements Runnable {
     }
   }
 
-  private MD5Hash calcPartialBlockChecksum(ExtendedBlock block,
-      long requestLength, DataChecksum checksum, DataInputStream checksumIn)
-      throws IOException {
-    final int bytesPerCRC = checksum.getBytesPerChecksum();
-    final int csize = checksum.getChecksumSize();
-    final byte[] buffer = new byte[4*1024];
-    MessageDigest digester = MD5Hash.getDigester();
-
-    long remaining = requestLength / bytesPerCRC * csize;
-    for (int toDigest = 0; remaining > 0; remaining -= toDigest) {
-      toDigest = checksumIn.read(buffer, 0,
-          (int) Math.min(remaining, buffer.length));
-      if (toDigest < 0) {
-        break;
-      }
-      digester.update(buffer, 0, toDigest);
-    }
-    
-    int partialLength = (int) (requestLength % bytesPerCRC);
-    if (partialLength > 0) {
-      byte[] buf = new byte[partialLength];
-      final InputStream blockIn = datanode.data.getBlockInputStream(block,
-          requestLength - partialLength);
-      try {
-        // Get the CRC of the partialLength.
-        IOUtils.readFully(blockIn, buf, 0, partialLength);
-      } finally {
-        IOUtils.closeStream(blockIn);
-      }
-      checksum.update(buf, 0, partialLength);
-      byte[] partialCrc = new byte[csize];
-      checksum.writeValue(partialCrc, 0, true);
-      digester.update(partialCrc);
-    }
-    return new MD5Hash(digester.digest());
-  }
-
   @Override
-  public void blockChecksum(final ExtendedBlock block,
-      final Token<BlockTokenIdentifier> blockToken) throws IOException {
+  public void blockChecksum(ExtendedBlock block,
+      Token<BlockTokenIdentifier> blockToken,
+      BlockChecksumOptions blockChecksumOptions)
+      throws IOException {
     updateCurrentThreadName("Getting checksum for block " + block);
     final DataOutputStream out = new DataOutputStream(
         getOutputStream());
     checkAccess(out, true, block, blockToken,
         Op.BLOCK_CHECKSUM, BlockTokenIdentifier.AccessMode.READ);
-    // client side now can specify a range of the block for checksum
-    long requestLength = block.getNumBytes();
-    Preconditions.checkArgument(requestLength >= 0);
-    long visibleLength = datanode.data.getReplicaVisibleLength(block);
-    boolean partialBlk = requestLength < visibleLength;
 
-    final LengthInputStream metadataIn = datanode.data
-        .getMetaDataInputStream(block);
-    
-    final DataInputStream checksumIn = new DataInputStream(
-        new BufferedInputStream(metadataIn, ioFileBufferSize));
+    BlockChecksumComputer maker = new ReplicatedBlockChecksumComputer(
+        datanode, block, blockChecksumOptions);
+
     try {
-      //read metadata file
-      final BlockMetadataHeader header = BlockMetadataHeader
-          .readHeader(checksumIn);
-      final DataChecksum checksum = header.getChecksum();
-      final int csize = checksum.getChecksumSize();
-      final int bytesPerCRC = checksum.getBytesPerChecksum();
-      final long crcPerBlock = csize <= 0 ? 0 : 
-        (metadataIn.getLength() - BlockMetadataHeader.getHeaderSize()) / csize;
-
-      final MD5Hash md5 = partialBlk && crcPerBlock > 0 ? 
-          calcPartialBlockChecksum(block, requestLength, checksum, checksumIn)
-            : MD5Hash.digest(checksumIn);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("block=" + block + ", bytesPerCRC=" + bytesPerCRC
-            + ", crcPerBlock=" + crcPerBlock + ", md5=" + md5);
-      }
+      maker.compute();
 
       //write reply
       BlockOpResponseProto.newBuilder()
-        .setStatus(SUCCESS)
-        .setChecksumResponse(OpBlockChecksumResponseProto.newBuilder()             
-          .setBytesPerCrc(bytesPerCRC)
-          .setCrcPerBlock(crcPerBlock)
-          .setMd5(ByteString.copyFrom(md5.getDigest()))
-          .setCrcType(PBHelperClient.convert(checksum.getChecksumType())))
-        .build()
-        .writeDelimitedTo(out);
+          .setStatus(SUCCESS)
+          .setChecksumResponse(OpBlockChecksumResponseProto.newBuilder()
+              .setBytesPerCrc(maker.getBytesPerCRC())
+              .setCrcPerBlock(maker.getCrcPerBlock())
+              .setBlockChecksum(ByteString.copyFrom(maker.getOutBytes()))
+              .setCrcType(PBHelperClient.convert(maker.getCrcType()))
+              .setBlockChecksumOptions(
+                  PBHelperClient.convert(blockChecksumOptions)))
+          .build()
+          .writeDelimitedTo(out);
       out.flush();
     } catch (IOException ioe) {
       LOG.info("blockChecksum " + block + " received exception " + ioe);
@@ -1032,8 +976,6 @@ class DataXceiver extends Receiver implements Runnable {
       throw ioe;
     } finally {
       IOUtils.closeStream(out);
-      IOUtils.closeStream(checksumIn);
-      IOUtils.closeStream(metadataIn);
     }
 
     //update metrics
@@ -1330,7 +1272,7 @@ class DataXceiver extends Receiver implements Runnable {
   /**
    * Wait until the BP is registered, upto the configured amount of time.
    * Throws an exception if times out, which should fail the client request.
-   * @param the requested block
+   * @param block requested block
    */
   void checkAndWaitForBP(final ExtendedBlock block)
       throws IOException {

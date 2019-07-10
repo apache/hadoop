@@ -15,32 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol.datatransfer;
-
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+package org.apache.hadoop.hdfs.protocol;
 
 import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.IOUtils;
 
 /**
- * A little struct class to wrap an InputStream and an OutputStream.
+ * Algorithms/types denoting how block-level checksums are computed using
+ * lower-level chunk checksums/CRCs.
  */
 @InterfaceAudience.Private
-public class IOStreamPair implements Closeable {
-  public final InputStream in;
-  public final OutputStream out;
-
-  public IOStreamPair(InputStream in, OutputStream out) {
-    this.in = in;
-    this.out = out;
-  }
-
-  @Override
-  public void close() throws IOException {
-    IOUtils.closeStream(in);
-    IOUtils.closeStream(out);
-  }
+public enum BlockChecksumType {
+  MD5CRC,  // BlockChecksum obtained by taking the MD5 digest of chunk CRCs
+  COMPOSITE_CRC  // Chunk-independent CRC, optionally striped
 }

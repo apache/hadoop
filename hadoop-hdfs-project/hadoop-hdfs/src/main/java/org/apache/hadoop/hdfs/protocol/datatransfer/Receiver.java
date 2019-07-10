@@ -284,8 +284,9 @@ public abstract class Receiver implements DataTransferProtocol {
     TraceScope traceScope = continueTraceSpan(proto.getHeader(),
         proto.getClass().getSimpleName());
     try {
-    blockChecksum(PBHelperClient.convert(proto.getHeader().getBlock()),
-        PBHelperClient.convert(proto.getHeader().getToken()));
+      blockChecksum(PBHelperClient.convert(proto.getHeader().getBlock()),
+          PBHelperClient.convert(proto.getHeader().getToken()),
+          PBHelperClient.convert(proto.getBlockChecksumOptions()));
     } finally {
       if (traceScope != null) traceScope.close();
     }

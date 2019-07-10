@@ -15,32 +15,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hdfs.protocol.datatransfer;
+package org.apache.hadoop.hdfs;
 
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 
 /**
- * A little struct class to wrap an InputStream and an OutputStream.
+ * End-to-end tests for COMPOSITE_CRC combine mode.
  */
-@InterfaceAudience.Private
-public class IOStreamPair implements Closeable {
-  public final InputStream in;
-  public final OutputStream out;
-
-  public IOStreamPair(InputStream in, OutputStream out) {
-    this.in = in;
-    this.out = out;
+public class TestFileChecksumCompositeCrc extends TestFileChecksum {
+  @Override
+  protected void customizeConf(Configuration conf) {
+    conf.set(
+        HdfsClientConfigKeys.DFS_CHECKSUM_COMBINE_MODE_KEY, "COMPOSITE_CRC");
   }
 
   @Override
-  public void close() throws IOException {
-    IOUtils.closeStream(in);
-    IOUtils.closeStream(out);
+  protected boolean expectComparableDifferentBlockSizeReplicatedFiles() {
+    return true;
+  }
+
+  @Override
+  protected boolean expectSupportForSingleFileMixedBytesPerChecksum() {
+    return true;
   }
 }

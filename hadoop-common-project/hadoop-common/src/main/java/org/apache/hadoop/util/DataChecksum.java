@@ -45,7 +45,7 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_MIXED   = 4;
  
   /** The checksum types */
-  public static enum Type {
+  public enum Type {
     NULL  (CHECKSUM_NULL, 0),
     CRC32 (CHECKSUM_CRC32, 4),
     CRC32C(CHECKSUM_CRC32C, 4),
@@ -55,7 +55,7 @@ public class DataChecksum implements Checksum {
     public final int id;
     public final int size;
     
-    private Type(int id, int size) {
+    Type(int id, int size) {
       this.id = id;
       this.size = size;
     }
@@ -76,6 +76,24 @@ public class DataChecksum implements Checksum {
    */
   public static Checksum newCrc32() {
     return new CRC32();
+  }
+
+  /**
+   * @return the int representation of the polynomial associated with the
+   *     CRC {@code type}, suitable for use with further CRC arithmetic.
+   * @throws IOException if there is no CRC polynomial applicable
+   *     to the given {@code type}.
+   */
+  public static int getCrcPolynomialForType(Type type) throws IOException {
+    switch (type) {
+    case CRC32:
+      return CrcUtil.GZIP_POLYNOMIAL;
+    case CRC32C:
+      return CrcUtil.CASTAGNOLI_POLYNOMIAL;
+    default:
+      throw new IOException(
+          "No CRC polynomial could be associated with type: " + type);
+    }
   }
 
   public static DataChecksum newDataChecksum(Type type, int bytesPerChecksum ) {
@@ -230,17 +248,21 @@ public class DataChecksum implements Checksum {
   public Type getChecksumType() {
     return type;
   }
+
   /** @return the size for a checksum. */
   public int getChecksumSize() {
     return type.size;
   }
+
   /** @return the required checksum size given the data length. */
   public int getChecksumSize(int dataSize) {
     return ((dataSize - 1)/getBytesPerChecksum() + 1) * getChecksumSize(); 
   }
+
   public int getBytesPerChecksum() {
     return bytesPerChecksum;
   }
+
   public int getNumBytesInSum() {
     return inSum;
   }
@@ -249,16 +271,19 @@ public class DataChecksum implements Checksum {
   static public int getChecksumHeaderSize() {
     return 1 + SIZE_OF_INTEGER; // type byte, bytesPerChecksum int
   }
+
   //Checksum Interface. Just a wrapper around member summer.
   @Override
   public long getValue() {
     return summer.getValue();
   }
+
   @Override
   public void reset() {
     summer.reset();
     inSum = 0;
   }
+
   @Override
   public void update( byte[] b, int off, int len ) {
     if ( len > 0 ) {
@@ -266,6 +291,7 @@ public class DataChecksum implements Checksum {
       inSum += len;
     }
   }
+
   @Override
   public void update( int b ) {
     summer.update( b );
