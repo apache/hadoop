@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import org.assertj.core.api.Assertions;
 import org.junit.FixMethodOrder;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
@@ -120,6 +121,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
   }
 
   @Test
+  @Ignore
   public void test_050_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
@@ -245,6 +247,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
   }
 
   @Test
+  @Ignore
   public void test_600_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
