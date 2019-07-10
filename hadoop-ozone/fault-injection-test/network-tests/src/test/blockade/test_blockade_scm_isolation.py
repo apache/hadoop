@@ -15,153 +15,111 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import time
-import re
 import logging
-from os import environ
-from blockadeUtils.blockade import Blockade
-from clusterUtils.cluster_utils import ClusterUtils
+
+from ozone.cluster import OzoneCluster
 
 logger = logging.getLogger(__name__)
-if "MAVEN_TEST" in os.environ:
-  compose_dir = environ.get("MAVEN_TEST")
-  FILE = os.path.join(compose_dir, "docker-compose.yaml")
-elif "OZONE_HOME" in os.environ:
-  compose_dir = environ.get("OZONE_HOME")
-  FILE = os.path.join(compose_dir, "compose", "ozoneblockade", \
-         "docker-compose.yaml")
-else:
-  parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
-  FILE = os.path.join(parent_dir, "compose", "ozoneblockade", \
-         "docker-compose.yaml")
-
-os.environ["DOCKER_COMPOSE_FILE"] = FILE
-SCALE = 3
-INCREASED_SCALE = 5
-CONTAINER_LIST = []
-OM = []
-SCM = []
-DATANODES = []
 
 
-def setup():
-  global CONTAINER_LIST, OM, SCM, DATANODES
-  Blockade.blockade_destroy()
-  CONTAINER_LIST = ClusterUtils.cluster_setup(FILE, SCALE)
-  exit_code, output = Blockade.blockade_status()
-  assert exit_code == 0, "blockade status command failed with output=[%s]" % \
-                         output
-  OM, SCM, _, DATANODES = \
-    ClusterUtils.find_om_scm_client_datanodes(CONTAINER_LIST)
-
-  exit_code, output = ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS",
-                                             "THREE")
-  assert exit_code == 0, "freon run failed with output=[%s]" % output
+def setup_function():
+    global cluster
+    cluster = OzoneCluster.create()
+    cluster.start()
 
 
-def teardown():
-  logger.info("Inside teardown")
-  Blockade.blockade_destroy()
+def teardown_function():
+    cluster.stop()
 
 
-def teardown_module():
-  ClusterUtils.cluster_destroy(FILE)
+def test_scm_isolation_one_node():
+    """
+    In this test, one of the DNs cannot communicate with SCM.
+    Other DNs can communicate with SCM.
+    Expectation : The container should eventually have at least two closed
+    replicas.
+    """
+    om = cluster.om
+    scm = cluster.scm
+    dns = cluster.datanodes
+    client = cluster.client
+    oz_client = cluster.get_client()
+
+    oz_client.run_freon(1, 1, 1, 10240)
+
+    first_set = [om, dns[0], dns[1], dns[2], client]
+    second_set = [om, scm, dns[1], dns[2], client]
+    cluster.partition_network(first_set, second_set)
+    oz_client.run_freon(1, 1, 1, 10240)
+
+    containers = cluster.get_containers_on_datanode(dns[1])
+
+    for container in containers:
+        container.wait_until_one_replica_is_closed()
+
+    for container in containers:
+        assert container.get_state(dns[0]) == 'OPEN'
+        assert container.get_state(dns[1]) == 'CLOSED'
+        assert container.get_state(dns[2]) == 'CLOSED'
+
+    cluster.restore_network()
+
+    for container in containers:
+        container.wait_until_all_replicas_are_closed()
+
+    for container in containers:
+        assert container.get_state(dns[0]) == 'CLOSED'
+        assert container.get_state(dns[1]) == 'CLOSED'
+        assert container.get_state(dns[2]) == 'CLOSED'
+
+    exit_code, output = oz_client.run_freon(1, 1, 1, 10240)
+    assert exit_code == 0, "freon run failed with output=[%s]" % output
 
 
-def test_scm_isolation_one_node(run_second_phase):
-  """
-  In this test, one of the datanodes cannot communicate with SCM.
-  Other datanodes can communicate with SCM.
-  Expectation : The container should eventually have at least two closed
-  replicas.
-  """
-  first_set = [OM[0], DATANODES[0], DATANODES[1], DATANODES[2]]
-  second_set = [OM[0], SCM[0], DATANODES[1], DATANODES[2]]
-  Blockade.blockade_create_partition(first_set, second_set)
-  Blockade.blockade_status()
-  ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
-  logger.info("Waiting for %s seconds before checking container status",
-              os.environ["CONTAINER_STATUS_SLEEP"])
-  time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-  all_datanodes_container_status = \
-    ClusterUtils.findall_container_status(FILE, SCALE)
-  closed_container_datanodes = [x for x in all_datanodes_container_status
-                                if x == 'CLOSED']
-  assert len(closed_container_datanodes) >= 2, \
-    "The container should have at least two closed replicas."
+def test_scm_isolation_two_node():
+    """
+    In this test, two DNs cannot communicate with SCM.
+    Expectation : The container should eventually have at three closed replicas
+    or, two open replicas and one quasi-closed replica.
+    """
+    om = cluster.om
+    scm = cluster.scm
+    dns = cluster.datanodes
+    client = cluster.client
+    oz_client = cluster.get_client()
 
-  if str(run_second_phase).lower() == "true":
-    ClusterUtils.cluster_setup(FILE, INCREASED_SCALE, False)
-    Blockade.blockade_status()
-    logger.info("Waiting for %s seconds before checking container status",
-                os.environ["CONTAINER_STATUS_SLEEP"])
-    time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-    all_datanodes_container_status = \
-      ClusterUtils.findall_container_status(FILE, INCREASED_SCALE)
-    closed_container_datanodes = [x for x in all_datanodes_container_status
-                                  if x == 'CLOSED']
-    assert len(closed_container_datanodes) >= 3, \
-      "The container should have at least three closed replicas."
-    Blockade.blockade_join()
-    Blockade.blockade_status()
-    _, output = \
-      ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
-    assert re.search("Status: Success", output) is not None
+    oz_client.run_freon(1, 1, 1, 10240)
 
+    first_set = [om, dns[0], dns[1], dns[2], client]
+    second_set = [om, scm, dns[1], client]
+    cluster.partition_network(first_set, second_set)
+    oz_client.run_freon(1, 1, 1, 10240)
 
-def test_scm_isolation_two_node(run_second_phase):
-  """
-  In this test, two datanodes cannot communicate with SCM.
-  Expectation : The container should eventually have at three closed replicas
-   or, two open replicas and one quasi-closed replica.
-  """
-  first_set = [OM[0], DATANODES[0], DATANODES[1], DATANODES[2]]
-  second_set = [OM[0], SCM[0], DATANODES[1]]
-  Blockade.blockade_create_partition(first_set, second_set)
-  Blockade.blockade_status()
-  ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
-  logger.info("Waiting for %s seconds before checking container status",
-              os.environ["CONTAINER_STATUS_SLEEP"])
-  time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-  all_datanodes_container_status = \
-    ClusterUtils.findall_container_status(FILE, SCALE)
-  closed_container_datanodes = [x for x in all_datanodes_container_status
-                                if x == 'CLOSED']
-  qausiclosed_container_datanodes = [x for x in all_datanodes_container_status
-                                     if x == 'QUASI_CLOSED']
-  count_open_container_datanodes = [x for x in all_datanodes_container_status
-                                    if x == 'OPEN']
-  assert len(closed_container_datanodes) == 3 or \
-         (len(count_open_container_datanodes) == 2 and
-          len(qausiclosed_container_datanodes) == 1), \
-    "The container should have three closed replicas or two open " \
-    "replicas and one quasi_closed replica."
+    containers = cluster.get_containers_on_datanode(dns[1])
 
-  if str(run_second_phase).lower() == "true":
-    ClusterUtils.cluster_setup(FILE, INCREASED_SCALE, False)
-    Blockade.blockade_status()
-    logger.info("Waiting for %s seconds before checking container status",
-                os.environ["CONTAINER_STATUS_SLEEP"])
-    time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-    all_datanodes_container_status = \
-      ClusterUtils.findall_container_status(FILE, INCREASED_SCALE)
-    closed_container_datanodes = [x for x in all_datanodes_container_status
-                                  if x == 'CLOSED']
-    qausiclosed_container_datanodes = \
-      [x for x in all_datanodes_container_status if x == 'QUASI_CLOSED']
-    assert len(closed_container_datanodes) >= 3 or \
-           len(qausiclosed_container_datanodes) >= 3
-    Blockade.blockade_join()
-    Blockade.blockade_status()
-    if len(closed_container_datanodes) < 3:
-      time.sleep(int(os.environ["CONTAINER_STATUS_SLEEP"]))
-      all_datanodes_container_status = \
-        ClusterUtils.findall_container_status(FILE, INCREASED_SCALE)
-      closed_container_datanodes = [x for x in all_datanodes_container_status
-                                    if x == 'CLOSED']
+    for container in containers:
+        container.wait_until_replica_is_not_open_anymore(dns[1])
 
-      assert len(closed_container_datanodes) >= 3
-    _, output = \
-      ClusterUtils.run_freon(FILE, 1, 1, 1, 10240, "RATIS", "THREE")
-    assert re.search("Status: Success", output) is not None
+    for container in containers:
+        state = container.get_state(dns[1])
+        assert state == 'QUASI_CLOSED' or state == 'CLOSED'
+
+        if state == 'QUASI_CLOSED':
+            assert container.get_state(dns[0]) == 'OPEN'
+            assert container.get_state(dns[2]) == 'OPEN'
+        else :
+            assert container.get_state(dns[0]) == 'CLOSED'
+            assert container.get_state(dns[2]) == 'CLOSED'
+
+    cluster.restore_network()
+
+    for container in containers:
+        container.wait_until_all_replicas_are_closed()
+
+    for container in containers:
+        assert container.get_state(dns[0]) == 'CLOSED'
+        assert container.get_state(dns[1]) == 'CLOSED'
+        assert container.get_state(dns[2]) == 'CLOSED'
+
+    exit_code, output = oz_client.run_freon(1, 1, 1, 10240)
+    assert exit_code == 0, "freon run failed with output=[%s]" % output
