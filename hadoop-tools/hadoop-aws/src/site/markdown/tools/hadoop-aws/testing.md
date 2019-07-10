@@ -854,12 +854,8 @@ and, for test runs in or near the S3/DDB stores, throttling events.
 
 If you want to manage capacity, use `s3guard set-capacity` to increase it
 (performance) or decrease it (costs).
-For remote `hadoop-aws` test runs, the read/write capacities of "10" each should suffice;
+For remote `hadoop-aws` test runs, the read/write capacities of "0" each should suffice;
 increase it if parallel test run logs warn of throttling.
-
-Tip: for agility, use DynamoDB autoscaling, setting the minimum to something very low (e.g 5 units), the maximum to the largest amount you are willing to pay.
-This will automatically reduce capacity when you are not running tests against
-the bucket, slowly increase it over multiple test runs, if the load justifies it.
 
 ## <a name="tips"></a> Tips
 
