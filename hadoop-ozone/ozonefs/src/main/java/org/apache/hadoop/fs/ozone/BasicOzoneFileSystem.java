@@ -43,10 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
-
 import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
-
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
@@ -632,8 +629,8 @@ public class BasicOzoneFileSystem extends FileSystem {
     String key = pathToKey(qualifiedPath);
     FileStatus fileStatus = null;
     try {
-      fileStatus = adapter.getFileStatus(key)
-        .makeQualified(uri, qualifiedPath, getUsername(), getUsername());
+      fileStatus = convertFileStatus(
+          adapter.getFileStatus(key, uri, qualifiedPath, getUsername()));
     } catch (OMException ex) {
       if (ex.getResult().equals(OMException.ResultCodes.KEY_NOT_FOUND)) {
         throw new FileNotFoundException("File not found. path:" + f);
