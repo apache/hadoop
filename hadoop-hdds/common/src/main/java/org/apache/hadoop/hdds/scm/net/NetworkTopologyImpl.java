@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -545,10 +546,6 @@ public class NetworkTopologyImpl implements NetworkTopology{
           ancestorGen);
       return null;
     }
-    LOG.debug("Choosing random from \"{}\" available nodes on node \"{}\"," +
-            " scope=\"{}\", excludedScope=\"{}\", excludeNodes=\"{}\".",
-        availableNodes, scopeNode, scopeNode.getNetworkFullPath(),
-        excludedScope, excludedNodes);
 
     // scope is a Leaf node
     if (!(scopeNode instanceof InnerNode)) {
@@ -556,15 +553,21 @@ public class NetworkTopologyImpl implements NetworkTopology{
     }
 
     Node ret;
+    int nodeIndex;
     if (leafIndex >= 0) {
-      ret = ((InnerNode)scopeNode).getLeaf(leafIndex % availableNodes,
-          excludedScope, mutableExNodes, ancestorGen);
+      nodeIndex = leafIndex % availableNodes;
+      ret = ((InnerNode)scopeNode).getLeaf(nodeIndex, excludedScope,
+          mutableExNodes, ancestorGen);
     } else {
-      final int index = ThreadLocalRandom.current().nextInt(availableNodes);
-      ret = ((InnerNode)scopeNode).getLeaf(index, excludedScope, mutableExNodes,
-          ancestorGen);
+      nodeIndex = ThreadLocalRandom.current().nextInt(availableNodes);
+      ret = ((InnerNode)scopeNode).getLeaf(nodeIndex, excludedScope,
+          mutableExNodes, ancestorGen);
     }
-    LOG.debug("chooseRandom return {}", ret);
+    LOG.debug("Choosing node[index={},random={}] from \"{}\" available nodes" +
+            " scope=\"{}\", excludedScope=\"{}\", excludeNodes=\"{}\".",
+        nodeIndex, (leafIndex == -1 ? "true" : "false"), availableNodes,
+        scopeNode.getNetworkFullPath(), excludedScope, excludedNodes);
+    LOG.debug("Chosen node = {}", (ret == null ? "not found" : ret.toString()));
     return ret;
   }
 
@@ -583,13 +586,16 @@ public class NetworkTopologyImpl implements NetworkTopology{
         (node1 == null && node2 == null))  {
       return 0;
     }
+    if (node1 == null || node2 == null) {
+      LOG.warn("One of the nodes is a null pointer");
+      return Integer.MAX_VALUE;
+    }
     int cost = 0;
     netlock.readLock().lock();
     try {
-      if (node1 == null || node2 == null ||
-          (node1.getAncestor(maxLevel - 1) != clusterTree) ||
+      if ((node1.getAncestor(maxLevel - 1) != clusterTree) ||
           (node2.getAncestor(maxLevel - 1) != clusterTree)) {
-        LOG.warn("One of the nodes is a null pointer");
+        LOG.warn("One of the nodes is outside of network topology");
         return Integer.MAX_VALUE;
       }
       int level1 = node1.getLevel();
@@ -630,17 +636,21 @@ public class NetworkTopologyImpl implements NetworkTopology{
    * @param nodes     Available replicas with the requested data
    * @param activeLen Number of active nodes at the front of the array
    */
-  public void sortByDistanceCost(Node reader, Node[] nodes, int activeLen) {
+  public List<? extends Node> sortByDistanceCost(Node reader,
+      List<? extends Node> nodes, int activeLen) {
     /** Sort weights for the nodes array */
+    if (reader == null) {
+      return nodes;
+    }
     int[] costs = new int[activeLen];
     for (int i = 0; i < activeLen; i++) {
-      costs[i] = getDistanceCost(reader, nodes[i]);
+      costs[i] = getDistanceCost(reader, nodes.get(i));
     }
     // Add cost/node pairs to a TreeMap to sort
     TreeMap<Integer, List<Node>> tree = new TreeMap<Integer, List<Node>>();
     for (int i = 0; i < activeLen; i++) {
       int cost = costs[i];
-      Node node = nodes[i];
+      Node node = nodes.get(i);
       List<Node> list = tree.get(cost);
       if (list == null) {
         list = Lists.newArrayListWithExpectedSize(1);
@@ -648,17 +658,20 @@ public class NetworkTopologyImpl implements NetworkTopology{
       }
       list.add(node);
     }
-    int idx = 0;
+
+    List<Node> ret = new ArrayList<>();
     for (List<Node> list: tree.values()) {
       if (list != null) {
         Collections.shuffle(list);
         for (Node n: list) {
-          nodes[idx] = n;
-          idx++;
+          ret.add(n);
         }
       }
     }
-    Preconditions.checkState(idx == activeLen, "Wrong number of nodes sorted!");
+
+    Preconditions.checkState(ret.size() == activeLen,
+        "Wrong number of nodes sorted!");
+    return ret;
   }
 
   /**

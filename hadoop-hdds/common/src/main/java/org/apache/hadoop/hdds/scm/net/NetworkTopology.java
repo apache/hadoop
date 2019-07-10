@@ -18,6 +18,7 @@
 package org.apache.hadoop.hdds.scm.net;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * The interface defines a network topology.
@@ -246,5 +247,6 @@ public interface NetworkTopology {
    * @param nodes     Available replicas with the requested data
    * @param activeLen Number of active nodes at the front of the array
    */
-  void sortByDistanceCost(Node reader, Node[] nodes, int activeLen);
+  List<? extends Node> sortByDistanceCost(Node reader,
+      List<? extends Node> nodes, int activeLen);
 }

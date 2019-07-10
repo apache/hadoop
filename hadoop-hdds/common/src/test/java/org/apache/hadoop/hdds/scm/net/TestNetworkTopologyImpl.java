@@ -784,15 +784,16 @@ public class TestNetworkTopologyImpl {
       for (Node[] nodeList : nodes) {
         int length = nodeList.length;
         while (length > 0) {
-          cluster.sortByDistanceCost(reader, nodeList, length);
-          for (int i = 0; i < nodeList.length; i++) {
-            if ((i + 1) < nodeList.length) {
-              int cost1 = cluster.getDistanceCost(reader, nodeList[i]);
-              int cost2 = cluster.getDistanceCost(reader, nodeList[i + 1]);
+          List<? extends Node> ret = cluster.sortByDistanceCost(reader,
+              Arrays.asList(nodeList), length);
+          for (int i = 0; i < ret.size(); i++) {
+            if ((i + 1) < ret.size()) {
+              int cost1 = cluster.getDistanceCost(reader, ret.get(i));
+              int cost2 = cluster.getDistanceCost(reader, ret.get(i + 1));
               assertTrue("reader:" + (reader != null ?
                   reader.getNetworkFullPath() : "null") +
-                  ",node1:" + nodeList[i].getNetworkFullPath() +
-                  ",node2:" + nodeList[i + 1].getNetworkFullPath() +
+                  ",node1:" + ret.get(i).getNetworkFullPath() +
+                  ",node2:" + ret.get(i + 1).getNetworkFullPath() +
                   ",cost1:" + cost1 + ",cost2:" + cost2,
                   cost1 == Integer.MAX_VALUE || cost1 <= cost2);
             }
@@ -803,20 +804,22 @@ public class TestNetworkTopologyImpl {
     }
 
     // sort all nodes
-    Node[] nodeList = dataNodes.clone();
+    List<Node> nodeList = Arrays.asList(dataNodes.clone());
     for (Node reader : readers) {
-      int length = nodeList.length;
+      int length = nodeList.size();
       while (length >= 0) {
-        cluster.sortByDistanceCost(reader, nodeList, length);
-        for (int i = 0; i < nodeList.length; i++) {
-          if ((i + 1) < nodeList.length) {
-            int cost1 = cluster.getDistanceCost(reader, nodeList[i]);
-            int cost2 = cluster.getDistanceCost(reader, nodeList[i + 1]);
+        List<? extends Node> sortedNodeList =
+            cluster.sortByDistanceCost(reader, nodeList, length);
+        for (int i = 0; i < sortedNodeList.size(); i++) {
+          if ((i + 1) < sortedNodeList.size()) {
+            int cost1 = cluster.getDistanceCost(reader, sortedNodeList.get(i));
+            int cost2 = cluster.getDistanceCost(
+                reader, sortedNodeList.get(i + 1));
             // node can be removed when called in testConcurrentAccess
             assertTrue("reader:" + (reader != null ?
                 reader.getNetworkFullPath() : "null") +
-                ",node1:" + nodeList[i].getNetworkFullPath() +
-                ",node2:" + nodeList[i + 1].getNetworkFullPath() +
+                ",node1:" + sortedNodeList.get(i).getNetworkFullPath() +
+                ",node2:" + sortedNodeList.get(i + 1).getNetworkFullPath() +
                 ",cost1:" + cost1 + ",cost2:" + cost2,
                 cost1 == Integer.MAX_VALUE || cost1 <= cost2);
           }

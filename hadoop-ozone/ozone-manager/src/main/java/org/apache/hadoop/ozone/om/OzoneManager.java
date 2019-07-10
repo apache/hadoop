@@ -2405,7 +2405,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     boolean auditSuccess = true;
     try {
       metrics.incNumKeyLookups();
-      return keyManager.lookupKey(args);
+      return keyManager.lookupKey(args, getClientAddress());
     } catch (Exception ex) {
       metrics.incNumKeyLookupFails();
       auditSuccess = false;
@@ -2606,6 +2606,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       MBeans.unregister(this.omInfoBeanName);
       this.omInfoBeanName = null;
     }
+  }
+
+  private static String getClientAddress() {
+    String clientMachine = Server.getRemoteAddress();
+    if (clientMachine == null) { //not a RPC client
+      clientMachine = "";
+    }
+    return clientMachine;
   }
 
   @Override
@@ -3044,7 +3052,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     boolean auditSuccess = true;
     try {
       metrics.incNumLookupFile();
-      return keyManager.lookupFile(args);
+      return keyManager.lookupFile(args, getClientAddress());
     } catch (Exception ex) {
       metrics.incNumLookupFileFails();
       auditSuccess = false;

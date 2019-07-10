@@ -258,7 +258,7 @@ public class TestOmMetrics {
 
     Mockito.doReturn(null).when(mockKm).openKey(null);
     Mockito.doNothing().when(mockKm).deleteKey(null);
-    Mockito.doReturn(null).when(mockKm).lookupKey(null);
+    Mockito.doReturn(null).when(mockKm).lookupKey(null, "");
     Mockito.doReturn(null).when(mockKm).listKeys(null, null, null, null, 0);
     Mockito.doNothing().when(mockKm).commitKey(any(OmKeyArgs.class), anyLong());
     Mockito.doReturn(null).when(mockKm).initiateMultipartUpload(
@@ -293,7 +293,7 @@ public class TestOmMetrics {
     // inject exception to test for Failure Metrics
     Mockito.doThrow(exception).when(mockKm).openKey(null);
     Mockito.doThrow(exception).when(mockKm).deleteKey(null);
-    Mockito.doThrow(exception).when(mockKm).lookupKey(null);
+    Mockito.doThrow(exception).when(mockKm).lookupKey(null, "");
     Mockito.doThrow(exception).when(mockKm).listKeys(
         null, null, null, null, 0);
     Mockito.doThrow(exception).when(mockKm).commitKey(any(OmKeyArgs.class),

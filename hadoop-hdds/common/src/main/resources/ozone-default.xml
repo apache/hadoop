@@ -270,10 +270,10 @@
   </property>
   <property>
     <name>dfs.ratis.leader.election.minimum.timeout.duration</name>
-    <value>1s</value>
+    <value>5s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The minimum timeout duration for ratis leader election.
-        Default is 1s.
+        Default is 5s.
     </description>
   </property>
   <property>
@@ -2343,6 +2343,14 @@
       The schema file defines the ozone network topology. We currently support
       xml(default) and yaml format. Refer to the samples in the topology
       awareness document for xml and yaml topology definition samples.
+    </description>
+  </property>
+  <property>
+    <name>dfs.network.topology.aware.read.enable</name>
+    <value>true</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Whether to enable topology aware read to improve the read performance.
     </description>
   </property>
   <property>

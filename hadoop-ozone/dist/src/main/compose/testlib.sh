@@ -72,20 +72,37 @@ start_docker_env(){
 ## @param        robot test file or directory relative to the smoketest dir
 execute_robot_test(){
   CONTAINER="$1"
-  TEST="$2"
+  shift 1 #Remove first argument which was the container name
+  # shellcheck disable=SC2206
+  ARGUMENTS=($@)
+  TEST="${ARGUMENTS[${#ARGUMENTS[@]}-1]}" #Use last element as the test name
+  unset 'ARGUMENTS[${#ARGUMENTS[@]}-1]' #Remove the last element, remainings are the custom parameters
   TEST_NAME=$(basename "$TEST")
   TEST_NAME="$(basename "$COMPOSE_DIR")-${TEST_NAME%.*}"
   set +e
   OUTPUT_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
   OUTPUT_PATH="$RESULT_DIR_INSIDE/robot-$OUTPUT_NAME.xml"
   docker-compose -f "$COMPOSE_FILE" exec -T "$CONTAINER" mkdir -p "$RESULT_DIR_INSIDE"
-  docker-compose -f "$COMPOSE_FILE" exec -e  SECURITY_ENABLED="${SECURITY_ENABLED}" -T "$CONTAINER" python -m robot --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" "$SMOKETEST_DIR_INSIDE/$TEST"
+  # shellcheck disable=SC2068
+  docker-compose -f "$COMPOSE_FILE" exec -T -e  SECURITY_ENABLED="${SECURITY_ENABLED}" "$CONTAINER" python -m robot ${ARGUMENTS[@]} --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" "$SMOKETEST_DIR_INSIDE/$TEST"
 
   FULL_CONTAINER_NAME=$(docker-compose -f "$COMPOSE_FILE" ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
   docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
   set -e
 
 }
+
+
+## @description  Execute specific command in docker container
+## @param        container name
+## @param        specific command to execute
+execute_command_in_container(){
+  set -e
+  # shellcheck disable=SC2068
+  docker-compose -f "$COMPOSE_FILE" exec -T $@
+  set +e
+}
+
 
 ## @description  Stops a docker-compose based test environment (with saving the logs)
 stop_docker_env(){

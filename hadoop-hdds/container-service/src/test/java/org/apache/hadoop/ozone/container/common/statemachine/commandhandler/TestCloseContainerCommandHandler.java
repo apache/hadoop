@@ -298,7 +298,7 @@ public class TestCloseContainerCommandHandler {
             maxOutstandingRequests,
             TimeDuration.valueOf(3, TimeUnit.SECONDS));
     Assert.assertTrue(client.groupAdd(group, peer.getId()).isSuccess());
-    Thread.sleep(2000);
+    Thread.sleep(10000);
     final ContainerID containerId = ContainerID.valueof(
         random.nextLong() & Long.MAX_VALUE);
     ContainerProtos.ContainerCommandRequestProto.Builder request =

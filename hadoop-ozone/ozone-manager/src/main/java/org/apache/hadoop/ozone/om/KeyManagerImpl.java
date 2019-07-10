@@ -44,6 +44,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -669,7 +670,8 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
+  public OmKeyInfo lookupKey(OmKeyArgs args, String clientAddress)
+      throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -724,6 +726,7 @@ public class KeyManagerImpl implements KeyManager {
           });
         }
       }
+      sortDatanodeInPipeline(value, clientAddress);
       return value;
     } catch (IOException ex) {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
@@ -1909,7 +1912,8 @@ public class KeyManagerImpl implements KeyManager {
    *                     invalid arguments
    */
   @Override
-  public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
+  public OmKeyInfo lookupFile(OmKeyArgs args, String clientAddress)
+      throws IOException {
     Preconditions.checkNotNull(args, "Key args can not be null");
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -1919,6 +1923,7 @@ public class KeyManagerImpl implements KeyManager {
     try {
       OzoneFileStatus fileStatus = getFileStatus(args);
       if (fileStatus.isFile()) {
+        sortDatanodeInPipeline(fileStatus.getKeyInfo(), clientAddress);
         return fileStatus.getKeyInfo();
       }
       //if key is not of type file or if key is not found we throw an exception
@@ -2106,4 +2111,31 @@ public class KeyManagerImpl implements KeyManager {
     return encInfo;
   }
 
+  private void sortDatanodeInPipeline(OmKeyInfo keyInfo, String clientMachine) {
+    if (keyInfo != null && clientMachine != null && !clientMachine.isEmpty()) {
+      for (OmKeyLocationInfoGroup key : keyInfo.getKeyLocationVersions()) {
+        key.getLocationList().forEach(k -> {
+          List<DatanodeDetails> nodes = k.getPipeline().getNodes();
+          List<String> nodeList = new ArrayList<>();
+          nodes.stream().forEach(node ->
+              nodeList.add(node.getNetworkName()));
+          try {
+            List<DatanodeDetails> sortedNodes = scmClient.getBlockClient()
+                .sortDatanodes(nodeList, clientMachine);
+            k.getPipeline().setNodesInOrder(sortedNodes);
+            LOG.debug("Sort datanodes {} for client {}, return {}", nodes,
+                clientMachine, sortedNodes);
+          } catch (IOException e) {
+            LOG.warn("Unable to sort datanodes based on distance to " +
+                "client, volume=" + keyInfo.getVolumeName() +
+                ", bucket=" + keyInfo.getBucketName() +
+                ", key=" + keyInfo.getKeyName() +
+                ", client=" + clientMachine +
+                ", datanodes=" + nodes.toString() +
+                ", exception=" + e.getMessage());
+          }
+        });
+      }
+    }
+  }
 }

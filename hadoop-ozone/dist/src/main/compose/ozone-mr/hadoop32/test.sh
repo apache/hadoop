@@ -15,34 +15,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+COMPOSE_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+export COMPOSE_DIR
 
-#
-# Test executor to test all the compose/*/test.sh test scripts.
-#
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../../testlib.sh"
 
-SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )
-ALL_RESULT_DIR="$SCRIPT_DIR/result"
+start_docker_env
 
-mkdir -p "$ALL_RESULT_DIR"
-rm "$ALL_RESULT_DIR/*"
+execute_robot_test scm createmrenv.robot
 
-RESULT=0
-IFS=$'\n'
-# shellcheck disable=SC2044
-for test in $(find "$SCRIPT_DIR" -name test.sh); do
-  echo "Executing test in $(dirname "$test")"
+# reinitialize the directories to use
+export OZONE_DIR=/opt/ozone
 
-  #required to read the .env file from the right location
-  cd "$(dirname "$test")" || continue
-  ./test.sh
-  ret=$?
-  if [[ $ret -ne 0 ]]; then
-      RESULT=1
-      echo "ERROR: Test execution of $(dirname "$test") is FAILED!!!!"
-  fi
-  RESULT_DIR="$(dirname "$test")/result"
-  cp "$RESULT_DIR"/robot-*.xml "$ALL_RESULT_DIR"
-done
+# shellcheck source=/dev/null
+source "$COMPOSE_DIR/../../testlib.sh"
 
-rebot -N "smoketests" -d "$SCRIPT_DIR/result" "$SCRIPT_DIR/result/robot-*.xml"
-exit $RESULT
+execute_robot_test rm ozonefs/hadoopo3fs.robot
+
+execute_robot_test rm mapreduce.robot
+
+stop_docker_env
+
+generate_report

@@ -21,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
@@ -28,6 +29,8 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.fs.FileAlreadyExistsException;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdds.client.ReplicationFactor;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -235,17 +238,32 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     }
   }
 
-  public OzoneFileStatus getFileStatus(String pathKey) throws IOException {
+  public FileStatusAdapter getFileStatus(String key, URI uri,
+      Path qualifiedPath, String userName)
+      throws IOException {
     try {
       incrementCounter(Statistic.OBJECTS_QUERY);
-      return bucket.getFileStatus(pathKey);
+      OzoneFileStatus status = bucket.getFileStatus(key);
+      makeQualified(status, uri, qualifiedPath, userName);
+      return toFileStatusAdapter(status);
+
     } catch (OMException e) {
       if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
         throw new
-            FileNotFoundException(pathKey + ": No such file or directory!");
+            FileNotFoundException(key + ": No such file or directory!");
       }
       throw e;
     }
+  }
+
+  public void makeQualified(FileStatus status, URI uri, Path path,
+      String username) {
+    if (status instanceof OzoneFileStatus) {
+      ((OzoneFileStatus) status)
+          .makeQualified(uri, path,
+              username, username);
+    }
+
   }
 
   @Override
@@ -254,11 +272,21 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
     return new IteratorAdapter(bucket.listKeys(pathKey));
   }
 
-  public List<OzoneFileStatus> listStatus(String keyName, boolean recursive,
-      String startKey, long numEntries) throws IOException {
+  public List<FileStatusAdapter> listStatus(String keyName, boolean recursive,
+      String startKey, long numEntries, URI uri,
+      Path workingDir, String username) throws IOException {
     try {
       incrementCounter(Statistic.OBJECTS_LIST);
-      return bucket.listStatus(keyName, recursive, startKey, numEntries);
+      List<OzoneFileStatus> statuses = bucket
+          .listStatus(keyName, recursive, startKey, numEntries);
+
+      List<FileStatusAdapter> result = new ArrayList<>();
+      for (OzoneFileStatus status : statuses) {
+        Path qualifiedPath = status.getPath().makeQualified(uri, workingDir);
+        makeQualified(status, uri, qualifiedPath, username);
+        result.add(toFileStatusAdapter(status));
+      }
+      return result;
     } catch (OMException e) {
       if (e.getResult() == OMException.ResultCodes.FILE_NOT_FOUND) {
         throw new FileNotFoundException(e.getMessage());
@@ -371,5 +399,21 @@ public class BasicOzoneClientAdapterImpl implements OzoneClientAdapter {
         );
       }
     }
+  }
+
+  private FileStatusAdapter toFileStatusAdapter(OzoneFileStatus status) {
+    return new FileStatusAdapter(
+        status.getLen(),
+        status.getPath(),
+        status.isDirectory(),
+        status.getReplication(),
+        status.getBlockSize(),
+        status.getModificationTime(),
+        status.getAccessTime(),
+        status.getPermission().toShort(),
+        status.getOwner(),
+        status.getGroup(),
+        status.getPath()
+    );
   }
 }

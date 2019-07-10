@@ -356,9 +356,10 @@ public class BlockOutputStream extends OutputStream {
       if (reply != null) {
         List<DatanodeDetails> dnList = reply.getDatanodes();
         if (!dnList.isEmpty()) {
-          if (failedServers.isEmpty()) {
-            failedServers = new ArrayList<>();
-          }
+          Pipeline pipe = xceiverClient.getPipeline();
+
+          LOG.warn("Failed to commit BlockId {} on {}. Failed nodes: {}",
+              blockID, pipe, dnList);
           failedServers.addAll(dnList);
         }
       }
