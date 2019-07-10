@@ -49,7 +49,7 @@ services:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
   scm:
-    image: apache/ozone-runner:latest:${HADOOP_RUNNER_VERSION}
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     hostname: scm
     volumes:
       - ../..:/opt/hadoop
