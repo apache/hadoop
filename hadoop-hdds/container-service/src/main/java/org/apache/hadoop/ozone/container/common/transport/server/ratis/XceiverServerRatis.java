@@ -545,18 +545,28 @@ public final class XceiverServerRatis extends XceiverServer {
           + roleInfoProto.getRole());
     }
 
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.PIPELINE_FAILED, false);
+  }
+
+  private void triggerPipelineClose(RaftGroupId groupId, String detail,
+      ClosePipelineInfo.Reason reasonCode, boolean triggerHB) {
     PipelineID pipelineID = PipelineID.valueOf(groupId.getUuid());
     ClosePipelineInfo.Builder closePipelineInfo =
         ClosePipelineInfo.newBuilder()
             .setPipelineID(pipelineID.getProtobuf())
-            .setReason(ClosePipelineInfo.Reason.PIPELINE_FAILED)
-            .setDetailedReason(msg);
+            .setReason(reasonCode)
+            .setDetailedReason(detail);
 
     PipelineAction action = PipelineAction.newBuilder()
         .setClosePipeline(closePipelineInfo)
         .setAction(PipelineAction.Action.CLOSE)
         .build();
     context.addPipelineActionIfAbsent(action);
+    // wait for the next HB timeout or right away?
+    if (triggerHB) {
+      context.getParent().triggerHeartbeat();
+    }
     LOG.debug(
         "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
@@ -627,5 +637,21 @@ public final class XceiverServerRatis extends XceiverServer {
         "termIndex: {}, terminating pipeline: {}",
         firstTermIndexInLog, groupId);
     handlePipelineFailure(groupId, roleInfoProto);
+  }
+
+  /**
+   * Notify the Datanode Ratis endpoint of Ratis log failure.
+   * Expected to be invoked from the Container StateMachine
+   * @param groupId the Ratis group/pipeline for which log has failed
+   * @param t exception encountered at the time of the failure
+   *
+   */
+  @VisibleForTesting
+  public void handleNodeLogFailure(RaftGroupId groupId, Throwable t) {
+    String msg = (t == null) ? "Unspecified failure reported in Ratis log"
+        : t.getMessage();
+
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.PIPELINE_LOG_FAILED, true);
   }
 }
