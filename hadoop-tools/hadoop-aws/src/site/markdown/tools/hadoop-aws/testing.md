@@ -845,7 +845,7 @@ it can be manually done:
       hadoop s3guard uploads -abort -force s3a://test-bucket/
 * If you don't need it, destroy the S3Guard DDB table.
 
-      hadoop s3guard destroy s3a://bucket-x/
+      hadoop s3guard destroy s3a://test-bucket/
 
 The S3Guard tests will automatically create the Dynamo DB table in runs with
 `-Ds3guard -Ddynamo` set; default capacity of these buckets
@@ -1084,13 +1084,14 @@ mvn -T 1C verify -Dtest=skip -Dit.test=ITestS3AMiscOperations -Ds3guard -Ddynamo
 1. If the `s3guard` profile is not set, then the S3Guard properties are those
 of the test configuration set in `contract-test-options.xml` or `auth-keys.xml`
 
-If the `s3guard` profile *is* set,
+If the `s3guard` profile *is* set:
 1. The S3Guard options from maven (the dynamo and authoritative flags)
   overwrite any previously set in the configuration files.
 1. DynamoDB will be configured to create any missing tables.
-1. When using DynamoDB and running ITestDynamoDBMetadataStore, the fs.s3a.s3guard.ddb.test.table
-property should be configured, and the name of that table should be different
- than what is used for fs.s3a.s3guard.ddb.table. The test table is destroyed
+1. When using DynamoDB and running `ITestDynamoDBMetadataStore`,
+  the `fs.s3a.s3guard.ddb.test.table`
+property MUST be configured, and the name of that table MUST be different
+ than what is used for `fs.s3a.s3guard.ddb.table`. The test table is destroyed
  and modified multiple times during the test.
  1. Several of the tests create and destroy DynamoDB tables. The table names
  are prefixed with the value defined by
@@ -1103,34 +1104,34 @@ property should be configured, and the name of that table should be different
 ### How to Dump the Table and Metastore State
 
 There's an unstable entry point to list the contents of a table
-and S3 filesystem ot a set of TSV files
+and S3 filesystem ot a set of Tab Separated Value files:
 
 ```
-hadoop org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable s3a://bucket-x/ dir/out
+hadoop org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardDynamoTable s3a://bucket/ dir/out
 ```
 
-This generates a set of files prefixed `dir/out-` with different views of the worl. 
- which can then be viewed on the command line or editor:
+This generates a set of files prefixed `dir/out-` with different views of the
+world which can then be viewed on the command line or editor:
 
 ```
-"type"	"deleted"	"path"	"is_auth_dir"	"is_empty_dir"	"len"	"updated"	"updated_s"	"last_modified"	"last_modified_s"	"etag"	"version"
-"file"	"true"	"s3a://bucket/fork-0001/test/ITestS3AContractDistCp/testDirectWrite/remote"	"false"	"UNKNOWN"	0	1562171244451	"Wed Jul 03 17:27:24 BST 2019"	1562171244451	"Wed Jul 03 17:27:24 BST 2019"	""	""
-"file"	"true"	"s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/file1"	"false"	"UNKNOWN"	0	1562171518435	"Wed Jul 03 17:31:58 BST 2019"	1562171518435	"Wed Jul 03 17:31:58 BST 2019"	""	""
-"file"	"true"	"s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/subdir"	"false"	"UNKNOWN"	0	1562171518535	"Wed Jul 03 17:31:58 BST 2019"	1562171518535	"Wed Jul 03 17:31:58 BST 2019"	""	""
-"file"	"true"	"s3a://bucket/test/DELAY_LISTING_ME/testMRJob"	"false"	"UNKNOWN"	0	1562172036299	"Wed Jul 03 17:40:36 BST 2019"	1562172036299	"Wed Jul 03 17:40:36 BST 2019"	""	""
+"type" "deleted" "path" "is_auth_dir" "is_empty_dir" "len" "updated" "updated_s" "last_modified" "last_modified_s" "etag" "version"
+"file" "true" "s3a://bucket/fork-0001/test/ITestS3AContractDistCp/testDirectWrite/remote" "false" "UNKNOWN" 0 1562171244451 "Wed Jul 03 17:27:24 BST 2019" 1562171244451 "Wed Jul 03 17:27:24 BST 2019" "" ""
+"file" "true" "s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/file1" "false" "UNKNOWN" 0 1562171518435 "Wed Jul 03 17:31:58 BST 2019" 1562171518435 "Wed Jul 03 17:31:58 BST 2019" "" ""
+"file" "true" "s3a://bucket/Users/stevel/Projects/hadoop-trunk/hadoop-tools/hadoop-aws/target/test-dir/1/5xlPpalRwv/test/new/newdir/subdir" "false" "UNKNOWN" 0 1562171518535 "Wed Jul 03 17:31:58 BST 2019" 1562171518535 "Wed Jul 03 17:31:58 BST 2019" "" ""
+"file" "true" "s3a://bucket/test/DELAY_LISTING_ME/testMRJob" "false" "UNKNOWN" 0 1562172036299 "Wed Jul 03 17:40:36 BST 2019" 1562172036299 "Wed Jul 03 17:40:36 BST 2019" "" ""
 ```
 
 This is unstable: the output format may change without warning.
-To understand the meaning of the fields, consult the documentation. 
+To understand the meaning of the fields, consult the documentation.
 They are, currently:
 
 | field | meaning | source |
 |-------|---------| -------|
 | `type` | type | filestatus |
-| `deleted` | tombstone marker | metadata | 
+| `deleted` | tombstone marker | metadata |
 | `path` | path of an entry | filestatus |
-| `is_auth_dir` | directory entry authoritative status | metadata | 
-| `is_empty_dir` | does the entry represent an empty directory | metadata | 
+| `is_auth_dir` | directory entry authoritative status | metadata |
+| `is_empty_dir` | does the entry represent an empty directory | metadata |
 | `len` | file length | filestatus |
 | `last_modified` | file status last modified | filestatus |
 | `last_modified_s` | file status last modified as string | filestatus |
@@ -1150,27 +1151,28 @@ Files generated
 | `-s3.csv`     | Dump of the S3 Store *only* |
 | `-scan-2.csv` | Scan of the store after the previous operations |
 
-Why the two scan entries? The S3Guard+S3 listing/treewalk operations
-may add new entries to the store. 
+Why the two scan entries? The S3A listing and treewalk operations
+may add new entries to the metastore/DynamoDB table.
 
 Note 1: this is unstable; entry list and meaning may change, sorting of output,
 the listing algorithm, representation of types, etc. It's expected
 uses are: diagnostics, support calls and helping us developers
 work out what we've just broken.
 
-Note 2: This *is* safe to use against an active store; the tables may be inconsistent
-due to changes taking place during the dump sequence.
+Note 2: This *is* safe to use against an active store; the tables may appear
+to be inconsistent due to changes taking place during the dump sequence.
 
-### Resetting the Metastore: `PurgeS3GuardTable`
+### Resetting the Metastore: `PurgeS3GuardDynamoTable`
 
-The `PurgeS3GuardTable` entry point `org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable` can
+The `PurgeS3GuardDynamoTable` entry point
+`org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardDynamoTable` can
 list all entries in a store for a specific filesystem, and delete them.
 It *only* deletes those entries in the store for that specific filesystem,
 even if the store is shared.
 
 ```bash
-hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable \
-  -force s3a://example-bucket/
+hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardDynamoTable \
+  -force s3a://bucket/
 ```
 
 Without the `-force` option the table is scanned, but no entries deleted;

@@ -1260,13 +1260,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     File buildDir = new File(target).getAbsoluteFile();
     String name = "ITestDynamoDBMetadataStore";
     File destFile = new File(buildDir, name);
-    DumpS3GuardTable.dumpStore(
+    DumpS3GuardDynamoTable.dumpStore(
         null,
         ddbmsStatic,
         getFileSystem().getConf(),
         destFile,
         fsUri);
-    File storeFile = new File(buildDir, name + DumpS3GuardTable.SCAN_CSV);
+    File storeFile = new File(buildDir, name + DumpS3GuardDynamoTable.SCAN_CSV);
     try (BufferedReader in = new BufferedReader(new InputStreamReader(
         new FileInputStream(storeFile), Charset.forName("UTF-8")))) {
       for (String line : org.apache.commons.io.IOUtils.readLines(in)) {
@@ -1280,7 +1280,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     describe("Purge the table");
 
     putTombstone("/" + getMethodName(), getTime(), null);
-    Pair<Long, Long> r = PurgeS3GuardTable.purgeStore(
+    Pair<Long, Long> r = PurgeS3GuardDynamoTable.purgeStore(
         null,
         ddbmsStatic,
         getFileSystem().getConf(),
@@ -1299,7 +1299,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public void testPurgeTableForce() throws Throwable {
     describe("Purge the table -force");
     putTombstone("/" + getMethodName(), getTime(), null);
-    Pair<Long, Long> r = PurgeS3GuardTable.purgeStore(
+    Pair<Long, Long> r = PurgeS3GuardDynamoTable.purgeStore(
         null,
         ddbmsStatic,
         getFileSystem().getConf(),
@@ -1314,7 +1314,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
     // second iteration will have zero entries
 
-    r = PurgeS3GuardTable.purgeStore(
+    r = PurgeS3GuardDynamoTable.purgeStore(
         null,
         ddbmsStatic,
         getFileSystem().getConf(),

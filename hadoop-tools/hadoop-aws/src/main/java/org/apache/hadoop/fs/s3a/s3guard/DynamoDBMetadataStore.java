@@ -633,24 +633,24 @@ public class DynamoDBMetadataStore implements MetadataStore,
 
     try(AncestorState state = new AncestorState(this,
         BulkOperationState.OperationType.Delete, path)) {
-        // Execute via the bounded threadpool.
-        final List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (DescendantsIterator desc = new DescendantsIterator(this, meta);
-            desc.hasNext();) {
-          final Path pathToDelete = desc.next().getPath();
-          futures.add(submit(executor, () -> {
-            innerDelete(pathToDelete, true, ttlTimeProvider, state);
-            return null;
-          }));
-          if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
-            // first batch done; block for completion.
-            waitForCompletion(futures);
-            futures.clear();
-          }
+      // Execute via the bounded threadpool.
+      final List<CompletableFuture<Void>> futures = new ArrayList<>();
+      for (DescendantsIterator desc = new DescendantsIterator(this, meta);
+          desc.hasNext();) {
+        final Path pathToDelete = desc.next().getPath();
+        futures.add(submit(executor, () -> {
+          innerDelete(pathToDelete, true, ttlTimeProvider, state);
+          return null;
+        }));
+        if (futures.size() > S3GUARD_DDB_SUBMITTED_TASK_LIMIT) {
+          // first batch done; block for completion.
+          waitForCompletion(futures);
+          futures.clear();
         }
-        // now wait for the final set.
-        waitForCompletion(futures);
       }
+      // now wait for the final set.
+      waitForCompletion(futures);
+    }
   }
 
   /**
@@ -2412,7 +2412,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       Item item) {
     if (OPERATIONS_LOG.isDebugEnabled()) {
       // log the operations
-      logPut(state, new Item[]{ item });
+      logPut(state, new Item[]{item});
     }
   }
 
@@ -2599,7 +2599,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
     @Override
     public void close() throws IOException {
       if (LOG.isDebugEnabled() && store != null) {
-        LOG.debug("Auditing {}",stateAsString(this));
+        LOG.debug("Auditing {}", stateAsString(this));
         for (Map.Entry<Path, DDBPathMetadata> entry : ancestry
             .entrySet()) {
           Path path = entry.getKey();
@@ -2622,16 +2622,17 @@ public class DynamoDBMetadataStore implements MetadataStore,
                 + path + " deleted during bulk "
                 + getOperation() + " operation";
             LOG.debug(message);
-          }
-          if (actual.getFileStatus().isDirectory() != expected.getFileStatus()
-              .isDirectory()) {
-            // the type of the entry has changed
-            String message = "Metastore entry for path "
-                    + path + " changed during bulk "
-                    + getOperation() + " operation"
-                    + " from " + expected
-                    + " to " + actual;
-            LOG.debug(message);
+          } else {
+            if (actual.getFileStatus().isDirectory() !=
+                expected.getFileStatus().isDirectory()) {
+              // the type of the entry has changed
+              String message = "Metastore entry for path "
+                  + path + " changed during bulk "
+                  + getOperation() + " operation"
+                  + " from " + expected
+                  + " to " + actual;
+              LOG.debug(message);
+            }
           }
 
         }

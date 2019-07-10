@@ -159,7 +159,7 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
       if (deleted) {
         assertPathDoesNotExist("expected file to be deleted", file);
       } else {
-        assertPathExists("expected file to be preserved", file);;
+        assertPathExists("expected file to be preserved", file);
       }
     } finally{
       getFileSystem().delete(file, false);
@@ -191,10 +191,10 @@ public abstract class AbstractContractRootDirectoryTest extends AbstractFSContra
     for (FileStatus status : statuses) {
       ContractTestUtils.assertDeleted(fs, status.getPath(), true);
     }
-    FileStatus[] list1 = fs.listStatus(root);
+    FileStatus[] rootListStatus = fs.listStatus(root);
     assertEquals("listStatus on empty root-directory returned found: "
-        + join("\n", list1),
-        0, list1.length);
+        + join("\n", rootListStatus),
+        0, rootListStatus.length);
     assertNoElements("listFiles(/, false)",
         fs.listFiles(root, false));
     assertNoElements("listFiles(/, true)",

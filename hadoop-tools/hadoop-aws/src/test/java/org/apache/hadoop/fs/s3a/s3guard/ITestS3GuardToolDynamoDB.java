@@ -44,7 +44,6 @@ import org.junit.Test;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Destroy;
@@ -306,7 +305,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     describe("Dumping metastore %s to %s",
         fs.getMetadataStore(),
         destFile);
-    DumpS3GuardTable.dumpStore(
+    DumpS3GuardDynamoTable.dumpStore(
         fs,
         null,
         null,

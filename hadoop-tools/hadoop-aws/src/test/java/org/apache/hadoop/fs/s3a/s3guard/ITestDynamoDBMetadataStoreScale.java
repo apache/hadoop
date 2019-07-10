@@ -177,7 +177,7 @@ public class ITestDynamoDBMetadataStoreScale
     if (ddbms != null) {
       S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
       ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
-      builder.withKeyCondition(
+      builder.withCondition(
           ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
 
       Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);

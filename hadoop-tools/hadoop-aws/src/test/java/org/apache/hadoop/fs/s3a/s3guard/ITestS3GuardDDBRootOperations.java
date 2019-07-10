@@ -53,7 +53,7 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.applyLocatedFiles;
  * The tests only run if DynamoDB is the metastore.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
+public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
 
   private StoreContext storeContext;
 
@@ -123,7 +123,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_050_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpStore(
+    DumpS3GuardDynamoTable.dumpStore(
         null,
         metastore,
         getConfiguration(),
@@ -135,7 +135,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_060_dump_metastore_and_s3() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpStore(
+    DumpS3GuardDynamoTable.dumpStore(
         getFileSystem(),
         metastore,
         getConfiguration(),
@@ -248,7 +248,7 @@ public class ITestS3GuardRootOperations extends AbstractS3ATestBase {
   public void test_600_dump_metastore() throws Throwable {
     File destFile = calculateDumpFileBase();
     describe("Dumping S3Guard store under %s", destFile);
-    DumpS3GuardTable.dumpStore(
+    DumpS3GuardDynamoTable.dumpStore(
         getFileSystem(),
         metastore,
         getConfiguration(),

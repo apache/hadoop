@@ -220,9 +220,7 @@ public abstract class RenameTracker extends AbstractStoreOperation {
    * @throws IOException failure.
    */
   public void completeRename() throws IOException {
-    // if the state is doing any final actions, it should be
-    // completed now.
-    operationState.close();
+    IOUtils.cleanupWithLogger(LOG, operationState);
     noteRenameFinished();
   }
 

@@ -43,7 +43,7 @@ import org.apache.hadoop.util.DurationInfo;
 import org.apache.hadoop.util.ExitUtil;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardTable.serviceMain;
+import static org.apache.hadoop.fs.s3a.s3guard.DumpS3GuardDynamoTable.serviceMain;
 import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 
 /**
@@ -51,39 +51,49 @@ import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.P
  * that table.
  * Will fail if there is no table, or the store is in auth mode.
  * <pre>
- *   hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardTable \
+ *   hadoop org.apache.hadoop.fs.s3a.s3guard.PurgeS3GuardDynamoTable \
  *   -force s3a://example-bucket/
  * </pre>
  *
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
+public class PurgeS3GuardDynamoTable
+    extends AbstractS3GuardDynamoDBDiagnostic {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PurgeS3GuardTable.class);
+      LoggerFactory.getLogger(PurgeS3GuardDynamoTable.class);
 
-  public static final String NAME = "PurgeS3GuardTable";
+  public static final String NAME = "PurgeS3GuardDynamoTable";
 
+  /**
+   * Name of the force option.
+   */
   public static final String FORCE = "-force";
 
+  /**
+   * Usage message.
+   */
   private static final String USAGE_MESSAGE = NAME
       + " [-force] <filesystem>";
 
+  /**
+   * Flag which actually triggers the delete.
+   */
   private boolean force;
 
   private long filesFound;
   private long filesDeleted;
 
-  public PurgeS3GuardTable(final String name) {
+  public PurgeS3GuardDynamoTable(final String name) {
     super(name);
   }
 
-  public PurgeS3GuardTable() {
+  public PurgeS3GuardDynamoTable() {
     this(NAME);
   }
 
-  public PurgeS3GuardTable(
+  public PurgeS3GuardDynamoTable(
       final S3AFileSystem filesystem,
       final DynamoDBMetadataStore store,
       final URI uri,
@@ -93,7 +103,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
   /**
-   * Bind to the argument list, including validating the CLI
+   * Bind to the argument list, including validating the CLI.
    * @throws Exception failure.
    */
   @Override
@@ -115,7 +125,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
 
   /**
    * Extract the host from the FS URI, then scan and
-   * delete all entries from that bucket
+   * delete all entries from that bucket.
    * @return the exit code.
    * @throws ServiceLaunchException on failure.
    */
@@ -182,7 +192,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
    */
   public static void main(String[] args) {
     try {
-      serviceMain(Arrays.asList(args), new PurgeS3GuardTable());
+      serviceMain(Arrays.asList(args), new PurgeS3GuardDynamoTable());
     } catch (ExitUtil.ExitException e) {
       ExitUtil.terminate(e);
     }
@@ -220,7 +230,7 @@ public class PurgeS3GuardTable extends AbstractS3GuardDiagnostic {
       store = (DynamoDBMetadataStore) checkNotNull(fs, "No filesystem")
           .getMetadataStore();
     }
-    PurgeS3GuardTable purge = new PurgeS3GuardTable(fs,
+    PurgeS3GuardDynamoTable purge = new PurgeS3GuardDynamoTable(fs,
         store,
         uri,
         force);

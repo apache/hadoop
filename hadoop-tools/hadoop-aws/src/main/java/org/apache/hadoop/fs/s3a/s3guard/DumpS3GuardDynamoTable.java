@@ -42,6 +42,7 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.s3a.Listing;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
@@ -66,15 +67,15 @@ import static org.apache.hadoop.fs.s3a.S3AUtils.ACCEPT_ALL;
  */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
+public class DumpS3GuardDynamoTable extends AbstractS3GuardDynamoDBDiagnostic {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(DumpS3GuardTable.class);
+      LoggerFactory.getLogger(DumpS3GuardDynamoTable.class);
 
   /**
    * Application name.
    */
-  public static final String NAME = "DumpS3GuardTable";
+  public static final String NAME = "DumpS3GuardDynamoTable";
 
   /**
    * Usage.
@@ -115,20 +116,20 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   /**
    * Path in the local filesystem to save the data.
    */
-  protected String destPath;
+  private String destPath;
 
   /**
    * Instantiate.
    * @param name application name.
    */
-  public DumpS3GuardTable(final String name) {
+  public DumpS3GuardDynamoTable(final String name) {
     super(name);
   }
 
   /**
    * Instantiate with default name.
    */
-  public DumpS3GuardTable() {
+  public DumpS3GuardDynamoTable() {
     this(NAME);
   }
 
@@ -139,7 +140,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    * @param destFile the base filename for output
    * @param uri URI of store -only needed if FS is null.
    */
-  public DumpS3GuardTable(
+  public DumpS3GuardDynamoTable(
       final S3AFileSystem fs,
       final DynamoDBMetadataStore store,
       final File destFile,
@@ -149,7 +150,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   }
 
   /**
-   * Bind to the argument list, including validating the CLI
+   * Bind to the argument list, including validating the CLI.
    * @throws Exception failure.
    */
   @Override
@@ -173,7 +174,11 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
     try {
       final File scanFile = new File(
           destPath + SCAN_CSV).getCanonicalFile();
-      scanFile.getParentFile().mkdirs();
+      File parentDir = scanFile.getParentFile();
+      if (!parentDir.mkdirs() && !parentDir.isDirectory()) {
+        throw new PathIOException(parentDir.toString(),
+            "Could not create destination directory");
+      }
 
       try (CsvFile csv = new CsvFile(scanFile);
            DurationInfo ignored = new DurationInfo(LOG,
@@ -415,12 +420,13 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
   /**
    * This is the JVM entry point for the service launcher.
    *
-   * Converts the arguments to a list, then invokes {@link #serviceMain(List)}
+   * Converts the arguments to a list, then invokes
+   * {@link #serviceMain(List, AbstractS3GuardDynamoDBDiagnostic)}.
    * @param args command line arguments.
    */
   public static void main(String[] args) {
     try {
-      serviceMain(Arrays.asList(args), new DumpS3GuardTable());
+      serviceMain(Arrays.asList(args), new DumpS3GuardDynamoTable());
     } catch (ExitUtil.ExitException e) {
       ExitUtil.terminate(e);
     }
@@ -434,7 +440,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
    */
   static void serviceMain(
       final List<String> argsList,
-      final AbstractS3GuardDiagnostic service) {
+      final AbstractS3GuardDynamoDBDiagnostic service) {
     ServiceLauncher<Service> serviceLauncher =
         new ServiceLauncher<>(service.getName());
 
@@ -480,7 +486,7 @@ public class DumpS3GuardTable extends AbstractS3GuardDiagnostic {
     }
     ExitUtil.ExitException ex = serviceLauncher.launchService(
         conf,
-        new DumpS3GuardTable(fs,
+        new DumpS3GuardDynamoTable(fs,
             store,
             destFile,
             uri),

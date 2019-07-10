@@ -1146,7 +1146,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
    * @return the entry
    * @throws IOException IO failure.
    */
-  protected PathMetadata getNonEmptyDirectory(final String pathStr) throws IOException {
+  protected PathMetadata getNonEmptyDirectory(final String pathStr)
+      throws IOException {
     PathMetadata meta = getDirectory(pathStr);
     assertNotEquals("Path " + pathStr
             + " is considered an empty dir " + meta,
@@ -1162,7 +1163,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
    * @return the entry
    * @throws IOException IO failure.
    */
-  protected PathMetadata getEmptyDirectory(final String pathStr) throws IOException {
+  protected PathMetadata getEmptyDirectory(final String pathStr)
+      throws IOException {
     PathMetadata meta = getDirectory(pathStr);
     assertEquals("Path " + pathStr
             + " is not considered an empty dir " + meta,
