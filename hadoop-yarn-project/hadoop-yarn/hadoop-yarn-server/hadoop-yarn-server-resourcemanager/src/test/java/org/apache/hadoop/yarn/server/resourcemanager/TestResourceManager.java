@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.TimeoutException;
 
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -51,14 +52,19 @@ import org.apache.hadoop.yarn.util.resource.Resources;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TestResourceManager {
   private static final Logger LOG =
       LoggerFactory.getLogger(TestResourceManager.class);
   
   private ResourceManager resourceManager = null;
-  
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
   @Before
   public void setUp() throws Exception {
     Configuration conf = new YarnConfiguration();
@@ -326,6 +332,28 @@ public class TestResourceManager {
         }
         resourceManager.stop();
       }
+    }
+  }
+
+  /**
+   * Test whether ResourceManager passes user-provided conf to
+   * UserGroupInformation class. If it reads this (incorrect)
+   * AuthenticationMethod enum an exception is thrown.
+   */
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Invalid attribute value for "
+        + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
+        + " of DUMMYAUTH");
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "DUMMYAUTH");
+    ResourceManager dummyResourceManager = new ResourceManager();
+    try {
+      dummyResourceManager.init(dummyConf);
+    } finally {
+      dummyResourceManager.stop();
     }
   }
 
