@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.blockmanagement;
 
+import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 import static org.apache.hadoop.hdfs.protocol.BlockType.CONTIGUOUS;
 import static org.apache.hadoop.hdfs.protocol.BlockType.STRIPED;
 import static org.apache.hadoop.util.ExitUtil.terminate;
@@ -625,6 +626,9 @@ public class BlockManager implements BlockStatsMXBean {
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE,
         DFSConfigKeys.DFS_BLOCK_ACCESS_TOKEN_PROTOBUF_ENABLE_DEFAULT);
 
+    boolean shouldWrapQOP = conf.getBoolean(
+        DFS_NAMENODE_SEND_QOP_ENABLED, DFS_NAMENODE_SEND_QOP_ENABLED_DEFAULT);
+
     if (isHaEnabled) {
       // figure out which index we are of the nns
       Collection<String> nnIds = DFSUtilClient.getNameNodeIds(conf, nsId);
@@ -638,11 +642,11 @@ public class BlockManager implements BlockStatsMXBean {
       }
       return new BlockTokenSecretManager(updateMin * 60 * 1000L,
           lifetimeMin * 60 * 1000L, nnIndex, nnIds.size(), null,
-          encryptionAlgorithm, shouldWriteProtobufToken);
+          encryptionAlgorithm, shouldWriteProtobufToken, shouldWrapQOP);
     } else {
       return new BlockTokenSecretManager(updateMin*60*1000L,
           lifetimeMin*60*1000L, 0, 1, null, encryptionAlgorithm,
-          shouldWriteProtobufToken);
+          shouldWriteProtobufToken, shouldWrapQOP);
     }
   }
 
