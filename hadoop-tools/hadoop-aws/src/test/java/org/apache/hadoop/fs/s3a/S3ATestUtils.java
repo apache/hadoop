@@ -506,6 +506,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Require a filesystem to have a metadata store; skip test
+   * if not.
+   * @param fs filesystem to check
+   */
+  public static void assumeFilesystemHasMetadatastore(S3AFileSystem fs) {
+    assume("Filesystem does not have a metastore",
+        fs.hasMetadataStore());
+  }
+
+  /**
    * Reset all metrics in a list.
    * @param metrics metrics to reset
    */
