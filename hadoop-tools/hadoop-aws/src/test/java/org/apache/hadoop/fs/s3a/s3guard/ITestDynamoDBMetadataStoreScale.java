@@ -183,11 +183,9 @@ public class ITestDynamoDBMetadataStoreScale
       Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
       List<Path> list = new ArrayList<>();
       entries.iterator().forEachRemaining(e -> {
-        if (!(e instanceof S3GuardTableAccess.VersionMarker)) {
-          Path p = e.getFileStatus().getPath();
-          LOG.info("Deleting {}", p);
-          list.add(p);
-        }
+        Path p = e.getFileStatus().getPath();
+        LOG.info("Deleting {}", p);
+        list.add(p);
       });
       tableAccess.delete(list);
     }

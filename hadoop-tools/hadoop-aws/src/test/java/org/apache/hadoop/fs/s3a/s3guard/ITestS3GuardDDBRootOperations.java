@@ -203,11 +203,11 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     // recursive treewalk to delete all files
     // does not delete directories.
     applyLocatedFiles(fs.listFilesAndEmptyDirectories(root, true),
-      f -> {
-        Path p = f.getPath();
-        fs.delete(p, true);
-        assertPathDoesNotExist("expected file to be deleted", p);
-      });
+        f -> {
+          Path p = f.getPath();
+          fs.delete(p, true);
+          assertPathDoesNotExist("expected file to be deleted", p);
+        });
     ContractTestUtils.deleteChildren(fs, root, true);
     // everything must be done by now
     StringBuffer sb = new StringBuffer();
