@@ -31,7 +31,6 @@ import java.util.TreeMap;
 public class TimelineMetricSubDoc {
 
   private final TimelineMetric timelineMetric;
-  private boolean valid;
   private long singleDataTimestamp;
   private Number singleDataValue = 0;
 
@@ -41,7 +40,6 @@ public class TimelineMetricSubDoc {
 
   public TimelineMetricSubDoc(TimelineMetric timelineMetric) {
     this.timelineMetric = timelineMetric;
-    this.valid = timelineMetric.isValid();
     if (timelineMetric.getType() == TimelineMetric.Type.SINGLE_VALUE &&
         timelineMetric.getValues().size() > 0) {
       this.singleDataTimestamp = timelineMetric.getSingleDataTimestamp();
@@ -128,10 +126,6 @@ public class TimelineMetricSubDoc {
 
   public void setType(TimelineMetric.Type metricType) {
     timelineMetric.setType(metricType);
-  }
-
-  public void setValid(boolean valid) {
-    this.valid = valid;
   }
 
   public boolean isValid() {
