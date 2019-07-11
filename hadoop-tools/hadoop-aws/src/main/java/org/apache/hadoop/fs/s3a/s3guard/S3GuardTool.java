@@ -1028,8 +1028,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "Common options:\n" +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
+        "[-" + TOMBSTONE + "]\n" +
         "Age options. Any combination of these integer-valued options:\n" +
-        "[" + TOMBSTONE + "]\n" +
         AGE_OPTIONS_USAGE + "\n" +
         "Amazon DynamoDB-specific options:\n" +
         "  -" + REGION_FLAG + " REGION - Service region for connections\n" +

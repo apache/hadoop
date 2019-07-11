@@ -18,12 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +37,6 @@ import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.s3a.Constants;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -295,28 +289,4 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
         "-meta", "dynamodb://" + getTestTableName(DYNAMODB_TABLE));
   }
 
-  @Test
-  public void testDumpTable() throws Throwable {
-    String target = System.getProperty("test.build.dir", "target");
-    File buildDir = new File(target).getAbsoluteFile();
-    String name = "dump-table";
-    File destFile = new File(buildDir, name);
-    S3AFileSystem fs = getFileSystem();
-    describe("Dumping metastore %s to %s",
-        fs.getMetadataStore(),
-        destFile);
-    DumpS3GuardDynamoTable.dumpStore(
-        fs,
-        null,
-        null,
-        destFile,
-        getFileSystem().getUri());
-    File storeFile = new File(buildDir, name + "-store.csv");
-    try (BufferedReader in = new BufferedReader(new InputStreamReader(
-        new FileInputStream(storeFile), Charset.forName("UTF-8")))) {
-      for (String line : IOUtils.readLines(in)) {
-        LOG.info(line);
-      }
-    }
-  }
 }
