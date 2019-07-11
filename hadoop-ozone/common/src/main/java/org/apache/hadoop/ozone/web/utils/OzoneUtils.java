@@ -377,8 +377,21 @@ public final class OzoneUtils {
    * 
    * @return list of default Acls.
    * */
-  public static Collection<OzoneAclInfo> getDefaultAcls(List<OzoneAcl> acls) {
+  public static Collection<OzoneAclInfo> getDefaultAclsProto(List<OzoneAcl> acls) {
     return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
         .map(OzoneAcl::toProtobufWithAccessType).collect(Collectors.toList());
   }
+
+  /**
+   * Helper function to find and return all DEFAULT acls in input list with
+   * scope changed to ACCESS.
+   * @param acls
+   *
+   * @return list of default Acls.
+   * */
+  public static Collection<OzoneAcl> getDefaultAcls(List<OzoneAcl> acls) {
+    return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
+        .collect(Collectors.toList());
+  }
+  
 }

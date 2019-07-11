@@ -2292,15 +2292,19 @@ public abstract class TestOzoneRpcClientAbstract {
       }
     }
     List<OzoneAcl> acls = store.getAcl(parentObj);
-    assertTrue("Current acls:" + StringUtils.join(",", acls),
+    assertTrue("Current acls:" + StringUtils.join(",", acls) +
+            " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(defaultUserAcl));
-    assertTrue("Current acls:" + StringUtils.join(",", acls),
+    assertTrue("Current acls:" + StringUtils.join(",", acls) +
+            " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(defaultGroupAcl));
 
     acls = store.getAcl(childObj);
-    assertTrue("Current acls:" + StringUtils.join(",", acls),
+    assertTrue("Current acls:" + StringUtils.join(",", acls) + 
+            " inheritedUserAcl:" + inheritedUserAcl, 
         acls.contains(inheritedUserAcl));
-    assertTrue("Current acls:" + StringUtils.join(",", acls),
+    assertTrue("Current acls:" + StringUtils.join(",", acls) +
+            " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(inheritedGroupAcl));
   }
 

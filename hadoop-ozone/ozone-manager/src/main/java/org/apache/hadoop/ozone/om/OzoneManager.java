@@ -105,7 +105,6 @@ import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.audit.Auditor;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.common.Storage.StorageState;
-import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
@@ -1688,7 +1687,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             !ozAdmins.contains(ProtobufRpcEngine.Server.getRemoteUser()
                 .getUserName())) {
           LOG.error("Only admin users are authorized to create " +
-              "Ozone volumes. User :{} is not an.", 
+              "Ozone volumes. User :{} is not an admin.",
               ProtobufRpcEngine.Server.getRemoteUser().getUserName());
           throw new OMException("Only admin users are authorized to create " +
               "Ozone volumes.", ResultCodes.PERMISSION_DENIED);

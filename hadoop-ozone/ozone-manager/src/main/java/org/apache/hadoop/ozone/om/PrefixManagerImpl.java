@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.PREFIX_NOT_FOUND;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLUME_NOT_FOUND;
@@ -237,18 +238,42 @@ public class PrefixManagerImpl implements PrefixManager {
       if (prefixInfo != null && prefixInfo.getMetadata() != null) {
         upiBuilder.addAllMetadata(prefixInfo.getMetadata());
       }
-      String bucketKey = metadataManager.getBucketKey(obj.getVolumeName(), 
-          obj.getBucketName());
-      OmBucketInfo bucketInfo = metadataManager.getBucketTable().
-          get(bucketKey);
-      if(bucketInfo != null) {
-        bucketInfo.getAcls().forEach(a -> {
-          if (a.getAclScope().equals(OzoneAcl.AclScope.DEFAULT)) {
-            aclsToBeSet.add(new OzoneAcl(a.getType(), a.getName(),
-                a.getAclBitSet(), OzoneAcl.AclScope.ACCESS));
-          }
-        });
+
+      // Inherit DEFAULT acls from prefix.
+      boolean prefixParentFound = false;
+
+      List<OmPrefixInfo> prefixList = this.getLongestPrefixPath(
+          OZONE_URI_DELIMITER +
+              obj.getVolumeName() + OZONE_URI_DELIMITER +
+              obj.getBucketName() + OZONE_URI_DELIMITER +
+              obj.getPrefixName());
+
+      if (prefixList.size() > 0) {
+        // Add all acls from direct parent to key.
+        OmPrefixInfo parentPrefixInfo = prefixList.get(prefixList.size() - 1);
+        if (parentPrefixInfo != null) {
+          aclsToBeSet.addAll(OzoneUtils.getDefaultAcls(
+              parentPrefixInfo.getAcls()));
+          prefixParentFound = true;
+        }
       }
+
+      // If no parent prefix is found inherit DEFULT acls from bucket.
+      if (!prefixParentFound) {
+        String bucketKey = metadataManager.getBucketKey(obj.getVolumeName(),
+            obj.getBucketName());
+        OmBucketInfo bucketInfo = metadataManager.getBucketTable().
+            get(bucketKey);
+        if (bucketInfo != null) {
+          bucketInfo.getAcls().forEach(a -> {
+            if (a.getAclScope().equals(OzoneAcl.AclScope.DEFAULT)) {
+              aclsToBeSet.add(new OzoneAcl(a.getType(), a.getName(),
+                  a.getAclBitSet(), OzoneAcl.AclScope.ACCESS));
+            }
+          });
+        }
+      }
+
       prefixInfo = upiBuilder.setAcls(aclsToBeSet).build();
       prefixTree.insert(prefixPath, prefixInfo);
       metadataManager.getPrefixTable().put(prefixPath, prefixInfo);

@@ -648,13 +648,13 @@ public class KeyManagerImpl implements KeyManager {
         // Add all acls from direct parent to key.
         OmPrefixInfo prefixInfo = prefixList.get(prefixList.size() - 1);
         if(prefixInfo  != null) {
-          acls.addAll(OzoneUtils.getDefaultAcls(prefixInfo.getAcls()));
+          acls.addAll(OzoneUtils.getDefaultAclsProto(prefixInfo.getAcls()));
           prefixParentFound = true;
         }
       }
     }
     if(!prefixParentFound && omBucketInfo != null) {
-      acls.addAll(OzoneUtils.getDefaultAcls(omBucketInfo.getAcls()));
+      acls.addAll(OzoneUtils.getDefaultAclsProto(omBucketInfo.getAcls()));
     }
     builder.setAcls(acls);
     
@@ -1043,7 +1043,7 @@ public class KeyManagerImpl implements KeyManager {
         // Add all acls from direct parent to key.
         OmPrefixInfo prefixInfo = prefixList.get(prefixList.size() - 1);
         if(prefixInfo  != null) {
-          acls.addAll(OzoneUtils.getDefaultAcls(prefixInfo.getAcls()));
+          acls.addAll(OzoneUtils.getDefaultAclsProto(prefixInfo.getAcls()));
           prefixParentFound = true;
         }
       }

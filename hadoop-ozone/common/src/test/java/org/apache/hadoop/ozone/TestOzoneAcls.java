@@ -305,7 +305,8 @@ public class TestOzoneAcls {
     rights = acls.get(1).getAclList();
     assertTrue(rights.contains(ALL));
 
-    acls = OzoneAcl.parseAcls("user:bilbo:cxy[ACCESS],group:hadoop:a[DEFAULT],world:xyz:r[DEFAULT]");
+    acls = OzoneAcl.parseAcls("user:bilbo:cxy[ACCESS]," +
+        "group:hadoop:a[DEFAULT],world::r[DEFAULT]");
     assertTrue(acls.size() == 3);
     rights = acls.get(0).getAclList();
     assertTrue(rights.size() == 3);

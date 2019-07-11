@@ -63,9 +63,10 @@ public class OzoneAcl {
   /**
    * Constructor for OzoneAcl.
    *
-   * @param type - Type
-   * @param name - Name of user
-   * @param acl - Rights
+   * @param type   - Type
+   * @param name   - Name of user
+   * @param acl    - Rights
+   * @param scope  - AclScope
    */
   public OzoneAcl(ACLIdentityType type, String name, ACLType acl, 
       AclScope scope) {
@@ -94,9 +95,10 @@ public class OzoneAcl {
   /**
    * Constructor for OzoneAcl.
    *
-   * @param type - Type
-   * @param name - Name of user
-   * @param acls - Rights
+   * @param type   - Type
+   * @param name   - Name of user
+   * @param acls   - Rights
+   * @param scope  - AclScope
    */
   public OzoneAcl(ACLIdentityType type, String name, BitSet acls, 
       AclScope scope) {
