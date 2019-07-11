@@ -506,8 +506,10 @@ public class DatanodeAdminManager {
         namesystem.writeUnlock();
       }
       if (numBlocksChecked + numNodesChecked > 0) {
-        LOG.info("Checked {} blocks and {} nodes this tick", numBlocksChecked,
-            numNodesChecked);
+        LOG.info("Checked {} blocks and {} nodes this tick. {} nodes are now " +
+            "in maintenance or transitioning state. {} nodes pending.",
+            numBlocksChecked, numNodesChecked, outOfServiceNodeBlocks.size(),
+            pendingNodes.size());
       }
     }
 
@@ -598,14 +600,14 @@ public class DatanodeAdminManager {
               LOG.debug("Node {} is sufficiently replicated and healthy, "
                   + "marked as {}.", dn, dn.getAdminState());
             } else {
-              LOG.debug("Node {} {} healthy."
+              LOG.info("Node {} {} healthy."
                   + " It needs to replicate {} more blocks."
                   + " {} is still in progress.", dn,
                   isHealthy ? "is": "isn't", blocks.size(), dn.getAdminState());
             }
           } else {
-            LOG.debug("Node {} still has {} blocks to replicate "
-                + "before it is a candidate to finish {}.",
+            LOG.info("Node {} still has {} blocks to replicate "
+                    + "before it is a candidate to finish {}.",
                 dn, blocks.size(), dn.getAdminState());
           }
         } catch (Exception e) {
