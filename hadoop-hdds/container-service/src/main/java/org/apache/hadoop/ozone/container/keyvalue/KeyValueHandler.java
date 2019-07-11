@@ -900,8 +900,17 @@ public class KeyValueHandler extends Handler {
   public void markContainerUnhealthy(Container container)
       throws IOException {
     if (container.getContainerState() != State.UNHEALTHY) {
-      container.markContainerUnhealthy();
-      sendICR(container);
+      try {
+        container.markContainerUnhealthy();
+      } catch (IOException ex) {
+        // explicitly catch IOException here since the this operation
+        // will fail if the Rocksdb metadata is corrupted.
+        long id = container.getContainerData().getContainerID();
+        LOG.warn("Unexpected error while marking container "
+                +id+ " as unhealthy", ex);
+      } finally {
+        sendICR(container);
+      }
     }
   }
 
