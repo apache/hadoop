@@ -1747,7 +1747,7 @@
 
 <property>
   <name>fs.s3a.committer.staging.conflict-mode</name>
-  <value>fail</value>
+  <value>append</value>
   <description>
     Staging committer conflict resolution policy.
     Supported: "fail", "append", "replace".

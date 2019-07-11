@@ -198,7 +198,7 @@ public final class CommitConstants {
   public static final String CONFLICT_MODE_REPLACE = "replace";
 
   /** Default conflict mode: {@value}. */
-  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_FAIL;
+  public static final String DEFAULT_CONFLICT_MODE = CONFLICT_MODE_APPEND;
 
   /**
    * Number of threads in committers for parallel operations on files

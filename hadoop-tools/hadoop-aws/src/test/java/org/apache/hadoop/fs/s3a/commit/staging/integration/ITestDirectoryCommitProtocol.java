@@ -19,7 +19,12 @@
 package org.apache.hadoop.fs.s3a.commit.staging.integration;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
+import org.junit.Test;
+
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.AbstractS3ACommitter;
 import org.apache.hadoop.fs.s3a.commit.CommitConstants;
@@ -29,6 +34,9 @@ import org.apache.hadoop.fs.s3a.commit.staging.DirectoryStagingCommitter;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.CONFLICT_MODE_APPEND;
+import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_STAGING_CONFLICT_MODE;
 
 /** ITest of the low level protocol methods. */
 public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
@@ -55,6 +63,32 @@ public class ITestDirectoryCommitProtocol extends ITestStagingCommitProtocol {
   public AbstractS3ACommitter createFailingCommitter(
       TaskAttemptContext tContext) throws IOException {
     return new CommitterWithFailedThenSucceed(getOutDir(), tContext);
+  }
+
+  /**
+   * This is here because somehow test runs were failing with
+   * the confict mode being fail. Unsetting per-bucket options
+   * in setup made this go away; its retained for regression
+   * testing
+   */
+  @Test
+  public void testValidateDefaultConflictMode() throws Throwable {
+    describe("Checking default conflict mode adoption");
+    Configuration baseConf = new Configuration(true);
+    String[] sources = baseConf.getPropertySources(
+        FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+    String sourceStr = Arrays.stream(sources)
+        .collect(Collectors.joining(","));
+    String baseConfVal = baseConf
+        .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+    assertEquals("conflict mode in core config from "+ sourceStr,
+        CONFLICT_MODE_APPEND, baseConfVal);
+
+    Configuration fsConf = getFileSystem().getConf();
+    String conflictModeDefVal = fsConf
+        .getTrimmed(FS_S3A_COMMITTER_STAGING_CONFLICT_MODE);
+    assertEquals("conflict mode in filesystem",
+        CONFLICT_MODE_APPEND, conflictModeDefVal);
   }
 
   /**
