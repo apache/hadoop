@@ -72,6 +72,7 @@ import org.apache.hadoop.fs.permission.FsCreateModes;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.XAttrHelper;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
@@ -1151,9 +1152,8 @@ public class NamenodeWebHdfsMethods {
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETHOMEDIRECTORY: {
-      final String js = JsonUtil.toJsonString("Path",
-          FileSystem.get(conf != null ? conf : new Configuration())
-              .getHomeDirectory().toUri().getPath());
+      String userHome = DFSUtilClient.getHomeDirectory(conf, ugi).toString();
+      final String js = JsonUtil.toJsonString("Path", userHome);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETACLSTATUS: {
