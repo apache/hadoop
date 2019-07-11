@@ -38,11 +38,13 @@ public class TestOzoneConfigurationFields extends TestConfigurationFieldsBase {
         new Class[] {OzoneConfigKeys.class, ScmConfigKeys.class,
             OMConfigKeys.class, HddsConfigKeys.class,
             ReconServerConfigKeys.class,
-            S3GatewayConfigKeys.class};
+            S3GatewayConfigKeys.class
+        };
     errorIfMissingConfigProps = true;
     errorIfMissingXmlProps = true;
     xmlPropsToSkipCompare.add("hadoop.tags.custom");
     xmlPropsToSkipCompare.add("ozone.om.nodes.EXAMPLEOMSERVICEID");
+    xmlPropsToSkipCompare.add("hdds.containerscrub.enabled");
     addPropertiesNotInXml();
   }
 

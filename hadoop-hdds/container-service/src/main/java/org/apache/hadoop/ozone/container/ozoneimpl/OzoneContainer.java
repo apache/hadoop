@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.container.ozoneimpl;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
-import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.datanode.proto
@@ -53,6 +52,7 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
@@ -75,7 +75,8 @@ public class OzoneContainer {
   private final XceiverServerSpi writeChannel;
   private final XceiverServerSpi readChannel;
   private final ContainerController controller;
-  private ContainerScrubber scrubber;
+  private ContainerMetadataScanner metadataScanner;
+  private List<ContainerDataScanner> dataScanners;
   private final BlockDeletingService blockDeletingService;
 
   /**
@@ -92,7 +93,7 @@ public class OzoneContainer {
     this.config = conf;
     this.volumeSet = new VolumeSet(datanodeDetails.getUuidString(), conf);
     this.containerSet = new ContainerSet();
-    this.scrubber = null;
+    this.metadataScanner = null;
 
     buildContainerSet();
     final ContainerMetrics metrics = ContainerMetrics.create(conf);
@@ -167,18 +168,28 @@ public class OzoneContainer {
    * Start background daemon thread for performing container integrity checks.
    */
   private void startContainerScrub() {
-    boolean enabled = config.getBoolean(
-        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
-        HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+    ContainerScrubberConfiguration c = config.getObject(
+        ContainerScrubberConfiguration.class);
+    boolean enabled = c.isEnabled();
+    long metadataScanInterval = c.getMetadataScanInterval();
+    long bytesPerSec = c.getBandwidthPerVolume();
 
     if (!enabled) {
-      LOG.info("Background container scrubber has been disabled by {}",
-              HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED);
+      LOG.info("Background container scanner has been disabled.");
     } else {
-      if (this.scrubber == null) {
-        this.scrubber = new ContainerScrubber(config, controller);
+      if (this.metadataScanner == null) {
+        this.metadataScanner = new ContainerMetadataScanner(controller,
+            metadataScanInterval);
       }
-      scrubber.up();
+      this.metadataScanner.start();
+
+      dataScanners = new ArrayList<>();
+      for (HddsVolume v : volumeSet.getVolumesList()) {
+        ContainerDataScanner s = new ContainerDataScanner(controller,
+            v, bytesPerSec);
+        s.start();
+        dataScanners.add(s);
+      }
     }
   }
 
@@ -186,10 +197,14 @@ public class OzoneContainer {
    * Stop the scanner thread and wait for thread to die.
    */
   private void stopContainerScrub() {
-    if (scrubber == null) {
+    if (metadataScanner == null) {
       return;
     }
-    scrubber.down();
+    metadataScanner.shutdown();
+    metadataScanner = null;
+    for (ContainerDataScanner s : dataScanners) {
+      s.shutdown();
+    }
   }
 
   /**

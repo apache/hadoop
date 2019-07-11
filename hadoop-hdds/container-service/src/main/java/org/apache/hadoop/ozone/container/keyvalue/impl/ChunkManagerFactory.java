@@ -65,12 +65,12 @@ public final class ChunkManagerFactory {
 
     if (!persist) {
       boolean scrubber = config.getBoolean(
-          HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED,
-          HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED_DEFAULT);
+          "hdds.containerscrub.enabled",
+          false);
       if (scrubber) {
         // Data Scrubber needs to be disabled for non-persistent chunks.
         LOG.warn("Failed to set " + HDDS_CONTAINER_PERSISTDATA + " to false."
-            + " Please set " + HddsConfigKeys.HDDS_CONTAINERSCRUB_ENABLED
+            + " Please set hdds.containerscrub.enabled"
             + " also to false to enable non-persistent containers.");
         persist = true;
       }
