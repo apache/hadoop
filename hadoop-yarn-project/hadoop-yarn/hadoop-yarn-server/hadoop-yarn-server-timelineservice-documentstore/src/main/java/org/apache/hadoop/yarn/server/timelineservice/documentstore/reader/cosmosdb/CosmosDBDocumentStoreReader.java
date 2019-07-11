@@ -18,9 +18,11 @@
 
 package org.apache.hadoop.yarn.server.timelineservice.documentstore.reader.cosmosdb;
 
-import com.microsoft.azure.documentdb.Document;
-import com.microsoft.azure.documentdb.DocumentClient;
-import com.microsoft.azure.documentdb.FeedOptions;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Sets;
+import com.microsoft.azure.cosmosdb.FeedOptions;
+import com.microsoft.azure.cosmosdb.FeedResponse;
+import com.microsoft.azure.cosmosdb.rx.AsyncDocumentClient;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.timelineservice.reader.TimelineReaderContext;
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.DocumentStoreUtils;
@@ -30,12 +32,14 @@ import org.apache.hadoop.yarn.server.timelineservice.documentstore.lib.DocumentS
 import org.apache.hadoop.yarn.server.timelineservice.documentstore.reader.DocumentStoreReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import rx.Observable;
+import rx.Scheduler;
+import rx.schedulers.Schedulers;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -49,7 +53,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
       .getLogger(CosmosDBDocumentStoreReader.class);
   private static final int DEFAULT_DOCUMENTS_SIZE = 1;
 
-  private static volatile DocumentClient client;
+  private static AsyncDocumentClient client;
   private final String databaseName;
   private final static String COLLECTION_LINK = "/dbs/%s/colls/%s";
   private final static String SELECT_TOP_FROM_COLLECTION = "SELECT TOP %d * " +
@@ -66,17 +70,24 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
       "\"%s\") ";
   private final static String ORDER_BY_CLAUSE = " ORDER BY c.createdTime";
 
+  // creating thread pool of size, half of the total available threads from JVM
+  private static ExecutorService executorService = Executors.newFixedThreadPool(
+      Runtime.getRuntime().availableProcessors() / 2);
+  private static Scheduler schedulerForBlockingWork =
+      Schedulers.from(executorService);
+
   public CosmosDBDocumentStoreReader(Configuration conf) {
     LOG.info("Initializing Cosmos DB DocumentStoreReader...");
     databaseName = DocumentStoreUtils.getCosmosDBDatabaseName(conf);
-    // making CosmosDB Client Singleton
+    initCosmosDBClient(conf);
+  }
+
+  private synchronized void initCosmosDBClient(Configuration conf) {
+    // making CosmosDB Async Client Singleton
     if (client == null) {
-      synchronized (this) {
-        if (client == null) {
-          LOG.info("Creating Cosmos DB Client...");
-          client = DocumentStoreUtils.createCosmosDBClient(conf);
-        }
-      }
+      LOG.info("Creating Cosmos DB Reader Async Client...");
+      client = DocumentStoreUtils.createCosmosDBAsyncClient(conf);
+      addShutdownHook();
     }
   }
 
@@ -104,15 +115,16 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
     LOG.debug("Querying Collection : {} , with query {}", collectionName,
         sqlQuery);
 
-    Set<String> entityTypes = new HashSet<>();
-    Iterator<Document> documentIterator = client.queryDocuments(
+    return Sets.newHashSet(client.queryDocuments(
         String.format(COLLECTION_LINK, databaseName, collectionName),
-        sqlQuery, null).getQueryIterator();
-    while (documentIterator.hasNext()) {
-      Document document = documentIterator.next();
-      entityTypes.add(document.getString(ENTITY_TYPE_COLUMN));
-    }
-    return entityTypes;
+        sqlQuery, new FeedOptions())
+        .map(FeedResponse::getResults) // Map the page to the list of documents
+        .concatMap(Observable::from)
+        .map(document -> String.valueOf(document.get(ENTITY_TYPE_COLUMN)))
+        .toList()
+        .subscribeOn(schedulerForBlockingWork)
+        .toBlocking()
+        .single());
   }
 
   @Override
@@ -133,25 +145,25 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
       final long maxDocumentsSize) {
     final String sqlQuery = buildQueryWithPredicates(context, collectionName,
         maxDocumentsSize);
-    List<TimelineDoc> timelineDocs = new ArrayList<>();
     LOG.debug("Querying Collection : {} , with query {}", collectionName,
         sqlQuery);
 
-    FeedOptions feedOptions = new FeedOptions();
-    feedOptions.setPageSize((int) maxDocumentsSize);
-    Iterator<Document> documentIterator = client.queryDocuments(
-        String.format(COLLECTION_LINK, databaseName, collectionName),
-        sqlQuery, feedOptions).getQueryIterator();
-    while (documentIterator.hasNext()) {
-      Document document = documentIterator.next();
-      TimelineDoc resultDoc = document.toObject(docClass);
-      if (resultDoc.getCreatedTime() == 0 &&
-          document.getTimestamp() != null) {
-        resultDoc.setCreatedTime(document.getTimestamp().getTime());
-      }
-      timelineDocs.add(resultDoc);
-    }
-    return timelineDocs;
+    return client.queryDocuments(String.format(COLLECTION_LINK,
+        databaseName, collectionName), sqlQuery, new FeedOptions())
+        .map(FeedResponse::getResults) // Map the page to the list of documents
+        .concatMap(Observable::from)
+        .map(document -> {
+          TimelineDoc resultDoc = document.toObject(docClass);
+          if (resultDoc.getCreatedTime() == 0 &&
+              document.getTimestamp() != null) {
+            resultDoc.setCreatedTime(document.getTimestamp().getTime());
+          }
+          return resultDoc;
+        })
+        .toList()
+        .subscribeOn(schedulerForBlockingWork)
+        .toBlocking()
+        .single();
   }
 
   private String buildQueryWithPredicates(TimelineReaderContext context,
@@ -168,33 +180,34 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
     return addPredicates(context, collectionName, queryStrBuilder);
   }
 
-  private String addPredicates(TimelineReaderContext context,
+  @VisibleForTesting
+  String addPredicates(TimelineReaderContext context,
       String collectionName, StringBuilder queryStrBuilder) {
     boolean hasPredicate = false;
 
     queryStrBuilder.append(WHERE_CLAUSE);
 
-    if (context.getClusterId() != null) {
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getClusterId())) {
       hasPredicate = true;
       queryStrBuilder.append(String.format(CONTAINS_FUNC_FOR_ID,
           context.getClusterId()));
     }
-    if (context.getUserId() != null) {
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getUserId())) {
       hasPredicate = true;
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_ID, context.getUserId()));
     }
-    if (context.getFlowName() != null) {
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getFlowName())) {
       hasPredicate = true;
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_ID, context.getFlowName()));
     }
-    if (context.getAppId() != null) {
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getAppId())) {
       hasPredicate = true;
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_ID, context.getAppId()));
     }
-    if (context.getEntityId() != null) {
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getEntityId())) {
       hasPredicate = true;
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_ID, context.getEntityId()));
@@ -204,7 +217,7 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_ID, context.getFlowRunId()));
     }
-    if (context.getEntityType() != null){
+    if (!DocumentStoreUtils.isNullOrEmpty(context.getEntityType())){
       hasPredicate = true;
       queryStrBuilder.append(AND_OPERATOR)
           .append(String.format(CONTAINS_FUNC_FOR_TYPE,
@@ -224,9 +237,17 @@ public class CosmosDBDocumentStoreReader<TimelineDoc extends TimelineDocument>
   @Override
   public synchronized void close() {
     if (client != null) {
-      LOG.info("Closing Cosmos DB Client...");
+      LOG.info("Closing Cosmos DB Reader Async Client...");
       client.close();
       client = null;
     }
+  }
+
+  private void addShutdownHook() {
+    Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+      if (executorService != null) {
+        executorService.shutdown();
+      }
+    }));
   }
 }
