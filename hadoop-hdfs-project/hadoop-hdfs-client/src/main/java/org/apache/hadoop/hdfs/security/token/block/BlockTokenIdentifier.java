@@ -21,6 +21,7 @@ package org.apache.hadoop.hdfs.security.token.block;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.EnumSet;
@@ -55,6 +56,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private StorageType[] storageTypes;
   private String[] storageIds;
   private boolean useProto;
+  private byte[] handshakeMsg;
 
   private byte [] cache;
 
@@ -76,6 +78,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     this.storageIds = Optional.ofNullable(storageIds)
                               .orElse(new String[0]);
     this.useProto = useProto;
+    this.handshakeMsg = new byte[0];
   }
 
   @Override
@@ -132,6 +135,14 @@ public class BlockTokenIdentifier extends TokenIdentifier {
 
   public String[] getStorageIds(){
     return storageIds;
+  }
+
+  public byte[] getHandshakeMsg() {
+    return handshakeMsg;
+  }
+
+  public void setHandshakeMsg(byte[] bytes) {
+    handshakeMsg = bytes;
   }
 
   @Override
@@ -241,6 +252,16 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = readStorageIds;
 
     useProto = false;
+
+    try {
+      int handshakeMsgLen = WritableUtils.readVInt(in);
+      if (handshakeMsgLen != 0) {
+        handshakeMsg = new byte[handshakeMsgLen];
+        in.readFully(handshakeMsg);
+      }
+    } catch (EOFException eof) {
+
+    }
   }
 
   @VisibleForTesting
@@ -271,6 +292,13 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     storageIds = blockTokenSecretProto.getStorageIdsList().stream()
         .toArray(String[]::new);
     useProto = true;
+
+    if(blockTokenSecretProto.hasHandshakeSecret()) {
+      handshakeMsg = blockTokenSecretProto
+          .getHandshakeSecret().toByteArray();
+    } else {
+      handshakeMsg = new byte[0];
+    }
   }
 
   @Override
@@ -300,6 +328,10 @@ public class BlockTokenIdentifier extends TokenIdentifier {
     WritableUtils.writeVInt(out, storageIds.length);
     for (String id: storageIds) {
       WritableUtils.writeString(out, id);
+    }
+    if (handshakeMsg != null && handshakeMsg.length > 0) {
+      WritableUtils.writeVInt(out, handshakeMsg.length);
+      out.write(handshakeMsg);
     }
   }
 

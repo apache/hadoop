@@ -354,10 +354,6 @@ public class PBHelperClient {
         setPassword(getByteString(tok.getPassword())).
         setKindBytes(getFixedByteString(tok.getKind())).
         setServiceBytes(getFixedByteString(tok.getService()));
-    if (tok.getDnHandshakeSecret() != null) {
-      builder.setHandshakeSecret(
-          ByteString.copyFrom(tok.getDnHandshakeSecret()));
-    }
     return builder.build();
   }
 
@@ -779,6 +775,11 @@ public class PBHelperClient {
     for (String storageId : blockTokenSecret.getStorageIds()) {
       builder.addStorageIds(storageId);
     }
+
+    byte[] handshake = blockTokenSecret.getHandshakeMsg();
+    if (handshake != null && handshake.length > 0) {
+      builder.setHandshakeSecret(getByteString(handshake));
+    }
     return builder.build();
   }
 
@@ -835,9 +836,6 @@ public class PBHelperClient {
         new Token<>(blockToken.getIdentifier()
         .toByteArray(), blockToken.getPassword().toByteArray(), new Text(
         blockToken.getKind()), new Text(blockToken.getService()));
-    if (blockToken.hasHandshakeSecret()) {
-      token.setDNHandshakeSecret(blockToken.getHandshakeSecret().toByteArray());
-    }
     return token;
   }
 

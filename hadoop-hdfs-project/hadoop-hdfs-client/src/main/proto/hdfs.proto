@@ -671,4 +671,5 @@ message BlockTokenSecretProto {
   repeated AccessModeProto modes = 6;
   repeated StorageTypeProto storageTypes = 7;
   repeated string storageIds = 8;
+  optional bytes handshakeSecret = 9;
 }
