@@ -254,7 +254,9 @@ public final class ShutdownHookManager {
   private AtomicBoolean shutdownInProgress = new AtomicBoolean(false);
 
   //private to constructor to ensure singularity
-  private ShutdownHookManager() {
+  @VisibleForTesting
+  @InterfaceAudience.Private
+  ShutdownHookManager() {
   }
 
   /**
@@ -267,8 +269,8 @@ public final class ShutdownHookManager {
   @VisibleForTesting
   List<HookEntry> getShutdownHooksInOrder() {
     List<HookEntry> list;
-    synchronized (MGR.hooks) {
-      list = new ArrayList<>(MGR.hooks);
+    synchronized (hooks) {
+      list = new ArrayList<>(hooks);
     }
     Collections.sort(list, new Comparator<HookEntry>() {
 
@@ -342,7 +344,9 @@ public final class ShutdownHookManager {
       throw new IllegalStateException("Shutdown in progress, cannot remove a " +
           "shutdownHook");
     }
-    return hooks.remove(new HookEntry(shutdownHook, 0));
+    // hooks are only == by runnable
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+      TIME_UNIT_DEFAULT));
   }
 
   /**
@@ -354,7 +358,8 @@ public final class ShutdownHookManager {
   @InterfaceAudience.Public
   @InterfaceStability.Stable
   public boolean hasShutdownHook(Runnable shutdownHook) {
-    return hooks.contains(new HookEntry(shutdownHook, 0));
+    return hooks.contains(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+      TIME_UNIT_DEFAULT));
   }
   
   /**

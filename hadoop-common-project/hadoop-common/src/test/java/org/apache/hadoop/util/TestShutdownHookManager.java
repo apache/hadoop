@@ -43,13 +43,10 @@ public class TestShutdownHookManager {
       LoggerFactory.getLogger(TestShutdownHookManager.class.getName());
 
   /**
-   * remove all the shutdown hooks so that they never get invoked later
-   * on in this test process.
+   * A new instance of ShutdownHookManager to ensure parallel tests
+   * don't have shared context
    */
-  @After
-  public void clearShutdownHooks() {
-    ShutdownHookManager.get().clearShutdownHooks();
-  }
+  private final ShutdownHookManager mgr = new ShutdownHookManager();
 
   /**
    * Verify hook registration, then execute the hook callback stage
@@ -58,7 +55,6 @@ public class TestShutdownHookManager {
    */
   @Test
   public void shutdownHookManager() {
-    ShutdownHookManager mgr = ShutdownHookManager.get();
     assertNotNull("No ShutdownHookManager", mgr);
     assertEquals(0, mgr.getShutdownHooksInOrder().size());
     Hook hook1 = new Hook("hook1", 0, false);
@@ -193,7 +189,6 @@ public class TestShutdownHookManager {
    */
   @Test
   public void testDuplicateRegistration() throws Throwable {
-    ShutdownHookManager mgr = ShutdownHookManager.get();
     Hook hook = new Hook("hook1", 0, false);
 
     // add the hook
@@ -220,6 +215,20 @@ public class TestShutdownHookManager {
     assertEquals("priority of hook", 5, entry.getPriority());
     assertNotEquals("timeout of hook", 1, entry.getTimeout());
 
+  }
+
+  @Test
+  public void testShutdownRemove() throws Throwable {
+    assertNotNull("No ShutdownHookManager", mgr);
+    assertEquals(0, mgr.getShutdownHooksInOrder().size());
+    Hook hook1 = new Hook("hook1", 0, false);
+    Hook hook2 = new Hook("hook2", 0, false);
+    mgr.addShutdownHook(hook1, 9); // create Hook1 with priority 9
+    assertTrue(mgr.hasShutdownHook(hook1)); // hook1 lookup works
+    assertEquals(1, mgr.getShutdownHooksInOrder().size()); // 1 hook
+    assertFalse(mgr.removeShutdownHook(hook2)); // can't delete hook2
+    assertTrue(mgr.removeShutdownHook(hook1)); // can delete hook1
+    assertEquals(0, mgr.getShutdownHooksInOrder().size()); // no more hooks
   }
 
   private static final AtomicInteger INVOCATION_COUNT = new AtomicInteger();
