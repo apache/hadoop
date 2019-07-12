@@ -21,6 +21,9 @@ package org.apache.hadoop.ozone.om.request.s3.bucket;
 
 import java.util.UUID;
 
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,6 +48,7 @@ import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -90,6 +94,31 @@ public class TestS3BucketCreateRequest {
     String userName = UUID.randomUUID().toString();
     String s3BucketName = UUID.randomUUID().toString();
     doPreExecute(userName, s3BucketName);
+  }
+
+  @Test
+  public void testPreExecuteInvalidBucketLength() throws Exception {
+    String userName = UUID.randomUUID().toString();
+
+    // set bucket name which is less than 3 characters length
+    String s3BucketName = RandomStringUtils.randomAlphabetic(2);
+
+    try {
+      doPreExecute(userName, s3BucketName);
+      fail("testPreExecuteInvalidBucketLength failed");
+    } catch (OMException ex) {
+      GenericTestUtils.assertExceptionContains("S3_BUCKET_INVALID_LENGTH", ex);
+    }
+
+    // set bucket name which is less than 3 characters length
+    s3BucketName = RandomStringUtils.randomAlphabetic(65);
+
+    try {
+      doPreExecute(userName, s3BucketName);
+      fail("testPreExecuteInvalidBucketLength failed");
+    } catch (OMException ex) {
+      GenericTestUtils.assertExceptionContains("S3_BUCKET_INVALID_LENGTH", ex);
+    }
   }
 
 
