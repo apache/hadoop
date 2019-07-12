@@ -41,7 +41,7 @@ import org.junit.rules.TemporaryFolder;
 import java.util.UUID;
 
 /**
- * class to test S3BucketCreateResponse.
+ * Class to test S3BucketCreateResponse.
  */
 public class TestS3BucketCreateResponse {
 

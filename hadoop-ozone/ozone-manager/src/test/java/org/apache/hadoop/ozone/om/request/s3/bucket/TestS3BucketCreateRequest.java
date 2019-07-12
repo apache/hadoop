@@ -53,7 +53,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests OMBucketCreateRequest class, which handles CreateBucket request.
+ * Tests S3BucketCreateRequest class, which handles S3 CreateBucket request.
  */
 public class TestS3BucketCreateRequest {
 
