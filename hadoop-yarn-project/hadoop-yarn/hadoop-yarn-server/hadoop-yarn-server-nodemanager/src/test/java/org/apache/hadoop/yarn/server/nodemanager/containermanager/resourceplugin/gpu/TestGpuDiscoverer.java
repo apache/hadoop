@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 import static org.apache.hadoop.test.PlatformAssumptions.assumeNotWindows;
+import static org.apache.hadoop.yarn.conf.YarnConfiguration.NM_GPU_ALLOWED_DEVICES;
 import static org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDiscoverer.DEFAULT_BINARY_NAME;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
@@ -49,6 +50,9 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 public class TestGpuDiscoverer {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -96,7 +100,7 @@ public class TestGpuDiscoverer {
 
   private Configuration createConfigWithAllowedDevices(String s) {
     Configuration conf = new Configuration(false);
-    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, s);
+    conf.set(NM_GPU_ALLOWED_DEVICES, s);
     setupFakeBinary(conf);
     return conf;
   }
@@ -494,5 +498,18 @@ public class TestGpuDiscoverer {
       assertTrue(message.contains("Also tried to find the " +
           "executable in the default directories:"));
     }
+  }
+
+  @Test
+  public void testScriptNotCalled() throws YarnException {
+    Configuration conf = new Configuration();
+    conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:1,2:3");
+
+    GpuDiscoverer gpuSpy = spy(GpuDiscoverer.class);
+
+    gpuSpy.initialize(conf);
+    gpuSpy.getGpusUsableByYarn();
+
+    verify(gpuSpy, never()).getGpuDeviceInformation();
   }
 }
