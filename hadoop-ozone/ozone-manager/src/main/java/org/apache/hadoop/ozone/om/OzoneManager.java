@@ -3223,9 +3223,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * notifies of leader change. If it is not leader, the role information is
    * retrieved through by submitting a GroupInfoRequest to Ratis server.
    *
+   * If ratis is not enabled, then it always returns true.
+   *
    * @return Return true if this node is the leader, false otherwsie.
    */
   public boolean isLeader() {
-    return omRatisServer.isLeader();
+    return isRatisEnabled ? omRatisServer.isLeader() : true;
+  }
+
+  /**
+   * Return if Ratis is enabled or not.
+   * @return
+   */
+  public boolean isRatisEnabled() {
+    return isRatisEnabled;
   }
 }

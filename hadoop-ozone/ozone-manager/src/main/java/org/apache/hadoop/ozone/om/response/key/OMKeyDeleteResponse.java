@@ -62,7 +62,7 @@ public class OMKeyDeleteResponse extends OMClientResponse {
         // name already exists, then the old deleted key information would be
         // lost. To differentiate between keys with same name in
         // deletedTable, we add the timestamp to the key name.
-        String deleteKeyName = OmUtils.getDeletedKey(ozoneKey, deleteTimestamp);
+        String deleteKeyName = OmUtils.getDeletedKeyName(ozoneKey, deleteTimestamp);
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             deleteKeyName, omKeyInfo);
       }

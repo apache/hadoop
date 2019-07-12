@@ -35,6 +35,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -155,6 +156,7 @@ public class KeyManagerImpl implements KeyManager {
   private final PrefixManager prefixManager;
 
 
+  @VisibleForTesting
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
@@ -168,7 +170,7 @@ public class KeyManagerImpl implements KeyManager {
         om.getBlockTokenMgr(), om.getKmsProvider(), om.getPrefixManager());
   }
 
-  public KeyManagerImpl(OzoneManager om, ScmClient scmClient,
+  private KeyManagerImpl(OzoneManager om, ScmClient scmClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager,
       KeyProviderCryptoExtension kmsProvider, PrefixManager prefixManager) {

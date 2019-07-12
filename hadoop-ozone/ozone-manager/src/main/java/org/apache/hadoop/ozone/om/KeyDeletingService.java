@@ -41,7 +41,11 @@ import com.google.common.annotations.VisibleForTesting;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_KEY_DELETING_LIMIT_PER_TASK;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_KEY_DELETING_LIMIT_PER_TASK_DEFAULT;
 
+import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.DBStore;
+import org.apache.hadoop.utils.db.Table;
 import org.apache.ratis.protocol.ClientId;
+import org.rocksdb.RocksDBException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +70,7 @@ public class KeyDeletingService extends BackgroundService {
   private final AtomicLong deletedKeyCount;
   private final AtomicLong runCount;
 
-  public KeyDeletingService(OzoneManager ozoneManager,
+  KeyDeletingService(OzoneManager ozoneManager,
       ScmBlockLocationProtocol scmClient,
       KeyManager manager, long serviceInterval,
       long serviceTimeout, Configuration conf) {
@@ -108,6 +112,21 @@ public class KeyDeletingService extends BackgroundService {
     return queue;
   }
 
+  private boolean shouldRun() {
+    if (ozoneManager == null) {
+      // OzoneManager can be null for testing
+      return true;
+    }
+    return ozoneManager.isLeader();
+  }
+
+  private boolean isRatisEnabled() {
+    if (ozoneManager == null) {
+      return false;
+    }
+    return ozoneManager.isRatisEnabled();
+  }
+
   /**
    * A key deleting task scans OM DB and looking for a certain number of
    * pending-deletion keys, sends these keys along with their associated blocks
@@ -127,7 +146,7 @@ public class KeyDeletingService extends BackgroundService {
     public BackgroundTaskResult call() throws Exception {
       // Check if this is the Leader OM. If not leader, no need to execute this
       // task.
-      if (ozoneManager.isLeader()) {
+      if (shouldRun()) {
         runCount.incrementAndGet();
         try {
           long startTime = Time.monotonicNow();
@@ -137,7 +156,15 @@ public class KeyDeletingService extends BackgroundService {
             List<DeleteBlockGroupResult> results =
                 scmClient.deleteKeyBlocks(keyBlocksList);
             if (results != null) {
-              int delCount = submitPurgeKeysRequest(results);
+              int delCount;
+              if (isRatisEnabled()) {
+                delCount = submitPurgeKeysRequest(results);
+              } else {
+                // TODO: Once HA and non-HA paths are merged, we should have
+                //  only one code path here. Purge keys should go through an
+                //  OMRequest model.
+                delCount = deleteAllKeys(results);
+              }
               LOG.debug("Number of keys deleted: {}, elapsed time: {}ms",
                   delCount, Time.monotonicNow() - startTime);
               deletedKeyCount.addAndGet(delCount);
@@ -150,6 +177,37 @@ public class KeyDeletingService extends BackgroundService {
       }
       // By design, no one cares about the results of this call back.
       return EmptyTaskResult.newResult();
+    }
+
+    /**
+     * Deletes all the keys that SCM has acknowledged and queued for delete.
+     *
+     * @param results DeleteBlockGroups returned by SCM.
+     * @throws RocksDBException on Error.
+     * @throws IOException      on Error
+     */
+    private int deleteAllKeys(List<DeleteBlockGroupResult> results)
+        throws RocksDBException, IOException {
+      Table deletedTable = manager.getMetadataManager().getDeletedTable();
+
+      DBStore store = manager.getMetadataManager().getStore();
+
+      // Put all keys to delete in a single transaction and call for delete.
+      int deletedCount = 0;
+      try (BatchOperation writeBatch = store.initBatchOperation()) {
+        for (DeleteBlockGroupResult result : results) {
+          if (result.isSuccess()) {
+            // Purge key from OM DB.
+            deletedTable.deleteWithBatch(writeBatch,
+                result.getObjectKey());
+            LOG.debug("Key {} deleted from OM DB", result.getObjectKey());
+            deletedCount++;
+          }
+        }
+        // Write a single transaction for delete.
+        store.commitBatchOperation(writeBatch);
+      }
+      return deletedCount;
     }
 
     /**

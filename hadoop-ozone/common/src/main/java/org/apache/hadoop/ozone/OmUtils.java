@@ -227,6 +227,7 @@ public final class OmUtils {
     case RemoveAcl:
     case SetAcl:
     case AddAcl:
+    case PurgeKeys:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
@@ -478,7 +479,7 @@ public final class OmUtils {
    * @param timestamp timestamp of deletion
    * @return Deleted key name
    */
-  public static String getDeletedKey(String key, long timestamp) {
+  public static String getDeletedKeyName(String key, long timestamp) {
     return key + "_" + timestamp;
   }
 }
