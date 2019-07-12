@@ -467,4 +467,12 @@ public class ContainerInfo implements Comparator<ContainerInfo>,
     return state == HddsProtos.LifeCycleState.OPEN
         || state == HddsProtos.LifeCycleState.CLOSING;
   }
+
+  /**
+   * Check if a container is in Open state, but Close has not been initiated.
+   * @return true if Open, false otherwise.
+   */
+  public boolean isOpenNotClosing() {
+    return state == HddsProtos.LifeCycleState.OPEN;
+  }
 }
