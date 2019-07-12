@@ -755,13 +755,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
               located.getOwner());
           dirCache.add(child.getPath());
         } else {
-          child = new S3AFileStatus(located.getLen(),
-              located.getModificationTime(),
-              located.getPath(),
-              located.getBlockSize(),
-              located.getOwner(),
-              located.getETag(),
-              located.getVersionId());
+          child = located.toS3AFileStatus();
         }
         putParentsIfNotPresent(child, operationState);
         S3Guard.putWithTtl(getStore(),
@@ -1026,11 +1020,15 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public static final String PURPOSE = "truncate older metadata from " +
         "repository "
         + DATA_IN_S3_IS_PRESERVED;;
+
+    public static final String TOMBSTONE = "tombstone";
+
     private static final String USAGE = NAME + " [OPTIONS] [s3a://BUCKET]\n" +
         "\t" + PURPOSE + "\n\n" +
         "Common options:\n" +
         "  -" + META_FLAG + " URL - Metadata repository details " +
         "(implementation-specific)\n" +
+        "[-" + TOMBSTONE + "]\n" +
         "Age options. Any combination of these integer-valued options:\n" +
         AGE_OPTIONS_USAGE + "\n" +
         "Amazon DynamoDB-specific options:\n" +
@@ -1041,7 +1039,7 @@ public abstract class S3GuardTool extends Configured implements Tool {
         "  is not supported.";
 
     Prune(Configuration conf) {
-      super(conf);
+      super(conf, TOMBSTONE);
       addAgeOptions();
     }
 
@@ -1098,8 +1096,13 @@ public abstract class S3GuardTool extends Configured implements Tool {
         keyPrefix = PathMetadataDynamoDBTranslation.pathToParentKey(path);
       }
 
+      MetadataStore.PruneMode mode
+          = MetadataStore.PruneMode.ALL_BY_MODTIME;
+      if (getCommandFormat().getOpt(TOMBSTONE)) {
+        mode = MetadataStore.PruneMode.TOMBSTONES_BY_LASTUPDATED;
+      }
       try {
-        getStore().prune(MetadataStore.PruneMode.ALL_BY_MODTIME, divide,
+        getStore().prune(mode, divide,
             keyPrefix);
       } catch (UnsupportedOperationException e){
         errorln("Prune operation not supported in metadata store.");

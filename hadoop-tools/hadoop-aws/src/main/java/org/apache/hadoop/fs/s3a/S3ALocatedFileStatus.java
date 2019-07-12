@@ -60,4 +60,19 @@ public class S3ALocatedFileStatus extends LocatedFileStatus {
   public int hashCode() {
     return super.hashCode();
   }
+
+  /**
+   * Generate an S3AFileStatus instance, including etag and
+   * version ID, if present.
+   */
+  public S3AFileStatus toS3AFileStatus() {
+    return new S3AFileStatus(
+        getLen(),
+        getModificationTime(),
+        getPath(),
+        getBlockSize(),
+        getOwner(),
+        getETag(),
+        getVersionId());
+  }
 }

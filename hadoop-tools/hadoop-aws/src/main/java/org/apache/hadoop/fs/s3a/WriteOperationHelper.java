@@ -538,7 +538,7 @@ public class WriteOperationHelper {
   public BulkOperationState initiateCommitOperation(
       Path path) throws IOException {
     return S3Guard.initiateBulkWrite(owner.getMetadataStore(),
-        BulkOperationState.OperationType.Put, path);
+        BulkOperationState.OperationType.Commit, path);
   }
 
   /**

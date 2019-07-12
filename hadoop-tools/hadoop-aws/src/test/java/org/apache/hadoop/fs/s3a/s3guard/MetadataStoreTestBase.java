@@ -120,6 +120,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   @Before
   public void setUp() throws Exception {
+    Thread.currentThread().setName("setup");
     LOG.debug("== Setup. ==");
     contract = createContract();
     ms = contract.getMetadataStore();
@@ -132,6 +133,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
   @After
   public void tearDown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.debug("== Tear down. ==");
     if (ms != null) {
       try {
@@ -1050,6 +1052,11 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     return checkNotNull(get(pathStr), "No metastore entry for %s", pathStr);
   }
 
+  /**
+   * Assert that either a path has no entry or that it is marked as deleted.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
   protected void assertDeleted(String pathStr) throws IOException {
     PathMetadata meta = get(pathStr);
     boolean cached = meta != null && !meta.isDeleted();
@@ -1071,6 +1078,39 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     assertFalse(pathStr + " was found but marked deleted: "+ meta,
         meta.isDeleted());
     return meta;
+  }
+
+  /**
+   * Assert that an entry exists and is a file.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata verifyIsFile(String pathStr) throws IOException {
+    PathMetadata md = verifyCached(pathStr);
+    assertTrue("Not a file: " + md,
+        md.getFileStatus().isFile());
+    return md;
+  }
+
+  /**
+   * Assert that an entry exists and is a tombstone.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertIsTombstone(String pathStr) throws IOException {
+    PathMetadata meta = getNonNull(pathStr);
+    assertTrue(pathStr + " must be a tombstone: " + meta, meta.isDeleted());
+  }
+
+  /**
+   * Assert that an entry does not exist.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected void assertNotFound(String pathStr) throws IOException {
+    PathMetadata meta = get(pathStr);
+    assertNull("Unexpectedly found entry at path " + pathStr,
+        meta);
   }
 
   /**
@@ -1096,6 +1136,40 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     PathMetadata meta = verifyCached(pathStr);
     assertTrue(pathStr + " is not a directory: " + meta,
         meta.getFileStatus().isDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must not be marked as an empty directory:
+   * its empty directory field must be FALSE or UNKNOWN.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getNonEmptyDirectory(final String pathStr)
+      throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertNotEquals("Path " + pathStr
+            + " is considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
+    return meta;
+  }
+
+  /**
+   * Get an entry which must be an empty directory.
+   * its empty directory field must be TRUE.
+   * @param pathStr path
+   * @return the entry
+   * @throws IOException IO failure.
+   */
+  protected PathMetadata getEmptyDirectory(final String pathStr)
+      throws IOException {
+    PathMetadata meta = getDirectory(pathStr);
+    assertEquals("Path " + pathStr
+            + " is not considered an empty dir " + meta,
+        Tristate.TRUE,
+        meta.isEmptyDirectory());
     return meta;
   }
 
