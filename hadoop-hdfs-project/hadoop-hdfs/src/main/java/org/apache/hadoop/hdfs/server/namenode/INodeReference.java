@@ -500,14 +500,15 @@ public abstract class INodeReference extends INode {
     
     @Override
     public final ContentSummaryComputationContext computeContentSummary(
-        int snapshotId, ContentSummaryComputationContext summary) {
-      final int s = snapshotId < lastSnapshotId ? snapshotId : lastSnapshotId;
-      // only count storagespace for WithName
-      final QuotaCounts q = computeQuotaUsage(
-          summary.getBlockStoragePolicySuite(), getStoragePolicyID(), false, s);
-      summary.getCounts().addContent(Content.DISKSPACE, q.getStorageSpace());
-      summary.getCounts().addTypeSpaces(q.getTypeSpaces());
-      return summary;
+        int snapshotId, ContentSummaryComputationContext summary)
+        throws AccessControlException {
+      Preconditions.checkState(snapshotId == Snapshot.CURRENT_STATE_ID
+          || this.lastSnapshotId >= snapshotId);
+      final INode referred =
+          this.getReferredINode().asReference().getReferredINode();
+      int id = snapshotId != Snapshot.CURRENT_STATE_ID ? snapshotId :
+          this.lastSnapshotId;
+      return referred.computeContentSummary(id, summary);
     }
 
     @Override
