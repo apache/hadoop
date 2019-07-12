@@ -186,7 +186,12 @@
                     <exclude>**/ITestS3AHuge*.java</exclude>
                     <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
                     <exclude>**/ITestDynamoDBMetadataStoreScale.java</exclude>
+                    <!-- Terasort MR jobs spawn enough processes that they use up all RAM -->
                     <exclude>**/ITestTerasort*.java</exclude>
+                    <!-- MR jobs spawn enough processes that they use up all RAM -->
+                    <exclude>**/ITest*CommitMRJob.java</exclude>
+                    <!-- operations across the metastore -->
+                    <exclude>**/ITestS3GuardDDBRootOperations.java</exclude>
                   </excludes>
                 </configuration>
               </execution>
@@ -215,15 +220,22 @@
                   <!-- Do a sequential run for tests that cannot handle -->
                   <!-- parallel execution. -->
                   <includes>
-                    <include>**/ITestS3AContractRootDir.java</include>
                     <include>**/ITestS3AFileContextStatistics.java</include>
+                    <!-- large uploads consuming all bandwidth -->
                     <include>**/ITestS3AHuge*.java</include>
+                    <!-- SSE encrypted files confuse everything else -->
                     <include>**/ITestS3AEncryptionSSEC*.java</include>
                     <!-- this sets out to overlaod DynamoDB, so must be run standalone -->
                     <include>**/ITestDynamoDBMetadataStoreScale.java</include>
                     <!-- the terasort tests both work with a file in the same path in -->
                     <!--  the local FS. Running them sequentially guarantees isolation -->
+                    <!-- and that they don't conflict with the other MR jobs for RAM -->
                     <include>**/ITestTerasort*.java</include>
+                    <!-- MR jobs spawn enough processes that they use up all RAM -->
+                    <include>**/ITest*CommitMRJob.java</include>
+                    <!-- operations across the metastore -->
+                    <include>**/ITestS3AContractRootDir.java</include>
+                    <include>**/ITestS3GuardDDBRootOperations.java</include>
                   </includes>
                 </configuration>
               </execution>

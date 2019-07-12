@@ -78,5 +78,11 @@ public class BulkOperationState implements Closeable {
     Rename,
     /** Pruning: deleting entries and updating parents. */
     Prune,
+    /** Commit operation. */
+    Commit,
+    /** Deletion operation. */
+    Delete,
+    /** FSCK operation. */
+    Fsck
   }
 }

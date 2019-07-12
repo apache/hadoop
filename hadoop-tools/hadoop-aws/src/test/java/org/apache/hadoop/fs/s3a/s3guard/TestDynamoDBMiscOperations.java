@@ -115,7 +115,7 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
   public void testAncestorStateForDir() throws Throwable {
     final DynamoDBMetadataStore.AncestorState ancestorState
         = new DynamoDBMetadataStore.AncestorState(
-            BulkOperationState.OperationType.Rename, null);
+            null, BulkOperationState.OperationType.Rename, null);
 
     // path 1 is a directory
     final Path path1 = new Path("s3a://bucket/1");
@@ -143,7 +143,7 @@ public class TestDynamoDBMiscOperations extends HadoopTestBase {
   public void testAncestorStateForFile() throws Throwable {
     final DynamoDBMetadataStore.AncestorState ancestorState
         = new DynamoDBMetadataStore.AncestorState(
-        BulkOperationState.OperationType.Rename, null);
+            null, BulkOperationState.OperationType.Rename, null);
 
     // path 1 is a file
     final Path path1 = new Path("s3a://bucket/1");

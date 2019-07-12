@@ -18,9 +18,14 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -41,6 +46,7 @@ import org.assertj.core.api.Assertions;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.fs.PathIOException;
 import org.apache.hadoop.fs.contract.s3a.S3AContract;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -93,6 +99,8 @@ import static org.apache.hadoop.test.LambdaTestUtils.*;
  * This is needed to avoid "leaking" DDB tables and running up bills.
  */
 public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
+
+  public static final int MINUTE = 60_000;
 
   public ITestDynamoDBMetadataStore() {
     super();
@@ -281,22 +289,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   public static void deleteMetadataUnderPath(final DynamoDBMetadataStore ms,
       final Path path, final boolean suppressErrors) throws IOException {
     ThrottleTracker throttleTracker = new ThrottleTracker(ms);
-    try (DurationInfo ignored = new DurationInfo(LOG, true, "prune")) {
-      ms.prune(PruneMode.ALL_BY_MODTIME,
-          System.currentTimeMillis(),
-          PathMetadataDynamoDBTranslation.pathToParentKey(path));
-      LOG.info("Throttle statistics: {}", throttleTracker);
-    } catch (FileNotFoundException fnfe) {
-      // there is no table.
-      return;
-    } catch (IOException ioe) {
-      // prune failed. warn and then fall back to forget.
-      LOG.warn("Failed to prune {}", path, ioe);
-      if (!suppressErrors) {
-        throw ioe;
-      }
-    }
-    // and after the pruning, make sure all other metadata is gone
     int forgotten = 0;
     try (DurationInfo ignored = new DurationInfo(LOG, true, "forget")) {
       PathMetadata meta = ms.get(path);
@@ -922,43 +914,6 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
   }
 
   @Test
-  public void testProvisionTable() throws Exception {
-    final String tableName
-        = getTestTableName("testProvisionTable-" + UUID.randomUUID());
-    final Configuration conf = getTableCreationConfig();
-    conf.set(S3GUARD_DDB_TABLE_NAME_KEY, tableName);
-    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_WRITE_KEY, 2);
-    conf.setInt(S3GUARD_DDB_TABLE_CAPACITY_READ_KEY, 2);
-    DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore();
-    try {
-      ddbms.initialize(conf);
-      DynamoDB dynamoDB = ddbms.getDynamoDB();
-      final DDBCapacities oldProvision = DDBCapacities.extractCapacities(
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
-      Assume.assumeFalse("Table is on-demand", oldProvision.isOnDemandTable());
-      long desiredReadCapacity = oldProvision.getRead() - 1;
-      long desiredWriteCapacity = oldProvision.getWrite() - 1;
-      ddbms.provisionTable(desiredReadCapacity,
-          desiredWriteCapacity);
-      ddbms.initTable();
-      // we have to wait until the provisioning settings are applied,
-      // so until the table is ACTIVE again and not in UPDATING
-      ddbms.getTable().waitForActive();
-      final DDBCapacities newProvision = DDBCapacities.extractCapacities(
-          dynamoDB.getTable(tableName).describe().getProvisionedThroughput());
-      assertEquals("Check newly provisioned table read capacity units.",
-          desiredReadCapacity,
-          newProvision.getRead());
-      assertEquals("Check newly provisioned table write capacity units.",
-          desiredWriteCapacity,
-          newProvision.getWrite());
-    } finally {
-      ddbms.destroy();
-      ddbms.close();
-    }
-  }
-
-  @Test
   public void testDeleteTable() throws Exception {
     final String tableName = getTestTableName("testDeleteTable");
     Path testPath = new Path(new Path(fsUri), "/" + tableName);
@@ -1107,7 +1062,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     describe("Create an Invalid listing and prune it");
     DynamoDBMetadataStore ms
         = ITestDynamoDBMetadataStore.ddbmsStatic;
-    String base = "/testPruneAgainstInvalidTable";
+    String base = "/" + getMethodName();
     String subdir = base + "/subdir";
     Path subDirPath = strToPath(subdir);
     createNewDirs(base, subdir);
@@ -1125,13 +1080,9 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     // over the subdirectory
 
     long now = getTime();
-    long oldTime = now - 60_000;
+    long oldTime = now - MINUTE;
     putFile(subdir, oldTime, null);
-    final DDBPathMetadata subDirAsFile = ms.get(subDirPath);
-
-    Assertions.assertThat(subDirAsFile.getFileStatus().isFile())
-        .describedAs("Subdirectory entry %s is now file", subDirMetadataOrig)
-        .isTrue();
+    getFile(subdir);
 
     Path basePath = strToPath(base);
     DirListingMetadata listing = ms.listChildren(basePath);
@@ -1147,13 +1098,13 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     Assertions.assertThat(status.isFile())
         .as("Entry %s", (Object)pm)
         .isTrue();
-    DDBPathMetadata subFilePm = checkNotNull(ms.get(subFilePath));
-    LOG.info("Pruning");
+    getNonNull(subFile);
 
+    LOG.info("Pruning");
     // now prune
     ms.prune(PruneMode.ALL_BY_MODTIME,
-        now + 60_000, subdir);
-    DDBPathMetadata prunedFile = ms.get(subFilePath);
+        now + MINUTE, subdir);
+    ms.get(subFilePath);
 
     final PathMetadata subDirMetadataFinal = getNonNull(subdir);
 
@@ -1165,8 +1116,8 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
 
   @Test
   public void testPutFileDirectlyUnderTombstone() throws Throwable {
-    describe("Put a file under a tombstone");
-    String base = "/testPutFileDirectlyUnderTombstone";
+    describe("Put a file under a tombstone; verify the tombstone");
+    String base = "/" + getMethodName();
     long now = getTime();
     putTombstone(base, now, null);
     PathMetadata baseMeta1 = get(base);
@@ -1175,35 +1126,114 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         .isTrue();
     String child = base + "/file";
     putFile(child, now, null);
-    PathMetadata baseMeta2 = get(base);
-    Assertions.assertThat(baseMeta2.isDeleted())
-        .as("Metadata %s", baseMeta2)
-        .isFalse();
+    getDirectory(base);
   }
 
   @Test
+  public void testPruneTombstoneUnderTombstone() throws Throwable {
+    describe("Put a tombsteone under a tombstone, prune the pair");
+    String base = "/" + getMethodName();
+    long now = getTime();
+    String dir = base + "/dir";
+    putTombstone(dir, now, null);
+    assertIsTombstone(dir);
+    // parent dir is created
+    assertCached(base);
+    String child = dir + "/file";
+    String child2 = dir + "/file2";
+
+    // this will actually mark the parent as a dir,
+    // so that lists of that dir will pick up the tombstone
+    putTombstone(child, now, null);
+    getDirectory(dir);
+    // tombstone the dir
+    putTombstone(dir, now, null);
+    // add another child entry; this will update the dir entry from being
+    // tombstone to dir
+    putFile(child2, now, null);
+    getDirectory(dir);
+
+    // put a tombstone over the directory again
+    putTombstone(dir, now, null);
+    // verify
+    assertIsTombstone(dir);
+
+    //prune all tombstones
+    getDynamoMetadataStore().prune(PruneMode.TOMBSTONES_BY_LASTUPDATED,
+        now + MINUTE);
+
+    // the child is gone
+    assertNotFound(child);
+
+    // *AND* the parent dir has not been created
+    assertNotFound(dir);
+
+    // the child2 entry is still there, though it's now orphan (the store isn't
+    // meeting the rule "all entries must have a parent which exists"
+    getFile(child2);
+    // a full prune will still find and delete it, as this
+    // doesn't walk the tree
+    getDynamoMetadataStore().prune(PruneMode.ALL_BY_MODTIME,
+        now + MINUTE);
+    assertNotFound(child2);
+    assertNotFound(dir);
+  }
+
+  @Test
+  public void testPruneFileUnderTombstone() throws Throwable {
+    describe("Put a file under a tombstone, prune the pair");
+    String base = "/" + getMethodName();
+    long now = getTime();
+    String dir = base + "/dir";
+    putTombstone(dir, now, null);
+    assertIsTombstone(dir);
+    // parent dir is created
+    assertCached(base);
+    String child = dir + "/file";
+
+    // this will actually mark the parent as a dir,
+    // so that lists of that dir will pick up the tombstone
+    putFile(child, now, null);
+    // dir is reinstated
+    getDirectory(dir);
+
+    // put a tombstone
+    putTombstone(dir, now, null);
+    // prune all entries
+    getDynamoMetadataStore().prune(PruneMode.ALL_BY_MODTIME,
+        now + MINUTE);
+    // the child is gone
+    assertNotFound(child);
+
+    // *AND* the parent dir has not been created
+    assertNotFound(dir);
+  }
+
+  /**
+   * Keep in sync with code changes in S3AFileSystem.finishedWrite() so that
+   * the production code can be tested here.
+   */
+  @Test
   public void testPutFileDeepUnderTombstone() throws Throwable {
     describe("Put a file two levels under a tombstone");
-    String base = "/testPutFileDeepUnderTombstone";
-    String subdir = base + "/subdir";
+    String base = "/" + getMethodName();
+    String dir = base + "/dir";
     long now = getTime();
     // creating a file MUST create its parents
-    String child = subdir + "/file";
+    String child = dir + "/file";
     Path childPath = strToPath(child);
     putFile(child, now, null);
     getFile(child);
-    getDirectory(subdir);
+    getDirectory(dir);
     getDirectory(base);
 
     // now put the tombstone
     putTombstone(base, now, null);
-    PathMetadata baseMeta1 = getNonNull(base);
-    Assertions.assertThat(baseMeta1.isDeleted())
-        .as("Metadata %s", baseMeta1)
-        .isTrue();
+    assertIsTombstone(base);
 
-    // this is the same ordering as S3FileSystem.finishedWrite()
-
+    /*- --------------------------------------------*/
+    /* Begin S3FileSystem.finishedWrite() sequence. */
+    /* ---------------------------------------------*/
     AncestorState ancestorState = getDynamoMetadataStore()
         .initiateBulkWrite(BulkOperationState.OperationType.Put,
             childPath);
@@ -1213,8 +1243,103 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
         ancestorState);
     // now write the file again.
     putFile(child, now, ancestorState);
+    /* -------------------------------------------*/
+    /* End S3FileSystem.finishedWrite() sequence. */
+    /* -------------------------------------------*/
+
+    getFile(child);
     // the ancestor will now exist.
+    getDirectory(dir);
     getDirectory(base);
   }
 
+  @Test
+  public void testDumpTable() throws Throwable {
+    describe("Dump the table contents, but not the S3 Store");
+    String target = System.getProperty("test.build.dir", "target");
+    File buildDir = new File(target).getAbsoluteFile();
+    String name = "ITestDynamoDBMetadataStore";
+    File destFile = new File(buildDir, name);
+    DumpS3GuardDynamoTable.dumpStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        destFile,
+        fsUri);
+    File storeFile = new File(buildDir, name + DumpS3GuardDynamoTable.SCAN_CSV);
+    try (BufferedReader in = new BufferedReader(new InputStreamReader(
+        new FileInputStream(storeFile), Charset.forName("UTF-8")))) {
+      for (String line : org.apache.commons.io.IOUtils.readLines(in)) {
+        LOG.info(line);
+      }
+    }
+  }
+
+  @Test
+  public void testPurgeTableNoForce() throws Throwable {
+    describe("Purge the table");
+
+    putTombstone("/" + getMethodName(), getTime(), null);
+    Pair<Long, Long> r = PurgeS3GuardDynamoTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        false);
+
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isGreaterThanOrEqualTo(1);
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isZero();
+  }
+
+  @Test
+  public void testPurgeTableForce() throws Throwable {
+    describe("Purge the table -force");
+    putTombstone("/" + getMethodName(), getTime(), null);
+    Pair<Long, Long> r = PurgeS3GuardDynamoTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        true);
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isGreaterThanOrEqualTo(1);
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isEqualTo(r.getLeft());
+
+    // second iteration will have zero entries
+
+    r = PurgeS3GuardDynamoTable.purgeStore(
+        null,
+        ddbmsStatic,
+        getFileSystem().getConf(),
+        fsUri,
+        true);
+    Assertions.assertThat(r.getLeft()).
+        describedAs("entries found in %s", r)
+        .isZero();
+    Assertions.assertThat(r.getRight()).
+        describedAs("entries deleted in %s", r)
+        .isZero();
+  }
+
+  /**
+   * Assert that an entry exists and is a directory.
+   * @param pathStr path
+   * @throws IOException IO failure.
+   */
+  protected DDBPathMetadata verifyAuthDirStatus(String pathStr,
+      boolean authDirFlag)
+      throws IOException {
+    DDBPathMetadata md = (DDBPathMetadata) getDirectory(pathStr);
+    assertEquals("isAuthoritativeDir() mismatch in " + md,
+        authDirFlag,
+        md.isAuthoritativeDir());
+    return md;
+  }
 }

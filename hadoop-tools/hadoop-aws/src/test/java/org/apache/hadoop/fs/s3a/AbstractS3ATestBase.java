@@ -50,7 +50,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
   }
 
   @Override
+  public void setup() throws Exception {
+    Thread.currentThread().setName("setup");
+    super.setup();
+  }
+
+  @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     super.teardown();
     describe("closing file system");
     IOUtils.closeStream(getFileSystem());

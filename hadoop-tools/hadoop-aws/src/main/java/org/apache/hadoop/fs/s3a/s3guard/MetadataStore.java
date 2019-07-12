@@ -301,7 +301,7 @@ public interface MetadataStore extends Closeable {
    *   </li>
    * </ul>
    *
-   * @param pruneMode
+   * @param pruneMode Prune Mode
    * @param cutoff Oldest time to allow (UTC)
    * @throws IOException if there is an error
    * @throws UnsupportedOperationException if not implemented
@@ -313,7 +313,7 @@ public interface MetadataStore extends Closeable {
    * Same as {@link MetadataStore#prune(PruneMode, long)}, but with an
    * additional keyPrefix parameter to filter the pruned keys with a prefix.
    *
-   * @param pruneMode
+   * @param pruneMode Prune Mode
    * @param cutoff Oldest time to allow (UTC)
    * @param keyPrefix The prefix for the keys that should be removed
    * @throws IOException if there is an error
