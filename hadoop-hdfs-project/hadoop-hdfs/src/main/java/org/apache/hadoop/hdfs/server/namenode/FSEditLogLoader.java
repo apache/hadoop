@@ -184,12 +184,12 @@ public class FSEditLogLoader {
       LogAction postLogAction = loadEditsLogHelper.record("post", endTime,
           numEdits, edits.length(), endTime - startTime);
       if (postLogAction.shouldLog()) {
-        FSImage.LOG.info("Loaded {} edits file(s) (the last named {}) of " +
-                "total size {}, total edits {}, total load time {} ms",
-            postLogAction.getCount(), edits.getName(),
-            postLogAction.getStats(1).getSum(),
-            postLogAction.getStats(0).getSum(),
-            postLogAction.getStats(2).getSum());
+        FSImage.LOG.info("Loaded " + postLogAction.getCount()
+            + " edits file(s) (the last named " + edits.getName()
+            + ") of total size " + postLogAction.getStats(1).getSum()
+            + ", total edits " + postLogAction.getStats(0).getSum()
+            + ", total load time " + postLogAction.getStats(2).getSum()
+            + " ms");
       }
       return numEdits;
     } finally {
