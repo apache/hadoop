@@ -14,11 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 export MAVEN_OPTS="-Xmx4096m"
-mvn -fn test -am -pl :hadoop-ozone-dist -P hdds
-module_failed_tests=$(find "." -name 'TEST*.xml'\
-    | xargs "grep" -l -E "<failure|<error"\
+mvn -fn test -f pom.ozone.xml -pl \!:hadoop-ozone-integration-test,\!:hadoop-ozone-filesystem
+module_failed_tests=$(find "." -name 'TEST*.xml' -print0 \
+    | xargs -n1 -0 "grep" -l -E "<failure|<error"\
     | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}')
 if [[ -n "${module_failed_tests}" ]] ; then
-    exit -1
+    exit 1
 fi
 exit 0
