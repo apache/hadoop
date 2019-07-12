@@ -154,17 +154,20 @@ public class TestDataScrubber {
     Assert.assertTrue(cs.containerCount() > 0);
 
     // delete the chunks directory.
-    File chunksDir = new File(c.getContainerData().getContainerPath(), "chunks");
+    File chunksDir = new File(c.getContainerData().getContainerPath(),
+        "chunks");
     deleteDirectory(chunksDir);
     Assert.assertFalse(chunksDir.exists());
 
-    ContainerScrubber sb = new ContainerScrubber(ozoneConfig, oc.getController());
+    ContainerScrubber sb = new ContainerScrubber(ozoneConfig,
+        oc.getController());
     sb.scrub(c);
 
     // wait for the incremental container report to propagate to SCM
     Thread.sleep(5000);
 
-    ContainerManager cm = cluster.getStorageContainerManager().getContainerManager();
+    ContainerManager cm = cluster.getStorageContainerManager()
+        .getContainerManager();
     Set<ContainerReplica> replicas = cm.getContainerReplicas(
         ContainerID.valueof(c.getContainerData().getContainerID()));
     Assert.assertEquals(1, replicas.size());
@@ -184,7 +187,8 @@ public class TestDataScrubber {
   }
 
   private boolean verifyRatisReplication(String volumeName, String bucketName,
-                                         String keyName, ReplicationType type, ReplicationFactor factor)
+                                         String keyName, ReplicationType type,
+                                         ReplicationFactor factor)
       throws IOException {
     OmKeyArgs keyArgs = new OmKeyArgs.Builder()
         .setVolumeName(volumeName)
