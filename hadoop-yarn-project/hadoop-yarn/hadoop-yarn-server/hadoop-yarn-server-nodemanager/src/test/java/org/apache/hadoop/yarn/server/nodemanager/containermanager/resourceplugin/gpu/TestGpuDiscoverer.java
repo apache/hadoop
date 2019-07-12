@@ -505,7 +505,7 @@ public class TestGpuDiscoverer {
     Configuration conf = new Configuration();
     conf.set(YarnConfiguration.NM_GPU_ALLOWED_DEVICES, "0:1,2:3");
 
-    GpuDiscoverer gpuSpy = spy(GpuDiscoverer.class);
+    GpuDiscoverer gpuSpy = spy(new GpuDiscoverer());
 
     gpuSpy.initialize(conf);
     gpuSpy.getGpusUsableByYarn();
