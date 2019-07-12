@@ -290,7 +290,7 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
     resetIdentityConfig(config);
 
     List<AclEntry> aclEntriesToBeTransformed = Lists.newArrayList(
-            aclEntry(ACCESS, USER, FULLY_QUALIFIED_NAME,ALL),
+            aclEntry(ACCESS, USER, FULLY_QUALIFIED_NAME, ALL),
             aclEntry(DEFAULT, USER, SUPER_USER, ALL),
             aclEntry(DEFAULT, USER, SERVICE_PRINCIPAL_ID, ALL),
             aclEntry(DEFAULT, USER, SHORT_NAME, ALL),
@@ -321,9 +321,9 @@ public class ITestAbfsIdentityTransformer extends AbstractAbfsScaleTest{
 
     // expected acl entries
     List<AclEntry> expectedAclEntries = Lists.newArrayList(
-            aclEntry(ACCESS, USER, SHORT_NAME, ALL),// Full UPN should be transformed to shortName
-            aclEntry(DEFAULT, USER, localUser, ALL),// $SuperUser should be transformed to shortName
-            aclEntry(DEFAULT, USER, localUser, ALL),// principal Id should be transformed to local user name
+            aclEntry(ACCESS, USER, SHORT_NAME, ALL), // Full UPN should be transformed to shortName
+            aclEntry(DEFAULT, USER, localUser, ALL), // $SuperUser should be transformed to shortName
+            aclEntry(DEFAULT, USER, localUser, ALL), // principal Id should be transformed to local user name
             aclEntry(DEFAULT, USER, SHORT_NAME, ALL),
             aclEntry(DEFAULT, GROUP, SHORT_NAME, ALL),
             aclEntry(DEFAULT, OTHER, ALL),
