@@ -34,7 +34,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeSetQuotaResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
@@ -58,7 +57,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_L
 /**
  * Handles set Quota request for volume.
  */
-public class OMVolumeSetQuotaRequest extends OMClientRequest {
+public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeSetQuotaRequest.class);
 

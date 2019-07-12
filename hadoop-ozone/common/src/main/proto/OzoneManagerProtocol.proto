@@ -279,6 +279,8 @@ enum Status {
     PERMISSION_DENIED = 48;
     TIMEOUT = 49;
     PREFIX_NOT_FOUND=50;
+
+    S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
 }
 
 
@@ -860,6 +862,17 @@ message ServiceInfo {
 message S3CreateBucketRequest {
     required string userName = 1;
     required string s3bucketname = 2;
+    // This will be set during OM HA by one of the OM node. In future if more
+    // data fields are required to create volume/bucket we can add them to
+    // this. This is the reason for creating a new message type for this.
+    // S3CreateBucket means create volume from userName and create bucket
+    // with s3BucketName.
+    optional S3CreateVolumeInfo s3CreateVolumeInfo = 3;
+}
+
+message S3CreateVolumeInfo {
+    // Creation time set in preExecute on one of the OM node.
+    required uint64 creationTime = 1;
 }
 
 message S3CreateBucketResponse {

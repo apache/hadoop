@@ -203,5 +203,7 @@ public class OMException extends IOException {
 
     PREFIX_NOT_FOUND,
 
+    S3_BUCKET_INVALID_LENGTH
+
   }
 }

@@ -35,7 +35,6 @@ import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeDeleteResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -55,8 +54,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOC
 /**
  * Handles volume delete request.
  */
-public class OMVolumeDeleteRequest extends OMClientRequest
-    implements OMVolumeRequest {
+public class OMVolumeDeleteRequest extends OMVolumeRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeDeleteRequest.class);
