@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.chaos;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomUtils;
 
 /**
@@ -26,11 +27,12 @@ public class TestProbability {
   private int pct;
 
   private TestProbability(int pct) {
+    Preconditions.checkArgument( pct <= 100);
     this.pct = pct;
   }
 
   public boolean isTrue() {
-    return (RandomUtils.nextInt() * pct / 100) == 1;
+    return (RandomUtils.nextInt() % (100 / pct)) == 0;
   }
 
   public static TestProbability valueOf(int pct) {
