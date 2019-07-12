@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu;
 
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperationExecutor;
@@ -33,8 +34,14 @@ import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.GpuDeviceInforma
 import org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu.NMGpuResourceInfo;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class GpuResourcePlugin implements ResourcePlugin {
+
+  private static final Logger LOG =
+      LoggerFactory.getLogger(GpuResourcePlugin.class);
+
   private final GpuNodeResourceUpdateHandler resourceDiscoverHandler;
   private final GpuDiscoverer gpuDiscoverer;
   private GpuResourceHandlerImpl gpuResourceHandler = null;
@@ -84,6 +91,10 @@ public class GpuResourcePlugin implements ResourcePlugin {
   public synchronized NMResourceInfo getNMResourceInfo() throws YarnException {
     GpuDeviceInformation gpuDeviceInformation =
         gpuDiscoverer.getGpuDeviceInformation();
+
+    //At this point the gpu plugin is already enabled
+    checkGpuResourceHandler();
+
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
     List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
@@ -92,6 +103,17 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
+  }
+
+  private void checkGpuResourceHandler() throws YarnException {
+    if(gpuResourceHandler == null) {
+      String errorMsg =
+          "Linux Container Executor is not configured for the NodeManager. "
+              + "To fully enable GPU feature on the node also set "
+              + YarnConfiguration.NM_CONTAINER_EXECUTOR + " properly.";
+      LOG.warn(errorMsg);
+      throw new YarnException(errorMsg);
+    }
   }
 
   @Override
