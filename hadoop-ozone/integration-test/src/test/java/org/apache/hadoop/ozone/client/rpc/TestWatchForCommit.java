@@ -312,7 +312,6 @@ public class TestWatchForCommit {
           .watchForCommit(index + new Random().nextInt(100) + 10, 3000);
       Assert.fail("expected exception not thrown");
     } catch (Exception e) {
-      System.out.println("exception " + e);
       Assert.assertTrue(
           HddsClientUtils.checkForException(e) instanceof TimeoutException);
     }
