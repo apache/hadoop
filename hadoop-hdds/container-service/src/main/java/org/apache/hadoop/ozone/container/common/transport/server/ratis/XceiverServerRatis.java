@@ -81,8 +81,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -102,7 +100,6 @@ public final class XceiverServerRatis extends XceiverServer {
   private int port;
   private final RaftServer server;
   private ThreadPoolExecutor chunkExecutor;
-  private final List<ExecutorService> executors;
   private final ContainerDispatcher dispatcher;
   private ClientId clientId = ClientId.randomId();
   private final StateContext context;
@@ -111,12 +108,14 @@ public final class XceiverServerRatis extends XceiverServer {
   private final long cacheEntryExpiryInteval;
   private boolean isStarted = false;
   private DatanodeDetails datanodeDetails;
+  private final Configuration conf;
 
   private XceiverServerRatis(DatanodeDetails dd, int port,
       ContainerDispatcher dispatcher, Configuration conf, StateContext
       context, GrpcTlsConfig tlsConfig, CertificateClient caClient)
       throws IOException {
     super(conf, caClient);
+    this.conf = conf;
     Objects.requireNonNull(dd, "id == null");
     datanodeDetails = dd;
     this.port = port;
@@ -129,23 +128,16 @@ public final class XceiverServerRatis extends XceiverServer {
             100, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(1024),
             new ThreadPoolExecutor.CallerRunsPolicy());
-    final int numContainerOpExecutors = conf.getInt(
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY,
-        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT);
     this.context = context;
     this.replicationLevel =
         conf.getEnum(OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_KEY,
             OzoneConfigKeys.DFS_CONTAINER_RATIS_REPLICATION_LEVEL_DEFAULT);
-    this.executors = new ArrayList<>();
     cacheEntryExpiryInteval = conf.getTimeDuration(OzoneConfigKeys.
             DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL,
         OzoneConfigKeys.
             DFS_CONTAINER_RATIS_STATEMACHINEDATA_CACHE_EXPIRY_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
     this.dispatcher = dispatcher;
-    for (int i = 0; i < numContainerOpExecutors; i++) {
-      executors.add(Executors.newSingleThreadExecutor());
-    }
 
     RaftServer.Builder builder = RaftServer.newBuilder()
         .setServerId(RatisHelper.toRaftPeerId(dd))
@@ -159,8 +151,8 @@ public final class XceiverServerRatis extends XceiverServer {
 
   private ContainerStateMachine getStateMachine(RaftGroupId gid) {
     return new ContainerStateMachine(gid, dispatcher, chunkExecutor, this,
-        Collections.unmodifiableList(executors), cacheEntryExpiryInteval,
-        getSecurityConfig().isBlockTokenEnabled(), getBlockTokenVerifier());
+        cacheEntryExpiryInteval, getSecurityConfig().isBlockTokenEnabled(),
+        getBlockTokenVerifier(), conf);
   }
 
   private RaftProperties newRaftProperties(Configuration conf) {
@@ -447,7 +439,6 @@ public final class XceiverServerRatis extends XceiverServer {
         // some of the tasks would be executed using the executors.
         server.close();
         chunkExecutor.shutdown();
-        executors.forEach(ExecutorService::shutdown);
         isStarted = false;
       } catch (IOException e) {
         throw new RuntimeException(e);
