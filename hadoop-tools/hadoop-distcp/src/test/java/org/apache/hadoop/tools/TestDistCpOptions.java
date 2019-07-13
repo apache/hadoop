@@ -21,6 +21,7 @@ package org.apache.hadoop.tools;
 import java.util.Collections;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -226,11 +227,12 @@ public class TestDistCpOptions {
   }
 
   @Test
-  public void testDeleteMissingUseTrash() {
+  public void testDeleteMissingUseTrash() throws Exception {
     final DistCpOptions.Builder builder = new DistCpOptions.Builder(
         Collections.singletonList(new Path("hdfs://localhost:8020/source")),
         new Path("hdfs://localhost:8020/target/"));
-    Assert.assertFalse(builder.build().shouldDeleteUseTrash());
+    Assert.assertFalse("Delete does not use trash by default.",
+        builder.build().shouldDeleteUseTrash());
 
     DistCpOptions options = builder.withSyncFolder(true)
         .withDeleteMissing(true)
@@ -247,21 +249,17 @@ public class TestDistCpOptions {
         .withDeleteMissing(true)
         .withDeleteUseTrash(true)
         .build();
+
     Assert.assertTrue(options.shouldDeleteUseTrash());
     Assert.assertTrue(options.shouldOverwrite());
     Assert.assertTrue(options.shouldDeleteMissing());
 
-    try {
-      new DistCpOptions.Builder(
-          Collections.singletonList(new Path("hdfs://localhost:8020/source")),
-          new Path("hdfs://localhost:8020/target/"))
-          .withDeleteUseTrash(true)
-          .build();
-      fail("Delete useTrash should fail without delete option");
-    } catch (IllegalArgumentException e) {
-      assertExceptionContains(
-          "Delete useTrash is applicable only with delete option", e);
-    }
+    LambdaTestUtils.intercept(IllegalArgumentException.class,
+        () -> new DistCpOptions.Builder(Collections.singletonList(
+            new Path("hdfs://localhost:8020/source")),
+            new Path("hdfs://localhost:8020/target/"))
+            .withDeleteUseTrash(true)
+            .build());
   }
 
   @Test

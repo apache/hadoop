@@ -18,14 +18,19 @@
 
 package org.apache.hadoop.tools.mapred;
 
+<<<<<<< HEAD
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 <<<<<<< HEAD
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 =======
 >>>>>>> 0c05975... fix failed unit test and checkstyles
+=======
+>>>>>>> 82de1c4... Fix some typo and checksytes.
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -291,8 +296,8 @@ public class TestCopyCommitter {
   public void testPreserveTimeWithDeleteMiss() throws IOException {
     TaskAttemptContext taskAttemptContext = getTaskAttemptContext(config);
     JobContext jobContext = new JobContextImpl(
-            taskAttemptContext.getConfiguration(),
-            taskAttemptContext.getTaskAttemptID().getJobID());
+        taskAttemptContext.getConfiguration(),
+        taskAttemptContext.getTaskAttemptID().getJobID());
     Configuration conf = jobContext.getConfiguration();
 
     FileSystem fs = null;
@@ -300,17 +305,17 @@ public class TestCopyCommitter {
       OutputCommitter committer = new CopyCommitter(null, taskAttemptContext);
       fs = FileSystem.get(conf);
       String sourceBase = TestDistCpUtils.createTestSetup(
-              fs, FsPermission.getDefault());
+          fs, FsPermission.getDefault());
       String targetBase = TestDistCpUtils.createTestSetup(
-              fs, FsPermission.getDefault());
+          fs, FsPermission.getDefault());
       String targetBaseAdd = TestDistCpUtils.createTestSetup(
-              fs, FsPermission.getDefault());
+          fs, FsPermission.getDefault());
       fs.rename(new Path(targetBaseAdd), new Path(targetBase));
 
       final DistCpOptions options = new DistCpOptions.Builder(
-              Collections.singletonList(new Path(sourceBase)), new Path("/out"))
-              .withSyncFolder(true).withDeleteMissing(true)
-              .preserve(FileAttribute.TIMES).build();
+          Collections.singletonList(new Path(sourceBase)), new Path("/out"))
+          .withSyncFolder(true).withDeleteMissing(true)
+          .preserve(FileAttribute.TIMES).build();
       options.appendToConf(conf);
       final DistCpContext context = new DistCpContext(options);
 
@@ -322,31 +327,23 @@ public class TestCopyCommitter {
       conf.set(DistCpConstants.CONF_LABEL_TARGET_FINAL_PATH, targetBase);
 
       Path sourceListing = new Path(
-              conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
+          conf.get(DistCpConstants.CONF_LABEL_LISTING_FILE_PATH));
       SequenceFile.Reader sourceReader = new SequenceFile.Reader(conf,
-              SequenceFile.Reader.file(sourceListing));
+          SequenceFile.Reader.file(sourceListing));
       Path targetRoot = new Path(targetBase);
 
       committer.commitJob(jobContext);
       checkDirectoryTimes(fs, sourceReader, targetRoot);
 
-<<<<<<< HEAD
       //Test for idempotent commit
       committer.commitJob(jobContext);
       checkDirectoryTimes(fs, sourceReader, targetRoot);
-=======
-      Assert.assertTrue("Path delete does not use trash",
-          fs.exists(trashRootDir));
-      Path trashDir = new Path(trashRootDir, "Current" + targetBaseAdd);
-      verifyFoldersAreInSync(fs, trashDir.toString(), sourceBase);
->>>>>>> 0c05975... fix failed unit test and checkstyles
     } finally {
       TestDistCpUtils.delete(fs, "/tmp1");
       conf.unset(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
       conf.set(DistCpConstants.CONF_LABEL_DELETE_MISSING, "false");
     }
   }
-
 
   @Test
   public void testDeleteMissingFlatInterleavedFiles() throws IOException {

@@ -82,7 +82,8 @@ public enum DistCpOptionSwitch {
    * moved to the trash
    */
   DELETE_USETRASH(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH,
-      new Option("useTrash", false, "Delete from target to the trash")),
+      new Option("useTrash", false, "Move deleted files into " +
+          "the user's trash directory in the destination filesystem")),
 
   /**
    * Track missing files in target that are missing from source

@@ -340,7 +340,6 @@ public abstract class AbstractContractDistCpTest
    * @param destDir output directory used by the initial distcp
    * @return the distcp job
    */
-
   protected Job distCpUpdateUseTrashDeepDirectoryStructure(final Path destDir)
       throws Exception {
     describe("Incremental update with deletion-use-trash of missing files");
@@ -356,9 +355,8 @@ public abstract class AbstractContractDistCpTest
         inputFile1, inputFile3, inputSubDir4);
 
     Path trashRootDir = remoteFS.getTrashRoot(null);
-    if (remoteFS.exists(trashRootDir)) {
-      remoteFS.delete(trashRootDir, true);
-    }
+    ContractTestUtils.assertDeleted(remoteFS, trashRootDir, true);
+
 
     Job job = distCpUpdateDeleteUseTrash(inputDir, inputDirUnderOutputDir);
     lsR("Updated Remote", remoteFS, destDir);

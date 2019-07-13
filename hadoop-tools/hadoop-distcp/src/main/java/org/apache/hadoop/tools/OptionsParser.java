@@ -155,7 +155,7 @@ public class OptionsParser {
               command,
               DistCpOptionSwitch.TRACK_MISSING.getSwitch())));
     }
-    if(command.hasOption(DistCpOptionSwitch.DELETE_USETRASH.getSwitch())) {
+    if (command.hasOption(DistCpOptionSwitch.DELETE_USETRASH.getSwitch())) {
       builder.withDeleteUseTrash(true);
     }
 
