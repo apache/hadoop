@@ -668,7 +668,7 @@ public class NNBench extends Configured implements Tool {
       long startTime = getConf().getLong("test.nnbench.starttime", 0l);
       long currentTime = System.currentTimeMillis();
       long sleepTime = startTime - currentTime;
-      boolean retVal = false;
+      boolean retVal = true;
       
       // If the sleep time is greater than 0, then sleep and return
       if (sleepTime > 0) {
