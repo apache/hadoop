@@ -115,7 +115,7 @@ public class TestShutdownHookManager {
     // now execute the hook shutdown sequence
     INVOCATION_COUNT.set(0);
     LOG.info("invoking executeShutdown()");
-    int timeouts = ShutdownHookManager.executeShutdown();
+    int timeouts = mgr.executeShutdown();
     LOG.info("Shutdown completed");
     assertEquals("Number of timed out hooks", 1, timeouts);
 

@@ -92,7 +92,7 @@ public final class ShutdownHookManager {
               return;
             }
             long started = System.currentTimeMillis();
-            int timeoutCount = executeShutdown();
+            int timeoutCount = MGR.executeShutdown();
             long ended = System.currentTimeMillis();
             LOG.debug(String.format(
                 "Completed shutdown in %.3f seconds; Timeouts: %d",
@@ -116,9 +116,9 @@ public final class ShutdownHookManager {
    */
   @InterfaceAudience.Private
   @VisibleForTesting
-  static int executeShutdown() {
+  int executeShutdown() {
     int timeouts = 0;
-    for (HookEntry entry: MGR.getShutdownHooksInOrder()) {
+    for (HookEntry entry: getShutdownHooksInOrder()) {
       Future<?> future = EXECUTOR.submit(entry.getHook());
       try {
         future.get(entry.getTimeout(), entry.getTimeUnit());
