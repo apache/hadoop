@@ -287,10 +287,6 @@ public final class DistCpOptions {
     return shouldUseDiff() || shouldUseRdiff();
   }
 
-  /**
-   * Should the file missing in source should be deleted use trash?
-   * @return true if target files deleted use trash
-   */
   public boolean shouldDeleteUseTrash() {
     return deleteUseTrash;
   }

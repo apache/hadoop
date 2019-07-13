@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.hadoop.fs.Trash;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +25,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -520,7 +520,7 @@ public class CopyCommitter extends FileOutputCommitter {
 
   private boolean deletePath(FileSystem targetFS, Path targetEntry,
                              Configuration conf) throws IOException {
-    if(conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH,
+    if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH,
         false)) {
       return Trash.moveToAppropriateTrash(
           targetFS, targetEntry, conf);

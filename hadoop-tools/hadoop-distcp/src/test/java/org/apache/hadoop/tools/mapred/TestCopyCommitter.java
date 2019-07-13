@@ -18,10 +18,11 @@
 
 package org.apache.hadoop.tools.mapred;
 
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -223,7 +224,8 @@ public class TestCopyCommitter {
       sourceBase = TestDistCpUtils.createTestSetup(fs);
       targetBase = TestDistCpUtils.createTestSetup(fs);
       String targetBaseAdd = TestDistCpUtils.createTestSetup(fs);
-      fs.rename(new Path(targetBaseAdd), new Path(targetBase));
+      ContractTestUtils.assertRenameOutcome(fs, new Path(targetBaseAdd),
+          new Path(targetBase),true);
 
       DistCpOptions.Builder builder = new DistCpOptions.Builder(
           Arrays.asList(new Path(sourceBase)), new Path("/out"));
