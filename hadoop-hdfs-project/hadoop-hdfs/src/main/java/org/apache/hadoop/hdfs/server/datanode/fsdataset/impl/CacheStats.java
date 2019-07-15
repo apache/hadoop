@@ -27,7 +27,7 @@ import com.google.common.annotations.VisibleForTesting;
 /**
  * Keeps statistics for the memory cache.
  */
-class MemoryCacheStats {
+class CacheStats {
 
   /**
    * The approximate amount of cache space in use.
@@ -47,7 +47,7 @@ class MemoryCacheStats {
    */
   private final long maxBytes;
 
-  MemoryCacheStats(long maxBytes) {
+  CacheStats(long maxBytes) {
     this.usedBytesCount = new UsedBytesCount();
     this.maxBytes = maxBytes;
   }
@@ -81,7 +81,7 @@ class MemoryCacheStats {
   private class UsedBytesCount {
     private final AtomicLong usedBytes = new AtomicLong(0);
 
-    private MemoryCacheStats.PageRounder rounder = new PageRounder();
+    private CacheStats.PageRounder rounder = new PageRounder();
 
     /**
      * Try to reserve more bytes.
