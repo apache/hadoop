@@ -823,13 +823,13 @@
   <property>
     <name>ozone.scm.container.placement.impl</name>
     <value>
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
     </value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
       The class decides which datanode will be used to host the container replica. If not set,
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware will be used as default value.
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom will be used as default value.
     </description>
   </property>
   <property>
@@ -2347,7 +2347,7 @@
   </property>
   <property>
     <name>dfs.network.topology.aware.read.enable</name>
-    <value>true</value>
+    <value>false</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>
       Whether to enable topology aware read to improve the read performance.
