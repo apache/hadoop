@@ -20,7 +20,7 @@ mkdir -p ./target
 rm "$FINDBUGS_ALL_FILE" || true
 touch "$FINDBUGS_ALL_FILE"
 
-mvn -B compile -fn findbugs:check -Dfindbugs.failOnError=false  -f pom.ozone.xml
+mvn -fn findbugs:check -Dfindbugs.failOnError=false  -am -pl :hadoop-ozone-dist -Phdds
 
 find hadoop-ozone -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"
 find hadoop-hdds -name findbugsXml.xml | xargs -n1 convertXmlToText | tee -a "${FINDBUGS_ALL_FILE}"

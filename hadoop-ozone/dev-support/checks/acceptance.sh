@@ -15,6 +15,5 @@
 # limitations under the License.
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export HADOOP_VERSION=3
-OZONE_VERSION=$(cat $DIR/../../pom.xml  | grep "<ozone.version>" | sed 's/<[^>]*>//g'|  sed 's/^[ \t]*//')
-"$DIR/../../dist/target/ozone-$OZONE_VERSION/compose/test-all.sh"
+"$DIR/../../../hadoop-ozone/dist/target/ozone-*-SNAPSHOT/compose/test-all.sh"
 exit $?
