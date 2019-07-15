@@ -55,12 +55,12 @@ spec:
         args:
         - ozone
         - datanode
-        envFrom:
-        - configMapRef:
-            name: config
         volumeMounts:
         - name: data
           mountPath: /data
+        envFrom:
+        - configMapRef:
+            name: config
   volumeClaimTemplates:
   - metadata:
       name: data

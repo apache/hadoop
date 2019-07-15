@@ -37,22 +37,8 @@ spec:
         prometheus.io/port: "9874"
         prometheus.io/path: /prom
     spec:
-      initContainers:
-      - name: init
-        image: '@docker.image@'
-        args:
-        - ozone
-        - om
-        - --init
-        env:
-        - name: WAITFOR
-          value: scm-0.scm:9876
-        envFrom:
-        - configMapRef:
-            name: config
-        volumeMounts:
-        - name: data
-          mountPath: /data
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: om
         image: '@docker.image@'
@@ -62,12 +48,18 @@ spec:
         env:
         - name: WAITFOR
           value: scm-0.scm:9876
-        envFrom:
-        - configMapRef:
-            name: config
+        - name: ENSURE_OM_INITIALIZED
+          value: /data/metadata/om/current/VERSION
+        livenessProbe:
+          tcpSocket:
+            port: 9862
+          initialDelaySeconds: 30
         volumeMounts:
         - name: data
           mountPath: /data
+        envFrom:
+        - configMapRef:
+            name: config
       volumes:
       - name: data
         emptyDir: {}
