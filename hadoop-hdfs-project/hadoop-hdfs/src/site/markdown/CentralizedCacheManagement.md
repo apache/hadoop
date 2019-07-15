@@ -32,6 +32,8 @@ Centralized cache management in HDFS has many significant advantages.
 
 4.  Centralized caching can improve overall cluster memory utilization. When relying on the OS buffer cache at each DataNode, repeated reads of a block will result in all *n* replicas of the block being pulled into buffer cache. With centralized cache management, a user can explicitly pin only *m* of the *n* replicas, saving *n-m* memory.
 
+5.  HDFS supports non-volatile storage class memory (SCM, also known as persistent memory) cache in Linux platform. User can enable either memory cache or SCM cache for a DataNode. Memory cache and SCM cache can coexist among DataNodes. In the current implementation, the cache data in SCM will be cleaned up when DataNode restarts. Persistent HDFS cache support on SCM will be considered in the future.
+
 Use Cases
 ---------
 
@@ -200,17 +202,31 @@ Configuration
 
 In order to lock block files into memory, the DataNode relies on native JNI code found in `libhadoop.so` or `hadoop.dll` on Windows. Be sure to [enable JNI](../hadoop-common/NativeLibraries.html) if you are using HDFS centralized cache management.
 
+Currently, there are two implementations for persistent memory cache. The default one is pure Java based implementation and the other is native implementation which leverages PMDK library to improve the performance of cache write and cache read.
+
+To enable PMDK based implementation, please follow the below steps.
+
+1. Install PMDK library. Please refer to the official site http://pmem.io/ for detailed information.
+
+2. Build Hadoop with PMDK support. Please refer to "PMDK library build options" section in `BUILDING.txt` in the source code.
+
+To verify that PMDK is correctly detected by Hadoop, run the `hadoop checknative` command.
+
 ### Configuration Properties
 
 #### Required
 
-Be sure to configure the following:
+Be sure to configure one of the following properties for DRAM cache or persistent memory cache. Please note that DRAM cache and persistent cache cannot coexist on a DataNode.
 
 *   dfs.datanode.max.locked.memory
 
     This determines the maximum amount of memory a DataNode will use for caching. On Unix-like systems, the "locked-in-memory size" ulimit (`ulimit -l`) of the DataNode user also needs to be increased to match this parameter (see below section on [OS Limits](#OS_Limits)). When setting this value, please remember that you will need space in memory for other things as well, such as the DataNode and application JVM heaps and the operating system page cache.
 
     This setting is shared with the [Lazy Persist Writes feature](./MemoryStorage.html). The Data Node will ensure that the combined memory used by Lazy Persist Writes and Centralized Cache Management does not exceed the amount configured in `dfs.datanode.max.locked.memory`.
+
+*   dfs.datanode.cache.pmem.dirs
+
+    This property specifies the cache volume of persistent memory. For multiple volumes, they should be separated by “,”, e.g. “/mnt/pmem0, /mnt/pmem1”. The default value is empty. If this property is configured, the volume capacity will be detected. And there is no need to configure `dfs.datanode.max.locked.memory`.
 
 #### Optional
 
