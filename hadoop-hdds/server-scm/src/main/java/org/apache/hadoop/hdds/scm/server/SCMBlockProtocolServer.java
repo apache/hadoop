@@ -290,7 +290,12 @@ public class SCMBlockProtocolServer implements
       NodeManager nodeManager = scm.getScmNodeManager();
       Node client = nodeManager.getNode(clientMachine);
       List<Node> nodeList = new ArrayList();
-      nodes.stream().forEach(path -> nodeList.add(nodeManager.getNode(path)));
+      nodes.stream().forEach(path -> {
+        DatanodeDetails node = nodeManager.getNode(path);
+        if (node != null) {
+          nodeList.add(nodeManager.getNode(path));
+        }
+      });
       List<? extends Node> sortedNodeList = scm.getClusterMap()
           .sortByDistanceCost(client, nodeList, nodes.size());
       List<DatanodeDetails> ret = new ArrayList<>();
