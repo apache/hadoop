@@ -64,7 +64,6 @@ public class GpuDiscoverer {
   private Configuration conf = null;
   private String pathOfGpuBinary = null;
   private Map<String, String> environment = new HashMap<>();
-  private GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
 
   private int numOfErrorExecutionSinceLastSucceed = 0;
   private GpuDeviceInformation lastDiscoveredGpuInformation = null;
@@ -125,6 +124,7 @@ public class GpuDiscoverer {
     try {
       output = Shell.execCommand(environment,
           new String[] { pathOfGpuBinary, "-x", "-q" }, MAX_EXEC_TIMEOUT_MS);
+      GpuDeviceInformationParser parser = new GpuDeviceInformationParser();
       lastDiscoveredGpuInformation = parser.parseXml(output);
       numOfErrorExecutionSinceLastSucceed = 0;
       return lastDiscoveredGpuInformation;
