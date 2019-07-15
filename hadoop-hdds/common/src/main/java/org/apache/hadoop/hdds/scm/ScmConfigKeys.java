@@ -317,10 +317,6 @@ public final class ScmConfigKeys {
   public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY =
       "ozone.scm.container.placement.impl";
 
-  public static final String OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
-      "org.apache.hadoop.hdds.scm.container.placement.algorithms." +
-          "SCMContainerPlacementRackAware";
-
   public static final String OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT =
       "ozone.scm.pipeline.owner.container.count";
   public static final int OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT_DEFAULT = 3;
@@ -371,7 +367,7 @@ public final class ScmConfigKeys {
   public static final String DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED =
       "dfs.network.topology.aware.read.enable";
   public static final String DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT =
-      "true";
+      "false";
 
   public static final String HDDS_TRACING_ENABLED = "hdds.tracing.enabled";
   public static final boolean HDDS_TRACING_ENABLED_DEFAULT = true;
