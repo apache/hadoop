@@ -342,7 +342,9 @@ public final class ShutdownHookManager {
       throw new IllegalStateException("Shutdown in progress, cannot remove a " +
           "shutdownHook");
     }
-    return hooks.remove(new HookEntry(shutdownHook, 0));
+    // hooks are only == by runnable
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+            TIME_UNIT_DEFAULT));
   }
 
   /**
@@ -354,7 +356,9 @@ public final class ShutdownHookManager {
   @InterfaceAudience.Public
   @InterfaceStability.Stable
   public boolean hasShutdownHook(Runnable shutdownHook) {
-    return hooks.contains(new HookEntry(shutdownHook, 0));
+    // hooks are only == by runnable
+    return hooks.remove(new HookEntry(shutdownHook, 0, TIMEOUT_MINIMUM,
+            TIME_UNIT_DEFAULT));
   }
   
   /**
