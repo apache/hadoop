@@ -2193,6 +2193,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryTranslated
   public boolean delete(Path f, boolean recursive) throws IOException {
+    if (f.isRoot()) {
+      if (!recursive) {
+        return false;
+      }
+      LOG.debug("Deleting root content recursively");
+    }
+
     try {
       entryPoint(INVOCATION_DELETE);
       boolean outcome = innerDelete(innerGetFileStatus(f, true), recursive);
@@ -2805,7 +2812,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return new S3AFileStatus(Tristate.FALSE, path, username);
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return new S3AFileStatus(Tristate.FALSE, path, username);
+        return new S3AFileStatus(Tristate.TRUE, path, username);
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {

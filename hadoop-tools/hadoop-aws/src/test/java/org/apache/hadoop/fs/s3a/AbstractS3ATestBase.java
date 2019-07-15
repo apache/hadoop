@@ -153,4 +153,14 @@ public abstract class AbstractS3ATestBase extends AbstractFSContractTestBase
       throw e;
     }
   }
+
+  protected void assertEmptyDir(final S3AFileStatus status) {
+    assertEquals("Should be empty dir: " + status, Tristate.TRUE,
+        status.isEmptyDirectory());
+  }
+
+  protected void assertNonEmptyDir(final S3AFileStatus status) {
+    assertEquals("Should not be empty dir: " + status, Tristate.FALSE,
+        status.isEmptyDirectory());
+  }
 }

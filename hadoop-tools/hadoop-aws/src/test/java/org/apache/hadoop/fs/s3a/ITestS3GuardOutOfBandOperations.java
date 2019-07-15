@@ -23,10 +23,17 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ListObjectsRequest;
+import com.amazonaws.services.s3.model.ObjectListing;
+import org.apache.hadoop.fs.s3a.impl.StoreContext;
+import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -57,6 +64,7 @@ import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getStatusWithEmptyDirFlag;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
@@ -534,6 +542,95 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
     } finally {
       guardedFs.delete(filePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * Test tombstones don't get in the way of a listing of the
+   * root dir after tombstone expiry if an OOB happens.
+   * This test needs to create a path which appears first in the listing,
+   * and an entry which can come later. To allow the test to proceed
+   * while other tests are running, the filename "0000" is used for that
+   * deleted entry.
+   */
+  @Test
+  public void testRootTombstones() throws Throwable {
+    long ttl = 10L;
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+    when(mockTimeProvider.getNow()).thenReturn(100L);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+    guardedFs.setTtlTimeProvider(mockTimeProvider);
+
+    // Create the first and last files.
+    Path root = guardedFs.makeQualified(new Path("/"));
+    // use something ahead of all the ASCII alphabet characters so
+    // even during parallel test runs, this test is expected to work.
+    String first = "0000";
+    Path firstPath = new Path(root, first);
+    Path child = new Path(firstPath, "child");
+    String last = "zzzz";
+    Path lastPath = new Path(root, last);
+
+    try {
+      // this path is near the bottom of the ASCII string space.
+      // This isn't so critical.
+      touch(guardedFs, firstPath);
+      touch(guardedFs, lastPath);
+      // Delete first entry (+assert tombstone)
+      assertDeleted(firstPath, false);
+
+      PathMetadata firstMD = realMs.get(firstPath);
+      assertNotNull("No MD for " + firstPath, firstMD);
+      assertTrue("Not a tombstone " + firstMD, firstMD.isDeleted());
+      touch(rawFS, child);
+      awaitFileStatus(rawFS, child);
+
+      // Do a list
+      StoreContext ctx = rawFS.createStoreContext();
+      String rootKey = ctx.pathToKey(root);
+      AmazonS3 s3 = rawFS.getAmazonS3ClientForTesting("LIST");
+      String bucket = ctx.getBucket();
+      ListObjectsRequest listReq = new ListObjectsRequest(
+          bucket, rootKey, "", "/", 10);
+      ObjectListing listing = s3.listObjects(listReq);
+
+      // the listing has the first path as a prefix, because of the child
+      Assertions.assertThat(listing.getCommonPrefixes())
+          .describedAs("The prefixes of a LIST of %s", root)
+          .contains(first + "/");
+
+      // and the last file is one of the files
+      Stream<String> files = listing.getObjectSummaries()
+          .stream()
+          .map(s -> s.getKey());
+      final List<String> keys = files.collect(Collectors.toList());
+      Assertions.assertThat(keys)
+          .describedAs("The files of a LIST of %s", root)
+          .contains(last);
+
+      // verify absolutely that the last file exists
+      assertPathExists("last file", lastPath);
+
+      // do a getFile status with empty dir flag
+      S3AFileStatus emptyRootStatus =
+          getStatusWithEmptyDirFlag(guardedFs, root);
+      // this will be empty before the first parent tombstone expires.
+      assertEmptyDir(emptyRootStatus);
+
+      when(mockTimeProvider.getNow()).thenReturn(200L);
+      final S3AFileStatus recoveredRootStatus =
+          getStatusWithEmptyDirFlag(guardedFs, root);
+      // this won't be empty after the first parent tombstone expires
+      assertNonEmptyDir(recoveredRootStatus);
+    } finally {
+      // try to recover from the defective state.
+      rawFS.delete(child, true);
+      guardedFs.delete(firstPath, true);
+      guardedFs.delete(lastPath, true);
+      realMs.forgetMetadata(firstPath);
+      realMs.forgetMetadata(lastPath);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
     }
   }
