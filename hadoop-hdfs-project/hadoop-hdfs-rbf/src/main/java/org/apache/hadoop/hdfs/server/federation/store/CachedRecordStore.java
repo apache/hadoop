@@ -19,7 +19,6 @@ package org.apache.hadoop.hdfs.server.federation.store;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -164,13 +163,15 @@ public abstract class CachedRecordStore<R extends BaseRecord>
 
   /**
    * Updates the state store with any record overrides we detected, such as an
-   * expired state.
+   * expired state. If an expired record exists beyond deletion time, it is
+   * removed.
    *
    * @param query RecordQueryResult containing the data to be inspected.
    * @throws IOException If the values cannot be updated.
    */
   public void overrideExpiredRecords(QueryResult<R> query) throws IOException {
     List<R> commitRecords = new ArrayList<>();
+    List<R> deleteRecords = new ArrayList<>();
     List<R> newRecords = query.getRecords();
     long currentDriverTime = query.getTimestamp();
     if (newRecords == null || currentDriverTime <= 0) {
@@ -178,7 +179,16 @@ public abstract class CachedRecordStore<R extends BaseRecord>
       return;
     }
     for (R record : newRecords) {
-      if (record.checkExpired(currentDriverTime)) {
+      if (record.shouldBeDeleted(currentDriverTime)) {
+        String recordName = StateStoreUtils.getRecordName(record.getClass());
+        if (getDriver().remove(record)) {
+          deleteRecords.add(record);
+          LOG.info("Deleted State Store record {}: {}", recordName, record);
+        } else {
+          LOG.warn("Couldn't delete State Store record {}: {}", recordName,
+              record);
+        }
+      } else if (record.checkExpired(currentDriverTime)) {
         String recordName = StateStoreUtils.getRecordName(record.getClass());
         LOG.info("Override State Store record {}: {}", recordName, record);
         commitRecords.add(record);
@@ -186,6 +196,9 @@ public abstract class CachedRecordStore<R extends BaseRecord>
     }
     if (commitRecords.size() > 0) {
       getDriver().putAll(commitRecords, true, false);
+    }
+    if (deleteRecords.size() > 0) {
+      newRecords.removeAll(deleteRecords);
     }
   }
 
@@ -197,7 +210,8 @@ public abstract class CachedRecordStore<R extends BaseRecord>
    * @throws IOException If the values cannot be updated.
    */
   public void overrideExpiredRecord(R record) throws IOException {
-    List<R> newRecords = Collections.singletonList(record);
+    List<R> newRecords = new ArrayList<>();
+    newRecords.add(record);
     long time = getDriver().getTime();
     QueryResult<R> query = new QueryResult<>(newRecords, time);
     overrideExpiredRecords(query);
