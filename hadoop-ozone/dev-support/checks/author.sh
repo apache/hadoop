@@ -22,7 +22,7 @@ AUTHOR="@a${AUTHOR}"
 
 grep -r --include="*.java" "$AUTHOR" .
 if grep -r --include="*.java" "$AUTHOR" .; then
-  exit 0
-else
   exit 1
+else
+  exit 0
 fi
