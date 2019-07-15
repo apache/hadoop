@@ -43,6 +43,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3CreateBucketRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .S3CreateBucketResponse;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .S3CreateVolumeInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
@@ -261,7 +263,9 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
       omMetrics.incNumS3Buckets();
       return new S3BucketCreateResponse(omVolumeCreateResponse,
           omBucketCreateResponse, s3BucketName,
-          formatS3MappingName(volumeName, s3BucketName), omResponse.build());
+          formatS3MappingName(volumeName, s3BucketName),
+          omResponse.setCreateS3BucketResponse(
+              S3CreateBucketResponse.newBuilder()).build());
     } else {
       LOG.error("S3Bucket Creation Failed for userName: {}, s3BucketName {}, " +
           "VolumeName {}", userName, s3BucketName, volumeName);
