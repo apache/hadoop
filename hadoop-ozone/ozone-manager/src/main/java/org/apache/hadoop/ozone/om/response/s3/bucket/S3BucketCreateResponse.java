@@ -17,7 +17,6 @@
 
 package org.apache.hadoop.ozone.om.response.s3.bucket;
 
-import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.bucket.OMBucketCreateResponse;
