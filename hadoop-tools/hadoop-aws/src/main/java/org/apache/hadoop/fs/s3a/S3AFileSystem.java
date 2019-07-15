@@ -2679,6 +2679,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DirListingMetadata children =
               S3Guard.listChildrenWithTtl(metadataStore, path, ttlTimeProvider);
           if (children != null) {
+            // todo check what is listed
             tombstones = children.listTombstones();
           }
           LOG.debug("MetadataStore doesn't know if dir is empty, using S3.");
@@ -2804,7 +2805,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         return new S3AFileStatus(Tristate.FALSE, path, username);
       } else if (key.isEmpty()) {
         LOG.debug("Found root directory");
-        return new S3AFileStatus(Tristate.TRUE, path, username);
+        return new S3AFileStatus(Tristate.FALSE, path, username);
       }
     } catch (AmazonServiceException e) {
       if (e.getStatusCode() != 404) {

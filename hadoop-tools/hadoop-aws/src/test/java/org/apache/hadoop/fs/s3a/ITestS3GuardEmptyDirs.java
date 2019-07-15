@@ -20,6 +20,8 @@ package org.apache.hadoop.fs.s3a;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.io.FileNotFoundException;
 import java.util.stream.Stream;
 
@@ -175,8 +177,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
     DynamoDBMetadataStore ddbMs = getRequiredDDBMetastore(fs);
     DDBPathMetadata firstMD = ddbMs.get(firstPath);
     assertNotNull("No MD for " + firstPath, firstMD);
-    assertTrue("Not a tombstone " + firstMD,
-        firstMD.isDeleted());
+    assertTrue("Not a tombstone " + firstMD, firstMD.isDeleted());
     // PUT child to store
     Path child = new Path(firstPath, "child");
     StoreContext ctx = fs.createStoreContext();
@@ -201,7 +202,8 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       Stream<String> files = listing.getObjectSummaries()
           .stream()
           .map(s -> s.getKey());
-      Assertions.assertThat(files)
+      final List<String> keys = files.collect(Collectors.toList());
+      Assertions.assertThat(keys)
           .describedAs("The files of a LIST of %s", root)
           .contains(last);
 
