@@ -44,7 +44,7 @@ public class TestShutdownHookManager {
 
   /**
    * A new instance of ShutdownHookManager to ensure parallel tests
-   * don't have shared context
+   * don't have shared context.
    */
   private final ShutdownHookManager mgr = new ShutdownHookManager();
 
@@ -224,10 +224,10 @@ public class TestShutdownHookManager {
     Hook hook1 = new Hook("hook1", 0, false);
     Hook hook2 = new Hook("hook2", 0, false);
     mgr.addShutdownHook(hook1, 9); // create Hook1 with priority 9
-    assertTrue(mgr.hasShutdownHook(hook1)); // hook1 lookup works
+    assertTrue("No hook1", mgr.hasShutdownHook(hook1)); // hook1 lookup works
     assertEquals(1, mgr.getShutdownHooksInOrder().size()); // 1 hook
-    assertFalse(mgr.removeShutdownHook(hook2)); // can't delete hook2
-    assertTrue(mgr.removeShutdownHook(hook1)); // can delete hook1
+    assertFalse("Delete hook2 should not be allowed", mgr.removeShutdownHook(hook2)); // can't delete hook2
+    assertTrue("Can't delete hook1", mgr.removeShutdownHook(hook1)); // can delete hook1
     assertEquals(0, mgr.getShutdownHooksInOrder().size()); // no more hooks
   }
 
