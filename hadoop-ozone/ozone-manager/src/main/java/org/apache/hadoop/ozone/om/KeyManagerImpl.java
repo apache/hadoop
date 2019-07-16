@@ -170,6 +170,7 @@ public class KeyManagerImpl implements KeyManager {
         om.getBlockTokenMgr(), om.getKmsProvider(), om.getPrefixManager());
   }
 
+  @SuppressWarnings("parameternumber")
   private KeyManagerImpl(OzoneManager om, ScmClient scmClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager,
