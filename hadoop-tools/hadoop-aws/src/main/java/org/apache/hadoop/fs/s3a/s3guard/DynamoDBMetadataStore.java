@@ -777,7 +777,12 @@ public class DynamoDBMetadataStore implements MetadataStore,
           final List<PathMetadata> metas = new ArrayList<>();
           for (Item item : items) {
             DDBPathMetadata meta = itemToPathMetadata(item, username);
-            metas.add(meta);
+            // handle expiry - only add not expired entries to listing.
+            if (meta.getLastUpdated() == 0 ||
+                !meta.isExpired(ttlTimeProvider.getMetadataTtl(),
+                ttlTimeProvider.getNow())) {
+              metas.add(meta);
+            }
           }
 
           // Minor race condition here - if the path is deleted between

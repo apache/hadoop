@@ -32,10 +32,12 @@ import java.util.stream.Stream;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;
 import org.assertj.core.api.Assertions;
 import org.junit.Assume;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -567,10 +569,10 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     Path root = guardedFs.makeQualified(new Path("/"));
     // use something ahead of all the ASCII alphabet characters so
     // even during parallel test runs, this test is expected to work.
-    String first = "0000";
+    String first = "0000" + UUID.randomUUID();
     Path firstPath = new Path(root, first);
     Path child = new Path(firstPath, "child");
-    String last = "zzzz";
+    String last = "zzzz" + UUID.randomUUID();
     Path lastPath = new Path(root, last);
 
     try {
@@ -579,7 +581,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       touch(guardedFs, firstPath);
       touch(guardedFs, lastPath);
       // Delete first entry (+assert tombstone)
-      assertDeleted(firstPath, false);
+      ContractTestUtils.assertDeleted(guardedFs, firstPath, false);
 
       PathMetadata firstMD = realMs.get(firstPath);
       assertNotNull("No MD for " + firstPath, firstMD);
@@ -625,10 +627,9 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       // this won't be empty after the first parent tombstone expires
       assertNonEmptyDir(recoveredRootStatus);
     } finally {
-      // try to recover from the defective state.
-      rawFS.delete(child, true);
-      guardedFs.delete(firstPath, true);
-      guardedFs.delete(lastPath, true);
+      // cleanup
+      rawFS.delete(firstPath, true);
+      rawFS.delete(lastPath, true);
       realMs.forgetMetadata(firstPath);
       realMs.forgetMetadata(lastPath);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
