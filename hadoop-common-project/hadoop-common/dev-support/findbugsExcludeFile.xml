@@ -207,6 +207,12 @@
        <Bug pattern="BC_UNCONFIRMED_CAST" />
      </Match>
 
+     <Match>
+       <Class name="org.apache.hadoop.fs.GlobalStorageStatistics" />
+       <Field name="map" />
+       <Bug pattern="SE_BAD_FIELD" />
+     </Match>
+
      <!--
         The compareTo method is actually a dummy method that just
         throws excpetions. So, no need to override equals. Ignore
