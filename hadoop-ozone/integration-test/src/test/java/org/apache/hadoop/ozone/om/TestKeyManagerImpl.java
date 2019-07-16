@@ -89,6 +89,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.mockito.Mockito;
 
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE_DEFAULT;
@@ -407,7 +408,7 @@ public class TestKeyManagerImpl {
         .build();
 
     OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
-        ACLType.READ);
+        ACLType.READ, ACCESS);
     prefixManager.addAcl(ozPrefix1, ozAcl1);
 
     List<OzoneAcl> ozAclGet = prefixManager.getAcl(ozPrefix1);
@@ -416,23 +417,23 @@ public class TestKeyManagerImpl {
 
     List<OzoneAcl> acls = new ArrayList<>();
     OzoneAcl ozAcl2 = new OzoneAcl(ACLIdentityType.USER, "admin",
-        ACLType.ALL);
+        ACLType.ALL, ACCESS);
 
     BitSet rwRights = new BitSet();
     rwRights.set(IAccessAuthorizer.ACLType.WRITE.ordinal());
     rwRights.set(IAccessAuthorizer.ACLType.READ.ordinal());
     OzoneAcl ozAcl3 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
-        rwRights);
+        rwRights, ACCESS);
 
     BitSet wRights = new BitSet();
     wRights.set(IAccessAuthorizer.ACLType.WRITE.ordinal());
     OzoneAcl ozAcl4 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
-        wRights);
+        wRights, ACCESS);
 
     BitSet rRights = new BitSet();
     rRights.set(IAccessAuthorizer.ACLType.READ.ordinal());
     OzoneAcl ozAcl5 = new OzoneAcl(ACLIdentityType.GROUP, "dev",
-        rRights);
+        rRights, ACCESS);
 
     acls.add(ozAcl2);
     acls.add(ozAcl3);
@@ -500,7 +501,7 @@ public class TestKeyManagerImpl {
     // Invalid prefix not ending with "/"
     String invalidPrefix = "invalid/pf";
     OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
-        ACLType.READ);
+        ACLType.READ, ACCESS);
 
     OzoneObj ozInvalidPrefix = new OzoneObjInfo.Builder()
         .setVolumeName(volumeName)
@@ -564,7 +565,7 @@ public class TestKeyManagerImpl {
         .build();
 
     OzoneAcl ozAcl1 = new OzoneAcl(ACLIdentityType.USER, "user1",
-        ACLType.READ);
+        ACLType.READ, ACCESS);
     prefixManager.addAcl(ozPrefix1, ozAcl1);
 
     OzoneObj ozFile1 = new OzoneObjInfo.Builder()

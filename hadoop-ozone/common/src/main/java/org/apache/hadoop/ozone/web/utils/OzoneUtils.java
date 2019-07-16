@@ -25,11 +25,13 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
@@ -44,6 +46,8 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.ratis.util.TimeDuration;
 
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.GROUP;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
 import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.ALL;
@@ -251,7 +255,7 @@ public final class OzoneUtils {
   }
 
   /**
-   * Helper function to get deafult acl list for current user.
+   * Helper function to get access acl list for current user.
    *
    * @param userName
    * @param userGroups
@@ -263,11 +267,11 @@ public final class OzoneUtils {
     List<OzoneAcl> listOfAcls = new ArrayList<>();
 
     // User ACL.
-    listOfAcls.add(new OzoneAcl(USER, userName, userRights));
+    listOfAcls.add(new OzoneAcl(USER, userName, userRights, ACCESS));
     if(userGroups != null) {
       // Group ACLs of the User.
       userGroups.forEach((group) -> listOfAcls.add(
-          new OzoneAcl(GROUP, group, groupRights)));
+          new OzoneAcl(GROUP, group, groupRights, ACCESS)));
     }
     return listOfAcls;
   }
@@ -365,4 +369,30 @@ public final class OzoneUtils {
         || bitset.get(ALL.ordinal()))
         && !bitset.get(NONE.ordinal()));
   }
+
+  /**
+   * Helper function to find and return all DEFAULT acls in input list with
+   * scope changed to ACCESS.
+   * @param acls
+   *
+   * @return list of default Acls.
+   * */
+  public static Collection<OzoneAclInfo> getDefaultAclsProto(
+      List<OzoneAcl> acls) {
+    return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
+        .map(OzoneAcl::toProtobufWithAccessType).collect(Collectors.toList());
+  }
+
+  /**
+   * Helper function to find and return all DEFAULT acls in input list with
+   * scope changed to ACCESS.
+   * @param acls
+   *
+   * @return list of default Acls.
+   * */
+  public static Collection<OzoneAcl> getDefaultAcls(List<OzoneAcl> acls) {
+    return acls.stream().filter(a -> a.getAclScope() == DEFAULT)
+        .collect(Collectors.toList());
+  }
+
 }

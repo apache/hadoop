@@ -505,9 +505,15 @@ message OzoneAclInfo {
         CLIENT_IP = 5;
     }
 
+    enum OzoneAclScope {
+      ACCESS = 0;
+      DEFAULT = 1;
+    }
+
     required OzoneAclType type = 1;
     required string name = 2;
     required bytes rights = 3;
+    required OzoneAclScope aclScope = 4 [default = ACCESS];
 }
 
 message GetAclRequest {

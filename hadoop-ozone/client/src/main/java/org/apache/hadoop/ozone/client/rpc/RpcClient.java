@@ -75,7 +75,6 @@ import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto
     .OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.protocolPB
@@ -102,6 +101,8 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 
 /**
  * Ozone RPC Client Implementation, it connects to OM, SCM and DataNode
@@ -259,12 +260,12 @@ public class RpcClient implements ClientProtocol {
     List<OzoneAcl> listOfAcls = new ArrayList<>();
     //User ACL
     listOfAcls.add(new OzoneAcl(ACLIdentityType.USER,
-            owner, userRights));
+            owner, userRights, ACCESS));
     //Group ACLs of the User
     List<String> userGroups = Arrays.asList(UserGroupInformation
         .createRemoteUser(owner).getGroupNames());
     userGroups.stream().forEach((group) -> listOfAcls.add(
-        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights)));
+        new OzoneAcl(ACLIdentityType.GROUP, group, groupRights, ACCESS)));
     //ACLs from VolumeArgs
     if(volArgs.getAcls() != null) {
       listOfAcls.addAll(volArgs.getAcls());
@@ -280,7 +281,7 @@ public class RpcClient implements ClientProtocol {
     //Remove duplicates and add ACLs
     for (OzoneAcl ozoneAcl :
         listOfAcls.stream().distinct().collect(Collectors.toList())) {
-      builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(ozoneAcl));
+      builder.addOzoneAcls(OzoneAcl.toProtobuf(ozoneAcl));
     }
 
     if (volArgs.getQuota() == null) {
@@ -323,7 +324,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+            map(OzoneAcl::fromProtobuf).collect(Collectors.toList()),
         volume.getMetadata());
   }
 
@@ -355,7 +356,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList())))
+            map(OzoneAcl::fromProtobuf).collect(Collectors.toList())))
         .collect(Collectors.toList());
   }
 
@@ -375,7 +376,7 @@ public class RpcClient implements ClientProtocol {
         volume.getQuotaInBytes(),
         volume.getCreationTime(),
         volume.getAclMap().ozoneAclGetProtobuf().stream().
-            map(OMPBHelper::convertOzoneAcl).collect(Collectors.toList()),
+            map(OzoneAcl::fromProtobuf).collect(Collectors.toList()),
         volume.getMetadata()))
         .collect(Collectors.toList());
   }
