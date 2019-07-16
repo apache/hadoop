@@ -597,7 +597,15 @@ public class ImageServlet extends HttpServlet {
     } catch (Throwable t) {
       String errMsg = "PutImage failed. " + StringUtils.stringifyException(t);
       response.sendError(HttpServletResponse.SC_GONE, errMsg);
-      throw new IOException(errMsg);
+      /*
+       *  Do not throw exceptions here to prevent Jetty from printing too
+       *  many unnecessary warn logs, since it is very likely that the peer
+       *  Standby NameNode is testing whether it needs to really put an image.
+       *
+       *  Note the peer Standby NameNode's log will still contain the complete
+       *  warnings.
+       */
+      return;
     }
   }
 

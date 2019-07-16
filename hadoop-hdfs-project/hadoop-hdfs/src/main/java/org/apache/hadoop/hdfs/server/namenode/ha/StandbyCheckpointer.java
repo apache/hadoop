@@ -246,7 +246,6 @@ public class StandbyCheckpointer {
     for (; i < uploads.size(); i++) {
       Future<TransferFsImage.TransferResult> upload = uploads.get(i);
       try {
-        // TODO should there be some smarts here about retries nodes that are not the active NN?
         if (upload.get() == TransferFsImage.TransferResult.SUCCESS) {
           success = true;
           //avoid getting the rest of the results - we don't care since we had a successful upload
