@@ -150,7 +150,6 @@ public class KeyManagerImpl implements KeyManager {
 
   private final KeyProviderCryptoExtension kmsProvider;
 
-  private final boolean isRatisEnabled;
 
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
@@ -180,9 +179,6 @@ public class KeyManagerImpl implements KeyManager {
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
     this.kmsProvider = kmsProvider;
-    this.isRatisEnabled = conf.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
   }
 
   @Override
@@ -286,13 +282,10 @@ public class KeyManagerImpl implements KeyManager {
     List<OmKeyLocationInfo> locationInfos =
         allocateBlock(keyInfo, excludeList, scmBlockSize);
 
-    // If om is not managing via ratis, write to db, otherwise write to DB
-    // will happen via ratis apply transaction.
-    if (!isRatisEnabled) {
-      keyInfo.appendNewBlocks(locationInfos, true);
-      keyInfo.updateModifcationTime();
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    }
+    keyInfo.appendNewBlocks(locationInfos, true);
+    keyInfo.updateModifcationTime();
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+
     return locationInfos.get(0);
 
   }
@@ -461,11 +454,8 @@ public class KeyManagerImpl implements KeyManager {
       keyInfo.appendNewBlocks(locationInfos, true);
     }
 
-    // When OM is not managed via ratis we should write in to Om db in
-    // openKey call.
-    if (!isRatisEnabled) {
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    }
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+
   }
 
   private OmKeyInfo prepareKeyInfo(
