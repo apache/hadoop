@@ -119,7 +119,7 @@ public final class XceiverServerRatis extends XceiverServer {
     Objects.requireNonNull(dd, "id == null");
     datanodeDetails = dd;
     this.port = port;
-    RaftProperties serverProperties = newRaftProperties(conf);
+    RaftProperties serverProperties = newRaftProperties();
     final int numWriteChunkThreads = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_WRITE_CHUNK_THREADS_DEFAULT);
@@ -155,18 +155,18 @@ public final class XceiverServerRatis extends XceiverServer {
         getBlockTokenVerifier(), conf);
   }
 
-  private RaftProperties newRaftProperties(Configuration conf) {
+  private RaftProperties newRaftProperties() {
     final RaftProperties properties = new RaftProperties();
 
     // Set rpc type
-    final RpcType rpc = setRpcType(conf, properties);
+    final RpcType rpc = setRpcType(properties);
 
     // set raft segment size
-    setRaftSegmentSize(conf, properties);
+    setRaftSegmentSize(properties);
 
     // set raft segment pre-allocated size
     final int raftSegmentPreallocatedSize =
-        setRaftSegmentPreallocatedSize(conf, properties);
+        setRaftSegmentPreallocatedSize(properties);
 
     // Set max write buffer size, which is the scm chunk size
     final int maxChunkSize = setMaxWriteBuffer(properties);
@@ -188,19 +188,19 @@ public final class XceiverServerRatis extends XceiverServer {
         .setSyncTimeout(properties, dataSyncTimeout);
 
     // Set the server Request timeout
-    setServerRequestTimeout(conf, properties);
+    setServerRequestTimeout(properties);
 
     // set timeout for a retry cache entry
-    setTimeoutForRetryCache(conf, properties);
+    setTimeoutForRetryCache(properties);
 
     // Set the ratis leader election timeout
-    setRatisLeaderElectionTimeout(conf, properties);
+    setRatisLeaderElectionTimeout(properties);
 
     // Set the maximum cache segments
     RaftServerConfigKeys.Log.setMaxCachedSegmentNum(properties, 2);
 
     // set the node failure timeout
-    setNodeFailureTimeout(conf, properties);
+    setNodeFailureTimeout(properties);
 
     // Set the ratis storage directory
     String storageDir = HddsServerUtil.getOzoneDatanodeRatisDirectory(conf);
@@ -258,8 +258,7 @@ public final class XceiverServerRatis extends XceiverServer {
     return properties;
   }
 
-  private void setNodeFailureTimeout(Configuration conf,
-                                     RaftProperties properties) {
+  private void setNodeFailureTimeout(RaftProperties properties) {
     TimeUnit timeUnit;
     long duration;
     timeUnit = OzoneConfigKeys.DFS_RATIS_SERVER_FAILURE_DURATION_DEFAULT
@@ -277,8 +276,7 @@ public final class XceiverServerRatis extends XceiverServer {
     nodeFailureTimeoutMs = nodeFailureTimeout.toLong(TimeUnit.MILLISECONDS);
   }
 
-  private void setRatisLeaderElectionTimeout(Configuration conf,
-                                             RaftProperties properties) {
+  private void setRatisLeaderElectionTimeout(RaftProperties properties) {
     long duration;
     TimeUnit leaderElectionMinTimeoutUnit =
         OzoneConfigKeys.
@@ -299,8 +297,7 @@ public final class XceiverServerRatis extends XceiverServer {
         TimeDuration.valueOf(leaderElectionMaxTimeout, TimeUnit.MILLISECONDS));
   }
 
-  private void setTimeoutForRetryCache(Configuration conf,
-                                       RaftProperties properties) {
+  private void setTimeoutForRetryCache(RaftProperties properties) {
     TimeUnit timeUnit;
     long duration;
     timeUnit =
@@ -316,8 +313,7 @@ public final class XceiverServerRatis extends XceiverServer {
         .setExpiryTime(properties, retryCacheTimeout);
   }
 
-  private void setServerRequestTimeout(Configuration conf,
-                                       RaftProperties properties) {
+  private void setServerRequestTimeout(RaftProperties properties) {
     TimeUnit timeUnit;
     long duration;
     timeUnit = OzoneConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_DEFAULT
@@ -339,8 +335,7 @@ public final class XceiverServerRatis extends XceiverServer {
     return maxChunkSize;
   }
 
-  private int setRaftSegmentPreallocatedSize(Configuration conf,
-                                             RaftProperties properties) {
+  private int setRaftSegmentPreallocatedSize(RaftProperties properties) {
     final int raftSegmentPreallocatedSize = (int) conf.getStorageSize(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_PREALLOCATED_SIZE_DEFAULT,
@@ -363,8 +358,7 @@ public final class XceiverServerRatis extends XceiverServer {
     return raftSegmentPreallocatedSize;
   }
 
-  private void setRaftSegmentSize(Configuration conf,
-                                  RaftProperties properties) {
+  private void setRaftSegmentSize(RaftProperties properties) {
     final int raftSegmentSize = (int)conf.getStorageSize(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_SEGMENT_SIZE_DEFAULT,
@@ -373,7 +367,7 @@ public final class XceiverServerRatis extends XceiverServer {
         SizeInBytes.valueOf(raftSegmentSize));
   }
 
-  private RpcType setRpcType(Configuration conf, RaftProperties properties) {
+  private RpcType setRpcType(RaftProperties properties) {
     final String rpcType = conf.get(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_RPC_TYPE_DEFAULT);

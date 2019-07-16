@@ -81,7 +81,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
@@ -177,11 +176,11 @@ public class ContainerStateMachine extends BaseStateMachine {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT);
     this.executors = new ExecutorService[numContainerOpExecutors];
-    for (AtomicInteger i = new AtomicInteger();
-         i.get() < numContainerOpExecutors; i.incrementAndGet()) {
-      this.executors[i.get()] = Executors.newSingleThreadExecutor(r -> {
+    for (int i = 0; i < numContainerOpExecutors; i++) {
+      final int index = i;
+      this.executors[index] = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r);
-        t.setName("RatisApplyTransactionExecutor " + i.get());
+        t.setName("RatisApplyTransactionExecutor " + index);
         return t;
       });
     }
