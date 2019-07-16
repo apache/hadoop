@@ -85,10 +85,6 @@ import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyLocation;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
@@ -2233,34 +2229,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
-  @Override
-  public void applyOpenKey(KeyArgs omKeyArgs, KeyInfo keyInfo, long clientID)
-      throws IOException {
-    // Do we need to check again Acl's for apply OpenKey call?
-    if(isAclEnabled) {
-      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.READ,
-          omKeyArgs.getVolumeName(), omKeyArgs.getBucketName(),
-          omKeyArgs.getKeyName());
-    }
-    boolean auditSuccess = true;
-    try {
-      keyManager.applyOpenKey(omKeyArgs, keyInfo, clientID);
-    } catch (Exception ex) {
-      metrics.incNumKeyAllocateFails();
-      auditSuccess = false;
-      AUDIT.logWriteFailure(buildAuditMessageForFailure(
-          OMAction.APPLY_ALLOCATE_KEY,
-          (omKeyArgs == null) ? null : toAuditMap(omKeyArgs), ex));
-      throw ex;
-    } finally {
-      if(auditSuccess){
-        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
-            OMAction.APPLY_ALLOCATE_KEY, (omKeyArgs == null) ? null :
-                toAuditMap(omKeyArgs)));
-      }
-    }
-  }
-
   private Map<String, String> toAuditMap(KeyArgs omKeyArgs) {
     Map<String, String> auditMap = new LinkedHashMap<>();
     auditMap.put(OzoneConsts.VOLUME, omKeyArgs.getVolumeName());
@@ -2357,34 +2325,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       if(auditSuccess){
         AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
             OMAction.ALLOCATE_BLOCK, auditMap));
-      }
-    }
-  }
-
-  @Override
-  public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      KeyLocation keyLocation) throws IOException {
-    if(isAclEnabled) {
-      checkAcls(ResourceType.KEY, StoreType.OZONE, ACLType.WRITE,
-          args.getVolumeName(), args.getBucketName(), args.getKeyName());
-    }
-    boolean auditSuccess = true;
-    Map<String, String> auditMap = (args == null) ? new LinkedHashMap<>() :
-        args.toAuditMap();
-    auditMap.put(OzoneConsts.CLIENT_ID, String.valueOf(clientID));
-    try {
-      metrics.incNumAddAllocateBlockCalls();
-      return keyManager.addAllocatedBlock(args, clientID, keyLocation);
-    } catch (Exception ex) {
-      metrics.incNumAddAllocateBlockFails();
-      auditSuccess = false;
-      AUDIT.logWriteFailure(buildAuditMessageForFailure(
-          OMAction.ADD_ALLOCATE_BLOCK, auditMap, ex));
-      throw ex;
-    } finally {
-      if(auditSuccess){
-        AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
-            OMAction.ADD_ALLOCATE_BLOCK, auditMap));
       }
     }
   }
