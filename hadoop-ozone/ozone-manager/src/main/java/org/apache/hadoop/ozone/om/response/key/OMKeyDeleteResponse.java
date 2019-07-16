@@ -37,8 +37,8 @@ public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
   private long deleteTimestamp;
 
-  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, OMResponse omResponse,
-      long deletionTime) {
+  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, long deletionTime,
+      OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
     this.deleteTimestamp = deletionTime;
@@ -62,7 +62,8 @@ public class OMKeyDeleteResponse extends OMClientResponse {
         // name already exists, then the old deleted key information would be
         // lost. To differentiate between keys with same name in
         // deletedTable, we add the timestamp to the key name.
-        String deleteKeyName = OmUtils.getDeletedKeyName(ozoneKey, deleteTimestamp);
+        String deleteKeyName = OmUtils.getDeletedKeyName(
+            ozoneKey, deleteTimestamp);
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
             deleteKeyName, omKeyInfo);
       }

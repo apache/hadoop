@@ -168,13 +168,14 @@ public class OMKeyDeleteRequest extends OMKeyRequest {
     // return response.
     if (exception == null) {
       omMetrics.decNumKeys();
-      return new OMKeyDeleteResponse(omKeyInfo, omResponse.setDeleteKeyResponse(
-          DeleteKeyResponse.newBuilder()).build(),
-          deleteKeyArgs.getModificationTime());
+      return new OMKeyDeleteResponse(
+          omKeyInfo, deleteKeyArgs.getModificationTime(),
+          omResponse.setDeleteKeyResponse(
+              DeleteKeyResponse.newBuilder()).build());
     } else {
       omMetrics.incNumKeyDeleteFails();
-      return new OMKeyDeleteResponse(null,
-          createErrorOMResponse(omResponse, exception), 0);
+      return new OMKeyDeleteResponse(null, 0,
+          createErrorOMResponse(omResponse, exception));
     }
 
   }

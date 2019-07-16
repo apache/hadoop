@@ -55,11 +55,12 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
     long deletionTime = Time.now();
 
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse, deletionTime);
+        new OMKeyDeleteResponse(omKeyInfo, deletionTime, omResponse);
 
     String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
         keyName);
-    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(ozoneKey, deletionTime);
+    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(
+        ozoneKey, deletionTime);
 
     TestOMRequestUtils.addKeyToTable(false, volumeName, bucketName, keyName,
         clientID, replicationType, replicationFactor, omMetadataManager);
@@ -119,9 +120,10 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
     long deletionTime = Time.now();
 
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse, deletionTime);
+        new OMKeyDeleteResponse(omKeyInfo, deletionTime, omResponse);
 
-    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(ozoneKey, deletionTime);
+    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(
+        ozoneKey, deletionTime);
 
     Assert.assertTrue(omMetadataManager.getKeyTable().isExist(ozoneKey));
     omKeyDeleteResponse.addToDBBatch(omMetadataManager, batchOperation);
@@ -150,7 +152,7 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
             .build();
 
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse, Time.now());
+        new OMKeyDeleteResponse(omKeyInfo, Time.now(), omResponse);
 
     String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
         keyName);
