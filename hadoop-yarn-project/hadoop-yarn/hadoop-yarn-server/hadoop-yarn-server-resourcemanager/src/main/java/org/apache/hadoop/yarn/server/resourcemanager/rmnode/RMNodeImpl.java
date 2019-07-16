@@ -216,6 +216,9 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
       .addTransition(NodeState.NEW, NodeState.DECOMMISSIONED,
           RMNodeEventType.DECOMMISSION,
           new DeactivateNodeTransition(NodeState.DECOMMISSIONED))
+      .addTransition(NodeState.NEW, NodeState.NEW,
+          RMNodeEventType.FINISHED_CONTAINERS_PULLED_BY_AM,
+          new AddContainersToBeRemovedFromNMTransition())
 
       //Transitions from RUNNING state
       .addTransition(NodeState.RUNNING,
@@ -1597,5 +1600,10 @@ public class RMNodeImpl implements RMNode, EventHandler<RMNodeEvent> {
     Map<NodeAttribute, AttributeValue> nodeattrs =
         attrMgr.getAttributesForNode(hostName);
     return nodeattrs.keySet();
+  }
+
+  @VisibleForTesting
+  public Set<ContainerId> getContainersToBeRemovedFromNM() {
+    return containersToBeRemovedFromNM;
   }
 }
