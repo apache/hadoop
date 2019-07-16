@@ -576,7 +576,6 @@ public class KeyManagerImpl implements KeyManager {
       acls.addAll(OzoneUtils.getDefaultAclsProto(omBucketInfo.getAcls()));
     }
     builder.setAcls(acls);
-    
     return builder.build();
   }
 
@@ -964,7 +963,7 @@ public class KeyManagerImpl implements KeyManager {
       }
     }
 
-    // Inherit DEFAULT acls from bucket only if DEFAULT acls for 
+    // Inherit DEFAULT acls from bucket only if DEFAULT acls for
     // prefix are not set.
     if (!prefixParentFound && bucketInfo != null) {
       acls.addAll(bucketInfo.getAcls().stream().filter(a -> a.getAclScope()
@@ -972,7 +971,7 @@ public class KeyManagerImpl implements KeyManager {
           .map(OzoneAcl::toProtobufWithAccessType)
           .collect(Collectors.toList()));
     }
-    
+
     return acls;
   }
 

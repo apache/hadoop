@@ -173,7 +173,7 @@ public class BucketManagerImpl implements BucketManager {
       acls.addAll(bucketInfo.getAcls());
       volumeArgs.getAclMap().getDefaultAclList().forEach(
           a -> acls.add(OzoneAcl.fromProtobufWithAccessType(a)));
-      
+
       OmBucketInfo.Builder omBucketInfoBuilder = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
           .setBucketName(bucketInfo.getBucketName())

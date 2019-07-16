@@ -428,8 +428,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
     ozAdmins = conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
     omMetaDir = OmUtils.getOmDbDir(configuration);
-
-    this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE, 
+    this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE,
         OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
     this.preallocateBlocksMax = conf.getInt(
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX,

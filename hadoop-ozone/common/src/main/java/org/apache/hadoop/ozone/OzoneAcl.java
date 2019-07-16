@@ -68,7 +68,7 @@ public class OzoneAcl {
    * @param acl    - Rights
    * @param scope  - AclScope
    */
-  public OzoneAcl(ACLIdentityType type, String name, ACLType acl, 
+  public OzoneAcl(ACLIdentityType type, String name, ACLType acl,
       AclScope scope) {
     this.name = name;
     this.aclBitSet = new BitSet(ACLType.getNoOfAcls());
@@ -100,7 +100,7 @@ public class OzoneAcl {
    * @param acls   - Rights
    * @param scope  - AclScope
    */
-  public OzoneAcl(ACLIdentityType type, String name, BitSet acls, 
+  public OzoneAcl(ACLIdentityType type, String name, BitSet acls,
       AclScope scope) {
     Objects.requireNonNull(type);
     Objects.requireNonNull(acls);
@@ -133,14 +133,14 @@ public class OzoneAcl {
   }
 
   /**
-   * Parses an ACL string and returns the ACL object. If acl scope is not 
+   * Parses an ACL string and returns the ACL object. If acl scope is not
    * passed in input string then scope is set to ACCESS.
    *
    * @param acl - Acl String , Ex. user:anu:rw
    *
    * @return - Ozone ACLs
    */
-  public static OzoneAcl parseAcl(String acl) 
+  public static OzoneAcl parseAcl(String acl)
       throws IllegalArgumentException {
     if ((acl == null) || acl.isEmpty()) {
       throw new IllegalArgumentException("ACLs cannot be null or empty");
@@ -154,7 +154,7 @@ public class OzoneAcl {
     BitSet acls = new BitSet(ACLType.getNoOfAcls());
 
     String bits = parts[2];
-    
+
     // Default acl scope is ACCESS.
     AclScope aclScope = AclScope.ACCESS;
     
@@ -212,7 +212,7 @@ public class OzoneAcl {
   public static OzoneAcl fromProtobuf(OzoneAclInfo protoAcl) {
     BitSet aclRights = BitSet.valueOf(protoAcl.getRights().toByteArray());
     return new OzoneAcl(ACLIdentityType.valueOf(protoAcl.getType().name()),
-        protoAcl.getName(), aclRights, 
+        protoAcl.getName(), aclRights,
         AclScope.valueOf(protoAcl.getAclScope().name()));
   }
 
@@ -251,7 +251,7 @@ public class OzoneAcl {
   
   @Override
   public String toString() {
-    return type + ":" + name + ":" + ACLType.getACLString(aclBitSet) 
+    return type + ":" + name + ":" + ACLType.getACLString(aclBitSet)
         + "[" + aclScope + "]";
   }
 

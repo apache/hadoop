@@ -509,7 +509,7 @@ message OzoneAclInfo {
       ACCESS = 0;
       DEFAULT = 1;
     }
-    
+
     required OzoneAclType type = 1;
     required string name = 2;
     required bytes rights = 3;

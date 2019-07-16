@@ -76,7 +76,7 @@ public class OmOzoneAclMap {
     List<OzoneAcl> acls = new ArrayList<>();
 
     acls.addAll(getAccessAcls());
-    acls.addAll(defaultAclList.stream().map(a -> 
+    acls.addAll(defaultAclList.stream().map(a ->
         OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()));
     return acls;
   }
@@ -89,7 +89,6 @@ public class OmOzoneAclMap {
               valueOf(type.name()), entry.getKey(), entry.getValue(),
               OzoneAcl.AclScope.ACCESS)));
     }
-    
     return acls;
   }
 
@@ -174,7 +173,7 @@ public class OmOzoneAclMap {
       defaultAclList.add(acl);
       return;
     }
-    
+
     if (!getAccessAclMap(acl.getType()).containsKey(acl.getName())) {
       BitSet acls = BitSet.valueOf(acl.getRights().toByteArray());
       getAccessAclMap(acl.getType()).put(acl.getName(), acls);

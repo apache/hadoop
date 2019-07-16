@@ -149,7 +149,7 @@ public abstract class TestOzoneRpcClientAbstract {
       READ, DEFAULT);
   private static OzoneAcl inheritedUserAcl = new OzoneAcl(USER, remoteUserName,
       READ, ACCESS);
-  private static OzoneAcl inheritedGroupAcl = new OzoneAcl(GROUP, 
+  private static OzoneAcl inheritedGroupAcl = new OzoneAcl(GROUP,
       remoteUserName, READ, ACCESS);
 
   private static String scmId = UUID.randomUUID().toString();
@@ -2276,7 +2276,7 @@ public abstract class TestOzoneRpcClientAbstract {
     validateDefaultAcls(volObj, ozObj, volume, null);
   }
 
-  private void validateDefaultAcls(OzoneObj parentObj, OzoneObj childObj, 
+  private void validateDefaultAcls(OzoneObj parentObj, OzoneObj childObj,
       OzoneVolume volume,  OzoneBucket bucket) throws Exception {
     assertTrue(store.addAcl(parentObj, defaultUserAcl));
     assertTrue(store.addAcl(parentObj, defaultGroupAcl));
@@ -2300,8 +2300,8 @@ public abstract class TestOzoneRpcClientAbstract {
         acls.contains(defaultGroupAcl));
 
     acls = store.getAcl(childObj);
-    assertTrue("Current acls:" + StringUtils.join(",", acls) + 
-            " inheritedUserAcl:" + inheritedUserAcl, 
+    assertTrue("Current acls:" + StringUtils.join(",", acls) +
+            " inheritedUserAcl:" + inheritedUserAcl,
         acls.contains(inheritedUserAcl));
     assertTrue("Current acls:" + StringUtils.join(",", acls) +
             " inheritedUserAcl:" + inheritedUserAcl,
@@ -2334,7 +2334,7 @@ public abstract class TestOzoneRpcClientAbstract {
 
     // Validates access acls.
     validateOzoneAccessAcl(ozObj);
-    
+
     // Check default acls inherited from bucket.
     OzoneObj buckObj = new OzoneObjInfo.Builder()
         .setVolumeName(volumeName)
@@ -2366,7 +2366,7 @@ public abstract class TestOzoneRpcClientAbstract {
     // Remove inherited acls from prefix.
     assertTrue(store.removeAcl(prefixObj, inheritedUserAcl));
     assertTrue(store.removeAcl(prefixObj, inheritedGroupAcl));
-    
+
     validateDefaultAcls(prefixObj, ozObj, null, bucket);
   }
 
@@ -2543,9 +2543,9 @@ public abstract class TestOzoneRpcClientAbstract {
     expectedAcls.forEach(a -> assertTrue(finalNewAcls.contains(a)));
 
     // Reset acl's.
-    OzoneAcl ua = new OzoneAcl(USER, "userx", 
+    OzoneAcl ua = new OzoneAcl(USER, "userx",
         ACLType.READ_ACL, ACCESS);
-    OzoneAcl ug = new OzoneAcl(GROUP, "userx", 
+    OzoneAcl ug = new OzoneAcl(GROUP, "userx",
         ACLType.ALL, ACCESS);
     store.setAcl(ozObj, Arrays.asList(ua, ug));
     newAcls = store.getAcl(ozObj);
