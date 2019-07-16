@@ -18,8 +18,7 @@ import java.util.List;
 /**
  * Handles purging of keys from OM DB.
  */
-public class OMKeyPurgeRequest extends OMClientRequest
-    implements OMKeyRequest {
+public class OMKeyPurgeRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMKeyPurgeRequest.class);

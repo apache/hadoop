@@ -185,9 +185,6 @@ public class KeyManagerImpl implements KeyManager {
     this.grpcBlockTokenEnabled = conf.getBoolean(
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
-    this.isRatisEnabled = conf.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
 
     this.ozoneManager = om;
     this.omId = omId;
