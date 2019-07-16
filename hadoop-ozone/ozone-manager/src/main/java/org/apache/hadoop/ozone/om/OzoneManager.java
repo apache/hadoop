@@ -188,6 +188,7 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.DFS_CONTAINER_RATIS_ENABLE
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED_DEFAULT;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SCM_BLOCK_SIZE;
@@ -314,7 +315,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throw new OMException("OM not initialized.",
           ResultCodes.OM_NOT_INITIALIZED);
     }
-
     // Load HA related configurations
     loadOMHAConfigs(configuration);
 
@@ -406,9 +406,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
     this.scmClient = new ScmClient(scmBlockClient, scmContainerClient);
-    keyManager = new KeyManagerImpl(scmClient, metadataManager,
-        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
     prefixManager = new PrefixManagerImpl(metadataManager);
+    keyManager = new KeyManagerImpl(scmClient, metadataManager,
+        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider(),
+        prefixManager);
     shutdownHook = () -> {
       saveOmMetrics();
     };
@@ -429,18 +430,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       accessAuthorizer = null;
     }
-    ozAdmins = conf.getTrimmedStringCollection(OzoneConfigKeys
-        .OZONE_ADMINISTRATORS);
+    ozAdmins = conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
     omMetaDir = OmUtils.getOmDbDir(configuration);
-
-    this.scmBlockSize = (long) conf
-        .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
-            StorageUnit.BYTES);
+    this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE,
+        OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
     this.preallocateBlocksMax = conf.getInt(
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
-    this.grpcBlockTokenEnabled = conf.getBoolean(
-        HDDS_BLOCK_TOKEN_ENABLED,
+    this.grpcBlockTokenEnabled = conf.getBoolean(HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
     this.useRatisForReplication = conf.getBoolean(
         DFS_CONTAINER_RATIS_ENABLED_KEY, DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
@@ -1689,7 +1686,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
             !ozAdmins.contains(ProtobufRpcEngine.Server.getRemoteUser()
                 .getUserName())) {
           LOG.error("Only admin users are authorized to create " +
-              "Ozone volumes.");
+              "Ozone volumes. User :{} is not an admin.",
+              ProtobufRpcEngine.Server.getRemoteUser().getUserName());
           throw new OMException("Only admin users are authorized to create " +
               "Ozone volumes.", ResultCodes.PERMISSION_DENIED);
         }

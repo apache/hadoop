@@ -506,4 +506,3 @@ public interface OzoneManagerProtocol
   List<OzoneAcl> getAcl(OzoneObj obj) throws IOException;
 
 }
-

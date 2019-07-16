@@ -43,7 +43,6 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.OzoneConsts.Versioning;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
@@ -70,6 +69,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 
 /**
  * A {@link StorageHandler} implementation that distributes object storage
@@ -179,19 +180,19 @@ public final class DistributedStorageHandler implements StorageHandler {
   public void createVolume(VolumeArgs args) throws IOException, OzoneException {
     long quota = args.getQuota() == null ?
         OzoneConsts.MAX_QUOTA_IN_BYTES : args.getQuota().sizeInBytes();
-    OzoneAcl userAcl =
-        new OzoneAcl(ACLIdentityType.USER, args.getUserName(), userRights);
+    OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, args.getUserName(),
+            userRights, ACCESS);
     OmVolumeArgs.Builder builder = OmVolumeArgs.newBuilder();
     builder.setAdminName(args.getAdminName())
         .setOwnerName(args.getUserName())
         .setVolume(args.getVolumeName())
         .setQuotaInBytes(quota)
-        .addOzoneAcls(OMPBHelper.convertOzoneAcl(userAcl));
+        .addOzoneAcls(OzoneAcl.toProtobuf(userAcl));
     if (args.getGroups() != null) {
       for (String group : args.getGroups()) {
         OzoneAcl groupAcl =
-            new OzoneAcl(ACLIdentityType.GROUP, group, groupRights);
-        builder.addOzoneAcls(OMPBHelper.convertOzoneAcl(groupAcl));
+            new OzoneAcl(ACLIdentityType.GROUP, group, groupRights, ACCESS);
+        builder.addOzoneAcls(OzoneAcl.toProtobuf(groupAcl));
       }
     }
     ozoneManagerClient.createVolume(builder.build());
@@ -215,7 +216,7 @@ public final class DistributedStorageHandler implements StorageHandler {
   public boolean checkVolumeAccess(String volume, OzoneAcl acl)
       throws IOException, OzoneException {
     return ozoneManagerClient
-        .checkVolumeAccess(volume, OMPBHelper.convertOzoneAcl(acl));
+        .checkVolumeAccess(volume, OzoneAcl.toProtobuf(acl));
   }
 
   @Override
