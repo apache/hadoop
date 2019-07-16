@@ -69,7 +69,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    this.cacheCleanupPolicy = TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH;
+    this.cacheCleanupPolicy = TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH;
     cache = new TableCacheImpl<>(cacheCleanupPolicy);
   }
 
@@ -154,7 +154,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     //  If cache cleanup policy is NEVER return null. Because cache here is
     //  full table data in-memory, so no need to get from underlying rocksdb
     //  table.
-    //  If cache cleanup policy is AFTERFLUSH return from underlying rocksdb
+    //  If cache cleanup policy is AFTER_FLUSH return from underlying rocksdb
     //  table. As it might have been cleaned up from cache, might be there in
     //  DB.
     CacheValue<VALUE> cacheValue =
@@ -163,7 +163,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
       return cacheValue.getCacheValue();
     }
 
-    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH) {
+    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH) {
       return getFromTable(key);
     } else {
       return null;

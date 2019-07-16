@@ -35,7 +35,7 @@ import org.apache.hadoop.classification.InterfaceStability.Evolving;
  * Cache implementation for the table. Depending on the cache clean up policy
  * this cache will be full cache or partial cache.
  *
- * If cache cleanup policy is set as {@link CacheCleanupPolicy#AFTERFLUSH},
+ * If cache cleanup policy is set as {@link CacheCleanupPolicy#AFTER_FLUSH},
  * this will be a partial cache.
  *
  * If cache cleanup policy is set as {@link CacheCleanupPolicy#NEVER},
@@ -78,7 +78,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
   @Override
   public void cleanup(long epoch) {
     // If it is never do nothing.
-    if (cleanupPolicy == CacheCleanupPolicy.AFTERFLUSH) {
+    if (cleanupPolicy == CacheCleanupPolicy.AFTER_FLUSH) {
       executorService.submit(() -> evictCache(epoch));
     }
   }
@@ -120,6 +120,6 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
   public enum CacheCleanupPolicy {
     NEVER, // Cache will not be cleaned up. This mean's the table maintains
     // full cache.
-    AFTERFLUSH // Cache will be cleaned up, once after flushing to DB.
+    AFTER_FLUSH // Cache will be cleaned up, once after flushing to DB.
   }
 }

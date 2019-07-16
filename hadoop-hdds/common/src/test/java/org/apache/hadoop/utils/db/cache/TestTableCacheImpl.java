@@ -47,7 +47,7 @@ public class TestTableCacheImpl {
   public static Collection<Object[]> policy() {
     Object[][] params = new Object[][] {
         {TableCacheImpl.CacheCleanupPolicy.NEVER},
-        {TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH}
+        {TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH}
     };
     return Arrays.asList(params);
   }
@@ -128,7 +128,7 @@ public class TestTableCacheImpl {
 
     totalCount += value;
 
-    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH) {
+    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH) {
       int deleted = 5;
 
       // cleanup first 5 entires
