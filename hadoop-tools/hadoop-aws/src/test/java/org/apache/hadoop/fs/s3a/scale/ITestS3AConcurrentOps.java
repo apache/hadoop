@@ -84,6 +84,7 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     super.teardown();
     if (auxFs != null) {
       auxFs.delete(testRoot, true);
+      auxFs.close();
     }
   }
 
@@ -170,11 +171,12 @@ public class ITestS3AConcurrentOps extends S3AScaleTestBase {
     conf.set(MIN_MULTIPART_THRESHOLD, "10K");
     conf.set(MULTIPART_SIZE, "5K");
 
-    S3AFileSystem tinyThreadPoolFs = new S3AFileSystem();
-    tinyThreadPoolFs.initialize(auxFs.getUri(), conf);
+    try (S3AFileSystem tinyThreadPoolFs = new S3AFileSystem()) {
+      tinyThreadPoolFs.initialize(auxFs.getUri(), conf);
 
-    parallelRenames(concurrentRenames, tinyThreadPoolFs,
-        "testParallelRename-source", "testParallelRename-target");
+      parallelRenames(concurrentRenames, tinyThreadPoolFs,
+          "testParallelRename-source", "testParallelRename-target");
+    }
   }
 
   @Test
