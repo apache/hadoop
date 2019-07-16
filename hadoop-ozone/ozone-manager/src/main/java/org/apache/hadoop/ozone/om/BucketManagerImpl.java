@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketArgs;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
@@ -49,6 +50,8 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCK
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.INTERNAL_ERROR;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclScope.*;
+
 /**
  * OM bucket manager.
  */
@@ -125,9 +128,10 @@ public class BucketManagerImpl implements BucketManager {
           volumeName, bucketName);
       String volumeKey = metadataManager.getVolumeKey(volumeName);
       String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
+      OmVolumeArgs volumeArgs = metadataManager.getVolumeTable().get(volumeKey);
 
       //Check if the volume exists
-      if (metadataManager.getVolumeTable().get(volumeKey) == null) {
+      if (volumeArgs == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.VOLUME_NOT_FOUND);
@@ -165,10 +169,15 @@ public class BucketManagerImpl implements BucketManager {
             .setVersion(CryptoProtocolVersion.ENCRYPTION_ZONES)
             .setSuite(CipherSuite.convert(metadata.getCipher()));
       }
+      List<OzoneAcl> acls = new ArrayList<>();
+      acls.addAll(bucketInfo.getAcls());
+      volumeArgs.getAclMap().getDefaultAclList().forEach(
+          a -> acls.add(OzoneAcl.fromProtobufWithAccessType(a)));
+
       OmBucketInfo.Builder omBucketInfoBuilder = OmBucketInfo.newBuilder()
           .setVolumeName(bucketInfo.getVolumeName())
           .setBucketName(bucketInfo.getBucketName())
-          .setAcls(bucketInfo.getAcls())
+          .setAcls(acls)
           .setStorageType(bucketInfo.getStorageType())
           .setIsVersionEnabled(bucketInfo.getIsVersionEnabled())
           .setCreationTime(Time.now())
