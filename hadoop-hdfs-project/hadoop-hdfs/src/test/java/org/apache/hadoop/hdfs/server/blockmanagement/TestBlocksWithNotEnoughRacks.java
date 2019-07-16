@@ -205,7 +205,7 @@ public class TestBlocksWithNotEnoughRacks {
               "/testFile:  Replica placement policy is violated"));
       assertTrue(fsckOp.contains(" Block should be additionally replicated" +
               " on 1 more rack(s). Total number of racks in the cluster: 2"));
-
+      assertTrue(fsckOp.contains(" Blocks queued for replication:\t1"));
       try {
         DFSTestUtil.waitForReplication(cluster, b, 2, replicationFactor, 0);
       } catch (TimeoutException e) {
