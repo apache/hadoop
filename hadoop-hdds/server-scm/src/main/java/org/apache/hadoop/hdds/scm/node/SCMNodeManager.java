@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.protocol.proto
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
+import org.apache.hadoop.hdds.scm.net.InnerNode;
 import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.net.Node;
@@ -566,9 +567,20 @@ public class SCMNodeManager implements NodeManager {
       node = clusterMap.getNode(location + NetConstants.PATH_SEPARATOR_STR +
           address);
     }
-    LOG.debug("Get node for {} return {}", address, (node == null ?
-        "not found" : node.getNetworkFullPath()));
-    return node == null ? null : (DatanodeDetails)node;
+
+    if (node != null) {
+      if (node instanceof InnerNode) {
+        LOG.warn("Get node for {} return {}, it's an inner node, " +
+            "not a datanode", address, node.getNetworkFullPath());
+      } else {
+        LOG.debug("Get node for {} return {}", address,
+            node.getNetworkFullPath());
+        return (DatanodeDetails)node;
+      }
+    } else {
+      LOG.warn("Cannot find node for {}", address);
+    }
+    return null;
   }
 
   private String nodeResolve(String hostname) {
