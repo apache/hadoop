@@ -34,6 +34,7 @@ import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.Tag;
 import org.junit.Assert;
 import org.junit.Assume;
+import org.junit.AssumptionViolatedException;
 import org.junit.Test;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +46,7 @@ import org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.Init;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_REGION_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_NAME_KEY;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_DDB_TABLE_TAG;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
 import static org.apache.hadoop.fs.s3a.S3AUtils.setBucketOption;
 import static org.apache.hadoop.fs.s3a.s3guard.DynamoDBMetadataStore.*;
 import static org.apache.hadoop.fs.s3a.s3guard.S3GuardTool.*;
@@ -59,10 +61,18 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
   @Override
   public void setup() throws Exception {
     super.setup();
-    MetadataStore ms = getMetadataStore();
-    Assume.assumeTrue("Test only applies when DynamoDB is used for S3Guard;"
-        + "Store is " + (ms == null ? "none" : ms.toString()),
-        ms instanceof DynamoDBMetadataStore);
+    try {
+      getMetadataStore();
+    } catch (ClassCastException e) {
+      throw new AssumptionViolatedException(
+          "Test only applies when DynamoDB is used for S3Guard Store",
+          e);
+    }
+  }
+
+  @Override
+  protected DynamoDBMetadataStore getMetadataStore() {
+    return (DynamoDBMetadataStore) super.getMetadataStore();
   }
 
   // Check the existence of a given DynamoDB table.
@@ -120,6 +130,11 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
     conf.set(S3GUARD_DDB_TABLE_NAME_KEY,
         getTestTableName("testDynamoTableTagging-" + UUID.randomUUID()));
+    String bucket = getFileSystem().getBucket();
+    removeBucketOverrides(bucket, conf,
+        S3GUARD_DDB_TABLE_NAME_KEY,
+        S3GUARD_DDB_REGION_KEY);
+
     S3GuardTool.Init cmdR = new S3GuardTool.Init(conf);
     Map<String, String> tagMap = new HashMap<>();
     tagMap.put("hello", "dynamo");
@@ -128,7 +143,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
     String[] argsR = new String[]{
         cmdR.getName(),
         "-tag", tagMapToStringParams(tagMap),
-        getFileSystem().getBucket()
+        "s3a://" + bucket + "/"
     };
 
     // run

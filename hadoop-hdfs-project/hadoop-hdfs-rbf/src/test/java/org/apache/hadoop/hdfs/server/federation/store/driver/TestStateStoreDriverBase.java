@@ -184,7 +184,10 @@ public class TestStateStoreDriverBase {
     long now = stateStore.getDriver().getTime();
     assertTrue(
         committed.getDateCreated() <= now && committed.getDateCreated() > 0);
-    assertTrue(committed.getDateModified() >= committed.getDateCreated());
+    // since expired record doesn't update the modification time, let's skip it
+    if (!committed.isExpired()) {
+      assertTrue(committed.getDateModified() >= committed.getDateCreated());
+    }
 
     return ret;
   }

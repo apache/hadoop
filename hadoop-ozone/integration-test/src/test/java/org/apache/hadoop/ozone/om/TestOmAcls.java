@@ -124,8 +124,8 @@ public class TestOmAcls {
     logCapturer.clearOutput();
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createVolume(createVolumeArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
-        "permission to access volume"));
+    assertTrue(logCapturer.getOutput().contains("Only admin users are " +
+        "authorized to create Ozone"));
 
     BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
     bucketArgs.setAddAcls(new LinkedList<>());
@@ -133,8 +133,8 @@ public class TestOmAcls {
     bucketArgs.setStorageType(StorageType.DISK);
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createBucket(bucketArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have CREATE " +
-        "permission to access bucket"));
+    assertTrue(logCapturer.getOutput().contains("Only admin users are" +
+        " authorized to create Ozone"));
   }
 
   @Test
@@ -157,8 +157,8 @@ public class TestOmAcls {
     KeyArgs keyArgs = new KeyArgs(keyName, bucketArgs);
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.newKeyWriter(keyArgs));
-    assertTrue(logCapturer.getOutput().contains("doesn't have READ permission" +
-        " to access key"));
+    assertTrue(logCapturer.getOutput().contains("doesn't have WRITE " +
+        "permission to access key"));
   }
 }
 

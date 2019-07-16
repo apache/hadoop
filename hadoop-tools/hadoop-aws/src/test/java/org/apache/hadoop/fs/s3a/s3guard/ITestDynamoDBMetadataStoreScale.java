@@ -32,6 +32,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.amazonaws.services.dynamodbv2.document.DynamoDB;
 import com.amazonaws.services.dynamodbv2.document.Table;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputDescription;
+import com.amazonaws.services.dynamodbv2.xspec.ExpressionSpecBuilder;
 import org.junit.Assume;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
@@ -59,6 +60,7 @@ import org.apache.hadoop.util.DurationInfo;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static org.apache.hadoop.fs.s3a.Constants.*;
 import static org.apache.hadoop.fs.s3a.s3guard.MetadataStoreTestBase.basicFileStatus;
+import static org.apache.hadoop.fs.s3a.s3guard.PathMetadataDynamoDBTranslation.PARENT;
 import static org.junit.Assume.*;
 
 /**
@@ -172,6 +174,21 @@ public class ITestDynamoDBMetadataStoreScale
 
   @Override
   public void teardown() throws Exception {
+    if (ddbms != null) {
+      S3GuardTableAccess tableAccess = new S3GuardTableAccess(ddbms);
+      ExpressionSpecBuilder builder = new ExpressionSpecBuilder();
+      builder.withCondition(
+          ExpressionSpecBuilder.S(PARENT).beginsWith("/test/"));
+
+      Iterable<DDBPathMetadata> entries = tableAccess.scanMetadata(builder);
+      List<Path> list = new ArrayList<>();
+      entries.iterator().forEachRemaining(e -> {
+        Path p = e.getFileStatus().getPath();
+        LOG.info("Deleting {}", p);
+        list.add(p);
+      });
+      tableAccess.delete(list);
+    }
     IOUtils.cleanupWithLogger(LOG, ddbms);
     super.teardown();
   }

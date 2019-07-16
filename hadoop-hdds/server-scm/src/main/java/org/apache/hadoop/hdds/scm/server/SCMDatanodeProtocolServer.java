@@ -271,6 +271,8 @@ public class SCMDatanodeProtocolServer implements
         .setErrorCode(cmd.getError())
         .setClusterID(cmd.getClusterID())
         .setDatanodeUUID(cmd.getDatanodeUUID())
+        .setIpAddress(cmd.getIpAddress())
+        .setHostname(cmd.getHostName())
         .build();
   }
 

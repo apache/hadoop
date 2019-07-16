@@ -1588,7 +1588,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
-  protected ObjectMetadata getObjectMetadata(String key) throws IOException {
+  @VisibleForTesting
+  ObjectMetadata getObjectMetadata(String key) throws IOException {
     return getObjectMetadata(key, null, invoker,null);
   }
 
@@ -2231,6 +2232,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException, AmazonClientException {
     Path f = status.getPath();
     LOG.debug("Delete path {} - recursive {}", f, recursive);
+    LOG.debug("Type = {}",
+        status.isFile() ? "File"
+            : (status.isEmptyDirectory() == Tristate.TRUE
+                ? "Empty Directory"
+                : "Directory"));
 
     String key = pathToKey(f);
 
@@ -2290,7 +2296,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         metadataStore.deleteSubtree(f, ttlTimeProvider);
       }
     } else {
-      LOG.debug("delete: Path is a file");
+      LOG.debug("delete: Path is a file: {}", key);
       deleteObjectAtPath(f, key, true);
     }
 
@@ -2439,7 +2445,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the request
    */
   @VisibleForTesting
-  S3ListRequest createListObjectsRequest(String key,
+  public S3ListRequest createListObjectsRequest(String key,
       String delimiter) {
     return createListObjectsRequest(key, delimiter, null);
   }

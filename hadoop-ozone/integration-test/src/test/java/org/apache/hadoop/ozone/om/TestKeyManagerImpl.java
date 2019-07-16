@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -61,6 +62,7 @@ import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -76,6 +78,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.test.LambdaTestUtils;
 
+import org.apache.hadoop.util.Time;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -213,11 +216,29 @@ public class TestKeyManagerImpl {
     OmKeyArgs keyArgs = createBuilder()
         .setKeyName(KEY_NAME)
         .build();
-    OpenKeySession keySession = keyManager1.openKey(keyArgs);
+
+    // As now openKey will allocate at least one block, even if the size
+    // passed is 0. So adding an entry to openKeyTable manually to test
+    // allocateBlock failure.
+    OmKeyInfo omKeyInfo = new OmKeyInfo.Builder()
+        .setVolumeName(keyArgs.getVolumeName())
+        .setBucketName(keyArgs.getBucketName())
+        .setKeyName(keyArgs.getKeyName())
+        .setOmKeyLocationInfos(Collections.singletonList(
+            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
+        .setCreationTime(Time.now())
+        .setModificationTime(Time.now())
+        .setDataSize(0)
+        .setReplicationType(keyArgs.getType())
+        .setReplicationFactor(keyArgs.getFactor())
+        .setFileEncryptionInfo(null).build();
+    metadataManager.getOpenKeyTable().put(
+        metadataManager.getOpenKey(VOLUME_NAME, BUCKET_NAME, KEY_NAME, 1L),
+        omKeyInfo);
     LambdaTestUtils.intercept(OMException.class,
         "SafeModePrecheck failed for allocateBlock", () -> {
           keyManager1
-              .allocateBlock(keyArgs, keySession.getId(), new ExcludeList());
+              .allocateBlock(keyArgs, 1L, new ExcludeList());
         });
   }
 

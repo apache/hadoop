@@ -219,7 +219,6 @@ public class TestDiskBalancer {
     } finally {
       cluster.shutdown();
     }
-
   }
 
   @Test

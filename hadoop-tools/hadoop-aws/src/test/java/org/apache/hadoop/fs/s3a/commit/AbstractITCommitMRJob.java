@@ -36,6 +36,7 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -51,6 +52,7 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.DurationInfo;
 
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.disableFilesystemCaching;
 import static org.apache.hadoop.fs.s3a.commit.InternalCommitterConstants.FS_S3A_COMMITTER_STAGING_UUID;
 
 /**
@@ -60,6 +62,13 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractITCommitMRJob.class);
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    disableFilesystemCaching(conf);
+    return conf;
+  }
 
   @Rule
   public final TemporaryFolder temp = new TemporaryFolder();
@@ -147,8 +156,8 @@ public abstract class AbstractITCommitMRJob extends AbstractYarnClusterITest {
     }
     Collections.sort(actualFiles);
 
-    SuccessData successData = validateSuccessFile(fs, outputPath,
-        committerName());
+    SuccessData successData = validateSuccessFile(outputPath, committerName(),
+        fs, "MR job");
     List<String> successFiles = successData.getFilenames();
     String commitData = successData.toString();
     assertTrue("No filenames in " + commitData,

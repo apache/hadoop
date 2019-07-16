@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.security.token.block;
 
+import com.google.common.base.Charsets;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -29,6 +30,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.ipc.Server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -94,6 +96,8 @@ public class BlockTokenSecretManager extends
 
   private final boolean useProto;
 
+  private final boolean shouldWrapQOP;
+
   private final SecureRandom nonceGenerator = new SecureRandom();
 
   /**
@@ -112,7 +116,25 @@ public class BlockTokenSecretManager extends
       long tokenLifetime, String blockPoolId, String encryptionAlgorithm,
       boolean useProto) {
     this(false, keyUpdateInterval, tokenLifetime, blockPoolId,
-        encryptionAlgorithm, 0, 1, useProto);
+        encryptionAlgorithm, 0, 1, useProto, false);
+  }
+
+  public BlockTokenSecretManager(long keyUpdateInterval,
+      long tokenLifetime, int nnIndex, int numNNs, String blockPoolId,
+      String encryptionAlgorithm, boolean useProto) {
+    this(keyUpdateInterval, tokenLifetime, nnIndex, numNNs,
+        blockPoolId, encryptionAlgorithm, useProto, false);
+  }
+
+  public BlockTokenSecretManager(long keyUpdateInterval,
+      long tokenLifetime, int nnIndex, int numNNs,  String blockPoolId,
+      String encryptionAlgorithm, boolean useProto, boolean shouldWrapQOP) {
+    this(true, keyUpdateInterval, tokenLifetime, blockPoolId,
+        encryptionAlgorithm, nnIndex, numNNs, useProto, shouldWrapQOP);
+    Preconditions.checkArgument(nnIndex >= 0);
+    Preconditions.checkArgument(numNNs > 0);
+    setSerialNo(new SecureRandom().nextInt());
+    generateKeys();
   }
 
   /**
@@ -125,21 +147,11 @@ public class BlockTokenSecretManager extends
    * @param encryptionAlgorithm encryption algorithm to use
    * @param numNNs number of namenodes possible
    * @param useProto should we use new protobuf style tokens
+   * @param shouldWrapQOP should wrap QOP in the block access token
    */
-  public BlockTokenSecretManager(long keyUpdateInterval,
-      long tokenLifetime, int nnIndex, int numNNs,  String blockPoolId,
-      String encryptionAlgorithm, boolean useProto) {
-    this(true, keyUpdateInterval, tokenLifetime, blockPoolId,
-        encryptionAlgorithm, nnIndex, numNNs, useProto);
-    Preconditions.checkArgument(nnIndex >= 0);
-    Preconditions.checkArgument(numNNs > 0);
-    setSerialNo(new SecureRandom().nextInt());
-    generateKeys();
-  }
-
   private BlockTokenSecretManager(boolean isMaster, long keyUpdateInterval,
       long tokenLifetime, String blockPoolId, String encryptionAlgorithm,
-      int nnIndex, int numNNs, boolean useProto) {
+      int nnIndex, int numNNs, boolean useProto, boolean shouldWrapQOP) {
     this.nnIndex = nnIndex;
     this.isMaster = isMaster;
     this.keyUpdateInterval = keyUpdateInterval;
@@ -148,6 +160,7 @@ public class BlockTokenSecretManager extends
     this.blockPoolId = blockPoolId;
     this.encryptionAlgorithm = encryptionAlgorithm;
     this.useProto = useProto;
+    this.shouldWrapQOP = shouldWrapQOP;
     this.timer = new Timer();
     generateKeys();
   }
@@ -277,10 +290,16 @@ public class BlockTokenSecretManager extends
   /** Generate a block token for a specified user */
   public Token<BlockTokenIdentifier> generateToken(String userId,
       ExtendedBlock block, EnumSet<BlockTokenIdentifier.AccessMode> modes,
-      StorageType[] storageTypes, String[] storageIds) throws IOException {
+      StorageType[] storageTypes, String[] storageIds) {
     BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
         .getBlockPoolId(), block.getBlockId(), modes, storageTypes,
         storageIds, useProto);
+    if (shouldWrapQOP) {
+      String qop = Server.getEstablishedQOP();
+      if (qop != null) {
+        id.setHandshakeMsg(qop.getBytes(Charsets.UTF_8));
+      }
+    }
     return new Token<BlockTokenIdentifier>(id, this);
   }
 
@@ -543,18 +562,6 @@ public class BlockTokenSecretManager extends
     return createPassword(nonce, key.getKey());
   }
 
-  /**
-   * Encrypt the given message with the current block key, using the current
-   * block key.
-   *
-   * @param message the message to be encrypted.
-   * @return the secret created by encrypting the given message.
-   */
-  public byte[] secretGen(byte[] message) {
-    return createPassword(message, currentKey.getKey());
-  }
-
-  @VisibleForTesting
   public BlockKey getCurrentKey() {
     return currentKey;
   }

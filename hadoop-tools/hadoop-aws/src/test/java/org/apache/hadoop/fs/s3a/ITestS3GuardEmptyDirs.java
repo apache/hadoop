@@ -18,13 +18,18 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
 import org.junit.Assume;
 import org.junit.Test;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.assertRenameOutcome;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test logic around whether or not a directory is empty, with S3Guard enabled.
@@ -36,6 +41,45 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
  * of the MetadataStore.
  */
 public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
+
+  @Test
+  public void testRenameEmptyDir() throws Throwable {
+    S3AFileSystem fs = getFileSystem();
+    Path basePath = path(getMethodName());
+    Path sourceDir = new Path(basePath, "AAA-source");
+    String sourceDirMarker = fs.pathToKey(sourceDir) + "/";
+    Path destDir = new Path(basePath, "BBB-dest");
+    String destDirMarker = fs.pathToKey(destDir) + "/";
+    // set things up.
+    mkdirs(sourceDir);
+    // there'a source directory marker
+    fs.getObjectMetadata(sourceDirMarker);
+    S3AFileStatus srcStatus = getEmptyDirStatus(sourceDir);
+    assertEquals("Must be an empty dir: " + srcStatus, Tristate.TRUE,
+        srcStatus.isEmptyDirectory());
+    // do the rename
+    assertRenameOutcome(fs, sourceDir, destDir, true);
+    S3AFileStatus destStatus = getEmptyDirStatus(destDir);
+    assertEquals("Must be an empty dir: " + destStatus, Tristate.TRUE,
+        destStatus.isEmptyDirectory());
+    // source does not exist.
+    intercept(FileNotFoundException.class,
+        () -> getEmptyDirStatus(sourceDir));
+    // and verify that there's no dir marker hidden under a tombstone
+    intercept(FileNotFoundException.class,
+        () -> Invoker.once("HEAD", sourceDirMarker,
+            () -> fs.getObjectMetadata(sourceDirMarker)));
+    // the parent dir mustn't be confused
+    S3AFileStatus baseStatus = getEmptyDirStatus(basePath);
+    assertEquals("Must not be an empty dir: " + baseStatus, Tristate.FALSE,
+        baseStatus.isEmptyDirectory());
+    // and verify the dest dir has a marker
+    fs.getObjectMetadata(destDirMarker);
+  }
+
+  private S3AFileStatus getEmptyDirStatus(Path dir) throws IOException {
+    return getFileSystem().innerGetFileStatus(dir, true);
+  }
 
   @Test
   public void testEmptyDirs() throws Exception {

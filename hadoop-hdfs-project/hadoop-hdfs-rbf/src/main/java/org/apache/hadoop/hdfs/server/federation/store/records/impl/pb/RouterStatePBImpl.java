@@ -182,7 +182,9 @@ public class RouterStatePBImpl extends RouterState implements PBRecord {
 
   @Override
   public void setDateModified(long time) {
-    this.translator.getBuilder().setDateModified(time);
+    if (getStatus() != RouterServiceState.EXPIRED) {
+      this.translator.getBuilder().setDateModified(time);
+    }
   }
 
   @Override

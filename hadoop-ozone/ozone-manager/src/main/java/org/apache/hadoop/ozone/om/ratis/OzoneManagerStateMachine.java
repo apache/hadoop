@@ -57,8 +57,6 @@ import org.apache.ratis.thirdparty.com.google.protobuf.ByteString;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.hadoop.ozone.om.exceptions.OMException.STATUS_CODE;
-
 /**
  * The OM StateMachine is the state machine for OM Ratis server. It is
  * responsible for applying ratis committed transactions to
@@ -275,17 +273,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
         .setServerRole(RaftProtos.RaftPeerRole.LEADER)
         .setLogData(messageContent)
         .build();
-  }
-
-  /**
-   * Construct IOException message for failed requests in StartTransaction.
-   * @param omResponse
-   * @return
-   */
-  private IOException constructExceptionForFailedRequest(
-      OMResponse omResponse) {
-    return new IOException(omResponse.getMessage() + " " +
-        STATUS_CODE + omResponse.getStatus());
   }
 
   /**
