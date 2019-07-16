@@ -127,7 +127,7 @@ public final class BlockOutputStreamEntry extends OutputStream {
         UserGroupInformation.getCurrentUser().addToken(getToken());
       }
       this.outputStream =
-          new BlockOutputStream(blockID, key, xceiverClientManager,
+          new BlockOutputStream(blockID, xceiverClientManager,
               pipeline, chunkSize, streamBufferFlushSize,
               streamBufferMaxSize, watchTimeout, bufferPool, checksumType,
               bytesPerChecksum);
