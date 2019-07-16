@@ -19,7 +19,3 @@ FROM apache/ozone-runner:@docker.ozone-runner.version@
 ADD --chown=hadoop . /opt/hadoop
 
 WORKDIR /opt/hadoop
-
-RUN sudo wget https://os.anzix.net/goofys -O /usr/bin/goofys
-RUN sudo chmod 755 /usr/bin/goofys
-RUN sudo yum install -y fuse
