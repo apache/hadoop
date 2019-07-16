@@ -268,6 +268,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private S3SecretManager s3SecretManager;
   private volatile boolean isOmRpcServerRunning = false;
   private String omComponent;
+  private OzoneManagerProtocolServerSideTranslatorPB omServerProtocol;
 
   private boolean isRatisEnabled;
   private OzoneManagerRatisServer omRatisServer;
@@ -401,11 +402,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcServer = getRpcServer(conf);
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
+
     this.scmClient = new ScmClient(scmBlockClient, scmContainerClient);
+
     prefixManager = new PrefixManagerImpl(metadataManager);
-    keyManager = new KeyManagerImpl(scmClient, metadataManager,
-        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider(),
-        prefixManager);
+    keyManager = new KeyManagerImpl(this, scmClient, configuration,
+        omStorage.getOmId());
+
     shutdownHook = () -> {
       saveOmMetrics();
     };
@@ -1200,6 +1203,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   public KeyProviderCryptoExtension getKmsProvider() {
     return kmsProvider;
   }
+
+  public PrefixManager getPrefixManager() {
+    return prefixManager;
+  }
+
   /**
    * Get metadata manager.
    *
@@ -1207,6 +1215,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public OMMetadataManager getMetadataManager() {
     return metadataManager;
+  }
+
+  public OzoneBlockTokenSecretManager getBlockTokenMgr() {
+    return blockTokenMgr;
+  }
+
+  public OzoneManagerProtocolServerSideTranslatorPB getOmServerProtocol() {
+    return omServerProtocol;
   }
 
   public OMMetrics getMetrics() {
@@ -1328,9 +1344,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
 
-    BlockingService omService = newReflectiveBlockingService(
-        new OzoneManagerProtocolServerSideTranslatorPB(this, omRatisServer,
-            isRatisEnabled));
+    this.omServerProtocol = new OzoneManagerProtocolServerSideTranslatorPB(
+        this, omRatisServer, isRatisEnabled);
+
+    BlockingService omService = newReflectiveBlockingService(omServerProtocol);
+
     return startRpcServer(configuration, omNodeRpcAddr,
         OzoneManagerProtocolPB.class, omService,
         handlerCount);
@@ -3195,5 +3213,29 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public long getMaxUserVolumeCount() {
     return maxUserVolumeCount;
+  }
+
+  /**
+   * Checks the Leader status of OM Ratis Server.
+   * Note that this status has a small window of error. It should not be used
+   * to determine the absolute leader status.
+   * If it is the leader, the role status is cached till Ratis server
+   * notifies of leader change. If it is not leader, the role information is
+   * retrieved through by submitting a GroupInfoRequest to Ratis server.
+   *
+   * If ratis is not enabled, then it always returns true.
+   *
+   * @return Return true if this node is the leader, false otherwsie.
+   */
+  public boolean isLeader() {
+    return isRatisEnabled ? omRatisServer.isLeader() : true;
+  }
+
+  /**
+   * Return if Ratis is enabled or not.
+   * @return
+   */
+  public boolean isRatisEnabled() {
+    return isRatisEnabled;
   }
 }
