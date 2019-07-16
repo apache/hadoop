@@ -38,12 +38,11 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.HDDS_SCM_WATCHER_TIMEOUT;
 
-// This class tests the 2 way
+// This class tests the 2 way commit in Ratis.
 public class Test2WayCommitInRatis {
 
   private MiniOzoneCluster cluster;
