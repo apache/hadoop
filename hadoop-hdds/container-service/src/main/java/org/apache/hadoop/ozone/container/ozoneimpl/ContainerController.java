@@ -137,7 +137,9 @@ public class ContainerController {
   public void deleteContainer(final long containerId, boolean force)
       throws IOException {
     final Container container = containerSet.getContainer(containerId);
-    getHandler(container).deleteContainer(container, force);
+    if (container != null) {
+      getHandler(container).deleteContainer(container, force);
+    }
   }
 
   /**
