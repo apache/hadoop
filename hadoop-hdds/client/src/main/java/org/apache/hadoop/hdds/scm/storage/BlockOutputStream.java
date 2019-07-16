@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.UUID;
 import java.util.List;
 import java.util.ArrayList;
@@ -167,7 +166,7 @@ public class BlockOutputStream extends OutputStream {
     bufferList = null;
     totalDataFlushedLength = 0;
     writtenDataLength = 0;
-    failedServers = Collections.emptyList();
+    failedServers = new ArrayList<>(0);
     ioException = new AtomicReference<>(null);
   }
 
