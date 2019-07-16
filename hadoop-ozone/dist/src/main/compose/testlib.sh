@@ -18,7 +18,6 @@ set -e
 
 COMPOSE_ENV_NAME=$(basename "$COMPOSE_DIR")
 COMPOSE_FILE=$COMPOSE_DIR/docker-compose.yaml
-DATANODE_COUNT=${DATANODE_COUNT:-3}
 RESULT_DIR=${RESULT_DIR:-"$COMPOSE_DIR/result"}
 RESULT_DIR_INSIDE="/tmp/smoketest/$(basename "$COMPOSE_ENV_NAME")/result"
 SMOKETEST_DIR_INSIDE="${OZONE_DIR:-/opt/hadoop}/smoketest"
@@ -29,9 +28,12 @@ mkdir -p "$RESULT_DIR"
 #Should be writeable from the docker containers where user is different.
 chmod ogu+w "$RESULT_DIR"
 
-## @description wait until 3 or more datanodes are up (or 30 seconds)
+## @description wait until datanodes are up (or 30 seconds)
 ## @param the docker-compose file
+## @param number of datanodes to wait for (default: 3)
 wait_for_datanodes(){
+  local compose_file=$1
+  local -i datanode_count=${2:-3}
 
   #Reset the timer
   SECONDS=0
@@ -41,9 +43,9 @@ wait_for_datanodes(){
 
      #This line checks the number of HEALTHY datanodes registered in scm over the
      # jmx HTTP servlet
-     datanodes=$(docker-compose -f "$1" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+     datanodes=$(docker-compose -f "${compose_file}" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
      if [[ "$datanodes" ]]; then
-       if [[ $datanodes -ge ${DATANODE_COUNT} ]]; then
+       if [[ ${datanodes} -ge ${datanode_count} ]]; then
 
          #It's up and running. Let's return from the function.
          echo "$datanodes datanodes are up and registered to the scm"
@@ -61,10 +63,13 @@ wait_for_datanodes(){
 }
 
 ## @description  Starts a docker-compose based test environment
+## @param number of datanodes to start and wait for (default: 3)
 start_docker_env(){
+  local -i datanode_count=${1:-3}
+
   docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${DATANODE_COUNT}"
-  wait_for_datanodes "$COMPOSE_FILE"
+  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}"
+  wait_for_datanodes "$COMPOSE_FILE" "${datanode_count}"
   sleep 10
 }
 
