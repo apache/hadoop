@@ -32,21 +32,28 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
- * Cache implementation for the table, this cache is partial cache, this will
- * be cleaned up, after entries are flushed to DB.
+ * Cache implementation for the table. Depending on the cache clean up policy
+ * this cache will be full cache or partial cache.
+ *
+ * If cache cleanup policy is set as {@link CacheCleanupPolicy#AFTERFLUSH},
+ * this will be a partial cache.
+ *
+ * If cache cleanup policy is set as {@link CacheCleanupPolicy#NEVER},
+ * this will be a full cache.
  */
 @Private
 @Evolving
-public class PartialTableCache<CACHEKEY extends CacheKey,
+public class TableCacheImpl<CACHEKEY extends CacheKey,
     CACHEVALUE extends CacheValue> implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
   private final TreeSet<EpochEntry<CACHEKEY>> epochEntries;
   private ExecutorService executorService;
+  private CacheCleanupPolicy cleanupPolicy;
 
 
 
-  public PartialTableCache() {
+  public TableCacheImpl(CacheCleanupPolicy cleanupPolicy) {
     cache = new ConcurrentHashMap<>();
     epochEntries = new TreeSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
@@ -54,7 +61,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("PartialTableCache Cleanup Thread - %d").build();
     executorService = Executors.newSingleThreadExecutor(build);
-
+    this.cleanupPolicy = cleanupPolicy;
   }
 
   @Override
@@ -70,7 +77,10 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
 
   @Override
   public void cleanup(long epoch) {
-    executorService.submit(() -> evictCache(epoch));
+    // If it is never do nothing.
+    if (cleanupPolicy == CacheCleanupPolicy.AFTERFLUSH) {
+      executorService.submit(() -> evictCache(epoch));
+    }
   }
 
   @Override
@@ -102,5 +112,14 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
         break;
       }
     }
+  }
+
+  /**
+   * Cleanup policies for table cache.
+   */
+  public enum CacheCleanupPolicy {
+    NEVER, // Cache will not be cleaned up. This mean's the table maintains
+    // full cache.
+    AFTERFLUSH // Cache will be cleaned up, once after flushing to DB.
   }
 }

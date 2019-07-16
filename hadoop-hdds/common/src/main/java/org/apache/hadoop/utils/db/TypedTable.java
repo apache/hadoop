@@ -23,9 +23,10 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
-import org.apache.hadoop.utils.db.cache.PartialTableCache;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 import org.apache.hadoop.utils.db.cache.TableCache;
 
 /**
@@ -49,7 +50,17 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   private final TableCache<CacheKey<KEY>, CacheValue<VALUE>> cache;
 
+  private final TableCacheImpl.CacheCleanupPolicy cacheCleanupPolicy;
 
+
+  /**
+   * Create an TypedTable from the raw table.
+   * Default cleanup policy used for the table is cleanup after flush.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   */
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
@@ -58,7 +69,29 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    cache = new PartialTableCache<>();
+    this.cacheCleanupPolicy = TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH;
+    cache = new TableCacheImpl<>(cacheCleanupPolicy);
+  }
+
+  /**
+   * Create an TypedTable from the raw table with specified cleanup policy
+   * for table cache.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   * @param cleanupPolicy
+   */
+  public TypedTable(
+      Table<byte[], byte[]> rawTable,
+      CodecRegistry codecRegistry, Class<KEY> keyType,
+      Class<VALUE> valueType, TableCacheImpl.CacheCleanupPolicy cleanupPolicy) {
+    this.rawTable = rawTable;
+    this.codecRegistry = codecRegistry;
+    this.keyType = keyType;
+    this.valueType = valueType;
+    this.cacheCleanupPolicy = cleanupPolicy;
+    cache = new TableCacheImpl<>(cacheCleanupPolicy);
   }
 
   @Override
@@ -83,9 +116,20 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   @Override
   public boolean isExist(KEY key) throws IOException {
-    CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
-    return (cacheValue != null && cacheValue.getCacheValue() != null) ||
+
+    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.NEVER) {
+      return isExistForCleanupPolicyNever(key);
+    }
+
+    return isExistForCleanupPolicyNever(key) ||
         rawTable.isExist(codecRegistry.asRawData(key));
+  }
+
+  private boolean isExistForCleanupPolicyNever(KEY key) {
+    // If cache cleanup policy is NEVER, entire table is cached. So, no need
+    // to check from DB.
+    CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
+    return (cacheValue != null && cacheValue.getCacheValue() != null);
   }
 
   /**
@@ -104,14 +148,25 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public VALUE get(KEY key) throws IOException {
     // Here the metadata lock will guarantee that cache is not updated for same
     // key during get key.
-    CacheValue< VALUE > cacheValue = cache.get(new CacheKey<>(key));
-    if (cacheValue == null) {
-      // If no cache for the table or if it does not exist in cache get from
-      // RocksDB table.
+
+    // First get from cache. If it has return value.
+    // If it does not have
+    //  If cache cleanup policy is NEVER return null. Because cache here is
+    //  full table data in-memory, so no need to get from underlying rocksdb
+    //  table.
+    //  If cache cleanup policy is AFTERFLUSH return from underlying rocksdb
+    //  table. As it might have been cleaned up from cache, might be there in
+    //  DB.
+    CacheValue<VALUE> cacheValue =
+        Optional.fromNullable(cache.get(new CacheKey<>(key))).orNull();
+    if (cacheValue != null) {
+      return cacheValue.getCacheValue();
+    }
+
+    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTERFLUSH) {
       return getFromTable(key);
     } else {
-      // We have a value in cache, return the value.
-      return cacheValue.getCacheValue();
+      return null;
     }
   }
 
