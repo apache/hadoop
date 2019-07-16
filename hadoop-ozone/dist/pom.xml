@@ -28,7 +28,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.ozone-runner.version>20190617-2</docker.ozone-runner.version>
+    <docker.ozone-runner.version>20190717-1</docker.ozone-runner.version>
   </properties>
 
   <build>
