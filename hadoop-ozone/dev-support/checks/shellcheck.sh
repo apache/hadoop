@@ -19,9 +19,14 @@ cd "$DIR/../../.." || exit 1
 OUTPUT_FILE="$DIR/../../../target/shell-problems.txt"
 mkdir -p "$(dirname "$OUTPUT_FILE")"
 echo "" > "$OUTPUT_FILE"
-find "./hadoop-hdds" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
-find "./hadoop-ozone" -type f -executable | grep -v target | grep -v node_modules | grep -v py | xargs -n1 shellcheck  | tee "$OUTPUT_FILE"
-
+if [[ "$(uname -s)" = "Darwin" ]]; then
+  find hadoop-hdds hadoop-ozone -type f -perm '-500'
+else
+  find hadoop-hdds hadoop-ozone -type f -executable
+fi \
+  | grep -v -e target/ -e node_modules/ -e '\.\(ico\|py\|yml\)$' \
+  | xargs -n1 shellcheck \
+  | tee "$OUTPUT_FILE"
 
 if [ "$(cat "$OUTPUT_FILE")" ]; then
    exit 1
