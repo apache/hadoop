@@ -2193,6 +2193,13 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Retries.RetryTranslated
   public boolean delete(Path f, boolean recursive) throws IOException {
+    if (f.isRoot()) {
+      if (!recursive) {
+        return false;
+      }
+      LOG.debug("Deleting root content recursively");
+    }
+
     try {
       entryPoint(INVOCATION_DELETE);
       boolean outcome = innerDelete(innerGetFileStatus(f, true), recursive);
