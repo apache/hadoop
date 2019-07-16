@@ -227,6 +227,7 @@ public final class OmUtils {
     case RemoveAcl:
     case SetAcl:
     case AddAcl:
+    case PurgeKeys:
       return false;
     default:
       LOG.error("CmdType {} is not categorized as readOnly or not.", cmdType);
@@ -469,5 +470,16 @@ public final class OmUtils {
       throw new IllegalArgumentException("Unable to create path: " + dirFile);
     }
     return dirFile;
+  }
+
+  /**
+   * Returns the DB key name of a deleted key in OM metadata store. The
+   * deleted key name is the <keyName>_<deletionTimestamp>.
+   * @param key Original key name
+   * @param timestamp timestamp of deletion
+   * @return Deleted key name
+   */
+  public static String getDeletedKeyName(String key, long timestamp) {
+    return key + "_" + timestamp;
   }
 }

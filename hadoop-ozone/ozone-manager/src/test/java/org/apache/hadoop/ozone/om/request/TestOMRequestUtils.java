@@ -20,12 +20,14 @@
 package org.apache.hadoop.ozone.om.request;
 
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -240,6 +242,23 @@ public final class TestOMRequestUtils {
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
         .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
+  }
+
+  /**
+   * Deletes key from Key table and adds it to DeletedKeys table.
+   * @return the deletedKey name
+   */
+  public static String deleteKey(String ozoneKey,
+      OMMetadataManager omMetadataManager) throws IOException {
+    // Retrieve the keyInfo
+    OmKeyInfo omKeyInfo = omMetadataManager.getKeyTable().get(ozoneKey);
+
+    // Delete key from KeyTable and put in DeletedKeyTable
+    omMetadataManager.getKeyTable().delete(ozoneKey);
+    String deletedKeyName = OmUtils.getDeletedKeyName(ozoneKey, Time.now());
+    omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
+
+    return deletedKeyName;
   }
 
 }
