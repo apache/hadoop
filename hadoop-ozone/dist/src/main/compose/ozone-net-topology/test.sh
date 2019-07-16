@@ -21,7 +21,7 @@ export COMPOSE_DIR
 # shellcheck source=/dev/null
 source "$COMPOSE_DIR/../testlib.sh"
 
-start_docker_env
+start_docker_env 4
 
 #Due to the limitation of the current auditparser test, it should be the
 #first test in a clean cluster.
