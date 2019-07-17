@@ -51,7 +51,7 @@ public class CacheResult<CACHEVALUE extends CacheValue> {
     NOT_EXIST, // We guarantee that it does not exist. This will be returned
     // when the key does not exist in cache, when cache clean up policy is
     // NEVER.
-    CHECK_IN_TABLE  // This will be returned when the key does not exist in
+    MAY_EXIST  // This will be returned when the key does not exist in
     // cache, when cache clean up policy is MANUAL. So caller need to check
     // if it might exist in it's rocksdb table.
   }

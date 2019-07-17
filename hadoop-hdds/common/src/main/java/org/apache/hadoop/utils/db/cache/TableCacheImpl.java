@@ -119,7 +119,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
     }
   }
 
-  public CacheResult<CACHEVALUE> isExist(CACHEKEY cachekey) {
+  public CacheResult<CACHEVALUE> lookup(CACHEKEY cachekey) {
 
     // TODO: Remove this check once HA and Non-HA code is merged and all
     //  requests are converted to use cache and double buffer.
@@ -129,7 +129,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
     // double buffer and cache.
 
     if (cache.size() == 0) {
-      return new CacheResult<>(CacheResult.CacheStatus.CHECK_IN_TABLE,
+      return new CacheResult<>(CacheResult.CacheStatus.MAY_EXIST,
           null);
     }
 
@@ -138,7 +138,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
       if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
         return new CacheResult<>(CacheResult.CacheStatus.NOT_EXIST, null);
       } else {
-        return new CacheResult<>(CacheResult.CacheStatus.CHECK_IN_TABLE,
+        return new CacheResult<>(CacheResult.CacheStatus.MAY_EXIST,
             null);
       }
     } else {

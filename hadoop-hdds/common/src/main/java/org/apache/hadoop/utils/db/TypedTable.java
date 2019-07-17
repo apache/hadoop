@@ -135,7 +135,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public boolean isExist(KEY key) throws IOException {
 
     CacheResult<CacheValue<VALUE>> cacheResult =
-        cache.isExist(new CacheKey<>(key));
+        cache.lookup(new CacheKey<>(key));
 
     if (cacheResult.getCacheStatus() == EXISTS) {
       return true;
@@ -164,7 +164,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     // key during get key.
 
     CacheResult<CacheValue<VALUE>> cacheResult =
-        cache.isExist(new CacheKey<>(key));
+        cache.lookup(new CacheKey<>(key));
 
     if (cacheResult.getCacheStatus() == EXISTS) {
       return cacheResult.getValue().getCacheValue();

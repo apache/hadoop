@@ -88,10 +88,10 @@ public interface TableCache<CACHEKEY extends CacheKey,
    *
    *  If cache clean up policy is {@link CacheCleanupPolicy#MANUAL} it means
    *  table cache is partial cache. It return's {@link CacheResult} with
-   *  null and status as CHECK_IN_TABLE.
+   *  null and status as MAY_EXIST.
    *
    * @param cachekey
    */
-  CacheResult<CACHEVALUE> isExist(CACHEKEY cachekey);
+  CacheResult<CACHEVALUE> lookup(CACHEKEY cachekey);
 
 }
