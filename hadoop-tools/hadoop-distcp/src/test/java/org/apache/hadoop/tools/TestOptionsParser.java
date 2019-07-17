@@ -802,23 +802,4 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getFiltersFile(), "/tmp/filters.txt");
   }
-
-  @Test
-  public void testParseDeleteSkipTrash() {
-    DistCpOptions options = OptionsParser.parse(new String[] {
-        "-overwrite",
-        "-delete",
-        "-useTrash",
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertTrue("Delete with useTrash.",
-        options.shouldDeleteUseTrash());
-    options = OptionsParser.parse(new String[] {
-        "-overwrite",
-        "-delete",
-        "hdfs://localhost:8020/source/first",
-        "hdfs://localhost:8020/target/"});
-    Assert.assertFalse("Delete does not use trash.",
-        options.shouldDeleteUseTrash());
-  }
 }

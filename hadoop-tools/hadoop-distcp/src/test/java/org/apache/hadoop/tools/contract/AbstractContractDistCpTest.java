@@ -26,7 +26,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
@@ -138,7 +137,6 @@ public abstract class AbstractContractDistCpTest
   public void setup() throws Exception {
     super.setup();
     conf = getContract().getConf();
-    conf.setLong(CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY, 10);
     localFS = FileSystem.getLocal(conf);
     remoteFS = getFileSystem();
     // Test paths are isolated by concrete subclass name and test method name.
@@ -227,13 +225,6 @@ public abstract class AbstractContractDistCpTest
   }
 
   @Test
-  public void testUpdateUseTrashDeepDirectoryStructureToRemote() throws Exception {
-    describe("update a deep directory structure from local to remote");
-    distCpDeepDirectoryStructure(localFS, localDir, remoteFS, remoteDir);
-    distCpUpdateUseTrashDeepDirectoryStructure(remoteDir);
-  }
-
-  @Test
   public void testUpdateDeepDirectoryStructureNoChange() throws Exception {
     describe("update an unchanged directory structure"
         + " from local to remote; expect no copy");
@@ -293,10 +284,6 @@ public abstract class AbstractContractDistCpTest
 
     modifySourceDirectories();
 
-    ContractTestUtils.assertPathsDoNotExist(localFS,
-        "Paths for test are wrong",
-        inputFile1, inputFile3, inputSubDir4);
-
     Job job = distCpUpdate(srcDir, destDir);
 
     Path outputFileNew1 = new Path(outputSubDir2, "newfile1");
@@ -336,73 +323,6 @@ public abstract class AbstractContractDistCpTest
   }
 
   /**
-   * Do a distcp -update -delete -useTrash.
-   * @param destDir output directory used by the initial distcp
-   * @return the distcp job
-   */
-  protected Job distCpUpdateUseTrashDeepDirectoryStructure(final Path destDir)
-      throws Exception {
-    describe("Incremental update with deletion-use-trash of missing files");
-    Path srcDir = inputDir;
-    LOG.info("Source directory = {}, dest={}", srcDir, destDir);
-
-    ContractTestUtils.assertPathsExist(localFS,
-        "Paths for test are wrong",
-        inputFile1, inputFile2, inputFile3, inputFile4, inputFile5);
-
-    modifySourceDirectories();
-    ContractTestUtils.assertPathsDoNotExist(localFS, "deleted right now",
-        inputFile1, inputFile3, inputSubDir4);
-
-    Path trashRootDir = remoteFS.getTrashRoot(null);
-    ContractTestUtils.assertDeleted(remoteFS, trashRootDir, true);
-
-
-    Job job = distCpUpdateDeleteUseTrash(inputDir, inputDirUnderOutputDir);
-    lsR("Updated Remote", remoteFS, destDir);
-
-    ContractTestUtils.assertPathsDoNotExist(remoteFS,
-        "DistCP should have deleted",
-        outputFile1, outputFile3, outputFile4, outputSubDir4);
-    ContractTestUtils.assertPathExists(remoteFS,
-        "Path delete does not use trash", trashRootDir);
-    Path trashFile1 = new Path(trashRootDir,
-        "Current" + outputFile1.toUri().getPath());
-    Path trashFile3 = new Path(trashRootDir,
-        "Current" + outputFile3.toUri().getPath());
-    Path trashFile4 = new Path(trashRootDir,
-        "Current" + outputFile4.toUri().getPath());
-    Path trashFile5 = new Path(trashRootDir,
-        "Current" + outputFile5.toUri().getPath());
-    ContractTestUtils.assertPathsExist(remoteFS,
-        "Path delete does not use trash",
-        trashFile1, trashFile3, trashFile4, trashFile5);
-    return job;
-  }
-
-  /**
-   * Run distcp -update -delete -useTrash.
-   * @param srcDir local source directory
-   * @param destDir remote destination directory.
-   * @return the completed job
-   * @throws Exception any failure.
-   */
-  private Job distCpUpdateDeleteUseTrash(final Path srcDir, final Path destDir)
-      throws Exception {
-    describe("\nDistcp -update from " + srcDir + " to " + destDir);
-    lsR("Local to update", localFS, srcDir);
-    lsR("Remote before update", remoteFS, destDir);
-    return runDistCp(buildWithStandardOptions(
-        new DistCpOptions.Builder(
-            Collections.singletonList(srcDir), destDir)
-            .withDeleteMissing(true)
-            .withDeleteUseTrash(true)
-            .withSyncFolder(true)
-            .withCRC(true)
-            .withOverwrite(false)));
-  }
-
-  /**
    * Update the source directories as various tests expect,
    * including adding a new file.
    * @return the path to the newly created file
@@ -416,11 +336,6 @@ public abstract class AbstractContractDistCpTest
     // add one new file
     Path inputFileNew1 = new Path(inputSubDir2, "newfile1");
     ContractTestUtils.touch(localFS, inputFileNew1);
-
-    ContractTestUtils.assertPathsDoNotExist(localFS, "deleted right now",
-        inputFile1, inputFile3, inputSubDir4);
-    ContractTestUtils.assertPathsExist(localFS, "touched right now",
-        inputFileNew1);
     return inputFileNew1;
   }
 

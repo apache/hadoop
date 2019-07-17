@@ -25,7 +25,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.Trash;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
@@ -454,8 +453,7 @@ public class CopyCommitter extends FileOutputCommitter {
         if (tracker.shouldDelete(trgtFileStatus)) {
           showProgress = true;
           try {
-            boolean result = deletePath(targetFS, targetEntry, conf);
-            if (result) {
+            if (targetFS.delete(targetEntry, true)) {
               // the delete worked. Unless the file is actually missing, this is the
               LOG.info("Deleted " + targetEntry + " - missing at source");
               deletedEntries++;
@@ -469,8 +467,7 @@ public class CopyCommitter extends FileOutputCommitter {
               // For all the filestores which implement the FS spec properly,
               // this means "the file wasn't there".
               // so track but don't worry about it.
-              LOG.info("delete({}) returned false ({}). Consider using " +
-                      "-useTrash option if trash is enabled.",
+              LOG.info("delete({}) returned false ({})",
                   targetEntry, trgtFileStatus);
               missingDeletes++;
             }
@@ -516,17 +513,6 @@ public class CopyCommitter extends FileOutputCommitter {
         formatDuration(deletionEnd - deletionStart));
     LOG.info("Total duration of deletion operation: {}",
         formatDuration(deletionEnd - listingStart));
-  }
-
-  private boolean deletePath(FileSystem targetFS, Path targetEntry,
-                             Configuration conf) throws IOException {
-    if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING_USETRASH,
-        false)) {
-      return Trash.moveToAppropriateTrash(
-          targetFS, targetEntry, conf);
-    } else {
-      return targetFS.delete(targetEntry, true);
-    }
   }
 
   /**
