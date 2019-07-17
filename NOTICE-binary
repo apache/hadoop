@@ -115,9 +115,9 @@ Copyright (c) 2008 Alexander Beider & Stephen P. Morse.
 
 
 Apache Commons Collections
-Copyright 2001-2015 The Apache Software Foundation
+Copyright 2001-2018 The Apache Software Foundation
 
-This product includes software developed by
+This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 
 
@@ -167,6 +167,13 @@ These files are used as test data and test result specifications.
 
 Apache Commons Daemon
 Copyright 1999-2013 The Apache Software Foundation
+
+This product includes software developed by
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Digester
+Copyright 2001-2008 The Apache Software Foundation
 
 This product includes software developed by
 The Apache Software Foundation (http://www.apache.org/).
@@ -280,6 +287,13 @@ The Apache Software Foundation (http://www.apache.org/).
 
 Apache Commons Text
 Copyright 2014-2018 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+Apache Commons Validator
+Copyright 2001-2017 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -824,9 +838,3 @@ Copyright 2009-2018 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
-
-
-joda-time
-
-This product includes software developed by
-Joda.org (http://www.joda.org/).
