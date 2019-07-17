@@ -25,9 +25,12 @@ import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,12 +41,16 @@ import java.util.stream.Collectors;
  */
 public final class Pipeline {
 
+  private static final Logger LOG = LoggerFactory
+      .getLogger(Pipeline.class);
   private final PipelineID id;
   private final ReplicationType type;
   private final ReplicationFactor factor;
 
   private PipelineState state;
   private Map<DatanodeDetails, Long> nodeStatus;
+  // nodes with ordered distance to client
+  private ThreadLocal<List<DatanodeDetails>> nodesInOrder = new ThreadLocal<>();
 
   /**
    * The immutable properties of pipeline object is used in
@@ -112,12 +119,32 @@ public final class Pipeline {
     return nodeStatus.keySet().iterator().next();
   }
 
+  public DatanodeDetails getClosestNode() throws IOException {
+    if (nodesInOrder.get() == null || nodesInOrder.get().isEmpty()) {
+      LOG.debug("Nodes in order is empty, delegate to getFirstNode");
+      return getFirstNode();
+    }
+    return nodesInOrder.get().get(0);
+  }
+
   public boolean isClosed() {
     return state == PipelineState.CLOSED;
   }
 
   public boolean isOpen() {
     return state == PipelineState.OPEN;
+  }
+
+  public void setNodesInOrder(List<DatanodeDetails> nodes) {
+    nodesInOrder.set(nodes);
+  }
+
+  public List<DatanodeDetails> getNodesInOrder() {
+    if (nodesInOrder.get() == null || nodesInOrder.get().isEmpty()) {
+      LOG.debug("Nodes in order is empty, delegate to getNodes");
+      return getNodes();
+    }
+    return nodesInOrder.get();
   }
 
   void reportDatanode(DatanodeDetails dn) throws IOException {
@@ -152,6 +179,22 @@ public final class Pipeline {
         .addAllMembers(nodeStatus.keySet().stream()
             .map(DatanodeDetails::getProtoBufMessage)
             .collect(Collectors.toList()));
+    // To save the message size on wire, only transfer the node order based on
+    // network topology
+    List<DatanodeDetails> nodes = nodesInOrder.get();
+    if (nodes != null && !nodes.isEmpty()) {
+      for (int i = 0; i < nodes.size(); i++) {
+        Iterator<DatanodeDetails> it = nodeStatus.keySet().iterator();
+        for (int j = 0; j < nodeStatus.keySet().size(); j++) {
+          if (it.next().equals(nodes.get(i))) {
+            builder.addMemberOrders(j);
+            break;
+          }
+        }
+      }
+      LOG.info("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
+          nodes);
+    }
     return builder.build();
   }
 
@@ -164,9 +207,9 @@ public final class Pipeline {
         .setState(PipelineState.fromProtobuf(pipeline.getState()))
         .setNodes(pipeline.getMembersList().stream()
             .map(DatanodeDetails::getFromProtoBuf).collect(Collectors.toList()))
+        .setNodesInOrder(pipeline.getMemberOrdersList())
         .build();
   }
-
 
   @Override
   public boolean equals(Object o) {
@@ -228,6 +271,8 @@ public final class Pipeline {
     private ReplicationFactor factor = null;
     private PipelineState state = null;
     private Map<DatanodeDetails, Long> nodeStatus = null;
+    private List<Integer> nodeOrder = null;
+    private List<DatanodeDetails> nodesInOrder = null;
 
     public Builder() {}
 
@@ -237,6 +282,7 @@ public final class Pipeline {
       this.factor = pipeline.factor;
       this.state = pipeline.state;
       this.nodeStatus = pipeline.nodeStatus;
+      this.nodesInOrder = pipeline.nodesInOrder.get();
     }
 
     public Builder setId(PipelineID id1) {
@@ -265,13 +311,42 @@ public final class Pipeline {
       return this;
     }
 
+    public Builder setNodesInOrder(List<Integer> orders) {
+      this.nodeOrder = orders;
+      return this;
+    }
+
     public Pipeline build() {
       Preconditions.checkNotNull(id);
       Preconditions.checkNotNull(type);
       Preconditions.checkNotNull(factor);
       Preconditions.checkNotNull(state);
       Preconditions.checkNotNull(nodeStatus);
-      return new Pipeline(id, type, factor, state, nodeStatus);
+      Pipeline pipeline = new Pipeline(id, type, factor, state, nodeStatus);
+
+      if (nodeOrder != null && !nodeOrder.isEmpty()) {
+        // This branch is for build from ProtoBuf
+        List<DatanodeDetails> nodesWithOrder = new ArrayList<>();
+        for(int i = 0; i < nodeOrder.size(); i++) {
+          int nodeIndex = nodeOrder.get(i);
+          Iterator<DatanodeDetails> it = nodeStatus.keySet().iterator();
+          while(it.hasNext() && nodeIndex >= 0) {
+            DatanodeDetails node = it.next();
+            if (nodeIndex == 0) {
+              nodesWithOrder.add(node);
+              break;
+            }
+            nodeIndex--;
+          }
+        }
+        LOG.info("Deserialize nodesInOrder {} in pipeline {}", nodesWithOrder,
+            id.toString());
+        pipeline.setNodesInOrder(nodesWithOrder);
+      } else if (nodesInOrder != null){
+        // This branch is for pipeline clone
+        pipeline.setNodesInOrder(nodesInOrder);
+      }
+      return pipeline;
     }
   }
 

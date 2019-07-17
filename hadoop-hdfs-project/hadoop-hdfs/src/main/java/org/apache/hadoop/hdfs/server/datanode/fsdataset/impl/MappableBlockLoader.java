@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.util.DataChecksum;
 
 import java.io.BufferedInputStream;
@@ -43,7 +44,7 @@ public abstract class MappableBlockLoader {
   /**
    * Initialize a specific MappableBlockLoader.
    */
-  abstract void initialize(FsDatasetCache cacheManager) throws IOException;
+  abstract CacheStats initialize(DNConf dnConf) throws IOException;
 
   /**
    * Load the block.

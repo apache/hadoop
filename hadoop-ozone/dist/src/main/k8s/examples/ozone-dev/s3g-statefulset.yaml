@@ -39,9 +39,11 @@ spec:
         args:
         - ozone
         - s3g
-        envFrom:
-        - configMapRef:
-            name: config
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 9878
+          initialDelaySeconds: 30
         env:
         - name: JAEGER_SAMPLER_TYPE
           value: probabilistic
@@ -52,6 +54,9 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
+        envFrom:
+        - configMapRef:
+            name: config
       volumes:
       - name: data
         emptyDir: {}

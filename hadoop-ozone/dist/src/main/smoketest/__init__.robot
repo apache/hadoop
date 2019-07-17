@@ -15,4 +15,4 @@
 *** Settings ***
 Documentation       Smoketest ozone secure cluster
 Resource            commonlib.robot
-Suite Setup         Run Keyword if    '${SECURITY_ENABLED}' == 'true'     Kinit test user
+Suite Setup         Run Keyword if    '${SECURITY_ENABLED}' == 'true'    Kinit test user     testuser     testuser.keytab

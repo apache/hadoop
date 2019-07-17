@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.util.resource.ResourceCalculator;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.RMWSConsts;
@@ -79,7 +80,8 @@ public class ActivitiesManager extends AbstractService {
   private long activitiesCleanupIntervalMs;
   private long schedulerActivitiesTTL;
   private long appActivitiesTTL;
-  private int appActivitiesMaxQueueLength;
+  private volatile int appActivitiesMaxQueueLength;
+  private int configuredAppActivitiesMaxQueueLength;
   private final RMContext rmContext;
   private volatile boolean stopped;
   private ThreadLocal<DiagnosticsCollectorManager> diagnosticCollectorManager;
@@ -114,10 +116,11 @@ public class ActivitiesManager extends AbstractService {
         YarnConfiguration.RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS,
         YarnConfiguration.
             DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_TTL_MS);
-    appActivitiesMaxQueueLength = conf.getInt(YarnConfiguration.
+    configuredAppActivitiesMaxQueueLength = conf.getInt(YarnConfiguration.
             RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH,
         YarnConfiguration.
             DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH);
+    appActivitiesMaxQueueLength = configuredAppActivitiesMaxQueueLength;
   }
 
   public AppActivitiesInfo getAppActivitiesInfo(ApplicationId applicationId,
@@ -228,6 +231,44 @@ public class ActivitiesManager extends AbstractService {
     recordingAppActivitiesUntilSpecifiedTime.put(applicationId, endTS);
   }
 
+  private void dynamicallyUpdateAppActivitiesMaxQueueLengthIfNeeded() {
+    if (rmContext.getRMNodes() == null) {
+      return;
+    }
+    if (rmContext.getScheduler() instanceof CapacityScheduler) {
+      CapacityScheduler cs = (CapacityScheduler) rmContext.getScheduler();
+      if (!cs.isMultiNodePlacementEnabled()) {
+        int numNodes = rmContext.getRMNodes().size();
+        int newAppActivitiesMaxQueueLength;
+        int numAsyncSchedulerThreads = cs.getNumAsyncSchedulerThreads();
+        if (numAsyncSchedulerThreads > 0) {
+          newAppActivitiesMaxQueueLength =
+              Math.max(configuredAppActivitiesMaxQueueLength,
+                  numNodes * numAsyncSchedulerThreads);
+        } else {
+          newAppActivitiesMaxQueueLength =
+              Math.max(configuredAppActivitiesMaxQueueLength,
+                  (int) (numNodes * 1.2));
+        }
+        if (appActivitiesMaxQueueLength != newAppActivitiesMaxQueueLength) {
+          LOG.info("Update max queue length of app activities from {} to {},"
+                  + " configured={}, numNodes={}, numAsyncSchedulerThreads={}"
+                  + " when multi-node placement disabled.",
+              appActivitiesMaxQueueLength, newAppActivitiesMaxQueueLength,
+              configuredAppActivitiesMaxQueueLength, numNodes,
+              numAsyncSchedulerThreads);
+          appActivitiesMaxQueueLength = newAppActivitiesMaxQueueLength;
+        }
+      } else if (appActivitiesMaxQueueLength
+          != configuredAppActivitiesMaxQueueLength) {
+        LOG.info("Update max queue length of app activities from {} to {}"
+                + " when multi-node placement enabled.",
+            appActivitiesMaxQueueLength, configuredAppActivitiesMaxQueueLength);
+        appActivitiesMaxQueueLength = configuredAppActivitiesMaxQueueLength;
+      }
+    }
+  }
+
   @Override
   protected void serviceStart() throws Exception {
     cleanUpThread = new Thread(new Runnable() {
@@ -277,6 +318,8 @@ public class ActivitiesManager extends AbstractService {
 
           LOG.debug("Remaining apps in app activities cache: {}",
               completedAppAllocations.keySet());
+          // dynamically update max queue length of app activities if needed
+          dynamicallyUpdateAppActivitiesMaxQueueLengthIfNeeded();
           try {
             Thread.sleep(activitiesCleanupIntervalMs);
           } catch (InterruptedException e) {
@@ -566,5 +609,10 @@ public class ActivitiesManager extends AbstractService {
       sb.append(DIAGNOSTICS_DETAILS_SEPARATOR).append(dc.getDetails());
     }
     return sb.toString();
+  }
+
+  @VisibleForTesting
+  public int getAppActivitiesMaxQueueLength() {
+    return appActivitiesMaxQueueLength;
   }
 }

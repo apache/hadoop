@@ -55,7 +55,6 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL;
 
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_LEVELDB;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_METADATA_STORE_IMPL_ROCKSDB;
-import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -101,7 +100,7 @@ import static org.junit.Assert.assertTrue;
     int deletedBlocks = 1;
     int normalBlocks = 3;
     int chunksPerBlock = 4;
-    boolean corruption = false;
+    boolean valid = false;
 
     // test Closed Container
     createContainerWithBlocks(containerID, normalBlocks, deletedBlocks, 65536,
@@ -115,14 +114,14 @@ import static org.junit.Assert.assertTrue;
             containerID);
 
     // first run checks on a Open Container
-    corruption = kvCheck.fastCheck();
-    assertFalse(corruption);
+    valid = kvCheck.fastCheck();
+    assertTrue(valid);
 
     container.close();
 
     // next run checks on a Closed Container
-    corruption = kvCheck.fullCheck();
-    assertFalse(corruption);
+    valid = kvCheck.fullCheck();
+    assertTrue(valid);
   }
 
   /**

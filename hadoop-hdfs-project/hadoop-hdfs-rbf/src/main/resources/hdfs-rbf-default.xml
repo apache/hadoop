@@ -346,6 +346,16 @@
   </property>
 
   <property>
+    <name>dfs.federation.router.store.membership.expiration.deletion</name>
+    <value>-1</value>
+    <description>
+      Deletion time in milliseconds for a membership record. If an expired
+      membership record exists beyond this time, it will be deleted. If this
+      value is negative, the deletion is disabled.
+    </description>
+  </property>
+
+  <property>
     <name>dfs.federation.router.heartbeat.enable</name>
     <value>true</value>
     <description>
@@ -388,6 +398,16 @@
       Expiration time in milliseconds for a router state record. This setting
       supports multiple time unit suffixes as described in
       dfs.federation.router.quota-cache.update.interval.
+    </description>
+  </property>
+
+  <property>
+    <name>dfs.federation.router.store.router.expiration.deletion</name>
+    <value>-1</value>
+    <description>
+      Deletion time in milliseconds for a router state record. If an expired
+      router state record exists beyond this time, it will be deleted. If this
+      value is negative, the deletion is disabled.
     </description>
   </property>
 

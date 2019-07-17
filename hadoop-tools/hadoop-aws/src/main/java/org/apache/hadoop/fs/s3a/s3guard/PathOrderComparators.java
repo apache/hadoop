@@ -115,12 +115,12 @@ final class PathOrderComparators {
   /**
    * Compare on path status.
    */
-  private static final class PathMetadataComparator implements
+  static final class PathMetadataComparator implements
       Comparator<PathMetadata>, Serializable {
 
     private final Comparator<Path> inner;
 
-    private PathMetadataComparator(final Comparator<Path> inner) {
+    PathMetadataComparator(final Comparator<Path> inner) {
       this.inner = inner;
     }
 

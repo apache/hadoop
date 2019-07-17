@@ -90,10 +90,11 @@ public final class RatisPipelineUtils {
         new SecurityConfig(ozoneConf));
     final TimeDuration requestTimeout =
         RatisHelper.getClientRequestTimeout(ozoneConf);
-    RaftClient client = RatisHelper
+    try(RaftClient client = RatisHelper
         .newRaftClient(SupportedRpcType.valueOfIgnoreCase(rpcType), p,
-            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout);
-    client
-        .groupRemove(RaftGroupId.valueOf(pipelineID.getId()), true, p.getId());
+            retryPolicy, maxOutstandingRequests, tlsConfig, requestTimeout)) {
+      client.groupRemove(RaftGroupId.valueOf(pipelineID.getId()),
+          true, p.getId());
+    }
   }
 }

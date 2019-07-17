@@ -21,7 +21,9 @@ package org.apache.hadoop.ozone.om.response.key;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
+import org.apache.hadoop.util.Time;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -50,11 +52,15 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
             .setCmdType(OzoneManagerProtocolProtos.Type.DeleteKey)
             .build();
 
+    long deletionTime = Time.now();
+
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse);
+        new OMKeyDeleteResponse(omKeyInfo, deletionTime, omResponse);
 
     String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
         keyName);
+    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(
+        ozoneKey, deletionTime);
 
     TestOMRequestUtils.addKeyToTable(false, volumeName, bucketName, keyName,
         clientID, replicationType, replicationFactor, omMetadataManager);
@@ -69,7 +75,8 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
 
     // As default key entry does not have any blocks, it should not be in
     // deletedKeyTable.
-    Assert.assertFalse(omMetadataManager.getDeletedTable().isExist(ozoneKey));
+    Assert.assertFalse(omMetadataManager.getDeletedTable().isExist(
+        deletedOzoneKeyName));
   }
 
   @Test
@@ -110,9 +117,13 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setCmdType(OzoneManagerProtocolProtos.Type.DeleteKey)
             .build();
+    long deletionTime = Time.now();
 
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse);
+        new OMKeyDeleteResponse(omKeyInfo, deletionTime, omResponse);
+
+    String deletedOzoneKeyName = OmUtils.getDeletedKeyName(
+        ozoneKey, deletionTime);
 
     Assert.assertTrue(omMetadataManager.getKeyTable().isExist(ozoneKey));
     omKeyDeleteResponse.addToDBBatch(omMetadataManager, batchOperation);
@@ -123,7 +134,8 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
     Assert.assertFalse(omMetadataManager.getKeyTable().isExist(ozoneKey));
 
     // Key has blocks, it should not be in deletedKeyTable.
-    Assert.assertTrue(omMetadataManager.getDeletedTable().isExist(ozoneKey));
+    Assert.assertTrue(omMetadataManager.getDeletedTable().isExist(
+        deletedOzoneKeyName));
   }
 
 
@@ -140,7 +152,7 @@ public class TestOMKeyDeleteResponse extends TestOMKeyResponse {
             .build();
 
     OMKeyDeleteResponse omKeyDeleteResponse =
-        new OMKeyDeleteResponse(omKeyInfo, omResponse);
+        new OMKeyDeleteResponse(omKeyInfo, Time.now(), omResponse);
 
     String ozoneKey = omMetadataManager.getOzoneKey(volumeName, bucketName,
         keyName);

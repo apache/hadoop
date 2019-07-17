@@ -29,32 +29,34 @@
             {{em-table-simple-status-cell content=model.selectedQueue.state}}
           </div>
           {{/if}}
-          <div class="top-1">
-            <span class="yarn-label secondary">
-              <span class="label-key">configured capacity</span>
-              <span class="label-value">{{model.selectedQueue.capacity}}%</span>
-            </span>
-            <span class="yarn-label secondary">
-              <span class="label-key">configured max capacity</span>
-              <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
-            </span>
-            {{#if model.selectedQueue.isLeafQueue}}
-            <span class="yarn-label secondary">
-              <span class="label-key">user limit</span>
-              <span class="label-value">{{model.selectedQueue.userLimit}}%</span>
-            </span>
-            <span class="yarn-label secondary">
-              <span class="label-key">user limit factor</span>
-              <span class="label-value">{{model.selectedQueue.userLimitFactor}}</span>
-            </span>
-            {{/if}}
-          </div>
+          {{#if (eq model.queues.firstObject.type "capacity")}}
+              <div class="top-1">
+                <span class="yarn-label secondary">
+                  <span class="label-key">configured capacity</span>
+                  <span class="label-value">{{model.selectedQueue.capacity}}%</span>
+                </span>
+                <span class="yarn-label secondary">
+                  <span class="label-key">configured max capacity</span>
+                  <span class="label-value">{{model.selectedQueue.maxCapacity}}%</span>
+                </span>
+                {{#if model.selectedQueue.isLeafQueue}}
+                <span class="yarn-label secondary">
+                  <span class="label-key">user limit</span>
+                  <span class="label-value">{{model.selectedQueue.userLimit}}%</span>
+                </span>
+                <span class="yarn-label secondary">
+                  <span class="label-key">user limit factor</span>
+                  <span class="label-value">{{model.selectedQueue.userLimitFactor}}</span>
+                </span>
+                {{/if}}
+              </div>
+          {{/if}}
         </div>
         <div class="flex-right">
           {{#each model.selectedQueue.capacitiesBarChartData as |item|}}
             <span class="yarn-label primary">
               <span class="label-key"> {{lower item.label}}</span>
-              <span class="label-value">{{item.value}}%</span>
+                <span class="label-value">{{item.value}}{{#if (eq model.queues.firstObject.type "fair")}} MB{{else}}%{{/if}}</span>
             </span>
           {{/each}}
         </div>

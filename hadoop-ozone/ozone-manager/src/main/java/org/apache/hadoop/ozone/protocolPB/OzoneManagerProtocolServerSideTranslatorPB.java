@@ -85,7 +85,6 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
         if (OmUtils.isReadOnly(request)) {
           return submitReadRequestToOM(request);
         } else {
-          // PreExecute if needed.
           if (omRatisServer.isLeader()) {
             try {
               OMClientRequest omClientRequest =
@@ -93,7 +92,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
               if (omClientRequest != null) {
                 request = omClientRequest.preExecute(ozoneManager);
               }
-            } catch (IOException ex) {
+            } catch(IOException ex) {
               // As some of the preExecute returns error. So handle here.
               return createErrorResponse(request, ex);
             }

@@ -183,6 +183,12 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
   }
 
   @Override
+  public List<DatanodeDetails> sortDatanodes(List<String> nodes,
+      String clientMachine) throws IOException {
+    return null;
+  }
+
+  @Override
   public void close() throws IOException {
 
   }

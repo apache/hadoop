@@ -293,11 +293,12 @@ public final class PathMetadataDynamoDBTranslation {
   @VisibleForTesting
   public static String pathToParentKey(Path path) {
     Preconditions.checkNotNull(path);
-    Preconditions.checkArgument(path.isUriPathAbsolute(), "Path not absolute");
+    Preconditions.checkArgument(path.isUriPathAbsolute(),
+        "Path not absolute: '%s'", path);
     URI uri = path.toUri();
     String bucket = uri.getHost();
     Preconditions.checkArgument(!StringUtils.isEmpty(bucket),
-        "Path missing bucket");
+        "Path missing bucket %s", path);
     String pKey = "/" + bucket + uri.getPath();
 
     // Strip trailing slash
@@ -363,4 +364,38 @@ public final class PathMetadataDynamoDBTranslation {
         .collect(Collectors.toList());
   }
 
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String itemPrimaryKeyToString(Item item) {
+    String parent = item.getString(PARENT);
+    String child = item.getString(CHILD);
+    return "s3a://" + parent + "/" + child;
+  }
+  /**
+   * Convert an item's (parent, child) key to a string value
+   * for logging. There is no validation of the item.
+   * @param item item.
+   * @return an s3a:// prefixed string.
+   */
+  static String primaryKeyToString(PrimaryKey item) {
+    Collection<KeyAttribute> c = item.getComponents();
+    String parent = "";
+    String child = "";
+    for (KeyAttribute attr : c) {
+      switch (attr.getName()) {
+      case PARENT:
+        parent = attr.getValue().toString();
+        break;
+      case CHILD:
+        child = attr.getValue().toString();
+        break;
+      default:
+      }
+    }
+    return "s3a://" + parent + "/" + child;
+  }
 }

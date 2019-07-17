@@ -121,6 +121,11 @@ public abstract class Handler {
       throws IOException;
 
   /**
+   * Stop the Handler.
+   */
+  public abstract void stop();
+
+  /**
    * Marks the container for closing. Moves the container to CLOSING state.
    *
    * @param container container to update

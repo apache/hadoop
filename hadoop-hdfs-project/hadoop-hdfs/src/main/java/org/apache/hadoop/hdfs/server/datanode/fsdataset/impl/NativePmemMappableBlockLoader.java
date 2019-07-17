@@ -24,6 +24,7 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdfs.ExtendedBlockId;
 import org.apache.hadoop.hdfs.server.datanode.BlockMetadataHeader;
+import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.io.nativeio.NativeIO.POSIX;
 import org.apache.hadoop.util.DataChecksum;
@@ -47,8 +48,8 @@ public class NativePmemMappableBlockLoader extends PmemMappableBlockLoader {
       LoggerFactory.getLogger(NativePmemMappableBlockLoader.class);
 
   @Override
-  void initialize(FsDatasetCache cacheManager) throws IOException {
-    super.initialize(cacheManager);
+  CacheStats initialize(DNConf dnConf) throws IOException {
+    return super.initialize(dnConf);
   }
 
   /**

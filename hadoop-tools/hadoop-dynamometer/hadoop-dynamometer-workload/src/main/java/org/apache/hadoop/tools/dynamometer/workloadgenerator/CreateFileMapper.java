@@ -32,8 +32,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 /**
  * CreateFileMapper continuously creates 1 byte files for the specified duration
  * to increase the number of file objects on the NN.
- *
- * <p/>Configuration options available:
+ * <p>
+ * Configuration options available:
  * <ul>
  *   <li>{@value NUM_MAPPERS_KEY} (required): Number of mappers to launch.</li>
  *   <li>{@value DURATION_MIN_KEY} (required): Number of minutes to induce

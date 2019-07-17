@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -88,7 +89,8 @@ public class ITestS3AMetadataPersistenceException extends AbstractS3ATestBase {
     ioException = new IOException();
     IOExceptionMetadataStore metadataStore =
         new IOExceptionMetadataStore(ioException);
-    metadataStore.initialize(getConfiguration());
+    metadataStore.initialize(getConfiguration(),
+        new S3Guard.TtlTimeProvider(getConfiguration()));
     fs.setMetadataStore(metadataStore);
   }
 

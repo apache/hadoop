@@ -27,6 +27,7 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
+import org.apache.hadoop.ozone.om.lock.OzoneManagerLock;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.DBStore;
@@ -98,6 +99,17 @@ public interface OMMetadataManager {
    */
 
   String getOzoneKey(String volume, String bucket, String key);
+
+  /**
+   * Given a volume, bucket and a key, return the corresponding DB directory
+   * key.
+   *
+   * @param volume - volume name
+   * @param bucket - bucket name
+   * @param key    - key name
+   * @return DB directory key as String.
+   */
+  String getOzoneDirKey(String volume, String bucket, String key);
 
 
   /**

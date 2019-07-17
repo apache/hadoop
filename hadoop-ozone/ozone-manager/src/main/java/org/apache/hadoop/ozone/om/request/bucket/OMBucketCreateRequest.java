@@ -58,6 +58,8 @@ import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.VOLUME_LOCK;
+import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CryptoProtocolVersionProto.ENCRYPTION_ZONES;
 
@@ -144,10 +146,12 @@ public class OMBucketCreateRequest extends OMClientRequest {
     String bucketKey = metadataManager.getBucketKey(volumeName, bucketName);
 
     IOException exception = null;
-    metadataManager.getLock().acquireVolumeLock(volumeName);
-    metadataManager.getLock().acquireBucketLock(volumeName, bucketName);
-    try {
+    boolean acquiredBucketLock = false;
+    metadataManager.getLock().acquireLock(VOLUME_LOCK, volumeName);
 
+    try {
+      acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
       //Check if the volume exists
       if (metadataManager.getVolumeTable().get(volumeKey) == null) {
         LOG.debug("volume: {} not found ", volumeName);
@@ -169,8 +173,11 @@ public class OMBucketCreateRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      metadataManager.getLock().releaseBucketLock(volumeName, bucketName);
-      metadataManager.getLock().releaseVolumeLock(volumeName);
+      if (acquiredBucketLock) {
+        metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
+      metadataManager.getLock().releaseLock(VOLUME_LOCK, volumeName);
     }
 
     // Performing audit logging outside of the lock.

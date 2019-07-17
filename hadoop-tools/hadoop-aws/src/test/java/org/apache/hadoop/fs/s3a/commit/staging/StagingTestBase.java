@@ -19,6 +19,7 @@
 package org.apache.hadoop.fs.s3a.commit.staging;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -55,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
@@ -196,9 +198,34 @@ public class StagingTestBase {
     when(mockS3.exists(path)).thenReturn(true);
   }
 
+  public static void pathIsDirectory(FileSystem mockS3, Path path)
+      throws IOException {
+    hasFileStatus(mockS3, path,
+        new FileStatus(0, true, 0, 0, 0, path));
+  }
+
+  public static void pathIsFile(FileSystem mockS3, Path path)
+      throws IOException {
+    pathExists(mockS3, path);
+    hasFileStatus(mockS3, path,
+        new FileStatus(0, false, 0, 0, 0, path));
+  }
+
   public static void pathDoesNotExist(FileSystem mockS3, Path path)
       throws IOException {
     when(mockS3.exists(path)).thenReturn(false);
+    when(mockS3.getFileStatus(path)).thenThrow(
+        new FileNotFoundException("mock fnfe of " + path));
+  }
+
+  public static void hasFileStatus(FileSystem mockS3,
+      Path path, FileStatus status) throws IOException {
+    when(mockS3.getFileStatus(path)).thenReturn(status);
+  }
+
+  public static void mkdirsHasOutcome(FileSystem mockS3,
+      Path path, boolean outcome) throws IOException {
+    when(mockS3.mkdirs(path)).thenReturn(outcome);
   }
 
   public static void canDelete(FileSystem mockS3, String... children)
@@ -221,7 +248,12 @@ public class StagingTestBase {
 
   public static void verifyExistenceChecked(FileSystem mockS3, Path path)
       throws IOException {
-    verify(mockS3).exists(path);
+    verify(mockS3).getFileStatus(path);
+  }
+
+  public static void verifyMkdirsInvoked(FileSystem mockS3, Path path)
+      throws IOException {
+    verify(mockS3).mkdirs(path);
   }
 
   /**

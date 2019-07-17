@@ -295,7 +295,7 @@ public class TestBuckets {
     OzoneVolume vol = protocol.getVolumeDetails(volumeName);
     String[] acls = {"user:frodo:rw", "user:samwise:rw"};
     List<OzoneAcl> aclList =
-        Arrays.stream(acls).map(OzoneAcl::parseAcl)
+        Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
             .collect(Collectors.toList());
 
     long currentTime = Time.now();

@@ -16,23 +16,40 @@
 -->
 {{ partial "header.html" . }}
 
-  <body>
+<body>
 
-{{ partial "navbar.html" . }}
+  {{ partial "navbar.html" . }}
 
-    <div class="container-fluid">
-      <div class="row">
-        {{ partial "sidebar.html" . }}
-        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
-            <h1>{{ .Title }}</h1>
-            <div class="col-md-9">
-              {{ .Content }}
-            </div>
+  <div class="container-fluid">
+    <div class="row">
+      {{ partial "sidebar.html" . }}
+      <div class="col-sm-10 col-sm-offset-2 col-md-10 col-md-offset-2 main">
+
+
+
+        <div class="col-md-9">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                  <li class="breadcrumb-item"><a href="/">Home</a></li>
+                  <li class="breadcrumb-item" aria-current="page"><a href="{{.CurrentSection.Permalink}}">{{.CurrentSection.Title}}</a></li>
+                  <li class="breadcrumb-item active" aria-current="page">{{ .Title }}</li>
+                </ol>
+              </nav>
+
+            <h1>{{.Title}}</h1>
+
+          {{ .Content }}
+
+          {{ with .PrevInSection }}
+          <a class="btn  btn-success btn-lg" href="{{ .Permalink }}">Next >></a>
+          {{ end }}
         </div>
       </div>
     </div>
+  </div>
 
-{{ partial "footer.html" . }}
+  {{ partial "footer.html" . }}
 
-  </body>
+</body>
+
 </html>

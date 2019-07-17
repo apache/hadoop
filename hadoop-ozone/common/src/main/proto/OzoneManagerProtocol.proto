@@ -60,7 +60,6 @@ enum Type {
   ListKeys = 35;
   CommitKey = 36;
   AllocateBlock = 37;
-  ApplyCreateKey = 38;
 
   CreateS3Bucket = 41;
   DeleteS3Bucket = 42;
@@ -92,6 +91,7 @@ enum Type {
   SetAcl = 77;
   GetAcl = 78;
 
+  PurgeKeys = 81;
 }
 
 message OMRequest {
@@ -126,8 +126,6 @@ message OMRequest {
   optional ListKeysRequest                  listKeysRequest                = 35;
   optional CommitKeyRequest                 commitKeyRequest               = 36;
   optional AllocateBlockRequest             allocateBlockRequest           = 37;
-  optional ApplyCreateKeyRequest            applyCreateKeyRequest          = 38;
-
 
   optional S3CreateBucketRequest            createS3BucketRequest          = 41;
   optional S3DeleteBucketRequest            deleteS3BucketRequest          = 42;
@@ -157,6 +155,8 @@ message OMRequest {
   optional RemoveAclRequest                 removeAclRequest               = 76;
   optional SetAclRequest                    setAclRequest                  = 77;
   optional GetAclRequest                    getAclRequest                  = 78;
+
+  optional PurgeKeysRequest                 purgeKeysRequest               = 81;
 }
 
 message OMResponse {
@@ -222,6 +222,8 @@ message OMResponse {
   optional RemoveAclResponse                 removeAclResponse             = 76;
   optional SetAclResponse                   setAclResponse                 = 77;
   optional GetAclResponse                    getAclResponse                = 78;
+
+  optional PurgeKeysResponse                  purgeKeysResponse            = 81;
 }
 
 enum Status {
@@ -510,20 +512,15 @@ message OzoneAclInfo {
         CLIENT_IP = 5;
     }
 
-    enum OzoneAclRights {
-        READ = 1;
-        WRITE = 2;
-        CREATE = 3;
-        LIST = 4;
-        DELETE = 5;
-        READ_ACL = 6;
-        WRITE_ACL = 7;
-        ALL = 8;
-        NONE = 9;
+    enum OzoneAclScope {
+      ACCESS = 0;
+      DEFAULT = 1;
     }
+
     required OzoneAclType type = 1;
     required string name = 2;
-    repeated OzoneAclRights rights = 3;
+    required bytes rights = 3;
+    required OzoneAclScope aclScope = 4 [default = ACCESS];
 }
 
 message GetAclRequest {
@@ -687,6 +684,9 @@ message CreateFileRequest {
     required KeyArgs keyArgs = 1;
     required bool isRecursive = 2;
     required bool isOverwrite = 3;
+    // Set in OM HA during preExecute step. This way all OM's use same ID in
+    // OM HA.
+    optional uint64 clientID = 4;
 }
 
 message CreateFileResponse {
@@ -733,11 +733,6 @@ message CreateKeyResponse {
     optional uint64 openVersion = 4;
 }
 
-message ApplyCreateKeyRequest {
-    required CreateKeyRequest createKeyRequest = 1;
-    required CreateKeyResponse createKeyResponse = 2;
-}
-
 message LookupKeyRequest {
     required KeyArgs keyArgs = 1;
 }
@@ -772,6 +767,14 @@ message DeleteKeyResponse {
     // (similar to a cookie).
     optional uint64 ID = 3;
     optional uint64 openVersion = 4;
+}
+
+message PurgeKeysRequest {
+    repeated string keys = 1;
+}
+
+message PurgeKeysResponse {
+
 }
 
 message OMTokenProto {

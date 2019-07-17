@@ -21,26 +21,6 @@ theme: "ozonedoc"
 pygmentsCodeFences: true
 uglyurls: true
 relativeURLs: true
-
-menu:
-  main:
-  - identifier: Starting
-    name: "Getting Started"
-    title: "Getting Started"
-    url: runningviadocker.html
-    weight: 1
-  - identifier: Client
-    name: Client
-    title: Client
-    url: commandshell.html
-    weight: 2
-  - identifier: Tools
-    name: Tools
-    title: Tools
-    url: dozone.html
-    weight: 3
-  - identifier: Recipes
-    name: Recipes
-    title: Recipes
-    url: prometheus.html
-    weight: 4
+disableKinds:
+- taxonomy
+- taxonomyTerm
