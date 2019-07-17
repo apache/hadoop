@@ -25,10 +25,15 @@ import java.util.Map;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheResult;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 import org.apache.hadoop.utils.db.cache.TableCache;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl.CacheCleanupPolicy;
 
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.EXISTS;
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.NOT_EXIST;
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.CHECK_IN_TABLE;
 /**
  * Strongly typed table implementation.
  * <p>
@@ -50,12 +55,12 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   private final TableCache<CacheKey<KEY>, CacheValue<VALUE>> cache;
 
-  private final TableCacheImpl.CacheCleanupPolicy cacheCleanupPolicy;
-
+  private final static long EPOCH_DEFAULT = -1L;
 
   /**
    * Create an TypedTable from the raw table.
-   * Default cleanup policy used for the table is cleanup after flush.
+   * Default cleanup policy used for the table is
+   * {@link CacheCleanupPolicy#MANUAL}.
    * @param rawTable
    * @param codecRegistry
    * @param keyType
@@ -69,8 +74,7 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    this.cacheCleanupPolicy = TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH;
-    cache = new TableCacheImpl<>(cacheCleanupPolicy);
+    cache = new TableCacheImpl<>(TableCacheImpl.CacheCleanupPolicy.MANUAL);
   }
 
   /**
@@ -85,13 +89,27 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
-      Class<VALUE> valueType, TableCacheImpl.CacheCleanupPolicy cleanupPolicy) {
+      Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException {
     this.rawTable = rawTable;
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    this.cacheCleanupPolicy = cleanupPolicy;
-    cache = new TableCacheImpl<>(cacheCleanupPolicy);
+    cache = new TableCacheImpl<>(cleanupPolicy);
+
+    if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+      //fill cache
+      try(TableIterator<KEY, ? extends KeyValue<KEY, VALUE>> tableIterator =
+              iterator()) {
+        KeyValue<KEY, VALUE> kv = tableIterator.next();
+
+        // We should build cache after OM restart when clean up policy is NEVER.
+        // Setting epoch value -1, so that when it is marked for delete, this
+        // will be considered for cleanup.
+        cache.put(new CacheKey<>(kv.getKey()),
+            new CacheValue<>(Optional.of(kv.getValue()), EPOCH_DEFAULT));
+      }
+    }
   }
 
   @Override
@@ -117,19 +135,16 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   @Override
   public boolean isExist(KEY key) throws IOException {
 
-    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.NEVER) {
-      return isExistForCleanupPolicyNever(key);
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.isExist(new CacheKey<>(key));
+
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return true;
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      return false;
+    } else {
+      return rawTable.isExist(codecRegistry.asRawData(key));
     }
-
-    return isExistForCleanupPolicyNever(key) ||
-        rawTable.isExist(codecRegistry.asRawData(key));
-  }
-
-  private boolean isExistForCleanupPolicyNever(KEY key) {
-    // If cache cleanup policy is NEVER, entire table is cached. So, no need
-    // to check from DB.
-    CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
-    return (cacheValue != null && cacheValue.getCacheValue() != null);
   }
 
   /**
@@ -149,24 +164,15 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
     // Here the metadata lock will guarantee that cache is not updated for same
     // key during get key.
 
-    // First get from cache. If it has return value.
-    // If it does not have
-    //  If cache cleanup policy is NEVER return null. Because cache here is
-    //  full table data in-memory, so no need to get from underlying rocksdb
-    //  table.
-    //  If cache cleanup policy is AFTER_FLUSH return from underlying rocksdb
-    //  table. As it might have been cleaned up from cache, might be there in
-    //  DB.
-    CacheValue<VALUE> cacheValue =
-        Optional.fromNullable(cache.get(new CacheKey<>(key))).orNull();
-    if (cacheValue != null) {
-      return cacheValue.getCacheValue();
-    }
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.isExist(new CacheKey<>(key));
 
-    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.AFTER_FLUSH) {
-      return getFromTable(key);
-    } else {
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return cacheResult.getValue().getCacheValue();
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
       return null;
+    } else {
+      return getFromTable(key);
     }
   }
 
