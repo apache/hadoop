@@ -178,7 +178,7 @@ public final class MultiObjectDeleteSupport extends AbstractStoreOperation {
     //  metastore entries
     deleted.forEach(path -> {
       try {
-        metadataStore.delete(path, getStoreContext().getTimeProvider());
+        metadataStore.delete(path);
       } catch (IOException e) {
         // trouble: we failed to delete the far end entry
         // try with the next one.

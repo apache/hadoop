@@ -126,7 +126,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     ms = contract.getMetadataStore();
     assertNotNull("null MetadataStore", ms);
     assertNotNull("null FileSystem", contract.getFileSystem());
-    ms.initialize(contract.getFileSystem());
+    ms.initialize(contract.getFileSystem(),
+        new S3Guard.TtlTimeProvider(contract.getFileSystem().getConf()));
     ttlTimeProvider =
         new S3Guard.TtlTimeProvider(contract.getFileSystem().getConf());
   }
@@ -333,7 +334,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testDelete() throws Exception {
     setUpDeleteTest();
 
-    ms.delete(strToPath("/ADirectory1/db1/file2"), ttlTimeProvider);
+    ms.delete(strToPath("/ADirectory1/db1/file2"));
 
     /* Ensure delete happened. */
     assertDirectorySize("/ADirectory1/db1", 1);
@@ -362,7 +363,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     if (!allowMissing()) {
       assertCached(p + "/ADirectory1/db1");
     }
-    ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath(p + "/ADirectory1/db1/"));
 
     assertEmptyDirectory(p + "/ADirectory1");
     assertDeleted(p + "/ADirectory1/db1");
@@ -382,7 +383,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   public void testDeleteRecursiveRoot() throws Exception {
     setUpDeleteTest();
 
-    ms.deleteSubtree(strToPath("/"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath("/"));
     assertDeleted("/ADirectory1");
     assertDeleted("/ADirectory2");
     assertDeleted("/ADirectory2/db1");
@@ -393,10 +394,10 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   @Test
   public void testDeleteNonExisting() throws Exception {
     // Path doesn't exist, but should silently succeed
-    ms.delete(strToPath("/bobs/your/uncle"), ttlTimeProvider);
+    ms.delete(strToPath("/bobs/your/uncle"));
 
     // Ditto.
-    ms.deleteSubtree(strToPath("/internets"), ttlTimeProvider);
+    ms.deleteSubtree(strToPath("/internets"));
   }
 
 
@@ -434,7 +435,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     }
 
     if (!(ms instanceof NullMetadataStore)) {
-      ms.delete(strToPath(filePath), ttlTimeProvider);
+      ms.delete(strToPath(filePath));
       meta = ms.get(strToPath(filePath));
       assertTrue("Tombstone not left for deleted file", meta.isDeleted());
     }
@@ -612,7 +613,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
     destMetas.add(new PathMetadata(makeDirStatus("/b1")));
     destMetas.add(new PathMetadata(makeFileStatus("/b1/file1", 100)));
     destMetas.add(new PathMetadata(makeFileStatus("/b1/file2", 100)));
-    ms.move(srcPaths, destMetas, ttlTimeProvider, null);
+    ms.move(srcPaths, destMetas, null);
 
     // Assert src is no longer there
     dirMeta = ms.listChildren(strToPath("/a1"));
@@ -662,11 +663,11 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     // Make sure delete is correct as well
     if (!allowMissing()) {
-      ms.delete(new Path(p2), ttlTimeProvider);
+      ms.delete(new Path(p2));
       meta = ms.get(new Path(p1));
       assertNotNull("Path should not have been deleted", meta);
     }
-    ms.delete(new Path(p1), ttlTimeProvider);
+    ms.delete(new Path(p1));
   }
 
   @Test
