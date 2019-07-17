@@ -21,6 +21,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.IOException;
 
+import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.bucket.OMBucketCreateResponse;
@@ -61,9 +62,8 @@ public class S3BucketCreateResponse extends OMClientResponse {
         omVolumeCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
       }
 
-      if (omBucketCreateResponse != null) {
-        omBucketCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
-      }
+      Preconditions.checkState(omBucketCreateResponse != null);
+      omBucketCreateResponse.addToDBBatch(omMetadataManager, batchOperation);
 
       omMetadataManager.getS3Table().putWithBatch(batchOperation, s3Bucket,
           s3Mapping);
