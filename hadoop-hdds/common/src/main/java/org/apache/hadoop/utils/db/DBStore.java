@@ -49,8 +49,8 @@ public interface DBStore extends AutoCloseable {
 
   /**
    * Gets an existing TableStore with implicit key/value conversion and
-   * with default cleanup policy for cache. Default policy is cache cleanup
-   * after flush to DB is completed.
+   * with default cleanup policy for cache. Default cache clean up policy is
+   * manual.
    *
    * @param name - Name of the TableStore to get
    * @param keyType
