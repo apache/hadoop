@@ -459,9 +459,14 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
-  public DatanodeDetails getNode(String address) {
-    Node node = clusterMap.getNode(NetConstants.DEFAULT_RACK + "/" + address);
+  public DatanodeDetails getNodeByUuid(String uuid) {
+    Node node = clusterMap.getNode(NetConstants.DEFAULT_RACK + "/" + uuid);
     return node == null ? null : (DatanodeDetails)node;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByAddress(String address) {
+    return null;
   }
 
   public void setNetworkTopology(NetworkTopology topology) {
