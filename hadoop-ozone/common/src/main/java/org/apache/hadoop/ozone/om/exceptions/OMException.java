@@ -203,7 +203,8 @@ public class OMException extends IOException {
 
     PREFIX_NOT_FOUND,
 
-    S3_BUCKET_INVALID_LENGTH
+    S3_BUCKET_INVALID_LENGTH,
 
+    RATIS_ERROR // Error in Ratis server
   }
 }

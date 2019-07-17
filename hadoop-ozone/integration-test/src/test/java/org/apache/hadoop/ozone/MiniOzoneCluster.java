@@ -241,6 +241,7 @@ public interface MiniOzoneCluster {
     protected String clusterId;
     protected String omServiceId;
     protected int numOfOMs;
+    protected int numOfActiveOMs;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
@@ -437,6 +438,11 @@ public interface MiniOzoneCluster {
 
     public Builder setNumOfOzoneManagers(int numOMs) {
       this.numOfOMs = numOMs;
+      return this;
+    }
+
+    public Builder setNumOfActiveOMs(int numActiveOMs) {
+      this.numOfActiveOMs = numActiveOMs;
       return this;
     }
 

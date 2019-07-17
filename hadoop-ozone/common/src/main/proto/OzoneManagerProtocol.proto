@@ -278,6 +278,8 @@ enum Status {
     PREFIX_NOT_FOUND=50;
 
     S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
+
+    RATIS_ERROR = 52;
 }
 
 

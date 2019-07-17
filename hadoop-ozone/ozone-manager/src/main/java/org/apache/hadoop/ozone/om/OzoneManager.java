@@ -80,7 +80,6 @@ import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
-import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
@@ -146,6 +145,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.utils.RetriableTask;
 import org.apache.hadoop.utils.db.DBCheckpoint;
+import org.apache.hadoop.utils.db.DBStore;
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.util.LifeCycle;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
@@ -344,8 +344,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
         OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
 
-    startRatisServer();
-    startRatisClient();
+    initializeRatisServer();
+    initializeRatisClient();
 
     if (isRatisEnabled) {
       // Create Ratis storage dir
@@ -1243,6 +1243,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     DefaultMetricsSystem.initialize("OzoneManager");
 
+    // Start Ratis services
+    if (omRatisServer != null) {
+      omRatisServer.start();
+    }
+    if (omRatisClient != null) {
+      omRatisClient.connect();
+    }
+
     metadataManager.start(configuration);
     startSecretManagerIfNecessary();
 
@@ -1313,8 +1321,14 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRpcServer.start();
     isOmRpcServerRunning = true;
 
-    startRatisServer();
-    startRatisClient();
+    initializeRatisServer();
+    if (omRatisServer != null) {
+      omRatisServer.start();
+    }
+    initializeRatisClient();
+    if (omRatisClient != null) {
+      omRatisClient.connect();
+    }
 
     try {
       httpServer = new OzoneManagerHttpServer(configuration, this);
@@ -1361,15 +1375,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * Creates an instance of ratis server.
    */
-  private void startRatisServer() throws IOException {
+  private void initializeRatisServer() throws IOException {
     if (isRatisEnabled) {
       if (omRatisServer == null) {
         omRatisServer = OzoneManagerRatisServer.newOMRatisServer(
             configuration, this, omNodeDetails, peerNodes);
       }
-      omRatisServer.start();
-
-      LOG.info("OzoneManager Ratis server started at port {}",
+      LOG.info("OzoneManager Ratis server initialized at port {}",
           omRatisServer.getServerPort());
     } else {
       omRatisServer = null;
@@ -1379,14 +1391,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * Creates an instance of ratis client.
    */
-  private void startRatisClient() throws IOException {
+  private void initializeRatisClient() throws IOException {
     if (isRatisEnabled) {
       if (omRatisClient == null) {
         omRatisClient = OzoneManagerRatisClient.newOzoneManagerRatisClient(
             omNodeDetails.getOMNodeId(), omRatisServer.getRaftGroup(),
             configuration);
       }
-      omRatisClient.connect();
     } else {
       omRatisClient = null;
     }
@@ -3094,13 +3105,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return null;
     }
 
-    DBCheckpoint omDBcheckpoint;
-    try {
-      omDBcheckpoint = omSnapshotProvider.getOzoneManagerDBSnapshot(leaderId);
-    } catch (IOException e) {
-      LOG.error("Failed to download checkpoint from OM leader {}", leaderId, e);
-      return null;
-    }
+    DBCheckpoint omDBcheckpoint = getDBCheckpointFromLeader(leaderId);
 
     // Check if current ratis log index is smaller than the downloaded
     // snapshot index. If yes, proceed by stopping the ratis server so that
@@ -3116,46 +3121,36 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       return null;
     }
 
-    // Stop the ratis server so that no new transactions are applied. This
-    // can happen if a leader election happens while the state is being
-    // re-initialized. This action also clears the OM Double Buffer so that
-    // if there are any pending transactions in the buffer, they are discarded.
-    omRatisServer.stop();
-
-    // Take a backup of the current DB
-    File dbFile = metadataManager.getStore().getDbLocation();
-    String dbBackupFileName = OzoneConsts.OM_DB_BACKUP_PREFIX +
-        lastAppliedIndex + "_" + System.currentTimeMillis();
-    File dbBackupFile = new File(dbFile.getParentFile(), dbBackupFileName);
+    // Pause the State Machine so that no new transactions can be applied.
+    // This action also clears the OM Double Buffer so that if there are any
+    // pending transactions in the buffer, they are discarded.
+    // TODO: The Ratis server should also be paused here. This is required
+    //  because a leader election might happen while the snapshot
+    //  installation is in progress and the new leader might start sending
+    //  append log entries to the ratis server.
+    omRatisServer.getOmStateMachine().pause();
 
     try {
-      Files.move(dbFile.toPath(), dbBackupFile.toPath());
-    } catch (IOException e) {
-      LOG.error("Failed to create a backup of the current DB. Aborting " +
-          "snapshot installation.", e);
+      replaceOMDBWithCheckpoint(lastAppliedIndex, omDBcheckpoint);
+    } catch (Exception e) {
+      LOG.error("OM DB checkpoint replacement with new downloaded checkpoint " +
+          "failed.", e);
       return null;
     }
 
-    // Move the downloaded DB checkpoint into the om metadata dir
-    Path checkpointPath = omDBcheckpoint.getCheckpointLocation();
-    try {
-      Files.move(checkpointPath, dbFile.toPath());
-    } catch (IOException e) {
-      LOG.error("Failed to move downloaded DB checkpoint {} to metadata " +
-          "directory {}",checkpointPath, dbFile.toPath(), e);
-      return null;
-    }
-
-    // Reload the OM DB store with the new checkpoint
+    // Reload the OM DB store with the new checkpoint.
+    // Restart (unpause) the state machine and update its last applied index
+    // to the installed checkpoint's snapshot index.
     try {
       reloadOMState();
+      omRatisServer.getOmStateMachine().unpause(checkpointSnapshotIndex);
     } catch (IOException e) {
       LOG.error("Failed to reload OM state with new DB checkpoint.", e);
       return null;
     }
 
     // TODO: We should only return the snpashotIndex to the leader.
-    //  Fixed after RATIS-586
+    //  Should be fixed after RATIS-586
     TermIndex newTermIndex = TermIndex.newTermIndex(0,
         checkpointSnapshotIndex);
 
@@ -3163,11 +3158,65 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   /**
+   * Download the latest OM DB checkpoint from the leader OM.
+   * @param leaderId OMNodeID of the leader OM node.
+   * @return latest DB checkpoint from leader OM.
+   */
+  private DBCheckpoint getDBCheckpointFromLeader(String leaderId) {
+    LOG.info("Downloading checkpoint from leader OM {} and reloading state " +
+        "from the checkpoint.", leaderId);
+
+    try {
+      return omSnapshotProvider.getOzoneManagerDBSnapshot(leaderId);
+    } catch (IOException e) {
+      LOG.error("Failed to download checkpoint from OM leader {}", leaderId, e);
+    }
+    return null;
+  }
+
+  /**
+   * Replace the current OM DB with the new DB checkpoint.
+   * @param lastAppliedIndex the last applied index in the current OM DB.
+   * @param omDBcheckpoint the new DB checkpoint
+   * @throws Exception
+   */
+  void replaceOMDBWithCheckpoint(long lastAppliedIndex,
+      DBCheckpoint omDBcheckpoint) throws Exception {
+    // Stop the DB first
+    DBStore store = metadataManager.getStore();
+    store.close();
+
+    // Take a backup of the current DB
+    File db = store.getDbLocation();
+    String dbBackupName = OzoneConsts.OM_DB_BACKUP_PREFIX +
+        lastAppliedIndex + "_" + System.currentTimeMillis();
+    File dbBackup = new File(db.getParentFile(), dbBackupName);
+
+    try {
+      Files.move(db.toPath(), dbBackup.toPath());
+    } catch (IOException e) {
+      LOG.error("Failed to create a backup of the current DB. Aborting " +
+          "snapshot installation.");
+      throw e;
+    }
+
+    // Move the new DB checkpoint into the om metadata dir
+    Path checkpointPath = omDBcheckpoint.getCheckpointLocation();
+    try {
+      Files.move(checkpointPath, db.toPath());
+    } catch (IOException e) {
+      LOG.error("Failed to move downloaded DB checkpoint {} to metadata " +
+          "directory {}",checkpointPath, db.toPath());
+      throw e;
+    }
+  }
+
+  /**
    * Re-instantiate MetadataManager with new DB checkpoint.
    * All the classes which use/ store MetadataManager should also be updated
    * with the new MetadataManager instance.
    */
-  private void reloadOMState() throws IOException {
+  void reloadOMState() throws IOException {
 
     metadataManager = new OmMetadataManagerImpl(configuration);
 
@@ -3194,7 +3243,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     keyManager = new KeyManagerImpl(
         new ScmClient(scmBlockClient, scmContainerClient), metadataManager,
-        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider());
+        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider(),
+        prefixManager);
     keyManager.start(configuration);
     prefixManager = new PrefixManagerImpl(metadataManager);
   }
