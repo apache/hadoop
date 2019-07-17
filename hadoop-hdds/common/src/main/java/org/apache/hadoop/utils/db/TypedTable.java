@@ -33,7 +33,6 @@ import org.apache.hadoop.utils.db.cache.TableCacheImpl.CacheCleanupPolicy;
 
 import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.EXISTS;
 import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.NOT_EXIST;
-import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.CHECK_IN_TABLE;
 /**
  * Strongly typed table implementation.
  * <p>
