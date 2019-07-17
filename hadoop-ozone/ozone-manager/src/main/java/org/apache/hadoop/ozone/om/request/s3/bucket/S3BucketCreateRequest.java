@@ -64,6 +64,7 @@ import org.apache.hadoop.utils.db.cache.CacheValue;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OM_S3_VOLUME_PREFIX;
 import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MAX_LENGTH;
+import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MIN_LENGTH;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.S3_BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOCK;
@@ -98,7 +99,7 @@ public class S3BucketCreateRequest extends OMVolumeRequest {
 
     // For now only checked the length.
     int bucketLength = s3CreateBucketRequest.getS3Bucketname().length();
-    if (bucketLength < S3_BUCKET_MAX_LENGTH ||
+    if (bucketLength < S3_BUCKET_MIN_LENGTH ||
         bucketLength >= S3_BUCKET_MAX_LENGTH) {
       throw new OMException("S3BucketName must be at least 3 and not more " +
           "than 63 characters long",

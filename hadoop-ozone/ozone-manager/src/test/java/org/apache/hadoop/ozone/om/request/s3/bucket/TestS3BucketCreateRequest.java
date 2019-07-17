@@ -110,8 +110,8 @@ public class TestS3BucketCreateRequest {
       GenericTestUtils.assertExceptionContains("S3_BUCKET_INVALID_LENGTH", ex);
     }
 
-    // set bucket name which is less than 3 characters length
-    s3BucketName = RandomStringUtils.randomAlphabetic(65);
+    // set bucket name which is greater than 63 characters length
+    s3BucketName = RandomStringUtils.randomAlphabetic(64);
 
     try {
       doPreExecute(userName, s3BucketName);
