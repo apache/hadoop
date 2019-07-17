@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -47,8 +46,8 @@ public class PrometheusMetricsSink implements MetricsSink {
    */
   private Map<String, String> metricLines = new HashMap<>();
 
-  private static final Pattern UPPER_CASE_SEQ =
-      Pattern.compile("([A-Z]*)([A-Z])");
+  private static final Pattern SPLIT_PATTERN =
+      Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
 
   public PrometheusMetricsSink() {
   }
@@ -88,7 +87,7 @@ public class PrometheusMetricsSink implements MetricsSink {
   }
 
   /**
-   * Convert CamelCase based namess to lower-case names where the separator
+   * Convert CamelCase based names to lower-case names where the separator
    * is the underscore, to follow prometheus naming conventions.
    */
   public String prometheusName(String recordName,
@@ -99,29 +98,12 @@ public class PrometheusMetricsSink implements MetricsSink {
         recordName.startsWith(ROCKSDB_CONTEXT_PREFIX)) {
       return recordName.toLowerCase() + "_" + metricName.toLowerCase();
     }
-    String baseName = upperFirst(recordName) + upperFirst(metricName);
-    Matcher m = UPPER_CASE_SEQ.matcher(baseName);
-    StringBuffer sb = new StringBuffer();
-    while (m.find()) {
-      String replacement = "_" + m.group(2).toLowerCase();
-      if (m.group(1).length() > 0) {
-        replacement = "_" + m.group(1).toLowerCase() + replacement;
-      }
-      m.appendReplacement(sb, replacement);
-    }
-    m.appendTail(sb);
 
-    //always prefixed with "_"
-    return sb.toString().substring(1);
-  }
-
-  private String upperFirst(String name) {
-    if (Character.isLowerCase(name.charAt(0))) {
-      return Character.toUpperCase(name.charAt(0)) + name.substring(1);
-    } else {
-      return name;
-    }
-
+    String baseName = StringUtils.capitalize(recordName)
+        + StringUtils.capitalize(metricName);
+    baseName = baseName.replace('-', '_');
+    String[] parts = SPLIT_PATTERN.split(baseName);
+    return String.join("_", parts).toLowerCase();
   }
 
   @Override
