@@ -67,6 +67,7 @@ import java.util.concurrent.TimeoutException;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -969,6 +970,8 @@ public class MiniDFSCluster implements AutoCloseable {
         }
        copyKeys(conf, nnConf, nnInfo.nameserviceId, nnInfo.nnId);
       }
+      nn.nameNode.getHttpServer()
+          .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     }
   }
 
@@ -2184,6 +2187,8 @@ public class MiniDFSCluster implements AutoCloseable {
     }
 
     NameNode nn = NameNode.createNameNode(args, info.conf);
+    nn.getHttpServer()
+        .setAttribute(ImageServlet.RECENT_IMAGE_CHECK_ENABLED, false);
     info.nameNode = nn;
     info.setStartOpt(startOpt);
     if (waitActive) {

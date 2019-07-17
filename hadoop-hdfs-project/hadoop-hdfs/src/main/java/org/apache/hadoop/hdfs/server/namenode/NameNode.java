@@ -70,6 +70,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocol;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.http.HttpServer2;
 import org.apache.hadoop.ipc.ExternalCall;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.RetriableException;
@@ -433,6 +434,11 @@ public class NameNode extends ReconfigurableBase implements
 
   public NamenodeProtocols getRpcServer() {
     return rpcServer;
+  }
+
+  @VisibleForTesting
+  public HttpServer2 getHttpServer() {
+    return httpServer.getHttpServer();
   }
 
   public void queueExternalCall(ExternalCall<?> extCall)
