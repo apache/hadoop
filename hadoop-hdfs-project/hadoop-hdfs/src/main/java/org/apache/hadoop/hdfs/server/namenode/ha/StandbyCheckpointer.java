@@ -288,9 +288,7 @@ public class StandbyCheckpointer {
         uploads.entrySet()) {
       String url = entry.getKey();
       Future<TransferFsImage.TransferResult> upload = entry.getValue();
-      try {
-        // TODO should there be some smarts here about retries nodes that
-        //  are not the active NN?
+      try {        
         CheckpointReceiverEntry receiverEntry = checkpointReceivers.get(url);
         if (upload.get() == TransferFsImage.TransferResult.SUCCESS) {
           receiverEntry.setLastUploadTime(monotonicNow());
