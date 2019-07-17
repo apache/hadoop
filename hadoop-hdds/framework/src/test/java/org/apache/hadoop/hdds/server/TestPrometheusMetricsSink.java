@@ -30,7 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.commons.codec.CharEncoding.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test prometheus Sink.
@@ -59,10 +59,11 @@ public class TestPrometheusMetricsSink {
     writer.flush();
 
     //THEN
-    System.out.println(stream.toString(UTF_8));
+    String writtenMetrics = stream.toString(UTF_8.name());
+    System.out.println(writtenMetrics);
     Assert.assertTrue(
         "The expected metric line is missing from prometheus metrics output",
-        stream.toString(UTF_8).contains(
+        writtenMetrics.contains(
             "test_metrics_num_bucket_create_fails{context=\"dfs\"")
     );
 
@@ -71,7 +72,7 @@ public class TestPrometheusMetricsSink {
   }
 
   @Test
-  public void testNaming() throws IOException {
+  public void testNamingCamelCase() {
     PrometheusMetricsSink sink = new PrometheusMetricsSink();
 
     Assert.assertEquals("rpc_time_some_metrics",
@@ -82,18 +83,35 @@ public class TestPrometheusMetricsSink {
 
     Assert.assertEquals("rpc_time_small",
         sink.prometheusName("RpcTime", "small"));
+  }
 
+  @Test
+  public void testNamingRocksDB() {
     //RocksDB metrics are handled differently.
-
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
     Assert.assertEquals("rocksdb_om.db_num_open_connections",
         sink.prometheusName("Rocksdb_om.db", "num_open_connections"));
+  }
+
+  @Test
+  public void testNamingPipeline() {
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+
+    String recordName = "SCMPipelineMetrics";
+    String metricName = "NumBlocksAllocated-"
+        + "RATIS-THREE-47659e3d-40c9-43b3-9792-4982fc279aba";
+    Assert.assertEquals(
+        "scm_pipeline_metrics_"
+            + "num_blocks_allocated_"
+            + "ratis_three_47659e3d_40c9_43b3_9792_4982fc279aba",
+        sink.prometheusName(recordName, metricName));
   }
 
   /**
    * Example metric pojo.
    */
   @Metrics(about = "Test Metrics", context = "dfs")
-  public static class TestMetrics {
+  private static class TestMetrics {
 
     @Metric
     private MutableCounterLong numBucketCreateFails;
