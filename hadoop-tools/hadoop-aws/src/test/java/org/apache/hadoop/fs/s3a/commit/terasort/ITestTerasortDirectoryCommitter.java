@@ -41,7 +41,7 @@ public final class ITestTerasortDirectoryCommitter extends AbstractCommitTerasor
 
   @BeforeClass
   public static void setupClusters() throws IOException {
-    clusterBinding = createCluster(new JobConf());
+    clusterBinding = createCluster(new JobConf(), false);
   }
 
   @AfterClass

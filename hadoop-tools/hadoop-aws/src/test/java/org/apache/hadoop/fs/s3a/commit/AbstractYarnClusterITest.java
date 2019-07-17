@@ -19,6 +19,8 @@
 package org.apache.hadoop.fs.s3a.commit;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -27,6 +29,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapred.JobConf;
@@ -44,8 +47,8 @@ import static org.apache.hadoop.fs.s3a.commit.CommitConstants.FS_S3A_COMMITTER_S
 /**
  * Full integration test MR jobs.
  *
- * This is all done on shared static mini YARN and HDFS clusters, set up before
- * any of the tests methods run.
+ * This is all done on shared static mini YARN and (optionally) HDFS clusters,
+ * set up before any of the tests methods run.
  *
  * To isolate tests properly for parallel test runs, that static state
  * needs to be stored in the final classes implementing the tests, and
@@ -70,10 +73,10 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   private static final Logger LOG =
       LoggerFactory.getLogger(AbstractYarnClusterITest.class);
 
-  private static final int TEST_FILE_COUNT = 2;
-  private static final int SCALE_TEST_FILE_COUNT = 50;
+  private static final int TEST_FILE_COUNT = 1;
+  private static final int SCALE_TEST_FILE_COUNT = 2;
 
-  public static final int SCALE_TEST_KEYS = 1000;
+  public static final int SCALE_TEST_KEYS = 100;
   public static final int BASE_TEST_KEYS = 10;
 
   private boolean scaleTest;
@@ -92,12 +95,24 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     public ClusterBinding(
         final MiniDFSClusterService hdfs,
         final MiniMRYarnCluster yarn) {
-      this.hdfs = checkNotNull(hdfs);
+      this.hdfs = hdfs;
       this.yarn = checkNotNull(yarn);
     }
 
     public MiniDFSClusterService getHdfs() {
       return hdfs;
+    }
+
+    /**
+     * Get the cluster FS, which will either be HDFS or the local FS.
+     * @return a filesystem.
+     * @throws IOException
+     */
+    public FileSystem getClusterFS() throws IOException {
+      MiniDFSClusterService hdfs = getHdfs();
+      return hdfs != null
+          ? hdfs.getClusterFS()
+          : FileSystem.getLocal(yarn.getConfig());
     }
 
     public MiniMRYarnCluster getYarn() {
@@ -117,22 +132,30 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   /**
    * Create the cluster binding. This must be done in
    * class setup of the (final) subclass.
-   * The HDFS and YARN clusters share the same configuration, so
+   * If an HDFS cluster is requested,
+   * the HDFS and YARN clusters will share the same configuration, so
    * the HDFS cluster binding is implicitly propagated to YARN.
+   * If one is not requested, the local filesystem is used as the cluster FS.
    * @param conf configuration to start with.
+   * @param useHDFS should an HDFS cluster be instantiated.
    * @return the cluster binding.
    * @throws IOException failure.
    */
-  protected static ClusterBinding createCluster(JobConf conf)
+  protected static ClusterBinding createCluster(JobConf conf,
+      final boolean useHDFS)
       throws IOException {
 
     conf.setBoolean(JHAdminConfig.MR_HISTORY_CLEANER_ENABLE, false);
     conf.setLong(CommonConfigurationKeys.FS_DU_INTERVAL_KEY, Long.MAX_VALUE);
 
-    // create a unique cluster name.
-    String clusterName = "yarn-" + UUID.randomUUID();
-    MiniDFSClusterService miniDFSClusterService = deployService(conf,
-        new MiniDFSClusterService());
+    // create a unique cluster name based on the current time in millis.
+    String timestamp = LocalDateTime.now().format(
+        DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmssSS"));
+    String clusterName = "yarn-" + timestamp;
+    MiniDFSClusterService miniDFSClusterService =
+        useHDFS
+            ? deployService(conf, new MiniDFSClusterService())
+            : null;
     MiniMRYarnCluster yarnCluster = deployService(conf,
         new MiniMRYarnCluster(clusterName, 2));
     return new ClusterBinding(miniDFSClusterService, yarnCluster);
@@ -145,8 +168,8 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   }
 
   /**
-   * Get the cluster binding for this subclass
-   * @return
+   * Get the cluster binding for this subclass.
+   * @return the cluster binding
    */
   protected abstract ClusterBinding getClusterBinding();
 
@@ -159,17 +182,17 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     return getClusterBinding().getYarn();
   }
 
-  public FileSystem getLocalFS() {
-    return getHdfs().getLocalFS();
-  }
-
-  protected FileSystem getDFS() {
-    return getHdfs().getClusterFS();
+  protected FileSystem getDFS() throws IOException {
+    MiniDFSClusterService hdfs = getHdfs();
+    return hdfs != null
+        ? hdfs.getClusterFS()
+        : FileSystem.getLocal(getConfiguration());
   }
 
   /**
    * The name of the committer as returned by
-   * {@link AbstractS3ACommitter#getName()} and used for committer construction.
+   * {@link AbstractS3ACommitter#getName()}
+   * and used for committer construction.
    */
   protected abstract String committerName();
 

@@ -42,7 +42,7 @@ public final class ITestDirectoryCommitMRJob extends AbstractITCommitMRJob {
 
   @BeforeClass
   public static void setupClusters() throws IOException {
-    clusterBinding = createCluster(new JobConf());  }
+    clusterBinding = createCluster(new JobConf(), false);  }
 
   @AfterClass
   public static void teardownClusters() throws IOException {

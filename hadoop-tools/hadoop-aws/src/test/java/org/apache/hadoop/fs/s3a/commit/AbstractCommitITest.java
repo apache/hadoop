@@ -209,6 +209,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
    */
   @Override
   public void teardown() throws Exception {
+    Thread.currentThread().setName("teardown");
     LOG.info("AbstractCommitITest::teardown");
     waitForConsistency();
     // make sure there are no failures any more
@@ -485,7 +486,7 @@ public abstract class AbstractCommitITest extends AbstractS3ATestBase {
         status.isFile());
     assertTrue("0 byte success file "
             + success + " from " + origin
-            + "; a s3guard committer was not used",
+            + "; an S3A committer was not used",
         status.getLen() > 0);
     return SuccessData.load(fs, success);
   }

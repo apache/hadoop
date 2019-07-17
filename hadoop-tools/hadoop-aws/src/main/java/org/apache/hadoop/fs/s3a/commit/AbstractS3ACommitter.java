@@ -438,7 +438,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   protected void commitPendingUploads(JobContext context,
       List<SinglePendingCommit> pending) throws IOException {
     if (pending.isEmpty()) {
-      LOG.warn("{}: No pending uploads to commit", getRole());
+      LOG.warn("{}: No pending uploads to commit to {}",
+          getRole(), getOutputPath());
     }
     LOG.debug("{}: committing the output of {} task(s)",
         getRole(), pending.size());

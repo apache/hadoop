@@ -53,7 +53,7 @@ public final class ITestStagingCommitMRJob extends AbstractITCommitMRJob {
 
   @BeforeClass
   public static void setupClusters() throws IOException {
-    clusterBinding = createCluster(new JobConf());
+    clusterBinding = createCluster(new JobConf(), true);
   }
 
   @AfterClass

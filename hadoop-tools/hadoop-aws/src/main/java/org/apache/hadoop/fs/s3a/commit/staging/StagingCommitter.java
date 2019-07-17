@@ -495,10 +495,11 @@ public class StagingCommitter extends AbstractS3ACommitter {
    */
   protected List<SinglePendingCommit> listPendingUploads(
       JobContext context, boolean suppressExceptions) throws IOException {
+    Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
     try {
-      Path wrappedJobAttemptPath = wrappedCommitter.getJobAttemptPath(context);
       final FileSystem attemptFS = wrappedJobAttemptPath.getFileSystem(
           context.getConfiguration());
+      LOG.info("Listing pending uploads from {}", wrappedJobAttemptPath);
       return loadPendingsetFiles(context, suppressExceptions, attemptFS,
           listAndFilter(attemptFS,
               wrappedJobAttemptPath, false,
@@ -506,10 +507,12 @@ public class StagingCommitter extends AbstractS3ACommitter {
     } catch (FileNotFoundException e) {
       // this can mean the job was aborted early on, so don't confuse people
       // with long stack traces that aren't the underlying problem.
-      maybeIgnore(suppressExceptions, "Pending upload directory not found", e);
+      maybeIgnore(suppressExceptions, "Pending upload directory "
+          + wrappedJobAttemptPath + " not found", e);
     } catch (IOException e) {
       // unable to work with endpoint, if suppressing errors decide our actions
-      maybeIgnore(suppressExceptions, "Listing pending uploads", e);
+      maybeIgnore(suppressExceptions,
+          "Listing pending uploads in " + wrappedJobAttemptPath, e);
     }
     // reached iff an IOE was caught and swallowed
     return new ArrayList<>(0);
@@ -677,7 +680,8 @@ public class StagingCommitter extends AbstractS3ACommitter {
     // we will try to abort the ones that had already succeeded.
     int commitCount = taskOutput.size();
     final Queue<SinglePendingCommit> commits = new ConcurrentLinkedQueue<>();
-    LOG.info("{}: uploading from staging directory to S3", getRole());
+    LOG.info("{}: uploading from staging directory to S3 {}", getRole(),
+        attemptPath);
     LOG.info("{}: Saving pending data information to {}",
         getRole(), commitsAttemptPath);
     if (taskOutput.isEmpty()) {
