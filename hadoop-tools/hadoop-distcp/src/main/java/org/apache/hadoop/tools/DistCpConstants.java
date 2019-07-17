@@ -61,8 +61,6 @@ public final class DistCpConstants {
   public static final String CONF_LABEL_DELETE_MISSING = "distcp.delete.missing.source";
   public static final String CONF_LABEL_TRACK_MISSING =
       "distcp.track.missing.source";
-  public static final String CONF_LABEL_DELETE_MISSING_USETRASH =
-      "distcp.delete.missing.usetrash";
   public static final String CONF_LABEL_LISTSTATUS_THREADS = "distcp.liststatus.threads";
   public static final String CONF_LABEL_MAX_MAPS = "distcp.max.maps";
   public static final String CONF_LABEL_SOURCE_LISTING = "distcp.source.listing";
