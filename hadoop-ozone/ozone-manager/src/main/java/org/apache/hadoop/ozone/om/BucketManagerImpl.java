@@ -65,8 +65,6 @@ public class BucketManagerImpl implements BucketManager {
   private final OMMetadataManager metadataManager;
   private final KeyProviderCryptoExtension kmsProvider;
 
-  private final boolean isRatisEnabled;
-
   /**
    * Constructs BucketManager.
    *
@@ -85,7 +83,6 @@ public class BucketManagerImpl implements BucketManager {
       KeyProviderCryptoExtension kmsProvider, boolean isRatisEnabled) {
     this.metadataManager = metadataManager;
     this.kmsProvider = kmsProvider;
-    this.isRatisEnabled = isRatisEnabled;
   }
 
   KeyProviderCryptoExtension getKMSProvider() {
