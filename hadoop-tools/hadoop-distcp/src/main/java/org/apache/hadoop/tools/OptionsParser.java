@@ -102,6 +102,8 @@ public class OptionsParser {
             command.hasOption(DistCpOptionSwitch.SYNC_FOLDERS.getSwitch()))
         .withDeleteMissing(
             command.hasOption(DistCpOptionSwitch.DELETE_MISSING.getSwitch()))
+        .withDeleteUseTrash(
+            command.hasOption(DistCpOptionSwitch.DELETE_USETRASH.getSwitch()))
         .withIgnoreFailures(
             command.hasOption(DistCpOptionSwitch.IGNORE_FAILURES.getSwitch()))
         .withOverwrite(
@@ -152,6 +154,9 @@ public class OptionsParser {
           new Path(getVal(
               command,
               DistCpOptionSwitch.TRACK_MISSING.getSwitch())));
+    }
+    if (command.hasOption(DistCpOptionSwitch.DELETE_USETRASH.getSwitch())) {
+      builder.withDeleteUseTrash(true);
     }
 
     if (command.hasOption(DistCpOptionSwitch.BANDWIDTH.getSwitch())) {
