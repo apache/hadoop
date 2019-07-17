@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -226,9 +225,10 @@ public class TestShutdownHookManager {
     mgr.addShutdownHook(hook1, 9); // create Hook1 with priority 9
     assertTrue("No hook1", mgr.hasShutdownHook(hook1)); // hook1 lookup works
     assertEquals(1, mgr.getShutdownHooksInOrder().size()); // 1 hook
-    assertFalse("Delete hook2 should not be allowed", mgr.removeShutdownHook(hook2)); // can't delete hook2
-    assertTrue("Can't delete hook1", mgr.removeShutdownHook(hook1)); // can delete hook1
-    assertEquals(0, mgr.getShutdownHooksInOrder().size()); // no more hooks
+    assertFalse("Delete hook2 should not be allowed",
+      mgr.removeShutdownHook(hook2));
+    assertTrue("Can't delete hook1", mgr.removeShutdownHook(hook1));
+    assertEquals(0, mgr.getShutdownHooksInOrder().size());
   }
 
   private static final AtomicInteger INVOCATION_COUNT = new AtomicInteger();
