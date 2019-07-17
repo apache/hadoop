@@ -61,7 +61,8 @@ echo
 run rm -rf "ozone-${HDDS_VERSION}"
 run mkdir "ozone-${HDDS_VERSION}"
 run cd "ozone-${HDDS_VERSION}"
-run cp -p "${ROOT}/LICENSE.txt" .
+# Concatenate root LICENSE.txt with Recon LICENSE
+run cat "${ROOT}/LICENSE.txt" "${ROOT}/hadoop-ozone/ozone-recon/src/main/resources/webapps/recon/ozone-recon-web/LICENSE" >> ./LICENSE.txt
 run cp -p "${ROOT}/NOTICE.txt" .
 run cp -p "${ROOT}/README.txt" .
 
