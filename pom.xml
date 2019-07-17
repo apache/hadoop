@@ -231,7 +231,7 @@ xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xs
                   <pluginExecutionFilter>
                     <groupId>org.apache.avro</groupId>
                     <artifactId>avro-maven-plugin</artifactId>
-                    <versionRange>[1.5.3,)</versionRange>
+                    <versionRange>[1.9.0,)</versionRange>
                     <goals>
                       <goal>schema</goal>
                       <goal>protocol</goal>
