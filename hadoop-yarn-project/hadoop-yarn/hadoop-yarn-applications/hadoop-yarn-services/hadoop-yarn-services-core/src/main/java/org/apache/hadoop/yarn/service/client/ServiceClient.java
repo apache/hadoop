@@ -1190,7 +1190,7 @@ public class ServiceClient extends AppAdminClient implements SliderExitCodes,
       LOG.info("Persisted service " + service.getName() + " at " + appJson);
       return appId;
     } else {
-      LOG.info("Finalize service {} upgrade");
+      LOG.info("Finalize service {} upgrade", serviceName);
       ApplicationId appId = getAppId(serviceName);
       ApplicationReport appReport = yarnClient.getApplicationReport(appId);
       if (StringUtils.isEmpty(appReport.getHost())) {
