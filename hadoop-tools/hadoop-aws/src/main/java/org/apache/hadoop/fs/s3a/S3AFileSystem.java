@@ -1369,10 +1369,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     @Override
     public void removeKeys(final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         final boolean deleteFakeDir,
-        final List<Path> undeletedObjectsOnFailure)
+        final List<Path> undeletedObjectsOnFailure,
+        final BulkOperationState operationState)
         throws MultiObjectDeleteException, AmazonClientException, IOException {
       S3AFileSystem.this.removeKeys(keysToDelete, deleteFakeDir,
-          undeletedObjectsOnFailure);
+          undeletedObjectsOnFailure, operationState);
     }
 
     @Override
@@ -1767,7 +1768,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f);
+    metadataStore.delete(f, null);
   }
 
   /**
@@ -2105,6 +2106,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param keysToDelete collection of keys to delete on the s3-backend.
    *        if empty, no request is made of the object store.
    * @param deleteFakeDir indicates whether this is for deleting fake dirs
+   * @param operationState
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2116,10 +2118,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @Retries.RetryMixed
   void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
-      final boolean deleteFakeDir)
+      final boolean deleteFakeDir,
+      final BulkOperationState operationState)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
-    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>());
+    removeKeys(keysToDelete, deleteFakeDir, new ArrayList<>(), operationState);
   }
 
   /**
@@ -2138,6 +2141,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param undeletedObjectsOnFailure List which will be built up of all
    * files that were not deleted. This happens even as an exception
    * is raised.
+   * @param operationState (nullable) operational state for a bulk update
    * @throws InvalidRequestException if the request was rejected due to
    * a mistaken attempt to delete the root directory.
    * @throws MultiObjectDeleteException one or more of the keys could not
@@ -2150,7 +2154,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   void removeKeys(
       final List<DeleteObjectsRequest.KeyVersion> keysToDelete,
       final boolean deleteFakeDir,
-      final List<Path> undeletedObjectsOnFailure)
+      final List<Path> undeletedObjectsOnFailure,
+      final BulkOperationState operationState)
       throws MultiObjectDeleteException, AmazonClientException,
       IOException {
     undeletedObjectsOnFailure.clear();
@@ -2164,13 +2169,14 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         // when deleting fake directories we don't want to delete metastore
         // entries so we only process these failures on "real" deletes.
         Triple<List<Path>, List<Path>, List<Pair<Path, IOException>>> results =
-            new MultiObjectDeleteSupport(createStoreContext())
+            new MultiObjectDeleteSupport(createStoreContext(), operationState)
                 .processDeleteFailure(ex, keysToDelete);
         undeletedObjectsOnFailure.addAll(results.getMiddle());
       }
       throw ex;
     } catch (AmazonClientException | IOException ex) {
-      List<Path> paths = new MultiObjectDeleteSupport(createStoreContext())
+      List<Path> paths = new MultiObjectDeleteSupport(createStoreContext(),
+          operationState)
           .processDeleteFailureGenericException(ex, keysToDelete);
       // other failures. Assume nothing was deleted
       undeletedObjectsOnFailure.addAll(paths);
@@ -2257,12 +2263,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
         throw new PathIsNotEmptyDirectoryException(f.toString());
       }
-
+      BulkOperationState operationState = null;
       if (status.isEmptyDirectory() == Tristate.TRUE) {
         LOG.debug("Deleting fake empty directory {}", key);
-        // HADOOP-13761 s3guard: retries here
         deleteObjectAtPath(f, key, false);
       } else {
+        // Directory delete: combine paginated list of files with single or
+        // multiple object delete calls.
+        // create an operation state so that the store can manage the bulk
+        // operation if it needs to.
+        operationState = S3Guard.initiateBulkWrite(
+            metadataStore,
+            BulkOperationState.OperationType.Delete, f);
         LOG.debug("Getting objects for directory prefix {} to delete", key);
 
         S3ListRequest request = createListObjectsRequest(key, null);
@@ -2270,15 +2282,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         S3ListResult objects = listObjects(request);
         List<DeleteObjectsRequest.KeyVersion> keys =
             new ArrayList<>(objects.getObjectSummaries().size());
+        List<Path> paths =new ArrayList<>(objects.getObjectSummaries().size());
         while (true) {
           for (S3ObjectSummary summary : objects.getObjectSummaries()) {
-            keys.add(new DeleteObjectsRequest.KeyVersion(summary.getKey()));
-            LOG.debug("Got object to delete {}", summary.getKey());
+            String k = summary.getKey();
+            keys.add(new DeleteObjectsRequest.KeyVersion(k));
+            paths.add(keyToQualifiedPath(k));
+            LOG.debug("Got object to delete {}", k);
 
             if (keys.size() == MAX_ENTRIES_TO_DELETE) {
               // delete a single page of keys
-              removeKeys(keys, false);
+              removeKeys(keys, false, operationState);
+              metadataStore.deletePaths(paths, operationState);
               keys.clear();
+              paths.clear();
             }
           }
 
@@ -2286,14 +2303,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
             objects = continueListObjects(request, objects);
           } else {
             // there is no more data: delete the final set of entries.
-            removeKeys(keys, false);
+            removeKeys(keys, false, operationState);
+            // don't bother with updating the parents as
+            // deleteSubtree will do this.
             break;
           }
         }
       }
       try(DurationInfo ignored =
               new DurationInfo(LOG, false, "Delete metastore")) {
-        metadataStore.deleteSubtree(f);
+        metadataStore.deleteSubtree(f, operationState);
       }
     } else {
       LOG.debug("delete: Path is a file: {}", key);
@@ -3399,7 +3418,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       path = path.getParent();
     }
     try {
-      removeKeys(keysToRemove, true);
+      removeKeys(keysToRemove, true, null);
     } catch(AmazonClientException | IOException e) {
       instrumentation.errorIgnored();
       if (LOG.isDebugEnabled()) {

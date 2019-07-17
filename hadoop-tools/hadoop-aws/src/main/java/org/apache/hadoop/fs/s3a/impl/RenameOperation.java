@@ -46,6 +46,7 @@ import org.apache.hadoop.fs.s3a.S3ALocatedFileStatus;
 import org.apache.hadoop.fs.s3a.S3AReadOpContext;
 import org.apache.hadoop.fs.s3a.S3ObjectAttributes;
 import org.apache.hadoop.fs.s3a.Tristate;
+import org.apache.hadoop.fs.s3a.s3guard.BulkOperationState;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.RenameTracker;
 import org.apache.hadoop.util.DurationInfo;
@@ -488,7 +489,8 @@ public class RenameOperation extends AbstractStoreOperation {
       // remove the keys
       // this will update the metastore on a failure, but on
       // a successful operation leaves the store as is.
-      callbacks.removeKeys(keys, false, undeletedObjects);
+      callbacks.removeKeys(keys, false, undeletedObjects,
+          renameTracker.getOperationState());
       // and clear the list.
     } catch (AmazonClientException | IOException e) {
       // Failed.
@@ -616,6 +618,7 @@ public class RenameOperation extends AbstractStoreOperation {
      * @param undeletedObjectsOnFailure List which will be built up of all
      * files that were not deleted. This happens even as an exception
      * is raised.
+     * @param operationState
      * @throws InvalidRequestException if the request was rejected due to
      * a mistaken attempt to delete the root directory.
      * @throws MultiObjectDeleteException one or more of the keys could not
@@ -627,7 +630,8 @@ public class RenameOperation extends AbstractStoreOperation {
     void removeKeys(
         List<DeleteObjectsRequest.KeyVersion> keysToDelete,
         boolean deleteFakeDir,
-        List<Path> undeletedObjectsOnFailure)
+        List<Path> undeletedObjectsOnFailure,
+        final BulkOperationState operationState)
         throws MultiObjectDeleteException, AmazonClientException,
         IOException;
   }
