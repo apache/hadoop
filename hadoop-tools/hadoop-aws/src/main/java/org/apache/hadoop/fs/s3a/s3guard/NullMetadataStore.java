@@ -85,7 +85,8 @@ public class NullMetadataStore implements MetadataStore {
 
   @Override
   public void move(Collection<Path> pathsToDelete,
-      Collection<PathMetadata> pathsToCreate, final BulkOperationState operationState) throws IOException {
+      Collection<PathMetadata> pathsToCreate,
+      final BulkOperationState operationState) throws IOException {
   }
 
   @Override
