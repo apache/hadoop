@@ -160,6 +160,21 @@ public class TestShutdownHookManager {
   }
 
   @Test
+  public void testShutdownRemove() throws Throwable {
+    ShutdownHookManager mgr = ShutdownHookManager.get();
+    assertNotNull("No ShutdownHookManager", mgr);
+    assertEquals(0, mgr.getShutdownHooksInOrder().size());
+    Hook hook1 = new Hook("hook1", 0, false);
+    Hook hook2 = new Hook("hook2", 0, false);
+    mgr.addShutdownHook(hook1, 9); // create Hook1 with priority 9
+    assertTrue(mgr.hasShutdownHook(hook1)); // hook1 lookup works
+    assertEquals(1, mgr.getShutdownHooksInOrder().size()); // 1 hook
+    assertFalse(mgr.removeShutdownHook(hook2)); // can't delete hook2
+    assertTrue(mgr.removeShutdownHook(hook1)); // can delete hook1
+    assertEquals(0, mgr.getShutdownHooksInOrder().size()); // no more hooks
+  }
+
+  @Test
   public void testShutdownTimeoutConfiguration() throws Throwable {
     // set the shutdown timeout and verify it can be read back.
     Configuration conf = new Configuration();
