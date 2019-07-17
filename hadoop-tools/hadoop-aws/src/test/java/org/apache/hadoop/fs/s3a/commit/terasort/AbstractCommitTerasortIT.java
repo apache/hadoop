@@ -18,6 +18,8 @@
 
 package org.apache.hadoop.fs.s3a.commit.terasort;
 
+import java.io.File;
+import java.nio.charset.Charset;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -27,13 +29,13 @@ import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.examples.terasort.TeraGen;
 import org.apache.hadoop.examples.terasort.TeraSort;
 import org.apache.hadoop.examples.terasort.TeraSortConfigKeys;
 import org.apache.hadoop.examples.terasort.TeraValidate;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.commit.AbstractYarnClusterITest;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.util.DurationInfo;
@@ -108,6 +110,9 @@ public abstract class AbstractCommitTerasortIT extends
     yarnConfig.setBoolean(
         TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
         true);
+    yarnConfig.setBoolean(
+        TeraSortConfigKeys.USE_SIMPLE_PARTITIONER.key(),
+        false);
     terasortPath = new Path("/terasort-" + getClass().getSimpleName())
         .makeQualified(getFileSystem());
     sortInput = new Path(terasortPath, "sortin");
@@ -143,7 +148,7 @@ public abstract class AbstractCommitTerasortIT extends
     assertEquals(stage
         + "(" + StringUtils.join(", ", args) + ")"
         + " failed", 0, result);
-    validateSuccessFile(getFileSystem(), dest, committerName());
+    validateSuccessFile(dest, committerName(), getFileSystem(), stage);
     return Optional.of(d);
   }
 
@@ -161,6 +166,7 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_110_teragen() throws Throwable {
     describe("Teragen to %s", sortInput);
+    getFileSystem().delete(sortInput, true);
 
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
@@ -174,7 +180,9 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_120_terasort() throws Throwable {
     describe("Terasort from %s to %s", sortInput, sortOutput);
-    loadSuccessFile(getFileSystem(), sortInput);
+    getFileSystem().delete(sortOutput, true);
+
+    loadSuccessFile(getFileSystem(), sortInput, "previous teragen stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
     // this job adds some data, so skip it.
@@ -189,7 +197,8 @@ public abstract class AbstractCommitTerasortIT extends
   @Test
   public void test_130_teravalidate() throws Throwable {
     describe("TeraValidate from %s to %s", sortOutput, sortValidate);
-    loadSuccessFile(getFileSystem(), sortOutput);
+    getFileSystem().delete(sortValidate, true);
+    loadSuccessFile(getFileSystem(), sortOutput, "previous terasort stage");
     JobConf jobConf = newJobConf();
     patchConfigurationForCommitter(jobConf);
     teravalidateStageDuration = executeStage("TeraValidate",
@@ -224,9 +233,9 @@ public abstract class AbstractCommitTerasortIT extends
     stage.accept("Validate", teravalidateStageDuration);
     stage.accept("Completed", terasortDuration);
     String text = results.toString();
-    Path path = new Path(terasortPath, "results.csv");
-    LOG.info("Results are in {}\n{}", path, text);
-    ContractTestUtils.writeTextFile(getFileSystem(), path, text, true);
+    File resultsFile = File.createTempFile("results", ".csv");
+    FileUtils.write(resultsFile, text, Charset.forName("UTF-8"));
+    LOG.info("Results are in {}\n{}", resultsFile, text);
   }
 
   /**

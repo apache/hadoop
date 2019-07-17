@@ -136,6 +136,7 @@ function ozonecmd_case
     ;;
     sh | shell)
       HADOOP_CLASSNAME=org.apache.hadoop.ozone.web.ozShell.OzoneShell
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_OM_SH_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-ozone-ozone-manager"
     ;;
     s3)
@@ -171,6 +172,7 @@ function ozonecmd_case
     ;;
     scmcli)
       HADOOP_CLASSNAME=org.apache.hadoop.hdds.scm.cli.SCMCLI
+      HADOOP_OPTS="${HADOOP_OPTS} ${HDFS_SCM_CLI_OPTS}"
       OZONE_RUN_ARTIFACT_NAME="hadoop-hdds-tools"
     ;;
     version)

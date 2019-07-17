@@ -22,7 +22,6 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.CryptoProtocolVersion;
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -33,22 +32,9 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .CryptoProtocolVersionProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .FileEncryptionInfoProto;
-
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
-import org.apache.hadoop.ozone.protocol.proto
-    .OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclRights;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.security.proto.SecurityProtos.TokenProto;
 import org.apache.hadoop.security.token.Token;
-
-import java.util.BitSet;
-import java.util.List;
-import java.util.ArrayList;
 
 /**
  * Utilities for converting protobuf classes.
@@ -57,74 +43,6 @@ public final class OMPBHelper {
 
   private OMPBHelper() {
     /** Hidden constructor */
-  }
-
-  /**
-   * Converts OzoneAcl into protobuf's OzoneAclInfo.
-   * @return OzoneAclInfo
-   */
-  public static OzoneAclInfo convertOzoneAcl(OzoneAcl acl) {
-    OzoneAclInfo.OzoneAclType aclType;
-    switch (acl.getType()) {
-    case USER:
-      aclType = OzoneAclType.USER;
-      break;
-    case GROUP:
-      aclType = OzoneAclType.GROUP;
-      break;
-    case WORLD:
-      aclType = OzoneAclType.WORLD;
-      break;
-    case ANONYMOUS:
-      aclType = OzoneAclType.ANONYMOUS;
-      break;
-    case CLIENT_IP:
-      aclType = OzoneAclType.CLIENT_IP;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL type is not recognized");
-    }
-    List<OzoneAclRights> ozAclRights =
-        new ArrayList<>(acl.getAclBitSet().cardinality());
-    acl.getAclBitSet().stream().forEach(a -> ozAclRights.add(
-        OzoneAclRights.valueOf(ACLType.values()[a].name())));
-
-    return OzoneAclInfo.newBuilder().setType(aclType)
-        .setName(acl.getName())
-        .addAllRights(ozAclRights)
-        .build();
-  }
-
-  /**
-   * Converts protobuf's OzoneAclInfo into OzoneAcl.
-   * @return OzoneAcl
-   */
-  public static OzoneAcl convertOzoneAcl(OzoneAclInfo aclInfo) {
-    ACLIdentityType aclType;
-    switch (aclInfo.getType()) {
-    case USER:
-      aclType = ACLIdentityType.USER;
-      break;
-    case GROUP:
-      aclType = ACLIdentityType.GROUP;
-      break;
-    case WORLD:
-      aclType = ACLIdentityType.WORLD;
-      break;
-    case ANONYMOUS:
-      aclType = ACLIdentityType.ANONYMOUS;
-      break;
-    case CLIENT_IP:
-      aclType = ACLIdentityType.CLIENT_IP;
-      break;
-    default:
-      throw new IllegalArgumentException("ACL type is not recognized");
-    }
-
-    BitSet aclRights = new BitSet(ACLType.getNoOfAcls());
-    aclInfo.getRightsList().stream().forEach(a ->
-        aclRights.set(ACLType.valueOf(a.name()).ordinal()));
-    return new OzoneAcl(aclType, aclInfo.getName(), aclRights);
   }
 
   /**

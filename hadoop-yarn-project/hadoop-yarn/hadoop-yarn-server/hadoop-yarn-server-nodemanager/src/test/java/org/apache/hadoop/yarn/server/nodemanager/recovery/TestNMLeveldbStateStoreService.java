@@ -77,6 +77,9 @@ import org.apache.hadoop.yarn.server.api.records.MasterKey;
 import org.apache.hadoop.yarn.server.nodemanager.amrmproxy.AMRMProxyTokenSecretManager;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.fpga.FpgaResourceAllocator.FpgaDevice;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.resources.numa.NumaResourceAllocation;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin.gpu.GpuDevice;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.LocalResourceTrackerState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredAMRMProxyState;
 import org.apache.hadoop.yarn.server.nodemanager.recovery.NMStateStoreService.RecoveredApplicationsState;
@@ -1450,7 +1453,7 @@ public class TestNMLeveldbStateStoreService {
 
   @Test
   public void testStateStoreForResourceMapping() throws IOException {
-    // test empty when no state
+    // test that stateStore is initially empty
     List<RecoveredContainerState> recoveredContainers =
         loadContainersState(stateStore.getContainerStateIterator());
     assertTrue(recoveredContainers.isEmpty());
@@ -1466,38 +1469,43 @@ public class TestNMLeveldbStateStoreService {
     ResourceMappings resourceMappings = new ResourceMappings();
     when(container.getResourceMappings()).thenReturn(resourceMappings);
 
-    // Store ResourceMapping
     stateStore.storeAssignedResources(container, "gpu",
-        Arrays.asList("1", "2", "3"));
-    // This will overwrite above
-    List<Serializable> gpuRes1 = Arrays.asList("1", "2", "4");
+        Arrays.asList(new GpuDevice(1, 1), new GpuDevice(2, 2),
+            new GpuDevice(3, 3)));
+
+    // This will overwrite the above
+    List<Serializable> gpuRes1 = Arrays.asList(
+        new GpuDevice(1, 1), new GpuDevice(2, 2), new GpuDevice(4, 4));
     stateStore.storeAssignedResources(container, "gpu", gpuRes1);
-    List<Serializable> fpgaRes = Arrays.asList("3", "4", "5", "6");
+
+    List<Serializable> fpgaRes = Arrays.asList(
+        new FpgaDevice("testType", 3, 3, "testIPID"),
+        new FpgaDevice("testType", 4, 4, "testIPID"),
+        new FpgaDevice("testType", 5, 5, "testIPID"),
+        new FpgaDevice("testType", 6, 6, "testIPID"));
     stateStore.storeAssignedResources(container, "fpga", fpgaRes);
-    List<Serializable> numaRes = Arrays.asList("numa1");
+
+    List<Serializable> numaRes = Arrays.asList(
+        new NumaResourceAllocation("testmemNodeId", 2048, "testCpuNodeId", 10));
     stateStore.storeAssignedResources(container, "numa", numaRes);
 
-    // add a invalid key
     restartStateStore();
     recoveredContainers =
         loadContainersState(stateStore.getContainerStateIterator());
     assertEquals(1, recoveredContainers.size());
     RecoveredContainerState rcs = recoveredContainers.get(0);
-    List<Serializable> res = rcs.getResourceMappings()
+    List<Serializable> resources = rcs.getResourceMappings()
         .getAssignedResources("gpu");
-    Assert.assertTrue(res.equals(gpuRes1));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("gpu").equals(gpuRes1));
+    Assert.assertEquals(gpuRes1, resources);
+    Assert.assertEquals(gpuRes1, resourceMappings.getAssignedResources("gpu"));
 
-    res = rcs.getResourceMappings().getAssignedResources("fpga");
-    Assert.assertTrue(res.equals(fpgaRes));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("fpga").equals(fpgaRes));
+    resources = rcs.getResourceMappings().getAssignedResources("fpga");
+    Assert.assertEquals(fpgaRes, resources);
+    Assert.assertEquals(fpgaRes, resourceMappings.getAssignedResources("fpga"));
 
-    res = rcs.getResourceMappings().getAssignedResources("numa");
-    Assert.assertTrue(res.equals(numaRes));
-    Assert.assertTrue(
-        resourceMappings.getAssignedResources("numa").equals(numaRes));
+    resources = rcs.getResourceMappings().getAssignedResources("numa");
+    Assert.assertEquals(numaRes, resources);
+    Assert.assertEquals(numaRes, resourceMappings.getAssignedResources("numa"));
   }
 
   @Test

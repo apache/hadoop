@@ -29,4 +29,4 @@ Test hadoop dfs
     ${random} =        Generate Random String  5  [NUMBERS]
     ${result} =        Execute                    hdfs dfs -put /opt/hadoop/NOTICE.txt o3fs://bucket1.vol1/${PREFIX}-${random}
     ${result} =        Execute                    hdfs dfs -ls o3fs://bucket1.vol1/
-                       Should contain             ${PREFIX}-${random}
+                       Should contain             ${result}   ${PREFIX}-${random}

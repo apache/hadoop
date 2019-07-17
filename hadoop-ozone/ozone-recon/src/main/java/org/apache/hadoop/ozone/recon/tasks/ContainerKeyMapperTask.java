@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -70,10 +71,13 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
    */
   @Override
   public Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
-    int omKeyCount = 0;
+    long omKeyCount = 0;
     try {
       LOG.info("Starting a 'reprocess' run of ContainerKeyMapperTask.");
       Instant start = Instant.now();
+
+      // initialize new container DB
+      containerDBServiceProvider.initNewContainerDB(new HashMap<>());
 
       Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
       try (TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
@@ -97,7 +101,6 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
     }
     return new ImmutablePair<>(getTaskName(), true);
   }
-
 
   @Override
   protected Collection<String> getTaskTables() {
@@ -125,7 +128,8 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
             .getAction());
         }
       } catch (IOException e) {
-        LOG.error("Unexpected exception while updating key data : {} ", e);
+        LOG.error("Unexpected exception while updating key data : {} ",
+            updatedKey, e);
         return new ImmutablePair<>(getTaskName(), false);
       }
     }
@@ -133,7 +137,9 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
   }
 
   /**
-   * Delete an OM Key from Container DB.
+   * Delete an OM Key from Container DB and update containerID -> no. of keys
+   * count.
+   *
    * @param key key String.
    * @throws IOException If Unable to write to container DB.
    */
@@ -144,30 +150,42 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
         Table.KeyValue<ContainerKeyPrefix, Integer>> containerIterator =
         containerDBServiceProvider.getContainerTableIterator();
 
-    Set<ContainerKeyPrefix> keysToDeDeleted = new HashSet<>();
+    Set<ContainerKeyPrefix> keysToBeDeleted = new HashSet<>();
 
     while (containerIterator.hasNext()) {
       Table.KeyValue<ContainerKeyPrefix, Integer> keyValue =
           containerIterator.next();
       String keyPrefix = keyValue.getKey().getKeyPrefix();
       if (keyPrefix.equals(key)) {
-        keysToDeDeleted.add(keyValue.getKey());
+        keysToBeDeleted.add(keyValue.getKey());
       }
     }
 
-    for (ContainerKeyPrefix containerKeyPrefix : keysToDeDeleted) {
+    for (ContainerKeyPrefix containerKeyPrefix : keysToBeDeleted) {
       containerDBServiceProvider.deleteContainerMapping(containerKeyPrefix);
+
+      // decrement count and update containerKeyCount.
+      Long containerID = containerKeyPrefix.getContainerId();
+      long keyCount =
+          containerDBServiceProvider.getKeyCountForContainer(containerID);
+      if (keyCount > 0) {
+        containerDBServiceProvider.storeContainerKeyCount(containerID,
+            --keyCount);
+      }
     }
   }
 
   /**
-   * Write an OM key to container DB.
+   * Write an OM key to container DB and update containerID -> no. of keys
+   * count.
+   *
    * @param key key String
    * @param omKeyInfo omKeyInfo value
    * @throws IOException if unable to write to recon DB.
    */
   private void  writeOMKeyToContainerDB(String key, OmKeyInfo omKeyInfo)
       throws IOException {
+    long containerCountToIncrement = 0;
     for (OmKeyLocationInfoGroup omKeyLocationInfoGroup : omKeyInfo
         .getKeyLocationVersions()) {
       long keyVersion = omKeyLocationInfoGroup.getVersion();
@@ -176,14 +194,35 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
         long containerId = omKeyLocationInfo.getContainerID();
         ContainerKeyPrefix containerKeyPrefix = new ContainerKeyPrefix(
             containerId, key, keyVersion);
-        if (containerDBServiceProvider.getCountForForContainerKeyPrefix(
+        if (containerDBServiceProvider.getCountForContainerKeyPrefix(
             containerKeyPrefix) == 0) {
           // Save on writes. No need to save same container-key prefix
           // mapping again.
           containerDBServiceProvider.storeContainerKeyMapping(
               containerKeyPrefix, 1);
+
+          // check if container already exists and
+          // increment the count of containers if it does not exist
+          if (!containerDBServiceProvider.doesContainerExists(containerId)) {
+            containerCountToIncrement++;
+          }
+
+          // update the count of keys for the given containerID
+          long keyCount =
+              containerDBServiceProvider.getKeyCountForContainer(containerId);
+
+          // increment the count and update containerKeyCount.
+          // keyCount will be 0 if containerID is not found. So, there is no
+          // need to initialize keyCount for the first time.
+          containerDBServiceProvider.storeContainerKeyCount(containerId,
+              ++keyCount);
         }
       }
+    }
+
+    if (containerCountToIncrement > 0) {
+      containerDBServiceProvider
+          .incrementContainerCountBy(containerCountToIncrement);
     }
   }
 

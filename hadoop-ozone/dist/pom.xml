@@ -28,8 +28,7 @@
   <properties>
     <file.encoding>UTF-8</file.encoding>
     <downloadSources>true</downloadSources>
-    <docker.image>apache/ozone:${project.version}</docker.image>
-    <docker.hadoop-runner.version>jdk11</docker.hadoop-runner.version>
+    <docker.ozone-runner.version>20190617-2</docker.ozone-runner.version>
   </properties>
 
   <build>
@@ -198,6 +197,22 @@
             </configuration>
           </execution>
           <execution>
+            <id>copy-and-filter-dockerfile</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>copy-resources</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}</outputDirectory>
+              <resources>
+                <resource>
+                  <directory>src/main/docker</directory>
+                  <filtering>true</filtering>
+                </resource>
+              </resources>
+            </configuration>
+          </execution>
+          <execution>
             <id>copy-k8s</id>
             <phase>compile</phase>
             <goals>
@@ -315,9 +330,6 @@
   <profiles>
     <profile>
       <id>docker-build</id>
-      <properties>
-        <docker.image>${user.name}/ozone:${project.version}</docker.image>
-      </properties>
       <build>
         <plugins>
           <plugin>

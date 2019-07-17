@@ -79,8 +79,11 @@ public class LocalMetadataStore implements MetadataStore {
 
   private String username;
 
+  private ITtlTimeProvider ttlTimeProvider;
+
   @Override
-  public void initialize(FileSystem fileSystem) throws IOException {
+  public void initialize(FileSystem fileSystem,
+      ITtlTimeProvider ttlTp) throws IOException {
     Preconditions.checkNotNull(fileSystem);
     fs = fileSystem;
     URI fsURI = fs.getUri();
@@ -89,11 +92,12 @@ public class LocalMetadataStore implements MetadataStore {
       uriHost = null;
     }
 
-    initialize(fs.getConf());
+    initialize(fs.getConf(), ttlTp);
   }
 
   @Override
-  public void initialize(Configuration conf) throws IOException {
+  public void initialize(Configuration conf, ITtlTimeProvider ttlTp)
+      throws IOException {
     Preconditions.checkNotNull(conf);
     int maxRecords = conf.getInt(S3GUARD_METASTORE_LOCAL_MAX_RECORDS,
         DEFAULT_S3GUARD_METASTORE_LOCAL_MAX_RECORDS);
@@ -110,6 +114,7 @@ public class LocalMetadataStore implements MetadataStore {
 
     localCache = builder.build();
     username = UserGroupInformation.getCurrentUser().getShortUserName();
+    this.ttlTimeProvider = ttlTp;
   }
 
   @Override
@@ -122,7 +127,7 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path p, ITtlTimeProvider ttlTimeProvider)
+  public void delete(Path p)
       throws IOException {
     doDelete(p, false, true, ttlTimeProvider);
   }
@@ -133,23 +138,23 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+  public void deleteSubtree(Path path)
       throws IOException {
     doDelete(path, true, true, ttlTimeProvider);
   }
 
   private synchronized void doDelete(Path p, boolean recursive,
-      boolean tombstone, ITtlTimeProvider ttlTimeProvider) {
+      boolean tombstone, ITtlTimeProvider ttlTp) {
 
     Path path = standardize(p);
 
     // Delete entry from file cache, then from cached parent directory, if any
 
-    deleteCacheEntries(path, tombstone, ttlTimeProvider);
+    deleteCacheEntries(path, tombstone, ttlTp);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
-      deleteEntryByAncestor(path, localCache, tombstone, ttlTimeProvider);
+      deleteEntryByAncestor(path, localCache, tombstone, ttlTp);
     }
   }
 
@@ -202,10 +207,8 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void move(
-      @Nullable Collection<Path> pathsToDelete,
+  public void move(@Nullable Collection<Path> pathsToDelete,
       @Nullable Collection<PathMetadata> pathsToCreate,
-        ITtlTimeProvider ttlTimeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
     LOG.info("Move {} to {}", pathsToDelete, pathsToCreate);
 
@@ -222,7 +225,7 @@ public class LocalMetadataStore implements MetadataStore {
       // 1. Delete pathsToDelete
       for (Path meta : pathsToDelete) {
         LOG.debug("move: deleting metadata {}", meta);
-        delete(meta, ttlTimeProvider);
+        delete(meta);
       }
 
       // 2. Create new destination path metadata
@@ -487,7 +490,7 @@ public class LocalMetadataStore implements MetadataStore {
    * lock held.
    */
   private void deleteCacheEntries(Path path, boolean tombstone,
-      ITtlTimeProvider ttlTimeProvider) {
+      ITtlTimeProvider ttlTp) {
     LocalMetadataEntry entry = localCache.getIfPresent(path);
     // If there's no entry, delete should silently succeed
     // (based on MetadataStoreTestBase#testDeleteNonExisting)
@@ -501,7 +504,7 @@ public class LocalMetadataStore implements MetadataStore {
     if(entry.hasPathMeta()){
       if (tombstone) {
         PathMetadata pmd = PathMetadata.tombstone(path);
-        pmd.setLastUpdated(ttlTimeProvider.getNow());
+        pmd.setLastUpdated(ttlTp.getNow());
         entry.setPathMetadata(pmd);
       } else {
         entry.setPathMetadata(null);
@@ -528,7 +531,7 @@ public class LocalMetadataStore implements MetadataStore {
         LOG.debug("removing parent's entry for {} ", path);
         if (tombstone) {
           dir.markDeleted(path);
-          dir.setLastUpdated(ttlTimeProvider.getNow());
+          dir.setLastUpdated(ttlTp.getNow());
         } else {
           dir.remove(path);
         }
@@ -595,8 +598,12 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
+    this.ttlTimeProvider = ttlTimeProvider;
+  }
+
+  @Override
   public void addAncestors(final Path qualifiedPath,
-      ITtlTimeProvider ttlTimeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
 
     Collection<PathMetadata> newDirs = new ArrayList<>();

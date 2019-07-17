@@ -105,7 +105,7 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
    * @return the output of any successful run
    * @throws Exception failure
    */
-  protected static String expectSuccess(
+  public static String expectSuccess(
       String message,
       S3GuardTool tool,
       String... args) throws Exception {
@@ -319,6 +319,19 @@ public abstract class AbstractS3GuardToolTestBase extends AbstractS3ATestBase {
     Path testPath = path("testPruneCommandCLI");
     testPruneCommand(getFileSystem().getConf(), testPath,
         "prune", "-seconds", String.valueOf(PRUNE_MAX_AGE_SECS),
+        testPath.toString());
+  }
+
+  @Test
+  public void testPruneCommandTombstones() throws Exception {
+    Path testPath = path("testPruneCommandTombstones");
+    getFileSystem().mkdirs(testPath);
+    getFileSystem().delete(testPath, true);
+    S3GuardTool.Prune cmd = new S3GuardTool.Prune(getFileSystem().getConf());
+    cmd.setMetadataStore(ms);
+    exec(cmd,
+        "prune", "-" + S3GuardTool.Prune.TOMBSTONE,
+        "-seconds", "0",
         testPath.toString());
   }
 

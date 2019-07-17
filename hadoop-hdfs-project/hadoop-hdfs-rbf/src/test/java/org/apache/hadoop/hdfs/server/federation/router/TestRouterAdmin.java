@@ -19,12 +19,10 @@ package org.apache.hadoop.hdfs.server.federation.router;
 
 import static org.apache.hadoop.hdfs.server.federation.FederationTestUtils.createNamenodeReport;
 import static org.apache.hadoop.hdfs.server.federation.store.FederationStateStoreTestUtils.synchronizeRecords;
-import static org.apache.hadoop.test.GenericTestUtils.assertExceptionContains;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -60,6 +58,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableE
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.Whitebox;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -407,30 +406,35 @@ public class TestRouterAdmin {
     assertFalse(disableResp.getStatus());
   }
 
-  @Test
-  public void testNameserviceManagerUnauthorized() throws Exception {
-
-    // Try to disable a name service with a random user
-    final String username = "baduser";
+  private DisableNameserviceResponse testNameserviceManagerUser(String username)
+      throws Exception {
     UserGroupInformation user =
         UserGroupInformation.createRemoteUser(username);
-    user.doAs(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        RouterClient client = routerContext.getAdminClient();
-        NameserviceManager nameservices = client.getNameserviceManager();
-        DisableNameserviceRequest disableReq =
-            DisableNameserviceRequest.newInstance("ns0");
-        try {
-          nameservices.disableNameservice(disableReq);
-          fail("We should not be able to disable nameservices");
-        } catch (IOException ioe) {
-          assertExceptionContains(
-              username + " is not a super user", ioe);
-        }
-        return null;
-      }
-    });
+    return user.doAs((PrivilegedExceptionAction<DisableNameserviceResponse>)
+        () -> {
+          RouterClient client = routerContext.getAdminClient();
+          NameserviceManager nameservices = client.getNameserviceManager();
+          DisableNameserviceRequest disableReq =
+              DisableNameserviceRequest.newInstance("ns0");
+          return nameservices.disableNameservice(disableReq);
+        });
+  }
+
+  @Test
+  public void testNameserviceManagerUnauthorized() throws Exception{
+    String username = "baduser";
+    LambdaTestUtils.intercept(IOException.class,
+        username + " is not a super user",
+        () -> testNameserviceManagerUser(username));
+  }
+
+  @Test
+  public void testNameserviceManagerWithRules() throws Exception{
+    // Try to disable a name service with a kerberos principal name
+    String username = RouterAdminServer.getSuperUser() + "@Example.com";
+    DisableNameserviceResponse disableResp =
+        testNameserviceManagerUser(username);
+    assertTrue(disableResp.getStatus());
   }
 
   private Set<String> getDisabledNameservices(NameserviceManager nsManager)

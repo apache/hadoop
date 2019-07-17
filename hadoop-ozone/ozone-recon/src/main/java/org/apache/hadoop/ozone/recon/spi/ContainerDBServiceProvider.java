@@ -52,13 +52,47 @@ public interface ContainerDBServiceProvider {
                                 Integer count) throws IOException;
 
   /**
-   * Get the stored key prefix count for the given containerId, key prefix.
+   * Store the containerID -> no. of keys count into the container DB store.
    *
-   * @param containerKeyPrefix the containerId, key-prefix tuple.
+   * @param containerID the containerID.
+   * @param count count of the keys within the given containerID.
+   * @throws IOException
+   */
+  void storeContainerKeyCount(Long containerID, Long count) throws IOException;
+
+  /**
+   * Store the total count of containers into the container DB store.
+   *
+   * @param count count of the containers present in the system.
+   */
+  void storeContainerCount(Long count);
+
+  /**
+   * Get the stored key prefix count for the given containerID, key prefix.
+   *
+   * @param containerKeyPrefix the containerID, key-prefix tuple.
    * @return count of keys with that prefix.
    */
-  Integer getCountForForContainerKeyPrefix(
+  Integer getCountForContainerKeyPrefix(
       ContainerKeyPrefix containerKeyPrefix) throws IOException;
+
+  /**
+   * Get the total count of keys within the given containerID.
+   *
+   * @param containerID the given containerId.
+   * @return count of keys within the given containerID.
+   * @throws IOException
+   */
+  long getKeyCountForContainer(Long containerID) throws IOException;
+
+  /**
+   * Get if a containerID exists or not.
+   *
+   * @param containerID the given containerID.
+   * @return if the given ContainerID exists or not.
+   * @throws IOException
+   */
+  boolean doesContainerExists(Long containerID) throws IOException;
 
   /**
    * Get the stored key prefixes for the given containerId.
@@ -66,29 +100,36 @@ public interface ContainerDBServiceProvider {
    * @param containerId the given containerId.
    * @return Map of Key prefix -> count.
    */
-  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(long containerId)
-      throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId) throws IOException;
 
   /**
-   * Get a Map of containerID, containerMetadata of all the Containers.
+   * Get the stored key prefixes for the given containerId starting
+   * after the given keyPrefix.
    *
-   * @return Map of containerID -> containerMetadata.
-   * @throws IOException
+   * @param containerId the given containerId.
+   * @param prevKeyPrefix the key prefix to seek to and start scanning.
+   * @return Map of Key prefix -> count.
    */
-  Map<Long, ContainerMetadata> getContainers() throws IOException;
+  Map<ContainerKeyPrefix, Integer> getKeyPrefixesForContainer(
+      long containerId, String prevKeyPrefix) throws IOException;
 
   /**
    * Get a Map of containerID, containerMetadata of Containers only for the
    * given limit. If the limit is -1 or any integer <0, then return all
    * the containers without any limit.
    *
+   * @param limit the no. of containers to fetch.
+   * @param prevContainer containerID after which the results are returned.
    * @return Map of containerID -> containerMetadata.
    * @throws IOException
    */
-  Map<Long, ContainerMetadata> getContainers(int limit) throws IOException;
+  Map<Long, ContainerMetadata> getContainers(int limit, long prevContainer)
+      throws IOException;
 
   /**
    * Delete an entry in the container DB.
+   *
    * @param containerKeyPrefix container key prefix to be deleted.
    * @throws IOException exception.
    */
@@ -98,7 +139,21 @@ public interface ContainerDBServiceProvider {
   /**
    * Get iterator to the entire container DB.
    * @return TableIterator
-   * @throws IOException exception
    */
   TableIterator getContainerTableIterator() throws IOException;
+
+  /**
+   * Get the total count of containers present in the system.
+   *
+   * @return total count of containers.
+   * @throws IOException
+   */
+  long getCountForContainers() throws IOException;
+
+  /**
+   * Increment the total count for containers in the system by the given count.
+   *
+   * @param count no. of new containers to add to containers total count.
+   */
+  void incrementContainerCountBy(long count);
 }

@@ -135,9 +135,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
 
   @Override
   public void completeRename() throws IOException {
-    metadataStore.move(sourcePaths, destMetas,
-        getStoreContext().getTimeProvider(),
-        getOperationState());
+    metadataStore.move(sourcePaths, destMetas, getOperationState());
     super.completeRename();
   }
 
@@ -147,12 +145,10 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
     try (DurationInfo ignored = new DurationInfo(LOG,
         "Cleaning up deleted paths")) {
       // the destination paths are updated; the source is left alone.
-      metadataStore.move(new ArrayList<>(0), destMetas,
-          getStoreContext().getTimeProvider(),
-          getOperationState());
+      metadataStore.move(new ArrayList<>(0), destMetas, getOperationState());
       for (Path deletedPath : deletedPaths) {
         // this is not ideal in that it may leave parent stuff around.
-        metadataStore.delete(deletedPath, getStoreContext().getTimeProvider());
+        metadataStore.delete(deletedPath);
       }
       deleteParentPaths();
     } catch (IOException | SdkBaseException e) {
@@ -185,7 +181,7 @@ public class DelayedUpdateRenameTracker extends RenameTracker {
       PathMetadata md = metadataStore.get(parent, true);
       if (md != null && md.isEmptyDirectory() == Tristate.TRUE) {
         // if were confident that this is empty: delete it.
-        metadataStore.delete(parent, getStoreContext().getTimeProvider());
+        metadataStore.delete(parent);
       }
     }
   }

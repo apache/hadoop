@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.om.helpers;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PrefixInfo;
-import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -125,7 +124,7 @@ public final class OmPrefixInfo extends WithMetadata {
    */
   public PrefixInfo getProtobuf() {
     PrefixInfo.Builder pib =  PrefixInfo.newBuilder().setName(name)
-        .addAllAcls(acls.stream().map(OMPBHelper::convertOzoneAcl)
+        .addAllAcls(acls.stream().map(OzoneAcl::toProtobuf)
             .collect(Collectors.toList()))
         .addAllMetadata(KeyValueUtil.toProtobuf(metadata));
     return pib.build();
@@ -140,7 +139,7 @@ public final class OmPrefixInfo extends WithMetadata {
     OmPrefixInfo.Builder opib = OmPrefixInfo.newBuilder()
         .setName(prefixInfo.getName())
         .setAcls(prefixInfo.getAclsList().stream().map(
-            OMPBHelper::convertOzoneAcl).collect(Collectors.toList()));
+            OzoneAcl::fromProtobuf).collect(Collectors.toList()));
     if (prefixInfo.getMetadataList() != null) {
       opib.addAllMetadata(KeyValueUtil
           .getFromProtobuf(prefixInfo.getMetadataList()));

@@ -25,6 +25,18 @@
   </div>
   <div class="panel-body">
     <div class="container-fluid">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+              Queue details for {{model.selected}}
+          </div>
+          <div class="panel-body">
+            <a href="#/yarn-queue/{{model.selected}}/apps">
+              {{model.selected}}
+            </a>
+          </div>
+        </div>
+    </div>
+    <div class="container-fluid">
       <div class="panel panel-default">
           {{yarn-queue.fair-queue-conf-table queue=model.selectedQueue}}
       </div>

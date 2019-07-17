@@ -399,6 +399,8 @@ public class CommitOperations {
         conf.getTrimmed(S3_METADATA_STORE_IMPL, ""));
     successData.addDiagnostic(METADATASTORE_AUTHORITATIVE,
         conf.getTrimmed(METADATASTORE_AUTHORITATIVE, "false"));
+    successData.addDiagnostic(AUTHORITATIVE_PATH,
+        conf.getTrimmed(AUTHORITATIVE_PATH, ""));
     successData.addDiagnostic(MAGIC_COMMITTER_ENABLED,
         conf.getTrimmed(MAGIC_COMMITTER_ENABLED, "false"));
 

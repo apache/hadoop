@@ -41,6 +41,8 @@ public final class OzoneConfigKeys {
       "dfs.container.ipc";
   public static final int DFS_CONTAINER_IPC_PORT_DEFAULT = 9859;
 
+  public static final String OZONE_METADATA_DIRS = "ozone.metadata.dirs";
+
   /**
    *
    * When set to true, allocate a random free port for ozone container,
@@ -118,6 +120,10 @@ public final class OzoneConfigKeys {
    * */
   public static final String OZONE_ADMINISTRATORS =
       "ozone.administrators";
+  /**
+   * Used only for testing purpose. Results in making every user an admin.
+   * */
+  public static final String OZONE_ADMINISTRATORS_WILDCARD = "*";
 
   public static final String OZONE_CLIENT_PROTOCOL =
       "ozone.client.protocol";
@@ -322,6 +328,10 @@ public final class OzoneConfigKeys {
   public static final String
       DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT =
       ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_APPENDER_QUEUE_BYTE_LIMIT_DEFAULT;
+  public static final String DFS_CONTAINER_RATIS_LOG_PURGE_GAP =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP;
+  public static final int DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT =
+      ScmConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP_DEFAULT;
   public static final String DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY =
       ScmConfigKeys.DFS_RATIS_SERVER_REQUEST_TIMEOUT_DURATION_KEY;
   public static final TimeDuration
@@ -384,6 +394,8 @@ public final class OzoneConfigKeys {
       "ozone.acl.authorizer.class";
   public static final String OZONE_ACL_AUTHORIZER_CLASS_DEFAULT =
       "org.apache.hadoop.ozone.security.acl.OzoneAccessAuthorizer";
+  public static final String OZONE_ACL_AUTHORIZER_CLASS_NATIVE =
+      "org.apache.hadoop.ozone.security.acl.OzoneNativeAuthorizer";
   public static final String OZONE_ACL_ENABLED =
       "ozone.acl.enabled";
   public static final boolean OZONE_ACL_ENABLED_DEFAULT =

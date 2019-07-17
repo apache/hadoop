@@ -56,9 +56,18 @@ public interface IAccessAuthorizer {
     ALL,
     NONE;
     private static int length = ACLType.values().length;
+    private static ACLType[] vals = ACLType.values();
 
     public static int getNoOfAcls() {
       return length;
+    }
+
+    public static ACLType getAclTypeFromOrdinal(int ordinal) {
+      if (ordinal > length - 1 && ordinal > -1) {
+        throw new IllegalArgumentException("Ordinal greater than array lentgh" +
+            ". ordinal:" + ordinal);
+      }
+      return vals[ordinal];
     }
 
     /**
@@ -145,9 +154,11 @@ public interface IAccessAuthorizer {
   enum ACLIdentityType {
     USER(OzoneConsts.OZONE_ACL_USER_TYPE),
     GROUP(OzoneConsts.OZONE_ACL_GROUP_TYPE),
-    CLIENT_IP(OzoneConsts.OZONE_ACL_IP_TYPE),
     WORLD(OzoneConsts.OZONE_ACL_WORLD_TYPE),
-    ANONYMOUS(OzoneConsts.OZONE_ACL_ANONYMOUS_TYPE);
+    ANONYMOUS(OzoneConsts.OZONE_ACL_ANONYMOUS_TYPE),
+    CLIENT_IP(OzoneConsts.OZONE_ACL_IP_TYPE);
+
+    // TODO: Add support for acl checks based on CLIENT_IP.
 
     @Override
     public String toString() {

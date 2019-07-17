@@ -21,6 +21,7 @@ package org.apache.hadoop.hdds.scm.server;
 
 
 import org.apache.hadoop.hdds.scm.block.BlockManager;
+import org.apache.hadoop.hdds.scm.net.NetworkTopology;
 import org.apache.hadoop.hdds.scm.safemode.SCMSafeModeManager;
 import org.apache.hadoop.hdds.scm.container.ContainerManager;
 import org.apache.hadoop.hdds.scm.container.ReplicationManager;
@@ -65,6 +66,7 @@ public final class SCMConfigurator {
   private SCMSafeModeManager scmSafeModeManager;
   private CertificateServer certificateServer;
   private SCMMetadataStore metadataStore;
+  private NetworkTopology networkTopology;
 
   /**
    * Allows user to specify a version of Node manager to use with this SCM.
@@ -138,6 +140,15 @@ public final class SCMConfigurator {
   }
 
   /**
+   * Allows user to specify a custom version of Network Topology Cluster
+   * to  be used with this SCM.
+   * @param networkTopology - network topology cluster.
+   */
+  public void setNetworkTopology(NetworkTopology networkTopology) {
+    this.networkTopology = networkTopology;
+  }
+
+  /**
    * Gets SCM Node Manager.
    * @return Node Manager.
    */
@@ -199,5 +210,13 @@ public final class SCMConfigurator {
    */
   public SCMMetadataStore getMetadataStore() {
     return metadataStore;
+  }
+
+  /**
+   * Get network topology cluster tree.
+   * @return NetworkTopology.
+   */
+  public NetworkTopology getNetworkTopology() {
+    return networkTopology;
   }
 }

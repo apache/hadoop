@@ -261,11 +261,13 @@ public class TestPartialDeleteFailures {
     private final List<Path> created = new ArrayList<>();
 
     @Override
-    public void initialize(final FileSystem fs) {
+    public void initialize(final FileSystem fs,
+        ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
-    public void initialize(final Configuration conf) {
+    public void initialize(final Configuration conf,
+        ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
@@ -316,21 +318,18 @@ public class TestPartialDeleteFailures {
     }
 
     @Override
-    public void delete(final Path path,
-        final ITtlTimeProvider ttlTimeProvider) {
+    public void delete(final Path path) {
       deleted.add(path);
     }
 
     @Override
-    public void deleteSubtree(final Path path,
-        final ITtlTimeProvider ttlTimeProvider) {
+    public void deleteSubtree(final Path path) {
 
     }
 
     @Override
     public void move(@Nullable final Collection<Path> pathsToDelete,
         @Nullable final Collection<PathMetadata> pathsToCreate,
-        final ITtlTimeProvider ttlTimeProvider,
         @Nullable final BulkOperationState operationState) {
     }
 
@@ -350,6 +349,10 @@ public class TestPartialDeleteFailures {
         final BulkOperationState.OperationType operation,
         final Path dest) {
       return null;
+    }
+
+    @Override
+    public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     }
 
     @Override
@@ -384,7 +387,6 @@ public class TestPartialDeleteFailures {
 
     @Override
     public void addAncestors(final Path qualifiedPath,
-        final ITtlTimeProvider timeProvider,
         @Nullable final BulkOperationState operationState) {
 
     }

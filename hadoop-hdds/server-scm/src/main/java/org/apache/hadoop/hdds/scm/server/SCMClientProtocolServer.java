@@ -238,7 +238,7 @@ public class SCMClientProtocolServer implements
           getContainer(id);
       final Pipeline pipeline;
 
-      if (container.isOpen()) {
+      if (container.isOpenNotClosing()) {
         // Ratis pipeline
         pipeline = scm.getPipelineManager()
             .getPipeline(container.getPipelineID());

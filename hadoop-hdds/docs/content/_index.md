@@ -34,11 +34,11 @@ ref "JavaApi.md"
 >}}), [S3 protocol support] ({{< ref "S3.md" >}}), and a [command line interface]
 ({{< ref "shell/_index.md" >}})  which makes it easy to use Ozone.
 
-Ozone consists of volumes, buckets, and Keys:
+Ozone consists of volumes, buckets, and keys:
 
 * Volumes are similar to user accounts. Only administrators can create or delete volumes.
-* Buckets are similar to directories. A bucket can contain any number of keys,  but buckets cannot contain other buckets.
-* Keys are similar to files. A bucket can contain any number of keys.
+* Buckets are similar to directories. A bucket can contain any number of keys, but buckets cannot contain other buckets.
+* Keys are similar to files.
 
  <a href="{{< ref "start/_index.md" >}}"> <button type="button"
  class="btn  btn-success btn-lg">Next >></button>

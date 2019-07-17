@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
+import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandRequestProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos.ContainerCommandResponseProto;
 import org.apache.hadoop.hdds.protocol.datanode.proto.XceiverClientProtocolServiceGrpc;
@@ -64,7 +65,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 /**
- * A Client for the storageContainer protocol.
+ * A Client for the storageContainer protocol for read object data.
  */
 public class XceiverClientGrpc extends XceiverClientSpi {
   static final Logger LOG = LoggerFactory.getLogger(XceiverClientGrpc.class);
@@ -76,6 +77,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
   private final Semaphore semaphore;
   private boolean closed = false;
   private SecurityConfig secConfig;
+  private final boolean topologyAwareRead;
 
   /**
    * Constructs a client that can communicate with the Container framework on
@@ -96,6 +98,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
     this.channels = new HashMap<>();
     this.asyncStubs = new HashMap<>();
+    this.topologyAwareRead = Boolean.parseBoolean(config.get(
+        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED,
+        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT));
   }
 
   /**
@@ -103,9 +108,10 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    */
   @Override
   public void connect() throws Exception {
-    // leader by default is the 1st datanode in the datanode list of pipleline
-    DatanodeDetails dn = this.pipeline.getFirstNode();
-    // just make a connection to the 1st datanode at the beginning
+    // connect to the closest node, if closest node doesn't exist, delegate to
+    // first node, which is usually the leader in the pipeline.
+    DatanodeDetails dn = this.pipeline.getClosestNode();
+    // just make a connection to the picked datanode at the beginning
     connectToDatanode(dn, null);
   }
 
@@ -114,9 +120,11 @@ public class XceiverClientGrpc extends XceiverClientSpi {
    */
   @Override
   public void connect(String encodedToken) throws Exception {
-    // leader by default is the 1st datanode in the datanode list of pipleline
-    DatanodeDetails dn = this.pipeline.getFirstNode();
-    // just make a connection to the 1st datanode at the beginning
+    // connect to the closest node, if closest node doesn't exist, delegate to
+    // first node, which is usually the leader in the pipeline.
+    DatanodeDetails dn;
+    dn = this.pipeline.getClosestNode();
+    // just make a connection to the picked datanode at the beginning
     connectToDatanode(dn, encodedToken);
   }
 
@@ -132,7 +140,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
 
     // Add credential context to the client call
     String userName = UserGroupInformation.getCurrentUser().getShortUserName();
-    LOG.debug("Connecting to server Port : " + dn.getIpAddress());
+    LOG.debug("Nodes in pipeline : {}", pipeline.getNodes().toString());
+    LOG.debug("Connecting to server : {}", dn.getIpAddress());
     NettyChannelBuilder channelBuilder =
         NettyChannelBuilder.forAddress(dn.getIpAddress(), port).usePlaintext()
             .maxInboundMessageSize(OzoneConsts.OZONE_SCM_CHUNK_MAX_SIZE)
@@ -252,7 +261,15 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     // TODO: cache the correct leader info in here, so that any subsequent calls
     // should first go to leader
     XceiverClientReply reply = new XceiverClientReply(null);
-    for (DatanodeDetails dn : pipeline.getNodes()) {
+    List<DatanodeDetails> datanodeList;
+    if ((request.getCmdType() == ContainerProtos.Type.ReadChunk ||
+        request.getCmdType() == ContainerProtos.Type.GetSmallFile) &&
+        topologyAwareRead) {
+      datanodeList = pipeline.getNodesInOrder();
+    } else {
+      datanodeList = pipeline.getNodes();
+    }
+    for (DatanodeDetails dn : datanodeList) {
       try {
         LOG.debug("Executing command " + request + " on datanode " + dn);
         // In case the command gets retried on a 2nd datanode,
@@ -349,6 +366,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       reconnect(dn, token);
     }
 
+    LOG.debug("Send command {} to datanode {}", request.getCmdType().toString(),
+        dn.getNetworkFullPath());
     final CompletableFuture<ContainerCommandResponseProto> replyFuture =
         new CompletableFuture<>();
     semaphore.acquire();

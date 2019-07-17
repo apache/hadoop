@@ -378,7 +378,7 @@ public class SQLCLI  extends Configured implements Tool {
       for (OzoneAclInfo aclInfo : volumeInfo.getVolumeAclsList()) {
         String insertAclInfo =
             String.format(INSERT_ACL_INFO, adminName, ownerName, volumeName,
-                aclInfo.getType(), aclInfo.getName(), aclInfo.getRightsList());
+                aclInfo.getType(), aclInfo.getName(), aclInfo.getRights());
         executeSQL(conn, insertAclInfo);
       }
       break;

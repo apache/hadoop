@@ -16,45 +16,27 @@
 Following python packages need to be installed before running the tests :
 
 1. blockade
-2. pytest==2.8.7
+2. pytest==3.2.0
 
 Running test as part of the maven build:
 
+```
 mvn clean verify -Pit
+```
 
 Running test as part of the released binary:
 
-You can execute all blockade tests with following command-lines:
+You can execute all blockade tests with following command:
 
 ```
-cd $DIRECTORY_OF_OZONE
-python -m pytest -s  tests/blockade/
+cd $OZONE_HOME
+python -m pytest tests/blockade
 ```
 
-You can also execute fewer blockade tests with following command-lines:
+You can also execute specific blockade tests with following command:
 
 ```
-cd $DIRECTORY_OF_OZONE
-python -m pytest -s  tests/blockade/<PATH_TO_PYTHON_FILE>
-e.g: python -m pytest -s tests/blockade/test_blockade_datanode_isolation.py
-```
-
-You can change the default 'sleep' interval in the tests with following
-command-lines:
-
-```
-cd $DIRECTORY_OF_OZONE
-python -m pytest -s  tests/blockade/ --containerStatusSleep=<SECONDS>
-
-e.g: python -m pytest -s  tests/blockade/ --containerStatusSleep=720
-```
-
-By default, second phase of the tests will not be run.
-In order to run the second phase of the tests, you can run following
-command-lines:
-
-```
-cd $DIRECTORY_OF_OZONE
-python -m pytest -s  tests/blockade/ --runSecondPhase=true
-
+cd $OZONE_HOME
+python -m pytest tests/blockade/< PATH TO PYTHON FILE >
+e.g: python -m pytest tests/blockade/test_blockade_datanode_isolation.py
 ```

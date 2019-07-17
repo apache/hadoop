@@ -76,7 +76,7 @@ public class GenerateDNBlockInfosReducer
 
     Text out = new Text();
     while (it.hasNext()) {
-      BlockInfo blockInfo = new BlockInfo(it.next());
+      BlockInfo blockInfo = it.next();
       String blockLine = blockInfo.getBlockId() + ","
           + blockInfo.getBlockGenerationStamp() + "," + blockInfo.getSize();
       out.set(blockLine);
