@@ -68,12 +68,9 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
-      Class<VALUE> valueType) {
-    this.rawTable = rawTable;
-    this.codecRegistry = codecRegistry;
-    this.keyType = keyType;
-    this.valueType = valueType;
-    cache = new TableCacheImpl<>(TableCacheImpl.CacheCleanupPolicy.MANUAL);
+      Class<VALUE> valueType) throws IOException {
+    this(rawTable, codecRegistry, keyType, valueType,
+        CacheCleanupPolicy.MANUAL);
   }
 
   /**
