@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hdfs.server.common.Util;
+
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
+import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
 
 import java.net.HttpURLConnection;
@@ -87,6 +93,10 @@ public class ImageServlet extends HttpServlet {
 
   private SortedSet<ImageUploadRequest> currentlyDownloadingCheckpoints = Collections
       .<ImageUploadRequest> synchronizedSortedSet(new TreeSet<ImageUploadRequest>());
+
+  public static final String RECENT_IMAGE_CHECK_ENABLED =
+      "recent.image.check.enabled";
+  public static final boolean RECENT_IMAGE_CHECK_ENABLED_DEFAULT = true;
 
   @Override
   public void doGet(final HttpServletRequest request,
@@ -481,6 +491,23 @@ public class ImageServlet extends HttpServlet {
       final PutImageParams parsedParams = new PutImageParams(request, response,
           conf);
       final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+      final boolean checkRecentImageEnable;
+      Object checkRecentImageEnableObj =
+          context.getAttribute(RECENT_IMAGE_CHECK_ENABLED);
+      if (checkRecentImageEnableObj != null) {
+        if (checkRecentImageEnableObj instanceof Boolean) {
+          checkRecentImageEnable = (boolean) checkRecentImageEnableObj;
+        } else {
+          // This is an error case, but crashing NN due to this
+          // seems more undesirable. Only log the error and set to default.
+          LOG.error("Expecting boolean obj for setting checking recent image, "
+              + "but got " + checkRecentImageEnableObj.getClass() + ". This is "
+              + "unexpected! Setting to default.");
+          checkRecentImageEnable = RECENT_IMAGE_CHECK_ENABLED_DEFAULT;
+        }
+      } else {
+        checkRecentImageEnable = RECENT_IMAGE_CHECK_ENABLED_DEFAULT;
+      }
 
       validateRequest(context, conf, request, response, nnImage,
           parsedParams.getStorageInfoString());
@@ -494,7 +521,8 @@ public class ImageServlet extends HttpServlet {
               // target (regardless of the fact that we got the image)
               HAServiceProtocol.HAServiceState state = NameNodeHttpServer
                   .getNameNodeStateFromContext(getServletContext());
-              if (state != HAServiceProtocol.HAServiceState.ACTIVE) {
+              if (state != HAServiceProtocol.HAServiceState.ACTIVE &&
+                  state != HAServiceProtocol.HAServiceState.OBSERVER) {
                 // we need a different response type here so the client can differentiate this
                 // from the failure to upload due to (1) security, or (2) other checkpoints already
                 // present
@@ -528,6 +556,39 @@ public class ImageServlet extends HttpServlet {
                         + txid);
                 return null;
               }
+
+              long now = System.currentTimeMillis();
+              long lastCheckpointTime =
+                  nnImage.getStorage().getMostRecentCheckpointTime();
+              long lastCheckpointTxid =
+                  nnImage.getStorage().getMostRecentCheckpointTxId();
+
+              long checkpointPeriod =
+                  conf.getTimeDuration(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY,
+                      DFS_NAMENODE_CHECKPOINT_PERIOD_DEFAULT, TimeUnit.SECONDS);
+              long checkpointTxnCount =
+                  conf.getLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
+                      DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT);
+
+              long timeDelta = TimeUnit.MILLISECONDS.toSeconds(
+                  now - lastCheckpointTime);
+
+              if (checkRecentImageEnable &&
+                  timeDelta < checkpointPeriod &&
+                  txid - lastCheckpointTxid < checkpointTxnCount) {
+                // only when at least one of two conditions are met we accept
+                // a new fsImage
+                // 1. most recent image's txid is too far behind
+                // 2. last checkpoint time was too old
+                response.sendError(HttpServletResponse.SC_CONFLICT,
+                    "Most recent checkpoint is neither too far behind in "
+                        + "txid, nor too old. New txnid cnt is "
+                        + (txid - lastCheckpointTxid)
+                        + ", expecting at least " + checkpointTxnCount
+                        + " unless too long since last upload.");
+                return null;
+              }
+
               try {
                 if (nnImage.getStorage().findImageFile(nnf, txid) != null) {
                   response.sendError(HttpServletResponse.SC_CONFLICT,
