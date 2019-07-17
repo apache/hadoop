@@ -22,8 +22,6 @@ package org.apache.hadoop.ozone.om.request.s3.bucket;
 import java.util.UUID;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,6 +30,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.mockito.Mockito;
 
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditMessage;

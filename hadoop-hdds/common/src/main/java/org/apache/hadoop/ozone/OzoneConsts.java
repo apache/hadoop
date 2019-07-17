@@ -304,4 +304,8 @@ public final class OzoneConsts {
   public static final String JAVA_TMP_DIR = "java.io.tmpdir";
   public static final String LOCALHOST = "localhost";
 
+
+  public static final int S3_BUCKET_MIN_LENGTH = 3;
+  public static final int S3_BUCKET_MAX_LENGTH = 64;
+
 }
