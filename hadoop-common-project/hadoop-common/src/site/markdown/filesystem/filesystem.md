@@ -973,6 +973,9 @@ There is no consistent return code from an attempt to delete the root directory.
 Implementations SHOULD return true; this avoids code which checks for a false
 return value from overreacting.
 
+Note: Some of the object store based filesystem implementations always return
+false when deleting the root.
+
 ##### Empty (non-root) directory `recursive == False`
 
 Deleting an empty directory that is not root will remove the path from the FS and
@@ -1018,6 +1021,9 @@ which only system administrators should be able to perform.
 Any filesystem client which interacts with a remote filesystem which lacks
 such a security model, MAY reject calls to `delete("/", true)` on the basis
 that it makes it too easy to lose data.
+
+Note: Some of the object store based filesystem implementations always return
+false when deleting the root.
 
 ##### Recursive delete of non-root directory
 
