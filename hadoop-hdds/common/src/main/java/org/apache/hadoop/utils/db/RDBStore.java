@@ -334,12 +334,17 @@ public class RDBStore implements DBStore {
       while (transactionLogIterator.isValid()) {
         TransactionLogIterator.BatchResult result =
             transactionLogIterator.getBatch();
-        if (flag && result.sequenceNumber() > 1 + sequenceNumber) {
+        long currSequenceNumber = result.sequenceNumber();
+        if (flag && currSequenceNumber > 1 + sequenceNumber) {
           throw new DataNotFoundException("Unable to read data from " +
               "RocksDB wal to get delta updates. It may have already been" +
               "flushed to SSTs.");
         }
         flag = false;
+        if (currSequenceNumber == sequenceNumber) {
+          transactionLogIterator.next();
+          continue;
+        }
         WriteBatch writeBatch = result.writeBatch();
         byte[] writeBatchData = writeBatch.data();
         dbUpdatesWrapper.addWriteBatch(writeBatchData,

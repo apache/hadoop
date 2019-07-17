@@ -342,12 +342,6 @@ public class TestRDBStore {
 
       DBUpdatesWrapper dbUpdatesSince = newStore.getUpdatesSince(0);
       Assert.assertEquals(2, dbUpdatesSince.getData().size());
-
-      try {
-        dbUpdatesSince = newStore.getUpdatesSince(-1);
-        Assert.fail();
-      } catch (DataNotFoundException ex) {
-      }
     }
   }
 

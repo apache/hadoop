@@ -83,7 +83,6 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.DataNotFoundException;
 import org.apache.hadoop.utils.db.RDBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
