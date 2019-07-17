@@ -88,7 +88,10 @@ import org.apache.hadoop.utils.db.TableIterator;
 
 import org.apache.commons.lang3.RandomStringUtils;
 import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS;
+import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ADMINISTRATORS_WILDCARD;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_ADDRESS_KEY;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.KEY_NOT_FOUND;
@@ -135,6 +138,7 @@ public class TestOzoneManager {
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
+    conf.set(OZONE_ADMINISTRATORS, OZONE_ADMINISTRATORS_WILDCARD);
     cluster =  MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
         .setScmId(scmId)
@@ -356,7 +360,7 @@ public class TestOzoneManager {
   // Create a volume and test Volume access for a different user
   @Test
   public void testAccessVolume() throws IOException, OzoneException {
-    String userName = "user" + RandomStringUtils.randomNumeric(5);
+    String userName = UserGroupInformation.getCurrentUser().getUserName();
     String adminName = "admin" + RandomStringUtils.randomNumeric(5);
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
     String[] groupName =
@@ -369,28 +373,28 @@ public class TestOzoneManager {
     storageHandler.createVolume(createVolumeArgs);
 
     OzoneAcl userAcl = new OzoneAcl(ACLIdentityType.USER, userName,
-        ACLType.READ);
+        ACLType.READ, ACCESS);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, userAcl));
     OzoneAcl group = new OzoneAcl(ACLIdentityType.GROUP, groupName[0],
-        ACLType.READ);
+        ACLType.READ, ACCESS);
     Assert.assertTrue(storageHandler.checkVolumeAccess(volumeName, group));
 
     // Create a different user and access should fail
     String falseUserName = "user" + RandomStringUtils.randomNumeric(5);
     OzoneAcl falseUserAcl =
         new OzoneAcl(ACLIdentityType.USER, falseUserName,
-            ACLType.ALL);
+            ACLType.ALL, ACCESS);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseUserAcl));
     // Checking access with user name and Group Type should fail
     OzoneAcl falseGroupAcl = new OzoneAcl(ACLIdentityType.GROUP, userName,
-        ACLType.ALL);
+        ACLType.ALL, ACCESS);
     Assert.assertFalse(storageHandler
         .checkVolumeAccess(volumeName, falseGroupAcl));
 
     // Access for acl type world should also fail
     OzoneAcl worldAcl =
-        new OzoneAcl(ACLIdentityType.WORLD, "", ACLType.READ);
+        new OzoneAcl(ACLIdentityType.WORLD, "", ACLType.READ, ACCESS);
     Assert.assertFalse(storageHandler.checkVolumeAccess(volumeName, worldAcl));
 
     Assert.assertEquals(0, omMetrics.getNumVolumeCheckAccessFails());
@@ -1012,8 +1016,8 @@ public class TestOzoneManager {
 
   @Test
   public void testListVolumes() throws IOException, OzoneException {
-
-    String user0 = "testListVolumes-user-0";
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+    String user0 = ugi.getUserName();
     String user1 = "testListVolumes-user-1";
     String adminUser = "testListVolumes-admin";
     ListArgs listVolumeArgs;
@@ -1072,9 +1076,7 @@ public class TestOzoneManager {
     listVolumeArgs = new ListArgs(userArgs1, null, 100, null);
     listVolumeArgs.setRootScan(false);
     volumes = storageHandler.listVolumes(listVolumeArgs);
-    Assert.assertEquals(10, volumes.getVolumes().size());
-    Assert.assertEquals(user1,
-        volumes.getVolumes().get(3).getOwner().getName());
+    Assert.assertEquals(0, volumes.getVolumes().size());
 
     // Make sure all available fields are returned
     final String user0vol4 = "Vol-" + user0 + "-4";

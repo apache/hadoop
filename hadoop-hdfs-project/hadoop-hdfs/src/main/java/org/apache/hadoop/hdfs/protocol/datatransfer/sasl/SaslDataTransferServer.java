@@ -28,11 +28,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import javax.crypto.SecretKey;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -52,15 +50,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeID;
 import org.apache.hadoop.hdfs.protocol.datatransfer.IOStreamPair;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.DataTransferEncryptorMessageProto.DataTransferEncryptorStatus;
-import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.hdfs.security.token.block.BlockPoolTokenSecretManager;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.server.datanode.DNConf;
 import org.apache.hadoop.security.SaslPropertiesResolver;
-import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.token.SecretManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -348,21 +343,6 @@ public class SaslDataTransferServer {
     return identifier;
   }
 
-  private String examineSecret(byte[] secret, String bpid) {
-    BlockKey blockKey = blockPoolTokenSecretManager.get(bpid).getCurrentKey();
-    SecretKey secretKey = blockKey.getKey();
-    for (SaslRpcServer.QualityOfProtection qop :
-        SaslRpcServer.QualityOfProtection.values()) {
-      String qopString = qop.getSaslQop();
-      byte[] data = qopString.getBytes(Charsets.UTF_8);
-      byte[] encryptedData = SecretManager.createPassword(data, secretKey);
-      if (Arrays.equals(encryptedData, secret)) {
-        return qopString;
-      }
-    }
-    return null;
-  }
-
   @VisibleForTesting
   public String getNegotiatedQOP() {
     return negotiatedQOP;
@@ -399,12 +379,8 @@ public class SaslDataTransferServer {
       if (secret != null || bpid != null) {
         // sanity check, if one is null, the other must also not be null
         assert(secret != null && bpid != null);
-        String qop = examineSecret(secret, bpid);
-        if (qop != null) {
-          saslProps.put(Sasl.QOP, qop);
-        } else {
-          LOG.error("Unable to match secret to a QOP!");
-        }
+        String qop = new String(secret, Charsets.UTF_8);
+        saslProps.put(Sasl.QOP, qop);
       }
       SaslParticipant sasl = SaslParticipant.createServerSaslParticipant(
           saslProps, callbackHandler);

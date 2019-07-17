@@ -75,6 +75,26 @@ public abstract class BaseRecord implements Comparable<BaseRecord> {
   public abstract long getExpirationMs();
 
   /**
+   * Check if this record is expired. The default is false. Override for
+   * customized behavior.
+   *
+   * @return True if the record is expired.
+   */
+  public boolean isExpired() {
+    return false;
+  }
+
+  /**
+   * Get the deletion time for the expired record. The default is disabled.
+   * Override for customized behavior.
+   *
+   * @return Deletion time for the expired record.
+   */
+  public long getDeletionMs() {
+    return -1;
+  }
+
+  /**
    * Map of primary key names to values for the record. The primary key can be
    * a combination of 1-n different State Store serialized values.
    *
@@ -202,10 +222,32 @@ public abstract class BaseRecord implements Comparable<BaseRecord> {
    */
   public boolean checkExpired(long currentTime) {
     long expiration = getExpirationMs();
-    if (getDateModified() > 0 && expiration > 0) {
-      return (getDateModified() + expiration) < currentTime;
+    long modifiedTime = getDateModified();
+    if (modifiedTime > 0 && expiration > 0) {
+      return (modifiedTime + expiration) < currentTime;
     }
     return false;
+  }
+
+  /**
+   * Called when this record is expired and expired deletion is enabled, checks
+   * for the deletion. If an expired record exists beyond the deletion time, it
+   * should be deleted.
+   *
+   * @param currentTime The current timestamp in ms from the data store, to be
+   *          compared against the modification and creation dates of the
+   *          object.
+   * @return boolean True if the record has been updated and should be
+   *         deleted from the data store.
+   */
+  public boolean shouldBeDeleted(long currentTime) {
+    long deletionTime = getDeletionMs();
+    if (isExpired() && deletionTime > 0) {
+      long elapsedTime = currentTime - (getDateModified() + getExpirationMs());
+      return elapsedTime > deletionTime;
+    } else {
+      return false;
+    }
   }
 
   /**

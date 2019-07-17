@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.om.response.key;
 
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
@@ -34,10 +35,13 @@ import java.io.IOException;
  */
 public class OMKeyDeleteResponse extends OMClientResponse {
   private OmKeyInfo omKeyInfo;
+  private long deleteTimestamp;
 
-  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, OMResponse omResponse) {
+  public OMKeyDeleteResponse(OmKeyInfo omKeyInfo, long deletionTime,
+      OMResponse omResponse) {
     super(omResponse);
     this.omKeyInfo = omKeyInfo;
+    this.deleteTimestamp = deletionTime;
   }
 
   @Override
@@ -54,8 +58,14 @@ public class OMKeyDeleteResponse extends OMClientResponse {
 
       // If Key is not empty add this to delete table.
       if (!isKeyEmpty(omKeyInfo)) {
+        // If a deleted key is put in the table where a key with the same
+        // name already exists, then the old deleted key information would be
+        // lost. To differentiate between keys with same name in
+        // deletedTable, we add the timestamp to the key name.
+        String deleteKeyName = OmUtils.getDeletedKeyName(
+            ozoneKey, deleteTimestamp);
         omMetadataManager.getDeletedTable().putWithBatch(batchOperation,
-            ozoneKey, omKeyInfo);
+            deleteKeyName, omKeyInfo);
       }
     }
   }

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
+import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_COUNT_TABLE;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_CONTAINER_DB;
 import static org.apache.hadoop.ozone.recon.ReconConstants.CONTAINER_KEY_TABLE;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_DB_DIR;
@@ -30,6 +31,7 @@ import org.apache.hadoop.ozone.recon.api.types.ContainerKeyPrefix;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.hadoop.utils.db.DBStoreBuilder;
 import org.apache.hadoop.utils.db.IntegerCodec;
+import org.apache.hadoop.utils.db.LongCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,7 +71,9 @@ public class ReconContainerDBProvider implements Provider<DBStore> {
           .setPath(metaDir)
           .setName(dbName)
           .addTable(CONTAINER_KEY_TABLE)
+          .addTable(CONTAINER_KEY_COUNT_TABLE)
           .addCodec(ContainerKeyPrefix.class, new ContainerKeyPrefixCodec())
+          .addCodec(Long.class, new LongCodec())
           .addCodec(Integer.class, new IntegerCodec())
           .build();
     } catch (Exception ex) {

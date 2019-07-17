@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.annotation.Nonnull;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.request.key.OMKeyCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -72,8 +72,7 @@ import static org.apache.hadoop.ozone.om.request.file.OMFileRequest.OMDirectoryR
 /**
  * Handles create file request.
  */
-public class OMFileCreateRequest extends OMKeyCreateRequest
-    implements OMKeyRequest {
+public class OMFileCreateRequest extends OMKeyRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMFileCreateRequest.class);
@@ -171,7 +170,7 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
 
     boolean acquiredLock = false;
     IOException exception = null;
-    FileEncryptionInfo encryptionInfo = null;
+    Optional<FileEncryptionInfo> encryptionInfo = Optional.absent();
     OmKeyInfo omKeyInfo = null;
 
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
@@ -263,7 +262,8 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
       encryptionInfo = getFileEncryptionInfo(ozoneManager, bucketInfo);
       omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
           omMetadataManager.getOzoneKey(volumeName, bucketName,
-              keyName), keyArgs.getDataSize(), locations, encryptionInfo);
+              keyName), keyArgs.getDataSize(), locations,
+          encryptionInfo.orNull());
 
     } catch (IOException ex) {
       exception = ex;
@@ -275,7 +275,7 @@ public class OMFileCreateRequest extends OMKeyCreateRequest
     }
 
     return prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
-        encryptionInfo, exception, createFileRequest.getClientID(),
+        encryptionInfo.orNull(), exception, createFileRequest.getClientID(),
         transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
         OMAction.CREATE_FILE);
   }

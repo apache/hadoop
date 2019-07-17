@@ -19,10 +19,13 @@ package org.apache.hadoop.ozone.om;
 import com.google.common.base.Strings;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmPrefixInfo;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.util.RadixNode;
 import org.apache.hadoop.ozone.util.RadixTree;
+import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.utils.db.*;
 import org.apache.hadoop.utils.db.Table.KeyValue;
 import org.slf4j.Logger;
@@ -228,11 +231,45 @@ public class PrefixManagerImpl implements PrefixManager {
       OmPrefixInfo prefixInfo =
           metadataManager.getPrefixTable().get(prefixPath);
       OmPrefixInfo.Builder upiBuilder = OmPrefixInfo.newBuilder();
-      upiBuilder.setName(prefixPath).setAcls(acls);
+      List<OzoneAcl> aclsToBeSet = new ArrayList<>(acls.size());
+      aclsToBeSet.addAll(acls);
+      upiBuilder.setName(prefixPath);
       if (prefixInfo != null && prefixInfo.getMetadata() != null) {
         upiBuilder.addAllMetadata(prefixInfo.getMetadata());
       }
-      prefixInfo = upiBuilder.build();
+
+      // Inherit DEFAULT acls from prefix.
+      boolean prefixParentFound = false;
+      List<OmPrefixInfo> prefixList = getLongestPrefixPathHelper(
+          prefixTree.getLongestPrefix(prefixPath));
+
+      if (prefixList.size() > 0) {
+        // Add all acls from direct parent to key.
+        OmPrefixInfo parentPrefixInfo = prefixList.get(prefixList.size() - 1);
+        if (parentPrefixInfo != null) {
+          aclsToBeSet.addAll(OzoneUtils.getDefaultAcls(
+              parentPrefixInfo.getAcls()));
+          prefixParentFound = true;
+        }
+      }
+
+      // If no parent prefix is found inherit DEFULT acls from bucket.
+      if (!prefixParentFound) {
+        String bucketKey = metadataManager.getBucketKey(obj.getVolumeName(),
+            obj.getBucketName());
+        OmBucketInfo bucketInfo = metadataManager.getBucketTable().
+            get(bucketKey);
+        if (bucketInfo != null) {
+          bucketInfo.getAcls().forEach(a -> {
+            if (a.getAclScope().equals(OzoneAcl.AclScope.DEFAULT)) {
+              aclsToBeSet.add(new OzoneAcl(a.getType(), a.getName(),
+                  a.getAclBitSet(), OzoneAcl.AclScope.ACCESS));
+            }
+          });
+        }
+      }
+
+      prefixInfo = upiBuilder.setAcls(aclsToBeSet).build();
       prefixTree.insert(prefixPath, prefixInfo);
       metadataManager.getPrefixTable().put(prefixPath, prefixInfo);
     } catch (IOException ex) {
@@ -273,16 +310,62 @@ public class PrefixManagerImpl implements PrefixManager {
     return EMPTY_ACL_LIST;
   }
 
+  /**
+   * Check access for given ozoneObject.
+   *
+   * @param ozObject object for which access needs to be checked.
+   * @param context Context object encapsulating all user related information.
+   * @return true if user has access else false.
+   */
+  @Override
+  public boolean checkAccess(OzoneObj ozObject, RequestContext context)
+      throws OMException {
+    Objects.requireNonNull(ozObject);
+    Objects.requireNonNull(context);
+
+    String prefixPath = ozObject.getPath();
+    metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
+    try {
+      String longestPrefix = prefixTree.getLongestPrefix(prefixPath);
+      if (prefixPath.equals(longestPrefix)) {
+        RadixNode<OmPrefixInfo> lastNode =
+            prefixTree.getLastNodeInPrefixPath(prefixPath);
+        if (lastNode != null && lastNode.getValue() != null) {
+          boolean hasAccess = OzoneUtils.checkAclRights(lastNode.getValue().
+              getAcls(), context);
+          LOG.debug("user:{} has access rights for ozObj:{} ::{} ",
+              context.getClientUgi(), ozObject, hasAccess);
+          return hasAccess;
+        } else {
+          return true;
+        }
+      } else {
+        return true;
+      }
+    } finally {
+      metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
+    }
+  }
+
   @Override
   public List<OmPrefixInfo> getLongestPrefixPath(String path) {
     String prefixPath = prefixTree.getLongestPrefix(path);
     metadataManager.getLock().acquireLock(PREFIX_LOCK, prefixPath);
     try {
-      return prefixTree.getLongestPrefixPath(prefixPath).stream()
-          .map(c -> c.getValue()).collect(Collectors.toList());
+      return getLongestPrefixPathHelper(prefixPath);
     } finally {
       metadataManager.getLock().releaseLock(PREFIX_LOCK, prefixPath);
     }
+  }
+
+  /**
+   * Get longest prefix path assuming caller take prefix lock.
+   * @param prefixPath
+   * @return list of prefix info.
+   */
+  private List<OmPrefixInfo> getLongestPrefixPathHelper(String prefixPath) {
+    return prefixTree.getLongestPrefixPath(prefixPath).stream()
+          .map(c -> c.getValue()).collect(Collectors.toList());
   }
 
   /**

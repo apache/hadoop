@@ -60,7 +60,7 @@ public class OzoneManagerStarter extends GenericCli {
   public Void call() throws Exception {
     /**
      * This method is invoked only when a sub-command is not called. Therefore
-     * if someone runs "ozone om" with no parameters, this is the methood
+     * if someone runs "ozone om" with no parameters, this is the method
      * which runs and starts the OM.
      */
     commonInit();

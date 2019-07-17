@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
-import javax.crypto.Mac;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.fs.CreateFlag;
@@ -32,7 +31,6 @@ import org.apache.hadoop.hdfs.protocol.LastBlockWithStatus;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.protocol.datatransfer.sasl.SaslDataTransferTestCase;
-import org.apache.hadoop.hdfs.security.token.block.BlockKey;
 import org.apache.hadoop.io.EnumSetWritable;
 import org.apache.hadoop.security.TestPermission;
 import org.junit.After;
@@ -55,7 +53,6 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
 
   private HdfsConfiguration conf;
   private MiniDFSCluster cluster;
-  private String encryptionAlgorithm;
   private DistributedFileSystem dfs;
 
   private String configKey;
@@ -84,7 +81,6 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
     conf.setBoolean(DFS_NAMENODE_SEND_QOP_ENABLED, true);
     conf.set(HADOOP_RPC_PROTECTION, this.configKey);
     cluster = null;
-    encryptionAlgorithm = "HmacSHA1";
     cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
     cluster.waitActive();
   }
@@ -109,12 +105,8 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
 
     LocatedBlock lb = client.namenode.addBlock(src, clientName, null, null,
         HdfsConstants.GRANDFATHER_INODE_ID, null, null);
-    byte[] secret = lb.getBlockToken().getDnHandshakeSecret();
-    BlockKey currentKey = cluster.getNamesystem().getBlockManager()
-        .getBlockTokenSecretManager().getCurrentKey();
-    String decrypted = decryptMessage(secret, currentKey,
-        encryptionAlgorithm);
-    assertEquals(this.qopValue, decrypted);
+    byte[] secret = lb.getBlockToken().decodeIdentifier().getHandshakeMsg();
+    assertEquals(this.qopValue, new String(secret));
   }
 
   @Test
@@ -137,12 +129,8 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
         new EnumSetWritable<>(EnumSet.of(CreateFlag.APPEND)));
 
     byte[] secret = lastBlock.getLastBlock().getBlockToken()
-        .getDnHandshakeSecret();
-    BlockKey currentKey = cluster.getNamesystem().getBlockManager()
-        .getBlockTokenSecretManager().getCurrentKey();
-    String decrypted = decryptMessage(secret, currentKey,
-        encryptionAlgorithm);
-    assertEquals(this.qopValue, decrypted);
+        .decodeIdentifier().getHandshakeMsg();
+    assertEquals(this.qopValue, new String(secret));
   }
 
   @Test
@@ -164,27 +152,10 @@ public class TestBlockTokenWrappingQOP extends SaslDataTransferTestCase {
 
     assertTrue(lbs.getLocatedBlocks().size() > 0);
 
-    BlockKey currentKey = cluster.getNamesystem().getBlockManager()
-        .getBlockTokenSecretManager().getCurrentKey();
     for (LocatedBlock lb : lbs.getLocatedBlocks()) {
-      byte[] secret = lb.getBlockToken().getDnHandshakeSecret();
-      String decrypted = decryptMessage(secret, currentKey,
-          encryptionAlgorithm);
-      assertEquals(this.qopValue, decrypted);
+      byte[] secret = lb.getBlockToken()
+          .decodeIdentifier().getHandshakeMsg();
+      assertEquals(this.qopValue, new String(secret));
     }
-  }
-
-  private String decryptMessage(byte[] secret, BlockKey key,
-      String algorithm) throws Exception {
-    String[] qops = {"auth", "auth-conf", "auth-int"};
-    Mac mac = Mac.getInstance(algorithm);
-    mac.init(key.getKey());
-    for (String qop : qops) {
-      byte[] encrypted = mac.doFinal(qop.getBytes());
-      if (Arrays.equals(encrypted, secret)) {
-        return qop;
-      }
-    }
-    return null;
   }
 }

@@ -23,6 +23,7 @@ import io.opentracing.Scope;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .AllocateBlockResponse;
 import org.apache.hadoop.hdds.scm.ScmInfo;
@@ -50,6 +51,10 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .SCMBlockLocationRequest;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
     .Status;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SortDatanodesRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SortDatanodesResponseProto;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.ozone.common.BlockGroup;
 import org.apache.hadoop.ozone.common.DeleteBlockGroupResult;
@@ -113,6 +118,10 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
       case GetScmInfo:
         response.setGetScmInfoResponse(
             getScmInfo(request.getGetScmInfoRequest()));
+        break;
+      case SortDatanodes:
+        response.setSortDatanodesResponse(
+            sortDatanodes(request.getSortDatanodesRequest()));
         break;
       default:
         // Should never happen
@@ -192,5 +201,22 @@ public final class ScmBlockLocationProtocolServerSideTranslatorPB
         .setClusterId(scmInfo.getClusterId())
         .setScmId(scmInfo.getScmId())
         .build();
+  }
+
+  public SortDatanodesResponseProto sortDatanodes(
+      SortDatanodesRequestProto request) throws ServiceException {
+    SortDatanodesResponseProto.Builder resp =
+        SortDatanodesResponseProto.newBuilder();
+    try {
+      List<String> nodeList = request.getNodeNetworkNameList();
+      final List<DatanodeDetails> results =
+          impl.sortDatanodes(nodeList, request.getClient());
+      if (results != null && results.size() > 0) {
+        results.stream().forEach(dn -> resp.addNode(dn.getProtoBufMessage()));
+      }
+      return resp.build();
+    } catch (IOException ex) {
+      throw new ServiceException(ex);
+    }
   }
 }

@@ -24,9 +24,7 @@ public enum OMAction implements AuditAction {
 
   // WRITE Actions
   ALLOCATE_BLOCK,
-  ADD_ALLOCATE_BLOCK,
   ALLOCATE_KEY,
-  APPLY_ALLOCATE_KEY,
   COMMIT_KEY,
   CREATE_VOLUME,
   CREATE_BUCKET,
@@ -39,6 +37,8 @@ public enum OMAction implements AuditAction {
   UPDATE_VOLUME,
   UPDATE_BUCKET,
   UPDATE_KEY,
+  PURGE_KEYS,
+
   // READ Actions
   CHECK_VOLUME_ACCESS,
   LIST_BUCKETS,

@@ -648,7 +648,7 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
   /**
    * run integrity checks on the Container metadata.
    */
-  public void check() throws StorageContainerException {
+  public boolean check() {
     ContainerCheckLevel level = ContainerCheckLevel.NO_CHECK;
     long containerId = containerData.getContainerID();
 
@@ -671,14 +671,12 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
           containerData.getState());
       break;
     default:
-      throw new StorageContainerException(
-          "Invalid Container state found for Container : " + containerData
-              .getContainerID(), INVALID_CONTAINER_STATE);
+      break;
     }
 
     if (level == ContainerCheckLevel.NO_CHECK) {
       LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      return;
+      return true;
     }
 
     KeyValueContainerCheck checker =
@@ -687,17 +685,11 @@ public class KeyValueContainer implements Container<KeyValueContainerData> {
 
     switch (level) {
     case FAST_CHECK:
-      checker.fastCheck();
-      break;
+      return checker.fastCheck();
     case FULL_CHECK:
-      checker.fullCheck();
-      break;
-    case NO_CHECK:
-      LOG.debug("Skipping integrity checks for Container Id : {}", containerId);
-      break;
+      return checker.fullCheck();
     default:
-      // we should not be here at all, scuttle the ship!
-      Preconditions.checkNotNull(0, "Invalid Containercheck level");
+      return true;
     }
   }
 

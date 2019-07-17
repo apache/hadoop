@@ -842,7 +842,7 @@ public class StagingCommitter extends AbstractS3ACommitter {
       Configuration fsConf) {
     if (conflictResolution == null) {
       this.conflictResolution = ConflictResolution.valueOf(
-          getConfictModeOption(context, fsConf));
+          getConfictModeOption(context, fsConf, DEFAULT_CONFLICT_MODE));
     }
     return conflictResolution;
   }
@@ -889,14 +889,15 @@ public class StagingCommitter extends AbstractS3ACommitter {
    * Get the conflict mode option string.
    * @param context context with the config
    * @param fsConf filesystem config
+   * @param defVal default value.
    * @return the trimmed configuration option, upper case.
    */
   public static String getConfictModeOption(JobContext context,
-      Configuration fsConf) {
+      Configuration fsConf, String defVal) {
     return getConfigurationOption(context,
         fsConf,
         FS_S3A_COMMITTER_STAGING_CONFLICT_MODE,
-        DEFAULT_CONFLICT_MODE).toUpperCase(Locale.ENGLISH);
+        defVal).toUpperCase(Locale.ENGLISH);
   }
 
 }

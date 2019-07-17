@@ -34,6 +34,10 @@ public final class ContainerPlacementPolicyFactory {
   private static final Logger LOG =
       LoggerFactory.getLogger(ContainerPlacementPolicyFactory.class);
 
+  private static final Class<? extends ContainerPlacementPolicy>
+      OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
+      SCMContainerPlacementRandom.class;
+
   private ContainerPlacementPolicyFactory() {
   }
 
@@ -42,7 +46,7 @@ public final class ContainerPlacementPolicyFactory {
       final boolean fallback) throws SCMException{
     final Class<? extends ContainerPlacementPolicy> placementClass = conf
         .getClass(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-            SCMContainerPlacementRackAware.class,
+            OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT,
             ContainerPlacementPolicy.class);
     Constructor<? extends ContainerPlacementPolicy> constructor;
     try {

@@ -40,11 +40,13 @@ import java.util.Map;
 public class NullMetadataStore implements MetadataStore {
 
   @Override
-  public void initialize(FileSystem fs) throws IOException {
+  public void initialize(FileSystem fs, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override
-  public void initialize(Configuration conf) throws IOException {
+  public void initialize(Configuration conf, ITtlTimeProvider ttlTimeProvider)
+      throws IOException {
   }
 
   @Override
@@ -52,7 +54,7 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+  public void delete(Path path)
       throws IOException {
   }
 
@@ -61,7 +63,7 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+  public void deleteSubtree(Path path)
       throws IOException {
   }
 
@@ -84,7 +86,6 @@ public class NullMetadataStore implements MetadataStore {
   @Override
   public void move(Collection<Path> pathsToDelete,
       Collection<PathMetadata> pathsToCreate,
-      ITtlTimeProvider ttlTimeProvider,
       final BulkOperationState operationState) throws IOException {
   }
 
@@ -147,8 +148,11 @@ public class NullMetadataStore implements MetadataStore {
   }
 
   @Override
+  public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
+  }
+
+  @Override
   public void addAncestors(final Path qualifiedPath,
-      final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
   }
 

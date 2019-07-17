@@ -32,14 +32,20 @@ public final class ReconConstants {
   public static final String RECON_CONTAINER_DB = "recon-" +
       CONTAINER_DB_SUFFIX;
 
+  public static final String CONTAINER_COUNT_KEY = "totalCount";
+
   public static final String RECON_OM_SNAPSHOT_DB =
       "om.snapshot.db";
 
   public static final String CONTAINER_KEY_TABLE =
       "containerKeyTable";
 
+  public static final String CONTAINER_KEY_COUNT_TABLE =
+      "containerKeyCountTable";
+
   public static final String FETCH_ALL = "-1";
-  public static final String RECON_QUERY_PREVKEY = "prev-key";
+  public static final String RECON_QUERY_PREVKEY = "prevKey";
+  public static final String PREV_CONTAINER_ID_DEFAULT_VALUE = "0";
   public static final String RECON_QUERY_LIMIT = "limit";
 
 }

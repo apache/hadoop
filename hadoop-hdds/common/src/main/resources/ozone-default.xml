@@ -270,10 +270,10 @@
   </property>
   <property>
     <name>dfs.ratis.leader.election.minimum.timeout.duration</name>
-    <value>1s</value>
+    <value>5s</value>
     <tag>OZONE, RATIS, MANAGEMENT</tag>
     <description>The minimum timeout duration for ratis leader election.
-        Default is 1s.
+        Default is 5s.
     </description>
   </property>
   <property>
@@ -659,7 +659,7 @@
     <value/>
     <tag>OZONE, OM, SCM, CONTAINER, STORAGE, REQUIRED</tag>
     <description>
-      This setting is the fallback location for SCM, OM and DataNodes
+      This setting is the fallback location for SCM, OM, Recon and DataNodes
       to store their metadata. This setting may be used only in test/PoC
       clusters to simplify configuration.
 
@@ -823,13 +823,13 @@
   <property>
     <name>ozone.scm.container.placement.impl</name>
     <value>
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom
     </value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>
       The full name of class which implements org.apache.hadoop.hdds.scm.container.placement.algorithms.ContainerPlacementPolicy.
       The class decides which datanode will be used to host the container replica. If not set,
-      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRackAware will be used as default value.
+      org.apache.hadoop.hdds.scm.container.placement.algorithms.SCMContainerPlacementRandom will be used as default value.
     </description>
   </property>
   <property>
@@ -2346,6 +2346,14 @@
     </description>
   </property>
   <property>
+    <name>dfs.network.topology.aware.read.enable</name>
+    <value>false</value>
+    <tag>OZONE, PERFORMANCE</tag>
+    <description>
+      Whether to enable topology aware read to improve the read performance.
+    </description>
+  </property>
+  <property>
     <name>ozone.recon.container.db.impl</name>
     <value>RocksDB</value>
     <tag>OZONE, RECON, STORAGE</tag>
@@ -2457,7 +2465,7 @@
     <value/>
     <tag>OZONE, RECON</tag>
     <description>
-      Ozone Recon datbase password.
+      Ozone Recon database password.
     </description>
   </property>
   <property>
@@ -2484,7 +2492,7 @@
     <description>
       The max active connections to the SQL database. The default SQLite
       database only allows single active connection, set this to a
-      resonable value like 10, for external production database.
+      reasonable value like 10, for external production database.
     </description>
   </property>
   <property>

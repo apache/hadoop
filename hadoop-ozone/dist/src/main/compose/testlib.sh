@@ -28,9 +28,12 @@ mkdir -p "$RESULT_DIR"
 #Should be writeable from the docker containers where user is different.
 chmod ogu+w "$RESULT_DIR"
 
-## @description wait until 3 datanodes are up (or 30 seconds)
+## @description wait until datanodes are up (or 30 seconds)
 ## @param the docker-compose file
+## @param number of datanodes to wait for (default: 3)
 wait_for_datanodes(){
+  local compose_file=$1
+  local -i datanode_count=${2:-3}
 
   #Reset the timer
   SECONDS=0
@@ -40,19 +43,19 @@ wait_for_datanodes(){
 
      #This line checks the number of HEALTHY datanodes registered in scm over the
      # jmx HTTP servlet
-     datanodes=$(docker-compose -f "$1" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
-      if [[ "$datanodes" == "3" ]]; then
+     datanodes=$(docker-compose -f "${compose_file}" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+     if [[ "$datanodes" ]]; then
+       if [[ ${datanodes} -ge ${datanode_count} ]]; then
 
-        #It's up and running. Let's return from the function.
+         #It's up and running. Let's return from the function.
          echo "$datanodes datanodes are up and registered to the scm"
          return
-      else
+       else
 
-         #Print it only if a number. Could be not a number if scm is not yet started
-         if [[ "$datanodes" ]]; then
-            echo "$datanodes datanode is up and healthy (until now)"
+           #Print it only if a number. Could be not a number if scm is not yet started
+           echo "$datanodes datanode is up and healthy (until now)"
          fi
-      fi
+     fi
 
       sleep 2
    done
@@ -60,10 +63,13 @@ wait_for_datanodes(){
 }
 
 ## @description  Starts a docker-compose based test environment
+## @param number of datanodes to start and wait for (default: 3)
 start_docker_env(){
+  local -i datanode_count=${1:-3}
+
   docker-compose -f "$COMPOSE_FILE" down
-  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode=3
-  wait_for_datanodes "$COMPOSE_FILE"
+  docker-compose -f "$COMPOSE_FILE" up -d --scale datanode="${datanode_count}"
+  wait_for_datanodes "$COMPOSE_FILE" "${datanode_count}"
   sleep 10
 }
 
@@ -72,20 +78,37 @@ start_docker_env(){
 ## @param        robot test file or directory relative to the smoketest dir
 execute_robot_test(){
   CONTAINER="$1"
-  TEST="$2"
+  shift 1 #Remove first argument which was the container name
+  # shellcheck disable=SC2206
+  ARGUMENTS=($@)
+  TEST="${ARGUMENTS[${#ARGUMENTS[@]}-1]}" #Use last element as the test name
+  unset 'ARGUMENTS[${#ARGUMENTS[@]}-1]' #Remove the last element, remainings are the custom parameters
   TEST_NAME=$(basename "$TEST")
   TEST_NAME="$(basename "$COMPOSE_DIR")-${TEST_NAME%.*}"
   set +e
   OUTPUT_NAME="$COMPOSE_ENV_NAME-$TEST_NAME-$CONTAINER"
   OUTPUT_PATH="$RESULT_DIR_INSIDE/robot-$OUTPUT_NAME.xml"
   docker-compose -f "$COMPOSE_FILE" exec -T "$CONTAINER" mkdir -p "$RESULT_DIR_INSIDE"
-  docker-compose -f "$COMPOSE_FILE" exec -e  SECURITY_ENABLED="${SECURITY_ENABLED}" -T "$CONTAINER" python -m robot --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" "$SMOKETEST_DIR_INSIDE/$TEST"
+  # shellcheck disable=SC2068
+  docker-compose -f "$COMPOSE_FILE" exec -T -e  SECURITY_ENABLED="${SECURITY_ENABLED}" "$CONTAINER" python -m robot ${ARGUMENTS[@]} --log NONE -N "$TEST_NAME" --report NONE "${OZONE_ROBOT_OPTS[@]}" --output "$OUTPUT_PATH" "$SMOKETEST_DIR_INSIDE/$TEST"
 
   FULL_CONTAINER_NAME=$(docker-compose -f "$COMPOSE_FILE" ps | grep "_${CONTAINER}_" | head -n 1 | awk '{print $1}')
   docker cp "$FULL_CONTAINER_NAME:$OUTPUT_PATH" "$RESULT_DIR/"
   set -e
 
 }
+
+
+## @description  Execute specific command in docker container
+## @param        container name
+## @param        specific command to execute
+execute_command_in_container(){
+  set -e
+  # shellcheck disable=SC2068
+  docker-compose -f "$COMPOSE_FILE" exec -T $@
+  set +e
+}
+
 
 ## @description  Stops a docker-compose based test environment (with saving the logs)
 stop_docker_env(){

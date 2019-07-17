@@ -195,6 +195,13 @@ public class TestRMNodeTransitions {
     return appIdList;
   }
 
+  private List<ContainerId> getContainerIdList() {
+    List<ContainerId> containerIdList = new ArrayList<ContainerId>();
+    containerIdList.add(BuilderUtils.newContainerId(BuilderUtils
+        .newApplicationAttemptId(BuilderUtils.newApplicationId(0, 0), 0), 0));
+    return containerIdList;
+  }
+
   private RMNodeStatusEvent getMockRMNodeStatusEventWithoutRunningApps() {
     NodeHealthStatus healthStatus = mock(NodeHealthStatus.class);
     Boolean yes = new Boolean(true);
@@ -1104,5 +1111,16 @@ public class TestRMNodeTransitions {
 
     Assert.assertEquals(1, hbrsp.getContainersToBeRemovedFromNM().size());
     Assert.assertEquals(0, node.getCompletedContainers().size());
+  }
+
+  @Test
+  public void testFinishedContainersPulledByAMOnNewNode() {
+    RMNodeImpl rmNode = getNewNode();
+    NodeId nodeId = BuilderUtils.newNodeId("localhost", 0);
+
+    rmNode.handle(new RMNodeFinishedContainersPulledByAMEvent(nodeId,
+        getContainerIdList()));
+    Assert.assertEquals(1, rmNode.getContainersToBeRemovedFromNM().size());
+
   }
 }

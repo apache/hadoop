@@ -52,8 +52,10 @@ import org.apache.hadoop.ozone.client.io.OzoneInputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.ha.OMProxyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
@@ -604,8 +606,8 @@ public class TestOzoneManagerHA {
     OzoneClient rpcClient = cluster.getRpcClient();
     OMFailoverProxyProvider omFailoverProxyProvider =
         rpcClient.getObjectStore().getClientProxy().getOMProxyProvider();
-    List<OMFailoverProxyProvider.OMProxyInfo> omProxies =
-        omFailoverProxyProvider.getOMProxies();
+    List<OMProxyInfo> omProxies =
+        omFailoverProxyProvider.getOMProxyInfos();
 
     Assert.assertEquals(numOfOMs, omProxies.size());
 
@@ -613,7 +615,7 @@ public class TestOzoneManagerHA {
       InetSocketAddress omRpcServerAddr =
           cluster.getOzoneManager(i).getOmRpcServerAddr();
       boolean omClientProxyExists = false;
-      for (OMFailoverProxyProvider.OMProxyInfo omProxyInfo : omProxies) {
+      for (OMProxyInfo omProxyInfo : omProxies) {
         if (omProxyInfo.getAddress().equals(omRpcServerAddr)) {
           omClientProxyExists = true;
           break;
@@ -674,7 +676,7 @@ public class TestOzoneManagerHA {
     // Perform a manual failover of the proxy provider to move the
     // currentProxyIndex to a node other than the leader OM.
     omFailoverProxyProvider.performFailover(
-        omFailoverProxyProvider.getProxy().proxy);
+        (OzoneManagerProtocolPB) omFailoverProxyProvider.getProxy().proxy);
 
     String newProxyNodeId = omFailoverProxyProvider.getCurrentProxyOMNodeId();
     Assert.assertNotEquals(leaderOMNodeId, newProxyNodeId);

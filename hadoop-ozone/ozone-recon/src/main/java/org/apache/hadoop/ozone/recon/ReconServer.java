@@ -33,6 +33,9 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
+import org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition;
+import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
+import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +77,25 @@ public class ReconServer extends GenericCli {
 
     //Pass on injector to listener that does the Guice - Jersey HK2 bridging.
     ReconGuiceServletContextListener.setInjector(injector);
+
+    LOG.info("Initializing Recon server...");
+    try {
+      StatsSchemaDefinition statsSchemaDefinition = injector.getInstance(
+          StatsSchemaDefinition.class);
+      statsSchemaDefinition.initializeSchema();
+
+      UtilizationSchemaDefinition utilizationSchemaDefinition =
+          injector.getInstance(UtilizationSchemaDefinition.class);
+      utilizationSchemaDefinition.initializeSchema();
+
+      ReconInternalSchemaDefinition reconInternalSchemaDefinition =
+          injector.getInstance(ReconInternalSchemaDefinition.class);
+      reconInternalSchemaDefinition.initializeSchema();
+
+      LOG.info("Recon server initialized successfully!");
+    } catch (Exception e) {
+      LOG.error("Error during initializing Recon server.", e);
+    }
 
     httpServer = injector.getInstance(ReconHttpServer.class);
     LOG.info("Starting Recon server");

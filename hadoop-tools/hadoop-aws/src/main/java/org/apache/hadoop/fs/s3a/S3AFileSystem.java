@@ -42,7 +42,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -213,7 +212,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private boolean enableMultiObjectsDelete;
   private TransferManager transfers;
   private ListeningExecutorService boundedThreadPool;
-  private ExecutorService unboundedThreadPool;
+  private ThreadPoolExecutor unboundedThreadPool;
   private int executorCapacity;
   private long multiPartThreshold;
   public static final Logger LOG = LoggerFactory.getLogger(S3AFileSystem.class);
@@ -397,7 +396,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
           DEFAULT_METADATASTORE_METADATA_TTL, TimeUnit.MILLISECONDS);
       ttlTimeProvider = new S3Guard.TtlTimeProvider(authDirTtl);
 
-      setMetadataStore(S3Guard.getMetadataStore(this));
+      setMetadataStore(S3Guard.getMetadataStore(this, ttlTimeProvider));
       allowAuthoritativeMetadataStore = conf.getBoolean(METADATASTORE_AUTHORITATIVE,
           DEFAULT_METADATASTORE_AUTHORITATIVE);
       allowAuthoritativePaths = S3Guard.getAuthoritativePaths(this);
@@ -440,6 +439,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         new LinkedBlockingQueue<>(),
         BlockingThreadPoolExecutorService.newDaemonThreadFactory(
             "s3a-transfer-unbounded"));
+    unboundedThreadPool.allowCoreThreadTimeOut(true);
     executorCapacity = intOption(conf,
         EXECUTOR_CAPACITY, DEFAULT_EXECUTOR_CAPACITY, 1);
   }
@@ -1588,7 +1588,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException if the retry invocation raises one (it shouldn't).
    */
   @Retries.RetryRaw
-  protected ObjectMetadata getObjectMetadata(String key) throws IOException {
+  @VisibleForTesting
+  ObjectMetadata getObjectMetadata(String key) throws IOException {
     return getObjectMetadata(key, null, invoker,null);
   }
 
@@ -1766,7 +1767,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       instrumentation.directoryDeleted();
     }
     deleteObject(key);
-    metadataStore.delete(f, ttlTimeProvider);
+    metadataStore.delete(f);
   }
 
   /**
@@ -2231,6 +2232,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       throws IOException, AmazonClientException {
     Path f = status.getPath();
     LOG.debug("Delete path {} - recursive {}", f, recursive);
+    LOG.debug("Type = {}",
+        status.isFile() ? "File"
+            : (status.isEmptyDirectory() == Tristate.TRUE
+                ? "Empty Directory"
+                : "Directory"));
 
     String key = pathToKey(f);
 
@@ -2287,10 +2293,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       }
       try(DurationInfo ignored =
               new DurationInfo(LOG, false, "Delete metastore")) {
-        metadataStore.deleteSubtree(f, ttlTimeProvider);
+        metadataStore.deleteSubtree(f);
       }
     } else {
-      LOG.debug("delete: Path is a file");
+      LOG.debug("delete: Path is a file: {}", key);
       deleteObjectAtPath(f, key, true);
     }
 
@@ -2439,7 +2445,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return the request
    */
   @VisibleForTesting
-  S3ListRequest createListObjectsRequest(String key,
+  public S3ListRequest createListObjectsRequest(String key,
       String delimiter) {
     return createListObjectsRequest(key, delimiter, null);
   }
@@ -4060,6 +4066,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   @VisibleForTesting
   protected void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     this.ttlTimeProvider = ttlTimeProvider;
+    metadataStore.setTtlTimeProvider(ttlTimeProvider);
   }
 
   /**

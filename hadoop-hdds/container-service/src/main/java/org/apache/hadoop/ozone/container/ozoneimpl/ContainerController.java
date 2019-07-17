@@ -74,6 +74,18 @@ public class ContainerController {
   }
 
   /**
+   * Marks the container as UNHEALTHY.
+   *
+   * @param containerId Id of the container to update
+   * @throws IOException in case of exception
+   */
+  public void markContainerUnhealthy(final long containerId)
+          throws IOException {
+    Container container = containerSet.getContainer(containerId);
+    getHandler(container).markContainerUnhealthy(container);
+  }
+
+  /**
    * Returns the container report.
    *
    * @return ContainerReportsProto
@@ -125,7 +137,9 @@ public class ContainerController {
   public void deleteContainer(final long containerId, boolean force)
       throws IOException {
     final Container container = containerSet.getContainer(containerId);
-    getHandler(container).deleteContainer(container, force);
+    if (container != null) {
+      getHandler(container).deleteContainer(container, force);
+    }
   }
 
   /**
