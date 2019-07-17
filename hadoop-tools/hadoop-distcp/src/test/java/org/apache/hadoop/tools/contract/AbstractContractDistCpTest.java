@@ -355,8 +355,7 @@ public abstract class AbstractContractDistCpTest
         inputFile1, inputFile3, inputSubDir4);
 
     Path trashRootDir = remoteFS.getTrashRoot(null);
-    ContractTestUtils.assertDeleted(remoteFS, trashRootDir, true);
-
+    remoteFS.delete(trashRootDir, true);
 
     Job job = distCpUpdateDeleteUseTrash(inputDir, inputDirUnderOutputDir);
     lsR("Updated Remote", remoteFS, destDir);
