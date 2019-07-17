@@ -151,7 +151,7 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
     // Check. Should create new metadatastore with the table name set.
     try (DynamoDBMetadataStore ddbms = new DynamoDBMetadataStore()) {
-      ddbms.initialize(conf);
+      ddbms.initialize(conf, new S3Guard.TtlTimeProvider(conf));
       ListTagsOfResourceRequest listTagsOfResourceRequest = new ListTagsOfResourceRequest()
           .withResourceArn(ddbms.getTable().getDescription().getTableArn());
       List<Tag> tags = ddbms.getAmazonDynamoDB().listTagsOfResource(listTagsOfResourceRequest).getTags();

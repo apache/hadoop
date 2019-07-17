@@ -50,17 +50,21 @@ public interface MetadataStore extends Closeable {
    * Performs one-time initialization of the metadata store.
    *
    * @param fs {@code FileSystem} associated with the MetadataStore
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(FileSystem fs) throws IOException;
+  void initialize(FileSystem fs, ITtlTimeProvider ttlTimeProvider)
+      throws IOException;
 
   /**
    * Performs one-time initialization of the metadata store via configuration.
-   * @see #initialize(FileSystem)
+   * @see #initialize(FileSystem, ITtlTimeProvider)
    * @param conf Configuration.
+   * @param ttlTimeProvider the time provider to use for metadata expiry
    * @throws IOException if there is an error
    */
-  void initialize(Configuration conf) throws IOException;
+  void initialize(Configuration conf,
+      ITtlTimeProvider ttlTimeProvider) throws IOException;
 
   /**
    * Deletes exactly one path, leaving a tombstone to prevent lingering,
@@ -71,16 +75,14 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of the record has to be updated to <pre>now</pre>.
    *
    * @param path the path to delete
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
    * @throws IOException if there is an error
    */
-  void delete(Path path, ITtlTimeProvider ttlTimeProvider)
+  void delete(Path path)
       throws IOException;
 
   /**
    * Removes the record of exactly one path.  Does not leave a tombstone (see
-   * {@link MetadataStore#delete(Path, ITtlTimeProvider)}. It is currently
+   * {@link MetadataStore#delete(Path)}. It is currently
    * intended for testing only, and a need to use it as part of normal
    * FileSystem usage is not anticipated.
    *
@@ -103,11 +105,9 @@ public interface MetadataStore extends Closeable {
    * the lastUpdated field of all records have to be updated to <pre>now</pre>.
    *
    * @param path the root of the sub-tree to delete
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
    * @throws IOException if there is an error
    */
-  void deleteSubtree(Path path, ITtlTimeProvider ttlTimeProvider)
+  void deleteSubtree(Path path)
       throws IOException;
 
   /**
@@ -152,14 +152,11 @@ public interface MetadataStore extends Closeable {
    * must have their last updated timestamps set through
    * {@link S3Guard#patchLastUpdated(Collection, ITtlTimeProvider)}.
    * @param qualifiedPath path to update
-   * @param timeProvider time provider for timestamps
    * @param operationState (nullable) operational state for a bulk update
    * @throws IOException failure
    */
   @RetryTranslated
-  void addAncestors(
-      Path qualifiedPath,
-      @Nullable ITtlTimeProvider timeProvider,
+  void addAncestors(Path qualifiedPath,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -184,16 +181,12 @@ public interface MetadataStore extends Closeable {
    *                      source directory tree of the move.
    * @param pathsToCreate Collection of all PathMetadata for the new paths
    *                      that were created at the destination of the rename().
-   * @param ttlTimeProvider the time provider to set last_updated. Must not
-   *                        be null.
    * @param operationState     Any ongoing state supplied to the rename tracker
    *                      which is to be passed in with each move operation.
    * @throws IOException if there is an error
    */
-  void move(
-      @Nullable Collection<Path> pathsToDelete,
+  void move(@Nullable Collection<Path> pathsToDelete,
       @Nullable Collection<PathMetadata> pathsToCreate,
-      ITtlTimeProvider ttlTimeProvider,
       @Nullable BulkOperationState operationState) throws IOException;
 
   /**
@@ -377,5 +370,14 @@ public interface MetadataStore extends Closeable {
       Path dest) throws IOException {
     return null;
   }
+
+  /**
+   * The TtlTimeProvider has to be set during the initialization for the
+   * metadatastore, but this method can be used for testing, and change the
+   * instance during runtime.
+   *
+   * @param ttlTimeProvider
+   */
+  void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider);
 
 }
