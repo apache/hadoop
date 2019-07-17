@@ -62,7 +62,7 @@ public class CSMMetrics {
   public CSMMetrics() {
     int numCmdTypes = ContainerProtos.Type.values().length;
     this.opsLatency = new MutableRate[numCmdTypes];
-    this.registry = new MetricsRegistry(CSMMetrics.class.getName());
+    this.registry = new MetricsRegistry(CSMMetrics.class.getSimpleName());
     for (int i = 0; i < numCmdTypes; i++) {
       opsLatency[i] = registry.newRate(
           ContainerProtos.Type.forNumber(i + 1).toString(),
