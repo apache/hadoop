@@ -201,10 +201,18 @@ public class RBFConfigKeys extends CommonConfigurationKeysPublic {
       FEDERATION_STORE_PREFIX + "membership.expiration";
   public static final long FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS
+      = FEDERATION_STORE_MEMBERSHIP_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_MEMBERSHIP_EXPIRATION_DELETION_MS_DEFAULT = -1;
   public static final String FEDERATION_STORE_ROUTER_EXPIRATION_MS =
       FEDERATION_STORE_PREFIX + "router.expiration";
   public static final long FEDERATION_STORE_ROUTER_EXPIRATION_MS_DEFAULT =
       TimeUnit.MINUTES.toMillis(5);
+  public static final String FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS =
+      FEDERATION_STORE_ROUTER_EXPIRATION_MS + ".deletion";
+  public static final long
+      FEDERATION_STORE_ROUTER_EXPIRATION_DELETION_MS_DEFAULT = -1;
 
   // HDFS Router safe mode
   public static final String DFS_ROUTER_SAFEMODE_ENABLE =

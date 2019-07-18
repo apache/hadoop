@@ -144,15 +144,15 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
             toDelete = movedPaths;
             toCreate = origMetas;
           }
-          ms.move(toDelete, toCreate, ttlTimeProvider, null);
+          ms.move(toDelete, toCreate, null);
         }
         moveTimer.end();
         printTiming(LOG, "move", moveTimer, operations);
       } finally {
         // Cleanup
         clearMetadataStore(ms, count);
-        ms.move(origPaths, null, ttlTimeProvider, null);
-        ms.move(movedPaths, null, ttlTimeProvider, null);
+        ms.move(origPaths, null, null);
+        ms.move(movedPaths, null, null);
       }
     }
   }
@@ -215,7 +215,7 @@ public abstract class AbstractITestS3AMetadataStoreScale extends
       throws IOException {
     describe("Recursive deletion");
     NanoTimer deleteTimer = new NanoTimer();
-    ms.deleteSubtree(BUCKET_ROOT, ttlTimeProvider);
+    ms.deleteSubtree(BUCKET_ROOT);
     deleteTimer.end();
     printTiming(LOG, "delete", deleteTimer, count);
   }

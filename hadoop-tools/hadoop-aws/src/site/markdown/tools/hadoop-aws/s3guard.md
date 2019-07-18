@@ -113,6 +113,9 @@ two different reasons:
     stored in metadata store.
     * This mode can be set as a configuration property
     `fs.s3a.metadatastore.authoritative`
+    * It can also be set only on specific directories by setting
+    `fs.s3a.authoritative.path` to one or more prefixes, for example
+    `s3a://bucket/path` or "/auth1,/auth2".
     * All interactions with the S3 bucket(s) must be through S3A clients sharing
     the same metadata store.
     * This is independent from which metadata store implementation is used.
@@ -793,7 +796,7 @@ time" is older than the specified age.
 
 ```bash
 hadoop s3guard prune [-days DAYS] [-hours HOURS] [-minutes MINUTES]
-    [-seconds SECONDS] [-m URI] ( -region REGION | s3a://BUCKET )
+    [-seconds SECONDS] [-tombstone] [-meta URI] ( -region REGION | s3a://BUCKET )
 ```
 
 A time value of hours, minutes and/or seconds must be supplied.
@@ -803,6 +806,13 @@ A time value of hours, minutes and/or seconds must be supplied.
 in the S3 Bucket.
 1. If an S3A URI is supplied, only the entries in the table specified by the
 URI and older than a specific age are deleted.
+
+
+The `-tombstone` option instructs the operation to only purge "tombstones",
+markers of deleted files. These tombstone markers are only used briefly,
+to indicate that a recently deleted file should not be found in listings.
+As a result, there is no adverse consequences in regularly pruning old
+tombstones.
 
 Example
 
@@ -814,18 +824,18 @@ Deletes all entries in the S3Guard table for files older than seven days from
 the table associated with `s3a://ireland-1`.
 
 ```bash
-hadoop s3guard prune -days 7 s3a://ireland-1/path_prefix/
+hadoop s3guard prune -tombstone -days 7 s3a://ireland-1/path_prefix/
 ```
 
-Deletes all entries in the S3Guard table for files older than seven days from
-the table associated with `s3a://ireland-1` and with the prefix "path_prefix"
+Deletes all entries in the S3Guard table for tombstones older than seven days from
+the table associated with `s3a://ireland-1` and with the prefix `path_prefix`
 
 ```bash
 hadoop s3guard prune -hours 1 -minutes 30 -meta dynamodb://ireland-team -region eu-west-1
 ```
 
-Delete all entries more than 90 minutes old from the table "ireland-team" in
-the region "eu-west-1".
+Delete all entries more than 90 minutes old from the table "`ireland-team"` in
+the region `eu-west-1`.
 
 
 ### Tune the I/O capacity of the DynamoDB Table, `s3guard set-capacity`

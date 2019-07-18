@@ -151,7 +151,7 @@ public class BlockInputStream extends InputStream implements Seekable {
       pipeline = Pipeline.newBuilder(pipeline)
           .setType(HddsProtos.ReplicationType.STAND_ALONE).build();
     }
-    xceiverClient = xceiverClientManager.acquireClient(pipeline);
+    xceiverClient = xceiverClientManager.acquireClientForReadData(pipeline);
     boolean success = false;
     List<ChunkInfo> chunks;
     try {
@@ -170,7 +170,7 @@ public class BlockInputStream extends InputStream implements Seekable {
       success = true;
     } finally {
       if (!success) {
-        xceiverClientManager.releaseClient(xceiverClient, false);
+        xceiverClientManager.releaseClientForReadData(xceiverClient, false);
       }
     }
 

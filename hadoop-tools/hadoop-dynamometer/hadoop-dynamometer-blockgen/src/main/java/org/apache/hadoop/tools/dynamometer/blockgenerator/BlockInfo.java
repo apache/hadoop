@@ -34,36 +34,20 @@ import org.apache.hadoop.io.Writable;
 
 public class BlockInfo implements Writable {
 
-  public LongWritable getBlockId() {
+  LongWritable getBlockId() {
     return blockId;
   }
 
-  public void setBlockId(LongWritable blockId) {
-    this.blockId = blockId;
-  }
-
-  public LongWritable getBlockGenerationStamp() {
+  LongWritable getBlockGenerationStamp() {
     return blockGenerationStamp;
   }
 
-  public void setBlockGenerationStamp(LongWritable blockGenerationStamp) {
-    this.blockGenerationStamp = blockGenerationStamp;
-  }
-
-  public LongWritable getSize() {
+  LongWritable getSize() {
     return size;
   }
 
-  public void setSize(LongWritable size) {
-    this.size = size;
-  }
-
-  public short getReplication() {
+  short getReplication() {
     return replication;
-  }
-
-  public void setReplication(short replication) {
-    this.replication = replication;
   }
 
   private LongWritable blockId;
@@ -71,32 +55,14 @@ public class BlockInfo implements Writable {
   private LongWritable size;
   private transient short replication;
 
-  public BlockInfo(BlockInfo blockInfo) {
-    this.blockId = blockInfo.getBlockId();
-    this.blockGenerationStamp = blockInfo.getBlockGenerationStamp();
-    this.size = blockInfo.getSize();
-    this.replication = replication;
-  }
-
-  public BlockInfo() {
+  @SuppressWarnings("unused") // Used via reflection
+  private BlockInfo() {
     this.blockId = new LongWritable();
     this.blockGenerationStamp = new LongWritable();
-    this.size = new LongWritable(1);
+    this.size = new LongWritable();
   }
 
-  public BlockInfo(long blockid, long blockgenerationstamp) {
-    this.blockId = new LongWritable(blockid);
-    this.blockGenerationStamp = new LongWritable(blockgenerationstamp);
-    this.size = new LongWritable(1);
-  }
-
-  public BlockInfo(long blockid, long blockgenerationstamp, long size) {
-    this.blockId = new LongWritable(blockid);
-    this.blockGenerationStamp = new LongWritable(blockgenerationstamp);
-    this.size = new LongWritable(size);
-  }
-
-  public BlockInfo(long blockid, long blockgenerationstamp, long size,
+  BlockInfo(long blockid, long blockgenerationstamp, long size,
       short replication) {
     this.blockId = new LongWritable(blockid);
     this.blockGenerationStamp = new LongWritable(blockgenerationstamp);

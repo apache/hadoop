@@ -34,6 +34,8 @@ public abstract class WorkloadMapper<KEYIN, VALUEIN>
 
   /**
    * Return the input class to be used by this mapper.
+   * @param conf configuration.
+   * @return the {@link InputFormat} implementation for the mapper.
    */
   public Class<? extends InputFormat> getInputFormat(Configuration conf) {
     return VirtualInputFormat.class;
@@ -41,18 +43,22 @@ public abstract class WorkloadMapper<KEYIN, VALUEIN>
 
   /**
    * Get the description of the behavior of this mapper.
+   * @return description string.
    */
   public abstract String getDescription();
 
   /**
    * Get a list of the description of each configuration that this mapper
    * accepts.
+   * @return list of the description of each configuration.
    */
   public abstract List<String> getConfigDescriptions();
 
   /**
    * Verify that the provided configuration contains all configurations required
    * by this mapper.
+   * @param conf configuration.
+   * @return whether or not all configurations required are provided.
    */
   public abstract boolean verifyConfigurations(Configuration conf);
 

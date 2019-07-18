@@ -135,8 +135,12 @@ public class HeartbeatEndpointTask
       addReports(requestBuilder);
       addContainerActions(requestBuilder);
       addPipelineActions(requestBuilder);
+      SCMHeartbeatRequestProto request = requestBuilder.build();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Sending heartbeat message :: {}", request.toString());
+      }
       SCMHeartbeatResponseProto reponse = rpcEndpoint.getEndPoint()
-          .sendHeartbeat(requestBuilder.build());
+          .sendHeartbeat(request);
       processResponse(reponse, datanodeDetailsProto);
       rpcEndpoint.setLastSuccessfulHeartbeat(ZonedDateTime.now());
       rpcEndpoint.zeroMissedCount();

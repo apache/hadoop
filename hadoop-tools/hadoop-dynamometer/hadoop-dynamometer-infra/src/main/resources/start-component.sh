@@ -75,7 +75,7 @@ chmod 755 "$baseDir"
 chmod 700 "$pidDir"
 
 # Set Hadoop variables for component
-hadoopHome="$(find -H "$(pwd)/hadoopBinary" -depth 1 -type d | head -n 1)"
+hadoopHome="$(find -H "$(pwd)/hadoopBinary" -maxdepth 1 -mindepth 1 -type d | head -n 1)"
 # Save real environment for later
 hadoopConfOriginal=${HADOOP_CONF_DIR:-$confDir}
 hadoopHomeOriginal=${HADOOP_HOME:-$hadoopHome}
@@ -252,11 +252,8 @@ EOF
   rm -rf "$nameDir" "$editsDir" "$checkpointDir"
   mkdir -p "$nameDir/current" "$editsDir/current" "$checkpointDir"
   chmod -R 700 "$nameDir" "$editsDir" "$checkpointDir"
-  fsImageFile="$(find "$(pwd)" -depth 1 -name "fsimage_*" | tail -n 1)"
-  fsImageMD5File="$(find "$(pwd)" -depth 1 -name "fsimage_*.md5" | tail -n 1)"
-  ln -snf "$fsImageFile" "$nameDir/current/$(basename "$fsImageFile")"
-  ln -snf "$fsImageMD5File" "$nameDir/current/$(basename "$fsImageMD5File")"
-  ln -snf "$(pwd)/VERSION" "$nameDir/current/VERSION"
+  # Link all of the fsimage files into the name dir
+  find "$(pwd)" -maxdepth 1 -mindepth 1 \( -name "fsimage_*" -or -name "VERSION" \) -execdir ln -snf "$(pwd)/{}" "$nameDir/current/{}" \;
   chmod 700 "$nameDir"/current/*
 
   namenodeConfigs=(

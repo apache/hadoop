@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdds.client.ContainerBlockID;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationRequest;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.SCMBlockLocationResponse;
@@ -34,6 +35,10 @@ import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.Allo
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.DeleteScmKeyBlocksResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos.KeyBlocks;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SortDatanodesRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.ScmBlockLocationProtocolProtos
+    .SortDatanodesResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
@@ -225,6 +230,35 @@ public final class ScmBlockLocationProtocolClientSideTranslatorPB
         .setClusterId(resp.getClusterId())
         .setScmId(resp.getScmId());
     return builder.build();
+  }
+
+  /**
+   * Sort the datanodes based on distance from client.
+   * @return List<DatanodeDetails></>
+   * @throws IOException
+   */
+  @Override
+  public List<DatanodeDetails> sortDatanodes(List<String> nodes,
+      String clientMachine) throws IOException {
+    SortDatanodesRequestProto request = SortDatanodesRequestProto
+        .newBuilder()
+        .addAllNodeNetworkName(nodes)
+        .setClient(clientMachine)
+        .build();
+    SCMBlockLocationRequest wrapper = createSCMBlockRequest(
+        Type.SortDatanodes)
+        .setSortDatanodesRequest(request)
+        .build();
+
+    final SCMBlockLocationResponse wrappedResponse =
+        handleError(submitRequest(wrapper));
+    SortDatanodesResponseProto resp =
+        wrappedResponse.getSortDatanodesResponse();
+    List<DatanodeDetails> results = new ArrayList<>(resp.getNodeCount());
+    results.addAll(resp.getNodeList().stream()
+        .map(node -> DatanodeDetails.getFromProtoBuf(node))
+        .collect(Collectors.toList()));
+    return results;
   }
 
   @Override

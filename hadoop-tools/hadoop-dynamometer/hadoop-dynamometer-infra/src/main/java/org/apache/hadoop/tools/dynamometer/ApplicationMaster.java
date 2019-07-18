@@ -90,19 +90,19 @@ import org.slf4j.LoggerFactory;
  * part of this YARN application. This does not implement any retry/failure
  * handling.
  * TODO: Add proper retry/failure handling
- *
- * <p/>The AM will persist until it has run for a period of time equal to the
+ * <p>
+ * The AM will persist until it has run for a period of time equal to the
  * timeout specified or until the application is killed.
- *
- * <p/>If the NameNode is launched internally, it will upload some information
+ * <p>
+ * If the NameNode is launched internally, it will upload some information
  * onto the remote HDFS instance (i.e., the default FileSystem) about its
  * hostname and ports. This is in the location determined by the
  * {@link DynoConstants#DYNAMOMETER_STORAGE_DIR} and
  * {@link DynoConstants#NN_INFO_FILE_NAME} constants and is in the
  * {@link Properties} file format. This is consumed by this AM as well as the
  * {@link Client} to determine how to contact the NameNode.
- *
- * <p/>Information about the location of the DataNodes is logged by the AM.
+ * <p>
+ * Information about the location of the DataNodes is logged by the AM.
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
@@ -204,6 +204,7 @@ public class ApplicationMaster {
    *
    * @param args Command line args
    * @return Whether init successful and run should be invoked
+   * @throws ParseException on error while parsing options
    */
   public boolean init(String[] args) throws ParseException {
 
@@ -267,6 +268,9 @@ public class ApplicationMaster {
    *
    * @return True if the application completed successfully; false if if exited
    *         unexpectedly, failed, was killed, etc.
+   * @throws YarnException for issues while contacting YARN daemons
+   * @throws IOException for other issues
+   * @throws InterruptedException when the thread is interrupted
    */
   public boolean run() throws YarnException, IOException, InterruptedException {
     LOG.info("Starting ApplicationMaster");

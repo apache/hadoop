@@ -20,6 +20,7 @@ package org.apache.hadoop.fs.s3a.scale;
 
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
+import org.apache.hadoop.fs.s3a.s3guard.S3Guard;
 
 import java.io.IOException;
 
@@ -31,7 +32,7 @@ public class ITestLocalMetadataStoreScale
   @Override
   public MetadataStore createMetadataStore() throws IOException {
     MetadataStore ms = new LocalMetadataStore();
-    ms.initialize(getFileSystem());
+    ms.initialize(getFileSystem(), new S3Guard.TtlTimeProvider(getConf()));
     return ms;
   }
 }

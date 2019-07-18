@@ -200,6 +200,7 @@ public class OzoneContainer {
     stopContainerScrub();
     writeChannel.stop();
     readChannel.stop();
+    this.handlers.values().forEach(Handler::stop);
     hddsDispatcher.shutdown();
     volumeSet.shutdown();
   }

@@ -36,7 +36,7 @@ hadoopTarTmp="$hadoopTar.temporary"
 mkdir -p "$hadoopTarTmp"
 
 tar xzf "$hadoopTar" -C "$hadoopTarTmp"
-baseDir="$(find -H "$hadoopTarTmp" -depth 1 -type d | head -n 1)" # Should only be one subdir
+baseDir="$(find -H "$hadoopTarTmp" -maxdepth 1 -mindepth 1 -type d | head -n 1)" # Should only be one subdir
 hadoopShare="$baseDir/share/hadoop"
 
 # Remove unnecessary files

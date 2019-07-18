@@ -47,21 +47,21 @@ import org.apache.hadoop.fs.s3a.s3guard.DirListingMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.PathMetadata;
 import org.apache.hadoop.fs.s3a.s3guard.ITtlTimeProvider;
-import org.apache.hadoop.fs.LocatedFileStatus;
-import org.apache.hadoop.fs.RemoteIterator;
 
+import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
+import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
-import static org.junit.Assume.assumeTrue;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
-import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthoritativeBit;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -536,41 +536,6 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       guardedFs.delete(filePath, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
     }
-  }
-
-  private void checkListingDoesNotContainPath(S3AFileSystem fs, Path filePath)
-      throws IOException {
-    final RemoteIterator<LocatedFileStatus> listIter =
-        fs.listFiles(filePath.getParent(), false);
-    while (listIter.hasNext()) {
-      final LocatedFileStatus lfs = listIter.next();
-      assertNotEquals("The tombstone has not been expired, so must not be"
-          + " listed.", filePath, lfs.getPath());
-    }
-    LOG.info("{}; file omitted from listFiles listing as expected.", filePath);
-
-    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
-    for (FileStatus fileStatus : fileStatuses) {
-      assertNotEquals("The tombstone has not been expired, so must not be"
-          + " listed.", filePath, fileStatus.getPath());
-    }
-    LOG.info("{}; file omitted from listStatus as expected.", filePath);
-  }
-
-  private void checkListingContainsPath(S3AFileSystem fs, Path filePath)
-      throws IOException {
-    final RemoteIterator<LocatedFileStatus> listIter =
-        fs.listFiles(filePath.getParent(), false);
-
-    while (listIter.hasNext()) {
-      final LocatedFileStatus lfs = listIter.next();
-      assertEquals(filePath, lfs.getPath());
-    }
-
-    final FileStatus[] fileStatuses = fs.listStatus(filePath.getParent());
-    for (FileStatus fileStatus : fileStatuses)
-      assertEquals("The file should be listed in fs.listStatus",
-          filePath, fileStatus.getPath());
   }
 
   /**

@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,9 +50,8 @@ import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AInstrumentation;
 import org.apache.hadoop.util.ReflectionUtils;
 
-import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
-import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
+import static org.apache.hadoop.fs.s3a.Constants.*;
+import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_LATENCY;
 import static org.apache.hadoop.fs.s3a.Statistic.S3GUARD_METADATASTORE_PUT_PATH_REQUEST;
 import static org.apache.hadoop.fs.s3a.S3AUtils.createUploadFileStatus;
@@ -83,17 +83,19 @@ public final class S3Guard {
   /**
    * Create a new instance of the configured MetadataStore.
    * The returned MetadataStore will have been initialized via
-   * {@link MetadataStore#initialize(FileSystem)} by this function before
-   * returning it.  Callers must clean up by calling
+   * {@link MetadataStore#initialize(FileSystem, ITtlTimeProvider)}
+   * by this function before returning it.  Callers must clean up by calling
    * {@link MetadataStore#close()} when done using the MetadataStore.
    *
    * @param fs  FileSystem whose Configuration specifies which
    *            implementation to use.
+   * @param ttlTimeProvider
    * @return Reference to new MetadataStore.
    * @throws IOException if the metadata store cannot be instantiated
    */
   @Retries.OnceTranslated
-  public static MetadataStore getMetadataStore(FileSystem fs)
+  public static MetadataStore getMetadataStore(FileSystem fs,
+      ITtlTimeProvider ttlTimeProvider)
       throws IOException {
     Preconditions.checkNotNull(fs);
     Configuration conf = fs.getConf();
@@ -104,7 +106,7 @@ public final class S3Guard {
       msInstance = ReflectionUtils.newInstance(msClass, conf);
       LOG.debug("Using {} metadata store for {} filesystem",
           msClass.getSimpleName(), fs.getScheme());
-      msInstance.initialize(fs);
+      msInstance.initialize(fs, ttlTimeProvider);
       return msInstance;
     } catch (FileNotFoundException e) {
       // Don't log this exception as it means the table doesn't exist yet;
@@ -521,7 +523,7 @@ public final class S3Guard {
   /**
    * This adds all new ancestors of a path as directories.
    * This forwards to
-   * {@link MetadataStore#addAncestors(Path, ITtlTimeProvider, BulkOperationState)}.
+   * {@link MetadataStore#addAncestors(Path, BulkOperationState)}.
    * <p>
    * Originally it implemented the logic to probe for an add ancestors,
    * but with the addition of a store-specific bulk operation state
@@ -538,7 +540,7 @@ public final class S3Guard {
       final Path qualifiedPath,
       final ITtlTimeProvider timeProvider,
       @Nullable final BulkOperationState operationState) throws IOException {
-    metadataStore.addAncestors(qualifiedPath, timeProvider, operationState);
+    metadataStore.addAncestors(qualifiedPath, operationState);
   }
 
   /**
@@ -772,4 +774,32 @@ public final class S3Guard {
     return dlm;
   }
 
+  public static Collection<String> getAuthoritativePaths(S3AFileSystem fs) {
+    String[] rawAuthoritativePaths =
+        fs.getConf().getTrimmedStrings(AUTHORITATIVE_PATH, DEFAULT_AUTHORITATIVE_PATH);
+    Collection<String> authoritativePaths = new ArrayList<>();
+    if (rawAuthoritativePaths.length > 0) {
+      for (int i = 0; i < rawAuthoritativePaths.length; i++) {
+        Path qualified = fs.qualify(new Path(rawAuthoritativePaths[i]));
+        authoritativePaths.add(fs.maybeAddTrailingSlash(qualified.toString()));
+      }
+    }
+    return authoritativePaths;
+  }
+
+  public static boolean allowAuthoritative(Path p, S3AFileSystem fs,
+      boolean authMetadataStore, Collection<String> authPaths) {
+    String haystack = fs.maybeAddTrailingSlash(fs.qualify(p).toString());
+    if (authMetadataStore) {
+      return true;
+    }
+    if (!authPaths.isEmpty()) {
+      for (String needle : authPaths) {
+        if (haystack.startsWith(needle)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
 }

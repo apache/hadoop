@@ -44,6 +44,8 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.security.UserGroupInformation;
 
+import javax.annotation.Nonnull;
+
 /**
  * OMClientRequest provides methods which every write OM request should
  * implement.
@@ -170,8 +172,8 @@ public abstract class OMClientRequest implements RequestAuditor {
    * @param ex - IOException
    * @return error response need to be returned to client - OMResponse.
    */
-  protected OMResponse createErrorOMResponse(OMResponse.Builder omResponse,
-      IOException ex) {
+  protected OMResponse createErrorOMResponse(
+      @Nonnull OMResponse.Builder omResponse, @Nonnull IOException ex) {
 
     omResponse.setSuccess(false);
     if (ex.getMessage() != null) {

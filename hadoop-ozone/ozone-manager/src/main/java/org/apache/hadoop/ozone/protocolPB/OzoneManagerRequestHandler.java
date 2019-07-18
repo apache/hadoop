@@ -50,8 +50,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFile
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .ApplyCreateKeyRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
@@ -214,11 +212,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         CreateKeyResponse createKeyResponse = createKey(
             request.getCreateKeyRequest());
         responseBuilder.setCreateKeyResponse(createKeyResponse);
-        break;
-      case ApplyCreateKey:
-        CreateKeyResponse applyKeyResponse =
-            applyCreateKey(request.getApplyCreateKeyRequest());
-        responseBuilder.setCreateKeyResponse(applyKeyResponse);
         break;
       case LookupKey:
         LookupKeyResponse lookupKeyResponse = lookupKey(
@@ -589,20 +582,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     return resp.build();
   }
 
-  private CreateKeyResponse applyCreateKey(ApplyCreateKeyRequest request)
-      throws IOException {
-
-    CreateKeyRequest createKeyRequest = request.getCreateKeyRequest();
-    CreateKeyResponse createKeyResponse = request.getCreateKeyResponse();
-
-    impl.applyOpenKey(createKeyRequest.getKeyArgs(),
-        createKeyResponse.getKeyInfo(), createKeyResponse.getID());
-
-    // If applying to om DB successful just return createKeyResponse.
-    return createKeyResponse;
-
-  }
-
   private LookupKeyResponse lookupKey(LookupKeyRequest request)
       throws IOException {
     LookupKeyResponse.Builder resp =
@@ -744,16 +723,9 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setKeyName(keyArgs.getKeyName())
         .build();
 
-    OmKeyLocationInfo newLocation;
-    if (request.hasKeyLocation()) {
-      newLocation =
-          impl.addAllocatedBlock(omKeyArgs, request.getClientID(),
-              request.getKeyLocation());
-    } else {
-      newLocation =
-          impl.allocateBlock(omKeyArgs, request.getClientID(),
-              ExcludeList.getFromProtoBuf(request.getExcludeList()));
-    }
+    OmKeyLocationInfo newLocation = impl.allocateBlock(omKeyArgs,
+        request.getClientID(), ExcludeList.getFromProtoBuf(
+            request.getExcludeList()));
 
     resp.setKeyLocation(newLocation.getProtobuf());
 

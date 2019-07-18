@@ -35,6 +35,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivilegedExceptionAction;
 import java.util.stream.Collectors;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.protobuf.ByteString;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -44,6 +45,7 @@ import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersi
 import org.apache.hadoop.fs.FileEncryptionInfo;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -74,12 +76,6 @@ import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyArgs;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .KeyLocation;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -143,6 +139,7 @@ public class KeyManagerImpl implements KeyManager {
   /**
    * A SCM block client, used to talk to SCM to allocate block during putKey.
    */
+  private final OzoneManager ozoneManager;
   private final ScmClient scmClient;
   private final OMMetadataManager metadataManager;
   private final long scmBlockSize;
@@ -158,23 +155,26 @@ public class KeyManagerImpl implements KeyManager {
   private final KeyProviderCryptoExtension kmsProvider;
   private final PrefixManager prefixManager;
 
-  private final boolean isRatisEnabled;
 
+  @VisibleForTesting
   public KeyManagerImpl(ScmBlockLocationProtocol scmBlockClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager) {
-    this(new ScmClient(scmBlockClient, null), metadataManager,
+    this(null, new ScmClient(scmBlockClient, null), metadataManager,
         conf, omId, secretManager, null, null);
   }
 
-  public KeyManagerImpl(ScmClient scmClient,
+  public KeyManagerImpl(OzoneManager om, ScmClient scmClient,
+      OzoneConfiguration conf, String omId) {
+    this (om, scmClient, om.getMetadataManager(), conf, omId,
+        om.getBlockTokenMgr(), om.getKmsProvider(), om.getPrefixManager());
+  }
+
+  @SuppressWarnings("parameternumber")
+  private KeyManagerImpl(OzoneManager om, ScmClient scmClient,
       OMMetadataManager metadataManager, OzoneConfiguration conf, String omId,
       OzoneBlockTokenSecretManager secretManager,
-      KeyProviderCryptoExtension kmsProvider,
-      PrefixManager prefixManager) {
-    this.scmClient = scmClient;
-    this.metadataManager = metadataManager;
-    this.prefixManager = prefixManager;
+      KeyProviderCryptoExtension kmsProvider, PrefixManager prefixManager) {
     this.scmBlockSize = (long) conf
         .getStorageSize(OZONE_SCM_BLOCK_SIZE, OZONE_SCM_BLOCK_SIZE_DEFAULT,
             StorageUnit.BYTES);
@@ -183,16 +183,19 @@ public class KeyManagerImpl implements KeyManager {
     this.preallocateBlocksMax = conf.getInt(
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
         OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
-    this.omId = omId;
-    start(conf);
-    this.secretManager = secretManager;
     this.grpcBlockTokenEnabled = conf.getBoolean(
         HDDS_BLOCK_TOKEN_ENABLED,
         HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+
+    this.ozoneManager = om;
+    this.omId = omId;
+    this.scmClient = scmClient;
+    this.metadataManager = metadataManager;
+    this.prefixManager = prefixManager;
+    this.secretManager = secretManager;
     this.kmsProvider = kmsProvider;
-    this.isRatisEnabled = conf.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+
+    start(conf);
   }
 
   @Override
@@ -206,8 +209,9 @@ public class KeyManagerImpl implements KeyManager {
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT,
           OZONE_BLOCK_DELETING_SERVICE_TIMEOUT_DEFAULT,
           TimeUnit.MILLISECONDS);
-      keyDeletingService = new KeyDeletingService(scmClient.getBlockClient(),
-          this, blockDeleteInterval, serviceTimeout, configuration);
+      keyDeletingService = new KeyDeletingService(ozoneManager,
+          scmClient.getBlockClient(), this, blockDeleteInterval,
+          serviceTimeout, configuration);
       keyDeletingService.start();
     }
   }
@@ -274,36 +278,6 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyLocationInfo addAllocatedBlock(OmKeyArgs args, long clientID,
-      KeyLocation keyLocation) throws IOException {
-    Preconditions.checkNotNull(args);
-    Preconditions.checkNotNull(keyLocation);
-
-
-    String volumeName = args.getVolumeName();
-    String bucketName = args.getBucketName();
-    String keyName = args.getKeyName();
-    validateBucket(volumeName, bucketName);
-    String openKey = metadataManager.getOpenKey(
-        volumeName, bucketName, keyName, clientID);
-
-    OmKeyInfo keyInfo = metadataManager.getOpenKeyTable().get(openKey);
-    if (keyInfo == null) {
-      LOG.error("Allocate block for a key not in open status in meta store" +
-          " /{}/{}/{} with ID {}", volumeName, bucketName, keyName, clientID);
-      throw new OMException("Open Key not found",
-          KEY_NOT_FOUND);
-    }
-
-    OmKeyLocationInfo omKeyLocationInfo =
-        OmKeyLocationInfo.getFromProtobuf(keyLocation);
-    keyInfo.appendNewBlocks(Collections.singletonList(omKeyLocationInfo), true);
-    keyInfo.updateModifcationTime();
-    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    return omKeyLocationInfo;
-  }
-
-  @Override
   public OmKeyLocationInfo allocateBlock(OmKeyArgs args, long clientID,
       ExcludeList excludeList) throws IOException {
     Preconditions.checkNotNull(args);
@@ -329,13 +303,10 @@ public class KeyManagerImpl implements KeyManager {
     List<OmKeyLocationInfo> locationInfos =
         allocateBlock(keyInfo, excludeList, scmBlockSize);
 
-    // If om is not managing via ratis, write to db, otherwise write to DB
-    // will happen via ratis apply transaction.
-    if (!isRatisEnabled) {
-      keyInfo.appendNewBlocks(locationInfos, true);
-      keyInfo.updateModifcationTime();
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    }
+    keyInfo.appendNewBlocks(locationInfos, true);
+    keyInfo.updateModifcationTime();
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+
     return locationInfos.get(0);
 
   }
@@ -443,7 +414,7 @@ public class KeyManagerImpl implements KeyManager {
     // client should expect, in terms of current size of key. If client sets
     // a value, then this value is used, otherwise, we allocate a single
     // block which is the current size, if read by the client.
-    final long size = args.getDataSize() >= 0 ?
+    final long size = args.getDataSize() > 0 ?
         args.getDataSize() : scmBlockSize;
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
 
@@ -486,7 +457,7 @@ public class KeyManagerImpl implements KeyManager {
     openVersion = keyInfo.getLatestVersionLocations().getVersion();
     LOG.debug("Key {} allocated in volume {} bucket {}",
         keyName, volumeName, bucketName);
-    allocateBlockInKey(keyInfo, args.getDataSize(), currentTime);
+    allocateBlockInKey(keyInfo, size, currentTime);
     return new OpenKeySession(currentTime, keyInfo, openVersion);
   }
 
@@ -506,11 +477,8 @@ public class KeyManagerImpl implements KeyManager {
       keyInfo.appendNewBlocks(locationInfos, true);
     }
 
-    // When OM is not managed via ratis we should write in to Om db in
-    // openKey call.
-    if (!isRatisEnabled) {
-      metadataManager.getOpenKeyTable().put(openKey, keyInfo);
-    }
+    metadataManager.getOpenKeyTable().put(openKey, keyInfo);
+
   }
 
   private OmKeyInfo prepareKeyInfo(
@@ -563,41 +531,6 @@ public class KeyManagerImpl implements KeyManager {
     // is not an actual key, it is a part of the key.
     return createKeyInfo(args, locations, factor, type, size, encInfo,
         getBucketInfo(args.getVolumeName(), args.getBucketName()));
-  }
-
-  public void applyOpenKey(KeyArgs omKeyArgs,
-      KeyInfo keyInfo, long clientID) throws IOException {
-    Preconditions.checkNotNull(omKeyArgs);
-    String volumeName = omKeyArgs.getVolumeName();
-    String bucketName = omKeyArgs.getBucketName();
-
-    // Do we need to call again validateBucket, as this is just called after
-    // start Transaction from applyTransaction. Can we remove this double
-    // check?
-    validateBucket(volumeName, bucketName);
-
-    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
-    String keyName = omKeyArgs.getKeyName();
-
-    // TODO: here if on OM machines clocks are skewed and there is a chance
-    //  for override of the openKey entries.
-    try {
-      String openKey = metadataManager.getOpenKey(
-          volumeName, bucketName, keyName, clientID);
-
-      OmKeyInfo omKeyInfo = OmKeyInfo.getFromProtobuf(keyInfo);
-
-      metadataManager.getOpenKeyTable().put(openKey,
-          omKeyInfo);
-    } catch (IOException ex) {
-      LOG.error("Apply Open Key failed for volume:{} bucket:{} key:{}",
-          volumeName, bucketName, keyName, ex);
-      throw new OMException(ex.getMessage(),
-          ResultCodes.KEY_ALLOCATION_ERROR);
-    } finally {
-      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
-    }
   }
 
   /**
@@ -705,7 +638,8 @@ public class KeyManagerImpl implements KeyManager {
   }
 
   @Override
-  public OmKeyInfo lookupKey(OmKeyArgs args) throws IOException {
+  public OmKeyInfo lookupKey(OmKeyArgs args, String clientAddress)
+      throws IOException {
     Preconditions.checkNotNull(args);
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -753,12 +687,14 @@ public class KeyManagerImpl implements KeyManager {
                   k.setPipeline(cp.getPipeline());
                 }
               } catch (IOException e) {
-                LOG.debug("Unable to update pipeline for container");
+                LOG.error("Unable to update pipeline for container:{}",
+                    k.getContainerID());
               }
             }
           });
         }
       }
+      sortDatanodeInPipeline(value, clientAddress);
       return value;
     } catch (IOException ex) {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
@@ -1983,7 +1919,8 @@ public class KeyManagerImpl implements KeyManager {
    *                     invalid arguments
    */
   @Override
-  public OmKeyInfo lookupFile(OmKeyArgs args) throws IOException {
+  public OmKeyInfo lookupFile(OmKeyArgs args, String clientAddress)
+      throws IOException {
     Preconditions.checkNotNull(args, "Key args can not be null");
     String volumeName = args.getVolumeName();
     String bucketName = args.getBucketName();
@@ -1993,6 +1930,7 @@ public class KeyManagerImpl implements KeyManager {
     try {
       OzoneFileStatus fileStatus = getFileStatus(args);
       if (fileStatus.isFile()) {
+        sortDatanodeInPipeline(fileStatus.getKeyInfo(), clientAddress);
         return fileStatus.getKeyInfo();
       }
       //if key is not of type file or if key is not found we throw an exception
@@ -2180,4 +2118,31 @@ public class KeyManagerImpl implements KeyManager {
     return encInfo;
   }
 
+  private void sortDatanodeInPipeline(OmKeyInfo keyInfo, String clientMachine) {
+    if (keyInfo != null && clientMachine != null && !clientMachine.isEmpty()) {
+      for (OmKeyLocationInfoGroup key : keyInfo.getKeyLocationVersions()) {
+        key.getLocationList().forEach(k -> {
+          List<DatanodeDetails> nodes = k.getPipeline().getNodes();
+          List<String> nodeList = new ArrayList<>();
+          nodes.stream().forEach(node ->
+              nodeList.add(node.getNetworkName()));
+          try {
+            List<DatanodeDetails> sortedNodes = scmClient.getBlockClient()
+                .sortDatanodes(nodeList, clientMachine);
+            k.getPipeline().setNodesInOrder(sortedNodes);
+            LOG.debug("Sort datanodes {} for client {}, return {}", nodes,
+                clientMachine, sortedNodes);
+          } catch (IOException e) {
+            LOG.warn("Unable to sort datanodes based on distance to " +
+                "client, volume=" + keyInfo.getVolumeName() +
+                ", bucket=" + keyInfo.getBucketName() +
+                ", key=" + keyInfo.getKeyName() +
+                ", client=" + clientMachine +
+                ", datanodes=" + nodes.toString() +
+                ", exception=" + e.getMessage());
+          }
+        });
+      }
+    }
+  }
 }
