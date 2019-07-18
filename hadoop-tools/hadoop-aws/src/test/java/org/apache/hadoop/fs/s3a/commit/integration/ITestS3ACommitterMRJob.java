@@ -65,6 +65,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.JobStatus;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
@@ -247,7 +248,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     // an attempt to set up log4j properly, which clearly doesn't work
     URL log4j = getClass().getClassLoader().getResource("log4j.properties");
-    if (log4j != null && log4j.getProtocol().equals("file")) {
+    if (log4j != null && "file".equals(log4j.getProtocol())) {
       Path log4jPath = new Path(log4j.toURI());
       LOG.debug("Using log4j path {}", log4jPath);
       mrJob.addFileToClassPath(log4jPath);
@@ -265,26 +266,41 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     try (DurationInfo ignore = new DurationInfo(LOG, "Job Submit")) {
       mrJob.submit();
     }
-    String logLocation = "logs under target/";
+    String jobID = mrJob.getJobID().toString();
+    String logLocation = "logs under "
+        + clusterBinding.getYarn().getTestWorkDir().getAbsolutePath();
     try (DurationInfo ignore = new DurationInfo(LOG, "Job Execution")) {
-      boolean succeeded = mrJob.waitForCompletion(true);
-      assertTrue("mrJob.waitForCompletion returned false: consult "
-          + logLocation + clusterBinding.getClusterName(),
-          succeeded);
+      mrJob.waitForCompletion(true);
+    }
+    JobStatus status = mrJob.getStatus();
+    if (!mrJob.isSuccessful()) {
+      // failure of job.
+      // be as meaningful as possible.
+      String message =
+          String.format("Job %s failed in state %s with cause %s.\n"
+                  + "Consult %s",
+              jobID,
+              status.getState(),
+              status.getFailureInfo(),
+              logLocation);
+      LOG.error(message);
+      fail(message);
     }
 
     waitForConsistency();
     Path successPath = new Path(outputPath, _SUCCESS);
     SuccessData successData = validateSuccessFile(outputPath, committerName(),
-        fs, "MR job");
+        fs, "MR job " + jobID);
     String commitData = successData.toString();
 
     FileStatus[] results = fs.listStatus(outputPath,
         S3AUtils.HIDDEN_FILE_FILTER);
     int fileCount = results.length;
     Assertions.assertThat(fileCount)
-        .describedAs("No files in output directory %s; see %s",
-            outputPath, logLocation)
+        .describedAs("No files from job %s in output directory %s; see %s",
+            jobID,
+            outputPath,
+            logLocation)
         .isNotEqualTo(0);
 
     List<String> actualFiles = Arrays.stream(results)
@@ -307,6 +323,12 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
             + " classic file committers",
         new Path(outputPath, CommitConstants.TEMPORARY));
     customPostExecutionValidation(outputPath, successData);
+  }
+
+  @Override
+  protected void applyCustomConfigOptions(final JobConf jobConf)
+      throws IOException {
+    committerTestBinding.applyCustomConfigOptions(jobConf);
   }
 
   @Override
@@ -372,11 +394,11 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    * one-off binding.
    */
 
-  private static abstract class CommitterTestBinding {
+  private abstract static class CommitterTestBinding {
 
     private final String committerName;
 
-    private ClusterBinding clusterBinding;
+    private ClusterBinding binding;
 
     private S3AFileSystem remoteFS;
 
@@ -385,28 +407,26 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     private void bind(
-        ClusterBinding binding,
+        ClusterBinding cluster,
         final S3AFileSystem fs) {
-      if (clusterBinding == null) {
-        clusterBinding = binding;
-      }
-      remoteFS = fs;
+      this.binding = cluster;
+      this.remoteFS = fs;
     }
 
     protected String getCommitterName() {
       return committerName;
     }
 
-    protected ClusterBinding getClusterBinding() {
-      return clusterBinding;
+    protected ClusterBinding getBinding() {
+      return binding;
     }
 
     protected S3AFileSystem getRemoteFS() {
       return remoteFS;
     }
 
-    FileSystem getClusterFS() throws IOException {
-      return getClusterBinding().getClusterFS();
+    protected FileSystem getClusterFS() throws IOException {
+      return getBinding().getClusterFS();
     }
 
     @Override
@@ -452,9 +472,9 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
 
     public void validate() throws Throwable {
-      assertNotNull("Not bound to a cluster", clusterBinding);
+      assertNotNull("Not bound to a cluster", binding);
       assertNotNull("No cluster filesystem", getClusterFS());
-      assertNotNull("No yarn cluster", clusterBinding.getYarn());
+      assertNotNull("No yarn cluster", binding.getYarn());
 
     }
   }
