@@ -182,8 +182,8 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
       }
 
       final List<HddsDatanodeService> hddsDatanodes = createHddsDatanodes(scm);
-      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(conf, omMap
-          , activeOMs, inactiveOMs, scm, hddsDatanodes);
+      MiniOzoneHAClusterImpl cluster = new MiniOzoneHAClusterImpl(
+          conf, omMap, activeOMs, inactiveOMs, scm, hddsDatanodes);
       if (startDataNodes) {
         cluster.startHddsDatanodes();
       }

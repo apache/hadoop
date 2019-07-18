@@ -147,6 +147,7 @@ import org.apache.hadoop.utils.RetriableTask;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.ratis.server.protocol.TermIndex;
+import org.apache.ratis.util.FileUtils;
 import org.apache.ratis.util.LifeCycle;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
@@ -264,7 +265,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   private final Runnable shutdownHook;
   private final File omMetaDir;
   private final boolean isAclEnabled;
-  private final IAccessAuthorizer accessAuthorizer;
+  private IAccessAuthorizer accessAuthorizer;
   private JvmPauseMonitor jvmPauseMonitor;
   private final SecurityConfig secConfig;
   private S3SecretManager s3SecretManager;
@@ -314,12 +315,35 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       throw new OMException("OM not initialized.",
           ResultCodes.OM_NOT_INITIALIZED);
     }
+
+    // Read configuration and set values.
+    ozAdmins = conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
+    omMetaDir = OmUtils.getOmDbDir(configuration);
+    this.isAclEnabled = conf.getBoolean(OZONE_ACL_ENABLED,
+        OZONE_ACL_ENABLED_DEFAULT);
+    this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE,
+        OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
+    this.preallocateBlocksMax = conf.getInt(
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
+        OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
+    this.grpcBlockTokenEnabled = conf.getBoolean(HDDS_BLOCK_TOKEN_ENABLED,
+        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
+    this.useRatisForReplication = conf.getBoolean(
+        DFS_CONTAINER_RATIS_ENABLED_KEY, DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
+    // TODO: This is a temporary check. Once fully implemented, all OM state
+    //  change should go through Ratis - be it standalone (for non-HA) or
+    //  replicated (for HA).
+    isRatisEnabled = configuration.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
+
     // Load HA related configurations
     loadOMHAConfigs(configuration);
 
     scmContainerClient = getScmContainerClient(configuration);
     // verifies that the SCM info in the OM Version file is correct.
     scmBlockClient = getScmBlockClient(configuration);
+    this.scmClient = new ScmClient(scmBlockClient, scmContainerClient);
 
     // For testing purpose only, not hit scm from om as Hadoop UGI can't login
     // two principals in the same JVM.
@@ -334,15 +358,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
-
-    metadataManager = new OmMetadataManagerImpl(configuration);
-
-    // This is a temporary check. Once fully implemented, all OM state change
-    // should go through Ratis - be it standalone (for non-HA) or replicated
-    // (for HA).
-    isRatisEnabled = configuration.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
 
     initializeRatisServer();
     initializeRatisClient();
@@ -369,11 +384,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OM_RATIS_SNAPSHOT_INDEX);
     this.snapshotIndex = loadRatisSnapshotIndex();
 
-    InetSocketAddress omNodeRpcAddr = omNodeDetails.getRpcAddress();
-    omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
-    secConfig = new SecurityConfig(configuration);
-    volumeManager = new VolumeManagerImpl(metadataManager, configuration);
+    metrics = OMMetrics.create();
 
+    secConfig = new SecurityConfig(configuration);
     // Create the KMS Key Provider
     try {
       kmsProvider = createKeyProviderExt(configuration);
@@ -381,13 +394,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       kmsProvider = null;
       LOG.error("Fail to create Key Provider");
     }
-
-    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider(),
-        isRatisEnabled);
-    metrics = OMMetrics.create();
-
-    s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
-        volumeManager, bucketManager);
     if (secConfig.isSecurityEnabled()) {
       omComponent = OM_DAEMON + "-" + omId;
       if(omStorage.getOmCertSerialId() == null) {
@@ -396,32 +402,50 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
       certClient = new OMCertificateClient(new SecurityConfig(conf),
           omStorage.getOmCertSerialId());
-      s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
       delegationTokenMgr = createDelegationTokenSecretManager(configuration);
     }
     if (secConfig.isBlockTokenEnabled()) {
       blockTokenMgr = createBlockTokenSecretManager(configuration);
     }
 
+    instantiateServices();
+
+    InetSocketAddress omNodeRpcAddr = omNodeDetails.getRpcAddress();
+    omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());
     omRpcServer = getRpcServer(conf);
     omRpcAddress = updateRPCListenAddress(configuration,
         OZONE_OM_ADDRESS_KEY, omNodeRpcAddr, omRpcServer);
-
-    this.scmClient = new ScmClient(scmBlockClient, scmContainerClient);
-
-    prefixManager = new PrefixManagerImpl(metadataManager);
-    keyManager = new KeyManagerImpl(this, scmClient, configuration,
-        omStorage.getOmId());
 
     shutdownHook = () -> {
       saveOmMetrics();
     };
     ShutdownHookManager.get().addShutdownHook(shutdownHook,
         SHUTDOWN_HOOK_PRIORITY);
-    isAclEnabled = conf.getBoolean(OZONE_ACL_ENABLED,
-            OZONE_ACL_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Instantiate services which are dependent on the OM DB state.
+   * When OM state is reloaded, these services are re-initialized with the
+   * new OM state.
+   */
+  private void instantiateServices() throws IOException {
+
+    metadataManager = new OmMetadataManagerImpl(configuration);
+    volumeManager = new VolumeManagerImpl(metadataManager, configuration);
+    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider(),
+        isRatisEnabled);
+    s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
+        volumeManager, bucketManager);
+    if (secConfig.isSecurityEnabled()) {
+      s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
+    }
+
+    prefixManager = new PrefixManagerImpl(metadataManager);
+    keyManager = new KeyManagerImpl(this, scmClient, configuration,
+        omStorage.getOmId());
+
     if (isAclEnabled) {
-      accessAuthorizer = getACLAuthorizerInstance(conf);
+      accessAuthorizer = getACLAuthorizerInstance(configuration);
       if (accessAuthorizer instanceof OzoneNativeAuthorizer) {
         OzoneNativeAuthorizer authorizer =
             (OzoneNativeAuthorizer) accessAuthorizer;
@@ -433,17 +457,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } else {
       accessAuthorizer = null;
     }
-    ozAdmins = conf.getTrimmedStringCollection(OZONE_ADMINISTRATORS);
-    omMetaDir = OmUtils.getOmDbDir(configuration);
-    this.scmBlockSize = (long) conf.getStorageSize(OZONE_SCM_BLOCK_SIZE,
-        OZONE_SCM_BLOCK_SIZE_DEFAULT, StorageUnit.BYTES);
-    this.preallocateBlocksMax = conf.getInt(
-        OZONE_KEY_PREALLOCATION_BLOCKS_MAX,
-        OZONE_KEY_PREALLOCATION_BLOCKS_MAX_DEFAULT);
-    this.grpcBlockTokenEnabled = conf.getBoolean(HDDS_BLOCK_TOKEN_ENABLED,
-        HDDS_BLOCK_TOKEN_ENABLED_DEFAULT);
-    this.useRatisForReplication = conf.getBoolean(
-        DFS_CONTAINER_RATIS_ENABLED_KEY, DFS_CONTAINER_RATIS_ENABLED_DEFAULT);
   }
 
   /**
@@ -1417,11 +1430,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   @Override
-  public long saveRatisSnapshot() throws IOException {
+  public long saveRatisSnapshot(boolean flush) throws IOException {
     snapshotIndex = omRatisServer.getStateMachineLastAppliedIndex();
 
-    // Flush the OM state to disk
-    metadataManager.getStore().flush();
+    if (flush) {
+      // Flush the OM state to disk
+      metadataManager.getStore().flush();
+    }
 
     PersistentLongFile.writeFile(ratisSnapshotFile, snapshotIndex);
     LOG.info("Saved Ratis Snapshot on the OM with snapshotIndex {}",
@@ -2716,7 +2731,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     }
   }
-
   @Override
   public OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws
       IOException {
@@ -3106,6 +3120,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     DBCheckpoint omDBcheckpoint = getDBCheckpointFromLeader(leaderId);
+    Path newDBlocation = omDBcheckpoint.getCheckpointLocation();
 
     // Check if current ratis log index is smaller than the downloaded
     // snapshot index. If yes, proceed by stopping the ratis server so that
@@ -3116,8 +3131,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     if (checkpointSnapshotIndex <= lastAppliedIndex) {
       LOG.error("Failed to install checkpoint from OM leader: {}. The last " +
           "applied index: {} is greater than or equal to the checkpoint's " +
-          "snapshot index: {}", leaderId, lastAppliedIndex,
-          checkpointSnapshotIndex);
+          "snapshot index: {}. Deleting the downloaded checkpoint {}", leaderId,
+          lastAppliedIndex, checkpointSnapshotIndex,
+          newDBlocation);
+      try {
+        FileUtils.deleteFully(newDBlocation);
+      } catch (IOException e) {
+        LOG.error("Failed to fully delete the downloaded DB checkpoint {} " +
+            "from OM leader {}.", newDBlocation,
+            leaderId, e);
+      }
       return null;
     }
 
@@ -3131,7 +3154,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     omRatisServer.getOmStateMachine().pause();
 
     try {
-      replaceOMDBWithCheckpoint(lastAppliedIndex, omDBcheckpoint);
+      replaceOMDBWithCheckpoint(lastAppliedIndex, newDBlocation);
     } catch (Exception e) {
       LOG.error("OM DB checkpoint replacement with new downloaded checkpoint " +
           "failed.", e);
@@ -3142,7 +3165,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     // Restart (unpause) the state machine and update its last applied index
     // to the installed checkpoint's snapshot index.
     try {
-      reloadOMState();
+      reloadOMState(checkpointSnapshotIndex);
       omRatisServer.getOmStateMachine().unpause(checkpointSnapshotIndex);
     } catch (IOException e) {
       LOG.error("Failed to reload OM state with new DB checkpoint.", e);
@@ -3177,11 +3200,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   /**
    * Replace the current OM DB with the new DB checkpoint.
    * @param lastAppliedIndex the last applied index in the current OM DB.
-   * @param omDBcheckpoint the new DB checkpoint
+   * @param checkpointPath path to the new DB checkpoint
    * @throws Exception
    */
-  void replaceOMDBWithCheckpoint(long lastAppliedIndex,
-      DBCheckpoint omDBcheckpoint) throws Exception {
+  void replaceOMDBWithCheckpoint(long lastAppliedIndex, Path checkpointPath)
+      throws Exception {
     // Stop the DB first
     DBStore store = metadataManager.getStore();
     store.close();
@@ -3201,12 +3224,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
 
     // Move the new DB checkpoint into the om metadata dir
-    Path checkpointPath = omDBcheckpoint.getCheckpointLocation();
     try {
       Files.move(checkpointPath, db.toPath());
     } catch (IOException e) {
       LOG.error("Failed to move downloaded DB checkpoint {} to metadata " +
-          "directory {}",checkpointPath, db.toPath());
+          "directory {}. Resetting to original DB.", checkpointPath,
+          db.toPath());
+      Files.move(dbBackup.toPath(), db.toPath());
       throw e;
     }
   }
@@ -3216,11 +3240,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * All the classes which use/ store MetadataManager should also be updated
    * with the new MetadataManager instance.
    */
-  void reloadOMState() throws IOException {
+  void reloadOMState(long newSnapshotIndex) throws IOException {
 
-    metadataManager = new OmMetadataManagerImpl(configuration);
+    instantiateServices();
 
+    // Restart required services
     metadataManager.start(configuration);
+    keyManager.start(configuration);
 
     // Set metrics and start metrics back ground thread
     metrics.setNumVolumes(metadataManager.countRowsInTable(metadataManager
@@ -3228,53 +3254,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     metrics.setNumBuckets(metadataManager.countRowsInTable(metadataManager
         .getBucketTable()));
 
-    // Delete the omMetrics file if it exists
+    // Delete the omMetrics file if it exists and save the a new metrics file
+    // with new data
     Files.deleteIfExists(getMetricsStorageFile().toPath());
+    saveOmMetrics();
 
-    // Re-initialize metadataManager dependent implementations
-    volumeManager = new VolumeManagerImpl(metadataManager, configuration);
-    bucketManager = new BucketManagerImpl(metadataManager, getKmsProvider(),
-        isRatisEnabled);
-    s3BucketManager = new S3BucketManagerImpl(configuration, metadataManager,
-        volumeManager, bucketManager);
-    if (secConfig.isSecurityEnabled()) {
-      s3SecretManager = new S3SecretManagerImpl(configuration, metadataManager);
-    }
-
-    keyManager = new KeyManagerImpl(
-        new ScmClient(scmBlockClient, scmContainerClient), metadataManager,
-        configuration, omStorage.getOmId(), blockTokenMgr, getKmsProvider(),
-        prefixManager);
-    keyManager.start(configuration);
-    prefixManager = new PrefixManagerImpl(metadataManager);
-  }
-
-  /**
-   * Startup options.
-   */
-  public enum StartupOption {
-    INIT("--init"),
-    HELP("--help"),
-    REGULAR("--regular");
-
-    private final String name;
-
-    StartupOption(String arg) {
-      this.name = arg;
-    }
-
-    public static StartupOption parse(String value) {
-      for (StartupOption option : StartupOption.values()) {
-        if (option.name.equalsIgnoreCase(value)) {
-          return option;
-        }
-      }
-      return null;
-    }
-
-    public String getName() {
-      return name;
-    }
+    // Update OM snapshot index with the new snapshot index (from the new OM
+    // DB state) and save the snapshot index to disk
+    this.snapshotIndex = newSnapshotIndex;
+    saveRatisSnapshot(false);
   }
 
   public static  Logger getLogger() {

@@ -92,7 +92,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
 
   /**
    * Initializes the State Machine with the given server, group and storage.
-   * TODO: Load the latest snapshot from the file system.
    */
   @Override
   public void initialize(RaftServer server, RaftGroupId id,
@@ -225,7 +224,7 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   public long takeSnapshot() throws IOException {
     LOG.info("Saving Ratis snapshot on the OM.");
     if (ozoneManager != null) {
-      return ozoneManager.saveRatisSnapshot();
+      return ozoneManager.saveRatisSnapshot(true);
     }
     return 0;
   }
@@ -337,5 +336,6 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   public void stop() {
     ozoneManagerDoubleBuffer.stop();
     HadoopExecutors.shutdown(executorService, LOG, 5, TimeUnit.SECONDS);
+    HadoopExecutors.shutdown(installSnapshotExecutor, LOG, 5, TimeUnit.SECONDS);
   }
 }

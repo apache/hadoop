@@ -25,11 +25,8 @@ import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.client.VolumeArgs;
-import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.utils.db.DBCheckpoint;
-import org.apache.hadoop.utils.db.Table;
-import org.apache.hadoop.utils.db.TableIterator;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -66,7 +63,7 @@ public class TestOMRatisSnapshots {
   public Timeout timeout = new Timeout(3000_000);
 
   /**
-   * Create a MiniDFSCluster for testing. The cluster initially has one
+   * Create a MiniOzoneCluster for testing. The cluster initially has one
    * inactive OM. So at the start of the cluster, there will be 2 active and 1
    * inactive OM.
    *
@@ -146,7 +143,7 @@ public class TestOMRatisSnapshots {
     }
 
     // Get the latest db checkpoint from the leader OM.
-    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot();
+    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot(true);
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 
@@ -163,10 +160,10 @@ public class TestOMRatisSnapshots {
     followerOM.getOmRatisServer().getOmStateMachine().pause();
     followerOM.getMetadataManager().getStore().close();
     followerOM.replaceOMDBWithCheckpoint(
-        leaderOMSnaphsotIndex, leaderDbCheckpoint);
+        leaderOMSnaphsotIndex, leaderDbCheckpoint.getCheckpointLocation());
 
     // Reload the follower OM with new DB checkpoint from the leader OM.
-    followerOM.reloadOMState();
+    followerOM.reloadOMState(leaderOMSnaphsotIndex);
     followerOM.getOmRatisServer().getOmStateMachine().unpause(
         leaderOMSnaphsotIndex);
 

@@ -1632,7 +1632,7 @@
   </property>
   <property>
     <name>ozone.om.ratis.log.purge.gap</name>
-    <value>1024</value>
+    <value>1000000</value>
     <tag>OZONE, OM, RATIS</tag>
     <description>The minimum gap between log indices for Raft server to purge
       its log segments after taking snapshot.
