@@ -17,10 +17,6 @@
  */
 package org.apache.hadoop.ozone;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
-    .NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY;
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic
-    .NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_COMMAND_STATUS_REPORT_INTERVAL;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_CONTAINER_REPORT_INTERVAL;
 import static org.junit.Assert.fail;
@@ -30,8 +26,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -45,11 +39,8 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
 import org.apache.commons.lang3.RandomUtils;
 import org.apache.hadoop.hdds.HddsConfigKeys;
-import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -502,18 +493,6 @@ public class TestStorageContainerManager {
   public void testScmProcessDatanodeHeartbeat() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     String scmId = UUID.randomUUID().toString();
-    String hostname = HddsUtils.getHostName(conf);
-
-    File mapFile = File.createTempFile("rack-mapping", ".txt");
-    mapFile.deleteOnExit();
-    BufferedWriter writer = Files.newWriter(mapFile, Charsets.UTF_8);
-    writer.write(hostname + " /rack1\n");
-    writer.close();
-
-    conf.set(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
-        "org.apache.hadoop.net.TableMapping");
-    conf.set(NET_TOPOLOGY_TABLE_MAPPING_FILE_KEY, mapFile.getCanonicalPath());
-    System.out.println("temp mapping file = " + mapFile.getCanonicalPath());
     final int datanodeNum = 3;
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(datanodeNum)
@@ -540,8 +519,6 @@ public class TestStorageContainerManager {
             >= heartbeatCheckerIntervalMs);
         Assert.assertTrue(datanodeInfo.getUuidString()
             .equals(datanodeInfo.getNetworkName()));
-        Assert.assertTrue(datanodeInfo.getNetworkLocation()
-            .equals("/rack1"));
       }
     } finally {
       if (cluster != null) {
