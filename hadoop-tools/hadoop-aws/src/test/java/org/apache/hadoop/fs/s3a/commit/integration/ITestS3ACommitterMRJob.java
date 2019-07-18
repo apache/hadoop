@@ -102,7 +102,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
   /**
    * Test array for parameterized test runs.
-   * </ul>
    *
    * @return the committer binding for this run.
    */
@@ -194,8 +193,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     S3AFileSystem fs = getFileSystem();
     // final dest is in S3A
-    // we can't use the method name as the template places square braces into that and
-    // URI creation fails.
+    // we can't use the method name as the template places square braces into
+    // that and URI creation fails.
 
     Path outputPath = path("ITestS3ACommitterMRJob-execute-"+ committerName());
     // create and delete to force in a tombstone marker -see HADOOP-16207
@@ -369,7 +368,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    * These classes will be instantiated in a static array of the suite, and
    * not bound to a cluster binding or filesystem.
    *
-   * The per-method test setup method will call bind() to do the one-off binding.
+   * The per-method test setup method will call bind() to do the
+   * one-off binding.
    */
 
   private static abstract class CommitterTestBinding {

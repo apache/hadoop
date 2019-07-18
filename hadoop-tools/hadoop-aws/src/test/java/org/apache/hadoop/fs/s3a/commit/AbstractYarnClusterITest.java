@@ -111,9 +111,9 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
      * @throws IOException failure
      */
     public FileSystem getClusterFS() throws IOException {
-      MiniDFSClusterService hdfs = getHdfs();
-      return hdfs != null
-          ? hdfs.getClusterFS()
+      MiniDFSClusterService miniCluster = getHdfs();
+      return miniCluster != null
+          ? miniCluster.getClusterFS()
           : FileSystem.getLocal(yarn.getConfig());
     }
 
