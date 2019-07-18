@@ -21,7 +21,8 @@ package org.apache.hadoop.utils.db.cache;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
-
+import org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl.CacheCleanupPolicy;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -52,8 +53,11 @@ public interface TableCache<CACHEKEY extends CacheKey,
 
   /**
    * Removes all the entries from the cache which are having epoch value less
-   * than or equal to specified epoch value. For FullTable Cache this is a
-   * do-nothing operation.
+   * than or equal to specified epoch value.
+   *
+   * If clean up policy is NEVER, this is a do nothing operation.
+   * If clean up policy is MANUAL, it is caller responsibility to cleanup the
+   * cache before calling cleanup.
    * @param epoch
    */
   void cleanup(long epoch);
@@ -69,4 +73,25 @@ public interface TableCache<CACHEKEY extends CacheKey,
    * @return iterator of the underlying cache for the table.
    */
   Iterator<Map.Entry<CACHEKEY, CACHEVALUE>> iterator();
+
+  /**
+   * Check key exist in cache or not.
+   *
+   * If it exists return CacheResult with value and status as
+   * {@link CacheStatus#EXISTS}
+   *
+   * If it does not exist:
+   *  If cache clean up policy is
+   *  {@link TableCacheImpl.CacheCleanupPolicy#NEVER} it means table cache is
+   *  full cache. It return's {@link CacheResult} with null
+   *  and status as {@link CacheStatus#NOT_EXIST}.
+   *
+   *  If cache clean up policy is {@link CacheCleanupPolicy#MANUAL} it means
+   *  table cache is partial cache. It return's {@link CacheResult} with
+   *  null and status as MAY_EXIST.
+   *
+   * @param cachekey
+   */
+  CacheResult<CACHEVALUE> lookup(CACHEKEY cachekey);
+
 }
