@@ -18,9 +18,17 @@
 
 package org.apache.hadoop.ozone.om.request.volume;
 
+import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
+import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .VolumeList;
+import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheValue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +37,11 @@ import java.util.List;
 /**
  * Defines common methods required for volume requests.
  */
-public interface OMVolumeRequest {
+public abstract class OMVolumeRequest extends OMClientRequest {
+
+  public OMVolumeRequest(OMRequest omRequest) {
+    super(omRequest);
+  }
 
   /**
    * Delete volume from user volume list. This method should be called after
@@ -40,7 +52,7 @@ public interface OMVolumeRequest {
    * @return VolumeList - updated volume list for the user.
    * @throws IOException
    */
-  default VolumeList delVolumeFromOwnerList(VolumeList volumeList,
+  protected VolumeList delVolumeFromOwnerList(VolumeList volumeList,
       String volume, String owner) throws IOException {
 
     List<String> prevVolList = new ArrayList<>();
@@ -72,9 +84,8 @@ public interface OMVolumeRequest {
    * @throws OMException - if user has volumes greater than
    * maxUserVolumeCount, an exception is thrown.
    */
-  default VolumeList addVolumeToOwnerList(
-      VolumeList volumeList, String volume, String owner,
-      long maxUserVolumeCount) throws IOException {
+  protected VolumeList addVolumeToOwnerList(VolumeList volumeList,
+      String volume, String owner, long maxUserVolumeCount) throws IOException {
 
     // Check the volume count
     if (volumeList != null &&
@@ -95,4 +106,28 @@ public interface OMVolumeRequest {
 
     return newVolList;
   }
+
+  /**
+   * Create Ozone Volume. This method should be called after acquiring user
+   * and volume Lock.
+   * @param omMetadataManager
+   * @param omVolumeArgs
+   * @param volumeList
+   * @param dbVolumeKey
+   * @param dbUserKey
+   * @param transactionLogIndex
+   * @throws IOException
+   */
+  protected void createVolume(final OMMetadataManager omMetadataManager,
+      OmVolumeArgs omVolumeArgs, VolumeList volumeList, String dbVolumeKey,
+      String dbUserKey, long transactionLogIndex) {
+    // Update cache: Update user and volume cache.
+    omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
+        new CacheValue<>(Optional.of(volumeList), transactionLogIndex));
+
+    omMetadataManager.getVolumeTable().addCacheEntry(
+        new CacheKey<>(dbVolumeKey),
+        new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
+  }
+
 }
