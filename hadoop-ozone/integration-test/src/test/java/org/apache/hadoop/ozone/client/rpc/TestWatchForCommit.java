@@ -183,31 +183,24 @@ public class TestWatchForCommit {
         .getOutputStream();
     Assert.assertTrue(stream instanceof BlockOutputStream);
     BlockOutputStream blockOutputStream = (BlockOutputStream) stream;
-
     // we have just written data more than flush Size(2 chunks), at this time
     // buffer pool will have 3 buffers allocated worth of chunk size
-
     Assert.assertEquals(4, blockOutputStream.getBufferPool().getSize());
     // writtenDataLength as well flushedDataLength will be updated here
     Assert.assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
-
     Assert.assertEquals(maxFlushSize,
         blockOutputStream.getTotalDataFlushedLength());
-
     // since data equals to maxBufferSize is written, this will be a blocking
     // call and hence will wait for atleast flushSize worth of data to get
     // acked by all servers right here
     Assert.assertTrue(blockOutputStream.getTotalAckDataLength() >= flushSize);
-
     // watchForCommit will clean up atleast one entry from the map where each
     // entry corresponds to flushSize worth of data
     Assert.assertTrue(
         blockOutputStream.getCommitIndex2flushedDataMap().size() <= 1);
-
     // Now do a flush. This will flush the data and update the flush length and
     // the map.
     key.flush();
-
     Assert.assertEquals(pendingWriteChunkCount,
         metrics.getContainerOpsMetrics(ContainerProtos.Type.WriteChunk));
     Assert.assertEquals(pendingPutBlockCount,
@@ -218,19 +211,15 @@ public class TestWatchForCommit {
         metrics.getContainerOpCountMetrics(ContainerProtos.Type.PutBlock));
     Assert.assertEquals(totalOpCount + 8,
         metrics.getTotalOpCount());
-
     // Since the data in the buffer is already flushed, flush here will have
     // no impact on the counters and data structures
-
     Assert.assertEquals(4, blockOutputStream.getBufferPool().getSize());
     Assert.assertEquals(dataLength, blockOutputStream.getWrittenDataLength());
-
     Assert.assertEquals(dataLength,
         blockOutputStream.getTotalDataFlushedLength());
     // flush will make sure one more entry gets updated in the map
     Assert.assertTrue(
         blockOutputStream.getCommitIndex2flushedDataMap().size() <= 2);
-
     XceiverClientRatis raftClient =
         (XceiverClientRatis) blockOutputStream.getXceiverClient();
     Assert.assertEquals(3, raftClient.getCommitInfoMap().size());
@@ -240,11 +229,9 @@ public class TestWatchForCommit {
     // again write data with more than max buffer limit. This will call
     // watchForCommit again. Since the commit will happen 2 way, the
     // commitInfoMap will get updated for servers which are alive
-
     // 4 writeChunks = maxFlushSize + 2 putBlocks  will be discarded here
     // once exception is hit
     key.write(data1);
-
     // As a part of handling the exception, 4 failed writeChunks  will be
     // rewritten plus one partial chunk plus two putBlocks for flushSize
     // and one flush for partial chunk
