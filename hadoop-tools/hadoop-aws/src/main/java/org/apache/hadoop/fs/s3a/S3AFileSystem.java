@@ -2195,10 +2195,6 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public boolean delete(Path f, boolean recursive) throws IOException {
     try {
       entryPoint(INVOCATION_DELETE);
-      if (f.isRoot()) {
-        return rejectRootDirectoryDelete(f, recursive);
-      }
-
       boolean outcome = innerDelete(innerGetFileStatus(f, true), recursive);
       if (outcome) {
         try {
@@ -2254,6 +2250,10 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         key = key + "/";
       }
 
+      if (key.equals("/")) {
+        return rejectRootDirectoryDelete(status, recursive);
+      }
+
       if (!recursive && status.isEmptyDirectory() == Tristate.FALSE) {
         throw new PathIsNotEmptyDirectoryException(f.toString());
       }
@@ -2307,16 +2307,15 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Implements the specific logic to reject root directory deletion.
    * The caller must return the result of this call, rather than
    * attempt to continue with the delete operation: deleting root
-   * directories is never allowed. This method simply implements
-   * the policy of when to return false versus raise an exception.
-   * @param path path for deletion
+   * directories is never allowed.
+   * @param status filesystem status
    * @param recursive recursive flag from command
    * @return a return code for the operation
-   * @throws PathIOException if the operation was explicitly rejected.
    */
-  private boolean rejectRootDirectoryDelete(Path path, boolean recursive) {
+  private boolean rejectRootDirectoryDelete(S3AFileStatus status,
+      boolean recursive) {
     LOG.error("S3A: Cannot delete the {} root directory. Path: {}. Recursive: "
-            + "{}", bucket, path, recursive);
+            + "{}", bucket, status.getPath(), recursive);
     return false;
   }
 
