@@ -19,10 +19,11 @@
 package org.apache.hadoop.hdds.scm.cli;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
-import org.apache.hadoop.net.NetUtils;
 import picocli.CommandLine;
+
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONED;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DECOMMISSIONING;
@@ -30,6 +31,7 @@ import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.HEALTHY
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.STALE;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -75,7 +77,7 @@ public class TopologySubcommand implements Callable<Void> {
           if (order) {
             printOrderedByLocation(nodes);
           } else {
-            printUnordered(nodes);
+            printNodesWithLocation(nodes);
           }
         }
       }
@@ -83,49 +85,40 @@ public class TopologySubcommand implements Callable<Void> {
     }
   }
 
+  // Format
+  // Location: rack1
+  //  ipAddress(hostName)
   private void printOrderedByLocation(List<HddsProtos.Node> nodes) {
-    HashMap<String, TreeSet<String>> tree = new HashMap<>();
+    HashMap<String, TreeSet<DatanodeDetails>> tree =
+        new HashMap<>();
     for (HddsProtos.Node node : nodes) {
       String location = node.getNodeID().getNetworkLocation();
-      String name = node.getNodeID().getNetworkName();
-
-      if (!tree.containsKey(location)) {
+      if (location != null && !tree.containsKey(location)) {
         tree.put(location, new TreeSet<>());
       }
-      tree.get(location).add(name);
+      tree.get(location).add(DatanodeDetails.getFromProtoBuf(node.getNodeID()));
     }
     ArrayList<String> locations = new ArrayList<>(tree.keySet());
     Collections.sort(locations);
 
-    for (String l : locations) {
-      System.out.println("Location: " + l);
-      TreeSet<String> nodesInLocation = tree.get(l);
-      nodesInLocation.forEach(node->printNode(node));
-    }
+    locations.forEach(location -> {
+      System.out.println("Location: " + location);
+      tree.get(location).forEach(node -> {
+        System.out.println(" " + node.getIpAddress() + "(" + node.getHostName()
+            + ")");
+      });
+    });
   }
 
-  // format "ipAddress(hostName)"
-  private void printNode(String networkName) {
-    if (networkName != null) {
-      System.out.print(" " + networkName);
-      String hostname = NetUtils.getHostNameOfIP(networkName);
-      if (hostname != null) {
-        System.out.print("(" + hostname + ")");
-      }
-      System.out.println();
-    }
-  }
 
-  private void printUnordered(List<HddsProtos.Node> nodes) {
-    nodes.forEach(node -> printNodeWithLocation(node.getNodeID()));
-  }
-
-  // format "ipAddress(hostName)    networkLocation"
-  private void printNodeWithLocation(HddsProtos.DatanodeDetailsProto nodeID) {
-    System.out.print(" " + nodeID.getIpAddress() + "(" + nodeID.getHostName()
-        + ")");
-    System.out.println("    " +
-        (nodeID.getNetworkLocation() != null ?
-            nodeID.getNetworkLocation() : "NA"));
+  // Format "ipAddress(hostName)    networkLocation"
+  private void printNodesWithLocation(Collection<HddsProtos.Node> nodes) {
+    nodes.forEach(node -> {
+      System.out.print(" " + node.getNodeID().getIpAddress() + "(" +
+          node.getNodeID().getHostName() + ")");
+      System.out.println("    " +
+          (node.getNodeID().getNetworkLocation() != null ?
+              node.getNodeID().getNetworkLocation() : "NA"));
+    });
   }
 }
