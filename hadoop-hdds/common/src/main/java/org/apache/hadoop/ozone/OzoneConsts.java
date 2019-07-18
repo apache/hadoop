@@ -264,6 +264,7 @@ public final class OzoneConsts {
   public static final String UPLOAD_ID = "uploadID";
   public static final String PART_NUMBER_MARKER = "partNumberMarker";
   public static final String MAX_PARTS = "maxParts";
+  public static final String S3_BUCKET = "s3Bucket";
 
 
 
@@ -302,5 +303,9 @@ public final class OzoneConsts {
 
   public static final String JAVA_TMP_DIR = "java.io.tmpdir";
   public static final String LOCALHOST = "localhost";
+
+
+  public static final int S3_BUCKET_MIN_LENGTH = 3;
+  public static final int S3_BUCKET_MAX_LENGTH = 64;
 
 }

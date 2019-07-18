@@ -313,7 +313,13 @@ public class MiniYARNCluster extends CompositeService {
         YarnConfiguration.DEFAULT_TIMELINE_SERVICE_ENABLED) || enableAHS) {
         addService(new ApplicationHistoryServerWrapper());
     }
-    
+    // to ensure that any FileSystemNodeAttributeStore started by the RM always
+    // uses a unique path, if unset, force it under the test dir.
+    if (conf.get(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_ROOT_DIR) == null) {
+      File nodeAttrDir = new File(getTestWorkDir(), "nodeattributes");
+      conf.set(YarnConfiguration.FS_NODE_ATTRIBUTE_STORE_ROOT_DIR,
+          nodeAttrDir.getCanonicalPath());
+    }
     super.serviceInit(
         conf instanceof YarnConfiguration ? conf : new YarnConfiguration(conf));
   }

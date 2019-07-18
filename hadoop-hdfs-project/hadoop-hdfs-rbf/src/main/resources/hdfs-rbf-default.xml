@@ -383,7 +383,7 @@
 
   <property>
     <name>dfs.federation.router.namenode.heartbeat.enable</name>
-    <value>true</value>
+    <value></value>
     <description>
       If true, get namenode heartbeats and send into the State Store.
       If not explicitly specified takes the same value as for

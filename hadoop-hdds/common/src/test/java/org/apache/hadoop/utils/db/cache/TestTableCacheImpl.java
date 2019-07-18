@@ -19,6 +19,8 @@
 
 package org.apache.hadoop.utils.db.cache;
 
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.CompletableFuture;
 
 import com.google.common.base.Optional;
@@ -26,18 +28,40 @@ import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import static org.junit.Assert.fail;
 
 /**
  * Class tests partial table cache.
  */
-public class TestPartialTableCache {
+@RunWith(value = Parameterized.class)
+public class TestTableCacheImpl {
   private TableCache<CacheKey<String>, CacheValue<String>> tableCache;
+
+  private final TableCacheImpl.CacheCleanupPolicy cacheCleanupPolicy;
+
+
+  @Parameterized.Parameters
+  public static Collection<Object[]> policy() {
+    Object[][] params = new Object[][] {
+        {TableCacheImpl.CacheCleanupPolicy.NEVER},
+        {TableCacheImpl.CacheCleanupPolicy.MANUAL}
+    };
+    return Arrays.asList(params);
+  }
+
+  public TestTableCacheImpl(
+      TableCacheImpl.CacheCleanupPolicy cacheCleanupPolicy) {
+    this.cacheCleanupPolicy = cacheCleanupPolicy;
+  }
+
 
   @Before
   public void create() {
-    tableCache = new PartialTableCache<>();
+    tableCache =
+        new TableCacheImpl<>(cacheCleanupPolicy);
   }
   @Test
   public void testPartialTableCache() {
@@ -98,33 +122,40 @@ public class TestPartialTableCache {
           tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
     }
 
-    int deleted = 5;
-    // cleanup first 5 entires
-    tableCache.cleanup(deleted);
 
     value = future.get();
     Assert.assertEquals(10, value);
 
     totalCount += value;
 
-    // We should totalCount - deleted entries in cache.
-    final int tc = totalCount;
-    GenericTestUtils.waitFor(() -> (tc - deleted == tableCache.size()), 100,
-        5000);
+    if (cacheCleanupPolicy == TableCacheImpl.CacheCleanupPolicy.MANUAL) {
+      int deleted = 5;
 
-    // Check if we have remaining entries.
-    for (int i=6; i <= totalCount; i++) {
-      Assert.assertEquals(Integer.toString(i),
-          tableCache.get(new CacheKey<>(Integer.toString(i))).getCacheValue());
+      // cleanup first 5 entires
+      tableCache.cleanup(deleted);
+
+      // We should totalCount - deleted entries in cache.
+      final int tc = totalCount;
+      GenericTestUtils.waitFor(() -> (tc - deleted == tableCache.size()), 100,
+          5000);
+      // Check if we have remaining entries.
+      for (int i=6; i <= totalCount; i++) {
+        Assert.assertEquals(Integer.toString(i), tableCache.get(
+            new CacheKey<>(Integer.toString(i))).getCacheValue());
+      }
+      tableCache.cleanup(10);
+
+      tableCache.cleanup(totalCount);
+
+      // Cleaned up all entries, so cache size should be zero.
+      GenericTestUtils.waitFor(() -> (0 == tableCache.size()), 100,
+          5000);
+    } else {
+      tableCache.cleanup(totalCount);
+      Assert.assertEquals(totalCount, tableCache.size());
     }
 
-    tableCache.cleanup(10);
 
-    tableCache.cleanup(totalCount);
-
-    // Cleaned up all entries, so cache size should be zero.
-    GenericTestUtils.waitFor(() -> (0 == tableCache.size()), 100,
-        5000);
   }
 
   private int writeToCache(int count, int startVal, long sleep)

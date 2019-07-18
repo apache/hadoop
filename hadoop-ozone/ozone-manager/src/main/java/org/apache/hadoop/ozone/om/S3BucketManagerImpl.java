@@ -55,7 +55,6 @@ public class S3BucketManagerImpl implements S3BucketManager {
   private final OMMetadataManager omMetadataManager;
   private final VolumeManager volumeManager;
   private final BucketManager bucketManager;
-  private final boolean isRatisEnabled;
 
   /**
    * Construct an S3 Bucket Manager Object.
@@ -72,9 +71,6 @@ public class S3BucketManagerImpl implements S3BucketManager {
     this.omMetadataManager = omMetadataManager;
     this.volumeManager = volumeManager;
     this.bucketManager = bucketManager;
-    isRatisEnabled = configuration.getBoolean(
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
-        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
   }
 
   @Override
@@ -176,12 +172,9 @@ public class S3BucketManagerImpl implements S3BucketManager {
       }
 
       OmVolumeArgs args = builder.build();
-      if (isRatisEnabled) {
-        // When ratis is enabled we need to call apply also.
-        volumeManager.applyCreateVolume(args, volumeManager.createVolume(args));
-      } else {
-        volumeManager.createVolume(args);
-      }
+
+      volumeManager.createVolume(args);
+
     } catch (OMException exp) {
       newVolumeCreate = false;
       if (exp.getResult().compareTo(VOLUME_ALREADY_EXISTS) == 0) {

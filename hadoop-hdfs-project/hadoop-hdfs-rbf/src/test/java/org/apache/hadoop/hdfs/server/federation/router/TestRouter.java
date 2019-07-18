@@ -33,6 +33,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.server.federation.MockResolver;
 import org.apache.hadoop.hdfs.server.federation.RouterConfigBuilder;
@@ -260,4 +261,31 @@ public class TestRouter {
     router.close();
   }
 
+  @Test
+  public void testNamenodeHeartBeatEnableDefault() throws IOException {
+    checkNamenodeHeartBeatEnableDefault(true);
+    checkNamenodeHeartBeatEnableDefault(false);
+  }
+
+  /**
+   * Check the default value of dfs.federation.router.namenode.heartbeat.enable
+   * when it isn't explicitly defined.
+   * @param enable value for dfs.federation.router.heartbeat.enable.
+   */
+  private void checkNamenodeHeartBeatEnableDefault(boolean enable)
+      throws IOException {
+    final Router router = new Router();
+    try {
+      Configuration config = new HdfsConfiguration();
+      config.setBoolean(RBFConfigKeys.DFS_ROUTER_HEARTBEAT_ENABLE, enable);
+      router.init(config);
+      if (enable) {
+        assertNotNull(router.getNamenodeHeartbeatServices());
+      } else {
+        assertNull(router.getNamenodeHeartbeatServices());
+      }
+    } finally {
+      router.close();
+    }
+  }
 }
