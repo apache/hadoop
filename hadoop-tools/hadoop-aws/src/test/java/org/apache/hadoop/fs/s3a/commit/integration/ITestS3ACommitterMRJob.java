@@ -266,9 +266,12 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     try (DurationInfo ignore = new DurationInfo(LOG, "Job Submit")) {
       mrJob.submit();
     }
+    String logLocation = "logs under target/";
     try (DurationInfo ignore = new DurationInfo(LOG, "Job Execution")) {
       boolean succeeded = mrJob.waitForCompletion(true);
-      assertTrue("MR job failed", succeeded);
+      assertTrue("mrJob.waitForCompletion returned false: consult "
+          + logLocation + clusterBinding.getClusterName(),
+          succeeded);
     }
 
     waitForConsistency();
@@ -281,7 +284,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
         S3AUtils.HIDDEN_FILE_FILTER);
     int fileCount = results.length;
     Assertions.assertThat(fileCount)
-        .describedAs("No files in output directory %s", outputPath)
+        .describedAs("No files in output directory %s; see %s",
+            outputPath, logLocation)
         .isNotEqualTo(0);
 
     List<String> actualFiles = Arrays.stream(results)

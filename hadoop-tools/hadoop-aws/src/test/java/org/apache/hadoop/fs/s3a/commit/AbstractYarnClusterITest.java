@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.s3a.commit;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,7 +28,6 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.commit.files.SuccessData;
 import org.apache.hadoop.mapred.JobConf;
@@ -88,13 +86,17 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
    */
   protected static final class ClusterBinding {
 
+    private String clusterName;
+
     private final MiniDFSClusterService hdfs;
 
     private final MiniMRYarnCluster yarn;
 
     public ClusterBinding(
+        final String clusterName,
         final MiniDFSClusterService hdfs,
         final MiniMRYarnCluster yarn) {
+      this.clusterName = clusterName;
       this.hdfs = hdfs;
       this.yarn = checkNotNull(yarn);
     }
@@ -106,7 +108,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
     /**
      * Get the cluster FS, which will either be HDFS or the local FS.
      * @return a filesystem.
-     * @throws IOException
+     * @throws IOException failure
      */
     public FileSystem getClusterFS() throws IOException {
       MiniDFSClusterService hdfs = getHdfs();
@@ -121,6 +123,10 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
     public Configuration getConf() {
       return getYarn().getConfig();
+    }
+
+    public String getClusterName() {
+      return clusterName;
     }
 
     public void terminate() {
@@ -150,7 +156,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
 
     // create a unique cluster name based on the current time in millis.
     String timestamp = LocalDateTime.now().format(
-        DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmssSS"));
+        DateTimeFormatter.ofPattern("yyyy-MM-dd-HH.mm.ss.SS"));
     String clusterName = "yarn-" + timestamp;
     MiniDFSClusterService miniDFSClusterService =
         useHDFS
@@ -158,7 +164,7 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
             : null;
     MiniMRYarnCluster yarnCluster = deployService(conf,
         new MiniMRYarnCluster(clusterName, 2));
-    return new ClusterBinding(miniDFSClusterService, yarnCluster);
+    return new ClusterBinding(clusterName, miniDFSClusterService, yarnCluster);
   }
 
   protected static void terminateCluster(ClusterBinding clusterBinding) {
