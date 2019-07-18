@@ -281,7 +281,7 @@ killer.
 `fs.s3a.threads.max` and `fs.s3a.connection.maximum`.
 
 1. Make sure that the bucket is using `sequential` or `normal` fadvise seek policies,
-that is, `fs.s3a.experimental.fadvise` is not set to `random`
+that is, `fs.s3a.experimental.input.fadvise` is not set to `random`
 
 1. Perform listings in parallel by setting `-numListstatusThreads`
 to a higher number. Make sure that `fs.s3a.connection.maximum`
@@ -314,7 +314,7 @@ the S3 bucket/shard.
 </property>
 
 <property>
-  <name>fs.s3a.experimental.fadvise</name>
+  <name>fs.s3a.experimental.input.fadvise</name>
   <value>normal</value>
 </property>
 
