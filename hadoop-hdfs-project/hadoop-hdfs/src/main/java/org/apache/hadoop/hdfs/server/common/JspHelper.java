@@ -43,10 +43,12 @@ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationUtilsClient;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
+import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.SecurityUtil;
@@ -279,8 +281,13 @@ public class JspHelper {
     if (context != null) {
       final NameNode nn = NameNodeHttpServer.getNameNodeFromContext(context);
       if (nn != null) {
-        // Verify the token.
-        nn.getNamesystem().verifyToken(id, token.getPassword());
+        FSNamesystem namesystem = nn.getNamesystem();
+        // namesystem can be null during startup period at this moment.
+        // so bypass this verification step
+        if (namesystem != null) {
+          // Verify the token.
+          namesystem.verifyToken(id, token.getPassword());
+        }
       }
     }
     UserGroupInformation ugi = id.getUser();
