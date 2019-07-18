@@ -67,6 +67,7 @@ public class OzoneManagerHARequestHandlerImpl
     case CreateDirectory:
     case CreateFile:
     case PurgeKeys:
+    case CreateS3Bucket:
       //TODO: We don't need to pass transactionID, this will be removed when
       // complete write requests is changed to new model. And also we can
       // return OMClientResponse, then adding to doubleBuffer can be taken

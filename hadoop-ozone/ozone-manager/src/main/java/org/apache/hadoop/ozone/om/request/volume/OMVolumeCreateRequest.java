@@ -20,7 +20,6 @@ package org.apache.hadoop.ozone.om.request.volume;
 
 import java.io.IOException;
 
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,14 +28,11 @@ import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -60,8 +56,7 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.USER_LOC
 /**
  * Handles volume create request.
  */
-public class OMVolumeCreateRequest extends OMClientRequest
-    implements OMVolumeRequest {
+public class OMVolumeCreateRequest extends OMVolumeRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeCreateRequest.class);
 
@@ -132,10 +127,6 @@ public class OMVolumeCreateRequest extends OMClientRequest
           createErrorOMResponse(omResponse, ex));
     }
 
-
-
-    String dbUserKey = omMetadataManager.getUserKey(owner);
-    String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
     VolumeList volumeList = null;
     boolean acquiredUserLock = false;
     IOException exception = null;
@@ -145,27 +136,24 @@ public class OMVolumeCreateRequest extends OMClientRequest
     try {
       acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
           owner);
+      String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
+
       OmVolumeArgs dbVolumeArgs =
           omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
-      // Validation: Check if volume already exists
-      if (dbVolumeArgs != null) {
+      if (dbVolumeArgs == null) {
+        String dbUserKey = omMetadataManager.getUserKey(owner);
+        volumeList = omMetadataManager.getUserTable().get(dbUserKey);
+        volumeList = addVolumeToOwnerList(volumeList, volume, owner,
+            ozoneManager.getMaxUserVolumeCount());
+        createVolume(omMetadataManager, omVolumeArgs, volumeList, dbVolumeKey,
+              dbUserKey, transactionLogIndex);
+        LOG.debug("volume:{} successfully created", omVolumeArgs.getVolume());
+      } else {
         LOG.debug("volume:{} already exists", omVolumeArgs.getVolume());
         throw new OMException("Volume already exists",
             OMException.ResultCodes.VOLUME_ALREADY_EXISTS);
       }
-
-      volumeList = omMetadataManager.getUserTable().get(dbUserKey);
-      volumeList = addVolumeToOwnerList(volumeList,
-          volume, owner, ozoneManager.getMaxUserVolumeCount());
-
-      // Update cache: Update user and volume cache.
-      omMetadataManager.getUserTable().addCacheEntry(new CacheKey<>(dbUserKey),
-          new CacheValue<>(Optional.of(volumeList), transactionLogIndex));
-
-      omMetadataManager.getVolumeTable().addCacheEntry(
-          new CacheKey<>(dbVolumeKey),
-          new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
 
     } catch (IOException ex) {
       exception = ex;

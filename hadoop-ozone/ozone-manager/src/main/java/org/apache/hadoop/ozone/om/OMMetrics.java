@@ -113,16 +113,23 @@ public class OMMetrics {
 
   private @Metric MutableCounterLong numVolumes;
   private @Metric MutableCounterLong numBuckets;
+  private @Metric MutableCounterLong numS3Buckets;
 
   //TODO: This metric is an estimate and it may be inaccurate on restart if the
   // OM process was not shutdown cleanly. Key creations/deletions in the last
   // few minutes before restart may not be included in this count.
   private @Metric MutableCounterLong numKeys;
 
+
+
   // Metrics to track checkpointing statistics from last run.
   private @Metric MutableGaugeLong lastCheckpointCreationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointTarOperationTimeTaken;
   private @Metric MutableGaugeLong lastCheckpointStreamingTimeTaken;
+
+  private @Metric MutableCounterLong numS3BucketCreates;
+  private @Metric MutableCounterLong numS3BucketCreateFails;
+
 
   public OMMetrics() {
   }
@@ -132,6 +139,23 @@ public class OMMetrics {
     return ms.register(SOURCE_NAME,
         "Ozone Manager Metrics",
         new OMMetrics());
+  }
+
+  public void incNumS3BucketCreates() {
+    numBucketOps.incr();
+    numS3BucketCreates.incr();
+  }
+
+  public void incNumS3BucketCreateFails() {
+    numS3BucketCreateFails.incr();
+  }
+
+  public void incNumS3Buckets() {
+    numS3Buckets.incr();
+  }
+
+  public void decNumS3Buckets() {
+    numS3Buckets.incr();
   }
 
   public void incNumVolumes() {
