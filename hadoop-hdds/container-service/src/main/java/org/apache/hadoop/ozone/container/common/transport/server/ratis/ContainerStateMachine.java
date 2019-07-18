@@ -22,11 +22,13 @@ import com.google.common.base.Preconditions;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.container.common.helpers.ContainerUtils;
 import org.apache.hadoop.util.Time;
 import org.apache.ratis.proto.RaftProtos.RaftPeerRole;
@@ -82,6 +84,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.Executors;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.OutputStream;
@@ -139,7 +142,6 @@ public class ContainerStateMachine extends BaseStateMachine {
   // keeps track of the containers created per pipeline
   private final Set<Long> createContainerSet;
   private ExecutorService[] executors;
-  private final int numExecutors;
   private final Map<Long, Long> applyTransactionCompletionMap;
   private final Cache<Long, ByteString> stateMachineDataCache;
   private final boolean isBlockTokenEnabled;
@@ -152,15 +154,13 @@ public class ContainerStateMachine extends BaseStateMachine {
   @SuppressWarnings("parameternumber")
   public ContainerStateMachine(RaftGroupId gid, ContainerDispatcher dispatcher,
       ThreadPoolExecutor chunkExecutor, XceiverServerRatis ratisServer,
-      List<ExecutorService> executors, long expiryInterval,
-      boolean isBlockTokenEnabled, TokenVerifier tokenVerifier) {
+      long expiryInterval, boolean isBlockTokenEnabled,
+      TokenVerifier tokenVerifier, Configuration conf) {
     this.gid = gid;
     this.dispatcher = dispatcher;
     this.chunkExecutor = chunkExecutor;
     this.ratisServer = ratisServer;
     metrics = CSMMetrics.create(gid);
-    this.numExecutors = executors.size();
-    this.executors = executors.toArray(new ExecutorService[numExecutors]);
     this.writeChunkFutureMap = new ConcurrentHashMap<>();
     applyTransactionCompletionMap = new ConcurrentHashMap<>();
     stateMachineDataCache = CacheBuilder.newBuilder()
@@ -171,6 +171,19 @@ public class ContainerStateMachine extends BaseStateMachine {
     this.isBlockTokenEnabled = isBlockTokenEnabled;
     this.tokenVerifier = tokenVerifier;
     this.createContainerSet = new ConcurrentSkipListSet<>();
+
+    final int numContainerOpExecutors = conf.getInt(
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY,
+        OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT);
+    this.executors = new ExecutorService[numContainerOpExecutors];
+    for (int i = 0; i < numContainerOpExecutors; i++) {
+      final int index = i;
+      this.executors[index] = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r);
+        t.setName("RatisApplyTransactionExecutor " + index);
+        return t;
+      });
+    }
   }
 
   @Override
@@ -367,7 +380,7 @@ public class ContainerStateMachine extends BaseStateMachine {
 
   private ExecutorService getCommandExecutor(
       ContainerCommandRequestProto requestProto) {
-    int executorId = (int)(requestProto.getContainerID() % numExecutors);
+    int executorId = (int)(requestProto.getContainerID() % executors.length);
     return executors[executorId];
   }
 
@@ -700,5 +713,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   @Override
   public void close() throws IOException {
     evictStateMachineCache();
+    for (ExecutorService executor : executors) {
+      executor.shutdown();
+    }
   }
 }
