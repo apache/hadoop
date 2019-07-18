@@ -392,6 +392,8 @@ public final class OzoneManagerRatisServer {
         SizeInBytes.valueOf(logAppenderQueueByteLimit));
     RaftServerConfigKeys.Log.setPreallocatedSize(properties,
         SizeInBytes.valueOf(raftSegmentPreallocatedSize));
+    RaftServerConfigKeys.Log.Appender.setInstallSnapshotEnabled(properties,
+        false);
     final int logPurgeGap = conf.getInt(
         OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP,
         OMConfigKeys.OZONE_OM_RATIS_LOG_PURGE_GAP_DEFAULT);
