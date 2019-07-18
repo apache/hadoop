@@ -284,7 +284,7 @@ public class XceiverClientGrpc extends XceiverClientSpi {
         }
         break;
       } catch (ExecutionException | InterruptedException | IOException e) {
-        LOG.info("Failed to execute command " + request + " on datanode " + dn
+        LOG.error("Failed to execute command " + request + " on datanode " + dn
             .getUuidString(), e);
         if (!(e instanceof IOException)) {
           if (Status.fromThrowable(e.getCause()).getCode()
@@ -305,8 +305,8 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       return reply;
     } else {
       Preconditions.checkNotNull(ioException);
-      LOG.error("Failed to execute command " + request + " on the pipeline "
-          + pipeline);
+      LOG.error("Failed to execute command {} on the pipeline {}.", request,
+          pipeline);
       throw ioException;
     }
   }
