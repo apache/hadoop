@@ -63,6 +63,13 @@ public class TestContainerPlacementFactory {
   public void setup() {
     //initialize network topology instance
     conf = new OzoneConfiguration();
+  }
+
+  @Test
+  public void testRackAwarePolicy() throws IOException {
+    conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
+        SCMContainerPlacementRackAware.class.getName());
+
     NodeSchema[] schemas = new NodeSchema[]
         {ROOT_SCHEMA, RACK_SCHEMA, LEAF_SCHEMA};
     NodeSchemaManager.getInstance().init(schemas, true);
@@ -91,11 +98,7 @@ public class TestContainerPlacementFactory {
         .thenReturn(new SCMNodeMetric(storageCapacity, 80L, 20L));
     when(nodeManager.getNodeStat(datanodes.get(4)))
         .thenReturn(new SCMNodeMetric(storageCapacity, 70L, 30L));
-  }
 
-
-  @Test
-  public void testDefaultPolicy() throws IOException {
     ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
         .getPolicy(conf, nodeManager, cluster, true);
 
@@ -111,14 +114,21 @@ public class TestContainerPlacementFactory {
         datanodeDetails.get(2)));
   }
 
+  @Test
+  public void testDefaultPolicy() throws IOException {
+    ContainerPlacementPolicy policy = ContainerPlacementPolicyFactory
+        .getPolicy(conf, null, null, true);
+    Assert.assertSame(SCMContainerPlacementRandom.class, policy.getClass());
+  }
+
   /**
    * A dummy container placement implementation for test.
    */
-  public class DummyImpl implements ContainerPlacementPolicy {
+  public static class DummyImpl implements ContainerPlacementPolicy {
     @Override
     public List<DatanodeDetails> chooseDatanodes(
         List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
-        int nodesRequired, long sizeRequired) throws IOException {
+        int nodesRequired, long sizeRequired) {
       return null;
     }
   }
@@ -127,8 +137,7 @@ public class TestContainerPlacementFactory {
   public void testConstuctorNotFound() throws SCMException {
     // set a placement class which does't have the right constructor implemented
     conf.set(ScmConfigKeys.OZONE_SCM_CONTAINER_PLACEMENT_IMPL_KEY,
-        "org.apache.hadoop.hdds.scm.container.placement.algorithms." +
-            "TestContainerPlacementFactory$DummyImpl");
+        DummyImpl.class.getName());
     ContainerPlacementPolicyFactory.getPolicy(conf, null, null, true);
   }
 

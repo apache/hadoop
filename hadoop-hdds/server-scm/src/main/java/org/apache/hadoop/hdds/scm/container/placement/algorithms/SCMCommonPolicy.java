@@ -109,7 +109,9 @@ public abstract class SCMCommonPolicy implements ContainerPlacementPolicy {
       int nodesRequired, final long sizeRequired) throws SCMException {
     List<DatanodeDetails> healthyNodes =
         nodeManager.getNodes(HddsProtos.NodeState.HEALTHY);
-    healthyNodes.removeAll(excludedNodes);
+    if (excludedNodes != null) {
+      healthyNodes.removeAll(excludedNodes);
+    }
     String msg;
     if (healthyNodes.size() == 0) {
       msg = "No healthy node found to allocate container.";
