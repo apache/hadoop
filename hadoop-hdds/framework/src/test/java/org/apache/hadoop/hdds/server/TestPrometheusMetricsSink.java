@@ -20,7 +20,6 @@ package org.apache.hadoop.hdds.server;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 
 import org.apache.hadoop.metrics2.MetricsSystem;
 import org.apache.hadoop.metrics2.annotation.Metric;
@@ -31,7 +30,7 @@ import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.junit.Assert;
 import org.junit.Test;
 
-import static org.apache.commons.codec.CharEncoding.UTF_8;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 /**
  * Test prometheus Sink.
@@ -53,17 +52,18 @@ public class TestPrometheusMetricsSink {
     testMetrics.numBucketCreateFails.incr();
     metrics.publishMetricsNow();
     ByteArrayOutputStream stream = new ByteArrayOutputStream();
-    OutputStreamWriter writer = new OutputStreamWriter(stream, StandardCharsets.UTF_8);
+    OutputStreamWriter writer = new OutputStreamWriter(stream, UTF_8);
 
     //WHEN
     sink.writeMetrics(writer);
     writer.flush();
 
     //THEN
-    System.out.println(stream.toString(UTF_8));
+    String writtenMetrics = stream.toString(UTF_8.name());
+    System.out.println(writtenMetrics);
     Assert.assertTrue(
         "The expected metric line is missing from prometheus metrics output",
-        stream.toString(UTF_8).contains(
+        writtenMetrics.contains(
             "test_metrics_num_bucket_create_fails{context=\"dfs\"")
     );
 
