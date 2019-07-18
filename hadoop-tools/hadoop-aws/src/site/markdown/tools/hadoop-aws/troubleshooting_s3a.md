@@ -1129,7 +1129,7 @@ shows that it is generally more efficient to abort the TCP connection and initia
 a new one than read to the end of a large file.
 
 Note: the threshold when data is read rather than the stream aborted can be tuned
-by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.fadvise`.
+by `fs.s3a.readahead.range`; seek policy in `fs.s3a.experimental.input.fadvise`.
 
 ### <a name="no_such_bucket"></a> `FileNotFoundException` Bucket does not exist.
 
