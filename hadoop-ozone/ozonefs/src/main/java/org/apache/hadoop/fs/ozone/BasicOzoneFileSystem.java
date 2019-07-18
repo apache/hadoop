@@ -563,51 +563,14 @@ public class BasicOzoneFileSystem extends FileSystem {
   }
 
   /**
-   * Check whether the path is valid and then create directories.
-   * Directory is represented using a key with no value.
-   * All the non-existent parent directories are also created.
+   * Creates a directory. Directory is represented using a key with no value.
    *
    * @param path directory path to be created
    * @return true if directory exists or created successfully.
    * @throws IOException
    */
   private boolean mkdir(Path path) throws IOException {
-    Path fPart = path;
-    Path prevfPart = null;
-    do {
-      LOG.trace("validating path:{}", fPart);
-      try {
-        FileStatus fileStatus = getFileStatus(fPart);
-        if (fileStatus.isDirectory()) {
-          // If path exists and a directory, exit
-          break;
-        } else {
-          // Found a file here, rollback and delete newly created directories
-          LOG.trace("Found a file with same name as directory, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          throw new FileAlreadyExistsException(String.format(
-              "Can't make directory for path '%s', it is a file.", fPart));
-        }
-      } catch (FileNotFoundException | OMException fnfe) {
-        LOG.trace("creating directory for fpart:{}", fPart);
-        String key = pathToKey(fPart);
-        String dirKey = addTrailingSlashIfNeeded(key);
-        if (!adapter.createDirectory(dirKey)) {
-          // Directory creation failed here,
-          // rollback and delete newly created directories
-          LOG.trace("Directory creation failed, path:{}", fPart);
-          if (prevfPart != null) {
-            delete(prevfPart, true);
-          }
-          return false;
-        }
-      }
-      prevfPart = fPart;
-      fPart = fPart.getParent();
-    } while (fPart != null);
-    return true;
+    return adapter.createDirectory(pathToKey(path));
   }
 
   @Override
