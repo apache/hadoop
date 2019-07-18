@@ -359,6 +359,30 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
 
+    secConfig = new SecurityConfig(configuration);
+    // Create the KMS Key Provider
+    try {
+      kmsProvider = createKeyProviderExt(configuration);
+    } catch (IOException ioe) {
+      kmsProvider = null;
+      LOG.error("Fail to create Key Provider");
+    }
+    if (secConfig.isSecurityEnabled()) {
+      omComponent = OM_DAEMON + "-" + omId;
+      if(omStorage.getOmCertSerialId() == null) {
+        throw new RuntimeException("OzoneManager started in secure mode but " +
+            "doesn't have SCM signed certificate.");
+      }
+      certClient = new OMCertificateClient(new SecurityConfig(conf),
+          omStorage.getOmCertSerialId());
+      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
+    }
+    if (secConfig.isBlockTokenEnabled()) {
+      blockTokenMgr = createBlockTokenSecretManager(configuration);
+    }
+
+    instantiateServices();
+
     initializeRatisServer();
     initializeRatisClient();
 
@@ -385,30 +409,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     this.snapshotIndex = loadRatisSnapshotIndex();
 
     metrics = OMMetrics.create();
-
-    secConfig = new SecurityConfig(configuration);
-    // Create the KMS Key Provider
-    try {
-      kmsProvider = createKeyProviderExt(configuration);
-    } catch (IOException ioe) {
-      kmsProvider = null;
-      LOG.error("Fail to create Key Provider");
-    }
-    if (secConfig.isSecurityEnabled()) {
-      omComponent = OM_DAEMON + "-" + omId;
-      if(omStorage.getOmCertSerialId() == null) {
-        throw new RuntimeException("OzoneManager started in secure mode but " +
-            "doesn't have SCM signed certificate.");
-      }
-      certClient = new OMCertificateClient(new SecurityConfig(conf),
-          omStorage.getOmCertSerialId());
-      delegationTokenMgr = createDelegationTokenSecretManager(configuration);
-    }
-    if (secConfig.isBlockTokenEnabled()) {
-      blockTokenMgr = createBlockTokenSecretManager(configuration);
-    }
-
-    instantiateServices();
 
     InetSocketAddress omNodeRpcAddr = omNodeDetails.getRpcAddress();
     omRpcAddressTxt = new Text(omNodeDetails.getRpcAddressString());

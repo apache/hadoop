@@ -60,7 +60,7 @@ public class TestOMRatisSnapshots {
   public ExpectedException exception = ExpectedException.none();
 
   @Rule
-  public Timeout timeout = new Timeout(3000_000);
+  public Timeout timeout = new Timeout(500_000);
 
   /**
    * Create a MiniOzoneCluster for testing. The cluster initially has one
@@ -186,5 +186,4 @@ public class TestOMRatisSnapshots {
           followerOMMetaMngr.getOzoneKey(volumeName, bucketName, key)));
     }
   }
-
 }

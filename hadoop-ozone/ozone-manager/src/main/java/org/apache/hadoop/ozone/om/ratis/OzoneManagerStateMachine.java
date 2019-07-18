@@ -244,6 +244,9 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
     String leaderNodeId = RaftPeerId.valueOf(roleInfoProto.getSelf().getId())
         .toString();
 
+    LOG.info("Received install snapshot notificaiton form OM leader: {} with " +
+            "term index: {}", leaderNodeId, firstTermIndexInLog);
+
     if (!roleInfoProto.getRole().equals(RaftProtos.RaftPeerRole.LEADER)) {
       // A non-leader Ratis server should not send this notification.
       LOG.error("Received Install Snapshot notification from non-leader OM " +
