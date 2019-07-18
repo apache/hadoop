@@ -3153,8 +3153,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     //  append log entries to the ratis server.
     omRatisServer.getOmStateMachine().pause();
 
+    File dbBackup;
     try {
-      replaceOMDBWithCheckpoint(lastAppliedIndex, newDBlocation);
+      dbBackup = replaceOMDBWithCheckpoint(lastAppliedIndex, newDBlocation);
     } catch (Exception e) {
       LOG.error("OM DB checkpoint replacement with new downloaded checkpoint " +
           "failed.", e);
@@ -3170,6 +3171,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     } catch (IOException e) {
       LOG.error("Failed to reload OM state with new DB checkpoint.", e);
       return null;
+    }
+
+    // Delete the backup DB
+    try {
+      FileUtils.deleteFully(dbBackup);
+    } catch (IOException e) {
+      LOG.error("Failed to delete the backup of the original DB {}", dbBackup);
     }
 
     // TODO: We should only return the snpashotIndex to the leader.
@@ -3201,9 +3209,10 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * Replace the current OM DB with the new DB checkpoint.
    * @param lastAppliedIndex the last applied index in the current OM DB.
    * @param checkpointPath path to the new DB checkpoint
+   * @return location of the backup of the original DB
    * @throws Exception
    */
-  void replaceOMDBWithCheckpoint(long lastAppliedIndex, Path checkpointPath)
+  File replaceOMDBWithCheckpoint(long lastAppliedIndex, Path checkpointPath)
       throws Exception {
     // Stop the DB first
     DBStore store = metadataManager.getStore();
@@ -3233,6 +3242,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       Files.move(dbBackup.toPath(), db.toPath());
       throw e;
     }
+    return dbBackup;
   }
 
   /**
