@@ -262,6 +262,9 @@ public class ContainerStateMachine extends BaseStateMachine {
       LOG.info("{}: Taking a snapshot at:{} file {}", gid, ti, snapshotFile);
       try (FileOutputStream fos = new FileOutputStream(snapshotFile)) {
         persistContainerSet(fos);
+        fos.flush();
+        // make sure the snapshot file is synced
+        fos.getFD().sync();
       } catch (IOException ioe) {
         LOG.info("{}: Failed to write snapshot at:{} file {}", gid, ti,
             snapshotFile);
