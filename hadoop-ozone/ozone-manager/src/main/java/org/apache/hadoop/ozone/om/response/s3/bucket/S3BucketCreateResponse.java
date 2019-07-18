@@ -22,6 +22,8 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 
 import com.google.common.base.Preconditions;
+import com.google.common.annotations.VisibleForTesting;
+
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.bucket.OMBucketCreateResponse;
@@ -69,5 +71,9 @@ public class S3BucketCreateResponse extends OMClientResponse {
           s3Mapping);
     }
   }
-}
 
+  @VisibleForTesting
+  public String getS3Mapping() {
+    return s3Mapping;
+  }
+}

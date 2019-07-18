@@ -41,6 +41,7 @@ public enum OMAction implements AuditAction {
 
   // S3 Bucket
   CREATE_S3_BUCKET,
+  DELETE_S3_BUCKET,
 
   // READ Actions
   CHECK_VOLUME_ACCESS,

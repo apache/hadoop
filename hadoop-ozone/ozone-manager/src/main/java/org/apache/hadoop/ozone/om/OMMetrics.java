@@ -129,6 +129,8 @@ public class OMMetrics {
 
   private @Metric MutableCounterLong numS3BucketCreates;
   private @Metric MutableCounterLong numS3BucketCreateFails;
+  private @Metric MutableCounterLong numS3BucketDeletes;
+  private @Metric MutableCounterLong numS3BucketDeleteFails;
 
 
   public OMMetrics() {
@@ -149,6 +151,17 @@ public class OMMetrics {
   public void incNumS3BucketCreateFails() {
     numS3BucketCreateFails.incr();
   }
+
+  public void incNumS3BucketDeletes() {
+    numBucketOps.incr();
+    numS3BucketDeletes.incr();
+  }
+
+  public void incNumS3BucketDeleteFails() {
+    numBucketOps.incr();
+    numS3BucketDeleteFails.incr();
+  }
+
 
   public void incNumS3Buckets() {
     numS3Buckets.incr();
