@@ -25,6 +25,7 @@ import java.util.ArrayList;
 import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 
 /**
  * The DBStore interface provides the ability to create Tables, which store
@@ -47,7 +48,9 @@ public interface DBStore extends AutoCloseable {
 
 
   /**
-   * Gets an existing TableStore with implicit key/value conversion.
+   * Gets an existing TableStore with implicit key/value conversion and
+   * with default cleanup policy for cache. Default cache clean up policy is
+   * manual.
    *
    * @param name - Name of the TableStore to get
    * @param keyType
@@ -57,6 +60,15 @@ public interface DBStore extends AutoCloseable {
    */
   <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
       Class<KEY> keyType, Class<VALUE> valueType) throws IOException;
+
+  /**
+   * Gets an existing TableStore with implicit key/value conversion and
+   * with specified cleanup policy for cache.
+   * @throws IOException
+   */
+  <KEY, VALUE> Table<KEY, VALUE> getTable(String name,
+      Class<KEY> keyType, Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException;
 
   /**
    * Lists the Known list of Tables in a DB.
