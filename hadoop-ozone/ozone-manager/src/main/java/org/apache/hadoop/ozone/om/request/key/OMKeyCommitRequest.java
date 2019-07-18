@@ -178,6 +178,17 @@ public class OMKeyCommitRequest extends OMKeyRequest {
     // return response after releasing lock.
     if (exception == null) {
       omResponse.setCommitKeyResponse(CommitKeyResponse.newBuilder().build());
+
+      // As when we commit the key, then it is visible in ozone, so we should
+      // increment here.
+      // As key also can have multiple versions, we need to increment keys
+      // only if version is 0. Currently we have not complete support of
+      // versioning of keys. So, this can be revisited later.
+
+      if (omKeyInfo.getKeyLocationVersions().size() == 1) {
+        omMetrics.incNumKeys();
+      }
+
       return new OMKeyCommitResponse(omKeyInfo, commitKeyRequest.getClientID(),
           omResponse.build());
     } else {
