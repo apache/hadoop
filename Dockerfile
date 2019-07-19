@@ -49,6 +49,8 @@ ENV CMAKE_C_COMPILER=gcc CMAKE_CXX_COMPILER=g++
 RUN scl enable rh-maven33 'cd /build && mvn -B -e -Dtest=false -DskipTests -Dmaven.javadoc.skip=true clean package -Pdist,native -Dtar'
 # Install prometheus-jmx agent
 RUN scl enable rh-maven33 'mvn dependency:get -Dartifact=io.prometheus.jmx:jmx_prometheus_javaagent:0.3.1:jar -Ddest=/build/jmx_prometheus_javaagent.jar'
+# Get gcs-connector for Hadoop
+RUN scl enable rh-maven33 'cd /build && mvn dependency:get -Dartifact=com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.0.0-RC2:jar && mv $HOME/.m2/repository/com/google/cloud/bigdataoss/gcs-connector/hadoop3-2.0.0-RC2/gcs-connector-hadoop3-2.0.0-RC2.jar /build/gcs-connector-hadoop3-2.0.0-RC2.jar'
 
 FROM centos:7
 
@@ -86,6 +88,8 @@ ENV PATH=$HADOOP_HOME/bin:$PATH
 
 COPY --from=build /build/hadoop-dist/target/hadoop-$HADOOP_VERSION $HADOOP_HOME
 COPY --from=build /build/jmx_prometheus_javaagent.jar $PROMETHEUS_JMX_EXPORTER
+COPY --from=build /build/gcs-connector-hadoop3-2.0.0-RC2.jar $HADOOP_HOME/share/hadoop/tools/lib/gcs-connector-hadoop3-2.0.0-RC2.jar
+
 WORKDIR $HADOOP_HOME
 
 # remove unnecessary doc/src files
