@@ -27,6 +27,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.model.ListObjectsV2Request;
 import com.amazonaws.services.s3.model.ListObjectsV2Result;
 import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
@@ -200,7 +201,7 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       // and the last file is one of the files
       Stream<String> files = listing.getObjectSummaries()
           .stream()
-          .map(s -> s.getKey());
+          .map(S3ObjectSummary::getKey);
       Assertions.assertThat(files)
           .describedAs("The files of a LIST of %s", base)
           .contains(baseKey + last);
@@ -208,9 +209,26 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
       // verify absolutely that the last file exists
       assertPathExists("last file", lastPath);
 
+      boolean isDDB = fs.getMetadataStore() instanceof DynamoDBMetadataStore;
+      // if DDB is the metastore, then we expect no FS requests to be made
+      // at all.
+      S3ATestUtils.MetricDiff listMetric = new S3ATestUtils.MetricDiff(fs,
+          Statistic.OBJECT_LIST_REQUESTS);
+      S3ATestUtils.MetricDiff getMetric = new S3ATestUtils.MetricDiff(fs,
+          Statistic.OBJECT_METADATA_REQUESTS);
       // do a getFile status with empty dir flag
       S3AFileStatus status = getStatusWithEmptyDirFlag(fs, base);
       assertNonEmptyDir(status);
+      if (isDDB) {
+        listMetric.assertDiffEquals(
+            "FileSystem called S3 LIST rather than use DynamoDB",
+            0);
+        getMetric.assertDiffEquals(
+            "FileSystem called S3 GET rather than use DynamoDB",
+            0);
+        LOG.info("Verified that DDB directory status was accepted");
+      }
+
     } finally {
       // try to recover from the defective state.
       s3.deleteObject(bucket, childKey);
@@ -241,13 +259,11 @@ public class ITestS3GuardEmptyDirs extends AbstractS3ATestBase {
    * From {@code S3AFileSystem.createEmptyObject()}.
    * @param fs filesystem
    * @param key key
-   * @throws IOException failure
    */
-  private void createEmptyObject(S3AFileSystem fs, String key)
-      throws IOException {
+  private void createEmptyObject(S3AFileSystem fs, String key) {
     final InputStream im = new InputStream() {
       @Override
-      public int read() throws IOException {
+      public int read() {
         return -1;
       }
     };
