@@ -30,6 +30,8 @@ execute_robot_test om auditparser
 
 execute_robot_test scm basic/basic.robot
 
+execute_robot_test scm topology/scmcli.robot
+
 stop_docker_env
 
 generate_report
