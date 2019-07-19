@@ -288,12 +288,12 @@ public class SCMBlockProtocolServer implements
     boolean auditSuccess = true;
     try{
       NodeManager nodeManager = scm.getScmNodeManager();
-      Node client = nodeManager.getNode(clientMachine);
+      Node client = nodeManager.getNodeByAddress(clientMachine);
       List<Node> nodeList = new ArrayList();
-      nodes.stream().forEach(path -> {
-        DatanodeDetails node = nodeManager.getNode(path);
+      nodes.stream().forEach(uuid -> {
+        DatanodeDetails node = nodeManager.getNodeByUuid(uuid);
         if (node != null) {
-          nodeList.add(nodeManager.getNode(path));
+          nodeList.add(node);
         }
       });
       List<? extends Node> sortedNodeList = scm.getClusterMap()

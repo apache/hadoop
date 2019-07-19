@@ -138,7 +138,10 @@ public class TestKeyManagerImpl {
     NodeSchemaManager schemaManager = NodeSchemaManager.getInstance();
     schemaManager.init(schemas, false);
     NetworkTopology clusterMap = new NetworkTopologyImpl(schemaManager);
-    nodeManager.getAllNodes().stream().forEach(node -> clusterMap.add(node));
+    nodeManager.getAllNodes().stream().forEach(node -> {
+      node.setNetworkName(node.getUuidString());
+      clusterMap.add(node);
+    });
     ((MockNodeManager)nodeManager).setNetworkTopology(clusterMap);
     SCMConfigurator configurator = new SCMConfigurator();
     configurator.setScmNodeManager(nodeManager);
@@ -696,17 +699,17 @@ public class TestKeyManagerImpl {
     Assert.assertNotEquals(follower1, follower2);
 
     // lookup key, leader as client
-    OmKeyInfo key1 = keyManager.lookupKey(keyArgs, leader.getNetworkName());
+    OmKeyInfo key1 = keyManager.lookupKey(keyArgs, leader.getIpAddress());
     Assert.assertEquals(leader, key1.getLatestVersionLocations()
         .getLocationList().get(0).getPipeline().getClosestNode());
 
     // lookup key, follower1 as client
-    OmKeyInfo key2 = keyManager.lookupKey(keyArgs, follower1.getNetworkName());
+    OmKeyInfo key2 = keyManager.lookupKey(keyArgs, follower1.getIpAddress());
     Assert.assertEquals(follower1, key2.getLatestVersionLocations()
         .getLocationList().get(0).getPipeline().getClosestNode());
 
     // lookup key, follower2 as client
-    OmKeyInfo key3 = keyManager.lookupKey(keyArgs, follower2.getNetworkName());
+    OmKeyInfo key3 = keyManager.lookupKey(keyArgs, follower2.getIpAddress());
     Assert.assertEquals(follower2, key3.getLatestVersionLocations()
         .getLocationList().get(0).getPipeline().getClosestNode());
 

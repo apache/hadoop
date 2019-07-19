@@ -54,6 +54,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState.DEAD;
 import static org.apache.hadoop.hdds.protocol.proto.HddsProtos.NodeState
@@ -87,6 +88,7 @@ public class MockNodeManager implements NodeManager {
   private final Node2PipelineMap node2PipelineMap;
   private final Node2ContainerMap node2ContainerMap;
   private NetworkTopology clusterMap;
+  private ConcurrentHashMap<String, String> dnsToUuidMap;
 
   public MockNodeManager(boolean initializeFakeNodes, int nodeCount) {
     this.healthyNodes = new LinkedList<>();
@@ -95,6 +97,7 @@ public class MockNodeManager implements NodeManager {
     this.nodeMetricMap = new HashMap<>();
     this.node2PipelineMap = new Node2PipelineMap();
     this.node2ContainerMap = new Node2ContainerMap();
+    this.dnsToUuidMap = new ConcurrentHashMap();
     aggregateStat = new SCMNodeStat();
     if (initializeFakeNodes) {
       for (int x = 0; x < nodeCount; x++) {
@@ -370,7 +373,10 @@ public class MockNodeManager implements NodeManager {
     try {
       node2ContainerMap.insertNewDatanode(datanodeDetails.getUuid(),
           Collections.emptySet());
+      dnsToUuidMap.put(datanodeDetails.getIpAddress(),
+          datanodeDetails.getUuidString());
       if (clusterMap != null) {
+        datanodeDetails.setNetworkName(datanodeDetails.getUuidString());
         clusterMap.add(datanodeDetails);
       }
     } catch (SCMException e) {
@@ -459,9 +465,14 @@ public class MockNodeManager implements NodeManager {
   }
 
   @Override
-  public DatanodeDetails getNode(String address) {
-    Node node = clusterMap.getNode(NetConstants.DEFAULT_RACK + "/" + address);
+  public DatanodeDetails getNodeByUuid(String uuid) {
+    Node node = clusterMap.getNode(NetConstants.DEFAULT_RACK + "/" + uuid);
     return node == null ? null : (DatanodeDetails)node;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByAddress(String address) {
+    return getNodeByUuid(dnsToUuidMap.get(address));
   }
 
   public void setNetworkTopology(NetworkTopology topology) {
