@@ -1470,7 +1470,6 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
       if (keyInfo == null) {
         throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
