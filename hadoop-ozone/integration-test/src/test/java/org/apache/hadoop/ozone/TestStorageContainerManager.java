@@ -494,7 +494,7 @@ public class TestStorageContainerManager {
   /**
    * Test datanode heartbeat well processed with a 4-layer network topology.
    */
-  @Test
+  @Test(timeout = 60000)
   public void testScmProcessDatanodeHeartbeat() throws Exception {
     OzoneConfiguration conf = new OzoneConfiguration();
     String scmId = UUID.randomUUID().toString();
