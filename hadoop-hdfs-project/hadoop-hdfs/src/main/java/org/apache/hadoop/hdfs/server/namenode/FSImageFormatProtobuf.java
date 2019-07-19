@@ -306,7 +306,7 @@ public final class FSImageFormatProtobuf {
         String n = s.getName();
         SectionName sectionName = SectionName.fromString(n);
         if (sectionName == null) {
-          throw new IOException("Unrecognized section " + n);
+          LOG.error("Unrecognized section " + n);
         }
         switch (sectionName) {
         case NS_INFO:
