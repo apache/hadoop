@@ -572,8 +572,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
       // the tombstone is expired, so we should detect the file
       // (if the listing from S3 was consistent)
-      when(mockTimeProvider.getNow()).thenReturn(
-          mockTimeProvider.getNow() + ttl);
+      when(mockTimeProvider.getNow()).thenReturn(100 + ttl);
       checkListingContainsPath(guardedFs, testFile);
     } finally {
       // cleanup
