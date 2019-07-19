@@ -27,7 +27,9 @@ import org.apache.hadoop.fs.s3a.Tristate;
 
 /**
  * {@code PathMetadata} models path metadata stored in the
- * {@link MetadataStore}.
+ * {@link MetadataStore}. The lastUpdated field is implicitly set to 0 in the
+ * constructors without that parameter to show that it will be initialized
+ * wit 0 if not set otherwise.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -42,11 +44,11 @@ public class PathMetadata extends ExpirableMetadata {
    * @param path path to tombstone
    * @return the entry.
    */
-  public static PathMetadata tombstone(Path path) {
+  public static PathMetadata tombstone(Path path, long lastUpdated) {
     S3AFileStatus s3aStatus = new S3AFileStatus(0,
         System.currentTimeMillis(), path, 0, null,
         null, null);
-    return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true);
+    return new PathMetadata(s3aStatus, Tristate.UNKNOWN, true, lastUpdated);
   }
 
   /**
@@ -54,15 +56,20 @@ public class PathMetadata extends ExpirableMetadata {
    * @param fileStatus file status containing an absolute path.
    */
   public PathMetadata(S3AFileStatus fileStatus) {
-    this(fileStatus, Tristate.UNKNOWN, false);
+    this(fileStatus, Tristate.UNKNOWN, false, 0);
   }
 
   public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir) {
-    this(fileStatus, isEmptyDir, false);
+    this(fileStatus, isEmptyDir, false, 0);
+  }
+
+  public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
+      boolean isDeleted) {
+    this(fileStatus, isEmptyDir, isDeleted, 0);
   }
 
   public PathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir, boolean
-      isDeleted) {
+      isDeleted, long lastUpdated) {
     Preconditions.checkNotNull(fileStatus, "fileStatus must be non-null");
     Preconditions.checkNotNull(fileStatus.getPath(), "fileStatus path must be" +
         " non-null");
@@ -71,6 +78,7 @@ public class PathMetadata extends ExpirableMetadata {
     this.fileStatus = fileStatus;
     this.isEmptyDirectory = isEmptyDir;
     this.isDeleted = isDeleted;
+    this.setLastUpdated(lastUpdated);
   }
 
   /**

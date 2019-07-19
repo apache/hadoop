@@ -61,6 +61,7 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthori
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.test.LambdaTestUtils.eventually;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
+import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.junit.Assume.assumeTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -534,6 +535,49 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
     } finally {
       guardedFs.delete(filePath, true);
+      guardedFs.setTtlTimeProvider(originalTimeProvider);
+    }
+  }
+
+  /**
+   * Test that a tombstone won't hide an entry after it's expired in the
+   * listing.
+   */
+  @Test
+  public void testRootTombstones() throws Exception {
+    long ttl = 10L;
+    ITtlTimeProvider mockTimeProvider = mock(ITtlTimeProvider.class);
+    when(mockTimeProvider.getMetadataTtl()).thenReturn(ttl);
+    when(mockTimeProvider.getNow()).thenReturn(100L);
+    ITtlTimeProvider originalTimeProvider = guardedFs.getTtlTimeProvider();
+    guardedFs.setTtlTimeProvider(mockTimeProvider);
+
+    Path base = path(getMethodName() + UUID.randomUUID());
+    Path testFile = new Path(base, "test.file");
+
+    try {
+      touch(guardedFs, testFile);
+      ContractTestUtils.assertDeleted(guardedFs, testFile, false);
+
+      touch(rawFS, testFile);
+      awaitFileStatus(rawFS, testFile);
+
+      // the rawFS will include the file
+      // (maybe we want to remove this check, because it can be inconsistent)
+      checkListingContainsPath(rawFS, testFile);
+
+      // it will be hidden because of the tombstone
+      // this check is consistent.
+      checkListingDoesNotContainPath(guardedFs, testFile);
+
+      // the tombstone is expired, so we should detect the file
+      // (if the listing from S3 was consistent)
+      when(mockTimeProvider.getNow()).thenReturn(
+          mockTimeProvider.getNow() + ttl);
+      checkListingContainsPath(guardedFs, testFile);
+    } finally {
+      // cleanup
+      guardedFs.delete(base, true);
       guardedFs.setTtlTimeProvider(originalTimeProvider);
     }
   }

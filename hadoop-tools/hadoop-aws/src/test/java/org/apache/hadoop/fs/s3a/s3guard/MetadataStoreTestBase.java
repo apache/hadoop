@@ -554,7 +554,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
     dirMeta.setAuthoritative(true);
-    dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
+    dirMeta.put(new PathMetadata(
+        makeFileStatus("/a1/b1/file_new", 100)));
     ms.put(dirMeta, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
