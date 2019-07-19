@@ -125,7 +125,8 @@ public class MiniOzoneLoadGenerator {
   }
 
 
-  private String writeData(OzoneBucket bucket, String threadName) throws Exception {
+  private String writeData(OzoneBucket bucket, String threadName)
+      throws Exception {
     // choose a random buffer.
     int index = RandomUtils.nextInt();
     ByteBuffer buffer = buffers.get(index % numBuffers);

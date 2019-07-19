@@ -108,7 +108,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("{} Completed restarting Datanode: {}", failString,
             dn.getUuid());
       } catch (Exception e) {
-
+        LOG.error("Failed to restartNodes Datanode", dn.getUuid());
       }
     }
   }
@@ -133,7 +133,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("Completed {} DataNode {}", stopString, dn.getUuid());
 
       } catch (Exception e) {
-
+        LOG.error("Failed to shutdown Datanode", dn.getUuid());
       }
     }
   }

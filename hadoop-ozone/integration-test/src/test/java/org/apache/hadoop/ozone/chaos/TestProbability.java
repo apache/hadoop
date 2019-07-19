@@ -21,13 +21,15 @@ import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.RandomUtils;
 
 /**
- * Class to keep track of test probability.
+ * This class is used to find out if a certain event is true.
+ * Every event is assigned a propbability and the isTrue function returns true
+ * when the probability has been met.
  */
-public class TestProbability {
+final public class TestProbability {
   private int pct;
 
   private TestProbability(int pct) {
-    Preconditions.checkArgument( pct <= 100);
+    Preconditions.checkArgument(pct <= 100 && pct > 0);
     this.pct = pct;
   }
 
