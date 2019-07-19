@@ -32,6 +32,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.DataOutput;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -39,6 +40,7 @@ import java.util.EnumSet;
 import java.util.GregorianCalendar;
 import java.util.Set;
 
+import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -817,6 +819,36 @@ public class TestBlockToken {
   public void testBadStorageIDCheckAccess() throws IOException {
     testBadStorageIDCheckAccess(false);
     testBadStorageIDCheckAccess(true);
+  }
+
+  @Test
+  public void testRetrievePasswordWithUnknownFields() throws IOException {
+    BlockTokenIdentifier id = new BlockTokenIdentifier();
+    BlockTokenIdentifier spyId = Mockito.spy(id);
+    Mockito.doAnswer(new Answer() {
+      @Override
+      public Object answer(InvocationOnMock invocationOnMock) throws Throwable {
+        DataOutput out = (DataOutput) invocationOnMock.getArguments()[0];
+        spyId.writeLegacy(out);
+        // write something at last that BlockTokenIdentifier#readFields() will
+        // ignore.
+        out.write(0);
+        return null;
+      }
+    }).when(spyId).write(Mockito.anyObject());
+
+    BlockTokenSecretManager bts =
+            new BlockTokenSecretManager(blockKeyUpdateInterval, blockTokenLifetime,
+                    0, 1, "fake-pool", null, false);
+    // master create password
+    byte[] password = bts.createPassword(spyId);
+
+    BlockTokenIdentifier slaveId = new BlockTokenIdentifier();
+    slaveId.readFields(
+            new DataInputStream(new ByteArrayInputStream(spyId.getBytes())));
+
+    // slave retrieve password
+    assertArrayEquals(password, bts.retrievePassword(slaveId));
   }
 
 }
