@@ -788,10 +788,11 @@ public class DynamoDBMetadataStore implements MetadataStore,
           final DirListingMetadata dirListing =
               getDirListingMetadataFromDirMetaAndList(path, metas,
                   dirPathMeta);
-          dirListing.removeExpiredEntriesFromListing(
-              ttlTimeProvider.getMetadataTtl(),
-              ttlTimeProvider.getNow());
-
+          if(dirListing != null) {
+            dirListing.removeExpiredEntriesFromListing(
+                ttlTimeProvider.getMetadataTtl(),
+                ttlTimeProvider.getNow());
+          }
           return dirListing;
         });
   }
