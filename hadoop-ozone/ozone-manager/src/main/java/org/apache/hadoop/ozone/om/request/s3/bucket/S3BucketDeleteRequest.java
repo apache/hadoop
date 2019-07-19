@@ -23,7 +23,6 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Optional;
-import com.google.common.base.Preconditions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,6 +47,8 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
+import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MAX_LENGTH;
+import static org.apache.hadoop.ozone.OzoneConsts.S3_BUCKET_MIN_LENGTH;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.S3_BUCKET_LOCK;
 
@@ -66,14 +67,14 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
   public OMRequest preExecute(OzoneManager ozoneManager) throws IOException {
     S3DeleteBucketRequest s3DeleteBucketRequest =
         getOmRequest().getDeleteS3BucketRequest();
-    Preconditions.checkNotNull(s3DeleteBucketRequest);
 
     // TODO: Do we need to enforce the bucket rules in this code path?
     // https://docs.aws.amazon.com/AmazonS3/latest/dev/BucketRestrictions.html
 
     // For now only checked the length.
     int bucketLength = s3DeleteBucketRequest.getS3BucketName().length();
-    if (bucketLength < 3 || bucketLength >= 64) {
+    if (bucketLength < S3_BUCKET_MIN_LENGTH ||
+        bucketLength >= S3_BUCKET_MAX_LENGTH) {
       throw new OMException("S3BucketName must be at least 3 and not more " +
           "than 63 characters long",
           OMException.ResultCodes.S3_BUCKET_INVALID_LENGTH);
@@ -88,7 +89,6 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
       long transactionLogIndex) {
     S3DeleteBucketRequest s3DeleteBucketRequest =
         getOmRequest().getDeleteS3BucketRequest();
-    Preconditions.checkNotNull(s3DeleteBucketRequest);
 
     String s3BucketName = s3DeleteBucketRequest.getS3BucketName();
 
