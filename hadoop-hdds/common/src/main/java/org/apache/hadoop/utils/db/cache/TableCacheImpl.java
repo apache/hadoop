@@ -32,21 +32,28 @@ import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Evolving;
 
 /**
- * Cache implementation for the table, this cache is partial cache, this will
- * be cleaned up, after entries are flushed to DB.
+ * Cache implementation for the table. Depending on the cache clean up policy
+ * this cache will be full cache or partial cache.
+ *
+ * If cache cleanup policy is set as {@link CacheCleanupPolicy#MANUAL},
+ * this will be a partial cache.
+ *
+ * If cache cleanup policy is set as {@link CacheCleanupPolicy#NEVER},
+ * this will be a full cache.
  */
 @Private
 @Evolving
-public class PartialTableCache<CACHEKEY extends CacheKey,
+public class TableCacheImpl<CACHEKEY extends CacheKey,
     CACHEVALUE extends CacheValue> implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
   private final TreeSet<EpochEntry<CACHEKEY>> epochEntries;
   private ExecutorService executorService;
+  private CacheCleanupPolicy cleanupPolicy;
 
 
 
-  public PartialTableCache() {
+  public TableCacheImpl(CacheCleanupPolicy cleanupPolicy) {
     cache = new ConcurrentHashMap<>();
     epochEntries = new TreeSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
@@ -54,7 +61,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
         .setNameFormat("PartialTableCache Cleanup Thread - %d").build();
     executorService = Executors.newSingleThreadExecutor(build);
-
+    this.cleanupPolicy = cleanupPolicy;
   }
 
   @Override
@@ -70,7 +77,7 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
 
   @Override
   public void cleanup(long epoch) {
-    executorService.submit(() -> evictCache(epoch));
+    executorService.submit(() -> evictCache(epoch, cleanupPolicy));
   }
 
   @Override
@@ -83,16 +90,24 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
     return cache.entrySet().iterator();
   }
 
-  private void evictCache(long epoch) {
+  private void evictCache(long epoch, CacheCleanupPolicy cacheCleanupPolicy) {
     EpochEntry<CACHEKEY> currentEntry = null;
     for (Iterator<EpochEntry<CACHEKEY>> iterator = epochEntries.iterator();
          iterator.hasNext();) {
       currentEntry = iterator.next();
       CACHEKEY cachekey = currentEntry.getCachekey();
       CacheValue cacheValue = cache.computeIfPresent(cachekey, ((k, v) -> {
-        if (v.getEpoch() <= epoch) {
-          iterator.remove();
-          return null;
+        if (cleanupPolicy == CacheCleanupPolicy.MANUAL) {
+          if (v.getEpoch() <= epoch) {
+            iterator.remove();
+            return null;
+          }
+        } else if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+          // Remove only entries which are marked for delete.
+          if (v.getEpoch() <= epoch && v.getCacheValue() == null) {
+            iterator.remove();
+            return null;
+          }
         }
         return v;
       }));
@@ -102,5 +117,49 @@ public class PartialTableCache<CACHEKEY extends CacheKey,
         break;
       }
     }
+  }
+
+  public CacheResult<CACHEVALUE> lookup(CACHEKEY cachekey) {
+
+    // TODO: Remove this check once HA and Non-HA code is merged and all
+    //  requests are converted to use cache and double buffer.
+    // This is to done as temporary instead of passing ratis enabled flag
+    // which requires more code changes. We cannot use ratis enabled flag
+    // also because some of the requests in OM HA are not modified to use
+    // double buffer and cache.
+
+    if (cache.size() == 0) {
+      return new CacheResult<>(CacheResult.CacheStatus.MAY_EXIST,
+          null);
+    }
+
+    CACHEVALUE cachevalue = cache.get(cachekey);
+    if (cachevalue == null) {
+      if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+        return new CacheResult<>(CacheResult.CacheStatus.NOT_EXIST, null);
+      } else {
+        return new CacheResult<>(CacheResult.CacheStatus.MAY_EXIST,
+            null);
+      }
+    } else {
+      if (cachevalue.getCacheValue() != null) {
+        return new CacheResult<>(CacheResult.CacheStatus.EXISTS, cachevalue);
+      } else {
+        // When entity is marked for delete, cacheValue will be set to null.
+        // In that case we can return NOT_EXIST irrespective of cache cleanup
+        // policy.
+        return new CacheResult<>(CacheResult.CacheStatus.NOT_EXIST, null);
+      }
+    }
+  }
+
+  /**
+   * Cleanup policies for table cache.
+   */
+  public enum CacheCleanupPolicy {
+    NEVER, // Cache will not be cleaned up. This mean's the table maintains
+    // full cache.
+    MANUAL // Cache will be cleaned up, once after flushing to DB. It is
+    // caller's responsibility to flush to DB, before calling cleanup cache.
   }
 }

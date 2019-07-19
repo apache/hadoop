@@ -133,7 +133,7 @@ public class TestOMVolumeCreateRequest {
     OMVolumeCreateRequest omVolumeCreateRequest =
         new OMVolumeCreateRequest(originalRequest);
 
-    omVolumeCreateRequest.preExecute(ozoneManager);
+    OMRequest modifiedRequest = omVolumeCreateRequest.preExecute(ozoneManager);
 
     String volumeKey = omMetadataManager.getVolumeKey(volumeName);
     String ownerKey = omMetadataManager.getUserKey(ownerName);
@@ -143,6 +143,8 @@ public class TestOMVolumeCreateRequest {
 
     Assert.assertNull(omMetadataManager.getVolumeTable().get(volumeKey));
     Assert.assertNull(omMetadataManager.getUserTable().get(ownerKey));
+
+    omVolumeCreateRequest = new OMVolumeCreateRequest(modifiedRequest);
 
     OMClientResponse omClientResponse =
         omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);
@@ -175,6 +177,25 @@ public class TestOMVolumeCreateRequest {
     Assert.assertNotNull(volumeList);
     Assert.assertEquals(volumeName, volumeList.getVolumeNames(0));
 
+    // Create another volume for the user.
+    originalRequest = createVolumeRequest("vol1", adminName,
+        ownerName);
+
+    omVolumeCreateRequest =
+        new OMVolumeCreateRequest(originalRequest);
+
+    modifiedRequest = omVolumeCreateRequest.preExecute(ozoneManager);
+
+    omClientResponse =
+        omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 2L);
+
+    Assert.assertEquals(OzoneManagerProtocolProtos.Status.OK,
+        omClientResponse.getOMResponse().getStatus());
+
+    Assert.assertTrue(omMetadataManager
+        .getUserTable().get(ownerKey).getVolumeNamesList().size() == 2);
+
+
   }
 
 
@@ -193,7 +214,9 @@ public class TestOMVolumeCreateRequest {
     OMVolumeCreateRequest omVolumeCreateRequest =
         new OMVolumeCreateRequest(originalRequest);
 
-    omVolumeCreateRequest.preExecute(ozoneManager);
+    OMRequest modifiedRequest = omVolumeCreateRequest.preExecute(ozoneManager);
+
+    omVolumeCreateRequest = new OMVolumeCreateRequest(modifiedRequest);
 
     OMClientResponse omClientResponse =
         omVolumeCreateRequest.validateAndUpdateCache(ozoneManager, 1);

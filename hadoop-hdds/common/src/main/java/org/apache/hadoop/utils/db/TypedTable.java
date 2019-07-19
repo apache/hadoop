@@ -23,11 +23,16 @@ import java.util.Iterator;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Optional;
 import org.apache.hadoop.utils.db.cache.CacheKey;
+import org.apache.hadoop.utils.db.cache.CacheResult;
 import org.apache.hadoop.utils.db.cache.CacheValue;
-import org.apache.hadoop.utils.db.cache.PartialTableCache;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl;
 import org.apache.hadoop.utils.db.cache.TableCache;
+import org.apache.hadoop.utils.db.cache.TableCacheImpl.CacheCleanupPolicy;
 
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.EXISTS;
+import static org.apache.hadoop.utils.db.cache.CacheResult.CacheStatus.NOT_EXIST;
 /**
  * Strongly typed table implementation.
  * <p>
@@ -49,16 +54,61 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   private final TableCache<CacheKey<KEY>, CacheValue<VALUE>> cache;
 
+  private final static long EPOCH_DEFAULT = -1L;
 
+  /**
+   * Create an TypedTable from the raw table.
+   * Default cleanup policy used for the table is
+   * {@link CacheCleanupPolicy#MANUAL}.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   */
   public TypedTable(
       Table<byte[], byte[]> rawTable,
       CodecRegistry codecRegistry, Class<KEY> keyType,
-      Class<VALUE> valueType) {
+      Class<VALUE> valueType) throws IOException {
+    this(rawTable, codecRegistry, keyType, valueType,
+        CacheCleanupPolicy.MANUAL);
+  }
+
+  /**
+   * Create an TypedTable from the raw table with specified cleanup policy
+   * for table cache.
+   * @param rawTable
+   * @param codecRegistry
+   * @param keyType
+   * @param valueType
+   * @param cleanupPolicy
+   */
+  public TypedTable(
+      Table<byte[], byte[]> rawTable,
+      CodecRegistry codecRegistry, Class<KEY> keyType,
+      Class<VALUE> valueType,
+      TableCacheImpl.CacheCleanupPolicy cleanupPolicy) throws IOException {
     this.rawTable = rawTable;
     this.codecRegistry = codecRegistry;
     this.keyType = keyType;
     this.valueType = valueType;
-    cache = new PartialTableCache<>();
+    cache = new TableCacheImpl<>(cleanupPolicy);
+
+    if (cleanupPolicy == CacheCleanupPolicy.NEVER) {
+      //fill cache
+      try(TableIterator<KEY, ? extends KeyValue<KEY, VALUE>> tableIterator =
+              iterator()) {
+
+        while (tableIterator.hasNext()) {
+          KeyValue< KEY, VALUE > kv = tableIterator.next();
+
+          // We should build cache after OM restart when clean up policy is
+          // NEVER. Setting epoch value -1, so that when it is marked for
+          // delete, this will be considered for cleanup.
+          cache.put(new CacheKey<>(kv.getKey()),
+              new CacheValue<>(Optional.of(kv.getValue()), EPOCH_DEFAULT));
+        }
+      }
+    }
   }
 
   @Override
@@ -83,9 +133,17 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
 
   @Override
   public boolean isExist(KEY key) throws IOException {
-    CacheValue<VALUE> cacheValue= cache.get(new CacheKey<>(key));
-    return (cacheValue != null && cacheValue.getCacheValue() != null) ||
-        rawTable.isExist(codecRegistry.asRawData(key));
+
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.lookup(new CacheKey<>(key));
+
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return true;
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      return false;
+    } else {
+      return rawTable.isExist(codecRegistry.asRawData(key));
+    }
   }
 
   /**
@@ -104,14 +162,16 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   public VALUE get(KEY key) throws IOException {
     // Here the metadata lock will guarantee that cache is not updated for same
     // key during get key.
-    CacheValue< VALUE > cacheValue = cache.get(new CacheKey<>(key));
-    if (cacheValue == null) {
-      // If no cache for the table or if it does not exist in cache get from
-      // RocksDB table.
-      return getFromTable(key);
+
+    CacheResult<CacheValue<VALUE>> cacheResult =
+        cache.lookup(new CacheKey<>(key));
+
+    if (cacheResult.getCacheStatus() == EXISTS) {
+      return cacheResult.getValue().getCacheValue();
+    } else if (cacheResult.getCacheStatus() == NOT_EXIST) {
+      return null;
     } else {
-      // We have a value in cache, return the value.
-      return cacheValue.getCacheValue();
+      return getFromTable(key);
     }
   }
 
