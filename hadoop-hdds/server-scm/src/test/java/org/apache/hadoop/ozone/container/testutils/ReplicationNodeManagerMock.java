@@ -311,7 +311,12 @@ public class ReplicationNodeManagerMock implements NodeManager {
   }
 
   @Override
-  public DatanodeDetails getNode(String address) {
+  public DatanodeDetails getNodeByUuid(String address) {
+    return null;
+  }
+
+  @Override
+  public DatanodeDetails getNodeByAddress(String address) {
     return null;
   }
 }

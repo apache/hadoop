@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.ozone.protocol.commands;
 
-import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos.SCMRegisteredResponseProto;
 import org.apache.hadoop.hdds.protocol.proto
@@ -28,23 +29,15 @@ import org.apache.hadoop.hdds.protocol.proto
  * Response to Datanode Register call.
  */
 public class RegisteredCommand {
-  private String datanodeUUID;
   private String clusterID;
   private ErrorCode error;
-  private String hostname;
-  private String ipAddress;
+  private DatanodeDetails datanode;
 
-  public RegisteredCommand(final ErrorCode error, final String datanodeUUID,
+  public RegisteredCommand(final ErrorCode error, final DatanodeDetails node,
       final String clusterID) {
-    this(error, datanodeUUID, clusterID, null, null);
-  }
-  public RegisteredCommand(final ErrorCode error, final String datanodeUUID,
-      final String clusterID, final String hostname, final String ipAddress) {
-    this.datanodeUUID = datanodeUUID;
+    this.datanode = node;
     this.clusterID = clusterID;
     this.error = error;
-    this.hostname = hostname;
-    this.ipAddress = ipAddress;
   }
 
   /**
@@ -57,12 +50,12 @@ public class RegisteredCommand {
   }
 
   /**
-   * Returns datanode UUID.
+   * Returns datanode.
    *
-   * @return - Datanode ID.
+   * @return - Datanode.
    */
-  public String getDatanodeUUID() {
-    return datanodeUUID;
+  public DatanodeDetails getDatanode() {
+    return datanode;
   }
 
   /**
@@ -84,76 +77,51 @@ public class RegisteredCommand {
   }
 
   /**
-   * Returns the hostname.
-   *
-   * @return - hostname
-   */
-  public String getHostName() {
-    return hostname;
-  }
-
-  /**
-   * Returns the ipAddress of the dataNode.
-   */
-  public String getIpAddress() {
-    return ipAddress;
-  }
-
-  /**
    * Gets the protobuf message of this object.
    *
    * @return A protobuf message.
    */
-  public byte[] getProtoBufMessage() {
+  public SCMRegisteredResponseProto getProtoBufMessage() {
     SCMRegisteredResponseProto.Builder builder =
         SCMRegisteredResponseProto.newBuilder()
+            // TODO : Fix this later when we have multiple SCM support.
+            // .setAddressList(addressList)
             .setClusterID(this.clusterID)
-            .setDatanodeUUID(this.datanodeUUID)
+            .setDatanodeUUID(this.datanode.getUuidString())
             .setErrorCode(this.error);
-    if (hostname != null && ipAddress != null) {
-      builder.setHostname(hostname).setIpAddress(ipAddress);
+    if (!Strings.isNullOrEmpty(datanode.getHostName())) {
+      builder.setHostname(datanode.getHostName());
     }
-    return builder.build().toByteArray();
+    if (!Strings.isNullOrEmpty(datanode.getIpAddress())) {
+      builder.setIpAddress(datanode.getIpAddress());
+    }
+    if (!Strings.isNullOrEmpty(datanode.getNetworkName())) {
+      builder.setNetworkName(datanode.getNetworkName());
+    }
+    if (!Strings.isNullOrEmpty(datanode.getNetworkLocation())) {
+      builder.setNetworkLocation(datanode.getNetworkLocation());
+    }
+
+    return builder.build();
   }
 
   /**
    * A builder class to verify all values are sane.
    */
   public static class Builder {
-    private String datanodeUUID;
+    private DatanodeDetails datanode;
     private String clusterID;
     private ErrorCode error;
-    private String ipAddress;
-    private String hostname;
 
     /**
-     * sets UUID.
+     * sets datanode details.
      *
-     * @param dnUUID - datanode UUID
+     * @param node - datanode details
      * @return Builder
      */
-    public Builder setDatanodeUUID(String dnUUID) {
-      this.datanodeUUID = dnUUID;
+    public Builder setDatanode(DatanodeDetails node) {
+      this.datanode = node;
       return this;
-    }
-
-    /**
-     * Create this object from a Protobuf message.
-     *
-     * @param response - RegisteredCmdResponseProto
-     * @return RegisteredCommand
-     */
-    public  RegisteredCommand getFromProtobuf(SCMRegisteredResponseProto
-                                                        response) {
-      Preconditions.checkNotNull(response);
-      if (response.hasHostname() && response.hasIpAddress()) {
-        return new RegisteredCommand(response.getErrorCode(),
-            response.getDatanodeUUID(), response.getClusterID(),
-            response.getHostname(), response.getIpAddress());
-      } else {
-        return new RegisteredCommand(response.getErrorCode(),
-            response.getDatanodeUUID(), response.getClusterID());
-      }
     }
 
     /**
@@ -179,37 +147,18 @@ public class RegisteredCommand {
     }
 
     /**
-     * sets the hostname.
-     */
-    public Builder setHostname(String host) {
-      this.hostname = host;
-      return this;
-    }
-
-    public Builder setIpAddress(String ipAddr) {
-      this.ipAddress = ipAddr;
-      return this;
-    }
-
-    /**
      * Build the command object.
      *
      * @return RegisteredCommand
      */
     public RegisteredCommand build() {
-      if ((this.error == ErrorCode.success) && (this.datanodeUUID == null
-          || this.datanodeUUID.isEmpty()) || (this.clusterID == null
-          || this.clusterID.isEmpty())) {
+      if ((this.error == ErrorCode.success) && (this.datanode == null
+          || Strings.isNullOrEmpty(this.datanode.getUuidString())
+          || Strings.isNullOrEmpty(this.clusterID))) {
         throw new IllegalArgumentException("On success, RegisteredCommand "
             + "needs datanodeUUID and ClusterID.");
       }
-      if (hostname != null && ipAddress != null) {
-        return new RegisteredCommand(this.error, this.datanodeUUID,
-            this.clusterID, this.hostname, this.ipAddress);
-      } else {
-        return new RegisteredCommand(this.error, this.datanodeUUID,
-            this.clusterID);
-      }
+      return new RegisteredCommand(this.error, this.datanode, this.clusterID);
     }
   }
 }

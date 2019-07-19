@@ -35,6 +35,7 @@ import org.junit.Test;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Test class for @{@link SCMBlockProtocolServer}.
@@ -105,8 +106,8 @@ public class TestSCMBlockProtocolServer {
         node -> System.out.println(node.toString()));
     Assert.assertTrue(datanodeDetails.size() == nodeCount);
 
-    // illegal nodes to sort 1
-    nodes.add("/default-rack");
+    // unknown node to sort
+    nodes.add(UUID.randomUUID().toString());
     ScmBlockLocationProtocolProtos.SortDatanodesRequestProto request =
         ScmBlockLocationProtocolProtos.SortDatanodesRequestProto
             .newBuilder()
@@ -120,25 +121,11 @@ public class TestSCMBlockProtocolServer {
     resp.getNodeList().stream().forEach(
         node -> System.out.println(node.getNetworkName()));
 
-    // illegal nodes to sort 2
-    nodes.remove("/default-rack");
-    nodes.add(nodes.get(0) + "X");
-    request = ScmBlockLocationProtocolProtos.SortDatanodesRequestProto
-            .newBuilder()
-            .addAllNodeNetworkName(nodes)
-            .setClient(client)
-            .build();
-    resp = service.sortDatanodes(request);
-    Assert.assertTrue(resp.getNodeList().size() == nodeCount);
-    System.out.println("client = " + client);
-    resp.getNodeList().stream().forEach(
-        node -> System.out.println(node.getNetworkName()));
-
-    // all illegal nodes
+    // all unknown nodes
     nodes.clear();
-    nodes.add("/default-rack");
-    nodes.add("/default-rack-1");
-    nodes.add("/default-rack-2");
+    nodes.add(UUID.randomUUID().toString());
+    nodes.add(UUID.randomUUID().toString());
+    nodes.add(UUID.randomUUID().toString());
     request = ScmBlockLocationProtocolProtos.SortDatanodesRequestProto
         .newBuilder()
         .addAllNodeNetworkName(nodes)

@@ -128,6 +128,10 @@ public final class RegisterEndpointTask implements
         datanodeDetails.setHostName(response.getHostname());
         datanodeDetails.setIpAddress(response.getIpAddress());
       }
+      if (response.hasNetworkName() && response.hasNetworkLocation()) {
+        datanodeDetails.setNetworkName(response.getNetworkName());
+        datanodeDetails.setNetworkLocation(response.getNetworkLocation());
+      }
       EndpointStateMachine.EndPointStates nextState =
           rpcEndPoint.getState().getNextState();
       rpcEndPoint.setState(nextState);
