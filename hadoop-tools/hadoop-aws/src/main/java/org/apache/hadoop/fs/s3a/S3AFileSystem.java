@@ -2609,7 +2609,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Check MetadataStore, if any.
     PathMetadata pm = null;
     if (hasMetadataStore()) {
-      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
+      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider,
+          needEmptyDirectoryFlag);
     }
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {
