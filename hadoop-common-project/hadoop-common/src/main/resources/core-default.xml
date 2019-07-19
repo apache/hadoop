@@ -3494,4 +3494,14 @@
       the right KMS for encrypted files.
     </description>
   </property>
+
+  <property>
+    <name>hadoop.prometheus.endpoint.enabled</name>
+    <value>false</value>
+    <description>
+      If set to true, prometheus compatible metric page on the HTTP servers
+      is enabled via '/prom' endpoint.
+    </description>
+  </property>
+
 </configuration>

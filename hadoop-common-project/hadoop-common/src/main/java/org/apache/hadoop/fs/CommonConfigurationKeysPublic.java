@@ -961,5 +961,13 @@ public class CommonConfigurationKeysPublic {
   /** Default shutdown hook timeout: {@value} seconds. */
   public static final long SERVICE_SHUTDOWN_TIMEOUT_DEFAULT = 30;
 
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String HADOOP_PROMETHEUS_ENABLED =
+      "hadoop.prometheus.endpoint.enabled";
+  public static final boolean HADOOP_PROMETHEUS_ENABLED_DEFAULT = false;
 }
 
