@@ -145,7 +145,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.utils.RetriableTask;
 import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.DataNotFoundException;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.apache.ratis.util.LifeCycle;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 import org.slf4j.Logger;
@@ -3169,11 +3169,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * Get DB updates since a specific sequence number.
    * @param dbUpdatesRequest request that encapsulates a sequence number.
    * @return Wrapper containing the updates.
-   * @throws DataNotFoundException if the DB is unable to read the data.
+   * @throws SequenceNumberNotFoundException if the DB is unable to read the data.
    */
   public DBUpdatesWrapper getDBUpdates(
       DBUpdatesRequest dbUpdatesRequest)
-      throws DataNotFoundException {
+      throws SequenceNumberNotFoundException {
     return metadataManager.getStore()
         .getUpdatesSince(dbUpdatesRequest.getSequenceNumber());
 

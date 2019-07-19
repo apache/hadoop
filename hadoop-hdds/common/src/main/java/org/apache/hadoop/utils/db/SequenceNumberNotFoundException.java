@@ -24,13 +24,13 @@ import java.io.IOException;
 /**
  * Thrown if RocksDB is unable to find requested data from WAL file.
  */
-public class DataNotFoundException extends IOException {
+public class SequenceNumberNotFoundException extends IOException {
 
-  public DataNotFoundException() {
+  public SequenceNumberNotFoundException() {
     super();
   }
 
-  public DataNotFoundException(String message) {
+  public SequenceNumberNotFoundException(String message) {
     super(message);
   }
 

@@ -189,8 +189,8 @@ public interface DBStore extends AutoCloseable {
    * Get data written to DB since a specific sequence number.
    * @param sequenceNumber
    * @return
-   * @throws DataNotFoundException
+   * @throws SequenceNumberNotFoundException
    */
   DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
-      throws DataNotFoundException;
+      throws SequenceNumberNotFoundException;
 }

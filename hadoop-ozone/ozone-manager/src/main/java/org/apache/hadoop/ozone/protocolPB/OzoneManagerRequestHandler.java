@@ -126,7 +126,7 @@ import org.apache.hadoop.security.token.Token;
 import com.google.common.collect.Lists;
 
 import org.apache.hadoop.utils.db.DBUpdatesWrapper;
-import org.apache.hadoop.utils.db.DataNotFoundException;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -396,7 +396,7 @@ public class OzoneManagerRequestHandler implements RequestHandler {
 
   private DBUpdatesResponse getOMDBUpdates(
       DBUpdatesRequest dbUpdatesRequest)
-      throws DataNotFoundException {
+      throws SequenceNumberNotFoundException {
 
     DBUpdatesResponse.Builder builder = DBUpdatesResponse
         .newBuilder();

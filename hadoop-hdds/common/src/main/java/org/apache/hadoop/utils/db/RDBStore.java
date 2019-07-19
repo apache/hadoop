@@ -331,7 +331,7 @@ public class RDBStore implements DBStore {
 
   @Override
   public DBUpdatesWrapper getUpdatesSince(long sequenceNumber)
-      throws DataNotFoundException {
+      throws SequenceNumberNotFoundException {
 
     DBUpdatesWrapper dbUpdatesWrapper = new DBUpdatesWrapper();
     try {
@@ -345,7 +345,7 @@ public class RDBStore implements DBStore {
             transactionLogIterator.getBatch();
         long currSequenceNumber = result.sequenceNumber();
         if (flag && currSequenceNumber > 1 + sequenceNumber) {
-          throw new DataNotFoundException("Unable to read data from " +
+          throw new SequenceNumberNotFoundException("Unable to read data from " +
               "RocksDB wal to get delta updates. It may have already been" +
               "flushed to SSTs.");
         }
