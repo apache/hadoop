@@ -143,7 +143,7 @@ public class TestOMRatisSnapshots {
     }
 
     // Get the latest db checkpoint from the leader OM.
-    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot(true);
+    long leaderOMSnaphsotIndex = leaderOM.saveRatisSnapshot();
     DBCheckpoint leaderDbCheckpoint =
         leaderOM.getMetadataManager().getStore().getCheckpoint(false);
 

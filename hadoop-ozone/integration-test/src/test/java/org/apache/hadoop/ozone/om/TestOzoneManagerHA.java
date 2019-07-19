@@ -1012,7 +1012,7 @@ public class TestOzoneManagerHA {
     }
 
     GenericTestUtils.waitFor(() -> {
-      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+      if (ozoneManager.getRatisSnapshotIndex() > 0) {
         return true;
       }
       return false;
@@ -1022,7 +1022,7 @@ public class TestOzoneManagerHA {
     // than or equal to the saved snapshot index.
     long smLastAppliedIndex =
         ozoneManager.getOmRatisServer().getStateMachineLastAppliedIndex();
-    long ratisSnapshotIndex = ozoneManager.loadRatisSnapshotIndex();
+    long ratisSnapshotIndex = ozoneManager.getRatisSnapshotIndex();
     Assert.assertTrue("LastAppliedIndex on OM State Machine ("
             + smLastAppliedIndex + ") is less than the saved snapshot index("
             + ratisSnapshotIndex + ").",
@@ -1036,14 +1036,14 @@ public class TestOzoneManagerHA {
     }
 
     GenericTestUtils.waitFor(() -> {
-      if (ozoneManager.loadRatisSnapshotIndex() > 0) {
+      if (ozoneManager.getRatisSnapshotIndex() > 0) {
         return true;
       }
       return false;
     }, 1000, 100000);
 
     // The new snapshot index must be greater than the previous snapshot index
-    long ratisSnapshotIndexNew = ozoneManager.loadRatisSnapshotIndex();
+    long ratisSnapshotIndexNew = ozoneManager.getRatisSnapshotIndex();
     Assert.assertTrue("Latest snapshot index must be greater than previous " +
         "snapshot indices", ratisSnapshotIndexNew > ratisSnapshotIndex);
 

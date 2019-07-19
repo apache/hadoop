@@ -70,6 +70,7 @@ public class TestOzoneManagerRatisServer {
   private static final long LEADER_ELECTION_TIMEOUT = 500L;
   private OMMetadataManager omMetadataManager;
   private OzoneManager ozoneManager;
+  private OMNodeDetails omNodeDetails;
 
   @Before
   public void init() throws Exception {
@@ -86,7 +87,7 @@ public class TestOzoneManagerRatisServer {
         OMConfigKeys.OZONE_OM_RATIS_PORT_DEFAULT);
     InetSocketAddress rpcAddress = new InetSocketAddress(
         InetAddress.getLocalHost(), 0);
-    OMNodeDetails omNodeDetails = new OMNodeDetails.Builder()
+    omNodeDetails = new OMNodeDetails.Builder()
         .setRpcAddress(rpcAddress)
         .setRatisPort(ratisPort)
         .setOMNodeId(omID)
@@ -99,6 +100,9 @@ public class TestOzoneManagerRatisServer {
         folder.newFolder().getAbsolutePath());
     omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
     when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
+    OMRatisSnapshotInfo omRatisSnapshotInfo = new OMRatisSnapshotInfo(
+        folder.newFolder());
+    when(ozoneManager.getSnapshotInfo()).thenReturn(omRatisSnapshotInfo);
     omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
       omNodeDetails, Collections.emptyList());
     omRatisServer.start();
@@ -124,6 +128,24 @@ public class TestOzoneManagerRatisServer {
   public void testStartOMRatisServer() throws Exception {
     Assert.assertEquals("Ratis Server should be in running state",
         LifeCycle.State.RUNNING, omRatisServer.getServerState());
+  }
+
+  @Test
+  public void testLoadSnapshotInfoOnStart() throws Exception {
+    // Stop the Ratis server and manually update the snapshotInfo.
+    long oldSnaphsotIndex = ozoneManager.saveRatisSnapshot();
+    ozoneManager.getSnapshotInfo().saveRatisSnapshotToDisk(oldSnaphsotIndex);
+    omRatisServer.stop();
+    long newSnapshotIndex = oldSnaphsotIndex + 100;
+    ozoneManager.getSnapshotInfo().saveRatisSnapshotToDisk(newSnapshotIndex);
+
+    // Start new Ratis server. It should pick up and load the new SnapshotInfo
+    omRatisServer = OzoneManagerRatisServer.newOMRatisServer(conf, ozoneManager,
+        omNodeDetails, Collections.emptyList());
+    omRatisServer.start();
+    long lastAppliedIndex = omRatisServer.getStateMachineLastAppliedIndex();
+
+    Assert.assertEquals(newSnapshotIndex, lastAppliedIndex);
   }
 
   /**
