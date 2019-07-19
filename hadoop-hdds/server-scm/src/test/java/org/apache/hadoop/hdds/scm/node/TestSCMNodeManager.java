@@ -1152,10 +1152,10 @@ public class TestSCMNodeManager {
       // test get node
       if (useHostname) {
         Arrays.stream(hostNames).forEach(hostname ->
-            Assert.assertNotNull(nodeManager.getNode(hostname)));
+            Assert.assertNotNull(nodeManager.getNodeByAddress(hostname)));
       } else {
         Arrays.stream(ipAddress).forEach(ip ->
-            Assert.assertNotNull(nodeManager.getNode(ip)));
+            Assert.assertNotNull(nodeManager.getNodeByAddress(ip)));
       }
     }
   }

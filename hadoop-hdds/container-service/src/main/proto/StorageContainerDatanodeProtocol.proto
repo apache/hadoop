@@ -70,6 +70,8 @@ message SCMRegisteredResponseProto {
   optional SCMNodeAddressList addressList = 4;
   optional string hostname = 5;
   optional string ipAddress = 6;
+  optional string networkName = 7;
+  optional string networkLocation = 8;
 }
 
 /**

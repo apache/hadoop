@@ -2123,9 +2123,14 @@ public class KeyManagerImpl implements KeyManager {
       for (OmKeyLocationInfoGroup key : keyInfo.getKeyLocationVersions()) {
         key.getLocationList().forEach(k -> {
           List<DatanodeDetails> nodes = k.getPipeline().getNodes();
+          if (nodes == null || nodes.size() == 0) {
+            LOG.warn("Datanodes for pipeline {} is empty",
+                k.getPipeline().getId().toString());
+            return;
+          }
           List<String> nodeList = new ArrayList<>();
           nodes.stream().forEach(node ->
-              nodeList.add(node.getNetworkName()));
+              nodeList.add(node.getUuidString()));
           try {
             List<DatanodeDetails> sortedNodes = scmClient.getBlockClient()
                 .sortDatanodes(nodeList, clientMachine);

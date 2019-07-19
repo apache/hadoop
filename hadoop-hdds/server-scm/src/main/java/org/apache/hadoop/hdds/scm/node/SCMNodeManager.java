@@ -19,15 +19,13 @@ package org.apache.hadoop.hdds.scm.node;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.hdds.protocol.proto
     .StorageContainerDatanodeProtocolProtos;
 import org.apache.hadoop.hdds.protocol.proto
         .StorageContainerDatanodeProtocolProtos.PipelineReportsProto;
 import org.apache.hadoop.hdds.scm.container.ContainerID;
-import org.apache.hadoop.hdds.scm.net.InnerNode;
-import org.apache.hadoop.hdds.scm.net.NetConstants;
 import org.apache.hadoop.hdds.scm.net.NetworkTopology;
-import org.apache.hadoop.hdds.scm.net.Node;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.hdds.scm.pipeline.PipelineID;
 import org.apache.hadoop.hdds.scm.node.states.NodeAlreadyExistsException;
@@ -74,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.stream.Collectors;
 
@@ -106,6 +105,8 @@ public class SCMNodeManager implements NodeManager {
   private final NetworkTopology clusterMap;
   private final DNSToSwitchMapping dnsToSwitchMapping;
   private final boolean useHostname;
+  private final ConcurrentHashMap<String, String> dnsToUuidMap =
+      new ConcurrentHashMap<>();
 
   /**
    * Constructs SCM machine Manager.
@@ -252,19 +253,21 @@ public class SCMNodeManager implements NodeManager {
       datanodeDetails.setIpAddress(dnAddress.getHostAddress());
     }
     try {
-      String location;
+      String dnsName;
+      String networkLocation;
+      datanodeDetails.setNetworkName(datanodeDetails.getUuidString());
       if (useHostname) {
-        datanodeDetails.setNetworkName(datanodeDetails.getHostName());
-        location = nodeResolve(datanodeDetails.getHostName());
+        dnsName = datanodeDetails.getHostName();
       } else {
-        datanodeDetails.setNetworkName(datanodeDetails.getIpAddress());
-        location = nodeResolve(datanodeDetails.getIpAddress());
+        dnsName = datanodeDetails.getIpAddress();
       }
-      if (location != null) {
-        datanodeDetails.setNetworkLocation(location);
+      networkLocation = nodeResolve(dnsName);
+      if (networkLocation != null) {
+        datanodeDetails.setNetworkLocation(networkLocation);
       }
       nodeStateManager.addNode(datanodeDetails);
       clusterMap.add(datanodeDetails);
+      dnsToUuidMap.put(dnsName, datanodeDetails.getUuidString());
       // Updating Node Report, as registration is successful
       processNodeReport(datanodeDetails, nodeReport);
       LOG.info("Registered Data node : {}", datanodeDetails);
@@ -274,10 +277,8 @@ public class SCMNodeManager implements NodeManager {
     }
 
     return RegisteredCommand.newBuilder().setErrorCode(ErrorCode.success)
-        .setDatanodeUUID(datanodeDetails.getUuidString())
+        .setDatanode(datanodeDetails)
         .setClusterID(this.scmStorageConfig.getClusterID())
-        .setHostname(datanodeDetails.getHostName())
-        .setIpAddress(datanodeDetails.getIpAddress())
         .build();
   }
 
@@ -553,33 +554,49 @@ public class SCMNodeManager implements NodeManager {
   }
 
   /**
-   * Given datanode address or host name, returns the DatanodeDetails for the
-   * node.
+   * Given datanode uuid, returns the DatanodeDetails for the node.
    *
-   * @param address node host address
+   * @param uuid node host address
    * @return the given datanode, or null if not found
    */
   @Override
-  public DatanodeDetails getNode(String address) {
-    Node node = null;
-    String location = nodeResolve(address);
-    if (location != null) {
-      node = clusterMap.getNode(location + NetConstants.PATH_SEPARATOR_STR +
-          address);
+  public DatanodeDetails getNodeByUuid(String uuid) {
+    if (Strings.isNullOrEmpty(uuid)) {
+      LOG.warn("uuid is null");
+      return null;
     }
+    DatanodeDetails temp = DatanodeDetails.newBuilder().setUuid(uuid).build();
+    try {
+      return nodeStateManager.getNode(temp);
+    } catch (NodeNotFoundException e) {
+      LOG.warn("Cannot find node for uuid {}", uuid);
+      return null;
+    }
+  }
 
-    if (node != null) {
-      if (node instanceof InnerNode) {
-        LOG.warn("Get node for {} return {}, it's an inner node, " +
-            "not a datanode", address, node.getNetworkFullPath());
-      } else {
-        LOG.debug("Get node for {} return {}", address,
-            node.getNetworkFullPath());
-        return (DatanodeDetails)node;
-      }
-    } else {
-      LOG.warn("Cannot find node for {}", address);
+  /**
+   * Given datanode address(Ipaddress or hostname), returns the DatanodeDetails
+   * for the node.
+   *
+   * @param address datanode address
+   * @return the given datanode, or null if not found
+   */
+  @Override
+  public DatanodeDetails getNodeByAddress(String address) {
+    if (Strings.isNullOrEmpty(address)) {
+      LOG.warn("address is null");
+      return null;
     }
+    String uuid = dnsToUuidMap.get(address);
+    if (uuid != null) {
+      DatanodeDetails temp = DatanodeDetails.newBuilder().setUuid(uuid).build();
+      try {
+        return nodeStateManager.getNode(temp);
+      } catch (NodeNotFoundException e) {
+        LOG.warn("Cannot find node for uuid {}", uuid);
+      }
+    }
+    LOG.warn("Cannot find node for address {}", address);
     return null;
   }
 
