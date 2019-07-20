@@ -144,6 +144,12 @@ public class TestAbfsConfigurationFieldsValidation {
   }
 
   @Test
+  public void testConfigBlockSizeInitialized() throws Exception {
+    // test the block size annotated field has been initialized in the constructor
+    assertEquals(MAX_AZURE_BLOCK_SIZE, abfsConfiguration.getAzureBlockSize());
+  }
+
+  @Test
   public void testGetAccountKey() throws Exception {
     String accountKey = abfsConfiguration.getStorageAccountKey();
     assertEquals(this.encodedAccountKey, accountKey);
