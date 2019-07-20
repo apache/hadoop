@@ -203,6 +203,17 @@ public final class TestOMRequestUtils {
         .setClientId(UUID.randomUUID().toString()).build();
   }
 
+  public static OzoneManagerProtocolProtos.OMRequest deleteS3BucketRequest(
+      String s3BucketName) {
+    OzoneManagerProtocolProtos.S3DeleteBucketRequest request =
+        OzoneManagerProtocolProtos.S3DeleteBucketRequest.newBuilder()
+            .setS3BucketName(s3BucketName).build();
+    return OzoneManagerProtocolProtos.OMRequest.newBuilder()
+        .setDeleteS3BucketRequest(request)
+        .setCmdType(OzoneManagerProtocolProtos.Type.DeleteS3Bucket)
+        .setClientId(UUID.randomUUID().toString()).build();
+  }
+
   public static List< HddsProtos.KeyValue> getMetadataList() {
     List<HddsProtos.KeyValue> metadataList = new ArrayList<>();
     metadataList.add(HddsProtos.KeyValue.newBuilder().setKey("key1").setValue(
