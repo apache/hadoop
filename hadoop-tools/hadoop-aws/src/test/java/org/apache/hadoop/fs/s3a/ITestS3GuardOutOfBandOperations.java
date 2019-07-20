@@ -27,6 +27,7 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -289,7 +290,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   }
 
   /**
-   * Tests that tombstone expiry is implemented, so if a file is created raw
+   * Tests that tombstone expiry is implemented. If a file is created raw
    * while the tombstone exist in ms for with the same name then S3Guard will
    * check S3 for the file.
    *
@@ -562,16 +563,15 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
       touch(rawFS, testFile);
       awaitFileStatus(rawFS, testFile);
 
-      // the rawFS will include the file
-      // (maybe we want to remove this check, because it can be inconsistent)
-      checkListingContainsPath(rawFS, testFile);
+      // the rawFS will include the file=
+      LambdaTestUtils.eventually(5000, 1000, () -> {
+        checkListingContainsPath(rawFS, testFile);
+      });
 
       // it will be hidden because of the tombstone
-      // this check is consistent.
       checkListingDoesNotContainPath(guardedFs, testFile);
 
       // the tombstone is expired, so we should detect the file
-      // (if the listing from S3 was consistent)
       when(mockTimeProvider.getNow()).thenReturn(100 + ttl);
       checkListingContainsPath(guardedFs, testFile);
     } finally {

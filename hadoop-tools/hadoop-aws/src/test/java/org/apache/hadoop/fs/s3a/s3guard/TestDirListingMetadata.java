@@ -238,8 +238,8 @@ public class TestDirListingMetadata {
     DirListingMetadata meta = new DirListingMetadata(path, null, false);
     exception.expect(IllegalArgumentException.class);
     exception.expectMessage(notNullValue(String.class));
-    meta.put(new PathMetadata(new S3AFileStatus(true, new Path("/different/ancestor"),
-        TEST_OWNER)));
+    meta.put(new PathMetadata(
+        new S3AFileStatus(true, new Path("/different/ancestor"), TEST_OWNER)));
   }
 
   @Test
