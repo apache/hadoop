@@ -23,7 +23,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
@@ -33,16 +32,12 @@ import org.apache.hadoop.ozone.container.common.transport.server.ratis
     .ContainerStateMachine;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.helpers.OMRatisHelper;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandler;
 import org.apache.hadoop.ozone.protocolPB.OzoneManagerHARequestHandlerImpl;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.util.concurrent.HadoopExecutors;
 import org.apache.ratis.proto.RaftProtos;
 import org.apache.ratis.protocol.Message;
@@ -225,53 +220,11 @@ public class OzoneManagerStateMachine extends BaseStateMachine {
   private TransactionContext handleStartTransactionRequests(
       RaftClientRequest raftClientRequest, OMRequest omRequest) {
 
-    switch (omRequest.getCmdType()) {
-    case InitiateMultiPartUpload:
-      return handleInitiateMultipartUpload(raftClientRequest, omRequest);
-    default:
-      return TransactionContext.newBuilder()
-          .setClientRequest(raftClientRequest)
-          .setStateMachine(this)
-          .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-          .setLogData(raftClientRequest.getMessage().getContent())
-          .build();
-    }
-  }
-
-  private TransactionContext handleInitiateMultipartUpload(
-      RaftClientRequest raftClientRequest, OMRequest omRequest) {
-
-    // Generate a multipart uploadID, and create a new request.
-    // When applyTransaction happen's all OM's use the same multipartUploadID
-    // for the key.
-
-    long time = Time.monotonicNowNanos();
-    String multipartUploadID = UUID.randomUUID().toString() + "-" + time;
-
-    MultipartInfoApplyInitiateRequest multipartInfoApplyInitiateRequest =
-        MultipartInfoApplyInitiateRequest.newBuilder()
-            .setKeyArgs(omRequest.getInitiateMultiPartUploadRequest()
-                .getKeyArgs()).setMultipartUploadID(multipartUploadID).build();
-
-    OMRequest.Builder newOmRequest =
-        OMRequest.newBuilder().setCmdType(
-            OzoneManagerProtocolProtos.Type.ApplyInitiateMultiPartUpload)
-            .setInitiateMultiPartUploadApplyRequest(
-                multipartInfoApplyInitiateRequest)
-            .setClientId(omRequest.getClientId());
-
-    if (omRequest.hasTraceID()) {
-      newOmRequest.setTraceID(omRequest.getTraceID());
-    }
-
-    ByteString messageContent =
-        ByteString.copyFrom(newOmRequest.build().toByteArray());
-
     return TransactionContext.newBuilder()
         .setClientRequest(raftClientRequest)
         .setStateMachine(this)
         .setServerRole(RaftProtos.RaftPeerRole.LEADER)
-        .setLogData(messageContent)
+        .setLogData(raftClientRequest.getMessage().getContent())
         .build();
   }
 

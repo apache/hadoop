@@ -221,7 +221,6 @@ public final class OmUtils {
     case GetDelegationToken:
     case RenewDelegationToken:
     case CancelDelegationToken:
-    case ApplyInitiateMultiPartUpload:
     case CreateDirectory:
     case CreateFile:
     case RemoveAcl:

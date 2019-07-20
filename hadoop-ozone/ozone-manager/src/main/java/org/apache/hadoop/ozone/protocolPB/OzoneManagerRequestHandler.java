@@ -49,8 +49,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFile
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetFileStatusResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.AllocateBlockResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .MultipartInfoApplyInitiateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CancelDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.CheckVolumeAccessResponse;
@@ -269,13 +267,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
                 request.getInitiateMultiPartUploadRequest());
         responseBuilder.setInitiateMultiPartUploadResponse(
             multipartInfoInitiateResponse);
-        break;
-      case ApplyInitiateMultiPartUpload:
-        MultipartInfoInitiateResponse response =
-            applyInitiateMultiPartUpload(
-                request.getInitiateMultiPartUploadApplyRequest());
-        responseBuilder.setInitiateMultiPartUploadResponse(
-            response);
         break;
       case CommitMultiPartUpload:
         MultipartCommitUploadPartResponse commitUploadPartResponse =
@@ -802,32 +793,6 @@ public class OzoneManagerRequestHandler implements RequestHandler {
         .setFactor(keyArgs.getFactor())
         .build();
     OmMultipartInfo multipartInfo = impl.initiateMultipartUpload(omKeyArgs);
-    resp.setVolumeName(multipartInfo.getVolumeName());
-    resp.setBucketName(multipartInfo.getBucketName());
-    resp.setKeyName(multipartInfo.getKeyName());
-    resp.setMultipartUploadID(multipartInfo.getUploadID());
-
-    return resp.build();
-  }
-
-  private MultipartInfoInitiateResponse applyInitiateMultiPartUpload(
-      MultipartInfoApplyInitiateRequest request) throws IOException {
-    MultipartInfoInitiateResponse.Builder resp = MultipartInfoInitiateResponse
-        .newBuilder();
-
-    KeyArgs keyArgs = request.getKeyArgs();
-    OmKeyArgs omKeyArgs = new OmKeyArgs.Builder()
-        .setVolumeName(keyArgs.getVolumeName())
-        .setBucketName(keyArgs.getBucketName())
-        .setKeyName(keyArgs.getKeyName())
-        .setType(keyArgs.getType())
-        .setAcls(keyArgs.getAclsList().stream().map(a ->
-            OzoneAcl.fromProtobuf(a)).collect(Collectors.toList()))
-        .setFactor(keyArgs.getFactor())
-        .build();
-    OmMultipartInfo multipartInfo =
-        impl.applyInitiateMultipartUpload(omKeyArgs,
-            request.getMultipartUploadID());
     resp.setVolumeName(multipartInfo.getVolumeName());
     resp.setBucketName(multipartInfo.getBucketName());
     resp.setKeyName(multipartInfo.getKeyName());

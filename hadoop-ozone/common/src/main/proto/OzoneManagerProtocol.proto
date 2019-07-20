@@ -74,8 +74,6 @@ enum Type {
 
   ServiceList = 51;
 
-  ApplyInitiateMultiPartUpload = 52;
-
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
   CancelDelegationToken = 63;
@@ -138,7 +136,6 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
-  optional MultipartInfoApplyInitiateRequest initiateMultiPartUploadApplyRequest = 52;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
@@ -909,11 +906,7 @@ message S3ListBucketsResponse {
 
 message MultipartInfoInitiateRequest {
     required KeyArgs keyArgs = 1;
-}
 
-message MultipartInfoApplyInitiateRequest {
-    required KeyArgs keyArgs = 1;
-    required string multipartUploadID = 2;
 }
 
 message MultipartInfoInitiateResponse {
