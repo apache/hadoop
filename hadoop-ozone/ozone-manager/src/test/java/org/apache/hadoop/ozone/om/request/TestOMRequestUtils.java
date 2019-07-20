@@ -36,6 +36,10 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .KeyArgs;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartInfoInitiateRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
@@ -290,6 +294,26 @@ public final class TestOMRequestUtils {
     omMetadataManager.getDeletedTable().put(deletedKeyName, omKeyInfo);
 
     return deletedKeyName;
+  }
+
+  /**
+   * Create OMRequest which encapsulates InitiateMultipartUpload request.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   */
+  public static OMRequest createInitiateMPURequest(String volumeName,
+      String bucketName, String keyName) {
+    MultipartInfoInitiateRequest
+        multipartInfoInitiateRequest =
+        MultipartInfoInitiateRequest.newBuilder().setKeyArgs(
+            KeyArgs.newBuilder().setVolumeName(volumeName).setKeyName(keyName)
+                .setBucketName(bucketName)).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.InitiateMultiPartUpload)
+        .setInitiateMultiPartUploadRequest(multipartInfoInitiateRequest)
+        .build();
   }
 
 }

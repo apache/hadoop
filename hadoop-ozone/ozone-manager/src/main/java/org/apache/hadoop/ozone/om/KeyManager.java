@@ -202,17 +202,6 @@ public interface KeyManager extends OzoneManagerFS, IOzoneAcl {
   OmMultipartInfo initiateMultipartUpload(OmKeyArgs keyArgs) throws IOException;
 
   /**
-   * Initiate multipart upload for the specified key.
-   *
-   * @param keyArgs
-   * @param multipartUploadID
-   * @return MultipartInfo
-   * @throws IOException
-   */
-  OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs keyArgs,
-      String multipartUploadID) throws IOException;
-
-  /**
    * Commit Multipart upload part file.
    * @param omKeyArgs
    * @param clientID
