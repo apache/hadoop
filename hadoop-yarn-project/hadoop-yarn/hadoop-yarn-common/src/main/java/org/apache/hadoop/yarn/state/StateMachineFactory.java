@@ -282,9 +282,11 @@ final public class StateMachineFactory
 
   /**
    * Effect a transition due to the effecting stimulus.
-   * @param state current state
-   * @param eventType trigger to initiate the transition
-   * @param cause causal eventType context
+   * @param operand the object upon which the returned
+   *                {@link StateMachine} will operate.
+   * @param oldState current state
+   * @param eventType stimulus for the transition
+   * @param event stimulus for the transition
    * @return transitioned state
    */
   private STATE doTransition
