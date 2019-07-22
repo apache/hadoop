@@ -75,9 +75,6 @@ public class ITestS3AContractRootDir extends
   @Override
   public void testListEmptyRootDirectory() throws IOException {
     int maxAttempts = 10;
-    if (getFileSystem().hasMetadataStore()) {
-      maxAttempts = 1;
-    }
     describe("Listing root directory; for consistency allowing "
         + maxAttempts + " attempts");
     for (int attempt = 1; attempt <= maxAttempts; ++attempt) {
