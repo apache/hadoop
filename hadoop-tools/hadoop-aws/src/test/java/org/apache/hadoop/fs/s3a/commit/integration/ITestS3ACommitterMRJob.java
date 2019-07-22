@@ -87,12 +87,53 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
 /**
  * Test an MR Job with all the different committers.
+ * <p>
  * This is a fairly complex parameterization: it is designed to
- * avoid the overhead of starting mini HDFS and yarn clusters for
+ * avoid the overhead of starting a Yarn cluster for
  * individual committer types, so speed up operations.
- * This implicitly guarantees that there is never more than one committer MR\
- * job active at a time, so avoids overloading the test machine with too many
- * processes.
+ * <p>
+ * It also implicitly guarantees that there is never more than one of these
+ * MR jobs active at a time, so avoids overloading the test machine with too
+ * many processes.
+ * How the binding works:
+ * <ol>
+ *   <li>
+ *     Each parameterized suite is configured through its own
+ *     {@link CommitterTestBinding} subclass.
+ *   </li>
+ *   <li>
+ *     JUnit runs these test suites one parameterized binding at a time.
+ *   </li>
+ *   <li>
+ *     The test suites are declared to be executed in ascending order, so
+ *     that for a specific binding, the order is {@link #test_000()},
+ *     {@link #test_100()} {@link #test_200_execute()} and finally
+ *     {@link #test_500()}.
+ *   </li>
+ *   <li>
+ *     {@link #test_000()} calls {@link CommitterTestBinding#validate()} to
+ *     as to validate the state of the committer. This is primarily to
+ *     verify that the binding setup mechanism is working.
+ *   </li>
+ *   <li>
+ *     {@link #test_100()} is relayed to
+ *     {@link CommitterTestBinding#test_100()},
+ *     for any preflight tests.
+ *   </li>
+ *   <li>
+ *     The {@link #test_200_execute()} test runs the MR job for that
+ *     particular binding with standard reporting and verification of the
+ *     outcome.
+ *   </li>
+ *   <li>
+ *     {@link #test_500()} test is relayed to
+ *     {@link CommitterTestBinding#test_500()}, for any post-MR-job tests.
+ * </ol>
+ *
+ * A new S3A FileSystem instance is created for each test_ method, so the pre-execute and
+ * post-execute validators cannot inspect the state of the FS as part of their tests.
+ * However, as the MR workers and AM all run in their own processes, there's generally no
+ * useful information about the job in the local S3AFileSystem instance.
  */
 @RunWith(Parameterized.class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
@@ -146,8 +187,8 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
   @Override
   public void setup() throws Exception {
     super.setup();
-    committerTestBinding.bind(getClusterBinding(),
-        getFileSystem());
+    // configure the test binding for this specific test case.
+    committerTestBinding.setup(getClusterBinding(), getFileSystem());
   }
 
   @Override
@@ -308,7 +349,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
         .sorted()
         .collect(Collectors.toList());
 
-
     Assertions.assertThat(actualFiles)
         .describedAs("Files found in %s", outputPath)
         .isEqualTo(expectedFiles);
@@ -381,7 +421,6 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
     }
   }
 
-
   /**
    * A binding class for committer tests.
    * Subclasses of this will be instantiated and drive the parameterized
@@ -390,10 +429,11 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
    * These classes will be instantiated in a static array of the suite, and
    * not bound to a cluster binding or filesystem.
    *
-   * The per-method test setup method will call bind() to do the
-   * one-off binding.
+   * The per-method test {@link #setup()} method will call
+   * {@link #setup(ClusterBinding, S3AFileSystem)}, to link the instance
+   * to the specific test cluster <i>and test filesystem</i> in use
+   * in that test.
    */
-
   private abstract static class CommitterTestBinding {
 
     private final String committerName;
@@ -402,13 +442,22 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     private S3AFileSystem remoteFS;
 
+    /**
+     * Constructor.
+     * @param committerName name of the committer for messages.
+     */
     protected CommitterTestBinding(final String committerName) {
       this.committerName = committerName;
     }
 
-    private void bind(
+    /**
+     * Set up the test binding: this is called during test setup.
+     * @param cluster the active test cluster.
+     * @param fs the S3A Filesystem used as a destination.
+     */
+    private void setup(
         ClusterBinding cluster,
-        final S3AFileSystem fs) {
+        S3AFileSystem fs) {
       this.binding = cluster;
       this.remoteFS = fs;
     }
@@ -440,9 +489,7 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
      */
     protected void applyCustomConfigOptions(JobConf jobConf)
         throws IOException {
-
     }
-
 
     /**
      * Should the inconsistent S3A client be used?
@@ -463,14 +510,30 @@ public class ITestS3ACommitterMRJob extends AbstractYarnClusterITest {
 
     }
 
+    /**
+     * A test to run before the main {@link #test_200_execute()} test is
+     * invoked.
+     * @throws Throwable failure.
+     */
     void test_100() throws Throwable {
 
     }
 
+    /**
+     * A test to run after the main {@link #test_200_execute()} test is
+     * invoked.
+     * @throws Throwable failure.
+     */
     void test_500() throws Throwable {
 
     }
 
+    /**
+     * Validate the state of the binding.
+     * This is called in {@link #test_000()} so will
+     * fail independently of the other tests.
+     * @throws Throwable failure.
+     */
     public void validate() throws Throwable {
       assertNotNull("Not bound to a cluster", binding);
       assertNotNull("No cluster filesystem", getClusterFS());

@@ -138,6 +138,19 @@ public abstract class AbstractYarnClusterITest extends AbstractCommitITest {
   /**
    * Create the cluster binding. This must be done in
    * class setup of the (final) subclass.
+   * The local filesystem is used as the cluster FS.
+   * @param conf configuration to start with.
+   * @return the cluster binding.
+   * @throws IOException failure.
+   */
+  protected static ClusterBinding createCluster(JobConf conf)
+      throws IOException {
+    return createCluster(conf, false);
+  }
+
+  /**
+   * Create the cluster binding. This must be done in
+   * class setup of the (final) subclass.
    * If an HDFS cluster is requested,
    * the HDFS and YARN clusters will share the same configuration, so
    * the HDFS cluster binding is implicitly propagated to YARN.

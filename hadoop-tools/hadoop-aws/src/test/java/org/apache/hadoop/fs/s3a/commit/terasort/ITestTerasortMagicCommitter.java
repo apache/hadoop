@@ -44,7 +44,7 @@ public final class ITestTerasortMagicCommitter
 
   @BeforeClass
   public static void setupClusters() throws IOException {
-    clusterBinding = createCluster(new JobConf(), false);
+    clusterBinding = createCluster(new JobConf());
   }
 
   @AfterClass
