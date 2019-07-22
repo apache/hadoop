@@ -23,6 +23,7 @@ import static org.junit.Assert.fail;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerEvent;
@@ -30,7 +31,9 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerState;
 import org.apache.hadoop.yarn.server.nodemanager.nodelabels.NodeLabelsProvider;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class TestNodeManager {
 
@@ -41,6 +44,9 @@ public class TestNodeManager {
       throw new IOException("dummy executor init called");
     }
   }
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
 
   @Test
   public void testContainerExecutorInitCall() {
@@ -168,6 +174,28 @@ public class TestNodeManager {
     } catch (Exception e) {
       Assert.fail("Exception caught");
       e.printStackTrace();
+    }
+  }
+
+  /**
+   * Test whether NodeManager passes user-provided conf to
+   * UserGroupInformation class. If it reads this (incorrect)
+   * AuthenticationMethod enum an exception is thrown.
+   */
+  @Test
+  public void testUserProvidedUGIConf() throws Exception {
+    thrown.expect(IllegalArgumentException.class);
+    thrown.expectMessage("Invalid attribute value for "
+        + CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION
+        + " of DUMMYAUTH");
+    Configuration dummyConf = new YarnConfiguration();
+    dummyConf.set(CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHENTICATION,
+        "DUMMYAUTH");
+    NodeManager dummyNodeManager = new NodeManager();
+    try {
+      dummyNodeManager.init(dummyConf);
+    } finally {
+      dummyNodeManager.stop();
     }
   }
 }
