@@ -1398,17 +1398,10 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
+
       List<OzoneAclInfo> newAcls = new ArrayList<>(keyInfo.getAcls());
       OzoneAclInfo newAcl = null;
       for(OzoneAclInfo a: keyInfo.getAcls()) {
@@ -1444,7 +1437,7 @@ public class KeyManagerImpl implements KeyManager {
           .setDataSize(keyInfo.getDataSize())
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Add acl operation failed for key:{}/{}/{}", volume,
@@ -1477,16 +1470,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAclInfo> newAcls = new ArrayList<>(keyInfo.getAcls());
@@ -1531,7 +1516,7 @@ public class KeyManagerImpl implements KeyManager {
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
 
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Remove acl operation failed for key:{}/{}/{}", volume,
@@ -1564,16 +1549,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAclInfo> newAcls = new ArrayList<>();
@@ -1594,7 +1571,7 @@ public class KeyManagerImpl implements KeyManager {
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
 
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Set acl operation failed for key:{}/{}/{}", volume,
@@ -1626,11 +1603,7 @@ public class KeyManagerImpl implements KeyManager {
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAcl> acls = new ArrayList<>();
