@@ -829,7 +829,11 @@ public class TestOzoneManagerHA {
 
   }
 
-  private void createKey(OzoneBucket ozoneBucket) throws IOException {
+  /**
+   * Create a key in the bucket.
+   * @return the key name.
+   */
+  static String createKey(OzoneBucket ozoneBucket) throws IOException {
     String keyName = "key" + RandomStringUtils.randomNumeric(5);
     String data = "data" + RandomStringUtils.randomNumeric(5);
     OzoneOutputStream ozoneOutputStream = ozoneBucket.createKey(keyName,
@@ -837,5 +841,6 @@ public class TestOzoneManagerHA {
         ReplicationFactor.ONE, new HashMap<>());
     ozoneOutputStream.write(data.getBytes(), 0, data.length());
     ozoneOutputStream.close();
+    return keyName;
   }
 }

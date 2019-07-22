@@ -29,9 +29,10 @@ public interface OzoneManagerHAProtocol {
   /**
    * Store the snapshot index i.e. the raft log index, corresponding to the
    * last transaction applied to the OM RocksDB, in OM metadata dir on disk.
+   * @param flush flush the OM DB to disk if true
    * @return the snapshot index
    * @throws IOException
    */
-  long saveRatisSnapshot() throws IOException;
+  long saveRatisSnapshot(boolean flush) throws IOException;
 
 }
