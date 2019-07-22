@@ -638,7 +638,7 @@ Options:
 * -R: Apply operations to all files and directories recursively.
 * -m: Modify ACL. New entries are added to the ACL, and existing entries are retained.
 * -x: Remove specified ACL entries. Other ACL entries are retained.
-* ``--set``: Fully replace the ACL, discarding all existing entries. The *acl\_spec* must include entries for user, group, and others for compatibility with permission bits.
+* ``--set``: Fully replace the ACL, discarding all existing entries. The *acl\_spec* must include entries for user, group, and others for compatibility with permission bits. If the ACL spec contains only access entries, then the existing default entries are retained. If the ACL spec contains only default entries, then the existing access entries are retained. If the ACL spec contains both access and default entries, then both are replaced.
 * *acl\_spec*: Comma separated list of ACL entries.
 * *path*: File or directory to modify.
 
