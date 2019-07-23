@@ -380,7 +380,7 @@ public final class OzoneConfigKeys {
    */
   public static final String OZONE_CLIENT_CHECKSUM_TYPE =
       "ozone.client.checksum.type";
-  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "SHA256";
+  public static final String OZONE_CLIENT_CHECKSUM_TYPE_DEFAULT = "CRC32";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM =
       "ozone.client.bytes.per.checksum";
   public static final String OZONE_CLIENT_BYTES_PER_CHECKSUM_DEFAULT = "1MB";
