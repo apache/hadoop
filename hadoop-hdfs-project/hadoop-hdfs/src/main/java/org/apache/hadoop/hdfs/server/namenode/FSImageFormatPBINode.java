@@ -268,7 +268,7 @@ public final class FSImageFormatPBINode {
             + "name before upgrading to this release.");
       }
       // NOTE: This does not update space counts for parents
-      if (!parent.addChild(child)) {
+      if (!parent.addChildAtLoading(child)) {
         return;
       }
       dir.cacheName(child);
@@ -550,6 +550,8 @@ public final class FSImageFormatPBINode {
               ++numImageErrors;
             }
             if (!inode.isReference()) {
+              // Serialization must ensure that children are in order, related
+              // to HDFS-13693
               b.addChildren(inode.getId());
             } else {
               refList.add(inode.asReference());
