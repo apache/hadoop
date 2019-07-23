@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.om.request.volume;
 import java.io.IOException;
 import java.util.Map;
 
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
@@ -36,7 +35,6 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeSetOwnerResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -110,7 +108,7 @@ public class OMVolumeSetOwnerRequest extends OMVolumeRequest {
       omMetrics.incNumVolumeUpdateFails();
       auditLog(auditLogger, buildAuditMessage(OMAction.SET_OWNER, auditMap,
           ex, userInfo));
-      return new OMVolumeCreateResponse(null, null,
+      return new OMVolumeSetOwnerResponse(null, null, null, null,
           createErrorOMResponse(omResponse, ex));
     }
 
