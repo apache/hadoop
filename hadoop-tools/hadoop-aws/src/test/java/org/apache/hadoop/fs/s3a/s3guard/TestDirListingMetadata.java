@@ -295,7 +295,7 @@ public class TestDirListingMetadata {
 
 
   @Test
-  public void testExpiredEntriesFromListing() {
+  public void testRemoveExpiredEntriesFromListing() {
     long ttl = 9;
     long oldTime = 100;
     long newTime = 110;

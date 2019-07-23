@@ -291,7 +291,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
   }
 
   /**
-   * Test that listing is filtering expired items, so
+   * Test that listing of metadatas is filtered from expired items.
    */
   @Test
   public void testListingFilteredExpiredItems() throws Exception {
