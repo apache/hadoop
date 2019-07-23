@@ -480,13 +480,13 @@ public final class HddsUtils {
   }
 
   /**
-   * Initialize hadoop metrics systen for Ozone servers.
-   *  @param configuration OzoneConfiguration to use.
-   * @param serverName    The logical name of the server components. (eg.
+   * Initialize hadoop metrics system for Ozone servers.
+   * @param configuration OzoneConfiguration to use.
+   * @param serverName    The logical name of the server components.
    * @return
    */
-  public static MetricsSystem initializeMetrics(OzoneConfiguration configuration,
-      String serverName) {
+  public static MetricsSystem initializeMetrics(
+      OzoneConfiguration configuration, String serverName) {
     MetricsSystem metricsSystem = DefaultMetricsSystem.initialize(serverName);
     JvmMetrics.create(serverName,
         configuration.get(DFSConfigKeys.DFS_METRICS_SESSION_ID_KEY),
