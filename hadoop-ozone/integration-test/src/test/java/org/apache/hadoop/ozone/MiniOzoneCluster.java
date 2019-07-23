@@ -234,6 +234,7 @@ public interface MiniOzoneCluster {
 
     protected static final int DEFAULT_HB_INTERVAL_MS = 1000;
     protected static final int DEFAULT_HB_PROCESSOR_INTERVAL_MS = 100;
+    protected static final int ACTIVE_OMS_NOT_SET = -1;
 
     protected final OzoneConfiguration conf;
     protected final String path;
@@ -241,7 +242,7 @@ public interface MiniOzoneCluster {
     protected String clusterId;
     protected String omServiceId;
     protected int numOfOMs;
-    protected int numOfActiveOMs;
+    protected int numOfActiveOMs = ACTIVE_OMS_NOT_SET;
 
     protected Optional<Boolean> enableTrace = Optional.of(false);
     protected Optional<Integer> hbInterval = Optional.empty();
