@@ -34,6 +34,7 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
@@ -54,7 +55,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWri
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainerImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ActiveUsersManager;
@@ -916,8 +916,8 @@ public class TestReservations {
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
     RMContext rmContext = mock(RMContext.class);
-    ContainerAllocationExpirer expirer =
-      mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer =
+      mock(ContainerAllocationExpired.class);
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
     when(rmContext.getDispatcher()).thenReturn(drainDispatcher);
@@ -990,8 +990,8 @@ public class TestReservations {
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     SystemMetricsPublisher publisher = mock(SystemMetricsPublisher.class);
     RMContext rmContext = mock(RMContext.class);
-    ContainerAllocationExpirer expirer =
-      mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired expirer =
+      mock(ContainerAllocationExpired.class);
     DrainDispatcher drainDispatcher = new DrainDispatcher();
     when(rmContext.getContainerAllocationExpirer()).thenReturn(expirer);
     when(rmContext.getDispatcher()).thenReturn(drainDispatcher);

@@ -34,7 +34,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ahs.RMApplicationHistoryWriter;
 import org.apache.hadoop.yarn.server.resourcemanager.metrics.SystemMetricsPublisher;
 import org.apache.hadoop.yarn.server.resourcemanager.nodelabels.RMNodeLabelsManager;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -90,8 +90,8 @@ public class TestUtils {
     };
     
     // No op
-    ContainerAllocationExpirer cae =
-        new ContainerAllocationExpirer(nullDispatcher);
+    ContainerAllocationExpired cae =
+        new ContainerAllocationExpired(nullDispatcher);
 
     Configuration conf = new Configuration();
     RMApplicationHistoryWriter writer =  mock(RMApplicationHistoryWriter.class);

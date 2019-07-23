@@ -172,7 +172,7 @@ public class RMContainerImpl implements RMContainer {
   private final NodeId nodeId;
   private final RMContext rmContext;
   private final EventHandler eventHandler;
-  private final ContainerAllocationExpirer containerAllocationExpirer;
+  private final ContainerAllocationExpired containerAllocationExpired;
   private final String user;
   private final String nodeLabelExpression;
 
@@ -239,7 +239,7 @@ public class RMContainerImpl implements RMContainer {
     this.creationTime = creationTime;
     this.rmContext = rmContext;
     this.eventHandler = rmContext.getDispatcher().getEventHandler();
-    this.containerAllocationExpirer = rmContext.getContainerAllocationExpirer();
+    this.containerAllocationExpired = rmContext.getContainerAllocationExpirer();
     this.isAMContainer = false;
     this.nodeLabelExpression = nodeLabelExpression;
     this.lastConfirmedResource = container.getResource();
@@ -600,8 +600,8 @@ public class RMContainerImpl implements RMContainer {
       // this anymore.
       container.setContainerRequest(null);
       
-      // Register with containerAllocationExpirer.
-      container.containerAllocationExpirer.register(
+      // Register with containerAllocationExpired.
+      container.containerAllocationExpired.register(
           new AllocationExpirationInfo(container.getContainerId()));
 
       // Tell the app
@@ -624,8 +624,8 @@ public class RMContainerImpl implements RMContainer {
           (RMContainerUpdatesAcquiredEvent) event;
       if (acquiredEvent.isIncreasedContainer()) {
         // If container is increased but not started by AM, we will start
-        // containerAllocationExpirer for this container in this transition. 
-        container.containerAllocationExpirer.register(
+        // containerAllocationExpired for this container in this transition.
+        container.containerAllocationExpired.register(
             new AllocationExpirationInfo(event.getContainerId(), true));
       }
     }
@@ -649,7 +649,7 @@ public class RMContainerImpl implements RMContainer {
         //    - Set the lastConfirmedResource as nmContainerResource
         //    - Unregister the allocation expirer
         container.lastConfirmedResource = nmContainerResource;
-        container.containerAllocationExpirer.unregister(
+        container.containerAllocationExpired.unregister(
             new AllocationExpirationInfo(event.getContainerId()));
       } else if (Resources.fitsIn(rmContainerResource, nmContainerResource)) {
         // If rmContainerResource < nmContainerResource, this is caused by the
@@ -664,7 +664,7 @@ public class RMContainerImpl implements RMContainer {
         //    - Unregister the allocation expirer
         //    - Notify NM to reduce its resource to rmContainerResource
         container.lastConfirmedResource = rmContainerResource;
-        container.containerAllocationExpirer.unregister(
+        container.containerAllocationExpired.unregister(
             new AllocationExpirationInfo(event.getContainerId()));
         container.eventHandler.handle(new RMNodeUpdateContainerEvent(
             container.nodeId,
@@ -779,8 +779,8 @@ public class RMContainerImpl implements RMContainer {
     @Override
     public void transition(RMContainerImpl container, RMContainerEvent event) {
 
-      // Unregister from containerAllocationExpirer.
-      container.containerAllocationExpirer.unregister(
+      // Unregister from containerAllocationExpired.
+      container.containerAllocationExpired.unregister(
           new AllocationExpirationInfo(container.getContainerId()));
 
       // Inform node

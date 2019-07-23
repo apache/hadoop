@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.resourcemanager.rmapp;
 
 import com.google.common.collect.Lists;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +73,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptI
 
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt
     .RMAppAttemptState;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 
 
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
@@ -234,8 +234,8 @@ public class TestRMAppTransitions {
     UserGroupInformation.setConfiguration(conf);
 
     rmDispatcher = new DrainDispatcher();
-    ContainerAllocationExpirer containerAllocationExpirer = 
-        mock(ContainerAllocationExpirer.class);
+    ContainerAllocationExpired containerAllocationExpirer =
+        mock(ContainerAllocationExpired.class);
     AMLivelinessMonitor amLivelinessMonitor = mock(AMLivelinessMonitor.class);
     AMLivelinessMonitor amFinishingMonitor = mock(AMLivelinessMonitor.class);
     store = mock(RMStateStore.class);

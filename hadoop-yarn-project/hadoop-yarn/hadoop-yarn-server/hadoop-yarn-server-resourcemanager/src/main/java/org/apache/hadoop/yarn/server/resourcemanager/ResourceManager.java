@@ -94,7 +94,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNodeEventType;
@@ -638,7 +638,7 @@ public class ResourceManager extends CompositeService
     private DelegationTokenRenewer delegationTokenRenewer;
     private EventHandler<SchedulerEvent> schedulerDispatcher;
     private ApplicationMasterLauncher applicationMasterLauncher;
-    private ContainerAllocationExpirer containerAllocationExpirer;
+    private ContainerAllocationExpired containerAllocationExpired;
     private ResourceManager rm;
     private boolean fromActive = false;
     private StandByTransitionRunnable standByTransitionRunnable;
@@ -656,9 +656,9 @@ public class ResourceManager extends CompositeService
       rmSecretManagerService = createRMSecretManagerService();
       addService(rmSecretManagerService);
 
-      containerAllocationExpirer = new ContainerAllocationExpirer(rmDispatcher);
-      addService(containerAllocationExpirer);
-      rmContext.setContainerAllocationExpirer(containerAllocationExpirer);
+      containerAllocationExpired = new ContainerAllocationExpired(rmDispatcher);
+      addService(containerAllocationExpired);
+      rmContext.setContainerAllocationExpirer(containerAllocationExpired);
 
       AMLivelinessMonitor amLivelinessMonitor = createAMLivelinessMonitor();
       addService(amLivelinessMonitor);

@@ -36,7 +36,7 @@ public enum RMContainerEventType {
   // Source: ApplicationMasterService->Scheduler
   RELEASED,
 
-  // Source: ContainerAllocationExpirer  
+  // Source: ContainerAllocationExpired
   EXPIRE,
 
   RECOVER,

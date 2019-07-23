@@ -22,6 +22,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -46,7 +47,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesMa
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -112,7 +112,7 @@ public class RMContextImpl implements RMContext {
   @VisibleForTesting
   // helper constructor for tests
   public RMContextImpl(Dispatcher rmDispatcher,
-      ContainerAllocationExpirer containerAllocationExpirer,
+      ContainerAllocationExpired containerAllocationExpired,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer delegationTokenRenewer,
@@ -124,7 +124,7 @@ public class RMContextImpl implements RMContext {
     this();
     this.setDispatcher(rmDispatcher);
     setActiveServiceContext(new RMActiveServiceContext(rmDispatcher,
-        containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+            containerAllocationExpired, amLivelinessMonitor, amFinishingMonitor,
         delegationTokenRenewer, appTokenSecretManager,
         containerTokenSecretManager, nmTokenSecretManager,
         clientToAMTokenSecretManager,
@@ -137,7 +137,7 @@ public class RMContextImpl implements RMContext {
   @VisibleForTesting
   // helper constructor for tests
   public RMContextImpl(Dispatcher rmDispatcher,
-      ContainerAllocationExpirer containerAllocationExpirer,
+      ContainerAllocationExpired containerAllocationExpired,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer delegationTokenRenewer,
@@ -147,7 +147,7 @@ public class RMContextImpl implements RMContext {
       ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager) {
     this(
       rmDispatcher,
-      containerAllocationExpirer,
+            containerAllocationExpired,
       amLivelinessMonitor,
       amFinishingMonitor,
       delegationTokenRenewer,
@@ -328,8 +328,8 @@ public class RMContextImpl implements RMContext {
   }
 
   @Override
-  public ContainerAllocationExpirer getContainerAllocationExpirer() {
-    return activeServiceContext.getContainerAllocationExpirer();
+  public ContainerAllocationExpired getContainerAllocationExpirer() {
+    return activeServiceContext.getContainerAllocationExpired();
   }
 
   @Override
@@ -420,9 +420,9 @@ public class RMContextImpl implements RMContext {
   }
 
   void setContainerAllocationExpirer(
-      ContainerAllocationExpirer containerAllocationExpirer) {
+      ContainerAllocationExpired containerAllocationExpired) {
     activeServiceContext
-        .setContainerAllocationExpirer(containerAllocationExpirer);
+        .setContainerAllocationExpired(containerAllocationExpired);
   }
 
   void setAMLivelinessMonitor(AMLivelinessMonitor amLivelinessMonitor) {

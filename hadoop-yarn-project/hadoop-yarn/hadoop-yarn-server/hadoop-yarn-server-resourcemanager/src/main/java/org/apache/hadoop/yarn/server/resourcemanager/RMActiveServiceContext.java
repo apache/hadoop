@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -42,7 +43,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceProfilesMa
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.monitor.RMAppLifetimeMonitor;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerNode;
@@ -90,7 +90,7 @@ public class RMActiveServiceContext {
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
   private RMStateStore stateStore = null;
-  private ContainerAllocationExpirer containerAllocationExpirer;
+  private ContainerAllocationExpired containerAllocationExpired;
   private DelegationTokenRenewer delegationTokenRenewer;
   private AMRMTokenSecretManager amRMTokenSecretManager;
   private RMContainerTokenSecretManager containerTokenSecretManager;
@@ -134,7 +134,7 @@ public class RMActiveServiceContext {
   @Private
   @Unstable
   public RMActiveServiceContext(Dispatcher rmDispatcher,
-      ContainerAllocationExpirer containerAllocationExpirer,
+      ContainerAllocationExpired containerAllocationExpired,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer delegationTokenRenewer,
@@ -144,7 +144,7 @@ public class RMActiveServiceContext {
       ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager,
       ResourceScheduler scheduler) {
     this();
-    this.setContainerAllocationExpirer(containerAllocationExpirer);
+    this.setContainerAllocationExpired(containerAllocationExpired);
     this.setAMLivelinessMonitor(amLivelinessMonitor);
     this.setAMFinishingMonitor(amFinishingMonitor);
     this.setDelegationTokenRenewer(delegationTokenRenewer);
@@ -214,8 +214,8 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
-  public ContainerAllocationExpirer getContainerAllocationExpirer() {
-    return this.containerAllocationExpirer;
+  public ContainerAllocationExpired getContainerAllocationExpired() {
+    return this.containerAllocationExpired;
   }
 
   @Private
@@ -299,9 +299,9 @@ public class RMActiveServiceContext {
 
   @Private
   @Unstable
-  void setContainerAllocationExpirer(
-      ContainerAllocationExpirer containerAllocationExpirer) {
-    this.containerAllocationExpirer = containerAllocationExpirer;
+  void setContainerAllocationExpired(
+      ContainerAllocationExpired containerAllocationExpired) {
+    this.containerAllocationExpired = containerAllocationExpired;
   }
 
   @Private

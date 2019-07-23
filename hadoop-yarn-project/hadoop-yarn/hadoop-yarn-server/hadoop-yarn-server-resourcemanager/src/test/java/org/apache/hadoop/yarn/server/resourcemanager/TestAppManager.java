@@ -66,7 +66,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppMetrics;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppState;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptImpl;
-import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
+import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpired;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
@@ -185,7 +185,7 @@ public class TestAppManager extends AppManagerTestBase{
 
   private RMContext createMockRMContextInternal(ConcurrentMap<ApplicationId, RMApp> map) {
     Dispatcher rmDispatcher = new AsyncDispatcher();
-    ContainerAllocationExpirer containerAllocationExpirer = new ContainerAllocationExpirer(
+    ContainerAllocationExpired containerAllocationExpired = new ContainerAllocationExpired(
             rmDispatcher);
     AMLivelinessMonitor amLivelinessMonitor = new AMLivelinessMonitor(
             rmDispatcher);
@@ -193,7 +193,7 @@ public class TestAppManager extends AppManagerTestBase{
             rmDispatcher);
     RMApplicationHistoryWriter writer = mock(RMApplicationHistoryWriter.class);
     RMContext context = new RMContextImpl(rmDispatcher,
-            containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
+            containerAllocationExpired, amLivelinessMonitor, amFinishingMonitor,
             null, null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
