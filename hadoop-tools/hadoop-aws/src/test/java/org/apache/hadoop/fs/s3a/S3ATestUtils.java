@@ -506,6 +506,16 @@ public final class S3ATestUtils {
   }
 
   /**
+   * Require a filesystem to have a metadata store; skip test
+   * if not.
+   * @param fs filesystem to check
+   */
+  public static void assumeFilesystemHasMetadatastore(S3AFileSystem fs) {
+    assume("Filesystem does not have a metastore",
+        fs.hasMetadataStore());
+  }
+
+  /**
    * Reset all metrics in a list.
    * @param metrics metrics to reset
    */
@@ -816,6 +826,22 @@ public final class S3ATestUtils {
   public static <T extends Service> T terminateService(final T service) {
     ServiceOperations.stopQuietly(LOG, service);
     return null;
+  }
+
+  /**
+   * Get a file status from S3A with the {@code needEmptyDirectoryFlag}
+   * state probed.
+   * This accesses a package-private method in the
+   * S3A filesystem.
+   * @param fs filesystem
+   * @param dir directory
+   * @return a status
+   * @throws IOException
+   */
+  public static S3AFileStatus getStatusWithEmptyDirFlag(
+      final S3AFileSystem fs,
+      final Path dir) throws IOException {
+    return fs.innerGetFileStatus(dir, true);
   }
 
   /**
