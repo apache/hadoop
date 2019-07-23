@@ -91,7 +91,7 @@ public class TestFailureHandlingByClient {
         OzoneConfigKeys.DFS_RATIS_LEADER_ELECTION_MINIMUM_TIMEOUT_DURATION_KEY,
         1, TimeUnit.SECONDS);
     conf.setBoolean(
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED, false);
+        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED, true);
 
     conf.setQuietMode(false);
     cluster = MiniOzoneCluster.newBuilder(conf)
