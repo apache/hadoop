@@ -112,7 +112,7 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
       omMetrics.incNumVolumeUpdateFails();
       auditLog(auditLogger, buildAuditMessage(OMAction.SET_QUOTA, auditMap,
           ex, userInfo));
-      return new OMVolumeCreateResponse(null, null,
+      return new OMVolumeSetQuotaResponse(null,
           createErrorOMResponse(omResponse, ex));
     }
 
