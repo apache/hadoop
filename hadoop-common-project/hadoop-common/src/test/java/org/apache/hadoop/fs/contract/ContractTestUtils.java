@@ -674,7 +674,8 @@ public class ContractTestUtils extends Assert {
   /**
    * Delete a file/dir and assert that delete() returned true
    * <i>and</i> that the path no longer exists. This variant rejects
-   * all operations on root directories.
+   * all operations on root directories and requires the target path
+   * to exist before the deletion operation.
    * @param fs filesystem
    * @param file path to delete
    * @param recursive flag to enable recursive delete
@@ -688,8 +689,9 @@ public class ContractTestUtils extends Assert {
 
   /**
    * Delete a file/dir and assert that delete() returned true
-   * <i>and</i> that the path no longer exists. This variant rejects
-   * all operations on root directories
+   * <i>and</i> that the path no longer exists.
+   * This variant requires the target path
+   * to exist before the deletion operation.
    * @param fs filesystem
    * @param file path to delete
    * @param recursive flag to enable recursive delete
@@ -700,8 +702,28 @@ public class ContractTestUtils extends Assert {
       Path file,
       boolean recursive,
       boolean allowRootOperations) throws IOException {
+    assertDeleted(fs, file, true, recursive, allowRootOperations);
+  }
+
+  /**
+   * Delete a file/dir and assert that delete() returned true
+   * <i>and</i> that the path no longer exists.
+   * @param fs filesystem
+   * @param file path to delete
+   * @param requirePathToExist check for the path existing first?
+   * @param recursive flag to enable recursive delete
+   * @param allowRootOperations can the root dir be deleted?
+   * @throws IOException IO problems
+   */
+  public static void assertDeleted(FileSystem fs,
+      Path file,
+      boolean requirePathToExist,
+      boolean recursive,
+      boolean allowRootOperations) throws IOException {
     rejectRootOperation(file, allowRootOperations);
-    assertPathExists(fs, "about to be deleted file", file);
+    if (requirePathToExist) {
+      assertPathExists(fs, "about to be deleted file", file);
+    }
     boolean deleted = fs.delete(file, recursive);
     String dir = ls(fs, file.getParent());
     assertTrue("Delete failed on " + file + ": " + dir, deleted);

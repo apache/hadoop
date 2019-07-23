@@ -712,12 +712,15 @@ public final class S3Guard {
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
+   * @param needEmptyDirectoryFlag if true, implementation will
+   * return known state of directory emptiness.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
-      @Nullable ITtlTimeProvider timeProvider) throws IOException {
-    final PathMetadata pathMetadata = ms.get(path);
+      @Nullable ITtlTimeProvider timeProvider,
+      final boolean needEmptyDirectoryFlag) throws IOException {
+    final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
     // if timeProvider is null let's return with what the ms has
     if (timeProvider == null) {
       LOG.debug("timeProvider is null, returning pathMetadata as is");
