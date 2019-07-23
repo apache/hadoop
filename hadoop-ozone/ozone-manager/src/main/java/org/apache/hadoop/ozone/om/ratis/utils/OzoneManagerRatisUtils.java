@@ -19,6 +19,7 @@ package org.apache.hadoop.ozone.om.ratis.utils;
 
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
@@ -44,6 +45,7 @@ import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 
@@ -117,6 +119,13 @@ public final class OzoneManagerRatisUtils {
       return new S3MultipartUploadAbortRequest(omRequest);
     case CompleteMultiPartUpload:
       return new S3MultipartUploadCompleteRequest(omRequest);
+    case AddAcl:
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (type == ObjectType.VOLUME) {
+        return new OMVolumeAddAclRequest(omRequest);
+      }
+      //TODO: handle bucket, key and prefix AddAcl
+      return null;
     default:
       // TODO: will update once all request types are implemented.
       return null;

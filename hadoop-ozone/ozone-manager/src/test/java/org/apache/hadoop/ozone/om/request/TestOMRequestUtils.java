@@ -28,6 +28,7 @@ import java.util.UUID;
 
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.ozone.OmUtils;
+import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -49,6 +50,13 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .AddAclRequest;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
+import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
+
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.util.Time;
 
 /**
@@ -283,6 +291,22 @@ public final class TestOMRequestUtils {
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.SetVolumeProperty)
         .setSetVolumePropertyRequest(setVolumePropertyRequest).build();
+  }
+
+  public static OMRequest createVolumeAddAclRequest(String volumeName,
+      OzoneAcl acl) {
+    AddAclRequest.Builder addAclRequestBuilder = AddAclRequest.newBuilder();
+    addAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(ResourceType.VOLUME)
+        .setStoreType(StoreType.OZONE)
+        .build()));
+    if (acl != null) {
+      addAclRequestBuilder.setAcl(OzoneAcl.toProtobuf(acl));
+    }
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.AddAcl)
+        .setAddAclRequest(addAclRequestBuilder.build()).build();
   }
 
   /**
