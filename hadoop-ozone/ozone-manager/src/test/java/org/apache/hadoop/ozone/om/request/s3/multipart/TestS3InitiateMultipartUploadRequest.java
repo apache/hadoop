@@ -37,8 +37,8 @@ public class TestS3InitiateMultipartUploadRequest
 
   @Test
   public void testPreExecute() {
-    doPreExecute(UUID.randomUUID().toString(), UUID.randomUUID().toString(),
-        UUID.randomUUID().toString());
+    doPreExecuteInitiateMPU(UUID.randomUUID().toString(),
+        UUID.randomUUID().toString(), UUID.randomUUID().toString());
   }
 
 
@@ -52,7 +52,8 @@ public class TestS3InitiateMultipartUploadRequest
     TestOMRequestUtils.addVolumeAndBucketToDB(volumeName, bucketName,
         omMetadataManager);
 
-    OMRequest modifiedRequest = doPreExecute(volumeName, bucketName, keyName);
+    OMRequest modifiedRequest = doPreExecuteInitiateMPU(volumeName,
+        bucketName, keyName);
 
     S3InitiateMultipartUploadRequest s3InitiateMultipartUploadRequest =
         new S3InitiateMultipartUploadRequest(modifiedRequest);
@@ -97,7 +98,8 @@ public class TestS3InitiateMultipartUploadRequest
 
     TestOMRequestUtils.addVolumeToDB(volumeName, omMetadataManager);
 
-    OMRequest modifiedRequest = doPreExecute(volumeName, bucketName, keyName);
+    OMRequest modifiedRequest = doPreExecuteInitiateMPU(
+        volumeName, bucketName, keyName);
 
     S3InitiateMultipartUploadRequest s3InitiateMultipartUploadRequest =
         new S3InitiateMultipartUploadRequest(modifiedRequest);
@@ -126,7 +128,8 @@ public class TestS3InitiateMultipartUploadRequest
     String keyName = UUID.randomUUID().toString();
 
 
-    OMRequest modifiedRequest = doPreExecute(volumeName, bucketName, keyName);
+    OMRequest modifiedRequest = doPreExecuteInitiateMPU(volumeName, bucketName,
+        keyName);
 
     S3InitiateMultipartUploadRequest s3InitiateMultipartUploadRequest =
         new S3InitiateMultipartUploadRequest(modifiedRequest);
@@ -146,29 +149,5 @@ public class TestS3InitiateMultipartUploadRequest
     Assert.assertNull(omMetadataManager.getMultipartInfoTable()
         .get(multipartKey));
 
-  }
-
-
-
-  private OMRequest doPreExecute(String volumeName, String bucketName,
-      String keyName) {
-    OMRequest omRequest =
-        TestOMRequestUtils.createInitiateMPURequest(volumeName, bucketName,
-            keyName);
-
-    S3InitiateMultipartUploadRequest s3InitiateMultipartUploadRequest =
-        new S3InitiateMultipartUploadRequest(omRequest);
-
-    OMRequest modifiedRequest =
-        s3InitiateMultipartUploadRequest.preExecute(ozoneManager);
-
-    Assert.assertNotEquals(omRequest, modifiedRequest);
-    Assert.assertTrue(modifiedRequest.hasInitiateMultiPartUploadRequest());
-    Assert.assertNotNull(modifiedRequest.getInitiateMultiPartUploadRequest()
-        .getKeyArgs().getMultipartUploadID());
-    Assert.assertTrue(modifiedRequest.getInitiateMultiPartUploadRequest()
-        .getKeyArgs().getModificationTime() > 0);
-
-    return modifiedRequest;
   }
 }

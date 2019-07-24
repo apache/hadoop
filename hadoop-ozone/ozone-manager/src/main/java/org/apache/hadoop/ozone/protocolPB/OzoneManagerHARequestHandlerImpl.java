@@ -27,8 +27,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .Status;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .Type;
 
 /**
@@ -70,6 +68,7 @@ public class OzoneManagerHARequestHandlerImpl
     case CreateS3Bucket:
     case DeleteS3Bucket:
     case InitiateMultiPartUpload:
+    case CommitMultiPartUpload:
       //TODO: We don't need to pass transactionID, this will be removed when
       // complete write requests is changed to new model. And also we can
       // return OMClientResponse, then adding to doubleBuffer can be taken
@@ -81,12 +80,12 @@ public class OzoneManagerHARequestHandlerImpl
           omClientRequest.validateAndUpdateCache(getOzoneManager(),
               transactionLogIndex);
 
-      // If any error we have got when validateAndUpdateCache, OMResponse
-      // Status is set with Error Code other than OK, in that case don't
-      // add this to double buffer.
-      if (omClientResponse.getOMResponse().getStatus() == Status.OK) {
-        ozoneManagerDoubleBuffer.add(omClientResponse, transactionLogIndex);
-      }
+
+      // Add OMClient Response to double buffer.
+      // Each OMClient Response should handle what needs to be done in error
+      // case.
+      ozoneManagerDoubleBuffer.add(omClientResponse, transactionLogIndex);
+
       return omClientResponse.getOMResponse();
     default:
       // As all request types are not changed so we need to call handle
