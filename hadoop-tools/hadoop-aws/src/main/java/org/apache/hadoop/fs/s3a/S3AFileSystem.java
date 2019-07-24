@@ -2472,7 +2472,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @param newDir the current working directory.
    */
   public void setWorkingDirectory(Path newDir) {
-    workingDir = newDir;
+    workingDir = makeQualified(newDir);
   }
 
   /**
