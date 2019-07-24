@@ -169,6 +169,11 @@ public final class MiniOzoneHAClusterImpl extends MiniOzoneClusterImpl {
         throw new IllegalArgumentException("Number of active OMs cannot be " +
             "more than the total number of OMs");
       }
+
+      // If num of ActiveOMs is not set, set it to numOfOMs.
+      if (numOfActiveOMs == ACTIVE_OMS_NOT_SET) {
+        numOfActiveOMs = numOfOMs;
+      }
       DefaultMetricsSystem.setMiniClusterMode(true);
       initializeConfiguration();
       StorageContainerManager scm;
