@@ -259,7 +259,7 @@ public final class FSImageFormatProtobuf {
 
     /**
      * Given a FSImage FileSummary.section, return a LimitInput stream set to
-     * the starting position of the section and limited to the section length
+     * the starting position of the section and limited to the section length.
      * @param section The FileSummary.Section containing the offset and length
      * @param compressionCodec The compression codec in use, if any
      * @return
