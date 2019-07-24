@@ -296,12 +296,14 @@ public final class S3Guard {
         continue;
       }
 
+      final PathMetadata pathMetadata = new PathMetadata(s);
+
       if (!isAuthoritative){
         FileStatus status = dirMetaMap.get(s.getPath());
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, new PathMetadata(s), timeProvider, null);
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
         }
       }
 
@@ -312,7 +314,7 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(s);
+      boolean updated = dirMeta.put(pathMetadata);
       changed = changed || updated;
     }
 
