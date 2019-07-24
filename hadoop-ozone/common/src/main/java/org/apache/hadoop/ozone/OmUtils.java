@@ -199,6 +199,7 @@ public final class OmUtils {
     case LookupFile:
     case ListStatus:
     case GetAcl:
+    case DBUpdates:
       return true;
     case CreateVolume:
     case SetVolumeProperty:

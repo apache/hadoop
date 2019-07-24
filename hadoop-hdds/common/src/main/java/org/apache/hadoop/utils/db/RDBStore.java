@@ -345,8 +345,8 @@ public class RDBStore implements DBStore {
             transactionLogIterator.getBatch();
         long currSequenceNumber = result.sequenceNumber();
         if (flag && currSequenceNumber > 1 + sequenceNumber) {
-          throw new SequenceNumberNotFoundException("Unable to read data from " +
-              "RocksDB wal to get delta updates. It may have already been" +
+          throw new SequenceNumberNotFoundException("Unable to read data from" +
+              " RocksDB wal to get delta updates. It may have already been" +
               "flushed to SSTs.");
         }
         flag = false;
