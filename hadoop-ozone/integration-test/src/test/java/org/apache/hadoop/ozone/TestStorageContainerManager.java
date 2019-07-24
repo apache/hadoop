@@ -69,6 +69,7 @@ import org.apache.hadoop.hdds.scm.server.SCMStorageConfig;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.hdds.server.events.EventPublisher;
 import org.apache.hadoop.net.DNSToSwitchMapping;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.StaticMapping;
 import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -500,7 +501,9 @@ public class TestStorageContainerManager {
     String scmId = UUID.randomUUID().toString();
     conf.setClass(NET_TOPOLOGY_NODE_SWITCH_MAPPING_IMPL_KEY,
         StaticMapping.class, DNSToSwitchMapping.class);
-    StaticMapping.addNodeToRack(HddsUtils.getHostName(conf), "/rack1");
+    StaticMapping.addNodeToRack(NetUtils.normalizeHostNames(
+        Collections.singleton(HddsUtils.getHostName(conf))).get(0),
+        "/rack1");
 
     final int datanodeNum = 3;
     MiniOzoneCluster cluster = MiniOzoneCluster.newBuilder(conf)
@@ -520,21 +523,18 @@ public class TestStorageContainerManager {
       Thread.sleep(heartbeatCheckerIntervalMs * 2);
 
       List<DatanodeDetails> allNodes = scm.getScmNodeManager().getAllNodes();
-      Assert.assertTrue(allNodes.size() == datanodeNum);
-      for (int i = 0; i < allNodes.size(); i++) {
+      Assert.assertEquals(datanodeNum, allNodes.size());
+      for (DatanodeDetails node : allNodes) {
         DatanodeInfo datanodeInfo = (DatanodeInfo) scm.getScmNodeManager()
-            .getNodeByUuid(allNodes.get(i).getUuidString());
+            .getNodeByUuid(node.getUuidString());
         Assert.assertTrue((datanodeInfo.getLastHeartbeatTime() - start)
             >= heartbeatCheckerIntervalMs);
-        Assert.assertTrue(datanodeInfo.getUuidString()
-            .equals(datanodeInfo.getNetworkName()));
-        Assert.assertTrue(datanodeInfo.getNetworkLocation()
-            .equals("/rack1"));
+        Assert.assertEquals(datanodeInfo.getUuidString(),
+            datanodeInfo.getNetworkName());
+        Assert.assertEquals("/rack1", datanodeInfo.getNetworkLocation());
       }
     } finally {
-      if (cluster != null) {
-        cluster.shutdown();
-      }
+      cluster.shutdown();
     }
   }
 
