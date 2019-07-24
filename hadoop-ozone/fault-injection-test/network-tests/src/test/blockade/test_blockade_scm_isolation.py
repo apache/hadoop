@@ -55,12 +55,13 @@ def test_scm_isolation_one_node():
     containers = cluster.get_containers_on_datanode(dns[1])
 
     for container in containers:
-        container.wait_until_one_replica_is_closed()
+        container.wait_until_two_replicas_are_closed()
 
     for container in containers:
-        assert container.get_state(dns[0]) == 'OPEN'
         assert container.get_state(dns[1]) == 'CLOSED'
         assert container.get_state(dns[2]) == 'CLOSED'
+        assert container.get_state(dns[0]) == 'OPEN' or \
+            container.get_state(dns[0]) == 'CLOSED'
 
     cluster.restore_network()
 
@@ -107,7 +108,7 @@ def test_scm_isolation_two_node():
         if state == 'QUASI_CLOSED':
             assert container.get_state(dns[0]) == 'OPEN'
             assert container.get_state(dns[2]) == 'OPEN'
-        else :
+        else:
             assert container.get_state(dns[0]) == 'CLOSED'
             assert container.get_state(dns[2]) == 'CLOSED'
 
