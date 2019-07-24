@@ -301,7 +301,7 @@ public class ITestS3GuardTtl extends AbstractS3ATestBase {
     long oldTime = 100L;
     long newTime = 110L;
     long ttl = 9L;
-    final String basedir = getMethodName();
+    final String basedir = "testListingFilteredExpiredItems";
     final Path tombstonedPath = path(basedir + "/tombstonedPath");
     final Path baseDirPath = path(basedir);
     final List<Path> filesToCreate = new ArrayList<>();

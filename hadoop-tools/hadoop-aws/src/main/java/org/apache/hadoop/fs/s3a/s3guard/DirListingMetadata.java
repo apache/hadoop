@@ -255,9 +255,9 @@ public class DirListingMetadata extends ExpirableMetadata {
   public void removeExpiredEntriesFromListing(long ttl, long now) {
     final Iterator<Map.Entry<Path, PathMetadata>> iterator =
         listMap.entrySet().iterator();
-    while(iterator.hasNext()) {
+    while (iterator.hasNext()) {
       final Map.Entry<Path, PathMetadata> entry = iterator.next();
-      // we filter IF the lastupdated is not 0 and the entry is expired
+      // we filter iff the lastupdated is not 0 and the entry is expired
       if (entry.getValue().getLastUpdated() != 0
           && (entry.getValue().getLastUpdated() + ttl) <= now) {
         iterator.remove();

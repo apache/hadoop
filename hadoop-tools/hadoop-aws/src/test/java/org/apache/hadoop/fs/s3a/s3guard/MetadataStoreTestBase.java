@@ -109,7 +109,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   /** The MetadataStore contract used to test against. */
   private AbstractMSContract contract;
 
-  private MetadataStore ms;
+  protected MetadataStore ms;
 
   /**
    * @return reference to the test contract.
