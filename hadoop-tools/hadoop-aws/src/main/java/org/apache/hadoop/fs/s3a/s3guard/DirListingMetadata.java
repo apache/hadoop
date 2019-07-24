@@ -252,7 +252,8 @@ public class DirListingMetadata extends ExpirableMetadata {
    * @param ttl the ttl time
    * @param now the current time
    */
-  public void removeExpiredEntriesFromListing(long ttl, long now) {
+  public synchronized void removeExpiredEntriesFromListing(long ttl,
+      long now) {
     final Iterator<Map.Entry<Path, PathMetadata>> iterator =
         listMap.entrySet().iterator();
     while (iterator.hasNext()) {

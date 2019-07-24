@@ -74,7 +74,6 @@ public class DDBPathMetadata extends PathMetadata {
   @Override public String toString() {
     return "DDBPathMetadata{" +
         "isAuthoritativeDir=" + isAuthoritativeDir +
-        ", lastUpdated=" + this.getLastUpdated() +
         ", PathMetadata=" + super.toString() +
         '}';
   }
