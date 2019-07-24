@@ -19,6 +19,7 @@ import re
 import time
 import logging
 import ozone.util
+import pytest
 
 from ozone.cluster import OzoneCluster
 
@@ -35,6 +36,8 @@ def teardown_function():
     cluster.stop()
 
 
+@pytest.mark.skip(reason="The test-case fails intermittently."
+                         "See HDDS-1817 for more info.")
 def test_client_failure_isolate_two_datanodes():
     """
     In this test, all DNs are isolated from each other.
@@ -66,7 +69,7 @@ def test_client_failure_isolate_two_datanodes():
     cluster.partition_network(first_set, second_set, third_set)
 
     exit_code, output = oz_client.run_freon(1, 1, 1, 10240)
-    assert re.search("Status: Failed", output) is not None
+    assert exit_code != 0, "freon run should have failed."
 
     oz_client.get_key(volume_name, bucket_name, key_name, "/tmp/")
 
@@ -76,6 +79,7 @@ def test_client_failure_isolate_two_datanodes():
     assert file_checksum == key_checksum
 
 
+@pytest.mark.skip(reason="HDDS-1817")
 def test_client_failure_isolate_one_datanode():
     """
     In this test, one of the DNs is isolated from all other nodes.
@@ -106,7 +110,7 @@ def test_client_failure_isolate_one_datanode():
 
     exit_code, output = oz_client.run_freon(1, 1, 1, 10240)
     assert re.search("3 way commit failed", output) is not None
-    assert re.search("Status: Success", output) is not None
+    assert exit_code == 0, "freon run failed with output=[%s]" % output
 
     oz_client.get_key(volume_name, bucket_name, key_name, "/tmp/")
 
