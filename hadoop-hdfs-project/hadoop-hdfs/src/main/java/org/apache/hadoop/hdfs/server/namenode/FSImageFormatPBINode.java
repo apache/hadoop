@@ -222,26 +222,24 @@ public final class FSImageFormatPBINode {
       final CopyOnWriteArrayList<IOException> exceptions =
           new CopyOnWriteArrayList<>();
       for (FileSummary.Section s : sections) {
-        service.submit(new Runnable() {
-          public void run() {
-            InputStream ins = null;
+        service.submit(() -> {
+          InputStream ins = null;
+          try {
+            ins = parent.getInputStreamForSection(s,
+                compressionCodec);
+            loadINodeDirectorySection(ins);
+          } catch (Exception e) {
+            LOG.error("An exception occurred loading INodeDirectories in " +
+                "parallel", e);
+            exceptions.add(new IOException(e));
+          } finally {
+            latch.countDown();
             try {
-              ins = parent.getInputStreamForSection(s,
-                  compressionCodec);
-              loadINodeDirectorySection(ins);
-            } catch (Exception e) {
-              LOG.error("An exception occurred loading INodeDirectories in " +
-                  "parallel", e);
-              exceptions.add(new IOException(e));
-            } finally {
-              latch.countDown();
-              try {
-                if (ins != null) {
-                  ins.close();
-                }
-              } catch (IOException ioe) {
-                LOG.warn("Failed to close the input stream, ignoring", ioe);
+              if (ins != null) {
+                ins.close();
               }
+            } catch (IOException ioe) {
+              LOG.warn("Failed to close the input stream, ignoring", ioe);
             }
           }
         });
@@ -385,23 +383,20 @@ public final class FSImageFormatPBINode {
           // The first inode section has a header which must be processed first
           loadINodeSectionHeader(ins, prog, currentStep);
         }
-
-        service.submit(new Runnable() {
-          public void run() {
+        service.submit(() -> {
+          try {
+            totalLoaded.addAndGet(loadINodesInSection(ins, null));
+            prog.setCount(Phase.LOADING_FSIMAGE, currentStep,
+                totalLoaded.get());
+          } catch (Exception e) {
+            LOG.error("An exception occurred loading INodes in parallel", e);
+            exceptions.add(new IOException(e));
+          } finally {
+            latch.countDown();
             try {
-              totalLoaded.addAndGet(loadINodesInSection(ins, null));
-              prog.setCount(Phase.LOADING_FSIMAGE, currentStep,
-                  totalLoaded.get());
-            } catch (Exception e) {
-              LOG.error("An exception occurred loading INodes in parallel", e);
-              exceptions.add(new IOException(e));
-            } finally {
-              latch.countDown();
-              try {
-                ins.close();
-              } catch (IOException ioe) {
-                LOG.warn("Failed to close the input stream, ignoring", ioe);
-              }
+              ins.close();
+            } catch (IOException ioe) {
+              LOG.warn("Failed to close the input stream, ignoring", ioe);
             }
           }
         });
