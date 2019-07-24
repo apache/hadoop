@@ -140,11 +140,31 @@ few configurations to your **hdfs-site.xml**:
    If too large, RPC time will increase as client requests will wait
    longer in the RPC queue before Observer tails edit logs and catches
    up the latest state of Active. The default value is 1min. It is
-   **highly recommend** to configure this to a much lower value.
+   **highly recommend** to configure this to a much lower value. It is also
+   recommended to configure backoff to be enabled when using low values; please
+   see below.
 
         <property>
           <name>dfs.ha.tail-edits.period</name>
           <value>0ms</value>
+        </property>
+
+*  **dfs.ha.tail-edits.period.backoff-max** - whether the Standby/Observer
+   NameNodes should perform backoff when tailing edits.
+
+   This determines the behavior of a Standby/Observer when it attempts to
+   tail edits from the JournalNodes and finds no edits available. This is a
+   common situation when the edit tailing period is very low, but the cluster
+   is not heavily loaded. Without this configuration, such a situation will
+   cause high utilization on the Standby/Observer as it constantly attempts to
+   read edits even though there are none available. With this configuration
+   enabled, exponential backoff will be performed when an edit tail attempt
+   returns 0 edits. This configuration specifies the maximum time to wait
+   between edit tailing attempts.
+
+        <property>
+          <name>dfs.ha.tail-edits.period</name>
+          <value>10s</value>
         </property>
 
 *  **dfs.journalnode.edit-cache-size.bytes** - the in-memory cache size,
