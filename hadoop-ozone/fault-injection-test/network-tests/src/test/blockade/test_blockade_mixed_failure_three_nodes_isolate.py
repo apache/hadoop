@@ -100,7 +100,7 @@ def test_three_dns_isolate_two_scm_failure():
     cluster.partition_network(first_set, second_set, third_set)
     containers = cluster.get_containers_on_datanode(dns[0])
     for container in containers:
-        container.wait_until_replica_is_closed(dns[0])
+        container.wait_until_replica_is_quasi_closed(dns[0])
 
     for container in containers:
         assert container.get_state(dns[0]) == 'QUASI_CLOSED'

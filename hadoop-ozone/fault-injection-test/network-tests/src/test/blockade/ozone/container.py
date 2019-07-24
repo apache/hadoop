@@ -83,8 +83,22 @@ class Container:
             for dn in dns:
                 if self.cluster.get_container_state(self.container_id, dn) == 'CLOSED':
                     return True
-                else:
-                    return False
+            return False
+
+        util.wait_until(predicate, int(os.environ["CONTAINER_STATUS_SLEEP"]), 10)
+        if not predicate():
+            raise Exception("None of the container replica is closed!")
+
+    def wait_until_two_replicas_are_closed(self):
+        def predicate():
+            dns = self.cluster.get_container_datanodes(self.container_id)
+            closed_count = 0
+            for dn in dns:
+                if self.cluster.get_container_state(self.container_id, dn) == 'CLOSED':
+                    closed_count = closed_count + 1
+            if closed_count > 1:
+                return True
+            return False
 
         util.wait_until(predicate, int(os.environ["CONTAINER_STATUS_SLEEP"]), 10)
         if not predicate():
@@ -92,11 +106,14 @@ class Container:
 
     def wait_until_all_replicas_are_closed(self):
         def predicate():
-            dns = self.cluster.get_container_datanodes(self.container_id)
-            for dn in dns:
-                if self.cluster.get_container_state(self.container_id, dn) != 'CLOSED':
-                    return False
-            return True
+            try:
+                dns = self.cluster.get_container_datanodes(self.container_id)
+                for dn in dns:
+                    if self.cluster.get_container_state(self.container_id, dn) != 'CLOSED':
+                        return False
+                return True
+            except ContainerNotFoundError:
+                return False
 
         util.wait_until(predicate, int(os.environ["CONTAINER_STATUS_SLEEP"]), 10)
         if not predicate():
@@ -105,7 +122,8 @@ class Container:
     def wait_until_replica_is_not_open_anymore(self, datanode):
         def predicate():
             try:
-                if self.cluster.get_container_state(self.container_id, datanode) != 'OPEN':
+                if self.cluster.get_container_state(self.container_id, datanode) != 'OPEN' and \
+                  self.cluster.get_container_state(self.container_id, datanode) != 'CLOSING':
                     return True
                 else:
                     return False

@@ -33,6 +33,7 @@ def teardown_function():
     cluster.stop()
 
 
+@pytest.mark.skip(reason="HDDS-1850")
 def test_isolate_single_datanode():
     """
     In this test case we will create a network partition in such a way that
