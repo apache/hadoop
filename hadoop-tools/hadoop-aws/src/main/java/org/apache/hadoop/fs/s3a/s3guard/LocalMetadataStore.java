@@ -129,32 +129,31 @@ public class LocalMetadataStore implements MetadataStore {
   @Override
   public void delete(Path p)
       throws IOException {
-    doDelete(p, false, true, ttlTimeProvider);
+    doDelete(p, false, true);
   }
 
   @Override
   public void forgetMetadata(Path p) throws IOException {
-    doDelete(p, false, false, null);
+    doDelete(p, false, false);
   }
 
   @Override
   public void deleteSubtree(Path path)
       throws IOException {
-    doDelete(path, true, true, ttlTimeProvider);
+    doDelete(path, true, true);
   }
 
   private synchronized void doDelete(Path p, boolean recursive,
-      boolean tombstone, ITtlTimeProvider ttlTp) {
+      boolean tombstone) {
 
     Path path = standardize(p);
 
     // Delete entry from file cache, then from cached parent directory, if any
-
-    deleteCacheEntries(path, tombstone, ttlTp);
+    deleteCacheEntries(path, tombstone);
 
     if (recursive) {
       // Remove all entries that have this dir as path prefix.
-      deleteEntryByAncestor(path, localCache, tombstone, ttlTp);
+      deleteEntryByAncestor(path, localCache, tombstone, ttlTimeProvider);
     }
   }
 
@@ -202,8 +201,16 @@ public class LocalMetadataStore implements MetadataStore {
       LOG.debug("listChildren({}) -> {}", path,
           listing == null ? "null" : listing.prettyPrint());
     }
-    // Make a copy so callers can mutate without affecting our state
-    return listing == null ? null : new DirListingMetadata(listing);
+
+    if (listing != null) {
+      listing.removeExpiredEntriesFromListing(
+          ttlTimeProvider.getMetadataTtl(), ttlTimeProvider.getNow());
+      LOG.debug("listChildren [after removing expired entries] ({}) -> {}",
+          path, listing.prettyPrint());
+      // Make a copy so callers can mutate without affecting our state
+      return new DirListingMetadata(listing);
+    }
+    return null;
   }
 
   @Override
@@ -309,15 +316,17 @@ public class LocalMetadataStore implements MetadataStore {
           DirListingMetadata parentDirMeta =
               new DirListingMetadata(parentPath, DirListingMetadata.EMPTY_DIR,
                   false);
+          parentDirMeta.setLastUpdated(meta.getLastUpdated());
           parentMeta.setDirListingMetadata(parentDirMeta);
         }
 
-        // Add the child status to the listing
-        parentMeta.getDirListingMeta().put(status);
+        // Add the child pathMetadata to the listing
+        parentMeta.getDirListingMeta().put(meta);
 
         // Mark the listing entry as deleted if the meta is set to deleted
         if(meta.isDeleted()) {
-          parentMeta.getDirListingMeta().markDeleted(path);
+          parentMeta.getDirListingMeta().markDeleted(path,
+              ttlTimeProvider.getNow());
         }
       }
     }
@@ -463,8 +472,8 @@ public class LocalMetadataStore implements MetadataStore {
           if(meta.hasDirMeta()){
             cache.invalidate(path);
           } else if(tombstone && meta.hasPathMeta()){
-            final PathMetadata pmTombstone = PathMetadata.tombstone(path);
-            pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
+            final PathMetadata pmTombstone = PathMetadata.tombstone(path,
+                ttlTimeProvider.getNow());
             meta.setPathMetadata(pmTombstone);
           } else {
             cache.invalidate(path);
@@ -489,8 +498,7 @@ public class LocalMetadataStore implements MetadataStore {
    * Update fileCache and dirCache to reflect deletion of file 'f'.  Call with
    * lock held.
    */
-  private void deleteCacheEntries(Path path, boolean tombstone,
-      ITtlTimeProvider ttlTp) {
+  private void deleteCacheEntries(Path path, boolean tombstone) {
     LocalMetadataEntry entry = localCache.getIfPresent(path);
     // If there's no entry, delete should silently succeed
     // (based on MetadataStoreTestBase#testDeleteNonExisting)
@@ -503,8 +511,8 @@ public class LocalMetadataStore implements MetadataStore {
     LOG.debug("delete file entry for {}", path);
     if(entry.hasPathMeta()){
       if (tombstone) {
-        PathMetadata pmd = PathMetadata.tombstone(path);
-        pmd.setLastUpdated(ttlTp.getNow());
+        PathMetadata pmd = PathMetadata.tombstone(path,
+            ttlTimeProvider.getNow());
         entry.setPathMetadata(pmd);
       } else {
         entry.setPathMetadata(null);
@@ -530,8 +538,7 @@ public class LocalMetadataStore implements MetadataStore {
       if (dir != null) {
         LOG.debug("removing parent's entry for {} ", path);
         if (tombstone) {
-          dir.markDeleted(path);
-          dir.setLastUpdated(ttlTp.getNow());
+          dir.markDeleted(path, ttlTimeProvider.getNow());
         } else {
           dir.remove(path);
         }
@@ -613,7 +620,8 @@ public class LocalMetadataStore implements MetadataStore {
       if (directory == null || directory.isDeleted()) {
         S3AFileStatus status = new S3AFileStatus(Tristate.FALSE, parent,
             username);
-        PathMetadata meta = new PathMetadata(status, Tristate.FALSE, false);
+        PathMetadata meta = new PathMetadata(status, Tristate.FALSE, false,
+            ttlTimeProvider.getNow());
         newDirs.add(meta);
       } else {
         break;

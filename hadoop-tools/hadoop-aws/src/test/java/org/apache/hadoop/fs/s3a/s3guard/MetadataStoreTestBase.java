@@ -109,7 +109,7 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
   /** The MetadataStore contract used to test against. */
   private AbstractMSContract contract;
 
-  private MetadataStore ms;
+  protected MetadataStore ms;
 
   /**
    * @return reference to the test contract.
@@ -554,7 +554,8 @@ public abstract class MetadataStoreTestBase extends HadoopTestBase {
 
     DirListingMetadata dirMeta = ms.listChildren(strToPath("/a1/b1"));
     dirMeta.setAuthoritative(true);
-    dirMeta.put(makeFileStatus("/a1/b1/file_new", 100));
+    dirMeta.put(new PathMetadata(
+        makeFileStatus("/a1/b1/file_new", 100)));
     ms.put(dirMeta, null);
 
     dirMeta = ms.listChildren(strToPath("/a1/b1"));
