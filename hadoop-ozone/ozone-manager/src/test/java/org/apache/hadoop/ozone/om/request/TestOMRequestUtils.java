@@ -36,6 +36,8 @@ import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartCommitUploadPartRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateRequest;
@@ -313,6 +315,36 @@ public final class TestOMRequestUtils {
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.InitiateMultiPartUpload)
         .setInitiateMultiPartUploadRequest(multipartInfoInitiateRequest)
+        .build();
+  }
+
+  /**
+   * Create OMRequest which encapsulates InitiateMultipartUpload request.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   */
+  public static OMRequest createCommitPartMPURequest(String volumeName,
+      String bucketName, String keyName, long clientID, long size,
+      String multipartUploadID, int partNumber) {
+
+    // Just set dummy size.
+    KeyArgs.Builder keyArgs =
+        KeyArgs.newBuilder().setVolumeName(volumeName).setKeyName(keyName)
+            .setBucketName(bucketName)
+            .setDataSize(size)
+            .setMultipartNumber(partNumber)
+            .setMultipartUploadID(multipartUploadID)
+            .addAllKeyLocations(new ArrayList<>());
+    // Just adding dummy list. As this is for UT only.
+
+    MultipartCommitUploadPartRequest multipartCommitUploadPartRequest =
+        MultipartCommitUploadPartRequest.newBuilder()
+            .setKeyArgs(keyArgs).setClientID(clientID).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CommitMultiPartUpload)
+        .setCommitMultiPartUploadRequest(multipartCommitUploadPartRequest)
         .build();
   }
 
