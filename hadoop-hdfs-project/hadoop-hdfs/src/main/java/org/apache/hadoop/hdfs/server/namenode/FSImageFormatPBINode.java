@@ -739,8 +739,7 @@ public final class FSImageFormatPBINode {
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
-        if (outputInodes >=
-            FSImageFormatProtobuf.Saver.INODES_PER_SUB_SECTION) {
+        if (outputInodes >= parent.getInodesPerSubSection()) {
           outputInodes = 0;
           parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_DIR_SUB);
@@ -768,7 +767,7 @@ public final class FSImageFormatPBINode {
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
-        if (i % FSImageFormatProtobuf.Saver.INODES_PER_SUB_SECTION == 0) {
+        if (i % parent.getInodesPerSubSection() == 0) {
           parent.commitSubSection(summary,
               FSImageFormatProtobuf.SectionName.INODE_SUB);
         }

@@ -262,7 +262,7 @@ public final class FSImageFormatProtobuf {
      * the starting position of the section and limited to the section length.
      * @param section The FileSummary.Section containing the offset and length
      * @param compressionCodec The compression codec in use, if any
-     * @return
+     * @return An InputStream for the given section
      * @throws IOException
      */
     public InputStream getInputStreamForSection(FileSummary.Section section,
@@ -558,8 +558,8 @@ public final class FSImageFormatProtobuf {
 
   public static final class Saver {
     public static final int CHECK_CANCEL_INTERVAL = 4096;
-    public static boolean WRITE_SUB_SECTIONS = false;
-    public static int INODES_PER_SUB_SECTION = Integer.MAX_VALUE;
+    private boolean writeSubSections = false;
+    private int inodesPerSubSection = Integer.MAX_VALUE;
 
     private final SaveNamespaceContext context;
     private final SaverContext saverContext;
@@ -590,6 +590,14 @@ public final class FSImageFormatProtobuf {
 
     public SaverContext getSaverContext() {
       return saverContext;
+    }
+
+    public int getInodesPerSubSection() {
+      return inodesPerSubSection;
+    }
+
+    public boolean shouldWriteSubSections() {
+      return writeSubSections;
     }
 
     /**
@@ -633,7 +641,7 @@ public final class FSImageFormatProtobuf {
      */
     public void commitSubSection(FileSummary.Builder summary, SectionName name)
         throws IOException {
-      if (!WRITE_SUB_SECTIONS) {
+      if (!writeSubSections) {
         return;
       }
 
@@ -695,13 +703,12 @@ public final class FSImageFormatProtobuf {
           DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
           DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
 
-
       if (parallelEnabled) {
         if (compressionEnabled) {
           LOG.warn("Parallel Image loading is not supported when {} is set to" +
               " true. Parallel loading will be disabled.",
               DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY);
-          WRITE_SUB_SECTIONS = false;
+          writeSubSections = false;
           return;
         }
         if (targetSections <= 0) {
@@ -717,7 +724,7 @@ public final class FSImageFormatProtobuf {
           LOG.warn("{} is set to {}. It must be greater than zero. Setting to" +
                   "default of {}",
               DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY,
-              targetSections,
+              inodeThreshold,
               DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_DEFAULT);
           inodeThreshold =
               DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_DEFAULT;
@@ -725,13 +732,13 @@ public final class FSImageFormatProtobuf {
         int inodeCount = context.getSourceNamesystem().dir.getInodeMapSize();
         // Only enable parallel sections if there are enough inodes
         if (inodeCount >= inodeThreshold) {
-          WRITE_SUB_SECTIONS = true;
+          writeSubSections = true;
           // Calculate the inodes per section rounded up to the nearest int
-          INODES_PER_SUB_SECTION = (inodeCount + targetSections - 1) /
+          inodesPerSubSection = (inodeCount + targetSections - 1) /
               targetSections;
         }
       } else {
-        WRITE_SUB_SECTIONS = false;
+        writeSubSections = false;
       }
     }
 
