@@ -529,7 +529,7 @@ public class FSImageFormatPBSnapshot {
         if (i % FSImageFormatProtobuf.Saver.CHECK_CANCEL_INTERVAL == 0) {
           context.checkCancelled();
         }
-        if (i % FSImageFormatProtobuf.Saver.INODES_PER_SUB_SECTION == 0) {
+        if (i % parent.getInodesPerSubSection() == 0) {
           parent.commitSubSection(headers,
               FSImageFormatProtobuf.SectionName.SNAPSHOT_DIFF_SUB);
         }
