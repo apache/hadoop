@@ -137,10 +137,6 @@ public class TestSCMContainerPlacementRackAware {
         datanodeDetails.get(2)));
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(1),
         datanodeDetails.get(2)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
-        datanodeDetails.get(3)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(2),
-        datanodeDetails.get(3)));
   }
 
   @Test
@@ -188,7 +184,7 @@ public class TestSCMContainerPlacementRackAware {
 
     // 5 replicas. there are only 3 racks. policy with fallback should
     // allocate the 5th datanode though it will break the rack rule(first
-    // 2 replicas on same rack, others are different racks).
+    // 2 replicas on same rack, others on different racks).
     int nodeNum = 5;
     List<DatanodeDetails>  datanodeDetails =
         policy.chooseDatanodes(null, null, nodeNum, 15);
@@ -199,10 +195,6 @@ public class TestSCMContainerPlacementRackAware {
         datanodeDetails.get(2)));
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(1),
         datanodeDetails.get(2)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
-        datanodeDetails.get(3)));
-    Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(2),
-        datanodeDetails.get(3)));
   }
 
 

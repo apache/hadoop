@@ -874,15 +874,13 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public OmMultipartInfo initiateMultipartUpload(OmKeyArgs omKeyArgs) throws
       IOException {
-    long time = Time.monotonicNowNanos();
-    String uploadID = UUID.randomUUID().toString() + "-" + time;
-    return applyInitiateMultipartUpload(omKeyArgs, uploadID);
+    Preconditions.checkNotNull(omKeyArgs);
+    String uploadID = UUID.randomUUID().toString() + "-" + UniqueId.next();
+    return createMultipartInfo(omKeyArgs, uploadID);
   }
 
-  public OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs keyArgs,
+  private OmMultipartInfo createMultipartInfo(OmKeyArgs keyArgs,
       String multipartUploadID) throws IOException {
-    Preconditions.checkNotNull(keyArgs);
-    Preconditions.checkNotNull(multipartUploadID);
     String volumeName = keyArgs.getVolumeName();
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();
@@ -1398,17 +1396,10 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
+
       List<OzoneAclInfo> newAcls = new ArrayList<>(keyInfo.getAcls());
       OzoneAclInfo newAcl = null;
       for(OzoneAclInfo a: keyInfo.getAcls()) {
@@ -1444,7 +1435,7 @@ public class KeyManagerImpl implements KeyManager {
           .setDataSize(keyInfo.getDataSize())
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Add acl operation failed for key:{}/{}/{}", volume,
@@ -1477,16 +1468,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAclInfo> newAcls = new ArrayList<>(keyInfo.getAcls());
@@ -1531,7 +1514,7 @@ public class KeyManagerImpl implements KeyManager {
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
 
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Remove acl operation failed for key:{}/{}/{}", volume,
@@ -1564,16 +1547,8 @@ public class KeyManagerImpl implements KeyManager {
       validateBucket(volume, bucket);
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      Table keyTable;
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
-        keyTable = metadataManager.getOpenKeyTable();
-      } else {
-        keyTable = metadataManager.getKeyTable();
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAclInfo> newAcls = new ArrayList<>();
@@ -1594,7 +1569,7 @@ public class KeyManagerImpl implements KeyManager {
           .setFileEncryptionInfo(keyInfo.getFileEncryptionInfo())
           .build();
 
-      keyTable.put(objectKey, newObj);
+      metadataManager.getKeyTable().put(objectKey, newObj);
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Set acl operation failed for key:{}/{}/{}", volume,
@@ -1626,11 +1601,7 @@ public class KeyManagerImpl implements KeyManager {
       String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
       OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
       if (keyInfo == null) {
-        keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-        if (keyInfo == null) {
-          throw new OMException("Key not found. Key:" +
-              objectKey, KEY_NOT_FOUND);
-        }
+        throw new OMException("Key not found. Key:" + objectKey, KEY_NOT_FOUND);
       }
 
       List<OzoneAcl> acls = new ArrayList<>();
@@ -2123,9 +2094,14 @@ public class KeyManagerImpl implements KeyManager {
       for (OmKeyLocationInfoGroup key : keyInfo.getKeyLocationVersions()) {
         key.getLocationList().forEach(k -> {
           List<DatanodeDetails> nodes = k.getPipeline().getNodes();
+          if (nodes == null || nodes.size() == 0) {
+            LOG.warn("Datanodes for pipeline {} is empty",
+                k.getPipeline().getId().toString());
+            return;
+          }
           List<String> nodeList = new ArrayList<>();
           nodes.stream().forEach(node ->
-              nodeList.add(node.getNetworkName()));
+              nodeList.add(node.getUuidString()));
           try {
             List<DatanodeDetails> sortedNodes = scmClient.getBlockClient()
                 .sortDatanodes(nodeList, clientMachine);

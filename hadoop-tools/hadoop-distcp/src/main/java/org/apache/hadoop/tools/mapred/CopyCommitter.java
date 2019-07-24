@@ -109,13 +109,6 @@ public class CopyCommitter extends FileOutputCommitter {
 
     cleanupTempFiles(jobContext);
 
-    String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
-    final boolean preserveRawXattrs =
-        conf.getBoolean(DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
-    if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
-      preserveFileAttributesForDirectories(conf);
-    }
-
     try {
       if (conf.getBoolean(DistCpConstants.CONF_LABEL_DELETE_MISSING, false)) {
         deleteMissing(conf);
@@ -124,6 +117,13 @@ public class CopyCommitter extends FileOutputCommitter {
       } else if (conf.get(CONF_LABEL_TRACK_MISSING) != null) {
         // save missing information to a directory
         trackMissing(conf);
+      }
+      // for HDFS-14621, should preserve status after -delete
+      String attributes = conf.get(DistCpConstants.CONF_LABEL_PRESERVE_STATUS);
+      final boolean preserveRawXattrs = conf.getBoolean(
+              DistCpConstants.CONF_LABEL_PRESERVE_RAWXATTRS, false);
+      if ((attributes != null && !attributes.isEmpty()) || preserveRawXattrs) {
+        preserveFileAttributesForDirectories(conf);
       }
       taskAttemptContext.setStatus("Commit Successful");
     }

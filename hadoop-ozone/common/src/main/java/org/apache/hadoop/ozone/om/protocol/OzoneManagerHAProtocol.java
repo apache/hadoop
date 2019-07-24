@@ -18,9 +18,6 @@
 
 package org.apache.hadoop.ozone.om.protocol;
 
-import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
-
 import java.io.IOException;
 
 /**
@@ -32,21 +29,10 @@ public interface OzoneManagerHAProtocol {
   /**
    * Store the snapshot index i.e. the raft log index, corresponding to the
    * last transaction applied to the OM RocksDB, in OM metadata dir on disk.
+   * @param flush flush the OM DB to disk if true
    * @return the snapshot index
    * @throws IOException
    */
-  long saveRatisSnapshot() throws IOException;
-
-  /**
-   * Initiate multipart upload for the specified key.
-   *
-   * This will be called only from applyTransaction.
-   * @param omKeyArgs
-   * @param multipartUploadID
-   * @return OmMultipartInfo
-   * @throws IOException
-   */
-  OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs omKeyArgs,
-      String multipartUploadID) throws IOException;
+  long saveRatisSnapshot(boolean flush) throws IOException;
 
 }

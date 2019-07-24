@@ -137,8 +137,10 @@ public final class TestUtils {
    */
   public static DatanodeDetails getDatanodeDetails(
       RegisteredCommand registeredCommand) {
-    return createDatanodeDetails(registeredCommand.getDatanodeUUID(),
-        registeredCommand.getHostName(), registeredCommand.getIpAddress(),
+    return createDatanodeDetails(
+        registeredCommand.getDatanode().getUuidString(),
+        registeredCommand.getDatanode().getHostName(),
+        registeredCommand.getDatanode().getIpAddress(),
         null);
   }
 

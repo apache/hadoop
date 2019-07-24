@@ -1630,6 +1630,14 @@
     <description>Byte limit for Raft's Log Worker queue.
     </description>
   </property>
+  <property>
+    <name>ozone.om.ratis.log.purge.gap</name>
+    <value>1000000</value>
+    <tag>OZONE, OM, RATIS</tag>
+    <description>The minimum gap between log indices for Raft server to purge
+      its log segments after taking snapshot.
+    </description>
+  </property>
 
   <property>
     <name>ozone.om.ratis.snapshot.auto.trigger.threshold</name>

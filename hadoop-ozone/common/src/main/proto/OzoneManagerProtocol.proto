@@ -73,8 +73,6 @@ enum Type {
   ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
-
-  ApplyInitiateMultiPartUpload = 52;
   DBUpdates = 53;
 
   GetDelegationToken = 61;
@@ -139,8 +137,11 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+<<<<<<< HEAD
   optional MultipartInfoApplyInitiateRequest initiateMultiPartUploadApplyRequest = 52;
   optional DBUpdatesRequest                  dbUpdatesRequest              = 53;
+=======
+>>>>>>> upstream/trunk
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
@@ -284,6 +285,8 @@ enum Status {
     PREFIX_NOT_FOUND=50;
 
     S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
+
+    RATIS_ERROR = 52;
 }
 
 
@@ -921,11 +924,7 @@ message S3ListBucketsResponse {
 
 message MultipartInfoInitiateRequest {
     required KeyArgs keyArgs = 1;
-}
 
-message MultipartInfoApplyInitiateRequest {
-    required KeyArgs keyArgs = 1;
-    required string multipartUploadID = 2;
 }
 
 message MultipartInfoInitiateResponse {

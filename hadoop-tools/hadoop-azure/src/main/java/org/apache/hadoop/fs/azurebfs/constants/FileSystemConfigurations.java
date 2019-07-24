@@ -44,7 +44,7 @@ public final class FileSystemConfigurations {
   public static final int DEFAULT_READ_BUFFER_SIZE = 4 * ONE_MB;  // 4 MB
   public static final int MIN_BUFFER_SIZE = 16 * ONE_KB;  // 16 KB
   public static final int MAX_BUFFER_SIZE = 100 * ONE_MB;  // 100 MB
-  public static final long MAX_AZURE_BLOCK_SIZE = 512 * 1024 * 1024L;
+  public static final long MAX_AZURE_BLOCK_SIZE = 256 * 1024 * 1024L; // changing default abfs blocksize to 256MB
   public static final String AZURE_BLOCK_LOCATION_HOST_DEFAULT = "localhost";
 
   public static final int MAX_CONCURRENT_READ_THREADS = 12;

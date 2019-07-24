@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdds.protocol;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
@@ -193,11 +194,11 @@ public class DatanodeDetails extends NodeImpl implements
       builder.addPort(newPort(
           Port.Name.valueOf(port.getName().toUpperCase()), port.getValue()));
     }
-    if (datanodeDetailsProto.hasNetworkLocation()) {
-      builder.setNetworkLocation(datanodeDetailsProto.getNetworkLocation());
-    }
     if (datanodeDetailsProto.hasNetworkName()) {
       builder.setNetworkName(datanodeDetailsProto.getNetworkName());
+    }
+    if (datanodeDetailsProto.hasNetworkLocation()) {
+      builder.setNetworkLocation(datanodeDetailsProto.getNetworkLocation());
     }
     return builder.build();
   }
@@ -219,8 +220,12 @@ public class DatanodeDetails extends NodeImpl implements
     if (certSerialId != null) {
       builder.setCertSerialId(certSerialId);
     }
-    builder.setNetworkLocation(getNetworkLocation());
-    builder.setNetworkName(getNetworkName());
+    if (!Strings.isNullOrEmpty(getNetworkName())) {
+      builder.setNetworkName(getNetworkName());
+    }
+    if (!Strings.isNullOrEmpty(getNetworkLocation())) {
+      builder.setNetworkLocation(getNetworkLocation());
+    }
 
     for (Port port : ports) {
       builder.addPorts(HddsProtos.Port.newBuilder()

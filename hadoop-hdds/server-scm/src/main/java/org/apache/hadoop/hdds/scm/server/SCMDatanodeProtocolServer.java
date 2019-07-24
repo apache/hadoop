@@ -265,15 +265,7 @@ public class SCMDatanodeProtocolServer implements
   @VisibleForTesting
   public static SCMRegisteredResponseProto getRegisteredResponse(
       RegisteredCommand cmd) {
-    return SCMRegisteredResponseProto.newBuilder()
-        // TODO : Fix this later when we have multiple SCM support.
-        // .setAddressList(addressList)
-        .setErrorCode(cmd.getError())
-        .setClusterID(cmd.getClusterID())
-        .setDatanodeUUID(cmd.getDatanodeUUID())
-        .setIpAddress(cmd.getIpAddress())
-        .setHostname(cmd.getHostName())
-        .build();
+    return cmd.getProtoBufMessage();
   }
 
   @Override

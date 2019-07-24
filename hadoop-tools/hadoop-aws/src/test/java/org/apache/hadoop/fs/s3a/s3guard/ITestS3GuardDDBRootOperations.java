@@ -234,7 +234,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
       assertDeleted(file, false);
 
 
-      assertTrue("Root directory delete failed",
+      assertFalse("Root directory delete failed",
           fs.delete(root, true));
 
       ContractTestUtils.touch(fs, file2);
