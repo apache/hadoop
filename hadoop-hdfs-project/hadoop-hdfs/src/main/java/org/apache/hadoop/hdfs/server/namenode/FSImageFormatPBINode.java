@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -237,7 +236,9 @@ public final class FSImageFormatPBINode {
             } finally {
               latch.countDown();
               try {
-                ins.close();
+                if (ins != null) {
+                  ins.close();
+                }
               } catch (IOException ioe) {
                 LOG.warn("Failed to close the input stream, ignoring", ioe);
               }
@@ -348,7 +349,7 @@ public final class FSImageFormatPBINode {
             dir.addToInodeMap(n);
           }
         }
-        cntr ++;
+        cntr++;
         if (counter != null) {
           counter.increment();
         }
@@ -386,11 +387,11 @@ public final class FSImageFormatPBINode {
         }
 
         service.submit(new Runnable() {
-           public void run() {
+          public void run() {
             try {
-               totalLoaded.addAndGet(loadINodesInSection(ins, null));
-               prog.setCount(Phase.LOADING_FSIMAGE, currentStep,
-                   totalLoaded.get());
+              totalLoaded.addAndGet(loadINodesInSection(ins, null));
+              prog.setCount(Phase.LOADING_FSIMAGE, currentStep,
+                  totalLoaded.get());
             } catch (Exception e) {
               LOG.error("An exception occurred loading INodes in parallel", e);
               exceptions.add(new IOException(e));
@@ -434,15 +435,15 @@ public final class FSImageFormatPBINode {
       }
     }
 
-    private boolean addToParent(INodeDirectory parent, INode child) {
-      if (parent == dir.rootDir && FSDirectory.isReservedName(child)) {
+    private boolean addToParent(INodeDirectory parentDir, INode child) {
+      if (parentDir == dir.rootDir && FSDirectory.isReservedName(child)) {
         throw new HadoopIllegalArgumentException("File name \""
             + child.getLocalName() + "\" is reserved. Please "
             + " change the name of the existing file or directory to another "
             + "name before upgrading to this release.");
       }
       // NOTE: This does not update space counts for parents
-      if (!parent.addChildAtLoading(child)) {
+      if (!parentDir.addChildAtLoading(child)) {
         return false;
       }
       return true;
@@ -728,7 +729,7 @@ public final class FSImageFormatPBINode {
               refList.add(inode.asReference());
               b.addRefChildren(refList.size() - 1);
             }
-            outputInodes ++;
+            outputInodes++;
           }
           INodeDirectorySection.DirEntry e = b.build();
           e.writeDelimitedTo(out);
