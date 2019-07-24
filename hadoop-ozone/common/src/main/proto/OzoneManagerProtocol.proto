@@ -137,11 +137,7 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
-<<<<<<< HEAD
-  optional MultipartInfoApplyInitiateRequest initiateMultiPartUploadApplyRequest = 52;
   optional DBUpdatesRequest                  dbUpdatesRequest              = 53;
-=======
->>>>>>> upstream/trunk
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
