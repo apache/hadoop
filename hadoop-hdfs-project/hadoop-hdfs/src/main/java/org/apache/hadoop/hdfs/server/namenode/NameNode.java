@@ -682,6 +682,10 @@ public class NameNode extends ReconfigurableBase implements
   @Override
   public void verifyToken(DelegationTokenIdentifier id, byte[] password)
       throws IOException {
+    // during startup namesystem is null, let client retry
+    if (namesystem == null) {
+      throw new RetriableException("Namenode is in startup mode");
+    }
     namesystem.verifyToken(id, password);
   }
 
