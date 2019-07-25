@@ -22,24 +22,11 @@ package org.apache.hadoop.ozone.om.request.s3.bucket;
 import java.util.UUID;
 
 import org.apache.commons.lang.RandomStringUtils;
-import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.audit.AuditLogger;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -49,45 +36,11 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 /**
  * Tests S3BucketCreateRequest class, which handles S3 CreateBucket request.
  */
-public class TestS3BucketCreateRequest {
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
-
-
-  @Before
-  public void setup() throws Exception {
-
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-  }
-
-  @After
-  public void stop() {
-    omMetrics.unRegister();
-    Mockito.framework().clearInlineMocks();
-  }
-
+public class TestS3BucketCreateRequest extends TestS3BucketRequest {
 
   @Test
   public void testPreExecute() throws Exception {
@@ -152,7 +105,8 @@ public class TestS3BucketCreateRequest {
 
     // Try create same bucket again
     OMClientResponse omClientResponse =
-        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 2);
+        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 2,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -177,7 +131,8 @@ public class TestS3BucketCreateRequest {
 
     // Try create same bucket again
     OMClientResponse omClientResponse =
-        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 2);
+        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 2,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -213,7 +168,8 @@ public class TestS3BucketCreateRequest {
 
 
     OMClientResponse omClientResponse =
-        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        s3BucketCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
 
     // As now after validateAndUpdateCache it should add entry to cache, get
     // should return non null value.

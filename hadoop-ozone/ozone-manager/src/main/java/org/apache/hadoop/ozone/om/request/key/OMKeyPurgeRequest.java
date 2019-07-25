@@ -1,6 +1,7 @@
 package org.apache.hadoop.ozone.om.request.key;
 
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.key.OMKeyPurgeResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -28,7 +29,8 @@ public class OMKeyPurgeRequest extends OMKeyRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     PurgeKeysRequest purgeKeysRequest = getOmRequest().getPurgeKeysRequest();
     List<String> purgeKeysList = purgeKeysRequest.getKeysList();
 
@@ -43,6 +45,11 @@ public class OMKeyPurgeRequest extends OMKeyRequest {
         .setSuccess(true)
         .build();
 
-    return new OMKeyPurgeResponse(purgeKeysList, omResponse);
+    OMClientResponse omClientResponse = new OMKeyPurgeResponse(purgeKeysList,
+        omResponse);
+    omClientResponse.setFlushFuture(
+        ozoneManagerDoubleBufferHelper.add(omClientResponse,
+            transactionLogIndex));
+    return omClientResponse;
   }
 }

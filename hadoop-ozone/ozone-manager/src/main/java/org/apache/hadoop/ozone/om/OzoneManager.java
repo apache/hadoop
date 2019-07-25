@@ -1375,7 +1375,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         OZONE_OM_HANDLER_COUNT_DEFAULT);
     RPC.setProtocolEngine(configuration, OzoneManagerProtocolPB.class,
         ProtobufRpcEngine.class);
-
     this.omServerProtocol = new OzoneManagerProtocolServerSideTranslatorPB(
         this, omRatisServer, isRatisEnabled);
 
@@ -1458,6 +1457,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         scheduleOMMetricsWriteTask = null;
       }
       omRpcServer.stop();
+      // When ratis is not enabled, we need to call stop() to stop
+      // OzoneManageDoubleBuffer in OM server protocol.
+      if (!isRatisEnabled) {
+        omServerProtocol.stop();
+      }
       if (omRatisServer != null) {
         omRatisServer.stop();
       }

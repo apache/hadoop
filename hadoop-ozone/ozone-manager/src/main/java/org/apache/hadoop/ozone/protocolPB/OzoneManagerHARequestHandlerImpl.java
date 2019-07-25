@@ -79,13 +79,8 @@ public class OzoneManagerHARequestHandlerImpl
           OzoneManagerRatisUtils.createClientRequest(omRequest);
       OMClientResponse omClientResponse =
           omClientRequest.validateAndUpdateCache(getOzoneManager(),
-              transactionLogIndex);
+              transactionLogIndex, ozoneManagerDoubleBuffer::add);
 
-
-      // Add OMClient Response to double buffer.
-      // Each OMClient Response should handle what needs to be done in error
-      // case.
-      ozoneManagerDoubleBuffer.add(omClientResponse, transactionLogIndex);
 
       return omClientResponse.getOMResponse();
     default:

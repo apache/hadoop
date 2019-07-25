@@ -107,7 +107,8 @@ public class TestOMKeyPurgeRequestAndResponse extends TestOMKeyRequest {
         new OMKeyPurgeRequest(preExecutedRequest);
 
     OMClientResponse omClientResponse =
-        omKeyPurgeRequest.validateAndUpdateCache(ozoneManager, 100L);
+        omKeyPurgeRequest.validateAndUpdateCache(ozoneManager, 100L,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = OMResponse.newBuilder()
         .setPurgeKeysResponse(PurgeKeysResponse.getDefaultInstance())

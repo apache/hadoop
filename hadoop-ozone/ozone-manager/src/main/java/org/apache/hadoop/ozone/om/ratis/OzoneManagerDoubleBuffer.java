@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om.ratis;
 
 import java.io.IOException;
 import java.util.Queue;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -61,6 +62,10 @@ public class OzoneManagerDoubleBuffer {
   private Queue<DoubleBufferEntry<OMClientResponse>> currentBuffer;
   private Queue<DoubleBufferEntry<OMClientResponse>> readyBuffer;
 
+
+  private Queue<CompletableFuture<Void>> currentFutureQueue;
+  private Queue<CompletableFuture<Void>> readyFutureQueue;
+
   private Daemon daemon;
   private final OMMetadataManager omMetadataManager;
   private final AtomicLong flushedTransactionCount = new AtomicLong(0);
@@ -71,10 +76,29 @@ public class OzoneManagerDoubleBuffer {
 
   private final OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot;
 
+  private final boolean isRatisEnabled;
+
   public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
       OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot) {
+    this(omMetadataManager, ozoneManagerRatisSnapShot, true);
+  }
+
+  public OzoneManagerDoubleBuffer(OMMetadataManager omMetadataManager,
+      OzoneManagerRatisSnapshot ozoneManagerRatisSnapShot,
+      boolean isRatisEnabled) {
     this.currentBuffer = new ConcurrentLinkedQueue<>();
     this.readyBuffer = new ConcurrentLinkedQueue<>();
+
+    this.isRatisEnabled = isRatisEnabled;
+
+    if (!isRatisEnabled) {
+      this.currentFutureQueue = new ConcurrentLinkedQueue<>();
+      this.readyFutureQueue = new ConcurrentLinkedQueue<>();
+    } else {
+      this.currentFutureQueue = null;
+      this.readyFutureQueue = null;
+    }
+
     this.omMetadataManager = omMetadataManager;
     this.ozoneManagerRatisSnapShot = ozoneManagerRatisSnapShot;
     this.ozoneManagerDoubleBufferMetrics =
@@ -87,6 +111,9 @@ public class OzoneManagerDoubleBuffer {
     daemon.start();
 
   }
+
+
+
 
   /**
    * Runs in a background thread and batches the transaction in currentBuffer
@@ -138,6 +165,15 @@ public class OzoneManagerDoubleBuffer {
 
           // set metrics.
           updateMetrics(flushedTransactionsSize);
+
+          if (!isRatisEnabled) {
+            // Once all entries are flushed, we can complete their future.
+            readyFutureQueue.iterator().forEachRemaining((entry) -> {
+              entry.complete(null);
+            });
+
+            readyFutureQueue.clear();
+          }
         }
       } catch (InterruptedException ex) {
         Thread.currentThread().interrupt();
@@ -248,10 +284,20 @@ public class OzoneManagerDoubleBuffer {
    * @param response
    * @param transactionIndex
    */
-  public synchronized void add(OMClientResponse response,
+  public synchronized CompletableFuture<Void> add(OMClientResponse response,
       long transactionIndex) {
     currentBuffer.add(new DoubleBufferEntry<>(transactionIndex, response));
     notify();
+
+    if (!isRatisEnabled) {
+      CompletableFuture< Void > future = new CompletableFuture<>();
+      currentFutureQueue.add(future);
+      return future;
+    } else {
+      // In Non-HA case we don't need future to be returned, and this return
+      // status is not used.
+      return null;
+    }
   }
 
   /**
@@ -279,6 +325,13 @@ public class OzoneManagerDoubleBuffer {
     Queue<DoubleBufferEntry<OMClientResponse>> temp = currentBuffer;
     currentBuffer = readyBuffer;
     readyBuffer = temp;
+
+    if (!isRatisEnabled) {
+      // Swap future queue.
+      Queue< CompletableFuture< Void > > tempFuture = currentFutureQueue;
+      currentFutureQueue = readyFutureQueue;
+      readyFutureQueue = tempFuture;
+    }
   }
 
   @VisibleForTesting

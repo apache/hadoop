@@ -22,9 +22,11 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
+import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -38,6 +40,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * This class is the server-side translator that forwards requests received on
@@ -52,6 +56,8 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final RequestHandler handler;
   private final boolean isRatisEnabled;
   private final OzoneManager ozoneManager;
+  private final AtomicLong transactionIndex = new AtomicLong(0L);
+  private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
 
   /**
    * Constructs an instance of the server handler.
@@ -65,6 +71,12 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
     this.isRatisEnabled = enableRatis;
+    this.ozoneManagerDoubleBuffer =
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(), (i) -> {
+          // Do nothing.
+          // For OM NON-HA code, there is no need to save transaction index.
+          // As we wait until the double buffer flushes DB to disk.
+        }, isRatisEnabled);
 
   }
 
@@ -107,7 +119,39 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
           }
         }
       } else {
-        return submitRequestDirectlyToOM(request);
+        //return submitRequestDirectlyToOM(request);
+        OMClientResponse omClientResponse = null;
+        long index = 0L;
+        try {
+          OMClientRequest omClientRequest =
+              OzoneManagerRatisUtils.createClientRequest(request);
+          if (omClientRequest != null) {
+            request = omClientRequest.preExecute(ozoneManager);
+            index = transactionIndex.incrementAndGet();
+            omClientRequest =
+                OzoneManagerRatisUtils.createClientRequest(request);
+            omClientResponse =
+                omClientRequest.validateAndUpdateCache(ozoneManager, index,
+                    ozoneManagerDoubleBuffer::add);
+          } else {
+            return submitRequestDirectlyToOM(request);
+          }
+        } catch(IOException ex) {
+          // As some of the preExecute returns error. So handle here.
+          return createErrorResponse(request, ex);
+        }
+
+        // I think for non-HA this should be done inside validateAndUpdateCache.
+
+
+        try {
+          omClientResponse.getFlushFuture().get();
+          LOG.trace("Future for {} is completed", request);
+        } catch (ExecutionException | InterruptedException ex) {
+          throw new ServiceException("Got exception during waiting for " +
+              "flush for request " + request, ex);
+        }
+        return omClientResponse.getOMResponse();
       }
     } finally {
       scope.close();
@@ -190,5 +234,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    */
   private OMResponse submitRequestDirectlyToOM(OMRequest request) {
     return handler.handle(request);
+  }
+
+  public void stop() {
+    if (!isRatisEnabled) {
+      ozoneManagerDoubleBuffer.stop();
+    }
   }
 }

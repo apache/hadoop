@@ -45,7 +45,7 @@ public class TestS3MultipartUploadAbortRequest extends TestS3MultipartRequest {
 
     OMClientResponse omClientResponse =
         s3InitiateMultipartUploadRequest.validateAndUpdateCache(ozoneManager,
-            1L);
+            1L, ozoneManagerDoubleBufferHelper);
 
     String multipartUploadID = omClientResponse.getOMResponse()
         .getInitiateMultiPartUploadResponse().getMultipartUploadID();
@@ -58,7 +58,8 @@ public class TestS3MultipartUploadAbortRequest extends TestS3MultipartRequest {
         new S3MultipartUploadAbortRequest(abortMPURequest);
 
     omClientResponse =
-        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L);
+        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L,
+            ozoneManagerDoubleBufferHelper);
 
 
     String multipartKey = omMetadataManager.getMultipartKey(volumeName,
@@ -92,7 +93,8 @@ public class TestS3MultipartUploadAbortRequest extends TestS3MultipartRequest {
         new S3MultipartUploadAbortRequest(abortMPURequest);
 
     OMClientResponse omClientResponse =
-        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L);
+        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L,
+            ozoneManagerDoubleBufferHelper);
 
     // Check table and response.
     Assert.assertEquals(
@@ -119,7 +121,8 @@ public class TestS3MultipartUploadAbortRequest extends TestS3MultipartRequest {
         new S3MultipartUploadAbortRequest(abortMPURequest);
 
     OMClientResponse omClientResponse =
-        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L);
+        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L,
+            ozoneManagerDoubleBufferHelper);
 
     // Check table and response.
     Assert.assertEquals(
@@ -147,7 +150,8 @@ public class TestS3MultipartUploadAbortRequest extends TestS3MultipartRequest {
         new S3MultipartUploadAbortRequest(abortMPURequest);
 
     OMClientResponse omClientResponse =
-        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L);
+        s3MultipartUploadAbortRequest.validateAndUpdateCache(ozoneManager, 2L,
+            ozoneManagerDoubleBufferHelper);
 
     // Check table and response.
     Assert.assertEquals(
