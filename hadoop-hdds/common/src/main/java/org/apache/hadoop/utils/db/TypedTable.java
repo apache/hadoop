@@ -206,6 +206,16 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   }
 
   @Override
+  public long getEstimatedKeyCount() throws IOException {
+    if (rawTable instanceof RDBTable) {
+      return rawTable.getEstimatedKeyCount();
+    }
+    throw new IllegalArgumentException(
+        "Unsupported operation getEstimatedKeyCount() on table type " +
+            rawTable.getClass().getCanonicalName());
+  }
+
+  @Override
   public void close() throws Exception {
     rawTable.close();
 
