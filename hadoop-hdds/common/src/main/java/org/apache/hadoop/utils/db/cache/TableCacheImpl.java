@@ -21,8 +21,9 @@ package org.apache.hadoop.utils.db.cache;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -47,7 +48,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
     CACHEVALUE extends CacheValue> implements TableCache<CACHEKEY, CACHEVALUE> {
 
   private final ConcurrentHashMap<CACHEKEY, CACHEVALUE> cache;
-  private final TreeSet<EpochEntry<CACHEKEY>> epochEntries;
+  private final NavigableSet<EpochEntry<CACHEKEY>> epochEntries;
   private ExecutorService executorService;
   private CacheCleanupPolicy cleanupPolicy;
 
@@ -55,7 +56,7 @@ public class TableCacheImpl<CACHEKEY extends CacheKey,
 
   public TableCacheImpl(CacheCleanupPolicy cleanupPolicy) {
     cache = new ConcurrentHashMap<>();
-    epochEntries = new TreeSet<>();
+    epochEntries = new ConcurrentSkipListSet<>();
     // Created a singleThreadExecutor, so one cleanup will be running at a
     // time.
     ThreadFactory build = new ThreadFactoryBuilder().setDaemon(true)
