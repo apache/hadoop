@@ -19,28 +19,16 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.UUID;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.MultipartInfoInitiateResponse;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
-import org.apache.hadoop.util.Time;
-
 /**
  * Class tests S3 Initiate MPU response.
  */
 public class TestS3InitiateMultipartUploadResponse
-    extends TestS3InitiateMultipartResponse {
+    extends TestS3MultipartResponse {
 
   @Test
   public void addDBToBatch() throws Exception {
@@ -49,35 +37,10 @@ public class TestS3InitiateMultipartUploadResponse
     String keyName = UUID.randomUUID().toString();
     String multipartUploadID = UUID.randomUUID().toString();
 
-
-    OmMultipartKeyInfo multipartKeyInfo = new OmMultipartKeyInfo(
-        multipartUploadID, new HashMap<>());
-
-    OmKeyInfo omKeyInfo = new OmKeyInfo.Builder()
-        .setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setKeyName(keyName)
-        .setCreationTime(Time.now())
-        .setModificationTime(Time.now())
-        .setReplicationType(HddsProtos.ReplicationType.RATIS)
-        .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
-        .setOmKeyLocationInfos(Collections.singletonList(
-            new OmKeyLocationInfoGroup(0, new ArrayList<>())))
-        .build();
-
-    OMResponse omResponse = OMResponse.newBuilder()
-        .setCmdType(OzoneManagerProtocolProtos.Type.InitiateMultiPartUpload)
-        .setStatus(OzoneManagerProtocolProtos.Status.OK)
-        .setSuccess(true).setInitiateMultiPartUploadResponse(
-            MultipartInfoInitiateResponse.newBuilder()
-            .setVolumeName(volumeName)
-            .setBucketName(bucketName)
-            .setKeyName(keyName)
-            .setMultipartUploadID(multipartUploadID)).build();
-
     S3InitiateMultipartUploadResponse s3InitiateMultipartUploadResponse =
-        new S3InitiateMultipartUploadResponse(multipartKeyInfo, omKeyInfo,
-            omResponse);
+        createS3InitiateMPUResponse(volumeName, bucketName, keyName,
+            multipartUploadID);
+
 
     s3InitiateMultipartUploadResponse.addToDBBatch(omMetadataManager,
         batchOperation);

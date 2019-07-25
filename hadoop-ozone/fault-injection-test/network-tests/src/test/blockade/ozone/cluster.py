@@ -146,6 +146,11 @@ class OzoneCluster(object):
         """
         Start Ozone Cluster in docker containers.
         """
+        # check if proper env $HDDS_VERSION and $HADOOP_RUNNER_VERSION
+        # are set.
+
+        # check if docker is up.
+
         self.__logger__.info("Starting Ozone Cluster")
         if Blockade.blockade_status() == 0:
             Blockade.blockade_destroy()
@@ -263,6 +268,8 @@ class OzoneCluster(object):
 
         # Reading the container file.
         exit_code, output = util.run_docker_command("cat " + container_path, datanode)
+        if exit_code != 0:
+            raise ContainerNotFoundError("Container not found!")
         data = output.split("\n")
         # Reading key value pairs from container file.
         key_value = [x for x in data if re.search(r"\w+:\s\w+", x)]

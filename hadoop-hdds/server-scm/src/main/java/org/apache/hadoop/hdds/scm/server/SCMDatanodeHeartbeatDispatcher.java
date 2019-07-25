@@ -49,6 +49,8 @@ import java.util.UUID;
 
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_ACTIONS;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CONTAINER_REPORT;
+import static org.apache.hadoop.hdds.scm.events.SCMEvents
+    .INCREMENTAL_CONTAINER_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.NODE_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.CMD_STATUS_REPORT;
 import static org.apache.hadoop.hdds.scm.events.SCMEvents.PIPELINE_ACTIONS;
@@ -119,6 +121,18 @@ public final class SCMDatanodeHeartbeatDispatcher {
                 datanodeDetails,
                 heartbeat.getContainerReport()));
 
+      }
+
+      final List<IncrementalContainerReportProto> icrs =
+          heartbeat.getIncrementalContainerReportList();
+
+      if (icrs.size() > 0) {
+        LOG.debug("Dispatching ICRs.");
+        for (IncrementalContainerReportProto icr : icrs) {
+          eventPublisher.fireEvent(INCREMENTAL_CONTAINER_REPORT,
+              new IncrementalContainerReportFromDatanode(
+                  datanodeDetails, icr));
+        }
       }
 
       if (heartbeat.hasContainerActions()) {

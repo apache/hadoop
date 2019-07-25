@@ -585,9 +585,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
     if (tombstone) {
       Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider "
           + "must not be null");
-      final PathMetadata pmTombstone = PathMetadata.tombstone(path);
-      // update the last updated field of record when putting a tombstone
-      pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
+      final PathMetadata pmTombstone = PathMetadata.tombstone(path,
+          ttlTimeProvider.getNow());
       Item item = PathMetadataDynamoDBTranslation.pathMetadataToItem(
           new DDBPathMetadata(pmTombstone));
       writeOp.retry(
@@ -785,8 +784,16 @@ public class DynamoDBMetadataStore implements MetadataStore,
           // get a null in DDBPathMetadata.
           DDBPathMetadata dirPathMeta = get(path);
 
-          return getDirListingMetadataFromDirMetaAndList(path, metas,
-              dirPathMeta);
+          // Filter expired entries.
+          final DirListingMetadata dirListing =
+              getDirListingMetadataFromDirMetaAndList(path, metas,
+                  dirPathMeta);
+          if(dirListing != null) {
+            dirListing.removeExpiredEntriesFromListing(
+                ttlTimeProvider.getMetadataTtl(),
+                ttlTimeProvider.getNow());
+          }
+          return dirListing;
         });
   }
 
@@ -947,7 +954,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
         S3AFileStatus status = makeDirStatus(username, parent);
         LOG.debug("Adding new ancestor entry {}", status);
         DDBPathMetadata meta = new DDBPathMetadata(status, Tristate.FALSE,
-            false);
+            false, ttlTimeProvider.getNow());
         newDirs.add(meta);
         // Do not update ancestor state here, as it
         // will happen in the innerPut() call. Were we to add it
@@ -1039,8 +1046,8 @@ public class DynamoDBMetadataStore implements MetadataStore,
       for (Path meta : pathsToDelete) {
         Preconditions.checkArgument(ttlTimeProvider != null, "ttlTimeProvider"
             + " must not be null");
-        final PathMetadata pmTombstone = PathMetadata.tombstone(meta);
-        pmTombstone.setLastUpdated(ttlTimeProvider.getNow());
+        final PathMetadata pmTombstone = PathMetadata.tombstone(meta,
+            ttlTimeProvider.getNow());
         tombstones.add(new DDBPathMetadata(pmTombstone));
       }
       // sort all the tombstones lowest first.
