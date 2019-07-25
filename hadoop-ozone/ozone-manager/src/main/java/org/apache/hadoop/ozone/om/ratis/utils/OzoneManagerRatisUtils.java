@@ -32,6 +32,10 @@ import org.apache.hadoop.ozone.om.request.key.OMKeyDeleteRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyPurgeRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRenameRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
+import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketDeleteRequest;
+import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUploadRequest;
+import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
+import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
@@ -102,6 +106,14 @@ public final class OzoneManagerRatisUtils {
       return new OMKeyPurgeRequest(omRequest);
     case CreateS3Bucket:
       return new S3BucketCreateRequest(omRequest);
+    case DeleteS3Bucket:
+      return new S3BucketDeleteRequest(omRequest);
+    case InitiateMultiPartUpload:
+      return new S3InitiateMultipartUploadRequest(omRequest);
+    case CommitMultiPartUpload:
+      return new S3MultipartUploadCommitPartRequest(omRequest);
+    case AbortMultiPartUpload:
+      return new S3MultipartUploadAbortRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;

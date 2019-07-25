@@ -31,7 +31,8 @@ public class DDBPathMetadata extends PathMetadata {
   private boolean isAuthoritativeDir;
 
   public DDBPathMetadata(PathMetadata pmd) {
-    super(pmd.getFileStatus(), pmd.isEmptyDirectory(), pmd.isDeleted());
+    super(pmd.getFileStatus(), pmd.isEmptyDirectory(), pmd.isDeleted(),
+        pmd.getLastUpdated());
     this.isAuthoritativeDir = false;
     this.setLastUpdated(pmd.getLastUpdated());
   }
@@ -42,16 +43,15 @@ public class DDBPathMetadata extends PathMetadata {
   }
 
   public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
-      boolean isDeleted) {
-    super(fileStatus, isEmptyDir, isDeleted);
+      boolean isDeleted, long lastUpdated) {
+    super(fileStatus, isEmptyDir, isDeleted, lastUpdated);
     this.isAuthoritativeDir = false;
   }
 
   public DDBPathMetadata(S3AFileStatus fileStatus, Tristate isEmptyDir,
       boolean isDeleted, boolean isAuthoritativeDir, long lastUpdated) {
-    super(fileStatus, isEmptyDir, isDeleted);
+    super(fileStatus, isEmptyDir, isDeleted, lastUpdated);
     this.isAuthoritativeDir = isAuthoritativeDir;
-    this.setLastUpdated(lastUpdated);
   }
 
   public boolean isAuthoritativeDir() {
@@ -74,7 +74,6 @@ public class DDBPathMetadata extends PathMetadata {
   @Override public String toString() {
     return "DDBPathMetadata{" +
         "isAuthoritativeDir=" + isAuthoritativeDir +
-        ", lastUpdated=" + this.getLastUpdated() +
         ", PathMetadata=" + super.toString() +
         '}';
   }

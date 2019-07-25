@@ -149,9 +149,16 @@ public final class FederationUtil {
       final R context, final Class<R> contextClass, final Class<T> clazz) {
     try {
       if (contextClass == null) {
-        // Default constructor if no context
-        Constructor<T> constructor = clazz.getConstructor();
-        return constructor.newInstance();
+        if (conf == null) {
+          // Default constructor if no context
+          Constructor<T> constructor = clazz.getConstructor();
+          return constructor.newInstance();
+        } else {
+          // Constructor with configuration but no context
+          Constructor<T> constructor = clazz.getConstructor(
+              Configuration.class);
+          return constructor.newInstance(conf);
+        }
       } else {
         // Constructor with context
         Constructor<T> constructor = clazz.getConstructor(

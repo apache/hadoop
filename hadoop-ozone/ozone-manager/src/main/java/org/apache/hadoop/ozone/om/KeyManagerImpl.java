@@ -874,15 +874,13 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   public OmMultipartInfo initiateMultipartUpload(OmKeyArgs omKeyArgs) throws
       IOException {
-    long time = Time.monotonicNowNanos();
-    String uploadID = UUID.randomUUID().toString() + "-" + time;
-    return applyInitiateMultipartUpload(omKeyArgs, uploadID);
+    Preconditions.checkNotNull(omKeyArgs);
+    String uploadID = UUID.randomUUID().toString() + "-" + UniqueId.next();
+    return createMultipartInfo(omKeyArgs, uploadID);
   }
 
-  public OmMultipartInfo applyInitiateMultipartUpload(OmKeyArgs keyArgs,
+  private OmMultipartInfo createMultipartInfo(OmKeyArgs keyArgs,
       String multipartUploadID) throws IOException {
-    Preconditions.checkNotNull(keyArgs);
-    Preconditions.checkNotNull(multipartUploadID);
     String volumeName = keyArgs.getVolumeName();
     String bucketName = keyArgs.getBucketName();
     String keyName = keyArgs.getKeyName();

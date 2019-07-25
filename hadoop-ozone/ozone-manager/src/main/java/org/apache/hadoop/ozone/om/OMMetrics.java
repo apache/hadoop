@@ -129,6 +129,8 @@ public class OMMetrics {
 
   private @Metric MutableCounterLong numS3BucketCreates;
   private @Metric MutableCounterLong numS3BucketCreateFails;
+  private @Metric MutableCounterLong numS3BucketDeletes;
+  private @Metric MutableCounterLong numS3BucketDeleteFails;
 
 
   public OMMetrics() {
@@ -149,6 +151,17 @@ public class OMMetrics {
   public void incNumS3BucketCreateFails() {
     numS3BucketCreateFails.incr();
   }
+
+  public void incNumS3BucketDeletes() {
+    numBucketOps.incr();
+    numS3BucketDeletes.incr();
+  }
+
+  public void incNumS3BucketDeleteFails() {
+    numBucketOps.incr();
+    numS3BucketDeleteFails.incr();
+  }
+
 
   public void incNumS3Buckets() {
     numS3Buckets.incr();
@@ -183,15 +196,18 @@ public class OMMetrics {
   }
 
   public void setNumVolumes(long val) {
-    this.numVolumes.incr(val);
+    long oldVal = this.numVolumes.value();
+    this.numVolumes.incr(val - oldVal);
   }
 
   public void setNumBuckets(long val) {
-    this.numBuckets.incr(val);
+    long oldVal = this.numBuckets.value();
+    this.numBuckets.incr(val - oldVal);
   }
 
   public void setNumKeys(long val) {
-    this.numKeys.incr(val);
+    long oldVal = this.numKeys.value();
+    this.numKeys.incr(val- oldVal);
   }
 
   public long getNumVolumes() {

@@ -41,6 +41,7 @@ public enum OMAction implements AuditAction {
 
   // S3 Bucket
   CREATE_S3_BUCKET,
+  DELETE_S3_BUCKET,
 
   // READ Actions
   CHECK_VOLUME_ACCESS,
@@ -55,6 +56,7 @@ public enum OMAction implements AuditAction {
   COMMIT_MULTIPART_UPLOAD_PARTKEY,
   COMPLETE_MULTIPART_UPLOAD,
   LIST_MULTIPART_UPLOAD_PARTS,
+  ABORT_MULTIPART_UPLOAD,
 
   //FS Actions
   GET_FILE_STATUS,

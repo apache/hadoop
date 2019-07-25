@@ -126,7 +126,7 @@ public class OMDBCheckpointServlet extends HttpServlet {
         // ratis snapshot first. This step also included flushing the OM DB.
         // Hence, we can set flush to false.
         flush = false;
-        ratisSnapshotIndex = om.saveRatisSnapshot();
+        ratisSnapshotIndex = om.saveRatisSnapshot(true);
       } else {
         ratisSnapshotIndex = om.loadRatisSnapshotIndex();
       }

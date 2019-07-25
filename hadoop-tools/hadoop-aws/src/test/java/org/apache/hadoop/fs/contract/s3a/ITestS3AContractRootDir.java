@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.contract.AbstractContractRootDirectoryTest;
 import org.apache.hadoop.fs.contract.AbstractFSContract;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 
+import org.junit.Ignore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +63,11 @@ public class ITestS3AContractRootDir extends
     return (S3AFileSystem) super.getFileSystem();
   }
 
+  @Override
+  @Ignore("S3 always return false when non-recursively remove root dir")
+  public void testRmNonEmptyRootDirNonRecursive() throws Throwable {
+  }
+
   /**
    * This is overridden to allow for eventual consistency on listings,
    * but only if the store does not have S3Guard protecting it.
@@ -69,9 +75,6 @@ public class ITestS3AContractRootDir extends
   @Override
   public void testListEmptyRootDirectory() throws IOException {
     int maxAttempts = 10;
-    if (getFileSystem().hasMetadataStore()) {
-      maxAttempts = 1;
-    }
     describe("Listing root directory; for consistency allowing "
         + maxAttempts + " attempts");
     for (int attempt = 1; attempt <= maxAttempts; ++attempt) {

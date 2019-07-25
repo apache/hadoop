@@ -296,12 +296,14 @@ public final class S3Guard {
         continue;
       }
 
+      final PathMetadata pathMetadata = new PathMetadata(s);
+
       if (!isAuthoritative){
         FileStatus status = dirMetaMap.get(s.getPath());
         if (status != null
             && s.getModificationTime() > status.getModificationTime()) {
           LOG.debug("Update ms with newer metadata of: {}", status);
-          S3Guard.putWithTtl(ms, new PathMetadata(s), timeProvider, null);
+          S3Guard.putWithTtl(ms, pathMetadata, timeProvider, null);
         }
       }
 
@@ -312,7 +314,7 @@ public final class S3Guard {
       // Any FileSystem has similar race conditions, but we could persist
       // a stale entry longer.  We could expose an atomic
       // DirListingMetadata#putIfNotPresent()
-      boolean updated = dirMeta.put(s);
+      boolean updated = dirMeta.put(pathMetadata);
       changed = changed || updated;
     }
 
@@ -712,12 +714,15 @@ public final class S3Guard {
    * @param ms metastore
    * @param path path to look up.
    * @param timeProvider nullable time provider
+   * @param needEmptyDirectoryFlag if true, implementation will
+   * return known state of directory emptiness.
    * @return the metadata or null if there as no entry.
    * @throws IOException failure.
    */
   public static PathMetadata getWithTtl(MetadataStore ms, Path path,
-      @Nullable ITtlTimeProvider timeProvider) throws IOException {
-    final PathMetadata pathMetadata = ms.get(path);
+      @Nullable ITtlTimeProvider timeProvider,
+      final boolean needEmptyDirectoryFlag) throws IOException {
+    final PathMetadata pathMetadata = ms.get(path, needEmptyDirectoryFlag);
     // if timeProvider is null let's return with what the ms has
     if (timeProvider == null) {
       LOG.debug("timeProvider is null, returning pathMetadata as is");

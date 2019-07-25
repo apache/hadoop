@@ -1021,7 +1021,7 @@ public class ITestDynamoDBMetadataStore extends MetadataStoreTestBase {
     }
 
     // Test with non-authoritative listing, non-empty dir
-    dlm.put(basicFileStatus(fileToPut, 1, false));
+    dlm.put(new PathMetadata(basicFileStatus(fileToPut, 1, false)));
     ms.put(dlm, null);
     final PathMetadata pmdResultNotEmpty = ms.get(dirToPut, true);
     assertEquals(Tristate.FALSE, pmdResultNotEmpty.isEmptyDirectory());

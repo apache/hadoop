@@ -2307,30 +2307,16 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Implements the specific logic to reject root directory deletion.
    * The caller must return the result of this call, rather than
    * attempt to continue with the delete operation: deleting root
-   * directories is never allowed. This method simply implements
-   * the policy of when to return an exit code versus raise an exception.
+   * directories is never allowed.
    * @param status filesystem status
    * @param recursive recursive flag from command
    * @return a return code for the operation
-   * @throws PathIOException if the operation was explicitly rejected.
    */
   private boolean rejectRootDirectoryDelete(S3AFileStatus status,
-      boolean recursive) throws IOException {
-    LOG.info("s3a delete the {} root directory. Path: {}. Recursive: {}",
-        bucket, status.getPath(), recursive);
-    boolean emptyRoot = status.isEmptyDirectory() == Tristate.TRUE;
-    if (emptyRoot) {
-      return true;
-    }
-    if (recursive) {
-      LOG.error("Cannot delete root path: {}", status.getPath());
-      return false;
-    } else {
-      // reject
-      String msg = "Cannot delete root path: " + status.getPath();
-      LOG.error(msg);
-      throw new PathIOException(bucket, msg);
-    }
+      boolean recursive) {
+    LOG.error("S3A: Cannot delete the {} root directory. Path: {}. Recursive: "
+            + "{}", bucket, status.getPath(), recursive);
+    return false;
   }
 
   /**
@@ -2623,7 +2609,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     // Check MetadataStore, if any.
     PathMetadata pm = null;
     if (hasMetadataStore()) {
-      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider);
+      pm = S3Guard.getWithTtl(metadataStore, path, ttlTimeProvider,
+          needEmptyDirectoryFlag);
     }
     Set<Path> tombstones = Collections.emptySet();
     if (pm != null) {

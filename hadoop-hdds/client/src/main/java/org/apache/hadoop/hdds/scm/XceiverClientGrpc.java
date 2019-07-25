@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -269,6 +270,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
       datanodeList = pipeline.getNodesInOrder();
     } else {
       datanodeList = pipeline.getNodes();
+      // Shuffle datanode list so that clients do not read in the same order
+      // every time.
+      Collections.shuffle(datanodeList);
     }
     for (DatanodeDetails dn : datanodeList) {
       try {

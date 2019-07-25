@@ -220,21 +220,21 @@ directory contains many thousands of files.
 
 Consider a directory `"/d"` with the contents:
 
-	a
-	part-0000001
-	part-0000002
-	...
-	part-9999999
+    a
+    part-0000001
+    part-0000002
+    ...
+    part-9999999
 
 
 If the number of files is such that HDFS returns a partial listing in each
 response, then, if a listing `listStatus("/d")` takes place concurrently with the operation
 `rename("/d/a","/d/z"))`, the result may be one of:
 
-	[a, part-0000001, ... , part-9999999]
-	[part-0000001, ... , part-9999999, z]
-	[a, part-0000001, ... , part-9999999, z]
-	[part-0000001, ... , part-9999999]
+    [a, part-0000001, ... , part-9999999]
+    [part-0000001, ... , part-9999999, z]
+    [a, part-0000001, ... , part-9999999, z]
+    [part-0000001, ... , part-9999999]
 
 While this situation is likely to be a rare occurrence, it MAY happen. In HDFS
 these inconsistent views are only likely when listing a directory with many children.
@@ -964,7 +964,7 @@ A path referring to a file is removed, return value: `True`
 Deleting an empty root does not change the filesystem state
 and may return true or false.
 
-    if isDir(FS, p) and isRoot(p) and children(FS, p) == {} :
+    if isRoot(p) and children(FS, p) == {} :
         FS ' = FS
         result = (undetermined)
 
@@ -972,6 +972,9 @@ There is no consistent return code from an attempt to delete the root directory.
 
 Implementations SHOULD return true; this avoids code which checks for a false
 return value from overreacting.
+
+*Object Stores*: see [Object Stores: root directory deletion](#object-stores-rm-root).
+
 
 ##### Empty (non-root) directory `recursive == False`
 
@@ -986,7 +989,7 @@ return true.
 ##### Recursive delete of non-empty root directory
 
 Deleting a root path with children and `recursive==True`
- can do one of two things.
+can generally have three outcomes:
 
 1. The POSIX model assumes that if the user has
 the correct permissions to delete everything,
@@ -1004,6 +1007,8 @@ filesystem is desired.
             FS' = FS
             result = False
 
+1. Object Stores: see [Object Stores: root directory deletion](#object-stores-rm-root).
+
 HDFS has the notion of *Protected Directories*, which are declared in
 the option `fs.protected.directories`. Any attempt to delete such a directory
 or a parent thereof raises an `AccessControlException`. Accordingly, any
@@ -1018,6 +1023,23 @@ which only system administrators should be able to perform.
 Any filesystem client which interacts with a remote filesystem which lacks
 such a security model, MAY reject calls to `delete("/", true)` on the basis
 that it makes it too easy to lose data.
+
+
+### <a name="object-stores-rm-root"></a> Object Stores: root directory deletion
+
+Some of the object store based filesystem implementations always return
+false when deleting the root, leaving the state of the store unchanged.
+
+    if isRoot(p) :
+        FS ' = FS
+        result = False
+
+This is irrespective of the recursive flag status or the state of the directory.
+
+This is a simplification which avoids the inevitably non-atomic scan and delete
+of the contents of the store. It also avoids any confusion about whether
+the operation actually deletes that specific store/container itself, and
+adverse consequences of the simpler permissions models of stores.
 
 ##### Recursive delete of non-root directory
 
