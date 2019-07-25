@@ -113,8 +113,8 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
 
   /**
    * Returns the key count of this Table.  Note the result can be inaccurate.
-   * @return
-   * @throws IOException
+   * @return Estimated key count of this Table
+   * @throws IOException on failure
    */
   long getEstimatedKeyCount() throws IOException;
 
