@@ -65,7 +65,7 @@ public class OzoneManagerDoubleBuffer {
   private final OMMetadataManager omMetadataManager;
   private final AtomicLong flushedTransactionCount = new AtomicLong(0);
   private final AtomicLong flushIterations = new AtomicLong(0);
-  private final AtomicBoolean isRunning = new AtomicBoolean(true);
+  private final AtomicBoolean isRunning = new AtomicBoolean(false);
   private OzoneManagerDoubleBufferMetrics ozoneManagerDoubleBufferMetrics;
   private long maxFlushedTransactionsInOneIteration;
 
@@ -80,6 +80,7 @@ public class OzoneManagerDoubleBuffer {
     this.ozoneManagerDoubleBufferMetrics =
         OzoneManagerDoubleBufferMetrics.create();
 
+    isRunning.set(true);
     // Daemon thread which runs in back ground and flushes transactions to DB.
     daemon = new Daemon(this::flushTransactions);
     daemon.setName("OMDoubleBufferFlushThread");
