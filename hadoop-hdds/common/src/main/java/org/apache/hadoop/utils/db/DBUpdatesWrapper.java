@@ -28,7 +28,7 @@ import java.util.List;
 public class DBUpdatesWrapper {
 
   private List<byte[]> dataList = new ArrayList<>();
-  private long currentSequenceNumber = 0;
+  private long currentSequenceNumber = -1;
 
   public void addWriteBatch(byte[] data, long sequenceNumber) {
     dataList.add(data);

@@ -47,7 +47,6 @@ import org.rocksdb.FlushOptions;
 import org.rocksdb.RocksDB;
 import org.rocksdb.RocksDBException;
 import org.rocksdb.TransactionLogIterator;
-import org.rocksdb.WriteBatch;
 import org.rocksdb.WriteOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -338,25 +337,32 @@ public class RDBStore implements DBStore {
       TransactionLogIterator transactionLogIterator =
           db.getUpdatesSince(sequenceNumber);
 
-      boolean flag = true;
+      // Only the first record needs to be checked if its seq number <
+      // ( 1 + passed_in_sequence_number). For example, if seqNumber passed
+      // in is 100, then we can read from the WAL ONLY if the first sequence
+      // number is <= 101. If it is 102, then 101 may already be flushed to
+      // SST. If it 99, we can skip 99 and 100, and then read from 101.
+
+      boolean checkValidStartingSeqNumber = true;
 
       while (transactionLogIterator.isValid()) {
         TransactionLogIterator.BatchResult result =
             transactionLogIterator.getBatch();
         long currSequenceNumber = result.sequenceNumber();
-        if (flag && currSequenceNumber > 1 + sequenceNumber) {
+        if (checkValidStartingSeqNumber &&
+            currSequenceNumber > 1 + sequenceNumber) {
           throw new SequenceNumberNotFoundException("Unable to read data from" +
               " RocksDB wal to get delta updates. It may have already been" +
               "flushed to SSTs.");
         }
-        flag = false;
-        if (currSequenceNumber == sequenceNumber) {
+        // If the above condition was not satisfied, then it is OK to reset
+        // the flag.
+        checkValidStartingSeqNumber = false;
+        if (currSequenceNumber <= sequenceNumber) {
           transactionLogIterator.next();
           continue;
         }
-        WriteBatch writeBatch = result.writeBatch();
-        byte[] writeBatchData = writeBatch.data();
-        dbUpdatesWrapper.addWriteBatch(writeBatchData,
+        dbUpdatesWrapper.addWriteBatch(result.writeBatch().data(),
             result.sequenceNumber());
         transactionLogIterator.next();
       }
