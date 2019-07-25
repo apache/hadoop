@@ -25,6 +25,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,7 +74,8 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
 
     SetBucketPropertyRequest setBucketPropertyRequest =
@@ -101,7 +103,9 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
 
     AuditLogger auditLogger = ozoneManager.getAuditLogger();
     OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
-
+    IOException exception = null;
+    boolean acquiredLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -109,23 +113,11 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE,
             volumeName, bucketName, null);
       }
-    } catch (IOException ex) {
-      LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
-          bucketName, volumeName, ex);
-      omMetrics.incNumBucketUpdateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.UPDATE_BUCKET,
-              omBucketArgs.toAuditMap(), ex, userInfo));
-      return new OMBucketSetPropertyResponse(omBucketInfo,
-          createErrorOMResponse(omResponse, ex));
-    }
 
-    IOException exception = null;
 
-    // acquire lock
-    omMetadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName,
-        bucketName);
-
-    try {
+      // acquire lock
+      acquiredLock =  omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
+          volumeName, bucketName);
 
       String bucketKey = omMetadataManager.getBucketKey(volumeName, bucketName);
       OmBucketInfo oldBucketInfo =
@@ -182,11 +174,24 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
           new CacheKey<>(bucketKey),
           new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
 
+      omResponse.setSetBucketPropertyResponse(
+          SetBucketPropertyResponse.newBuilder().build());
+      omClientResponse = new OMBucketSetPropertyResponse(omBucketInfo,
+        omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMBucketSetPropertyResponse(omBucketInfo,
+          createErrorOMResponse(omResponse, exception));
     } finally {
-      omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
-          bucketName);
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
+      if (acquiredLock) {
+        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+            bucketName);
+      }
     }
 
     // Performing audit logging outside of the lock.
@@ -197,15 +202,12 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
     if (exception == null) {
       LOG.debug("Setting bucket property for bucket:{} in volume:{}",
           bucketName, volumeName);
-      omResponse.setSetBucketPropertyResponse(
-          SetBucketPropertyResponse.newBuilder().build());
-      return new OMBucketSetPropertyResponse(omBucketInfo, omResponse.build());
+      return omClientResponse;
     } else {
       LOG.error("Setting bucket property failed for bucket:{} in volume:{}",
           bucketName, volumeName, exception);
       omMetrics.incNumBucketUpdateFails();
-      return new OMBucketSetPropertyResponse(omBucketInfo,
-          createErrorOMResponse(omResponse, exception));
+      return omClientResponse;
     }
   }
 

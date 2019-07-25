@@ -23,6 +23,7 @@ import java.util.Map;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +67,8 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     SetVolumePropertyRequest setVolumePropertyRequest =
         getOmRequest().getSetVolumePropertyRequest();
@@ -98,6 +100,10 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
     auditMap.put(OzoneConsts.QUOTA,
         String.valueOf(setVolumePropertyRequest.getQuotaInBytes()));
 
+    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    IOException exception = null;
+    boolean acquireVolumeLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -105,24 +111,11 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE, volume,
             null, null);
       }
-    } catch (IOException ex) {
-      LOG.error("Changing volume quota failed for volume:{} quota:{}", volume,
-          setVolumePropertyRequest.getQuotaInBytes(), ex);
-      omMetrics.incNumVolumeUpdateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.SET_QUOTA, auditMap,
-          ex, userInfo));
-      return new OMVolumeSetQuotaResponse(null,
-          createErrorOMResponse(omResponse, ex));
-    }
 
+      OmVolumeArgs omVolumeArgs = null;
 
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-
-    IOException exception = null;
-    OmVolumeArgs omVolumeArgs = null;
-
-    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
-    try {
+      acquireVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
+          volume);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
 
@@ -138,10 +131,23 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
           new CacheKey<>(dbVolumeKey),
           new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
 
+      omResponse.setSetVolumePropertyResponse(
+          SetVolumePropertyResponse.newBuilder().build());
+      omClientResponse = new OMVolumeSetQuotaResponse(omVolumeArgs,
+        omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMVolumeSetQuotaResponse(null,
+          createErrorOMResponse(omResponse, exception));
     } finally {
-      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
+      if (acquireVolumeLock) {
+        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      }
     }
 
     // Performing audit logging outside of the lock.
@@ -150,17 +156,17 @@ public class OMVolumeSetQuotaRequest extends OMVolumeRequest {
 
     // return response after releasing lock.
     if (exception == null) {
-      omResponse.setSetVolumePropertyResponse(
-          SetVolumePropertyResponse.newBuilder().build());
-      return new OMVolumeSetQuotaResponse(omVolumeArgs, omResponse.build());
+      LOG.debug("Changing volume quota is successfully completed for volume: " +
+          "{} quota:{}", volume, setVolumePropertyRequest.getQuotaInBytes());
     } else {
       omMetrics.incNumVolumeUpdateFails();
       LOG.error("Changing volume quota failed for volume:{} quota:{}", volume,
           setVolumePropertyRequest.getQuotaInBytes(), exception);
-      return new OMVolumeSetQuotaResponse(null,
-          createErrorOMResponse(omResponse, exception));
     }
+    return omClientResponse;
   }
 
 
 }
+
+

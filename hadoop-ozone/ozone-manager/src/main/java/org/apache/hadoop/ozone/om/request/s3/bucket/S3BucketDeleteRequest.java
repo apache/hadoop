@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -86,7 +87,8 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     S3DeleteBucketRequest s3DeleteBucketRequest =
         getOmRequest().getDeleteS3BucketRequest();
 
@@ -103,6 +105,7 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
     boolean acquiredBucketLock = false;
     String volumeName = null;
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -137,9 +140,22 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
             new CacheKey<>(s3BucketName),
             new CacheValue<>(Optional.absent(), transactionLogIndex));
       }
+
+      omResponse.setDeleteS3BucketResponse(
+          OzoneManagerProtocolProtos.S3DeleteBucketResponse.newBuilder());
+
+      omClientResponse = new S3BucketDeleteResponse(s3BucketName, volumeName,
+          omResponse.build());
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new S3BucketDeleteResponse(null, null,
+          createErrorOMResponse(omResponse, exception));
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquiredBucketLock) {
         omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
             s3BucketName);
@@ -161,16 +177,13 @@ public class S3BucketDeleteRequest extends OMVolumeRequest {
       LOG.debug("S3Bucket {} successfully deleted", s3BucketName);
       omMetrics.decNumS3Buckets();
       omMetrics.decNumBuckets();
-      omResponse.setDeleteS3BucketResponse(
-          OzoneManagerProtocolProtos.S3DeleteBucketResponse.newBuilder());
-      return new S3BucketDeleteResponse(s3BucketName, volumeName,
-          omResponse.build());
+
+      return omClientResponse;
     } else {
       LOG.error("S3Bucket Deletion failed for S3Bucket:{}", s3BucketName,
           exception);
       omMetrics.incNumS3BucketDeleteFails();
-      return new S3BucketDeleteResponse(null, null,
-          createErrorOMResponse(omResponse, exception));
+      return omClientResponse;
     }
   }
 

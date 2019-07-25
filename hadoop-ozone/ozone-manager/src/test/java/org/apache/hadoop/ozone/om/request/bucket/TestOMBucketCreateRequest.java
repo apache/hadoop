@@ -21,22 +21,11 @@ package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.util.UUID;
 
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.mockito.Mockito;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.ozone.audit.AuditLogger;
-import org.apache.hadoop.ozone.audit.AuditMessage;
-import org.apache.hadoop.ozone.om.OMConfigKeys;
+import org.junit.Assert;
+import org.junit.Test;
+
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
-import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
@@ -50,44 +39,10 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.util.Time;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-
 /**
  * Tests OMBucketCreateRequest class, which handles CreateBucket request.
  */
-public class TestOMBucketCreateRequest {
-
-  @Rule
-  public TemporaryFolder folder = new TemporaryFolder();
-
-  private OzoneManager ozoneManager;
-  private OMMetrics omMetrics;
-  private OMMetadataManager omMetadataManager;
-  private AuditLogger auditLogger;
-
-
-  @Before
-  public void setup() throws Exception {
-
-    ozoneManager = Mockito.mock(OzoneManager.class);
-    omMetrics = OMMetrics.create();
-    OzoneConfiguration ozoneConfiguration = new OzoneConfiguration();
-    ozoneConfiguration.set(OMConfigKeys.OZONE_OM_DB_DIRS,
-        folder.newFolder().getAbsolutePath());
-    omMetadataManager = new OmMetadataManagerImpl(ozoneConfiguration);
-    when(ozoneManager.getMetrics()).thenReturn(omMetrics);
-    when(ozoneManager.getMetadataManager()).thenReturn(omMetadataManager);
-    auditLogger = Mockito.mock(AuditLogger.class);
-    when(ozoneManager.getAuditLogger()).thenReturn(auditLogger);
-    Mockito.doNothing().when(auditLogger).logWrite(any(AuditMessage.class));
-  }
-
-  @After
-  public void stop() {
-    omMetrics.unRegister();
-  }
-
+public class TestOMBucketCreateRequest extends TestBucketRequest {
 
   @Test
   public void testPreExecute() throws Exception {
@@ -129,7 +84,8 @@ public class TestOMBucketCreateRequest {
     Assert.assertNull(omMetadataManager.getBucketTable().get(bucketKey));
 
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -155,7 +111,8 @@ public class TestOMBucketCreateRequest {
 
     // Try create same bucket again
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 2);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 2,
+            ozoneManagerDoubleBufferHelper);
 
     OMResponse omResponse = omClientResponse.getOMResponse();
     Assert.assertNotNull(omResponse.getCreateBucketResponse());
@@ -192,7 +149,8 @@ public class TestOMBucketCreateRequest {
 
 
     OMClientResponse omClientResponse =
-        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1);
+        omBucketCreateRequest.validateAndUpdateCache(ozoneManager, 1,
+            ozoneManagerDoubleBufferHelper);
 
     // As now after validateAndUpdateCache it should add entry to cache, get
     // should return non null value.
