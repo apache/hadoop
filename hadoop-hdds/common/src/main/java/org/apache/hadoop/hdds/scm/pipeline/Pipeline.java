@@ -339,7 +339,7 @@ public final class Pipeline {
             nodeIndex--;
           }
         }
-        LOG.info("Deserialize nodesInOrder {} in pipeline {}", nodesWithOrder,
+        LOG.debug("Deserialize nodesInOrder {} in pipeline {}", nodesWithOrder,
             id.toString());
         pipeline.setNodesInOrder(nodesWithOrder);
       } else if (nodesInOrder != null){
