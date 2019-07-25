@@ -53,7 +53,7 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTER
  * Tests the containerStateMachine failure handling.
  */
 
-public class TestContainerStateMachine {
+public class TestContainerStateMachineInt {
 
   private static MiniOzoneCluster cluster;
   private static OzoneConfiguration conf = new OzoneConfiguration();
@@ -71,7 +71,7 @@ public class TestContainerStateMachine {
   @BeforeClass
   public static void init() throws Exception {
     path = GenericTestUtils
-        .getTempPath(TestContainerStateMachine.class.getSimpleName());
+        .getTempPath(TestContainerStateMachineInt.class.getSimpleName());
     File baseDir = new File(path);
     baseDir.mkdirs();
 
