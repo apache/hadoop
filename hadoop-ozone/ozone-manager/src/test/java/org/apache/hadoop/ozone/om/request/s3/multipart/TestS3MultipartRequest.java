@@ -19,9 +19,8 @@
 
 package org.apache.hadoop.ozone.om.request.s3.multipart;
 
-import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
+import java.io.IOException;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -37,6 +36,9 @@ import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .OMRequest;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -138,6 +140,38 @@ public class TestS3MultipartRequest {
     Assert.assertNotEquals(omRequest, modifiedRequest);
 
     return modifiedRequest;
+  }
+
+  /**
+   * Perform preExecute of Abort Multipart Upload request for given volume,
+   * bucket and keyName.
+   * @param volumeName
+   * @param bucketName
+   * @param keyName
+   * @param multipartUploadID
+   * @return OMRequest - returned from preExecute.
+   * @throws IOException
+   */
+  protected OMRequest doPreExecuteAbortMPU(
+      String volumeName, String bucketName, String keyName,
+      String multipartUploadID) throws IOException {
+
+    OMRequest omRequest =
+        TestOMRequestUtils.createAbortMPURequest(volumeName, bucketName,
+            keyName, multipartUploadID);
+
+
+    S3MultipartUploadAbortRequest s3MultipartUploadAbortRequest =
+        new S3MultipartUploadAbortRequest(omRequest);
+
+    OMRequest modifiedRequest =
+        s3MultipartUploadAbortRequest.preExecute(ozoneManager);
+
+    // UserInfo and modification time is set.
+    Assert.assertNotEquals(omRequest, modifiedRequest);
+
+    return modifiedRequest;
+
   }
 
 

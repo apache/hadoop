@@ -19,6 +19,7 @@
 
 package org.apache.hadoop.ozone.om.response.s3.multipart;
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
@@ -65,5 +66,15 @@ public class S3InitiateMultipartUploadResponse extends OMClientResponse {
       omMetadataManager.getMultipartInfoTable().putWithBatch(batchOperation,
           multipartKey, omMultipartKeyInfo);
     }
+  }
+
+  @VisibleForTesting
+  public OmMultipartKeyInfo getOmMultipartKeyInfo() {
+    return omMultipartKeyInfo;
+  }
+
+  @VisibleForTesting
+  public OmKeyInfo getOmKeyInfo() {
+    return omKeyInfo;
   }
 }

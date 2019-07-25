@@ -176,6 +176,9 @@ public class OzoneManagerDoubleBuffer {
     omMetadataManager.getKeyTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getDeletedTable().cleanupCache(lastRatisTransactionIndex);
     omMetadataManager.getS3Table().cleanupCache(lastRatisTransactionIndex);
+    omMetadataManager.getMultipartInfoTable().cleanupCache(
+        lastRatisTransactionIndex);
+
   }
 
   /**
