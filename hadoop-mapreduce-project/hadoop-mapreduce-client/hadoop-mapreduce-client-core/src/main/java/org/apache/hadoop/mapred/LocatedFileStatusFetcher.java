@@ -51,6 +51,9 @@ import org.apache.hadoop.util.concurrent.HadoopExecutors;
 /**
  * Utility class to fetch block locations for specified Input paths using a
  * configured number of threads.
+ * The thread count is determined from the value of
+ * "mapreduce.input.fileinputformat.list-status.num-threads" in the
+ * configuration.
  */
 @Private
 public class LocatedFileStatusFetcher {
@@ -106,10 +109,14 @@ public class LocatedFileStatusFetcher {
   }
 
   /**
-   * Start executing and return FileStatuses based on the parameters specified
+   * Start executing and return FileStatuses based on the parameters specified.
+   *
    * @return fetched file statuses
-   * @throws InterruptedException
-   * @throws IOException
+   * @throws InterruptedException interruption waiting for results.
+   * @throws IOException IO failure or other error.
+   * @throws InvalidInputException on an invalid input and the old API
+   * @throws org.apache.hadoop.mapreduce.lib.input.InvalidInputException on an
+   *         invalid input and the new API.
    */
   public Iterable<FileStatus> getFileStatuses() throws InterruptedException,
       IOException {
@@ -285,7 +292,7 @@ public class LocatedFileStatusFetcher {
     }
   }
 
-  
+
   /**
    * Processes an initial Input Path pattern through the globber and PathFilter
    * to generate a list of files which need further processing.
