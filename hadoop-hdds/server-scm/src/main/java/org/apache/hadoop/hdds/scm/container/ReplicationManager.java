@@ -483,8 +483,14 @@ public class ReplicationManager {
         final int replicationFactor = container
             .getReplicationFactor().getNumber();
         final int delta = replicationFactor - getReplicaCount(id, replicas);
+        final List<DatanodeDetails> excludeList = replicas.stream()
+            .map(ContainerReplica::getDatanodeDetails)
+            .collect(Collectors.toList());
+        inflightReplication.get(id).stream().map(r -> r.datanode)
+            .forEach(excludeList::add);
         final List<DatanodeDetails> selectedDatanodes = containerPlacement
-            .chooseDatanodes(source, null, delta, container.getUsedBytes());
+            .chooseDatanodes(excludeList, null, delta,
+                container.getUsedBytes());
 
         LOG.info("Container {} is under replicated. Expected replica count" +
                 " is {}, but found {}.", id, replicationFactor,
