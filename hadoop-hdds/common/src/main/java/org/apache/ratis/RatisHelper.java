@@ -202,11 +202,11 @@ public interface RatisHelper {
   static GrpcTlsConfig createTlsClientConfig(SecurityConfig conf) {
     if (conf.isGrpcTlsEnabled()) {
       if (conf.isGrpcMutualTlsRequired()) {
-        return new GrpcTlsConfig(
-            null, null, conf.getTrustStoreFile(), false);
-      } else {
         return new GrpcTlsConfig(conf.getClientPrivateKeyFile(),
             conf.getClientCertChainFile(), conf.getTrustStoreFile(), true);
+      } else {
+        return new GrpcTlsConfig(
+            null, null, conf.getTrustStoreFile(), false);
       }
     }
     return null;
