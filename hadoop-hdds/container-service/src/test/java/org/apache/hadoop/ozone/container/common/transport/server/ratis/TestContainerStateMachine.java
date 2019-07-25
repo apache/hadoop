@@ -24,12 +24,15 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Paths;
 
 import org.apache.ratis.server.protocol.TermIndex;
 import org.apache.ratis.server.storage.FileInfo;
 import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.apache.ratis.statemachine.impl.SingleFileSnapshotInfo;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -45,13 +48,13 @@ public class TestContainerStateMachine {
   @Test
   public void testDeleteOldSnapshot() throws Exception {
 
-    File lastSnapshotFile = temporaryFolder.newFile();
-    File currentSnapshotFile = temporaryFolder.newFile();
-    File nextSnapshotFile = temporaryFolder.newFile();
+    File firstSnapshotFile = temporaryFolder.newFile();
+    File secondSnapshotFile = temporaryFolder.newFile();
+    File thirdSnapshotFile = temporaryFolder.newFile();
 
     FileInfo fileInfoMock = mock(FileInfo.class);
-    when(fileInfoMock.getPath()).thenReturn(lastSnapshotFile.toPath())
-        .thenReturn(currentSnapshotFile.toPath());
+    when(fileInfoMock.getPath()).thenReturn(firstSnapshotFile.toPath())
+        .thenReturn(secondSnapshotFile.toPath());
 
     SingleFileSnapshotInfo singleFileSnapshotInfoMock = mock(
         SingleFileSnapshotInfo.class);
@@ -66,7 +69,11 @@ public class TestContainerStateMachine {
     when(simpleStateMachineStorageMock.findLatestSnapshot())
         .thenReturn(singleFileSnapshotInfoMock);
     when(simpleStateMachineStorageMock.getSnapshotFile(1L, 1L))
-        .thenReturn(currentSnapshotFile).thenReturn(nextSnapshotFile);
+        .thenReturn(secondSnapshotFile)
+        .thenReturn(thirdSnapshotFile)
+        //Return non-existent file while taking 3rd snapshot.
+        .thenReturn(Paths.get("NonExistentDir", "NonExistentFile")
+            .toFile());
 
     ContainerStateMachine containerStateMachine =
         mock(ContainerStateMachine.class);
@@ -82,14 +89,24 @@ public class TestContainerStateMachine {
     f1.set(containerStateMachine, simpleStateMachineStorageMock);
 
     // Verify last snapshot deletion while calling takeSnapshot() API.
-    assertTrue(lastSnapshotFile.exists());
+    assertTrue(firstSnapshotFile.exists());
     containerStateMachine.takeSnapshot();
-    assertFalse(lastSnapshotFile.exists());
+    assertFalse(firstSnapshotFile.exists());
 
     // Verify current snapshot deletion while calling takeSnapshot() API once
     // more.
-    assertTrue(currentSnapshotFile.exists());
+    assertTrue(secondSnapshotFile.exists());
     containerStateMachine.takeSnapshot();
-    assertFalse(currentSnapshotFile.exists());
+    assertFalse(secondSnapshotFile.exists());
+
+    // Now, takeSnapshot throws IOException.
+    try {
+      containerStateMachine.takeSnapshot();
+      Assert.fail();
+    } catch (IOException ioEx) {
+      //Verify the old snapshot file still exists.
+      assertTrue(thirdSnapshotFile.exists());
+    }
+
   }
 }
