@@ -606,4 +606,27 @@ public abstract class FSImageTestUtil {
         getStorageDirectory(storageUri);
     return NNStorage.readTransactionIdFile(sDir);
   }
+
+  /**
+   * Returns the summary section from the latest fsimage stored on the cluster.
+   * This is effectively the image index which contains the offset of each
+   * section and subsection.
+   * @param cluster The cluster to load the image from
+   * @return The FileSummary section of the fsimage
+   * @throws IOException
+   */
+  public static FsImageProto.FileSummary getLatestImageSummary(
+      MiniDFSCluster cluster) throws IOException {
+    RandomAccessFile raFile = null;
+    try {
+      File image = FSImageTestUtil.findLatestImageFile(FSImageTestUtil
+          .getFSImage(cluster.getNameNode()).getStorage().getStorageDir(0));
+      raFile = new RandomAccessFile(image, "r");
+      return FSImageUtil.loadSummary(raFile);
+    } finally {
+      if (raFile != null) {
+        raFile.close();
+      }
+    }
+  }
 }
