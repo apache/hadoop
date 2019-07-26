@@ -31,6 +31,7 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 
 /**
  * Manages internal configuration of the cache by the client for job submission.
@@ -66,7 +67,7 @@ public class ClientDistributedCacheManager {
    */
   public static void determineTimestampsAndCacheVisibilities(Configuration job,
       Map<URI, FileStatus> statCache) throws IOException {
-    determineTimestamps(job, statCache);
+    determineTimestampsAndSizes(job, statCache);
     determineCacheVisibilities(job, statCache);
   }
 
@@ -80,8 +81,8 @@ public class ClientDistributedCacheManager {
    * @param job Configuration of a job.
    * @throws IOException
    */
-  public static void determineTimestamps(Configuration job,
-      Map<URI, FileStatus> statCache) throws IOException {
+  public static void determineTimestampsAndSizes(
+      Configuration job, Map<URI, FileStatus> statCache) throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
       FileStatus status = getFileStatus(job, tarchives[0], statCache);
@@ -161,26 +162,48 @@ public class ClientDistributedCacheManager {
       Map<URI, FileStatus> statCache) throws IOException {
     URI[] tarchives = DistributedCache.getCacheArchives(job);
     if (tarchives != null) {
-      StringBuilder archiveVisibilities =
-        new StringBuilder(String.valueOf(isPublic(job, tarchives[0], statCache)));
+      StringBuilder archiveVisibilities = new StringBuilder(
+          determineResourceLocalVisibility(
+              job, tarchives[0], statCache).name());
       for (int i = 1; i < tarchives.length; i++) {
         archiveVisibilities.append(",");
-        archiveVisibilities.append(String.valueOf(isPublic(job, tarchives[i], statCache)));
+        archiveVisibilities.append(
+            determineResourceLocalVisibility(
+                job, tarchives[i], statCache).name());
       }
       setArchiveVisibilities(job, archiveVisibilities.toString());
     }
     URI[] tfiles = DistributedCache.getCacheFiles(job);
     if (tfiles != null) {
       StringBuilder fileVisibilities =
-        new StringBuilder(String.valueOf(isPublic(job, tfiles[0], statCache)));
+          new StringBuilder(
+              determineResourceLocalVisibility(
+                  job, tfiles[0], statCache).name());
       for (int i = 1; i < tfiles.length; i++) {
         fileVisibilities.append(",");
-        fileVisibilities.append(String.valueOf(isPublic(job, tfiles[i], statCache)));
+        fileVisibilities.append(
+            determineResourceLocalVisibility(
+                job, tfiles[i], statCache).name());
       }
       setFileVisibilities(job, fileVisibilities.toString());
     }
   }
-  
+
+  /**
+   * In most cases, we will have resources with visibilites to us share cache.
+   * However, there are some cases which uses distribute cache only without
+   * @param conf
+   * @param uri
+   * @param statCache
+   * @return
+   */
+  private static LocalResourceVisibility determineResourceLocalVisibility(
+      Configuration conf, URI uri, Map<URI, FileStatus> statCache)
+      throws IOException {
+    return isPublic(conf, uri, statCache) ?
+        LocalResourceVisibility.PUBLIC : LocalResourceVisibility.APPLICATION;
+  }
+
   /**
    * This is to check the public/private visibility of the archives to be
    * localized.
@@ -197,11 +220,11 @@ public class ClientDistributedCacheManager {
    * This is to check the public/private visibility of the files to be localized
    * 
    * @param conf Configuration which stores the timestamp's
-   * @param booleans comma separated list of booleans (true - public)
+   * @param visibilities comma separated list of visibilities. Should
    * The order should be the same as the order in which the files are added.
    */
-  static void setFileVisibilities(Configuration conf, String booleans) {
-    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, booleans);
+  static void setFileVisibilities(Configuration conf, String visibilities) {
+    conf.set(MRJobConfig.CACHE_FILE_VISIBILITIES, visibilities);
   }
 
   /**
@@ -230,7 +253,7 @@ public class ClientDistributedCacheManager {
    * Gets the file status for the given URI.  If the URI is in the cache,
    * returns it.  Otherwise, fetches it and adds it to the cache.
    */
-  private static FileStatus getFileStatus(Configuration job, URI uri,
+  public static FileStatus getFileStatus(Configuration job, URI uri,
       Map<URI, FileStatus> statCache) throws IOException {
     FileSystem fileSystem = FileSystem.get(uri, job);
     return getFileStatus(fileSystem, uri, statCache);
@@ -244,7 +267,7 @@ public class ClientDistributedCacheManager {
    * @return true if the path in the uri is visible to all, false otherwise
    * @throws IOException thrown if a file system operation fails
    */
-  static boolean isPublic(Configuration conf, URI uri,
+  public static boolean isPublic(Configuration conf, URI uri,
       Map<URI, FileStatus> statCache) throws IOException {
     boolean isPublic = true;
     FileSystem fs = FileSystem.get(uri, conf);

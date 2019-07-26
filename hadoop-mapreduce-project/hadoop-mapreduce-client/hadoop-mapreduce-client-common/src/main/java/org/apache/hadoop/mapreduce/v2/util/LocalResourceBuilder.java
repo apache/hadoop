@@ -52,7 +52,7 @@ class LocalResourceBuilder {
   private URI[] uris;
   private long[] timestamps;
   private long[] sizes;
-  private boolean[] visibilities;
+  private LocalResourceVisibility[] visibilities;
   private Map<String, Boolean> sharedCacheUploadPolicies;
 
   LocalResourceBuilder() {
@@ -78,7 +78,7 @@ class LocalResourceBuilder {
     this.sizes = s;
   }
 
-  void setVisibilities(boolean[] v) {
+  void setVisibilities(LocalResourceVisibility[] v) {
     this.visibilities = v;
   }
 
@@ -108,8 +108,13 @@ class LocalResourceBuilder {
         String linkName = null;
 
         if (p.getName().equals(DistributedCache.WILDCARD)) {
+          // We won't have two jars/files share same name.
+          // However, the dirs might share same. e.g.
+          // job_***/public/libjars and job_***/user/libjars
           p = p.getParent();
-          linkName = p.getName() + Path.SEPARATOR + DistributedCache.WILDCARD;
+          linkName = p.getParent().getName()
+              + Path.SEPARATOR + p.getName()
+              + Path.SEPARATOR + DistributedCache.WILDCARD;
         }
 
         p = remoteFS.resolvePath(p.makeQualified(remoteFS.getUri(),
@@ -151,8 +156,7 @@ class LocalResourceBuilder {
         sharedCachePolicy =
             sharedCachePolicy == null ? Boolean.FALSE : sharedCachePolicy;
         localResources.put(linkName, LocalResource.newInstance(URL.fromURI(p
-            .toUri()), type, visibilities[i] ? LocalResourceVisibility.PUBLIC
-                : LocalResourceVisibility.PRIVATE,
+            .toUri()), type, visibilities[i],
             sizes[i], timestamps[i], sharedCachePolicy));
       }
     }

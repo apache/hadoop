@@ -164,6 +164,16 @@ public class TestGenericOptionsParser {
         GenericTestUtils.assertExceptionContains("File name can't be"
             + " empty string", e);
       }
+      args[1] = String.format("%s, ,%s",
+          tmpFileOne.toURI().toString(), tmpFileTwo.toURI().toString());
+      try {
+        new GenericOptionsParser(conf, args);
+        fail("Expected exception for empty filename");
+      } catch (IllegalArgumentException e) {
+        // expect to receive an IllegalArgumentException
+        GenericTestUtils.assertExceptionContains("File name can't be"
+            + " empty string", e);
+      }
 
       // test zero file list length - it should create an exception
       args[1] = ",,";
@@ -176,10 +186,10 @@ public class TestGenericOptionsParser {
             + " empty string", e);
       }
 
-      // test filename with space character
+      // test filename with special character
       // it should create exception from parser in URI class
       // due to URI syntax error
-      args[1] = String.format("%s, ,%s",
+      args[1] = String.format("%s,^,%s",
           tmpFileOne.toURI().toString(), tmpFileTwo.toURI().toString());
       try {
         new GenericOptionsParser(conf, args);
@@ -391,5 +401,136 @@ public class TestGenericOptionsParser {
   public void testNullArgs() throws IOException {
     GenericOptionsParser parser = new GenericOptionsParser(conf, null);
     parser.getRemainingArgs();
+  }
+
+  @Test
+  public void testFilesWithVisibilitySettings() throws Exception {
+    testLocalResourceWithVisibilitySettings(
+        "-files", GenericOptionsParser.TMP_FILES_CONF_KEY);
+  }
+
+  @Test
+  public void testLibjarsWithVisibilitySettings() throws Exception {
+    testLocalResourceWithVisibilitySettings(
+        "-libjars", GenericOptionsParser.TMP_LIBJARS_CONF_KEY);
+  }
+
+  @Test
+  public void testLibjarsWildCardWithVisibilitySettings() throws Exception {
+    Path tmpPath0 = new Path(
+        new File(testDir, "testLibjarsWildCard0.JAR").toString());
+    Path tmpPath1 = new Path(
+        new File(testDir, "testLibjarsWildCard1.JAR").toString());
+    localFs.create(tmpPath0);
+    localFs.create(tmpPath1);
+    Configuration config = new Configuration();
+    String[] args = new String[2];
+    args[0] = "-libjars";
+    args[1] = tmpPath0.getParent().toUri() + "/*"
+        + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+        + "public";
+    new GenericOptionsParser(config, args);
+    String[] resources = config.getStrings(
+        GenericOptionsParser.TMP_LIBJARS_CONF_KEY);
+    assertEquals("Reousrce number is 2", 2, resources.length);
+    assertEquals("First resource is not as expected",
+        localFs.makeQualified(tmpPath0).toString()
+            + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+            + "public", resources[0]);
+    assertEquals("First resource is not as expected",
+        localFs.makeQualified(tmpPath1).toString()
+            + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+            + "public", resources[1]);
+  }
+
+  @Test
+  public void testArchivesWithVisibilitySettings() throws Exception {
+    testLocalResourceWithVisibilitySettings(
+        "-archives", GenericOptionsParser.TMP_ARCHIVES_CONF_KEY);
+  }
+
+  public void testLocalResourceWithVisibilitySettings(
+      String userFacingConfigKey, String resourceConfigKey)
+      throws Exception {
+    File tmpFile = new File(
+        testDir, "testLocalResourceWithVisibilitySettingsTmpFile"
+        + userFacingConfigKey);
+    Path tmpPath = new Path(tmpFile.toString());
+    localFs.create(tmpPath);
+    String[] args = new String[2];
+    args[0] = userFacingConfigKey;
+    args[1] = tmpFile.toURI().toString()
+        + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER + "public";
+    new GenericOptionsParser(conf, args);
+    String resources = conf.get(resourceConfigKey);
+    assertEquals("resources option does not match",
+        localFs.makeQualified(tmpPath).toString()
+            + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+            + "public", resources);
+
+    // pass file as uri
+    Configuration conf1 = new Configuration();
+    URI tmpURI = new URI(tmpFile.toURI().toString() + "#link");
+    args[0] = userFacingConfigKey;
+    args[1] = tmpURI.toString()
+        + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER + "application";
+    new GenericOptionsParser(conf1, args);
+    resources = conf1.get(resourceConfigKey);
+    assertEquals("resources option does not match",
+        localFs.makeQualified(
+            new Path(tmpURI)).toString() + "::application", resources);
+
+    Configuration conf2 = new Configuration();
+    args[0] = userFacingConfigKey;
+    args[1] = "file:///xyz.txt::user";
+    testBadConfigWithExceptions(
+        conf2, args, resourceConfigKey, FileNotFoundException.class);
+
+    // Test bad configs
+    Configuration conf3 = new Configuration();
+    args[0] = userFacingConfigKey;
+    args[1] = tmpFile.toURI().toString()
+        + ":public";
+    testBadConfigWithExceptions(
+        conf3, args, resourceConfigKey, FileNotFoundException.class);
+
+    // Test multiple files
+    // pass file as uri
+    File tmpFile1 = new File(
+        testDir, "testLocalResourceWithVisibilitySettingsTmpFile1");
+    Path tmpPath1 = new Path(tmpFile1.toString());
+    localFs.create(tmpPath1);
+    Configuration conf4 = new Configuration();
+    args[0] = userFacingConfigKey;
+    args[1] = tmpFile.toString()
+        + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+        + "application"
+        + "," + tmpFile1.toString()
+        + ResourceWithVisibilitySetting.PATH_SETTING_DELIMITER
+        + "public";
+    new GenericOptionsParser(conf4, args);
+    resources = conf4.get(resourceConfigKey);
+    assertEquals("resources option does not match",
+        localFs.makeQualified(
+            tmpPath).toString() + "::application,"
+            + localFs.makeQualified(tmpPath1).toString() + "::public",
+        resources);
+  }
+
+  private void testBadConfigWithExceptions(
+      Configuration config, String[] args,
+      String resourceConfigKey, Class<?> expectEx) {
+    Throwable th = null;
+    try {
+      new GenericOptionsParser(config, args);
+    } catch (Exception e) {
+      th = e;
+    }
+    assertNotNull("throwable is null", th);
+    assertTrue(
+        expectEx.getClass().getName() + " exception is not thrown",
+        th.getClass().equals(expectEx));
+    assertNull("resources is not null", config.get(resourceConfigKey));
+
   }
 }

@@ -162,8 +162,10 @@ public class TestDistCacheEmulation {
 
     String[] fileSizes = { "400", "2500", "700", "1200", "1500", "500" };
 
-    String[] visibilities = { "true", "false", "false", "true", "true", "false" };
-    String[] timeStamps = { "1234", "2345", "34567", "5434", "125", "134" };
+    String[] visibilities = {
+        "PUBLIC", "APPLICATION", "APPLICATION",
+        "PUBLIC", "PUBLIC", "APPLICATION" };
+    String[] timeStamps = {"1234", "2345", "34567", "5434", "125", "134" };
 
     // DistributedCache.setCacheFiles(fileCaches, conf);
     conf.setStrings(MRJobConfig.CACHE_FILES, distCacheFiles);

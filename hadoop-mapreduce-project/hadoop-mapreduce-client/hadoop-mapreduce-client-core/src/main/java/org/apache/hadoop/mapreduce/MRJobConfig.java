@@ -211,14 +211,56 @@ public interface MRJobConfig {
   public static final String CACHE_ARCHIVES_VISIBILITIES = "mapreduce.job.cache.archives.visibilities";
 
   /**
+   * The is a generated parameter. MR client will set it based on
+   * JOBJAR_VISIBILITY. It will be used to determine resource visibility as yarn
+   * resource in shared/distributed cache. It won't be set when the client
+   * is older than 2.9.
+   */
+  String CACHE_JOBJAR_VISIBILITY =
+      "mapreduce.job.cache.jobjar.visibility";
+
+  /**
    * This parameter controls the visibility of the localized job jar on the node
-   * manager. If set to true, the visibility will be set to
-   * LocalResourceVisibility.PUBLIC. If set to false, the visibility will be set
-   * to LocalResourceVisibility.APPLICATION. This is a generated parameter and
-   * should not be set manually via config files.
+   * manager. It should be one of
+   * #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}. This is an user facing
+   * config item.
    */
   String JOBJAR_VISIBILITY = "mapreduce.job.jobjar.visibility";
-  boolean JOBJAR_VISIBILITY_DEFAULT = false;
+  MRResourceVisibility JOBJAR_VISIBILITY_DEFAULT =
+      MRResourceVisibility.APPLICATION;
+
+  /**
+   * This parameter controls the visibility of the localized lib jars on
+   * the node manager. It should be one of
+   * #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}
+   * Note that it will only work for resources whose visibility is not
+   * set implicitly.
+   */
+  String LIBJARS_VISIBILITY = "mapreduce.job.libjars.visibility";
+  MRResourceVisibility LIBJARS_VISIBILITY_DEFAULT =
+      MRResourceVisibility.APPLICATION;
+
+  /**
+   * This parameter controls the visibility of the localized files on the node
+   * manager. It should be one of
+   * #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}
+   * Note that it will only work for resources whose visibility is not
+   * set implicitly.
+   */
+  String FILES_VISIBILITY = "mapreduce.job.files.visibility";
+  MRResourceVisibility FILES_VISIBILITY_DEFAULT =
+      MRResourceVisibility.APPLICATION;
+
+  /**
+   * This parameter controls the visibility of the localized archives on
+   * the node manager. It should be one of
+   * #MRResourceVisibility{PUBLIC, PRIVATE, APPLICATION}
+   * Note that it will only work for resources whose visibility is not set
+   * implicitly.
+   */
+  String ARCHIEVS_VISIBILITY = "mapreduce.job.archives.visibility";
+  MRResourceVisibility ARCHIEVES_VISIBILITY_DEFAULT =
+      MRResourceVisibility.APPLICATION;
 
   /**
    * This is a generated parameter and should not be set manually via config
@@ -685,6 +727,31 @@ public interface MRJobConfig {
   public static final String DEFAULT_MR_AM_STAGING_DIR = 
     "/tmp/hadoop-yarn/staging";
 
+  /**
+   * This flag is used to set the last dir name of users's staging path.
+   * A MR job's staging dir is defined in
+   * {\@link org.apache.hadoop.mapreduce.v2.util.MRApps#getStagingAreaDir}.
+   * ${MRJobConfig.MR_AM_STAGING_DIR}/${user}/${MR_USER_STAGING_DIR_NAME};
+   *
+   * E.g. user1 launched two jobs: job-1234 and job-abcd. Their staging dir
+   * will be
+   * ${MRJobConfig.MR_AM_STAGING_DIR}/user1/${MR_USER_STAGING_DIR_NAME}/job-1234
+   * ${MRJobConfig.MR_AM_STAGING_DIR}/user1/${MR_USER_STAGING_DIR_NAME}/job-abcd
+   */
+  String MR_USER_STAGING_DIR_NAME
+      = "mapreduce.job.user.staging.dirname";
+  String DEFAULT_MR_USER_STAGING_DIR_NAME
+      = ".staging";
+
+  /**
+   * Permission of MR job staging dir, default is 0700.
+   * Only numeric style are supported for the moment
+   */
+  String MR_JOB_STAGING_DIR_PERMISSION =
+      "mapreduce.job.staging.dir.permission";
+  short DEFAULT_MR_JOB_STAGING_DIR_PERMISSION =
+      (short) 0700; // rwx------
+
   /** The amount of memory the MR app master needs.
    * Kept for backward-compatibility, yarn.app.mapreduce.am.resource.memory is
    * the new preferred way to specify this
@@ -1070,8 +1137,15 @@ public interface MRJobConfig {
   public static final String MAPREDUCE_APPLICATION_CLASSPATH = 
       "mapreduce.application.classpath";
   
-  public static final String MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE = 
+  String MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE =
       "mapreduce.job.log4j-properties-file";
+
+  String MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE_VISIBILITY
+      = "mapreduce.job.log4j-properties-file.visibility";
+
+  MRResourceVisibility
+      MAPREDUCE_JOB_LOG4J_PROPERTIES_FILE_VISIBILITY_DEFAULT
+      = MRResourceVisibility.APPLICATION;
 
   /**
    * Path to MapReduce framework archive

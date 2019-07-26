@@ -20,6 +20,8 @@ package org.apache.hadoop.mapreduce;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.fs.FileStatus;
@@ -45,10 +47,13 @@ public class JobSubmissionFiles {
   // job submission directory is private!
   final public static FsPermission JOB_DIR_PERMISSION =
       FsPermission.createImmutable((short) 0700); // rwx------
+
+  final public static FsPermission JOB_DIR_PERMISSION_WORLD_EXCUTABLE =
+      FsPermission.createImmutable((short) 0701); // rwx-----x
   //job files are world-wide readable and owner writable
   final public static FsPermission JOB_FILE_PERMISSION = 
       FsPermission.createImmutable((short) 0644); // rw-r--r--
-  
+
   public static Path getJobSplitFile(Path jobSubmissionDir) {
     return new Path(jobSubmissionDir, "job.split");
   }
@@ -63,14 +68,7 @@ public class JobSubmissionFiles {
   public static Path getJobConfPath(Path jobSubmitDir) {
     return new Path(jobSubmitDir, "job.xml");
   }
-    
-  /**
-   * Get the job jar path.
-   */
-  public static Path getJobJar(Path jobSubmitDir) {
-    return new Path(jobSubmitDir, "job.jar");
-  }
-  
+
   /**
    * Get the job distributed cache files path.
    * @param jobSubmitDir
@@ -78,7 +76,7 @@ public class JobSubmissionFiles {
   public static Path getJobDistCacheFiles(Path jobSubmitDir) {
     return new Path(jobSubmitDir, "files");
   }
-  
+
   /**
    * Get the job distributed cache path for log4j properties.
    * @param jobSubmitDir
@@ -99,6 +97,21 @@ public class JobSubmissionFiles {
    */
   public static Path getJobDistCacheLibjars(Path jobSubmitDir) {
     return new Path(jobSubmitDir, "libjars");
+  }
+
+  public static List<Path> getJobDistCacheLibjarsPaths(Path jobSubmitDir) {
+    List<Path> pathList = new ArrayList<>();
+    for (MRResourceVisibility visibility : MRResourceVisibility.values()) {
+      pathList.add(getJobDistCacheLibjarsPath(jobSubmitDir, visibility));
+    }
+    return pathList;
+  }
+
+  public static Path getJobDistCacheLibjarsPath(
+      Path jobSubmitDir, MRResourceVisibility visibility) {
+    return new Path(
+        jobSubmitDir, visibility.getDirName() + "/"
+        + MRResourceType.LIBJAR.getResourceParentDirName());
   }
 
   /**
@@ -132,6 +145,7 @@ public class JobSubmissionFiles {
     Path stagingArea = cluster.getStagingAreaDir();
     FileSystem fs = stagingArea.getFileSystem(conf);
     UserGroupInformation currentUser = realUser.getCurrentUser();
+    FsPermission stagingDirPermission = getStagingDirPermission(conf);
     try {
       FileStatus fsStatus = fs.getFileStatus(stagingArea);
       String fileOwner = fsStatus.getOwner();
@@ -152,15 +166,24 @@ public class JobSubmissionFiles {
           throw new IOException(errorMessage);
         }
       }
-      if (!fsStatus.getPermission().equals(JOB_DIR_PERMISSION)) {
+      if (!fsStatus.getPermission().equals(stagingDirPermission)) {
         LOG.info("Permissions on staging directory " + stagingArea + " are " +
             "incorrect: " + fsStatus.getPermission() + ". Fixing permissions " +
-            "to correct value " + JOB_DIR_PERMISSION);
-        fs.setPermission(stagingArea, JOB_DIR_PERMISSION);
+            "to correct value " + stagingDirPermission);
+        fs.setPermission(stagingArea, stagingDirPermission);
       }
     } catch (FileNotFoundException e) {
-      fs.mkdirs(stagingArea, new FsPermission(JOB_DIR_PERMISSION));
+      fs.mkdirs(stagingArea, new FsPermission(stagingDirPermission));
     }
     return stagingArea;
+  }
+
+  public static FsPermission getStagingDirPermission(Configuration conf) {
+    String permStr = conf.get(MRJobConfig.MR_JOB_STAGING_DIR_PERMISSION);
+    if (permStr == null) {
+      return FsPermission.createImmutable(
+          MRJobConfig.DEFAULT_MR_JOB_STAGING_DIR_PERMISSION);
+    }
+    return FsPermission.createImmutable(Short.decode(permStr));
   }
 }

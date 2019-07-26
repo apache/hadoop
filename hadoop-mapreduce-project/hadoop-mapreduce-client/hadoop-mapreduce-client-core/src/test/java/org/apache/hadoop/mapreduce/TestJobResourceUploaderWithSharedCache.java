@@ -85,8 +85,9 @@ public class TestJobResourceUploaderWithSharedCache {
     localFs = FileSystem.getLocal(conf);
     testRootDir =
         new Path("target",
-            TestJobResourceUploaderWithSharedCache.class.getName() + "-tmpDir")
-            .makeQualified(localFs.getUri(), localFs.getWorkingDirectory());
+            TestJobResourceUploaderWithSharedCache.class.getName()
+                + "-tmpDir").makeQualified(
+                    localFs.getUri(), localFs.getWorkingDirectory());
     dfs = new MiniDFSCluster.Builder(conf).numDataNodes(1).format(true).build();
     remoteFs = dfs.getFileSystem();
   }
@@ -168,6 +169,14 @@ public class TestJobResourceUploaderWithSharedCache {
   public void testSharedCacheEnabled() throws Exception {
     JobConf jobConf = createJobConf();
     jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
+    jobConf.set(
+        MRJobConfig.LIBJARS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.ARCHIEVS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.FILES_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.JOBJAR_VISIBILITY, MRResourceVisibility.PUBLIC.name());
     Job job = new Job(jobConf);
     job.setJobID(new JobID("567789", 1));
 
@@ -182,6 +191,15 @@ public class TestJobResourceUploaderWithSharedCache {
       throws Exception {
     JobConf jobConf = createJobConf();
     jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "enabled");
+
+    jobConf.set(
+        MRJobConfig.LIBJARS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.ARCHIEVS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.FILES_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.JOBJAR_VISIBILITY, MRResourceVisibility.PUBLIC.name());
     Job job = new Job(jobConf);
     job.setJobID(new JobID("567789", 1));
 
@@ -195,6 +213,10 @@ public class TestJobResourceUploaderWithSharedCache {
   public void testSharedCacheArchivesAndLibjarsEnabled() throws Exception {
     JobConf jobConf = createJobConf();
     jobConf.set(MRJobConfig.SHARED_CACHE_MODE, "archives,libjars");
+    jobConf.set(
+        MRJobConfig.LIBJARS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
+    jobConf.set(
+        MRJobConfig.ARCHIEVS_VISIBILITY, MRResourceVisibility.PUBLIC.name());
     Job job = new Job(jobConf);
     job.setJobID(new JobID("567789", 1));
 
@@ -250,7 +272,8 @@ public class TestJobResourceUploaderWithSharedCache {
     jobConf.set("tmpfiles", secondFile.toString());
 
     // Create jars with a single file inside them.
-    Path firstJar = makeJar(new Path(testRootDir, "distributed.first.jar"), 1);
+    Path firstJar = makeJar(
+        new Path(testRootDir, "distributed.first.jar"), 1);
     Path secondJar =
         makeJar(new Path(testRootDir, "distributed.second.jar"), 2);
 
@@ -273,8 +296,10 @@ public class TestJobResourceUploaderWithSharedCache {
 
     jobConf.set("tmpjars", secondJar.toString() + "," + thirdJar.toString());
 
-    Path firstArchive = makeArchive("first-archive.zip", "first-file");
-    Path secondArchive = makeArchive("second-archive.zip", "second-file");
+    Path firstArchive = makeArchive(
+        "first-archive.zip", "first-file");
+    Path secondArchive = makeArchive(
+        "second-archive.zip", "second-file");
 
     // Add archives to job conf via distributed cache API as well as command
     // line
@@ -331,7 +356,7 @@ public class TestJobResourceUploaderWithSharedCache {
     FSDataOutputStream os = localFs.create(path);
     os.writeBytes(contents);
     os.close();
-    localFs.setPermission(path, new FsPermission("700"));
+    localFs.setPermission(path, new FsPermission("705"));
     return path;
   }
 
@@ -345,7 +370,7 @@ public class TestJobResourceUploaderWithSharedCache {
     jos.write(("inside the jar!" + index).getBytes());
     jos.closeEntry();
     jos.close();
-    localFs.setPermission(p, new FsPermission("700"));
+    localFs.setPermission(p, new FsPermission("705"));
     return p;
   }
 

@@ -34,6 +34,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRJobConfig;
+import org.apache.hadoop.mapreduce.MRResourceVisibility;
 import org.apache.hadoop.tools.rumen.JobStory;
 import org.apache.hadoop.tools.rumen.JobStoryProducer;
 import org.apache.hadoop.tools.rumen.Pre21JobHistoryConstants;
@@ -329,9 +330,9 @@ class DistributedCacheEmulator {
       for (int i = 0; i < files.length; i++) {
         // Check if visibilities are available because older hadoop versions
         // didn't have public, private Distributed Caches separately.
-        boolean visibility =
-            (visibilities == null) || Boolean.parseBoolean(visibilities[i]);
-        if (isLocalDistCacheFile(files[i], user, visibility)) {
+        boolean isPublic = isCacheFilePublic(
+            visibilities == null ? null : visibilities[i]);
+        if (isLocalDistCacheFile(files[i], user, isPublic)) {
           // local FS based distributed cache file.
           // Create this file on the pseudo local FS on the fly (i.e. when the
           // simulated job is submitted).
@@ -339,7 +340,7 @@ class DistributedCacheEmulator {
         }
         // distributed cache file on hdfs
         String mappedPath = mapDistCacheFilePath(files[i], timeStamps[i],
-                                                 visibility, user);
+            isPublic, user);
 
         // No need to add a distributed cache file path to the list if
         // (1) the mapped path is already there in the list OR
@@ -363,13 +364,14 @@ class DistributedCacheEmulator {
    * @param filePath path of the distributed cache file
    * @param user job submitter of the job for which &lt;filePath&gt; is a
    *             distributed cache file
-   * @param visibility <code>true</code> for public distributed cache file
+   * @param isPublic <code>true</code> for public distributed cache file
    * @return true if the path provided is of a local file system based
    *              distributed cache file
    */
   static boolean isLocalDistCacheFile(String filePath, String user,
-                                       boolean visibility) {
-    return (!visibility && filePath.contains(user + "/.staging"));
+                                       boolean isPublic) {
+    return (!isPublic
+        && filePath.contains(user + "/.staging"));
   }
 
   /**
@@ -513,9 +515,9 @@ class DistributedCacheEmulator {
         for (int i = 0; i < files.length; i++) {
           // Check if visibilities are available because older hadoop versions
           // didn't have public, private Distributed Caches separately.
-          boolean visibility =
-              (visibilities == null) || Boolean.parseBoolean(visibilities[i]);
-          if (isLocalDistCacheFile(files[i], user, visibility)) {
+          boolean isPublic = isCacheFilePublic(
+              visibilities == null ? null : visibilities[i]);
+          if (isLocalDistCacheFile(files[i], user, isPublic)) {
             // local FS based distributed cache file.
             // Create this file on the pseudo local FS.
             String fileId = MD5Hash.digest(files[i] + timeStamps[i]).toString();
@@ -530,7 +532,7 @@ class DistributedCacheEmulator {
             // hdfs based distributed cache file.
             // Get the mapped HDFS path on simulated cluster
             String mappedPath = mapDistCacheFilePath(files[i], timeStamps[i],
-                                                     visibility, user);
+                isPublic, user);
             cacheFiles.add(mappedPath);
           }
         }
@@ -545,6 +547,21 @@ class DistributedCacheEmulator {
                                         new String[localCacheFiles.size()]));
         }
       }
+    }
+  }
+
+  boolean isCacheFilePublic(String visibility) {
+    boolean isPublic;
+    if (visibility == null) {
+      return true;
+    } else if (Boolean.parseBoolean(visibility)) {
+      // visibilities used to be boolean and the value is true
+      return true;
+    } else {
+      // Could be false or new type of visibility settings with values defined
+      // as one of {Public, Private, Application}
+      return MRResourceVisibility.getVisibility(visibility)
+          == MRResourceVisibility.PUBLIC;
     }
   }
 }

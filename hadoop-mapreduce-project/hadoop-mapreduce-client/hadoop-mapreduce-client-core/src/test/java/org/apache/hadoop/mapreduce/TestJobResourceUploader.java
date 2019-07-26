@@ -18,18 +18,20 @@
 
 package org.apache.hadoop.mapreduce;
 
+import static org.mockito.Matchers.any;
+import static org.mockito.Matchers.anyMap;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -44,6 +46,7 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapreduce.util.MRResourceUtil;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
@@ -61,7 +64,8 @@ public class TestJobResourceUploader {
 
     Assert.assertEquals("Failed: absolute, no scheme, with fragment",
         "/testWithFragment.txt",
-        uploader.stringToPath("/testWithFragment.txt#fragment.txt").toString());
+        uploader.stringToPath(
+            "/testWithFragment.txt#fragment.txt").toString());
 
     Assert.assertEquals("Failed: absolute, with scheme, with fragment",
         "file:/testWithFragment.txt",
@@ -70,7 +74,8 @@ public class TestJobResourceUploader {
 
     Assert.assertEquals("Failed: relative, no scheme, with fragment",
         "testWithFragment.txt",
-        uploader.stringToPath("testWithFragment.txt#fragment.txt").toString());
+        uploader.stringToPath(
+            "testWithFragment.txt#fragment.txt").toString());
 
     Assert.assertEquals("Failed: relative, no scheme, no fragment",
         "testWithFragment.txt",
@@ -209,7 +214,10 @@ public class TestJobResourceUploader {
           destinationPathPrefix + "tmpFiles2.txt",
           destinationPathPrefix + "tmpFiles3.txt",
           destinationPathPrefix + "tmpFiles4.txt",
-          "file:///libjars-submit-dir/libjars/*" };
+          destinationPathPrefix + "tmpjars0.jar",
+          destinationPathPrefix + "tmpjars1.jar",
+          destinationPathPrefix + "tmpjars2.jar",
+          destinationPathPrefix + "tmpjars3.jar"};
 
   private String[] expectedArchivesNoFrags =
       { destinationPathPrefix + "tmpArchives0.tgz",
@@ -219,8 +227,8 @@ public class TestJobResourceUploader {
       { destinationPathPrefix + "tmpArchives0.tgz#tmpArchivesfragment0.tgz",
           destinationPathPrefix + "tmpArchives1.tgz#tmpArchivesfragment1.tgz" };
 
-  private String jobjarSubmitDir = "/jobjar-submit-dir";
-  private String basicExpectedJobJar = jobjarSubmitDir + "/job.jar";
+  private String jobjarSubmitDir = "hdfs:///jobjar-submit-dir";
+  private String basicExpectedJobJar = destinationPathPrefix + "jobjar.jar";
 
   @Test
   public void testPathsWithNoFragNoSchemeRelative() throws IOException {
@@ -410,20 +418,24 @@ public class TestJobResourceUploader {
   private void uploadResources(JobResourceUploader uploader, Job job)
       throws IOException {
     Configuration conf = job.getConfiguration();
-    Collection<String> files = conf.getStringCollection("tmpfiles");
-    Collection<String> libjars = conf.getStringCollection("tmpjars");
-    Collection<String> archives = conf.getStringCollection("tmparchives");
     Map<URI, FileStatus> statCache = new HashMap<>();
     Map<String, Boolean> fileSCUploadPolicies = new HashMap<>();
-    String jobJar = job.getJar();
-    uploader.uploadFiles(job, files, new Path("/files-submit-dir"), null,
-        (short) 3, fileSCUploadPolicies, statCache);
-    uploader.uploadArchives(job, archives, new Path("/archives-submit-dir"),
-        null, (short) 3, fileSCUploadPolicies, statCache);
-    uploader.uploadLibJars(job, libjars, new Path("/libjars-submit-dir"), null,
-        (short) 3, fileSCUploadPolicies, statCache);
-    uploader.uploadJobJar(job, jobJar, new Path(jobjarSubmitDir), (short) 3,
-        statCache);
+
+    List<MRResource> filesList =
+        MRResourceUtil.getResourceFromMRConfig(MRResourceType.FILE, conf);
+    List<MRResource> libjarsList =
+        MRResourceUtil.getResourceFromMRConfig(MRResourceType.LIBJAR, conf);
+    List<MRResource> archivesList =
+        MRResourceUtil.getResourceFromMRConfig(MRResourceType.ARCHIVE, conf);
+    MRResource jobJar = MRResourceUtil.getJobJar(conf);
+
+    uploader.uploadFiles(job, new Path("/files-submit-dir"), filesList,
+        (short) 3);
+    uploader.uploadArchives(job, new Path("/archives-submit-dir"),
+        archivesList, (short) 3);
+    uploader.uploadLibJars(
+        job, new Path("/libjars-submit-dir"), libjarsList, (short) 3);
+    uploader.uploadJobJar(job, new Path(jobjarSubmitDir), jobJar, (short) 3);
   }
 
   private void validateResourcePaths(Job job, String[] expectedFiles,
@@ -474,11 +486,19 @@ public class TestJobResourceUploader {
     when(mockedStatus.isDirectory()).thenReturn(false);
     Map<URI, FileStatus> statCache = new HashMap<URI, FileStatus>();
     try {
+
+      List<MRResource> filesList =
+          MRResourceUtil.getResourceFromMRConfig(MRResourceType.FILE, conf);
+      List<MRResource> libjarsList =
+          MRResourceUtil.getResourceFromMRConfig(MRResourceType.LIBJAR, conf);
+      List<MRResource> archivesList =
+          MRResourceUtil.getResourceFromMRConfig(MRResourceType.ARCHIVE, conf);
+      MRResource jobJarResource = MRResourceUtil.getJobJar(conf);
       uploader.checkLocalizationLimits(conf,
-          conf.getStringCollection("tmpfiles"),
-          conf.getStringCollection("tmpjars"),
-          conf.getStringCollection("tmparchives"),
-          conf.getJar(), statCache);
+          filesList,
+          libjarsList,
+          archivesList,
+          jobJarResource);
       Assert.assertTrue("Limits check succeeded when it should have failed.",
           checkShouldSucceed);
     } catch (IOException e) {
@@ -741,9 +761,26 @@ public class TestJobResourceUploader {
     }
 
     @Override
-    FileStatus getFileStatus(Map<URI, FileStatus> statCache, Configuration job,
+    FileStatus getFileStatus(Configuration job,
         Path p) throws IOException {
       return mockedStatus;
+    }
+
+    @Override
+    MRResourceInfo checkAndUploadMRResource(
+        Job job, Path submitJobDir,
+        MRResource resource, short submitReplication)
+        throws IOException {
+      MRResourceInfo resourceInfo = super.checkAndUploadMRResource(
+          job, submitJobDir, resource, submitReplication);
+      MRResourceInfo spyInfo = spy(resourceInfo);
+      doReturn(mockedStatus.getLen()).when(spyInfo).getUriToUseFileSize(
+          any(Configuration.class),
+          anyMap());
+      doReturn(mockedStatus.getModificationTime())
+          .when(spyInfo).getUriToUseTimestamp(
+              any(Configuration.class), anyMap());
+      return spyInfo;
     }
 
     @Override
@@ -758,13 +795,6 @@ public class TestJobResourceUploader {
     Path copyRemoteFiles(Path parentDir, Path originalPath, Configuration conf,
         short replication) throws IOException {
       return new Path(destinationPathPrefix + originalPath.getName());
-    }
-
-    @Override
-    void copyJar(Path originalJarPath, Path submitJarFile, short replication)
-        throws IOException {
-      // Do nothing. Stubbed out to avoid side effects. We don't actually need
-      // to copy the jar to the remote fs.
     }
   }
 }
