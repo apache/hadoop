@@ -192,7 +192,7 @@ public final class Pipeline {
           }
         }
       }
-      LOG.info("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
+      LOG.debug("Serialize pipeline {} with nodesInOrder{ }", id.toString(),
           nodes);
     }
     return builder.build();
