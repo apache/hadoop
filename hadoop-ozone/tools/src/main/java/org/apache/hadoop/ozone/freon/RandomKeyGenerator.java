@@ -697,12 +697,11 @@ public final class RandomKeyGenerator implements Callable<Void> {
         try (Scope writeScope = GlobalTracer.get().buildSpan("writeKeyData")
             .startActive(true)) {
           long keyWriteStart = System.nanoTime();
-          for (long nrRemaining = keySize - randomValue.length;
+          for (long nrRemaining = keySize;
                nrRemaining > 0; nrRemaining -= bufferSize) {
             int curSize = (int) Math.min(bufferSize, nrRemaining);
             os.write(keyValueBuffer, 0, curSize);
           }
-          os.write(randomValue);
           os.close();
 
           long keyWriteDuration = System.nanoTime() - keyWriteStart;
