@@ -190,7 +190,7 @@ class RDBTable implements Table<byte[], byte[]> {
       return db.getLongProperty(handle, "rocksdb.estimate-num-keys");
     } catch (RocksDBException e) {
       throw new IOException(
-          "Failed to get estimated key count of the table.");
+          "Failed to get estimated key count of table " + getName());
     }
   }
 }
