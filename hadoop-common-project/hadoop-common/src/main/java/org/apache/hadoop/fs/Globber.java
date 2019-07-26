@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-class Globber {
+public class Globber {
   public static final Logger LOG =
       LoggerFactory.getLogger(Globber.class.getName());
 
@@ -42,6 +42,7 @@ class Globber {
   private final Path pathPattern;
   private final PathFilter filter;
   private final Tracer tracer;
+  private final boolean resolveSymlinks;
   
   public Globber(FileSystem fs, Path pathPattern, PathFilter filter) {
     this.fs = fs;
@@ -49,6 +50,7 @@ class Globber {
     this.pathPattern = pathPattern;
     this.filter = filter;
     this.tracer = FsTracer.get(fs.getConf());
+    this.resolveSymlinks = true;
   }
 
   public Globber(FileContext fc, Path pathPattern, PathFilter filter) {
@@ -57,6 +59,17 @@ class Globber {
     this.pathPattern = pathPattern;
     this.filter = filter;
     this.tracer = fc.getTracer();
+    this.resolveSymlinks = true;
+  }
+
+  public Globber(FileSystem fs, Path pathPattern, PathFilter filter,
+      boolean resolveSymlinks) {
+    this.fs = fs;
+    this.fc = null;
+    this.pathPattern = pathPattern;
+    this.filter = filter;
+    this.tracer = FsTracer.get(fs.getConf());
+    this.resolveSymlinks = resolveSymlinks;
   }
 
   private FileStatus getFileStatus(Path path) throws IOException {
@@ -250,22 +263,32 @@ class Globber {
               // incorrectly conclude that /a/b was a file and should not match
               // /a/*/*.  So we use getFileStatus of the path we just listed to
               // disambiguate.
-              LOG.debug("listStatus found one entry; disambiguating {}",
-                  children[0]);
-              Path path = candidate.getPath();
-              FileStatus status = getFileStatus(path);
-              if (status == null) {
-                // null means the file was not found
-                LOG.warn("File/directory {} not found:"
-                    + " it may have been deleted."
-                    + " If this is an object store, this can be a sign of"
-                    + " eventual consistency problems.",
-                    path);
-                continue;
-              }
-              if (!status.isDirectory()) {
-                LOG.debug("Resolved entry is a file; skipping: {}", status);
-                continue;
+              if (resolveSymlinks) {
+                LOG.debug("listStatus found one entry; disambiguating {}",
+                    children[0]);
+                Path path = candidate.getPath();
+                FileStatus status = getFileStatus(path);
+                if (status == null) {
+                  // null means the file was not found
+                  LOG.warn("File/directory {} not found:"
+                      + " it may have been deleted."
+                      + " If this is an object store, this can be a sign of"
+                      + " eventual consistency problems.",
+                      path);
+                  continue;
+                }
+                if (!status.isDirectory()) {
+                  LOG.debug("Resolved entry is a file; skipping: {}", status);
+                  continue;
+                }
+              } else {
+                // there's no symlinks in this store, so no need to issue
+                // another call, just see if the result is a directory or a file
+                if (children[0].getPath().equals(candidate.getPath())) {
+                  // the listing status is of a file
+                  continue;
+                }
+
               }
             }
             for (FileStatus child : children) {

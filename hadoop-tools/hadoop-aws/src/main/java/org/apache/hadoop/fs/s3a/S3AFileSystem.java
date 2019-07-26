@@ -94,6 +94,7 @@ import org.apache.hadoop.fs.CommonPathCapabilities;
 import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Globber;
 import org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy;
 import org.apache.hadoop.fs.s3a.impl.ContextAccessors;
 import org.apache.hadoop.fs.s3a.impl.CopyOutcome;
@@ -3669,8 +3670,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    */
   @Override
   public FileStatus[] globStatus(Path pathPattern) throws IOException {
-    entryPoint(INVOCATION_GLOB_STATUS);
-    return super.globStatus(pathPattern);
+    return globStatus(pathPattern, ACCEPT_ALL);
   }
 
   /**
@@ -3681,7 +3681,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
       throws IOException {
     entryPoint(INVOCATION_GLOB_STATUS);
-    return super.globStatus(pathPattern, filter);
+    return new Globber(this, pathPattern, filter, false).glob();
   }
 
   /**
