@@ -42,6 +42,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A Simple Load generator for testing.
@@ -64,7 +65,7 @@ public class MiniOzoneLoadGenerator {
 
   private final List<OzoneBucket> ozoneBuckets;
 
-  private final List<String> agedFiles;
+  private final AtomicInteger agedFileWrittenIndex;
   private final ExecutorService agedFileExecutor;
   private final OzoneBucket agedLoadBucket;
   private final TestProbability agedWriteProbability;
@@ -80,7 +81,7 @@ public class MiniOzoneLoadGenerator {
         new ThreadPoolExecutor.CallerRunsPolicy());
     this.writeExecutor.prestartAllCoreThreads();
 
-    this.agedFiles = new ArrayList<>();
+    this.agedFileWrittenIndex = new AtomicInteger(0);
     this.agedFileExecutor = Executors.newSingleThreadExecutor();
     this.agedLoadBucket = agedLoadBucket;
     this.agedWriteProbability = TestProbability.valueOf(10);
@@ -109,7 +110,8 @@ public class MiniOzoneLoadGenerator {
       OzoneBucket bucket =
           ozoneBuckets.get((int) (Math.random() * ozoneBuckets.size()));
       try {
-        String keyName = writeData(bucket, threadName);
+        int index = RandomUtils.nextInt();
+        String keyName = writeData(index, bucket, threadName);
 
         readData(bucket, keyName);
 
@@ -125,14 +127,13 @@ public class MiniOzoneLoadGenerator {
   }
 
 
-  private String writeData(OzoneBucket bucket, String threadName)
+  private String writeData(int keyIndex, OzoneBucket bucket, String threadName)
       throws Exception {
     // choose a random buffer.
-    int index = RandomUtils.nextInt();
-    ByteBuffer buffer = buffers.get(index % numBuffers);
+    ByteBuffer buffer = buffers.get(keyIndex % numBuffers);
     int bufferCapacity = buffer.capacity();
 
-    String keyName = threadName + keyNameDelimiter + index;
+    String keyName = threadName + keyNameDelimiter + keyIndex;
     try (OzoneOutputStream stream = bucket.createKey(keyName,
         bufferCapacity, ReplicationType.RATIS, ReplicationFactor.THREE,
         new HashMap<>())) {
@@ -182,13 +183,10 @@ public class MiniOzoneLoadGenerator {
     }
   }
 
-  private synchronized void addWrittenKey(String keyName) {
-    agedFiles.add(keyName);
-  }
-
-  private synchronized String getKeyToRead() {
-    int size = agedFiles.size();
-    return size != 0 ? agedFiles.get((RandomUtils.nextInt() % size)) : null;
+  private String getKeyToRead() {
+    int currentIndex = agedFileWrittenIndex.get();
+    return currentIndex != 0 ?
+        String.valueOf(RandomUtils.nextInt(0, currentIndex)): null;
   }
 
   private void startAgedFilesLoad(long runTimeMillis) {
@@ -203,8 +201,8 @@ public class MiniOzoneLoadGenerator {
       String keyName = null;
       try {
         if (agedWriteProbability.isTrue()) {
-          keyName = writeData(agedLoadBucket, threadName);
-          addWrittenKey(keyName);
+          keyName = writeData(agedFileWrittenIndex.incrementAndGet(),
+              agedLoadBucket, threadName);
         } else {
           keyName = getKeyToRead();
           if (keyName != null) {

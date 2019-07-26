@@ -34,7 +34,7 @@ final public class TestProbability {
   }
 
   public boolean isTrue() {
-    return (RandomUtils.nextInt() % (100 / pct)) == 0;
+    return (RandomUtils.nextInt(0, 100) <= pct);
   }
 
   public static TestProbability valueOf(int pct) {
