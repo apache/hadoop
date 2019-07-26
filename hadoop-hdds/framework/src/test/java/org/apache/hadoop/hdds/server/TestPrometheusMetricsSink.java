@@ -107,6 +107,17 @@ public class TestPrometheusMetricsSink {
         sink.prometheusName(recordName, metricName));
   }
 
+  @Test
+  public void testNamingSpaces() {
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+
+    String recordName = "JvmMetrics";
+    String metricName = "GcTimeMillisG1 Young Generation";
+    Assert.assertEquals(
+        "jvm_metrics_gc_time_millis_g1_young_generation",
+        sink.prometheusName(recordName, metricName));
+  }
+
   /**
    * Example metric pojo.
    */
