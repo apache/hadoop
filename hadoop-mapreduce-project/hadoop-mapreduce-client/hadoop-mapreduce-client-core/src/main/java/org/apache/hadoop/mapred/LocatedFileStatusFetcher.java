@@ -84,7 +84,7 @@ public class LocatedFileStatusFetcher {
   /**
    * @param conf configuration for the job
    * @param dirs the initial list of paths
-   * @param recursive whether to traverse the patchs recursively
+   * @param recursive whether to traverse the paths recursively
    * @param inputFilter inputFilter to apply to the resulting paths
    * @param newApi whether using the mapred or mapreduce API
    * @throws InterruptedException

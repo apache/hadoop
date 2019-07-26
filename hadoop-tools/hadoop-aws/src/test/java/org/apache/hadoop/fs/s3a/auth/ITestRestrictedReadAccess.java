@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3a.AbstractS3ATestBase;
 import org.apache.hadoop.fs.s3a.Constants;
@@ -46,6 +47,8 @@ import org.apache.hadoop.fs.s3a.Statistic;
 import org.apache.hadoop.fs.s3a.s3guard.LocalMetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.MetadataStore;
 import org.apache.hadoop.fs.s3a.s3guard.NullMetadataStore;
+import org.apache.hadoop.mapred.LocatedFileStatusFetcher;
+import org.apache.hadoop.mapreduce.lib.input.InvalidInputException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.createFile;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
@@ -64,6 +67,7 @@ import static org.apache.hadoop.fs.s3a.auth.RoleModel.statement;
 import static org.apache.hadoop.fs.s3a.auth.RolePolicies.*;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.bindRolePolicyStatements;
 import static org.apache.hadoop.fs.s3a.auth.RoleTestUtils.newAssumedRoleConfig;
+import static org.apache.hadoop.mapreduce.lib.input.FileInputFormat.LIST_STATUS_NUM_THREADS;
 import static org.apache.hadoop.test.GenericTestUtils.failif;
 import static org.apache.hadoop.test.LambdaTestUtils.intercept;
 
@@ -86,6 +90,21 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   private static final Logger LOG =
       LoggerFactory.getLogger(ITestRestrictedReadAccess.class);
 
+  private static final PathFilter ANYTHING = t -> true;
+
+  private static final PathFilter TEXT_FILE =
+      path -> path.toUri().toString().endsWith(".txt");
+
+  /**
+   * Text found in LocatedFileStatusFetcher exception.
+   */
+  private static final String DOES_NOT_EXIST = "does not exist";
+
+  /**
+   * Text found in LocatedFileStatusFetcher exception.
+   */
+  private static final String MATCHES_0_FILES = "matches 0 files";
+
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> params() {
     return Arrays.asList(new Object[][]{
@@ -94,11 +113,6 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         {"auth", true, true}
     });
   }
-
-  private static final Path ROOT = new Path("/");
-
-  private static final Statement STATEMENT_ALL_BUCKET_READ_ACCESS
-      = statement(true, S3_ALL_BUCKETS, S3_BUCKET_READ_OPERATIONS);
 
   private final String name;
 
@@ -130,8 +144,8 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     conf.setClass(Constants.S3_METADATA_STORE_IMPL,
         s3guard ?
             LocalMetadataStore.class
-            : NullMetadataStore.class
-        , MetadataStore.class);
+            : NullMetadataStore.class,
+        MetadataStore.class);
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authMode);
     disableFilesystemCaching(conf);
     return conf;
@@ -141,10 +155,6 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   public void setup() throws Exception {
     super.setup();
     assumeRoleTests();
-  }
-
-  public Path methodPath() throws IOException {
-    return path(getMethodName());
   }
 
   @Override
@@ -195,9 +205,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     touch(realFS, emptyFile);
     Path subDir = new Path(noReadDir, "subDir");
 
-    Path noReadFile = new Path(subDir, "noReadFile.txt");
+    Path subdirFile = new Path(subDir, "subdirFile.txt");
     byte[] data = "hello".getBytes(Charset.forName("UTF-8"));
-    createFile(realFS, noReadFile, true, data);
+    createFile(realFS, subdirFile, true, data);
+    Path subDir2 = new Path(noReadDir, "subDir2");
+    Path subdir2File1 = new Path(subDir2, "subdir2File1.txt");
+    Path subdir2File2 = new Path(subDir2, "subdir2File2.docx");
+    createFile(realFS, subdir2File1, true, data);
+    createFile(realFS, subdir2File2, true, data);
 
     // create a role filesystem which does not have read access under a path
     Configuration roleConfig = createAssumedRoleConfig();
@@ -207,8 +222,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         statement(true, S3_ALL_BUCKETS, S3_ALL_OPERATIONS),
         new Statement(Effects.Deny)
             .addActions(S3_PATH_RW_OPERATIONS)
-            .addResources(directory(noReadDir))
-    );
+            .addResources(directory(noReadDir)));
     roleFS = (S3AFileSystem) basePath.getFileSystem(roleConfig);
 
     // this is a LIST call; there's no marker.
@@ -222,36 +236,151 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     roleFS.getFileStatus(noReadDir);
     roleFS.getFileStatus(emptyDir);
     if (authMode) {
-      roleFS.getFileStatus(noReadFile);
+      // auth mode doesn't check S3, so no failure
+      roleFS.getFileStatus(subdirFile);
     } else {
       intercept(AccessDeniedException.class, () ->
-          roleFS.getFileStatus(noReadFile));
+          roleFS.getFileStatus(subdirFile));
     }
     intercept(AccessDeniedException.class, () ->
-        ContractTestUtils.readUTF8(roleFS, noReadFile, data.length));
+        ContractTestUtils.readUTF8(roleFS, subdirFile, data.length));
     if (authMode) {
+      // auth mode doesn't just not check the store,
+      // because it knows the file length is zero,
+      // it returns -1 without even opening the file.
       try (FSDataInputStream is = roleFS.open(emptyFile)) {
         Assertions.assertThat(is.read())
             .describedAs("read of empty file")
             .isEqualTo(-1);
       }
-      roleFS.getFileStatus(noReadFile);
+      roleFS.getFileStatus(subdirFile);
     } else {
+      // non-auth mode, it fails at some point in the opening process.
       intercept(AccessDeniedException.class, () ->
           ContractTestUtils.readUTF8(roleFS, emptyFile, 0));
     }
 
-    globFS(realFS, noReadFile, true, true, false);
+    // Fun with Glob
+    describe("Glob Status operations");
+    // baseline: the real filesystem on a subdir
+    globFS(realFS, subdirFile, null, false, 1);
     // a file fails if not in auth mode
-    globFS(roleFS, noReadFile, true, true, !authMode);
+    globFS(roleFS, subdirFile, null, !authMode, 1);
     // empty directories don't fail.
     assertStatusPathEquals(emptyDir,
-        globFS(roleFS, emptyDir, true, true, false));
-    assertStatusPathEquals(noReadFile,
-        globFS(roleFS,
-            new Path(noReadDir, "*/*.txt"),
-            true, true, false));
+        globFS(roleFS, emptyDir, null, false, 1));
+
+    Path textFilePathPattern = new Path(noReadDir, "*/*.txt");
+    FileStatus[] st = globFS(roleFS,
+        textFilePathPattern,
+        null, false, 2);
+    Assertions.assertThat(st)
+        .extracting("getPath")
+        .containsExactlyInAnyOrder(subdirFile, subdir2File1);
+
+    globFS(roleFS,
+        new Path(noReadDir, "*/*.docx"),
+        null, false, 1);
+    globFS(roleFS,
+        new Path(noReadDir, "*/*.doc"),
+        null, false, 0);
+    globFS(roleFS, noReadDir,
+        ANYTHING, false, 1);
+
     // now run a located file status fetcher against it
+    describe("LocatedFileStatusFetcher operations");
+
+    // use the same filter as FileInputFormat; single thread.
+    roleConfig.setInt(LIST_STATUS_NUM_THREADS, 1);
+    LocatedFileStatusFetcher fetcher =
+        new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{basePath},
+            true,
+            HIDDEN_FILE_FILTER,
+            true);
+    Assertions.assertThat(fetcher.getFileStatuses())
+        .describedAs("result of located scan")
+        .flatExtracting(FileStatus::getPath)
+        .containsExactlyInAnyOrder(
+            emptyFile,
+            subdirFile,
+            subdir2File1,
+            subdir2File2);
+
+    describe("LocatedFileStatusFetcher with %s", textFilePathPattern);
+    roleConfig.setInt(LIST_STATUS_NUM_THREADS, 4);
+    LocatedFileStatusFetcher fetcher2 =
+        new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{textFilePathPattern},
+            true,
+            ANYTHING,
+            true);
+    Assertions.assertThat(fetcher2.getFileStatuses())
+        .describedAs("result of located scan")
+        .isNotNull()
+        .flatExtracting(FileStatus::getPath)
+        .containsExactlyInAnyOrder(subdirFile, subdir2File1);
+
+    // query a file and expect the initial scan to fail except in
+    // auth mode.
+    describe("LocatedFileStatusFetcher with %s", subdirFile);
+    roleConfig.setInt(LIST_STATUS_NUM_THREADS, 16);
+    LocatedFileStatusFetcher fetcher3 =
+        new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{subdirFile},
+            true,
+            TEXT_FILE,
+            true);
+    try {
+      Iterable<FileStatus> fetched = fetcher3.getFileStatuses();
+      failif(!authMode, "LocatedFileStatusFetcher(" + subdirFile + ")"
+          + " should have failed");
+      Assertions.assertThat(fetched)
+          .describedAs("result of located scan")
+          .isNotNull()
+          .flatExtracting(FileStatus::getPath)
+          .containsExactly(subdirFile);
+    } catch (AccessDeniedException e) {
+      failif(authMode, "LocatedFileStatusFetcher(" + subdirFile + ")", e);
+    }
+
+    // a file that doesn't exist
+    Path nonexistent = new Path(noReadDir, "nonexistent");
+    intercept(InvalidInputException.class,
+        DOES_NOT_EXIST,
+        () -> new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{nonexistent},
+            true,
+            ANYTHING,
+            true)
+            .getFileStatuses());
+
+    // a file which exists but which doesn't match the pattern
+    intercept(InvalidInputException.class,
+        DOES_NOT_EXIST,
+        () -> new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{noReadDir},
+            true,
+            TEXT_FILE,
+            true)
+            .getFileStatuses());
+
+    // a pattern under a nonexistent path.
+    intercept(
+        InvalidInputException.class,
+        MATCHES_0_FILES,
+        () -> new LocatedFileStatusFetcher(
+            roleConfig,
+            new Path[]{new Path(nonexistent, "*.txt)")},
+            true,
+            TEXT_FILE,
+            true)
+            .getFileStatuses());
   }
 
   protected void assertStatusPathEquals(final Path expected,
@@ -266,9 +395,9 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
    * Glob.
    * @param fs filesystem to use
    * @param path path (which can include patterns)
-   * @param nonNull must the result be non-null
-   * @param notEmpty must the result be a non-empty array
+   * @param filter optional filter
    * @param expectAuthFailure is auth failure expected?
+   * @param expectedCount expected count of results; -1 means null response
    * @return the result of a successful glob or null if an expected auth
    *          failure was caught.
    * @throws IOException failure.
@@ -276,18 +405,20 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   protected FileStatus[] globFS(
       final S3AFileSystem fs,
       final Path path,
-      final boolean nonNull,
-      final boolean notEmpty,
-      boolean expectAuthFailure)
+      final PathFilter filter,
+      boolean expectAuthFailure,
+      final int expectedCount)
       throws IOException {
     LOG.info("Glob {}", path);
     S3ATestUtils.MetricDiff getMetric = new S3ATestUtils.MetricDiff(fs,
         Statistic.OBJECT_METADATA_REQUESTS);
     S3ATestUtils.MetricDiff listMetric = new S3ATestUtils.MetricDiff(fs,
         Statistic.OBJECT_LIST_REQUESTS);
-    FileStatus[] st = null;
+    FileStatus[] st;
     try {
-      st = fs.globStatus(path);
+      st = filter == null
+          ? fs.globStatus(path)
+          : fs.globStatus(path, filter);
       LOG.info("Metrics:\n {},\n {}", getMetric, listMetric);
       if (expectAuthFailure) {
         // should have failed here
@@ -306,16 +437,23 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
           e);
       return null;
     }
-    if (nonNull) {
+    if (expectedCount < 0) {
       Assertions.assertThat(st)
           .describedAs("Glob of %s", path)
-          .isNotNull();
-    }
-    if (notEmpty) {
+          .isNull();
+    } else {
       Assertions.assertThat(st)
           .describedAs("Glob of %s", path)
-          .isNotEmpty();
+          .isNotNull()
+          .hasSize(expectedCount);
     }
     return st;
   }
+
+  private static final PathFilter HIDDEN_FILE_FILTER =
+      (p) -> {
+        String n = p.getName();
+        return !n.startsWith("_") && !n.startsWith(".");
+      };
 }
+
