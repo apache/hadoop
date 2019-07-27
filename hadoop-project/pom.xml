@@ -1306,7 +1306,7 @@
       <dependency>
         <groupId>org.wildfly.openssl</groupId>
         <artifactId>wildfly-openssl</artifactId>
-        <version>1.0.4.Final</version>
+        <version>1.0.7.Final</version>
       </dependency>
 
       <dependency>
