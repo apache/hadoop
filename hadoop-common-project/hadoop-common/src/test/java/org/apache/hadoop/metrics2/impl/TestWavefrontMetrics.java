@@ -24,7 +24,7 @@ import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.sink.WavefrontSink;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.internal.util.reflection.Whitebox;
+import org.apache.hadoop.test.Whitebox;
 
 import java.io.IOException;
 import java.util.ArrayList;
