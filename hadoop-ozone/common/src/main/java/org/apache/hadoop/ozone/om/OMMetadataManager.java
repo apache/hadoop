@@ -316,15 +316,4 @@ public interface OMMetadataManager {
    */
   <KEY, VALUE> long countRowsInTable(Table<KEY, VALUE> table)
       throws IOException;
-
-  /**
-   * Returns an estimated number of rows in a table.  This is much quicker
-   * than {@link OMMetadataManager#countRowsInTable} but the result can be
-   * inaccurate.
-   * @param table Table
-   * @return long Estimated number of rows in the table.
-   * @throws IOException
-   */
-  <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
-      throws IOException;
 }
