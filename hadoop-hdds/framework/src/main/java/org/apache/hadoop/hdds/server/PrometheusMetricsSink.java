@@ -21,8 +21,8 @@ import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -44,7 +44,7 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Cached output lines for each metrics.
    */
-  private Map<String, String> metricLines = new HashMap<>();
+  private final Map<String, String> metricLines = new ConcurrentHashMap<>();
 
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
