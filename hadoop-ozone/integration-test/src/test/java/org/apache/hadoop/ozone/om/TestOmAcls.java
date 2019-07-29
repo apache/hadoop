@@ -24,7 +24,6 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.hdfs.server.datanode.ObjectStoreHandler;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneTestUtils;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.IOzoneObj;
@@ -80,7 +79,7 @@ public class TestOmAcls {
     omId = UUID.randomUUID().toString();
     conf.setBoolean(OZONE_ACL_ENABLED, true);
     conf.setInt(OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS, 2);
-    conf.setClass(OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthrizerTest.class,
+    conf.setClass(OZONE_ACL_AUTHORIZER_CLASS, OzoneAccessAuthorizerTest.class,
         IAccessAuthorizer.class);
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setClusterId(clusterId)
@@ -165,11 +164,10 @@ public class TestOmAcls {
 /**
  * Test implementation to negative case.
  */
-class OzoneAccessAuthrizerTest implements IAccessAuthorizer {
+class OzoneAccessAuthorizerTest implements IAccessAuthorizer {
 
   @Override
-  public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context)
-      throws OMException {
+  public boolean checkAccess(IOzoneObj ozoneObject, RequestContext context) {
     return false;
   }
 }

@@ -3212,7 +3212,7 @@ tOffset hdfsGetDefaultBlockSizeAtPath(hdfsFS fs, const char *path)
             path);
         return -1;
     }
-    jthr = getDefaultBlockSize(env, jFS, jPath, &blockSize);
+    jthr = getDefaultBlockSize(env, jFS, jPath, (jlong *)&blockSize);
     (*env)->DeleteLocalRef(env, jPath);
     if (jthr) {
         errno = printExceptionAndFree(env, jthr, PRINT_EXC_ALL,

@@ -14,15 +14,37 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-apiVersion: v1
-kind: Service
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: scm
+  name: ozone-csi-test-webserver
+  labels:
+    app: ozone-csi-test-webserver
+  annotations: {}
 spec:
-  ports:
-  - port: 9876
-    name: ui
-  clusterIP: None
+  replicas: 1
   selector:
-    app: ozone
-    component: scm
+    matchLabels:
+      app: ozone-csi-test-webserver
+  template:
+    metadata:
+      labels:
+        app: ozone-csi-test-webserver
+    spec:
+      containers:
+      - name: web
+        image: python:3.7.3-alpine3.8
+        args:
+        - python
+        - -m
+        - http.server
+        - --directory
+        - /www
+        volumeMounts:
+        - mountPath: /www
+          name: webroot
+      volumes:
+      - name: webroot
+        persistentVolumeClaim:
+          claimName: ozone-csi-test-webserver
+          readOnly: false

@@ -46,12 +46,12 @@ spec:
         - ozone
         - scm
         - --init
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       containers:
       - name: scm
         image: '@docker.image@'
@@ -62,6 +62,9 @@ spec:
           tcpSocket:
             port: 9861
           initialDelaySeconds: 30
+        envFrom:
+        - configMapRef:
+            name: config
         env:
         - name: JAEGER_SAMPLER_TYPE
           value: probabilistic
@@ -72,9 +75,6 @@ spec:
         volumeMounts:
         - name: data
           mountPath: /data
-        envFrom:
-        - configMapRef:
-            name: config
       volumes:
       - name: data
         emptyDir: {}

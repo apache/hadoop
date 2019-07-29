@@ -13,37 +13,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-apiVersion: apps/v1
-kind: Deployment
+
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
 metadata:
-  name: nginx
-  labels:
-    app: nginx
-  annotations: {}
+  name: org.apache.hadoop.ozone
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: nginx
-  template:
-    metadata:
-      labels:
-        app: nginx
-      annotations: {}
-    spec:
-      containers:
-        - name: nginx
-          image: nginx
-          volumeMounts:
-            - mountPath: /var/lib/www/html
-              name: webroot
-          env: []
-          envFrom: []
-      volumes:
-        - name: webroot
-          persistentVolumeClaim:
-            claimName: nginx-storage
-            readOnly: false
-        - name: config
-          configMap:
-            name: nginx-conf
+  attachRequired: false

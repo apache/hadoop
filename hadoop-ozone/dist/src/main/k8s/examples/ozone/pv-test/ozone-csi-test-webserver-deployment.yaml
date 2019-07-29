@@ -15,51 +15,36 @@
 # limitations under the License.
 
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
-  name: om
+  name: ozone-csi-test-webserver
   labels:
-    app.kubernetes.io/component: ozone
+    app: ozone-csi-test-webserver
+  annotations: {}
 spec:
+  replicas: 1
   selector:
     matchLabels:
-      app: ozone
-      component: om
-  serviceName: om
-  replicas: 1
+      app: ozone-csi-test-webserver
   template:
     metadata:
       labels:
-        app: ozone
-        component: om
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "9874"
-        prometheus.io/path: /prom
+        app: ozone-csi-test-webserver
     spec:
-      securityContext:
-        fsGroup: 1000
       containers:
-      - name: om
-        image: '@docker.image@'
+      - name: web
+        image: python:3.7.3-alpine3.8
         args:
-        - ozone
-        - om
-        env:
-        - name: WAITFOR
-          value: scm-0.scm:9876
-        - name: ENSURE_OM_INITIALIZED
-          value: /data/metadata/om/current/VERSION
-        livenessProbe:
-          tcpSocket:
-            port: 9862
-          initialDelaySeconds: 30
+        - python
+        - -m
+        - http.server
+        - --directory
+        - /www
         volumeMounts:
-        - name: data
-          mountPath: /data
-        envFrom:
-        - configMapRef:
-            name: config
+        - mountPath: /www
+          name: webroot
       volumes:
-      - name: data
-        emptyDir: {}
+      - name: webroot
+        persistentVolumeClaim:
+          claimName: ozone-csi-test-webserver
+          readOnly: false

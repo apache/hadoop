@@ -14,15 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
-  name: csi-ozone
-subjects:
-- kind: ServiceAccount
-  name: csi-ozone
-  namespace: default
-roleRef:
-  kind: ClusterRole
-  name: csi-ozone
-  apiGroup: rbac.authorization.k8s.io
+  name: ozone-csi-test-webserver
+  labels: {}
+  annotations: {}
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: ozone

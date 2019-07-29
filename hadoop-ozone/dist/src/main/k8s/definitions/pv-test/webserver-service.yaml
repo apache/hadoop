@@ -14,13 +14,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-source:
-  - path: ../../definitions
-import:
-  - path: ozone-csi
-  - path: ozone
-    transformations:
-      - type: ozone/csi
-      - type: ozone/emptydir
-  - path: pv-test
-    destination: pv-test
+apiVersion: v1
+kind: Service
+metadata:
+  name: ozone-csi-test-webserver
+  labels: {}
+  annotations: {}
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    name: web
+  selector:
+    app: ozone-csi-test-webserver
