@@ -1142,7 +1142,7 @@ public class CapacityScheduler extends
     root.updateClusterResource(clusterResource, new ResourceLimits(
         clusterResource));
   }
-  
+
   /**
    * Process node labels update on a node.
    */
@@ -1185,7 +1185,7 @@ public class CapacityScheduler extends
     if (null != reservedContainer) {
       killReservedContainer(reservedContainer);
     }
-    
+
     // Update node labels after we've done this
     node.updateLabels(newLabels);
   }
@@ -1367,13 +1367,8 @@ public class CapacityScheduler extends
     {
       NodeLabelsUpdateSchedulerEvent labelUpdateEvent =
           (NodeLabelsUpdateSchedulerEvent) event;
-      
-      for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
-          .getUpdatedNodeToLabels().entrySet()) {
-        NodeId id = entry.getKey();
-        Set<String> labels = entry.getValue();
-        updateLabelsOnNode(id, labels);
-      }
+
+      updateNodeLabelsAndQueueResource(labelUpdateEvent);
     }
     break;
     case NODE_UPDATE:
@@ -1482,6 +1477,23 @@ public class CapacityScheduler extends
       LOG.error("Invalid eventtype " + event.getType() + ". Ignoring!");
     }
   }
+
+  /**
+   * Process node labels update.
+   */
+  private synchronized void updateNodeLabelsAndQueueResource(
+      NodeLabelsUpdateSchedulerEvent labelUpdateEvent) {
+    for (Entry<NodeId, Set<String>> entry : labelUpdateEvent
+        .getUpdatedNodeToLabels().entrySet()) {
+      NodeId id = entry.getKey();
+      Set<String> labels = entry.getValue();
+      updateLabelsOnNode(id, labels);
+    }
+    Resource clusterResource = getClusterResource();
+    root.updateClusterResource(clusterResource,
+        new ResourceLimits(clusterResource));
+  }
+
 
   private synchronized void addNode(RMNode nodeManager) {
     FiCaSchedulerNode schedulerNode = new FiCaSchedulerNode(nodeManager,

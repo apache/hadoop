@@ -413,7 +413,7 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.close();
   }
 
-  @Test(timeout = 3000000)
+  @Test(timeout = 300000)
   public void testMoveApplicationWithLabel() throws Exception {
     // set node -> label
     mgr.addToCluserNodeLabelsWithDefaultExclusivity(
@@ -589,7 +589,49 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     rm.close();
   }
 
-  @Test (timeout = 60000)
+  @Test
+  public void testAMResourceLimitNodeUpdatePartition() throws Exception {
+    conf.setInt("yarn.scheduler.minimum-allocation-mb", 64);
+    // inject node label manager
+    MockRM rm = new MockRM(getConfigurationWithQueueLabels(conf)) {
+      @Override
+      public RMNodeLabelsManager createNodeLabelManager() {
+        return mgr;
+      }
+    };
+    rm.getRMContext().setNodeLabelManager(mgr);
+    rm.start();
+    rm.registerNode("h1:1234", 6400);
+    mgr.addToCluserNodeLabelsWithDefaultExclusivity(
+        ImmutableSet.of("x", "y", "z"));
+
+    // .1 percentage of 6400 will be for am
+    checkAMResourceLimit(rm, "a", 640, "");
+    checkAMResourceLimit(rm, "a", 0, "x");
+    checkAMResourceLimit(rm, "a", 0, "y");
+    checkAMResourceLimit(rm, "a", 0, "z");
+
+    mgr.replaceLabelsOnNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("x")));
+    rm.drainEvents();
+
+    checkAMResourceLimit(rm, "a", 640, "x");
+    checkAMResourceLimit(rm, "a", 0, "y");
+    checkAMResourceLimit(rm, "a", 0, "z");
+    checkAMResourceLimit(rm, "a", 0, "");
+
+    // Switch
+    mgr.replaceLabelsOnNode(
+        ImmutableMap.of(NodeId.newInstance("h1", 0), toSet("y")));
+    rm.drainEvents();
+
+    checkAMResourceLimit(rm, "a", 0, "x");
+    checkAMResourceLimit(rm, "a", 640, "y");
+    checkAMResourceLimit(rm, "a", 0, "z");
+    checkAMResourceLimit(rm, "a", 0, "");
+  }
+
+  @Test(timeout = 60000)
   public void testAMResourceUsageWhenNodeUpdatesPartition()
       throws Exception {
     // set node -> label
@@ -638,8 +680,8 @@ public class TestCapacitySchedulerNodeLabelUpdate {
     FiCaSchedulerApp app = cs.getApplicationAttempt(am1.getApplicationAttemptId());
 
     // change h1's label to z
-    cs.handle(new NodeLabelsUpdateSchedulerEvent(ImmutableMap.of(nm1.getNodeId(),
-        toSet("z"))));
+    cs.handle(new NodeLabelsUpdateSchedulerEvent(
+        ImmutableMap.of(nm1.getNodeId(), toSet("z"))));
 
     // Now the resources also should change from x to z. Verify AM and normal
     // used resource are successfully changed.
@@ -676,5 +718,29 @@ public class TestCapacitySchedulerNodeLabelUpdate {
         app.getAppAttemptResourceUsage().getAMUsed("").getMemorySize());
 
     rm.close();
+  }
+
+  private void checkAMResourceLimit(MockRM rm, String queuename, int memory,
+      String label) throws InterruptedException {
+    Assert.assertEquals(memory,
+        waitForResourceUpdate(rm, queuename, memory, label, 3000L));
+  }
+
+  private long waitForResourceUpdate(MockRM rm, String queuename, long memory,
+      String label, long timeout) throws InterruptedException {
+    long start = System.currentTimeMillis();
+    long memorySize = 0;
+    while (System.currentTimeMillis() - start < timeout) {
+      CapacityScheduler scheduler =
+          (CapacityScheduler) rm.getResourceScheduler();
+      CSQueue queue = scheduler.getQueue(queuename);
+      memorySize =
+          queue.getQueueResourceUsage().getAMLimit(label).getMemorySize();
+      if (memory == memorySize) {
+        return memorySize;
+      }
+      Thread.sleep(100);
+    }
+    return memorySize;
   }
 }
