@@ -206,11 +206,6 @@ public class TypedTable<KEY, VALUE> implements Table<KEY, VALUE> {
   }
 
   @Override
-  public long getEstimatedKeyCount() throws IOException {
-    return rawTable.getEstimatedKeyCount();
-  }
-
-  @Override
   public void close() throws Exception {
     rawTable.close();
 
