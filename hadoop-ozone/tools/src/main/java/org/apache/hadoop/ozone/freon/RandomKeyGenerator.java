@@ -680,7 +680,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
         + RandomStringUtils.randomNumeric(5);
     LOG.trace("Adding key: {} in bucket: {} of volume: {}",
         keyName, bucketName, volumeName);
-    byte[] randomValue = DFSUtil.string2Bytes(UUID.randomUUID().toString());
     try {
       try (Scope scope = GlobalTracer.get().buildSpan("createKey")
           .startActive(true)) {
