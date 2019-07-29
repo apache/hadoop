@@ -803,6 +803,16 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   }
 
   @Override
+  public <KEY, VALUE> long countEstimatedRowsInTable(Table<KEY, VALUE> table)
+      throws IOException {
+    long count = 0;
+    if (table != null) {
+      count = table.getEstimatedKeyCount();
+    }
+    return count;
+  }
+
+  @Override
   public Table<String, S3SecretValue> getS3SecretTable() {
     return s3SecretTable;
   }
