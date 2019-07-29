@@ -90,6 +90,7 @@ public class PrometheusMetricsSink implements MetricsSink {
         }
         builder.append("} ");
         builder.append(metrics.value());
+        builder.append("\n");
         metricLines.put(key, builder.toString());
 
       }
@@ -128,7 +129,7 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   public void writeMetrics(Writer writer) throws IOException {
     for (String line : metricLines.values()) {
-      writer.write(line + "\n");
+      writer.write(line);
     }
   }
 }
