@@ -187,6 +187,15 @@
     </description>
   </property>
   <property>
+    <name>dfs.container.ratis.statemachine.max.pending.apply-transactions</name>
+    <value>10000</value>
+    <tag>OZONE, RATIS</tag>
+    <description>Maximum number of pending apply transactions in a data
+      pipeline. The default value is kept same as default snapshot threshold
+      dfs.ratis.snapshot.threshold.
+    </description>
+  </property>
+  <property>
     <name>dfs.container.ratis.num.write.chunk.threads</name>
     <value>60</value>
     <tag>OZONE, RATIS, PERFORMANCE</tag>

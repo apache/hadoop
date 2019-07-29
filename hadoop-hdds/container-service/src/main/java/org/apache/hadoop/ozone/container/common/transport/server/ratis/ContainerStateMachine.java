@@ -26,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.HddsUtils;
 import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 
+import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerNotOpenException;
 import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
 import org.apache.hadoop.ozone.OzoneConfigKeys;
@@ -79,6 +80,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -146,6 +148,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   private final Cache<Long, ByteString> stateMachineDataCache;
   private final boolean isBlockTokenEnabled;
   private final TokenVerifier tokenVerifier;
+
+  private final Semaphore applyTransactionSemaphore;
   /**
    * CSM metrics.
    */
@@ -175,6 +179,12 @@ public class ContainerStateMachine extends BaseStateMachine {
     final int numContainerOpExecutors = conf.getInt(
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_KEY,
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT);
+    int maxPendingApplyTransactions = conf.getInt(
+        ScmConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS,
+        ScmConfigKeys.
+            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS_DEFAULT);
+    applyTransactionSemaphore = new Semaphore(maxPendingApplyTransactions);
     this.executors = new ExecutorService[numContainerOpExecutors];
     for (int i = 0; i < numContainerOpExecutors; i++) {
       final int index = i;
@@ -626,6 +636,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             .setLogIndex(index);
 
     try {
+      applyTransactionSemaphore.acquire();
       metrics.incNumApplyTransactionsOps();
       ContainerCommandRequestProto requestProto =
           getContainerCommandRequestProto(
@@ -663,9 +674,9 @@ public class ContainerStateMachine extends BaseStateMachine {
               requestProto.getWriteChunk().getChunkData().getLen());
         }
         updateLastApplied();
-      });
+      }).whenComplete((r, t) -> applyTransactionSemaphore.release());
       return future;
-    } catch (IOException e) {
+    } catch (IOException | InterruptedException e) {
       metrics.incNumApplyTransactionsFails();
       return completeExceptionally(e);
     }
