@@ -81,6 +81,7 @@ import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.snapshot.OzoneManagerSnapshotProvider;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.security.OzoneSecurityException;
@@ -144,6 +145,8 @@ import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.utils.RetriableTask;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
+import org.apache.hadoop.utils.db.SequenceNumberNotFoundException;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBStore;
 import org.apache.ratis.server.protocol.TermIndex;
@@ -3345,5 +3348,19 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   public boolean isRatisEnabled() {
     return isRatisEnabled;
+  }
+
+  /**
+   * Get DB updates since a specific sequence number.
+   * @param dbUpdatesRequest request that encapsulates a sequence number.
+   * @return Wrapper containing the updates.
+   * @throws SequenceNumberNotFoundException if db is unable to read the data.
+   */
+  public DBUpdatesWrapper getDBUpdates(
+      DBUpdatesRequest dbUpdatesRequest)
+      throws SequenceNumberNotFoundException {
+    return metadataManager.getStore()
+        .getUpdatesSince(dbUpdatesRequest.getSequenceNumber());
+
   }
 }
