@@ -120,7 +120,7 @@ public class TestOMVolumeAddAclRequest {
     // Get Acl before validateAndUpdateCache.
     OmVolumeArgs omVolumeArgs =
         omMetadataManager.getVolumeTable().get(volumeKey);
-    // As request is valid volume table should not have entry.
+    // As request is valid volume table should have entry.
     Assert.assertNotNull(omVolumeArgs);
     OmOzoneAclMap aclMapBeforeSet = omVolumeArgs.getAclMap();
 

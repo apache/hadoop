@@ -73,9 +73,8 @@ public class OMVolumeAddAclRequest extends OMClientRequest {
       return new OMVolumeAddAclResponse(null, omResponse.build());
     }
 
-    OzoneObjInfo ozoneObj = OzoneObjInfo.fromProtobuf(addAclRequest.getObj());
     OzoneAcl ozoneAcl = OzoneAcl.fromProtobuf(addAclRequest.getAcl());
-    String volume = ozoneObj.getVolumeName();
+    String volume = addAclRequest.getObj().getPath().substring(1);
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumVolumeUpdates();
@@ -83,7 +82,7 @@ public class OMVolumeAddAclRequest extends OMClientRequest {
     OmVolumeArgs omVolumeArgs = null;
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-
+    boolean lockAcquired = false;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -91,16 +90,14 @@ public class OMVolumeAddAclRequest extends OMClientRequest {
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.WRITE, volume,
             null, null);
       }
-
-      omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
+      lockAcquired =
+          omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
       omVolumeArgs = omMetadataManager.getVolumeTable().get(dbVolumeKey);
-
       if (omVolumeArgs == null) {
         throw new OMException(OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
       omVolumeArgs.addAcl(ozoneAcl);
-
       // update cache.
       omMetadataManager.getVolumeTable().addCacheEntry(
           new CacheKey<>(dbVolumeKey),
@@ -108,11 +105,14 @@ public class OMVolumeAddAclRequest extends OMClientRequest {
     } catch (IOException ex) {
       exception = ex;
     } finally {
-      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      if (lockAcquired) {
+        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      }
     }
 
     // TODO: audit log
     if (exception == null) {
+      LOG.debug("acl: {} added to volume: {}", ozoneAcl, volume);
       omResponse.setAddAclResponse(
           AddAclResponse.newBuilder().setResponse(true).build());
       return new OMVolumeAddAclResponse(omVolumeArgs, omResponse.build());
