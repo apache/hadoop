@@ -28,11 +28,13 @@ import java.net.URLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
+import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.server.federation.resolver.ActiveNamenodeResolver;
 import org.apache.hadoop.hdfs.server.federation.resolver.FileSubclusterResolver;
 import org.apache.hadoop.hdfs.server.federation.store.StateStoreService;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenSecretManager;
 import org.apache.hadoop.util.VersionInfo;
 import org.codehaus.jettison.json.JSONArray;
 import org.codehaus.jettison.json.JSONException;
@@ -201,6 +203,23 @@ public final class FederationUtil {
         RBFConfigKeys.FEDERATION_NAMENODE_RESOLVER_CLIENT_CLASS_DEFAULT,
         ActiveNamenodeResolver.class);
     return newInstance(conf, stateStore, StateStoreService.class, clazz);
+  }
+
+  /**
+   * Creates an instance of DelegationTokenSecretManager from the
+   * configuration.
+   *
+   * @param conf Configuration that defines the token manager class.
+   * @return New delegation token secret manager.
+   */
+  public static AbstractDelegationTokenSecretManager<DelegationTokenIdentifier>
+      newSecretManager(Configuration conf) {
+    Class<? extends AbstractDelegationTokenSecretManager> clazz =
+        conf.getClass(
+        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS,
+        RBFConfigKeys.DFS_ROUTER_DELEGATION_TOKEN_DRIVER_CLASS_DEFAULT,
+        AbstractDelegationTokenSecretManager.class);
+    return newInstance(conf, null, null, clazz);
   }
 
   /**
