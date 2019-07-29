@@ -44,12 +44,12 @@ spec:
             path: /
             port: 9878
           initialDelaySeconds: 30
-        volumeMounts:
-        - name: data
-          mountPath: /data
         envFrom:
         - configMapRef:
             name: config
+        volumeMounts:
+        - name: data
+          mountPath: /data
       volumes:
       - name: data
         emptyDir: {}
