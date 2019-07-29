@@ -19,17 +19,24 @@
 package org.apache.hadoop.fs.s3a;
 
 import com.amazonaws.ClientConfiguration;
+import com.amazonaws.SignableRequest;
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.Signer;
+import com.amazonaws.auth.SignerFactory;
 import com.amazonaws.services.s3.AmazonS3;
 import com.amazonaws.services.s3.S3ClientOptions;
 
+import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.reflect.FieldUtils;
+import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.s3native.S3xLoginHelper;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.Timeout;
@@ -617,4 +624,135 @@ public class ITestS3AConfiguration {
         "override,base");
   }
 
+  @Test(timeout = 10_000L)
+  public void testS3SpecificSignerOverride() throws IOException {
+    ClientConfiguration clientConfiguration = null;
+    Configuration config;
+
+    String signerOverride = "testSigner";
+    String s3SignerOverride = "testS3Signer";
+
+    // Default SIGNING_ALGORITHM, overridden for S3 only
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+    clientConfiguration = S3AUtils.createAwsConfForS3(config, "dontcare");
+    Assert.assertEquals(s3SignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils.createAwsConfForDdb(config, "dontcare");
+    Assert.assertNull(clientConfiguration.getSignerOverride());
+
+    // Configured base SIGNING_ALGORITHM, overridden for S3 only
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM, signerOverride);
+    config.set(SIGNING_ALGORITHM_S3, s3SignerOverride);
+    clientConfiguration = S3AUtils.createAwsConfForS3(config, "dontcare");
+    Assert.assertEquals(s3SignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils.createAwsConfForDdb(config, "dontcare");
+    Assert
+        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+  }
+
+  @Test(timeout = 10_000L)
+  public void testDdbSpecificSignerOverride() throws IOException {
+    ClientConfiguration clientConfiguration = null;
+    Configuration config;
+
+    String signerOverride = "testSigner";
+    String ddbSignerOverride = "testDdbSigner";
+
+    // Default SIGNING_ALGORITHM, overridden for S3
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
+    clientConfiguration = S3AUtils.createAwsConfForDdb(config, "dontcare");
+    Assert.assertEquals(ddbSignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils.createAwsConfForS3(config, "dontcare");
+    Assert.assertNull(clientConfiguration.getSignerOverride());
+
+    // Configured base SIGNING_ALGORITHM, overridden for S3
+    config = new Configuration();
+    config.set(SIGNING_ALGORITHM, signerOverride);
+    config.set(SIGNING_ALGORITHM_DDB, ddbSignerOverride);
+    clientConfiguration = S3AUtils.createAwsConfForDdb(config, "dontcare");
+    Assert.assertEquals(ddbSignerOverride,
+        clientConfiguration.getSignerOverride());
+    clientConfiguration = S3AUtils.createAwsConfForS3(config, "dontcare");
+    Assert
+        .assertEquals(signerOverride, clientConfiguration.getSignerOverride());
+  }
+
+  // Expecting generic Exception.class to handle future implementation changes.
+  // For now, this is an NPE
+  @Test(timeout = 10_000L, expected = Exception.class)
+  public void testCustomSignerFailureIfNotRegistered() {
+    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+  }
+
+  @Test(timeout = 10_000L)
+  public void testCustomSignerInitialization() {
+    Configuration config = new Configuration();
+    SignerForTest1.reset();
+    SignerForTest2.reset();
+    config.set(CUSTOM_SIGNERS, "testsigner1:" + SignerForTest1.class.getName());
+    initCustomSigners(config);
+    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    s1.sign(null, null);
+    Assert.assertEquals(true, SignerForTest1.initialized);
+  }
+
+  @Test(timeout = 10_000L)
+  public void testMultipleCustomSignerInitialization() {
+    Configuration config = new Configuration();
+    SignerForTest1.reset();
+    SignerForTest2.reset();
+    config.set(CUSTOM_SIGNERS,
+        "testsigner1:" + SignerForTest1.class.getName() + "," + "testsigner2:"
+            + SignerForTest2.class.getName());
+    initCustomSigners(config);
+    Signer s1 = SignerFactory.createSigner("testsigner1", null);
+    s1.sign(null, null);
+    Assert.assertEquals(true, SignerForTest1.initialized);
+
+    Signer s2 = SignerFactory.createSigner("testsigner2", null);
+    s2.sign(null, null);
+    Assert.assertEquals(true, SignerForTest2.initialized);
+  }
+
+
+  /**
+   * SignerForTest1.
+   */
+  @Private
+  public static class SignerForTest1 implements Signer {
+
+    private static boolean initialized = false;
+
+    @Override
+    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+      initialized = true;
+    }
+
+    public static void reset() {
+      initialized = false;
+    }
+  }
+
+  /**
+   * SignerForTest2.
+   */
+  @Private
+  public static class SignerForTest2 implements Signer {
+
+    private static boolean initialized = false;
+
+    @Override
+    public void sign(SignableRequest<?> request, AWSCredentials credentials) {
+      initialized = true;
+    }
+
+    public static void reset() {
+      initialized = false;
+    }
+  }
 }

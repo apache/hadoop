@@ -300,6 +300,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     LOG.debug("Initializing S3AFileSystem for {}", bucket);
     // clone the configuration into one with propagated bucket options
     Configuration conf = propagateBucketOptions(originalConf, bucket);
+    // Initialize any custom signers
+    initCustomSigners(conf);
     // patch the Hadoop security providers
     patchSecurityCredentialProviders(conf);
     // look for delegation token support early.

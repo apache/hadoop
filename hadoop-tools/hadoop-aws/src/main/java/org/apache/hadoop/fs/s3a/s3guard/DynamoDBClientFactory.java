@@ -80,7 +80,8 @@ public interface DynamoDBClientFactory extends Configurable {
           "Should have been configured before usage");
 
       final Configuration conf = getConf();
-      final ClientConfiguration awsConf = S3AUtils.createAwsConf(conf, bucket);
+      final ClientConfiguration awsConf = S3AUtils
+          .createAwsConfForDdb(conf, bucket);
 
       final String region = getRegion(conf, defaultRegion);
       LOG.debug("Creating DynamoDB client in region {}", region);

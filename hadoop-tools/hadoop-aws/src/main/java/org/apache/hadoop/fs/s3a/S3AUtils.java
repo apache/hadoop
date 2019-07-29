@@ -26,6 +26,8 @@ import com.amazonaws.Protocol;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.Signer;
+import com.amazonaws.auth.SignerFactory;
 import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
@@ -1195,9 +1197,10 @@ public final class S3AUtils {
   }
 
   /**
-   * Create a new AWS {@code ClientConfiguration}.
-   * All clients to AWS services <i>MUST</i> use this for consistent setup
-   * of connectivity, UA, proxy settings.
+   * Create a new AWS {@code ClientConfiguration}. All clients to AWS services
+   * <i>MUST</i> use this or the equivalents for the specific service for
+   * consistent setup of connectivity, UA, proxy settings.
+   *
    * @param conf The Hadoop configuration
    * @param bucket Optional bucket to use to look up per-bucket proxy secrets
    * @return new AWS client configuration
@@ -1210,6 +1213,38 @@ public final class S3AUtils {
     initConnectionSettings(conf, awsConf);
     initProxySupport(conf, bucket, awsConf);
     initUserAgent(conf, awsConf);
+    return awsConf;
+  }
+
+  /**
+   * Create a new AWS {#link ClientConfiguration} S3 clients <i>MUST</i> use
+   * this for consistent setup of connectivity, UA, proxy settings.
+   */
+  public static ClientConfiguration createAwsConfForS3(Configuration conf,
+      String bucket)
+      throws IOException {
+    ClientConfiguration awsConf = createAwsConf(conf, bucket);
+    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM_S3, "");
+    if (!signerOverride.isEmpty()) {
+      LOG.debug("Signer override for S3 = {}", signerOverride);
+      awsConf.setSignerOverride(signerOverride);
+    }
+    return awsConf;
+  }
+
+  /**
+   * Create a new AWS {#link ClientConfiguration} DynamoDB clients <i>MUST</i>
+   * use this for consistent setup of connectivity, UA, proxy settings.
+   */
+  public static ClientConfiguration createAwsConfForDdb(Configuration conf,
+      String bucket)
+      throws IOException {
+    ClientConfiguration awsConf = createAwsConf(conf, bucket);
+    String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM_DDB, "");
+    if (!signerOverride.isEmpty()) {
+      LOG.debug("Signer override for DDB = {}", signerOverride);
+      awsConf.setSignerOverride(signerOverride);
+    }
     return awsConf;
   }
 
@@ -1300,6 +1335,40 @@ public final class S3AUtils {
           "Proxy error: " + PROXY_PORT + " set without " + PROXY_HOST;
       LOG.error(msg);
       throw new IllegalArgumentException(msg);
+    }
+  }
+
+  /**
+   * Initialize custom signers and register them with the AWS SDK.
+   *
+   * @param conf Hadoop configuration
+   */
+  public static void initCustomSigners(Configuration conf) {
+    String[] customSigners = conf.getTrimmedStrings(CUSTOM_SIGNERS);
+    if (customSigners == null || customSigners.length == 0) {
+      // No custom signers specified, nothing to do.
+      LOG.debug("No custom signers specified");
+      return;
+    }
+
+    for (String customSigner : customSigners) {
+      String[] parts = customSigner.split(":");
+      if (parts.length != 2) {
+        String message =
+            "Invalid format (name:class) for CustomSigner: [" + customSigner
+                + "]";
+        LOG.error(message);
+        throw new IllegalArgumentException(message);
+      }
+      Class<? extends Signer> clazz = null;
+      try {
+        clazz = (Class<? extends Signer>) conf.getClassByName(parts[1]);
+      } catch (ClassNotFoundException e) {
+        throw new RuntimeException(e);
+      }
+      LOG.debug("Registering Custom Signer - [{}->{}]", parts[0],
+          clazz.getName());
+      SignerFactory.registerSigner(parts[0], clazz);
     }
   }
 
