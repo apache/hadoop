@@ -325,4 +325,25 @@ public class TestRDBStore {
     }
   }
 
+  @Test
+  public void testGetDBUpdatesSince() throws Exception {
+
+    try (RDBStore newStore =
+             new RDBStore(folder.newFolder(), options, configSet)) {
+
+      try (Table firstTable = newStore.getTable(families.get(1))) {
+        firstTable.put(StringUtils.getBytesUtf16("Key1"), StringUtils
+            .getBytesUtf16("Value1"));
+        firstTable.put(StringUtils.getBytesUtf16("Key2"), StringUtils
+            .getBytesUtf16("Value2"));
+      }
+      Assert.assertTrue(
+          newStore.getDb().getLatestSequenceNumber() == 2);
+
+      DBUpdatesWrapper dbUpdatesSince = newStore.getUpdatesSince(0);
+      Assert.assertEquals(2, dbUpdatesSince.getData().size());
+    }
+  }
+
+
 }

@@ -73,6 +73,7 @@ enum Type {
   ListMultiPartUploadParts = 50;
 
   ServiceList = 51;
+  DBUpdates = 53;
 
   GetDelegationToken = 61;
   RenewDelegationToken = 62;
@@ -136,6 +137,7 @@ message OMRequest {
   optional MultipartUploadListPartsRequest  listMultipartUploadPartsRequest = 50;
 
   optional ServiceListRequest               serviceListRequest             = 51;
+  optional DBUpdatesRequest                  dbUpdatesRequest              = 53;
 
   optional hadoop.common.GetDelegationTokenRequestProto getDelegationTokenRequest = 61;
   optional hadoop.common.RenewDelegationTokenRequestProto renewDelegationTokenRequest= 62;
@@ -202,6 +204,7 @@ message OMResponse {
   optional MultipartUploadListPartsResponse listMultipartUploadPartsResponse = 50;
 
   optional ServiceListResponse               ServiceListResponse           = 51;
+  optional DBUpdatesResponse                 dbUpdatesResponse             = 52;
 
   optional GetDelegationTokenResponseProto getDelegationTokenResponse = 61;
   optional RenewDelegationTokenResponseProto renewDelegationTokenResponse = 62;
@@ -836,9 +839,18 @@ message AllocateBlockResponse {
 message ServiceListRequest {
 }
 
+message DBUpdatesRequest {
+    required uint64 sequenceNumber = 1;
+}
+
 message ServiceListResponse {
 
     repeated ServiceInfo serviceInfo = 2;
+}
+
+message DBUpdatesResponse {
+    required uint64 sequenceNumber = 1;
+    repeated bytes data = 2;
 }
 
 message ServicePort {

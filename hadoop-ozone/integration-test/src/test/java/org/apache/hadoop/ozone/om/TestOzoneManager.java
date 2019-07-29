@@ -59,6 +59,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.VolumeList;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
@@ -81,6 +82,7 @@ import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
+import org.apache.hadoop.utils.db.DBUpdatesWrapper;
 import org.apache.hadoop.utils.db.RDBStore;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.Table.KeyValue;
@@ -1395,8 +1397,41 @@ public class TestOzoneManager {
     RDBStore rdbStore = (RDBStore) cluster.getOzoneManager()
         .getMetadataManager().getStore();
     RocksDB db = rdbStore.getDb();
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
 
+    OmKeyInfo keyInfo = getNewOmKeyInfo();
+    OmKeyInfoCodec omKeyInfoCodec = new OmKeyInfoCodec();
+
+    db.put(StringUtils.getBytesUtf16("OMKey1"),
+        omKeyInfoCodec.toPersistedFormat(keyInfo));
+
+    StringBuilder sb = new StringBuilder();
+    Assert.assertTrue(db.keyMayExist(StringUtils.getBytesUtf16("OMKey1"),
+        sb));
+    Assert.assertTrue(sb.length() > 0);
+  }
+
+
+  @Test
+  public void testGetOMDBUpdates() throws IOException {
+
+    DBUpdatesRequest dbUpdatesRequest =
+        DBUpdatesRequest.newBuilder().setSequenceNumber(0).build();
+
+    DBUpdatesWrapper dbUpdates =
+        cluster.getOzoneManager().getDBUpdates(dbUpdatesRequest);
+    Assert.assertTrue(dbUpdates.getData().isEmpty());
+
+    //Write data to OM.
+    OmKeyInfo keyInfo = getNewOmKeyInfo();
+    Assert.assertNotNull(keyInfo);
+    dbUpdates =
+        cluster.getOzoneManager().getDBUpdates(dbUpdatesRequest);
+    Assert.assertFalse(dbUpdates.getData().isEmpty());
+
+  }
+
+  private OmKeyInfo getNewOmKeyInfo() throws IOException {
+    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     OmVolumeArgs volumeArgs = OmVolumeArgs.newBuilder()
         .setVolume("vol1")
         .setAdminName("bilbo")
@@ -1423,16 +1458,6 @@ public class TestOzoneManager {
         .build();
     OpenKeySession keySession = cluster.getOzoneManager().getKeyManager()
         .openKey(keyArgs);
-    OmKeyInfo keyInfo = keySession.getKeyInfo();
-    OmKeyInfoCodec omKeyInfoCodec = new OmKeyInfoCodec();
-
-    db.put(StringUtils.getBytesUtf16("OMKey1"),
-        omKeyInfoCodec.toPersistedFormat(keyInfo));
-
-    StringBuilder sb = new StringBuilder();
-    Assert.assertTrue(db.keyMayExist(StringUtils.getBytesUtf16("OMKey1"),
-        sb));
-    Assert.assertTrue(sb.length() > 0);
+    return  keySession.getKeyInfo();
   }
-
 }
