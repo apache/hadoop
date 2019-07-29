@@ -17,7 +17,7 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-ozone
+  name: csi-ozone-default
 rules:
 - apiGroups:
   - ""

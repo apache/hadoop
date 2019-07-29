@@ -17,12 +17,12 @@
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: csi-ozone
+  name: csi-ozone-default
 subjects:
 - kind: ServiceAccount
   name: csi-ozone
-  namespace: weekly-test
+  namespace: default
 roleRef:
   kind: ClusterRole
-  name: csi-ozone
+  name: csi-ozone-default
   apiGroup: rbac.authorization.k8s.io
