@@ -263,9 +263,7 @@ public final class RandomKeyGenerator implements Callable<Void> {
     // Compute the common initial digest for all keys without their UUID
     if (validateWrites) {
       commonInitialMD = DigestUtils.getDigest(DIGEST_ALGORITHM);
-      int uuidLength = UUID.randomUUID().toString().length();
-      keySize = Math.max(uuidLength, keySize);
-      for (long nrRemaining = keySize - uuidLength; nrRemaining > 0;
+      for (long nrRemaining = keySize; nrRemaining > 0;
           nrRemaining -= bufferSize) {
         int curSize = (int)Math.min(bufferSize, nrRemaining);
         commonInitialMD.update(keyValueBuffer, 0, curSize);
@@ -715,7 +713,6 @@ public final class RandomKeyGenerator implements Callable<Void> {
 
       if (validateWrites) {
         MessageDigest tmpMD = (MessageDigest) commonInitialMD.clone();
-        tmpMD.update(randomValue);
         boolean validate = validationQueue.offer(
             new KeyValidate(bucket, keyName, tmpMD.digest()));
         if (validate) {
