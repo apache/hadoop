@@ -3674,14 +3674,22 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   }
 
   /**
-   * Override superclass so as to add statistic collection.
+   * Override superclass so as to add statistic collection
+   * and disable symlink resolution.
    * {@inheritDoc}
    */
   @Override
-  public FileStatus[] globStatus(Path pathPattern, PathFilter filter)
+  public FileStatus[] globStatus(
+      final Path pathPattern,
+      final PathFilter filter)
       throws IOException {
     entryPoint(INVOCATION_GLOB_STATUS);
-    return new Globber(this, pathPattern, filter, false).glob();
+    return Globber.createGlobber(this)
+        .withPathPattern(pathPattern)
+        .withPathFiltern(filter)
+        .withResolveSymlinks(true)
+        .build()
+        .glob();
   }
 
   /**

@@ -327,14 +327,14 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     // auth mode.
     describe("LocatedFileStatusFetcher with %s", subdirFile);
     roleConfig.setInt(LIST_STATUS_NUM_THREADS, 16);
-    LocatedFileStatusFetcher fetcher3 =
-        new LocatedFileStatusFetcher(
-            roleConfig,
-            new Path[]{subdirFile},
-            true,
-            TEXT_FILE,
-            true);
     try {
+      LocatedFileStatusFetcher fetcher3 =
+          new LocatedFileStatusFetcher(
+              roleConfig,
+              new Path[]{subdirFile},
+              true,
+              TEXT_FILE,
+              true);
       Iterable<FileStatus> fetched = fetcher3.getFileStatuses();
       failif(!authMode, "LocatedFileStatusFetcher(" + subdirFile + ")"
           + " should have failed");

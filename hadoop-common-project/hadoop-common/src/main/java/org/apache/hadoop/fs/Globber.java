@@ -26,11 +26,18 @@ import java.util.List;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
+import org.apache.hadoop.util.DurationInfo;
 import org.apache.htrace.core.TraceScope;
 import org.apache.htrace.core.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * Implementation of {@link FileSystem#globStatus(Path, PathFilter)}.
+ * This has historically been package-private; it has been opened
+ * up for object stores within the {@code hadoop-*} codebase.
+ * It could be expanded for external store implementations in future.
+ */
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
 public class Globber {
@@ -44,7 +51,7 @@ public class Globber {
   private final Tracer tracer;
   private final boolean resolveSymlinks;
   
-  public Globber(FileSystem fs, Path pathPattern, PathFilter filter) {
+  Globber(FileSystem fs, Path pathPattern, PathFilter filter) {
     this.fs = fs;
     this.fc = null;
     this.pathPattern = pathPattern;
@@ -53,7 +60,7 @@ public class Globber {
     this.resolveSymlinks = true;
   }
 
-  public Globber(FileContext fc, Path pathPattern, PathFilter filter) {
+  Globber(FileContext fc, Path pathPattern, PathFilter filter) {
     this.fs = null;
     this.fc = fc;
     this.pathPattern = pathPattern;
@@ -62,14 +69,42 @@ public class Globber {
     this.resolveSymlinks = true;
   }
 
-  public Globber(FileSystem fs, Path pathPattern, PathFilter filter,
+  /**
+   * Constructor for use by {@link GlobBuilder}.
+   * @param fs filesystem
+   * @param pathPattern path pattern
+   * @param filter optional filter
+   * @param resolveSymlinks should symlinks be resolved.
+   */
+  private Globber(FileSystem fs, Path pathPattern, PathFilter filter,
       boolean resolveSymlinks) {
     this.fs = fs;
     this.fc = null;
     this.pathPattern = pathPattern;
     this.filter = filter;
-    this.tracer = FsTracer.get(fs.getConf());
     this.resolveSymlinks = resolveSymlinks;
+    this.tracer = FsTracer.get(fs.getConf());
+    LOG.debug("Created Globber for path={}, symlinks={}",
+        pathPattern, resolveSymlinks);
+  }
+
+  /**
+   * Constructor for use by {@link GlobBuilder}.
+   * @param fc file context
+   * @param pathPattern path pattern
+   * @param filter optional filter
+   * @param resolveSymlinks should symlinks be resolved.
+   */
+  private Globber(FileContext fc, Path pathPattern, PathFilter filter,
+      boolean resolveSymlinks) {
+    this.fs = null;
+    this.fc = fc;
+    this.pathPattern = pathPattern;
+    this.filter = filter;
+    this.resolveSymlinks = resolveSymlinks;
+    this.tracer = FsTracer.get(fs.getConf());
+    LOG.debug("Created Globber path={}, symlinks={}",
+        pathPattern, resolveSymlinks);
   }
 
   private FileStatus getFileStatus(Path path) throws IOException {
@@ -160,7 +195,8 @@ public class Globber {
   public FileStatus[] glob() throws IOException {
     TraceScope scope = tracer.newScope("Globber#glob");
     scope.addKVAnnotation("pattern", pathPattern.toUri().getPath());
-    try {
+    try(DurationInfo ignored = new DurationInfo(LOG, false,
+        "glob %s", pathPattern)) {
       return doGlob();
     } finally {
       scope.close();
@@ -356,5 +392,88 @@ public class Globber {
     FileStatus ret[] = results.toArray(new FileStatus[0]);
     Arrays.sort(ret);
     return ret;
+  }
+
+  public static GlobBuilder createGlobber(FileSystem fs) {
+    return new GlobBuilder(fs);
+  }
+
+  public static GlobBuilder createGlobber(FileContext fc) {
+    return new GlobBuilder(fc);
+  }
+
+  /**
+   * Builder for glob instances.
+   */
+  public static class GlobBuilder {
+
+    private final FileSystem fs;
+
+    private final FileContext fc;
+
+    private Path pathPattern;
+
+    private PathFilter filter;
+
+    private boolean resolveSymlinks = true;
+
+    /**
+     * Construct bonded to a file context.
+     * @param fc file context.
+     */
+    public GlobBuilder(final FileContext fc) {
+      this.fs = null;
+      this.fc = fc;
+    }
+
+    /**
+     * Construct bonded to a filesystem.
+     * @param fs file system.
+     */
+    public GlobBuilder(final FileSystem fs) {
+      this.fs = fs;
+      this.fc = null;
+    }
+
+    /**
+     * Set the path pattern.
+     * @param pattern pattern to use.
+     * @return the builder
+     */
+    public GlobBuilder withPathPattern(Path pattern) {
+      pathPattern = pattern;
+      return this;
+    }
+
+    /**
+     * Set the path filter.
+     * @param pathFilter filter
+     * @return the builder
+     */
+    public GlobBuilder withPathFiltern(PathFilter pathFilter) {
+      filter = pathFilter;
+      return this;
+    }
+
+    /**
+     * Set the symlink resolution policy.
+     * @param resolve resolution flag.
+     * @return the builder
+     */
+    public GlobBuilder withResolveSymlinks(boolean resolve) {
+      resolveSymlinks = resolve;
+      return this;
+    }
+
+    /**
+     * Build the Globber.
+     * @return a new instance.
+     */
+    public Globber build() {
+      return fs != null
+          ? new Globber(fs, pathPattern, filter, resolveSymlinks)
+          : new Globber(fc, pathPattern, filter, resolveSymlinks);
+    }
+
   }
 }
