@@ -65,9 +65,13 @@ public class PrometheusMetricsSink implements MetricsSink {
             metricsRecord.name(), metrics.name());
 
         StringBuilder builder = new StringBuilder();
-        builder.append("# TYPE " + key + " " +
-            metrics.type().toString().toLowerCase() + "\n");
-        builder.append(key + "{");
+        builder.append("# TYPE ")
+            .append(key)
+            .append(" ")
+            .append(metrics.type().toString().toLowerCase())
+            .append("\n")
+            .append(key)
+            .append("{");
         String sep = "";
 
         //add tags
@@ -76,8 +80,11 @@ public class PrometheusMetricsSink implements MetricsSink {
 
           //ignore specific tag which includes sub-hierarchy
           if (!tagName.equals("numopenconnectionsperuser")) {
-            builder.append(
-                sep + tagName + "=\"" + tag.value() + "\"");
+            builder.append(sep)
+                .append(tagName)
+                .append("=\"")
+                .append(tag.value())
+                .append("\"");
             sep = ",";
           }
         }
