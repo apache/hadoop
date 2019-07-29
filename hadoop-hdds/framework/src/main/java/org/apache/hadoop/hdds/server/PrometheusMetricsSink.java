@@ -49,6 +49,9 @@ public class PrometheusMetricsSink implements MetricsSink {
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
 
+  private static final Pattern REPLACE_PATTERN =
+      Pattern.compile("[^a-zA-Z0-9]+");
+
   public PrometheusMetricsSink() {
   }
 
@@ -101,9 +104,9 @@ public class PrometheusMetricsSink implements MetricsSink {
 
     String baseName = StringUtils.capitalize(recordName)
         + StringUtils.capitalize(metricName);
-    baseName = baseName.replace('-', '_');
     String[] parts = SPLIT_PATTERN.split(baseName);
-    return String.join("_", parts).toLowerCase();
+    String result = String.join("_", parts).toLowerCase();
+    return REPLACE_PATTERN.matcher(result).replaceAll("_");
   }
 
   @Override
