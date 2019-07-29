@@ -112,6 +112,13 @@ public interface Table<KEY, VALUE> extends AutoCloseable {
   String getName() throws IOException;
 
   /**
+   * Returns the key count of this Table.  Note the result can be inaccurate.
+   * @return Estimated key count of this Table
+   * @throws IOException on failure
+   */
+  long getEstimatedKeyCount() throws IOException;
+
+  /**
    * Add entry to the table cache.
    *
    * If the cacheKey already exists, it will override the entry.
