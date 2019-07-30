@@ -434,6 +434,7 @@ public class ContainerStateMachine extends BaseStateMachine {
             write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
             write.getChunkData().getChunkName() + " Error message: " +
             r.getMessage() + " Container Result: " + r.getResult());
+        metrics.incNumWriteDataFails();
         raftFuture.completeExceptionally(sce);
       } else {
         metrics.incNumBytesWrittenCount(
