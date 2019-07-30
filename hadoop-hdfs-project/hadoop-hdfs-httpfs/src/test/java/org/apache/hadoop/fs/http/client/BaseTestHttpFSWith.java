@@ -22,12 +22,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockStoragePolicySpi;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileSystemTestHelper;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
 import org.apache.hadoop.fs.http.server.HttpFSServerWebApp;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -663,17 +666,56 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     fs = getHttpFSFileSystem();
     ContentSummary httpContentSummary = fs.getContentSummary(path);
     fs.close();
-    assertEquals(httpContentSummary.getDirectoryCount(),
-        hdfsContentSummary.getDirectoryCount());
-    assertEquals(httpContentSummary.getFileCount(),
-        hdfsContentSummary.getFileCount());
-    assertEquals(httpContentSummary.getLength(),
-        hdfsContentSummary.getLength());
-    assertEquals(httpContentSummary.getQuota(), hdfsContentSummary.getQuota());
-    assertEquals(httpContentSummary.getSpaceConsumed(),
-        hdfsContentSummary.getSpaceConsumed());
-    assertEquals(httpContentSummary.getSpaceQuota(),
-        hdfsContentSummary.getSpaceQuota());
+    assertEquals(hdfsContentSummary.getDirectoryCount(),
+        httpContentSummary.getDirectoryCount());
+    assertEquals(hdfsContentSummary.getFileCount(),
+        httpContentSummary.getFileCount());
+    assertEquals(hdfsContentSummary.getLength(),
+        httpContentSummary.getLength());
+    assertEquals(hdfsContentSummary.getQuota(), httpContentSummary.getQuota());
+    assertEquals(hdfsContentSummary.getSpaceConsumed(),
+        httpContentSummary.getSpaceConsumed());
+    assertEquals(hdfsContentSummary.getSpaceQuota(),
+        httpContentSummary.getSpaceQuota());
+  }
+
+  private void testQuotaUsage() throws Exception {
+    if (isLocalFS()) {
+      // LocalFS doesn't support setQuota so skip here
+      return;
+    }
+
+    DistributedFileSystem dfs =
+        (DistributedFileSystem) FileSystem.get(getProxiedFSConf());
+    Path path = new Path(getProxiedFSTestDir(), "foo");
+    dfs.mkdirs(path);
+    dfs.setQuota(path, 20, 600 * 1024 * 1024);
+    for (int i = 0; i < 10; i++) {
+      dfs.createNewFile(new Path(path, "test_file_" + i));
+    }
+    FSDataOutputStream out = dfs.create(new Path(path, "test_file"));
+    out.writeUTF("Hello World");
+    out.close();
+
+    dfs.setQuotaByStorageType(path, StorageType.SSD, 100000);
+    dfs.setQuotaByStorageType(path, StorageType.DISK, 200000);
+
+    QuotaUsage hdfsQuotaUsage = dfs.getQuotaUsage(path);
+    dfs.close();
+    FileSystem fs = getHttpFSFileSystem();
+    QuotaUsage httpQuotaUsage = fs.getQuotaUsage(path);
+    fs.close();
+    assertEquals(hdfsQuotaUsage.getFileAndDirectoryCount(),
+        httpQuotaUsage.getFileAndDirectoryCount());
+    assertEquals(hdfsQuotaUsage.getQuota(), httpQuotaUsage.getQuota());
+    assertEquals(hdfsQuotaUsage.getSpaceConsumed(),
+        httpQuotaUsage.getSpaceConsumed());
+    assertEquals(hdfsQuotaUsage.getSpaceQuota(),
+        httpQuotaUsage.getSpaceQuota());
+    assertEquals(hdfsQuotaUsage.getTypeQuota(StorageType.SSD),
+        httpQuotaUsage.getTypeQuota(StorageType.SSD));
+    assertEquals(hdfsQuotaUsage.getTypeQuota(StorageType.DISK),
+        httpQuotaUsage.getTypeQuota(StorageType.DISK));
   }
   
   /** Set xattr */
@@ -1068,9 +1110,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
   protected enum Operation {
     GET, OPEN, CREATE, APPEND, TRUNCATE, CONCAT, RENAME, DELETE, LIST_STATUS,
     WORKING_DIRECTORY, MKDIRS, SET_TIMES, SET_PERMISSION, SET_OWNER,
-    SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, FILEACLS, DIRACLS, SET_XATTR,
-    GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION, LIST_STATUS_BATCH,
-    GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
+    SET_REPLICATION, CHECKSUM, CONTENT_SUMMARY, QUOTA_USAGE, FILEACLS, DIRACLS,
+    SET_XATTR, GET_XATTRS, REMOVE_XATTR, LIST_XATTRS, ENCRYPTION,
+    LIST_STATUS_BATCH, GETTRASHROOT, STORAGEPOLICY, ERASURE_CODING,
     CREATE_SNAPSHOT, RENAME_SNAPSHOT, DELETE_SNAPSHOT,
     ALLOW_SNAPSHOT, DISALLOW_SNAPSHOT, DISALLOW_SNAPSHOT_EXCEPTION,
     FILE_STATUS_ATTR, GET_SNAPSHOT_DIFF, GET_SNAPSHOTTABLE_DIRECTORY_LIST
@@ -1128,6 +1170,9 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
       break;
     case CONTENT_SUMMARY:
       testContentSummary();
+      break;
+    case QUOTA_USAGE:
+      testQuotaUsage();
       break;
     case FILEACLS:
       testFileAcls();
