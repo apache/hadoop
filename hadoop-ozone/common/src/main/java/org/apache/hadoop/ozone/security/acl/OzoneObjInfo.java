@@ -17,6 +17,7 @@
 package org.apache.hadoop.ozone.security.acl;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
@@ -156,6 +157,14 @@ public final class OzoneObjInfo extends OzoneObj {
 
     public static Builder newBuilder() {
       return new Builder();
+    }
+
+    public static Builder fromKeyArgs(OmKeyArgs args) {
+      return new Builder()
+          .setVolumeName(args.getVolumeName())
+          .setBucketName(args.getBucketName())
+          .setKeyName(args.getKeyName())
+          .setResType(ResourceType.KEY);
     }
 
     public Builder setResType(OzoneObj.ResourceType res) {
