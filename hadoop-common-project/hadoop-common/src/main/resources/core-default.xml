@@ -2213,7 +2213,7 @@
 
 <property>
   <name>ipc.maximum.data.length</name>
-  <value>67108864</value>
+  <value>134217728</value>
   <description>This indicates the maximum IPC message length (bytes) that can be
     accepted by the server. Messages larger than this value are rejected by the
     immediately to avoid possible OOMs. This setting should rarely need to be
