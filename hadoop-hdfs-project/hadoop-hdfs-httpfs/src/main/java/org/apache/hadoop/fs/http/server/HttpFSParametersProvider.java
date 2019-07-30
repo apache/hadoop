@@ -57,6 +57,7 @@ public class HttpFSParametersProvider extends ParametersProvider {
     PARAMS_DEF.put(Operation.LISTSTATUS, new Class[]{FilterParam.class});
     PARAMS_DEF.put(Operation.GETHOMEDIRECTORY, new Class[]{});
     PARAMS_DEF.put(Operation.GETCONTENTSUMMARY, new Class[]{});
+    PARAMS_DEF.put(Operation.GETQUOTAUSAGE, new Class[]{});
     PARAMS_DEF.put(Operation.GETFILECHECKSUM, new Class[]{});
     PARAMS_DEF.put(Operation.GETFILEBLOCKLOCATIONS, new Class[]{});
     PARAMS_DEF.put(Operation.GETACLSTATUS, new Class[]{});

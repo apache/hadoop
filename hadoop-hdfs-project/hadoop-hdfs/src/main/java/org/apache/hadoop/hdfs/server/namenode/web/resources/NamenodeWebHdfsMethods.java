@@ -57,6 +57,7 @@ import javax.ws.rs.core.Response.Status;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.FileEncryptionInfo;
@@ -1113,6 +1114,12 @@ public class NamenodeWebHdfsMethods {
     {
       final ContentSummary contentsummary = cp.getContentSummary(fullpath);
       final String js = JsonUtil.toJsonString(contentsummary);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETQUOTAUSAGE:
+    {
+      final QuotaUsage quotaUsage = cp.getQuotaUsage(fullpath);
+      final String js = JsonUtil.toJsonString(quotaUsage);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETFILECHECKSUM:
