@@ -3655,6 +3655,23 @@
 </property>
 
 <property>
+  <name>dfs.balancer.service.interval</name>
+  <value>5m</value>
+  <description>
+    The schedule interval of balancer when running as a long service.
+  </description>
+</property>
+
+<property>
+  <name>dfs.balancer.service.retries.on.exception</name>
+  <value>5</value>
+  <description>
+    When the balancer is executed as a long-running service, it will retry upon encountering an exception. This
+    configuration determines how many times it will retry before considering the exception to be fatal and quitting.
+  </description>
+</property>
+
+<property>
   <name>dfs.block.misreplication.processing.limit</name>
   <value>10000</value>
   <description>
