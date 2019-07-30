@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.GlobFilter;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.XAttrSetFlag;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
 import org.apache.hadoop.hdfs.web.JsonUtil;
@@ -56,6 +58,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.HTTPFS_BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.HTTP_BUFFER_SIZE_DEFAULT;
@@ -249,15 +252,64 @@ public class FSOperations {
   @SuppressWarnings({"unchecked"})
   private static Map contentSummaryToJSON(ContentSummary contentSummary) {
     Map json = new LinkedHashMap();
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_DIRECTORY_COUNT_JSON, contentSummary.getDirectoryCount());
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_FILE_COUNT_JSON, contentSummary.getFileCount());
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_LENGTH_JSON, contentSummary.getLength());
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_QUOTA_JSON, contentSummary.getQuota());
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_SPACE_CONSUMED_JSON, contentSummary.getSpaceConsumed());
-    json.put(HttpFSFileSystem.CONTENT_SUMMARY_SPACE_QUOTA_JSON, contentSummary.getSpaceQuota());
+    json.put(HttpFSFileSystem.CONTENT_SUMMARY_DIRECTORY_COUNT_JSON,
+        contentSummary.getDirectoryCount());
+    json.put(HttpFSFileSystem.CONTENT_SUMMARY_FILE_COUNT_JSON,
+        contentSummary.getFileCount());
+    json.put(HttpFSFileSystem.CONTENT_SUMMARY_LENGTH_JSON,
+        contentSummary.getLength());
+    Map<String, Object> quotaUsageMap = quotaUsageToMap(contentSummary);
+    for (Map.Entry<String, Object> e : quotaUsageMap.entrySet()) {
+      // For ContentSummary we don't need this since we already have
+      // separate count for file and directory.
+      if (!e.getKey().equals(
+          HttpFSFileSystem.QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON)) {
+        json.put(e.getKey(), e.getValue());
+      }
+    }
     Map response = new LinkedHashMap();
     response.put(HttpFSFileSystem.CONTENT_SUMMARY_JSON, json);
     return response;
+  }
+
+  /**
+   * Converts a <code>QuotaUsage</code> object into a JSON array
+   * object.
+   */
+  @SuppressWarnings({"unchecked"})
+  private static Map quotaUsageToJSON(QuotaUsage quotaUsage) {
+    Map response = new LinkedHashMap();
+    Map quotaUsageMap = quotaUsageToMap(quotaUsage);
+    response.put(HttpFSFileSystem.QUOTA_USAGE_JSON, quotaUsageMap);
+    return response;
+  }
+
+  private static Map<String, Object> quotaUsageToMap(QuotaUsage quotaUsage) {
+    Map<String, Object> result = new LinkedHashMap<>();
+    result.put(HttpFSFileSystem.QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON,
+        quotaUsage.getFileAndDirectoryCount());
+    result.put(HttpFSFileSystem.QUOTA_USAGE_QUOTA_JSON, quotaUsage.getQuota());
+    result.put(HttpFSFileSystem.QUOTA_USAGE_SPACE_CONSUMED_JSON,
+        quotaUsage.getSpaceConsumed());
+    result.put(HttpFSFileSystem.QUOTA_USAGE_SPACE_QUOTA_JSON,
+        quotaUsage.getSpaceQuota());
+    Map<String, Map<String, Long>> typeQuota = new TreeMap<>();
+    for (StorageType t : StorageType.getTypesSupportingQuota()) {
+      long tQuota = quotaUsage.getTypeQuota(t);
+      if (tQuota != HdfsConstants.QUOTA_RESET) {
+        Map<String, Long> type = typeQuota.get(t.toString());
+        if (type == null) {
+          type = new TreeMap<>();
+          typeQuota.put(t.toString(), type);
+        }
+        type.put(HttpFSFileSystem.QUOTA_USAGE_QUOTA_JSON,
+            quotaUsage.getTypeQuota(t));
+        type.put(HttpFSFileSystem.QUOTA_USAGE_CONSUMED_JSON,
+            quotaUsage.getTypeConsumed(t));
+      }
+    }
+    result.put(HttpFSFileSystem.QUOTA_USAGE_TYPE_QUOTA_JSON, typeQuota);
+    return result;
   }
 
   /**
@@ -471,6 +523,26 @@ public class FSOperations {
       return contentSummaryToJSON(contentSummary);
     }
 
+  }
+
+  /**
+   * Executor that performs a quota-usage FileSystemAccess files system
+   * operation.
+   */
+  @InterfaceAudience.Private
+  public static class FSQuotaUsage
+      implements FileSystemAccess.FileSystemExecutor<Map> {
+    private Path path;
+
+    public FSQuotaUsage(String path) {
+      this.path = new Path(path);
+    }
+
+    @Override
+    public Map execute(FileSystem fs) throws IOException {
+      QuotaUsage quotaUsage = fs.getQuotaUsage(path);
+      return quotaUsageToJSON(quotaUsage);
+    }
   }
 
   /**

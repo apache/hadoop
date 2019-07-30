@@ -54,6 +54,7 @@ import java.util.Random;
 
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1036,6 +1037,47 @@ public class TestWebHDFS {
         cluster.shutdown();
       }
     }
+  }
+
+  @Test
+  public void testQuotaUsage() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/TestDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final long nsQuota = 100;
+      final long spaceQuota = 600 * 1024 * 1024;
+      final long diskQuota = 100000;
+      final byte[] bytes = {0x0, 0x1, 0x2, 0x3};
+
+      dfs.mkdirs(path);
+      dfs.setQuota(path, nsQuota, spaceQuota);
+      for (int i = 0; i < 10; i++) {
+        dfs.createNewFile(new Path(path, "test_file_" + i));
+      }
+      FSDataOutputStream out = dfs.create(new Path(path, "test_file"));
+      out.write(bytes);
+      out.close();
+
+      dfs.setQuotaByStorageType(path, StorageType.DISK, diskQuota);
+
+      QuotaUsage quotaUsage = webHdfs.getQuotaUsage(path);
+      assertEquals(12, quotaUsage.getFileAndDirectoryCount());
+      assertEquals(nsQuota, quotaUsage.getQuota());
+      assertEquals(bytes.length * dfs.getDefaultReplication(), quotaUsage.getSpaceConsumed());
+      assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
+      assertEquals(diskQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
   }
 
   @Test

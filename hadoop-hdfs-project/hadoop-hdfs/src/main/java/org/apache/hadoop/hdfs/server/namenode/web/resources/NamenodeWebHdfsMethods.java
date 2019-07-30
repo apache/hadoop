@@ -56,6 +56,7 @@ import javax.ws.rs.core.StreamingOutput;
 import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.Response.Status;
 
+import org.apache.hadoop.fs.QuotaUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1169,6 +1170,12 @@ public class NamenodeWebHdfsMethods {
     {
       final ContentSummary contentsummary = cp.getContentSummary(fullpath);
       final String js = JsonUtil.toJsonString(contentsummary);
+      return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
+    }
+    case GETQUOTAUSAGE:
+    {
+      final QuotaUsage quotaUsage = cp.getQuotaUsage(fullpath);
+      final String js = JsonUtil.toJsonString(quotaUsage);
       return Response.ok(js).type(MediaType.APPLICATION_JSON).build();
     }
     case GETFILECHECKSUM:
