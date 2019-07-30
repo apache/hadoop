@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.XAttrCodec;
 import org.apache.hadoop.fs.permission.AclEntry;
@@ -423,30 +424,66 @@ class JsonUtilClient {
       return null;
     }
 
-    final Map<?, ?> m = (Map<?, ?>)json.get(
-        ContentSummary.class.getSimpleName());
+    final Map<?, ?> m = (Map<?, ?>)
+        json.get(ContentSummary.class.getSimpleName());
     final long length = ((Number) m.get("length")).longValue();
     final long fileCount = ((Number) m.get("fileCount")).longValue();
     final long directoryCount = ((Number) m.get("directoryCount")).longValue();
+    ContentSummary.Builder builder = new ContentSummary.Builder()
+        .length(length)
+        .fileCount(fileCount)
+        .directoryCount(directoryCount);
+    builder = buildQuotaUsage(builder, m, ContentSummary.Builder.class);
+    return builder.build();
+  }
+
+  /** Convert a JSON map to a QuotaUsage. */
+  static QuotaUsage toQuotaUsage(final Map<?, ?> json) {
+    if (json == null) {
+      return null;
+    }
+
+    final Map<?, ?> m = (Map<?, ?>) json.get(QuotaUsage.class.getSimpleName());
+    QuotaUsage.Builder builder = new QuotaUsage.Builder();
+    builder = buildQuotaUsage(builder, m, QuotaUsage.Builder.class);
+    return builder.build();
+  }
+
+  /**
+   * Given a builder for QuotaUsage, parse the provided map and
+   * construct the relevant fields. Return the updated builder.
+   */
+  private static <T extends QuotaUsage.Builder> T buildQuotaUsage(
+      T builder, Map<?, ?> m, Class<T> type) {
     final long quota = ((Number) m.get("quota")).longValue();
     final long spaceConsumed = ((Number) m.get("spaceConsumed")).longValue();
     final long spaceQuota = ((Number) m.get("spaceQuota")).longValue();
     final Map<?, ?> typem = (Map<?, ?>) m.get("typeQuota");
 
-    ContentSummary.Builder contentSummaryBuilder =new ContentSummary.Builder()
-        .length(length).fileCount(fileCount).directoryCount(directoryCount)
-        .quota(quota).spaceConsumed(spaceConsumed).spaceQuota(spaceQuota);
+    T result = type.cast(builder
+        .quota(quota)
+        .spaceConsumed(spaceConsumed)
+        .spaceQuota(spaceQuota));
+
+    // ContentSummary doesn't set this so check before using it
+    if (m.get("fileAndDirectoryCount") != null) {
+      final long fileAndDirectoryCount =
+          ((Number) m.get("fileAndDirectoryCount")).longValue();
+      result = type.cast(result.fileAndDirectoryCount(fileAndDirectoryCount));
+    }
+
     if (typem != null) {
       for (StorageType t : StorageType.getTypesSupportingQuota()) {
-        Map<?, ?> type = (Map<?, ?>) typem.get(t.toString());
-        if (type != null) {
-          contentSummaryBuilder = contentSummaryBuilder.typeQuota(t,
-              ((Number) type.get("quota")).longValue()).typeConsumed(t,
-              ((Number) type.get("consumed")).longValue());
+        Map<?, ?> typeQuota = (Map<?, ?>) typem.get(t.toString());
+        if (typeQuota != null) {
+          result = type.cast(result.typeQuota(t,
+              ((Number) typeQuota.get("quota")).longValue()).typeConsumed(t,
+              ((Number) typeQuota.get("consumed")).longValue()));
         }
       }
     }
-    return contentSummaryBuilder.build();
+
+    return result;
   }
 
   /** Convert a Json map to a MD5MD5CRC32FileChecksum. */

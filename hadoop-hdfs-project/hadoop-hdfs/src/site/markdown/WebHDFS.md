@@ -39,6 +39,7 @@ The HTTP REST API supports the complete [FileSystem](../../api/org/apache/hadoop
     * [`LISTSTATUS`](#List_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatus)
     * [`LISTSTATUS_BATCH`](#Iteratively_List_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).listStatusIterator)
     * [`GETCONTENTSUMMARY`](#Get_Content_Summary_of_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getContentSummary)
+    * [`GETQUOTAUSAGE`](#Get_Quota_Usage_of_a_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getQuotaUsage)
     * [`GETFILECHECKSUM`](#Get_File_Checksum) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getFileChecksum)
     * [`GETHOMEDIRECTORY`](#Get_Home_Directory) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getHomeDirectory)
     * [`GETDELEGATIONTOKEN`](#Get_Delegation_Token) (see [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getDelegationToken)
@@ -768,6 +769,48 @@ Other File System Operations
         }
 
 See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getContentSummary
+
+### Get Quota Usage of a Directory
+
+* Submit a HTTP GET request.
+
+        curl -i "http://<HOST>:<PORT>/webhdfs/v1/<PATH>?op=GETQUOTAUSAGE"
+
+    The client receives a response with a [`QuotaUsage` JSON object](#QuotaUsage_JSON_Schema):
+
+        HTTP/1.1 200 OK
+        Content-Type: application/json
+        Transfer-Encoding: chunked
+
+        {
+          "QuotaUsage":
+          {
+            "fileAndDirectoryCount": 1,
+            "quota"         : 100,
+            "spaceConsumed" : 24930,
+            "spaceQuota"    : 100000,
+            "typeQuota":
+            {
+              "ARCHIVE":
+              {
+                "consumed": 500,
+                "quota": 10000
+              },
+              "DISK":
+              {
+                "consumed": 500,
+                "quota": 10000
+              },
+              "SSD":
+              {
+                "consumed": 500,
+                "quota": 10000
+              }
+            }
+          }
+        }
+
+See also: [FileSystem](../../api/org/apache/hadoop/fs/FileSystem.html).getQuotaUsage
 
 ### Get File Checksum
 
@@ -1745,6 +1788,114 @@ See also: [`MKDIRS`](#Make_a_Directory), [`RENAME`](#Rename_a_FileDirectory), [`
 ```
 
 See also: [`GETCONTENTSUMMARY`](#Get_Content_Summary_of_a_Directory)
+
+### QuotaUsage JSON Schema
+
+```json
+{
+  "name"      : "QuotaUsage",
+  "properties":
+  {
+    "QuotaUsage":
+    {
+      "type"      : "object",
+      "properties":
+      {
+        "fileAndDirectoryCount":
+        {
+          "description": "The number of files and directories.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "quota":
+        {
+          "description": "The namespace quota of this directory.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "spaceConsumed":
+        {
+          "description": "The disk space consumed by the content.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "spaceQuota":
+        {
+          "description": "The disk space quota.",
+          "type"       : "integer",
+          "required"   : true
+        },
+        "typeQuota":
+        {
+          "type"      : "object",
+          "properties":
+          {
+            "ARCHIVE":
+            {
+              "type"      : "object",
+              "properties":
+              {
+                "consumed":
+                {
+                  "description": "The storage type space consumed.",
+                  "type"       : "integer",
+                  "required"   : true
+                },
+                "quota":
+                {
+                  "description": "The storage type quota.",
+                  "type"       : "integer",
+                  "required"   : true
+                }
+              }
+            },
+            "DISK":
+            {
+              "type"      : "object",
+              "properties":
+              {
+                "consumed":
+                {
+                  "description": "The storage type space consumed.",
+                  "type"       : "integer",
+                  "required"   : true
+                },
+                "quota":
+                {
+                  "description": "The storage type quota.",
+                  "type"       : "integer",
+                  "required"   : true
+                }
+              }
+            },
+            "SSD":
+            {
+              "type"      : "object",
+              "properties":
+              {
+                "consumed":
+                {
+                  "description": "The storage type space consumed.",
+                  "type"       : "integer",
+                  "required"   : true
+                },
+                "quota":
+                {
+                  "description": "The storage type quota.",
+                  "type"       : "integer",
+                  "required"   : true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+See also: [`GETQUOTAUSAGE`](#Get_Quota_Usage_of_a_Directory)
 
 ### FileChecksum JSON Schema
 
