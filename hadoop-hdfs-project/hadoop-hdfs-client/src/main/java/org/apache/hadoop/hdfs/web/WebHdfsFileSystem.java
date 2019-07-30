@@ -74,6 +74,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FsServerDefaults;
 import org.apache.hadoop.fs.GlobalStorageStatistics;
 import org.apache.hadoop.fs.GlobalStorageStatistics.StorageStatisticsProvider;
+import org.apache.hadoop.fs.QuotaUsage;
 import org.apache.hadoop.fs.StorageStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics;
 import org.apache.hadoop.hdfs.DFSOpsCountStatistics.OpType;
@@ -1811,6 +1812,20 @@ public class WebHdfsFileSystem extends FileSystem
       @Override
       ContentSummary decodeResponse(Map<?,?> json) {
         return JsonUtilClient.toContentSummary(json);
+      }
+    }.run();
+  }
+
+  @Override
+  public QuotaUsage getQuotaUsage(final Path p) throws IOException {
+    statistics.incrementReadOps(1);
+    storageStatistics.incrementOpCounter(OpType.GET_QUOTA_USAGE);
+
+    final HttpOpParam.Op op = GetOpParam.Op.GETQUOTAUSAGE;
+    return new FsPathResponseRunner<QuotaUsage>(op, p) {
+      @Override
+      QuotaUsage decodeResponse(Map<?, ?> json) {
+        return JsonUtilClient.toQuotaUsage(json);
       }
     }.run();
   }
