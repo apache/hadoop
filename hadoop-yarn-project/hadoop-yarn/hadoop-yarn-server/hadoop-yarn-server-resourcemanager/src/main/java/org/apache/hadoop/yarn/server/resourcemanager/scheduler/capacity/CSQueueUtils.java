@@ -250,30 +250,24 @@ public class CSQueueUtils {
 
   }
 
-  private static Resource getMaxAvailableResourceToQueue(
-      final ResourceCalculator rc, RMNodeLabelsManager nlm, CSQueue queue,
-      Resource cluster) {
-    Set<String> nodeLabels = queue.getNodeLabelsForQueue();
-    Resource totalAvailableResource = Resources.createResource(0, 0);
+  private static Resource getMaxAvailableResourceToQueuePartition(
+      final ResourceCalculator rc, CSQueue queue,
+      Resource cluster, String partition) {
+    // Calculate guaranteed resource for a label in a queue by below logic.
+    // (total label resource) * (absolute capacity of label in that queue)
+    Resource queueGuaranteedResource = queue.getEffectiveCapacity(partition);
 
-    for (String partition : nodeLabels) {
-      // Calculate guaranteed resource for a label in a queue by below logic.
-      // (total label resource) * (absolute capacity of label in that queue)
-      Resource queueGuaranteedResource = queue.getEffectiveCapacity(partition);
+    // Available resource in queue for a specific label will be calculated as
+    // {(guaranteed resource for a label in a queue) -
+    // (resource usage of that label in the queue)}
+    Resource available = (Resources.greaterThan(rc, cluster,
+        queueGuaranteedResource,
+        queue.getQueueResourceUsage().getUsed(partition))) ? Resources
+        .componentwiseMax(Resources.subtractFrom(queueGuaranteedResource,
+            queue.getQueueResourceUsage().getUsed(partition)), Resources
+            .none()) : Resources.none();
 
-      // Available resource in queue for a specific label will be calculated as
-      // {(guaranteed resource for a label in a queue) -
-      // (resource usage of that label in the queue)}
-      // Finally accumulate this available resource to get total.
-      Resource available = (Resources.greaterThan(rc, cluster,
-          queueGuaranteedResource,
-          queue.getQueueResourceUsage().getUsed(partition))) ? Resources
-          .componentwiseMax(Resources.subtractFrom(queueGuaranteedResource,
-              queue.getQueueResourceUsage().getUsed(partition)), Resources
-              .none()) : Resources.none();
-      Resources.addTo(totalAvailableResource, available);
-    }
-    return totalAvailableResource;
+    return available;
   }
 
   /**
@@ -304,16 +298,27 @@ public class CSQueueUtils {
           queueResourceUsage.getNodePartitionsSet())) {
         updateUsedCapacity(rc, nlm.getResourceByLabel(partition, cluster),
             partition, childQueue);
+
+        // Update queue metrics w.r.t node labels.
+        // In QueueMetrics, null label is handled the same as NO_LABEL.
+        // This is because queue metrics for partitions are not tracked.
+        // In the future, will have to change this when/if queue metrics
+        // for partitions also get tracked.
+        childQueue.getMetrics().setAvailableResourcesToQueue(
+            partition,
+            getMaxAvailableResourceToQueuePartition(rc, childQueue,
+                cluster, partition));
       }
     } else {
       updateUsedCapacity(rc, nlm.getResourceByLabel(nodePartition, cluster),
           nodePartition, childQueue);
-    }
 
-    // Update queue metrics w.r.t node labels. In a generic way, we can
-    // calculate available resource from all labels in cluster.
-    childQueue.getMetrics().setAvailableResourcesToQueue(nodePartition,
-        getMaxAvailableResourceToQueue(rc, nlm, childQueue, cluster));
+      // Same as above.
+      childQueue.getMetrics().setAvailableResourcesToQueue(
+          nodePartition,
+          getMaxAvailableResourceToQueuePartition(rc, childQueue,
+              cluster, nodePartition));
+    }
    }
 
   /**
