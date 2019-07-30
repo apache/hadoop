@@ -1214,6 +1214,7 @@ public class KeyManagerImpl implements KeyManager {
             multipartKey);
         metadataManager.getKeyTable().putWithBatch(batch,
             ozoneKey, keyInfo);
+        metadataManager.getOpenKeyTable().deleteWithBatch(batch, multipartKey);
         store.commitBatchOperation(batch);
       }
       return new OmMultipartUploadCompleteInfo(omKeyArgs.getVolumeName(),
