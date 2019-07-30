@@ -4423,6 +4423,13 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
     return dir.ezManager.getNumEncryptionZones();
   }
 
+  @Override // FSNamesystemMBean
+  @Metric({ "CurrentTokensCount", "The number of delegation tokens"})
+  public long getCurrentTokensCount() {
+    return dtSecretManager != null ?
+        dtSecretManager.getCurrentTokensSize() : -1;
+  }
+
   /**
    * Returns the length of the wait Queue for the FSNameSystemLock.
    *
