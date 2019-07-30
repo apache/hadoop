@@ -24,38 +24,44 @@ import java.io.IOException;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
+import com.amazonaws.auth.EC2ContainerCredentialsProviderWrapper;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
 /**
- * This is going to be an IAM credential provider which performs
- * async refresh for lower-latency on IO calls.
- * Initially it does not do this, simply shares the single IAM instance
- * across all instances. This makes it less expensive to declare.
- *
+ * This is an IAM credential provider which wraps
+ * an {@code EC2ContainerCredentialsProviderWrapper}
+ * to provide credentials when the S3A connector is instantiated on AWS EC2
+ * or the AWS container services.
+ * <p>
+ * When it fails to authenticate, it raises a
+ * {@link NoAwsCredentialsException} which can be recognized by retry handlers
+ * as a non-recoverable failure.
+ * <p>
+ * It is implicitly public; marked evolving as we can change its semantics.
  */
-@InterfaceAudience.Private
-@InterfaceStability.Unstable
+@InterfaceAudience.Public
+@InterfaceStability.Evolving
 public class IAMInstanceCredentialsProvider
     implements AWSCredentialsProvider, Closeable {
 
-  private static final InstanceProfileCredentialsProvider INSTANCE =
-      InstanceProfileCredentialsProvider.getInstance();
+  private final AWSCredentialsProvider provider =
+      new EC2ContainerCredentialsProviderWrapper();
 
   public IAMInstanceCredentialsProvider() {
   }
 
   /**
    * Ask for the credentials.
-   * as it invariably means "you aren't running on EC2"
+   * Failure invariably means "you aren't running in an EC2 VM or AWS container".
    * @return the credentials
+   * @throws NoAwsCredentialsException on auth failure to indicate non-recoverable.
    */
   @Override
   public AWSCredentials getCredentials() {
     try {
-      return INSTANCE.getCredentials();
+      return provider.getCredentials();
     } catch (AmazonClientException e) {
       throw new NoAwsCredentialsException("IAMInstanceCredentialsProvider",
           e.getMessage(),
@@ -65,11 +71,11 @@ public class IAMInstanceCredentialsProvider
 
   @Override
   public void refresh() {
-    INSTANCE.refresh();
+    provider.refresh();
   }
 
   @Override
   public void close() throws IOException {
-    // until async, no-op.
+    // no-op.
   }
 }
