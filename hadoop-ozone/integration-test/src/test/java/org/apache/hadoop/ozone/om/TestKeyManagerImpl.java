@@ -57,6 +57,7 @@ import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
 import org.apache.hadoop.hdds.scm.server.SCMConfigurator;
 import org.apache.hadoop.hdds.scm.server.StorageContainerManager;
 import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.OzoneTestUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -73,6 +74,7 @@ import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
+import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.test.GenericTestUtils;
@@ -395,6 +397,53 @@ public class TestKeyManagerImpl {
     }
   }
 
+  @Test
+  public void testCheckAccessForFileKey() throws Exception {
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName("testdir/deep/NOTICE.txt")
+        .build();
+    OpenKeySession keySession = keyManager.createFile(keyArgs, false, true);
+    keyArgs.setLocationInfoList(
+        keySession.getKeyInfo().getLatestVersionLocations().getLocationList());
+    keyManager.commitKey(keyArgs, keySession.getId());
+
+    OzoneObj fileKey = OzoneObjInfo.Builder.fromKeyArgs(keyArgs)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    RequestContext context = currentUserReads();
+    Assert.assertTrue(keyManager.checkAccess(fileKey, context));
+
+    OzoneObj parentDirKey = OzoneObjInfo.Builder.fromKeyArgs(keyArgs)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setKeyName("testdir")
+        .build();
+    Assert.assertTrue(keyManager.checkAccess(parentDirKey, context));
+  }
+
+  @Test
+  public void testCheckAccessForNonExistentKey() throws Exception {
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName("testdir/deep/NO_SUCH_FILE.txt")
+        .build();
+    OzoneObj nonExistentKey = OzoneObjInfo.Builder.fromKeyArgs(keyArgs)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    OzoneTestUtils.expectOmException(OMException.ResultCodes.KEY_NOT_FOUND,
+        () -> keyManager.checkAccess(nonExistentKey, currentUserReads()));
+  }
+
+  @Test
+  public void testCheckAccessForDirectoryKey() throws Exception {
+    OmKeyArgs keyArgs = createBuilder()
+        .setKeyName("some/dir")
+        .build();
+    keyManager.createDirectory(keyArgs);
+
+    OzoneObj dirKey = OzoneObjInfo.Builder.fromKeyArgs(keyArgs)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .build();
+    Assert.assertTrue(keyManager.checkAccess(dirKey, currentUserReads()));
+  }
 
   @Test
   public void testPrefixAclOps() throws IOException {
@@ -913,5 +962,13 @@ public class TestKeyManagerImpl {
         .setAcls(OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
             ALL, ALL))
         .setVolumeName(VOLUME_NAME);
+  }
+
+  private RequestContext currentUserReads() throws IOException {
+    return RequestContext.newBuilder()
+        .setClientUgi(UserGroupInformation.getCurrentUser())
+        .setAclRights(ACLType.READ_ACL)
+        .setAclType(ACLIdentityType.USER)
+        .build();
   }
 }

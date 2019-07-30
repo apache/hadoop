@@ -1638,24 +1638,38 @@ public class KeyManagerImpl implements KeyManager {
     String volume = ozObject.getVolumeName();
     String bucket = ozObject.getBucketName();
     String keyName = ozObject.getKeyName();
+    String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
+    OmKeyArgs args = new OmKeyArgs.Builder()
+        .setVolumeName(volume)
+        .setBucketName(bucket)
+        .setKeyName(keyName)
+        .build();
 
     metadataManager.getLock().acquireLock(BUCKET_LOCK, volume, bucket);
     try {
       validateBucket(volume, bucket);
-      String objectKey = metadataManager.getOzoneKey(volume, bucket, keyName);
-      OmKeyInfo keyInfo = metadataManager.getKeyTable().get(objectKey);
-      if (keyInfo == null) {
-        objectKey = OzoneFSUtils.addTrailingSlashIfNeeded(objectKey);
-        keyInfo = metadataManager.getKeyTable().get(objectKey);
-        
-        if(keyInfo == null) {
+      OmKeyInfo keyInfo = null;
+      try {
+        OzoneFileStatus fileStatus = getFileStatus(args);
+        keyInfo = fileStatus.getKeyInfo();
+        if (keyInfo == null) {
+          // the key does not exist, but it is a parent "dir" of some key
+          // let access be determined based on volume/bucket/prefix ACL
+          LOG.debug("key:{} is non-existent parent, permit access to user:{}",
+              keyName, context.getClientUgi());
+          return true;
+        }
+      } catch (OMException e) {
+        if (e.getResult() == FILE_NOT_FOUND) {
           keyInfo = metadataManager.getOpenKeyTable().get(objectKey);
-          if (keyInfo == null) {
-            throw new OMException("Key not found, checkAccess failed. Key:" +
-                objectKey, KEY_NOT_FOUND);
-          }
         }
       }
+
+      if (keyInfo == null) {
+        throw new OMException("Key not found, checkAccess failed. Key:" +
+            objectKey, KEY_NOT_FOUND);
+      }
+
       boolean hasAccess = OzoneUtils.checkAclRight(keyInfo.getAcls(), context);
       LOG.debug("user:{} has access rights for key:{} :{} ",
           context.getClientUgi(), ozObject.getKeyName(), hasAccess);
