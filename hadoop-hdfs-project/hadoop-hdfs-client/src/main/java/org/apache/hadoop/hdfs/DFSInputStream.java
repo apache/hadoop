@@ -852,9 +852,7 @@ public class DFSInputStream extends FSInputStream
       updateReadStatistics(readStatistics, nRead, blockReader);
       dfsClient.updateFileSystemReadStats(blockReader.getNetworkDistance(),
           nRead);
-      if (nRead == 0) {
-        DFSClient.LOG.warn("zero");
-      } else if (nRead > 0) {
+      if (nRead > 0) {
         buf.position(buf.position() + nRead);
       }
       return nRead;
