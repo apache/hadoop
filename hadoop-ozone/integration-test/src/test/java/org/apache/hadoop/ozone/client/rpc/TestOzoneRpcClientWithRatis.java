@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.apache.hadoop.hdds.client.ReplicationType;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -63,6 +64,8 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
     conf = new OzoneConfiguration();
     conf.setInt(ScmConfigKeys.OZONE_SCM_PIPELINE_OWNER_CONTAINER_COUNT, 1);
     conf.setBoolean(OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY, true);
+    conf.setBoolean(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        true);
     startCluster(conf);
   }
 
@@ -103,7 +106,7 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
     builder.setVolumeName(volumeName).setBucketName(bucketName)
         .setKeyName(keyName).setRefreshPipeline(true);
 
-    // read key with topology aware read enabled(default)
+    // read key with topology aware read enabled
     try {
       OzoneInputStream is = bucket.readKey(keyName);
       byte[] b = new byte[value.getBytes().length];
@@ -112,7 +115,7 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
     } catch (OzoneChecksumException e) {
       fail("Reading key should success");
     }
-    // read file with topology aware read enabled(default)
+    // read file with topology aware read enabled
     try {
       OzoneInputStream is = bucket.readFile(keyName);
       byte[] b = new byte[value.getBytes().length];
@@ -123,7 +126,8 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
     }
 
     // read key with topology aware read disabled
-    conf.set(ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED, "false");
+    conf.setBoolean(OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        false);
     OzoneClient newClient = OzoneClientFactory.getRpcClient(conf);
     ObjectStore newStore = newClient.getObjectStore();
     OzoneBucket newBucket =
@@ -134,10 +138,15 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
       is.read(b);
       Assert.assertTrue(Arrays.equals(b, value.getBytes()));
     } catch (OzoneChecksumException e) {
+      if(newClient != null) {
+        try {
+          newClient.close();
+        } catch (Exception e1) {
+        }
+      }
       fail("Reading key should success");
     }
     // read file with topology aware read disabled
-
     try {
       OzoneInputStream is = newBucket.readFile(keyName);
       byte[] b = new byte[value.getBytes().length];
@@ -145,6 +154,13 @@ public class TestOzoneRpcClientWithRatis extends TestOzoneRpcClientAbstract {
       Assert.assertTrue(Arrays.equals(b, value.getBytes()));
     } catch (OzoneChecksumException e) {
       fail("Reading file should success");
+    } finally {
+      if(newClient != null) {
+        try {
+          newClient.close();
+        } catch (Exception e1) {
+        }
+      }
     }
   }
 }

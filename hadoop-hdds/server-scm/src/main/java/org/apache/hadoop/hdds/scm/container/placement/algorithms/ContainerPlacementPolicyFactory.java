@@ -36,7 +36,7 @@ public final class ContainerPlacementPolicyFactory {
 
   private static final Class<? extends ContainerPlacementPolicy>
       OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
-      SCMContainerPlacementRandom.class;
+      SCMContainerPlacementRackAware.class;
 
   private ContainerPlacementPolicyFactory() {
   }
@@ -52,6 +52,8 @@ public final class ContainerPlacementPolicyFactory {
     try {
       constructor = placementClass.getDeclaredConstructor(NodeManager.class,
           Configuration.class, NetworkTopology.class, boolean.class);
+      LOG.info("Create container placement policy of type " +
+          placementClass.getCanonicalName());
     } catch (NoSuchMethodException e) {
       String msg = "Failed to find constructor(NodeManager, Configuration, " +
           "NetworkTopology, boolean) for class " +

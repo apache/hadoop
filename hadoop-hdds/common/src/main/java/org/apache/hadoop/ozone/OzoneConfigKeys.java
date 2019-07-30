@@ -447,6 +447,10 @@ public final class OzoneConfigKeys {
       OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "ozone.freon.http.kerberos.keytab";
 
+   public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
+       "ozone.network.topology.aware.read";
+   public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT =
+       false;
   /**
    * There is no need to instantiate this class.
    */
