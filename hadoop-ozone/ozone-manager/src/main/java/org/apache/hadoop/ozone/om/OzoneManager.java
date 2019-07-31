@@ -1801,17 +1801,16 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .setVolumeName(vol)
         .setBucketName(bucket)
         .setKeyName(key).build();
-    UserGroupInformation user = ProtobufRpcEngine.Server.getRemoteUser();
     RequestContext context = RequestContext.newBuilder()
-        .setClientUgi(user)
-        .setIp(ProtobufRpcEngine.Server.getRemoteIp())
+        .setClientUgi(ugi)
+        .setIp(remoteAddress)
         .setAclType(ACLIdentityType.USER)
         .setAclRights(aclType)
         .build();
     if (!accessAuthorizer.checkAccess(obj, context)) {
       LOG.warn("User {} doesn't have {} permission to access {}",
-          user.getUserName(), aclType, resType);
-      throw new OMException("User " + user.getUserName() + " doesn't " +
+          ugi.getUserName(), aclType, resType);
+      throw new OMException("User " + ugi.getUserName() + " doesn't " +
           "have " + aclType + " permission to access " + resType,
           ResultCodes.PERMISSION_DENIED);
     }
