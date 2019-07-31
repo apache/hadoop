@@ -36,6 +36,7 @@ import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUploadRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequest;
+import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCompleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
@@ -114,6 +115,8 @@ public final class OzoneManagerRatisUtils {
       return new S3MultipartUploadCommitPartRequest(omRequest);
     case AbortMultiPartUpload:
       return new S3MultipartUploadAbortRequest(omRequest);
+    case CompleteMultiPartUpload:
+      return new S3MultipartUploadCompleteRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;
