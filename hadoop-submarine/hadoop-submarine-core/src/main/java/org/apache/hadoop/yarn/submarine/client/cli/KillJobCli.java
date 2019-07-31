@@ -67,19 +67,23 @@ public class KillJobCli extends AbstractCli {
           ParametersHolder.createWithCmdLine(cli, Command.KILL_JOB);
       parametersHolder.updateParameters(clientContext);
     } catch (ParseException e) {
+      LOG.error(("Error parsing command-line options: " + e.getMessage()));
       printUsages();
     }
   }
 
   @VisibleForTesting
-  protected boolean KillJob() throws IOException, YarnException {
+  protected boolean killJob() throws IOException, YarnException {
     String jobName = getParameters().getName();
     AppAdminClient appAdminClient = AppAdminClient
         .createAppAdminClient(DEFAULT_TYPE, clientContext.getYarnConfig());
 
-    if (appAdminClient.actionStop(jobName) != 0
-        || appAdminClient.actionDestroy(jobName) != 0) {
-      LOG.error("Fail to kill job !");
+    if (appAdminClient.actionStop(jobName) != 0) {
+      LOG.error("appAdminClient fail to stop application");
+      return false;
+    }
+    if (appAdminClient.actionDestroy(jobName) != 0) {
+      LOG.error("appAdminClient fail to destroy application");
       return false;
     }
 
@@ -100,7 +104,7 @@ public class KillJobCli extends AbstractCli {
       return 0;
     }
     parseCommandLineAndGetKillJobParameters(args);
-    if (KillJob() == true) {
+    if (killJob() == true) {
       LOG.info("Kill job successfully !");
     }
     return 0;
