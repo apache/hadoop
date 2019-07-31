@@ -61,7 +61,6 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
     this.oldMultipartKeyInfo = oldPartKeyInfo;
   }
 
-
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
@@ -104,6 +103,8 @@ public class S3MultipartUploadCommitPartResponse extends OMClientResponse {
 
     }
   }
+
+
 
 }
 

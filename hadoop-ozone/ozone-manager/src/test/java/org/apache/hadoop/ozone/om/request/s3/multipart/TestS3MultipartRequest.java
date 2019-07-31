@@ -20,6 +20,7 @@
 package org.apache.hadoop.ozone.om.request.s3.multipart;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -38,6 +39,7 @@ import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Part;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 
@@ -173,6 +175,27 @@ public class TestS3MultipartRequest {
 
     OMRequest modifiedRequest =
         s3MultipartUploadAbortRequest.preExecute(ozoneManager);
+
+    // UserInfo and modification time is set.
+    Assert.assertNotEquals(omRequest, modifiedRequest);
+
+    return modifiedRequest;
+
+  }
+
+  protected OMRequest doPreExecuteCompleteMPU(String volumeName,
+      String bucketName, String keyName, String multipartUploadID,
+      List<Part> partList) throws IOException {
+
+    OMRequest omRequest =
+        TestOMRequestUtils.createCompleteMPURequest(volumeName, bucketName,
+            keyName, multipartUploadID, partList);
+
+    S3MultipartUploadCompleteRequest s3MultipartUploadCompleteRequest =
+        new S3MultipartUploadCompleteRequest(omRequest);
+
+    OMRequest modifiedRequest =
+        s3MultipartUploadCompleteRequest.preExecute(ozoneManager);
 
     // UserInfo and modification time is set.
     Assert.assertNotEquals(omRequest, modifiedRequest);
