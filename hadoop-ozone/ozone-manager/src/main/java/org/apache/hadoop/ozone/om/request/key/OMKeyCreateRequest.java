@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -140,7 +141,8 @@ public class OMKeyCreateRequest extends OMKeyRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
     CreateKeyRequest createKeyRequest = getOmRequest().getCreateKeyRequest();
 
 
@@ -159,6 +161,7 @@ public class OMKeyCreateRequest extends OMKeyRequest {
     Optional<FileEncryptionInfo> encryptionInfo = Optional.absent();
     IOException exception = null;
     boolean acquireLock = false;
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -182,22 +185,29 @@ public class OMKeyCreateRequest extends OMKeyRequest {
       omKeyInfo = prepareKeyInfo(omMetadataManager, keyArgs,
           omMetadataManager.getOzoneKey(volumeName, bucketName, keyName),
           keyArgs.getDataSize(), locations, encryptionInfo.orNull());
-
+      omClientResponse = prepareCreateKeyResponse(keyArgs, omKeyInfo,
+          locations, encryptionInfo.orNull(), exception,
+          createKeyRequest.getClientID(), transactionLogIndex, volumeName,
+          bucketName, keyName, ozoneManager, OMAction.ALLOCATE_KEY);
     } catch (IOException ex) {
-      LOG.error("Key open failed for volume:{} bucket:{} key:{}",
-          volumeName, bucketName, keyName, ex);
       exception = ex;
+      omClientResponse = prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
+          encryptionInfo.orNull(), exception, createKeyRequest.getClientID(),
+          transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
+          OMAction.ALLOCATE_KEY);
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquireLock) {
         omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }
 
-    return prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
-        encryptionInfo.orNull(), exception, createKeyRequest.getClientID(),
-        transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
-        OMAction.ALLOCATE_KEY);
+    return omClientResponse;
   }
 
 }

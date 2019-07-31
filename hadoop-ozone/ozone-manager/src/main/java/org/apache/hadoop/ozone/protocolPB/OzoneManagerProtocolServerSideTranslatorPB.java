@@ -22,6 +22,7 @@ import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.NotLeaderException;
 import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolPB;
+import org.apache.hadoop.ozone.om.ratis.OzoneManagerDoubleBuffer;
 import org.apache.hadoop.ozone.om.ratis.OzoneManagerRatisServer;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
@@ -52,6 +53,7 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
   private final RequestHandler handler;
   private final boolean isRatisEnabled;
   private final OzoneManager ozoneManager;
+  private final OzoneManagerDoubleBuffer ozoneManagerDoubleBuffer;
 
   /**
    * Constructs an instance of the server handler.
@@ -65,6 +67,12 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
     handler = new OzoneManagerRequestHandler(impl);
     this.omRatisServer = ratisServer;
     this.isRatisEnabled = enableRatis;
+    this.ozoneManagerDoubleBuffer =
+        new OzoneManagerDoubleBuffer(ozoneManager.getMetadataManager(), (i) -> {
+          // Do nothing.
+          // For OM NON-HA code, there is no need to save transaction index.
+          // As we wait until the double buffer flushes DB to disk.
+        }, isRatisEnabled);
 
   }
 
@@ -190,5 +198,11 @@ public class OzoneManagerProtocolServerSideTranslatorPB implements
    */
   private OMResponse submitRequestDirectlyToOM(OMRequest request) {
     return handler.handle(request);
+  }
+
+  public void stop() {
+    if (!isRatisEnabled) {
+      ozoneManagerDoubleBuffer.stop();
+    }
   }
 }

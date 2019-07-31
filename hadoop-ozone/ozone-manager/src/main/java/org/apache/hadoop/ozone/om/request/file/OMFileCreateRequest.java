@@ -30,6 +30,7 @@ import javax.annotation.Nonnull;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -147,7 +148,8 @@ public class OMFileCreateRequest extends OMKeyRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     CreateFileRequest createFileRequest = getOmRequest().getCreateFileRequest();
     KeyArgs keyArgs = createFileRequest.getKeyArgs();
@@ -174,7 +176,7 @@ public class OMFileCreateRequest extends OMKeyRequest {
     OmKeyInfo omKeyInfo = null;
 
     final List<OmKeyLocationInfo> locations = new ArrayList<>();
-
+    OMClientResponse omClientResponse = null;
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
@@ -265,19 +267,31 @@ public class OMFileCreateRequest extends OMKeyRequest {
               keyName), keyArgs.getDataSize(), locations,
           encryptionInfo.orNull());
 
+      omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
+          locations, encryptionInfo.orNull(), exception,
+          createFileRequest.getClientID(), transactionLogIndex, volumeName,
+          bucketName, keyName, ozoneManager,
+          OMAction.CREATE_FILE);
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse =  prepareCreateKeyResponse(keyArgs, omKeyInfo,
+          locations, encryptionInfo.orNull(), exception,
+          createFileRequest.getClientID(), transactionLogIndex,
+          volumeName, bucketName, keyName, ozoneManager,
+          OMAction.CREATE_FILE);
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquiredLock) {
         omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
             bucketName);
       }
     }
 
-    return prepareCreateKeyResponse(keyArgs, omKeyInfo, locations,
-        encryptionInfo.orNull(), exception, createFileRequest.getClientID(),
-        transactionLogIndex, volumeName, bucketName, keyName, ozoneManager,
-        OMAction.CREATE_FILE);
+    return omClientResponse;
   }
 
 
