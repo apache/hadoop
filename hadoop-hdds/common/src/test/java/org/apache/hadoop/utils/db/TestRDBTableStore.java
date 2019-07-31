@@ -261,9 +261,9 @@ public class TestRDBTableStore {
             RandomStringUtils.random(10).getBytes(StandardCharsets.UTF_8);
         testTable.put(key, value);
       }
-      long count = testTable.getEstimatedKeyCount();
+      long keyCount = testTable.getEstimatedKeyCount();
       // The result should be larger than zero but not exceed(?) numKeys
-      Assert.assertTrue(count > 0 && count <= numKeys);
+      Assert.assertTrue(keyCount > 0 && keyCount <= numKeys);
     }
   }
 }
