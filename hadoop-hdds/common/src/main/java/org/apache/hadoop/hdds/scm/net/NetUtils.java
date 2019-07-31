@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Utility class to facilitate network topology functions.
@@ -73,16 +74,17 @@ public final class NetUtils {
    *  function call.
    * @return the new excludedScope
    */
-  public static String removeDuplicate(NetworkTopology topology,
-      Collection<Node> mutableExcludedNodes, String excludedScope,
+  public static void removeDuplicate(NetworkTopology topology,
+      Collection<Node> mutableExcludedNodes, List<String> mutableExcludedScopes,
       int ancestorGen) {
     if (mutableExcludedNodes == null || mutableExcludedNodes.size() == 0 ||
-        excludedScope == null || topology == null) {
-      return excludedScope;
+        mutableExcludedScopes == null || mutableExcludedScopes.size() == 0 ||
+        topology == null) {
+      return;
     }
 
     Iterator<Node> iterator = mutableExcludedNodes.iterator();
-    while (iterator.hasNext()) {
+    while (iterator.hasNext() && (!mutableExcludedScopes.isEmpty())) {
       Node node = iterator.next();
       Node ancestor = topology.getAncestor(node, ancestorGen);
       if (ancestor == null) {
@@ -90,16 +92,20 @@ public final class NetUtils {
             " of node :" + node);
         continue;
       }
-      if (excludedScope.startsWith(ancestor.getNetworkFullPath())) {
-        // reset excludedScope if it's covered by exclude node's ancestor
-        return null;
-      }
-      if (ancestor.getNetworkFullPath().startsWith(excludedScope)) {
-        // remove exclude node if it's covered by excludedScope
-        iterator.remove();
-      }
+      // excludedScope is child of ancestor
+      List<String> duplicateList = mutableExcludedScopes.stream()
+          .filter(scope -> scope.startsWith(ancestor.getNetworkFullPath()))
+          .collect(Collectors.toList());
+      mutableExcludedScopes.removeAll(duplicateList);
+
+      // ancestor is covered by excludedScope
+      mutableExcludedScopes.stream().forEach(scope -> {
+        if (ancestor.getNetworkFullPath().startsWith(scope)) {
+          // remove exclude node if it's covered by excludedScope
+          iterator.remove();
+        }
+      });
     }
-    return excludedScope;
   }
 
   /**

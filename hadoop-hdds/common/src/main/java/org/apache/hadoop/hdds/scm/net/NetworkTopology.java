@@ -119,11 +119,11 @@ public interface NetworkTopology {
    * Randomly choose a node in the scope, ano not in the exclude scope.
    * @param scope range of nodes from which a node will be chosen. cannot start
    *              with ~
-   * @param excludedScope the chosen node cannot be in this range. cannot
+   * @param excludedScopes the chosen nodes cannot be in these ranges. cannot
    *                      starts with ~
    * @return the chosen node
    */
-  Node chooseRandom(String scope, String excludedScope);
+  Node chooseRandom(String scope, List<String>  excludedScopes);
 
   /**
    * Randomly choose a leaf node from <i>scope</i>.
@@ -166,7 +166,7 @@ public interface NetworkTopology {
    *
    * @param scope range from which a node will be chosen, cannot start with ~
    * @param excludedNodes nodes to be excluded
-   * @param excludedScope excluded node range. Cannot start with ~
+   * @param excludedScopes excluded node ranges. Cannot start with ~
    * @param ancestorGen matters when excludeNodes is not null. It means the
    * ancestor generation that's not allowed to share between chosen node and the
    * excludedNodes. For example, if ancestorGen is 1, means chosen node
@@ -176,7 +176,7 @@ public interface NetworkTopology {
    *
    * @return the chosen node
    */
-  Node chooseRandom(String scope, String excludedScope,
+  Node chooseRandom(String scope, List<String>  excludedScopes,
       Collection<Node> excludedNodes, int ancestorGen);
 
 
@@ -187,7 +187,7 @@ public interface NetworkTopology {
    *
    * @param scope range of nodes from which a node will be chosen, cannot start
    *              with ~
-   * @param excludedScope range of nodes to be excluded, cannot start with ~
+   * @param excludedScopes ranges of nodes to be excluded, cannot start with ~
    * @param excludedNodes nodes to be excluded
    * @param affinityNode  when not null, the chosen node should share the same
    *                     ancestor with this node at generation ancestorGen.
@@ -198,7 +198,7 @@ public interface NetworkTopology {
    *                     excludedNodes if affinityNode is null
    * @return the chosen node
    */
-  Node chooseRandom(String scope, String excludedScope,
+  Node chooseRandom(String scope, List<String>  excludedScopes,
       Collection<Node> excludedNodes, Node affinityNode, int ancestorGen);
 
   /**
@@ -210,7 +210,7 @@ public interface NetworkTopology {
    *                  excludedNodes
    * @param scope range of nodes from which a node will be chosen, cannot start
    *              with ~
-   * @param excludedScope range of nodes to be excluded, cannot start with ~
+   * @param excludedScopes ranges of nodes to be excluded, cannot start with ~
    * @param excludedNodes nodes to be excluded
    * @param affinityNode  when not null, the chosen node should share the same
    *                     ancestor with this node at generation ancestorGen.
@@ -221,7 +221,7 @@ public interface NetworkTopology {
    *                     excludedNodes if affinityNode is null
    * @return the chosen node
    */
-  Node getNode(int leafIndex, String scope, String excludedScope,
+  Node getNode(int leafIndex, String scope, List<String> excludedScopes,
       Collection<Node> excludedNodes, Node affinityNode, int ancestorGen);
 
   /** Return the distance cost between two nodes
