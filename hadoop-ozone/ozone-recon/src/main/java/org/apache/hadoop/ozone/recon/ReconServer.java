@@ -33,9 +33,11 @@ import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
+import org.apache.hadoop.ozone.recon.tasks.FileSizeCountTask;
 import org.hadoop.ozone.recon.schema.ReconInternalSchemaDefinition;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
+import org.jooq.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -122,7 +124,7 @@ public class ReconServer extends GenericCli {
         .getInstance(ContainerDBServiceProvider.class);
     OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
         .getInstance(OzoneManagerServiceProvider.class);
-
+    Configuration sqlConfiguration = injector.getInstance(Configuration.class);
     long initialDelay = configuration.getTimeDuration(
         RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY,
         RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT,
@@ -143,6 +145,13 @@ public class ReconServer extends GenericCli {
                 ozoneManagerServiceProvider.getOMMetadataManagerInstance());
         containerKeyMapperTask.reprocess(
             ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+        FileSizeCountTask fileSizeCountTask = new
+            FileSizeCountTask(
+                ozoneManagerServiceProvider.getOMMetadataManagerInstance(),
+            sqlConfiguration);
+        fileSizeCountTask.reprocess(
+            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+
       } catch (IOException e) {
         LOG.error("Unable to get OM " +
             "Snapshot", e);
