@@ -50,7 +50,7 @@ public class TestKillJobCliParsing {
     MockClientContext mockClientContext = new MockClientContext();
     KillJobCli killJobCli = new KillJobCli(mockClientContext) {
       @Override
-      protected boolean KillJob() {
+      protected boolean killJob() {
         // do nothing
         return false;
       }
