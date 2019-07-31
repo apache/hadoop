@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.om.request.volume;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmOzoneAclMap;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeRemoveAclRequest;
@@ -47,8 +46,7 @@ public class TestOMVolumeRemoveAclRequest extends TestOMVolumeRequest{
         TestOMRequestUtils.createVolumeRemoveAclRequest(volumeName, acl);
 
     OMVolumeRemoveAclRequest omVolumeRemoveAclRequest =
-        new OMVolumeRemoveAclRequest(originalRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.RemoveAcl));
+        new OMVolumeRemoveAclRequest(originalRequest);
 
     OMRequest modifiedRequest = omVolumeRemoveAclRequest.preExecute(
         ozoneManager);
@@ -68,8 +66,7 @@ public class TestOMVolumeRemoveAclRequest extends TestOMVolumeRequest{
     OMRequest addAclRequest =
         TestOMRequestUtils.createVolumeAddAclRequest(volumeName, acl);
     OMVolumeAddAclRequest omVolumeAddAclRequest =
-        new OMVolumeAddAclRequest(addAclRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.AddAcl));
+        new OMVolumeAddAclRequest(addAclRequest);
     omVolumeAddAclRequest.preExecute(ozoneManager);
     OMClientResponse omClientAddResponse =
         omVolumeAddAclRequest.validateAndUpdateCache(ozoneManager, 1,
@@ -84,8 +81,7 @@ public class TestOMVolumeRemoveAclRequest extends TestOMVolumeRequest{
     OMRequest removeAclRequest =
         TestOMRequestUtils.createVolumeRemoveAclRequest(volumeName, acl);
     OMVolumeRemoveAclRequest omVolumeRemoveAclRequest =
-        new OMVolumeRemoveAclRequest(removeAclRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.RemoveAcl));
+        new OMVolumeRemoveAclRequest(removeAclRequest);
     omVolumeRemoveAclRequest.preExecute(ozoneManager);
 
     String volumeKey = omMetadataManager.getVolumeKey(volumeName);
@@ -122,8 +118,7 @@ public class TestOMVolumeRemoveAclRequest extends TestOMVolumeRequest{
         TestOMRequestUtils.createVolumeRemoveAclRequest(volumeName, acl);
 
     OMVolumeRemoveAclRequest omVolumeRemoveAclRequest =
-        new OMVolumeRemoveAclRequest(originalRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.RemoveAcl));
+        new OMVolumeRemoveAclRequest(originalRequest);
 
     omVolumeRemoveAclRequest.preExecute(ozoneManager);
 

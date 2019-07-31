@@ -18,7 +18,6 @@
 package org.apache.hadoop.ozone.om.request.volume.acl;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import org.apache.hadoop.hdds.scm.storage.CheckedBiFunction;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetrics;
@@ -41,12 +40,18 @@ public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeSetAclRequest.class);
 
+  private static CheckedBiFunction<List<OzoneAcl>,
+      OmVolumeArgs, IOException> volumeSetAclOp;
+
+  static {
+    volumeSetAclOp = (acls, volArgs) -> volArgs.setAcls(acls);
+  }
+
   private List<OzoneAcl> ozoneAcls;
   private String volumeName;
 
-  public OMVolumeSetAclRequest(OMRequest omRequest,
-      CheckedBiFunction<List<OzoneAcl>, OmVolumeArgs, IOException> aclOp) {
-    super(omRequest, aclOp);
+  public OMVolumeSetAclRequest(OMRequest omRequest) {
+    super(omRequest, volumeSetAclOp);
     OzoneManagerProtocolProtos.SetAclRequest setAclRequest =
         getOmRequest().getSetAclRequest();
     Preconditions.checkNotNull(setAclRequest);

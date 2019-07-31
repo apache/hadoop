@@ -40,12 +40,18 @@ public class OMVolumeRemoveAclRequest extends OMVolumeAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeRemoveAclRequest.class);
 
+  private static CheckedBiFunction<List<OzoneAcl>,
+      OmVolumeArgs, IOException> volumeRemoveAclOp;
+
+  static {
+    volumeRemoveAclOp = (acls, volArgs) -> volArgs.removeAcl(acls.get(0));
+  }
+
   private List<OzoneAcl> ozoneAcls;
   private String volumeName;
 
-  public OMVolumeRemoveAclRequest(OMRequest omRequest,
-      CheckedBiFunction<List<OzoneAcl>, OmVolumeArgs, IOException> aclOp) {
-    super(omRequest, aclOp);
+  public OMVolumeRemoveAclRequest(OMRequest omRequest) {
+    super(omRequest, volumeRemoveAclOp);
     OzoneManagerProtocolProtos.RemoveAclRequest removeAclRequest =
         getOmRequest().getRemoveAclRequest();
     Preconditions.checkNotNull(removeAclRequest);

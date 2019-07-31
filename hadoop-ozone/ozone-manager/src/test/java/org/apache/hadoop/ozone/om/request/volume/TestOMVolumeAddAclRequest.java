@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.om.request.volume;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmOzoneAclMap;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
-import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
@@ -47,8 +46,7 @@ public class TestOMVolumeAddAclRequest extends TestOMVolumeRequest{
         TestOMRequestUtils.createVolumeAddAclRequest(volumeName, acl);
 
     OMVolumeAddAclRequest omVolumeAddAclRequest =
-        new OMVolumeAddAclRequest(originalRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.AddAcl));
+        new OMVolumeAddAclRequest(originalRequest);
 
     OMRequest modifiedRequest = omVolumeAddAclRequest.preExecute(
         ozoneManager);
@@ -69,8 +67,7 @@ public class TestOMVolumeAddAclRequest extends TestOMVolumeRequest{
         TestOMRequestUtils.createVolumeAddAclRequest(volumeName, acl);
 
     OMVolumeAddAclRequest omVolumeAddAclRequest =
-        new OMVolumeAddAclRequest(originalRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.AddAcl));
+        new OMVolumeAddAclRequest(originalRequest);
 
     omVolumeAddAclRequest.preExecute(ozoneManager);
 
@@ -110,8 +107,7 @@ public class TestOMVolumeAddAclRequest extends TestOMVolumeRequest{
         TestOMRequestUtils.createVolumeAddAclRequest(volumeName, acl);
 
     OMVolumeAddAclRequest omVolumeAddAclRequest =
-        new OMVolumeAddAclRequest(originalRequest, OzoneManagerRatisUtils
-            .getVolumeAclOp(OzoneManagerProtocolProtos.Type.AddAcl));
+        new OMVolumeAddAclRequest(originalRequest);
 
     omVolumeAddAclRequest.preExecute(ozoneManager);
 

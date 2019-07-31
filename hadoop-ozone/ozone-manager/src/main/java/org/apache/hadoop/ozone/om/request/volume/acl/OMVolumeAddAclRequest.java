@@ -41,12 +41,18 @@ public class OMVolumeAddAclRequest extends OMVolumeAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMVolumeAddAclRequest.class);
 
+  private static CheckedBiFunction<List<OzoneAcl>,
+      OmVolumeArgs, IOException> volumeAddAclOp;
+
+  static {
+    volumeAddAclOp = (acls, volArgs) -> volArgs.addAcl(acls.get(0));
+  }
+
   private List<OzoneAcl> ozoneAcls;
   private String volumeName;
 
-  public OMVolumeAddAclRequest(OMRequest omRequest,
-    CheckedBiFunction<List<OzoneAcl>, OmVolumeArgs, IOException> aclOp) {
-    super(omRequest, aclOp);
+  public OMVolumeAddAclRequest(OMRequest omRequest) {
+    super(omRequest, volumeAddAclOp);
     OzoneManagerProtocolProtos.AddAclRequest addAclRequest =
         getOmRequest().getAddAclRequest();
     Preconditions.checkNotNull(addAclRequest);
