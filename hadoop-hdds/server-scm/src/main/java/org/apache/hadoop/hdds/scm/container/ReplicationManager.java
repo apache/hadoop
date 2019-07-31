@@ -486,8 +486,11 @@ public class ReplicationManager {
         final List<DatanodeDetails> excludeList = replicas.stream()
             .map(ContainerReplica::getDatanodeDetails)
             .collect(Collectors.toList());
-        inflightReplication.get(id).stream().map(r -> r.datanode)
-            .forEach(excludeList::add);
+        List<InflightAction> actionList = inflightReplication.get(id);
+        if (actionList != null) {
+          actionList.stream().map(r -> r.datanode)
+              .forEach(excludeList::add);
+        }
         final List<DatanodeDetails> selectedDatanodes = containerPlacement
             .chooseDatanodes(excludeList, null, delta,
                 container.getUsedBytes());
