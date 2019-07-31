@@ -98,8 +98,11 @@ import static org.apache.hadoop.test.LambdaTestUtils.intercept;
  * <ol>
  *   <li>A failure of an assertion blocks all subsequent assertions from
  *   being checked.</li>
- *   <li>Maintenance is going to be harder.</li>
+ *   <li>Maintenance is potentially harder.</li>
  * </ol>
+ * To simplify maintenance, the operations tested are broken up into
+ * their own methods, with fields used to share the restricted role and
+ * created paths.
  */
 @SuppressWarnings("ThrowableNotThrown")
 @RunWith(Parameterized.class)
@@ -156,6 +159,26 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   private final boolean s3guard;
 
   private final boolean authMode;
+
+  private Path basePath;
+
+  private Path noReadDir;
+
+  private Path emptyDir;
+
+  private Path emptyFile;
+
+  private Path subDir;
+
+  private Path subdirFile;
+
+  private Path subDir2;
+
+  private Path subdir2File1;
+
+  private Path subdir2File2;
+
+  private Configuration roleConfig;
 
   /**
    * A read-only FS; if non-null it is closed in teardown.
@@ -231,48 +254,69 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
     return newAssumedRoleConfig(getContract().getConf(), roleARN);
   }
 
+  /**
+   * This is a single test case which invokes the individual test cases
+   * in sequence.
+   */
   @Test
   public void testNoReadAccess() throws Throwable {
     describe("Test failure handling if the client doesn't"
         + " have read access under a path");
+    initNoReadAccess();
+
+    // now move up the API Chain, from the calls made by globStatus,
+    // to globStatus itself, and then to LocatedFileStatusFetcher,
+    // which invokes globStatus
+
+    testBasicFileOperations();
+    testGlobOperations();
+    testLocatedFileStatusFetcher();
+    testDeleteOperations();
+  }
+
+  /**
+   * Initialize the directory tree and the role filesystem.
+   */
+  public void initNoReadAccess() throws Throwable {
+    describe("Setting up filesystem");
+
     S3AFileSystem realFS = getFileSystem();
 
     // avoiding the parameterization to steer clear of accidentally creating
     // patterns
-    Path basePath = path("testNoReadAccess-" + name);
+    basePath = path("testNoReadAccess-" + name);
 
     // define the paths and create them.
     describe("Creating test directories and files");
 
     // this is the directory to which the restricted role has no read
     // access.
-    Path noReadDir = new Path(basePath, "noReadDir");
+    noReadDir = new Path(basePath, "noReadDir");
 
     // an empty directory directory under the noReadDir
-    Path emptyDir = new Path(noReadDir, "emptyDir");
+    emptyDir = new Path(noReadDir, "emptyDir");
     realFS.mkdirs(emptyDir);
 
     // an empty file directory under the noReadDir
-    Path emptyFile = new Path(noReadDir, "emptyFile.txt");
+    emptyFile = new Path(noReadDir, "emptyFile.txt");
     touch(realFS, emptyFile);
 
     // a subdirectory
-    Path subDir = new Path(noReadDir, "subDir");
+    subDir = new Path(noReadDir, "subDir");
 
     // and a file in that subdirectory
-    Path subdirFile = new Path(subDir, "subdirFile.txt");
+    subdirFile = new Path(subDir, "subdirFile.txt");
     createFile(realFS, subdirFile, true, HELLO);
-    Path subDir2 = new Path(noReadDir, "subDir2");
-    Path subdir2File1 = new Path(subDir2, "subdir2File1.txt");
-    Path subdir2File2 = new Path(subDir2, "subdir2File2.docx");
+    subDir2 = new Path(noReadDir, "subDir2");
+    subdir2File1 = new Path(subDir2, "subdir2File1.txt");
+    subdir2File2 = new Path(subDir2, "subdir2File2.docx");
     createFile(realFS, subdir2File1, true, HELLO);
     createFile(realFS, subdir2File2, true, HELLO);
-
 
     // create a role filesystem which does not have read access under a path
     // it still has write access, which can be explored in the final
     // step to delete files and directories.
-    Configuration roleConfig = createAssumedRoleConfig();
+    roleConfig = createAssumedRoleConfig();
     bindRolePolicyStatements(roleConfig,
         STATEMENT_S3GUARD_CLIENT,
         STATEMENT_ALLOW_SSE_KMS_RW,
@@ -281,14 +325,12 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             .addActions(S3_ALL_GET)
             .addResources(directory(noReadDir)));
     readonlyFS = (S3AFileSystem) basePath.getFileSystem(roleConfig);
+  }
 
-    // now move up the API Chain, from the calls made by globStatus,
-    // to globStatus itself, and then to LocatedFileStatusFetcher,
-    // which invokes globStatus
-
-    // -----------------------------------------------------------------
-    // validate basic IO operations.
-    // -----------------------------------------------------------------
+  /**
+   * Validate basic IO operations.
+   */
+  public void testBasicFileOperations() throws Throwable {
 
     // this is a LIST call; there's no marker.
     // so the sequence is
@@ -344,14 +386,16 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
       }
       readonlyFS.getFileStatus(subdirFile);
     }
+  }
 
-    // -----------------------------------------------------------------
-    // Explore Glob's recursive scan
-    // -----------------------------------------------------------------
+  /**
+   * Explore Glob's recursive scan.
+   */
+  public void testGlobOperations() throws Throwable {
 
     describe("Glob Status operations");
     // baseline: the real filesystem on a subdir
-    globFS(realFS, subdirFile, null, false, 1);
+    globFS(getFileSystem(), subdirFile, null, false, 1);
     // a file fails if not in auth mode
     globFS(readonlyFS, subdirFile, null, !authMode, 1);
     // empty directories don't fail.
@@ -386,11 +430,16 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
         .extracting(FileStatus::getPath)
         .containsExactly(noReadDir);
 
-    // -----------------------------------------------------------------
-    // now run a located file status fetcher against the directory tree.
-    // -----------------------------------------------------------------
-    describe("LocatedFileStatusFetcher operations");
+  }
 
+  /**
+   * Run a located file status fetcher against the directory tree.
+   */
+  public void testLocatedFileStatusFetcher() throws Throwable {
+
+    describe("LocatedFileStatusFetcher operations");
+    // wildcard scan to find *.txt
+    Path textFilePathPattern = new Path(noReadDir, "*/*.txt");
     // use the same filter as FileInputFormat; single thread.
     roleConfig.setInt(LIST_STATUS_NUM_THREADS, 1);
     LocatedFileStatusFetcher fetcher =
@@ -489,10 +538,16 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
             .getFileStatuses());
     // validate nested exception
     assertExceptionContains(MATCHES_0_FILES, ex.getCause());
+  }
 
-    // -----------------------------------------------------------------
-    // finally, do some cleanup to see what happens with a delete
-    // -----------------------------------------------------------------
+  /**
+   * Do some cleanup to see what happens with delete calls.
+   * Cleanup happens in test teardown anyway; doing it here
+   * just makes use of the delete calls to see how delete failures
+   * change with permissions and S3Guard stettings.
+   */
+  public void testDeleteOperations() throws Throwable {
+    describe("Testing delete operations");
 
     if (!authMode) {
       // unguarded or non-auth S3Guard to fail on HEAD + /
@@ -560,7 +615,7 @@ public class ITestRestrictedReadAccess extends AbstractS3ATestBase {
   }
 
   /**
-   * Glob.
+   * Glob under a path with expected outcomes.
    * @param fs filesystem to use
    * @param path path (which can include patterns)
    * @param filter optional filter
