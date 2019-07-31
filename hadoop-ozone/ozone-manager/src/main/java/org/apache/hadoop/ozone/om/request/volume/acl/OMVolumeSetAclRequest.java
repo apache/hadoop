@@ -27,34 +27,34 @@ import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeAclOpResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Handles volume add acl request.
+ * Handles volume set acl request.
  */
-public class OMVolumeAddAclRequest extends OMVolumeAclRequest {
+public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
   private static final Logger LOG =
-      LoggerFactory.getLogger(OMVolumeAddAclRequest.class);
+      LoggerFactory.getLogger(OMVolumeSetAclRequest.class);
 
   private List<OzoneAcl> ozoneAcls;
   private String volumeName;
 
-  public OMVolumeAddAclRequest(OMRequest omRequest,
-    CheckedBiFunction<List<OzoneAcl>, OmVolumeArgs, IOException> aclOp) {
+  public OMVolumeSetAclRequest(OMRequest omRequest,
+      CheckedBiFunction<List<OzoneAcl>, OmVolumeArgs, IOException> aclOp) {
     super(omRequest, aclOp);
-    OzoneManagerProtocolProtos.AddAclRequest addAclRequest =
-        getOmRequest().getAddAclRequest();
-    Preconditions.checkNotNull(addAclRequest);
-    ozoneAcls = Lists.newArrayList(
-        OzoneAcl.fromProtobuf(addAclRequest.getAcl()));
-    volumeName = addAclRequest.getObj().getPath().substring(1);
+    OzoneManagerProtocolProtos.SetAclRequest setAclRequest =
+        getOmRequest().getSetAclRequest();
+    Preconditions.checkNotNull(setAclRequest);
+    ozoneAcls = new ArrayList<>();
+    setAclRequest.getAclList().forEach(oai ->
+        ozoneAcls.add(OzoneAcl.fromProtobuf(oai)));
+    volumeName = setAclRequest.getObj().getPath().substring(1);
   }
-
 
   public List<OzoneAcl> getAcls() {
     return ozoneAcls;
@@ -64,28 +64,24 @@ public class OMVolumeAddAclRequest extends OMVolumeAclRequest {
     return volumeName;
   }
 
-  private OzoneAcl getAcl() {
-    return ozoneAcls.get(0);
-  }
-
-  protected OMClientResponse handleResult(OmVolumeArgs omVolumeArgs,
+  public OMClientResponse handleResult(OmVolumeArgs omVolumeArgs,
       OMMetrics omMetrics, IOException exception) {
     OzoneManagerProtocolProtos.OMResponse.Builder omResponse =
         OzoneManagerProtocolProtos.OMResponse.newBuilder()
-            .setCmdType(OzoneManagerProtocolProtos.Type.AddAcl)
+            .setCmdType(OzoneManagerProtocolProtos.Type.SetAcl)
             .setStatus(OzoneManagerProtocolProtos.Status.OK)
             .setSuccess(true);
 
     if (exception == null) {
-      OMVolumeAddAclRequest.LOG.debug("Add acl: {} to volume: {} success!",
-          getAcl(), getVolumeName());
-      omResponse.setAddAclResponse(OzoneManagerProtocolProtos.AddAclResponse
-          .newBuilder().setResponse(true).build());
+      OMVolumeSetAclRequest.LOG.debug("Set acls: {} for volume: {}" +
+              " success!", getAcls(), volumeName);
+      omResponse.setSetAclResponse(OzoneManagerProtocolProtos
+          .SetAclResponse.newBuilder().setResponse(true).build());
       return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
     } else {
       omMetrics.incNumVolumeUpdateFails();
-      OMVolumeAddAclRequest.LOG.error("Add acl {} to volume {} failed!",
-          getAcl(), getVolumeName(), exception);
+      OMVolumeSetAclRequest.LOG.error("Set acls {} for volume {} failed!",
+          getAcls(), getVolumeName(), exception);
       return new OMVolumeAclOpResponse(null,
           createErrorOMResponse(omResponse, exception));
     }

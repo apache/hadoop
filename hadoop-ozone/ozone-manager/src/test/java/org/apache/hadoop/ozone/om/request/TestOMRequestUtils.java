@@ -52,6 +52,10 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .SetVolumePropertyRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .AddAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .RemoveAclRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .SetAclRequest;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType;
 import org.apache.hadoop.ozone.security.acl.OzoneObj.StoreType;
@@ -309,6 +313,40 @@ public final class TestOMRequestUtils {
         .setAddAclRequest(addAclRequestBuilder.build()).build();
   }
 
+  public static OMRequest createVolumeRemoveAclRequest(String volumeName,
+      OzoneAcl acl) {
+    RemoveAclRequest.Builder removeAclRequestBuilder = RemoveAclRequest.newBuilder();
+    removeAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(ResourceType.VOLUME)
+        .setStoreType(StoreType.OZONE)
+        .build()));
+    if (acl != null) {
+      removeAclRequestBuilder.setAcl(OzoneAcl.toProtobuf(acl));
+    }
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.RemoveAcl)
+        .setRemoveAclRequest(removeAclRequestBuilder.build()).build();
+  }
+
+  public static OMRequest createVolumeSetAclRequest(String volumeName,
+      List<OzoneAcl> acls) {
+    SetAclRequest.Builder setAclRequestBuilder = SetAclRequest.newBuilder();
+    setAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
+        .setVolumeName(volumeName)
+        .setResType(ResourceType.VOLUME)
+        .setStoreType(StoreType.OZONE)
+        .build()));
+    if (acls != null) {
+      acls.forEach(
+          acl -> setAclRequestBuilder.addAcl(OzoneAcl.toProtobuf(acl)));
+    }
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.SetAcl)
+        .setSetAclRequest(setAclRequestBuilder.build()).build();
+  }
+
   /**
    * Deletes key from Key table and adds it to DeletedKeys table.
    * @return the deletedKey name
@@ -411,5 +449,4 @@ public final class TestOMRequestUtils {
         .build();
 
   }
-
 }

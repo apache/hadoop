@@ -29,13 +29,13 @@ import org.apache.hadoop.utils.db.BatchOperation;
 import java.io.IOException;
 
 /**
- * Response for addAcl request.
+ * Response for om volume acl operation request.
  */
-public class OMVolumeAddAclResponse extends OMClientResponse {
+public class OMVolumeAclOpResponse extends OMClientResponse {
 
   private OmVolumeArgs omVolumeArgs;
 
-  public OMVolumeAddAclResponse(OmVolumeArgs omVolumeArgs,
+  public OMVolumeAclOpResponse(OmVolumeArgs omVolumeArgs,
       OMResponse omResponse) {
     super(omResponse);
     this.omVolumeArgs = omVolumeArgs;
