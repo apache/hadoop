@@ -558,7 +558,7 @@ public final class XceiverServerRatis extends XceiverServer {
     if (triggerHB) {
       context.getParent().triggerHeartbeat();
     }
-    LOG.debug(
+    LOG.info(
         "pipeline Action " + action.getAction() + "  on pipeline " + pipelineID
             + ".Reason : " + action.getClosePipeline().getDetailedReason());
   }

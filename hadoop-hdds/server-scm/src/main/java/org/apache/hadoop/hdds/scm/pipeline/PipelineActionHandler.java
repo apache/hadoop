@@ -57,9 +57,10 @@ public class PipelineActionHandler
           pipelineID = PipelineID.
               getFromProtobuf(action.getClosePipeline().getPipelineID());
           Pipeline pipeline = pipelineManager.getPipeline(pipelineID);
-          LOG.info("Received pipeline action {} for {} from datanode {}",
-              action.getAction(), pipeline, report.getDatanodeDetails());
-          pipelineManager.finalizeAndDestroyPipeline(pipeline, true);
+          LOG.info("Received pipeline action {} for {} from datanode {}. " +
+                  "Reason : {}", action.getAction(), pipeline,
+              report.getDatanodeDetails(),
+              action.getClosePipeline().getDetailedReason());
         } catch (IOException ioe) {
           LOG.error("Could not execute pipeline action={} pipeline={} {}",
               action, pipelineID, ioe);
