@@ -70,6 +70,12 @@ public abstract class BaseHttpServer {
       this.httpAddress = getHttpBindAddress();
       this.httpsAddress = getHttpsBindAddress();
       HttpServer2.Builder builder = null;
+
+      // Avoid registering o.a.h.http.PrometheusServlet in HttpServer2.
+      // TODO: Replace "hadoop.prometheus.endpoint.enabled" with
+      // CommonConfigurationKeysPublic.HADOOP_PROMETHEUS_ENABLED when possible.
+      conf.setBoolean("hadoop.prometheus.endpoint.enabled", false);
+
       builder = DFSUtil.httpServerTemplateForNNAndJN(conf, this.httpAddress,
           this.httpsAddress, name, getSpnegoPrincipal(), getKeytabFile());
 
