@@ -82,7 +82,7 @@ public class TestS3MultipartUploadAbortResponse
     PartKeyInfo part1 = createPartKeyInfo(volumeName, bucketName,
         keyName, 1);
     PartKeyInfo part2 = createPartKeyInfo(volumeName, bucketName,
-        keyName, 1);
+        keyName, 2);
 
     addPart(1, part1, omMultipartKeyInfo);
     addPart(2, part2, omMultipartKeyInfo);
