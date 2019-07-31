@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -81,6 +82,12 @@ public class TestOMKeyRequest {
   protected long clientID;
   protected long scmBlockSize = 1000L;
   protected long dataSize;
+
+  // Just setting ozoneManagerDoubleBuffer which does nothing.
+  protected OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
+      ((response, transactionIndex) -> {
+        return null;
+      });
 
 
   @Before

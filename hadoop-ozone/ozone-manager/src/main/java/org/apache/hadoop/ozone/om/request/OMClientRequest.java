@@ -33,6 +33,7 @@ import org.apache.hadoop.ozone.audit.AuditEventStatus;
 import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.AuditMessage;
 import org.apache.hadoop.ozone.om.OzoneManager;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerRatisUtils;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -85,7 +86,8 @@ public abstract class OMClientRequest implements RequestAuditor {
    * @return the response that will be returned to the client.
    */
   public abstract OMClientResponse validateAndUpdateCache(
-      OzoneManager ozoneManager, long transactionLogIndex);
+      OzoneManager ozoneManager, long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper);
 
   @VisibleForTesting
   public OMRequest getOmRequest() {
@@ -213,5 +215,4 @@ public abstract class OMClientRequest implements RequestAuditor {
     auditMap.put(OzoneConsts.VOLUME, volume);
     return auditMap;
   }
-
 }

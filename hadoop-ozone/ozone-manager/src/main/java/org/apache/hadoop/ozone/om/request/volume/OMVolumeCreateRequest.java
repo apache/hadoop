@@ -19,12 +19,14 @@
 package org.apache.hadoop.ozone.om.request.volume;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.google.common.base.Preconditions;
+import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hadoop.ozone.audit.AuditLogger;
 import org.apache.hadoop.ozone.audit.OMAction;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeCreateResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -84,7 +86,8 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
 
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex) {
+      long transactionLogIndex,
+      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
 
     CreateVolumeRequest createVolumeRequest =
         getOmRequest().getCreateVolumeRequest();
@@ -101,41 +104,34 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
         OzoneManagerProtocolProtos.Type.CreateVolume).setStatus(
         OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
 
-    OmVolumeArgs omVolumeArgs = null;
-
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
 
-    AuditLogger auditLogger = ozoneManager.getAuditLogger();
-    OzoneManagerProtocolProtos.UserInfo userInfo = getOmRequest().getUserInfo();
-
     // Doing this here, so we can do protobuf conversion outside of lock.
+    boolean acquiredVolumeLock = false;
+    boolean acquiredUserLock = false;
+    IOException exception = null;
+    OMClientResponse omClientResponse = null;
+    OmVolumeArgs omVolumeArgs = null;
+    Map<String, String> auditMap = new HashMap<>();
     try {
       omVolumeArgs = OmVolumeArgs.getFromProtobuf(volumeInfo);
+      auditMap = omVolumeArgs.toAuditMap();
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
         checkAcls(ozoneManager, OzoneObj.ResourceType.VOLUME,
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.CREATE, volume,
             null, null);
       }
-    } catch (IOException ex) {
-      omMetrics.incNumVolumeCreateFails();
-      auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_VOLUME,
-          buildVolumeAuditMap(volume), ex, userInfo));
-      LOG.error("Volume creation failed for user:{} volume:{}", owner, volume,
-          ex);
-      return new OMVolumeCreateResponse(omVolumeArgs, null,
-          createErrorOMResponse(omResponse, ex));
-    }
 
-    VolumeList volumeList = null;
-    boolean acquiredUserLock = false;
-    IOException exception = null;
+      VolumeList volumeList = null;
 
-    // acquire lock.
-    omMetadataManager.getLock().acquireLock(VOLUME_LOCK, volume);
-    try {
+      // acquire lock.
+      acquiredVolumeLock = omMetadataManager.getLock().acquireLock(VOLUME_LOCK,
+          volume);
+
       acquiredUserLock = omMetadataManager.getLock().acquireLock(USER_LOCK,
           owner);
+
       String dbVolumeKey = omMetadataManager.getVolumeKey(volume);
 
       OmVolumeArgs dbVolumeArgs =
@@ -147,7 +143,12 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
         volumeList = addVolumeToOwnerList(volumeList, volume, owner,
             ozoneManager.getMaxUserVolumeCount());
         createVolume(omMetadataManager, omVolumeArgs, volumeList, dbVolumeKey,
-              dbUserKey, transactionLogIndex);
+            dbUserKey, transactionLogIndex);
+
+        omResponse.setCreateVolumeResponse(CreateVolumeResponse.newBuilder()
+            .build());
+        omClientResponse = new OMVolumeCreateResponse(omVolumeArgs, volumeList,
+            omResponse.build());
         LOG.debug("volume:{} successfully created", omVolumeArgs.getVolume());
       } else {
         LOG.debug("volume:{} already exists", omVolumeArgs.getVolume());
@@ -157,34 +158,38 @@ public class OMVolumeCreateRequest extends OMVolumeRequest {
 
     } catch (IOException ex) {
       exception = ex;
+      omClientResponse = new OMVolumeCreateResponse(null, null,
+          createErrorOMResponse(omResponse, exception));
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (acquiredUserLock) {
         omMetadataManager.getLock().releaseLock(USER_LOCK, owner);
       }
-      omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      if (acquiredVolumeLock) {
+        omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
+      }
     }
 
     // Performing audit logging outside of the lock.
-    auditLog(auditLogger, buildAuditMessage(OMAction.CREATE_VOLUME,
-        omVolumeArgs.toAuditMap(), exception, userInfo));
+    auditLog(ozoneManager.getAuditLogger(),
+        buildAuditMessage(OMAction.CREATE_VOLUME, auditMap, exception,
+            getOmRequest().getUserInfo()));
 
     // return response after releasing lock.
     if (exception == null) {
-      LOG.debug("created volume:{} for user:{}", omVolumeArgs.getVolume(),
-          owner);
+      LOG.debug("created volume:{} for user:{}", volume, owner);
       omMetrics.incNumVolumes();
-      omResponse.setCreateVolumeResponse(CreateVolumeResponse.newBuilder()
-          .build());
-      return new OMVolumeCreateResponse(omVolumeArgs, volumeList,
-          omResponse.build());
     } else {
       LOG.error("Volume creation failed for user:{} volume:{}", owner,
-          volumeInfo.getVolume(), exception);
+          volume, exception);
       omMetrics.incNumVolumeCreateFails();
-      return new OMVolumeCreateResponse(omVolumeArgs, volumeList,
-          createErrorOMResponse(omResponse, exception));
     }
+    return omClientResponse;
   }
-
-
 }
+
+
