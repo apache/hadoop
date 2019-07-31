@@ -40,6 +40,8 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartCommitUploadPartRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .KeyArgs;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .MultipartInfoInitiateRequest;
@@ -364,6 +366,26 @@ public final class TestOMRequestUtils {
     return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
         .setCmdType(OzoneManagerProtocolProtos.Type.AbortMultiPartUpload)
         .setAbortMultiPartUploadRequest(multipartUploadAbortRequest).build();
+  }
+
+  public static OMRequest createCompleteMPURequest(String volumeName,
+      String bucketName, String keyName, String multipartUploadID,
+      List<OzoneManagerProtocolProtos.Part> partList) {
+    KeyArgs.Builder keyArgs =
+        KeyArgs.newBuilder().setVolumeName(volumeName)
+            .setKeyName(keyName)
+            .setBucketName(bucketName)
+            .setMultipartUploadID(multipartUploadID);
+
+    MultipartUploadCompleteRequest multipartUploadCompleteRequest =
+        MultipartUploadCompleteRequest.newBuilder().setKeyArgs(keyArgs)
+            .addAllPartsList(partList).build();
+
+    return OMRequest.newBuilder().setClientId(UUID.randomUUID().toString())
+        .setCmdType(OzoneManagerProtocolProtos.Type.CompleteMultiPartUpload)
+        .setCompleteMultiPartUploadRequest(multipartUploadCompleteRequest)
+        .build();
+
   }
 
 }
