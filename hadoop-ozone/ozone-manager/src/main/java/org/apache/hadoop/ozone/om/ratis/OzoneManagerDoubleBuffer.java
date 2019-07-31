@@ -64,8 +64,13 @@ public class OzoneManagerDoubleBuffer {
   private Queue<DoubleBufferEntry<OMClientResponse>> readyBuffer;
 
 
-  private Queue<CompletableFuture<Void>> currentFutureQueue;
-  private Queue<CompletableFuture<Void>> readyFutureQueue;
+  // future objects which hold the future returned by add method.
+  private volatile Queue<CompletableFuture<Void>> currentFutureQueue;
+
+  // Once we have an entry in current buffer, we swap the currentFutureQueue
+  // with readyFutureQueue. After flush is completed in flushTransaction
+  // daemon thread, we complete the futures in readyFutureQueue and clear them.
+  private volatile Queue<CompletableFuture<Void>> readyFutureQueue;
 
   private Daemon daemon;
   private final OMMetadataManager omMetadataManager;
@@ -120,12 +125,6 @@ public class OzoneManagerDoubleBuffer {
    * Runs in a background thread and batches the transaction in currentBuffer
    * and commit to DB.
    */
-  @SuppressFBWarnings(value = "IS2_INCONSISTENT_SYNC", justification =
-      "futureQueue is accessed in this method with out synchronization " +
-          "because, when swap of futureQueue happens that is done with " +
-          "synchronization and add method adds to only currentQueue. So, we " +
-          "don't need synchronization at this point. This is similar to " +
-          "readyBuffer approach.")
   private void flushTransactions() {
     while (isRunning.get()) {
       try {

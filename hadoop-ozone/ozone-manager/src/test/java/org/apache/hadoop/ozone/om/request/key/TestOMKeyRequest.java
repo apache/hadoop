@@ -83,7 +83,7 @@ public class TestOMKeyRequest {
   protected long scmBlockSize = 1000L;
   protected long dataSize;
 
-  // Just setting ozoneManagerDoubleBuffer which does no
+  // Just setting ozoneManagerDoubleBuffer which does nothing.
   protected OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
       ((response, transactionIndex) -> {
         return null;

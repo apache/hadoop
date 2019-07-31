@@ -52,7 +52,7 @@ public class TestBucketRequest {
   protected OMMetadataManager omMetadataManager;
   protected AuditLogger auditLogger;
 
-  // Just setting ozoneManagerDoubleBuffer which does no
+  // Just setting ozoneManagerDoubleBuffer which does nothing.
   protected OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
       ((response, transactionIndex) -> {
         return null;

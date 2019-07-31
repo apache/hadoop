@@ -66,7 +66,7 @@ public class TestOMDirectoryCreateRequest {
   private OMMetrics omMetrics;
   private OMMetadataManager omMetadataManager;
   private AuditLogger auditLogger;
-  // Just setting ozoneManagerDoubleBuffer which does no
+  // Just setting ozoneManagerDoubleBuffer which does nothing.
   private OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper =
       ((response, transactionIndex) -> {
         return null;
