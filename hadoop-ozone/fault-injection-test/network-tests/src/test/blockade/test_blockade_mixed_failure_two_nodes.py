@@ -16,7 +16,6 @@
 # limitations under the License.
 
 import logging
-import pytest
 
 from ozone.cluster import OzoneCluster
 
@@ -33,7 +32,6 @@ def teardown_function():
     cluster.stop()
 
 
-@pytest.mark.skip(reason="HDDS-1850")
 def test_two_dns_isolate_scm_same_partition():
     """
     In this test, there are three DNs,
