@@ -248,6 +248,8 @@ Both the numbers can be configurable:
   * 1 is the minimum number of healthy replicas (`decommissioning.minimum.healthy-replicas`)
   * 3 is the minimum number of existing replicas (`decommissioning.minimum.replicas`)
 
+For example `decommissioning.minimum.healthy-replicas` can be set to two if administrator would like to survive an additional node failure during the maintenance period. 
+
 **From ENTERING_MAINTENANCE to IN_MAINTENANCE:**
 
  * There are at least one healthy replicas
