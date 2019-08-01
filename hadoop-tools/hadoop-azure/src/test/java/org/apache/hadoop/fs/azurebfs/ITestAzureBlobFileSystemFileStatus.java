@@ -126,7 +126,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
   @Test
   public void testLastModifiedTime() throws IOException {
     AzureBlobFileSystem fs = this.getFileSystem();
-    Path testFilePath = new Path("childfile1");
+    Path testFilePath = new Path("childfile1.txt");
     long createStartTime = System.currentTimeMillis();
     fs.create(testFilePath);
     long createEndTime = System.currentTimeMillis();
