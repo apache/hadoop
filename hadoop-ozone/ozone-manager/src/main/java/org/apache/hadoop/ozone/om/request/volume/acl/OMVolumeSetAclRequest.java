@@ -20,12 +20,12 @@ package org.apache.hadoop.ozone.om.request.volume.acl;
 import com.google.common.base.Preconditions;
 import org.apache.hadoop.hdds.scm.storage.CheckedBiFunction;
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.volume.OMVolumeAclOpResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,34 +61,39 @@ public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
     volumeName = setAclRequest.getObj().getPath().substring(1);
   }
 
+  @Override
   public List<OzoneAcl> getAcls() {
     return ozoneAcls;
   }
 
+  @Override
   public String getVolumeName() {
     return volumeName;
   }
 
-  public OMClientResponse handleResult(OmVolumeArgs omVolumeArgs,
-      OMMetrics omMetrics, IOException exception) {
-    OzoneManagerProtocolProtos.OMResponse.Builder omResponse =
-        OzoneManagerProtocolProtos.OMResponse.newBuilder()
-            .setCmdType(OzoneManagerProtocolProtos.Type.SetAcl)
-            .setStatus(OzoneManagerProtocolProtos.Status.OK)
-            .setSuccess(true);
+  @Override
+  OMResponse.Builder onInit() {
+    return OMResponse.newBuilder().setCmdType(
+        OzoneManagerProtocolProtos.Type.RemoveAcl)
+        .setStatus(OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
+  }
 
-    if (exception == null) {
-      OMVolumeSetAclRequest.LOG.debug("Set acls: {} for volume: {}" +
-              " success!", getAcls(), volumeName);
-      omResponse.setSetAclResponse(OzoneManagerProtocolProtos
-          .SetAclResponse.newBuilder().setResponse(true).build());
-      return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
-    } else {
-      omMetrics.incNumVolumeUpdateFails();
-      OMVolumeSetAclRequest.LOG.error("Set acls {} for volume {} failed!",
-          getAcls(), getVolumeName(), exception);
-      return new OMVolumeAclOpResponse(null,
-          createErrorOMResponse(omResponse, exception));
-    }
+  @Override
+  OMClientResponse onSuccess(OMResponse.Builder omResponse,
+      OmVolumeArgs omVolumeArgs){
+    LOG.debug("Set acls: {} to volume: {} success!",
+        getAcls(), getVolumeName());
+    omResponse.setSetAclResponse(OzoneManagerProtocolProtos.SetAclResponse
+        .newBuilder().setResponse(true).build());
+    return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
+  }
+
+  @Override
+  OMClientResponse onFailure(OMResponse.Builder omResponse,
+      IOException ex) {
+    LOG.error("Set acls {} to volume {} failed!",
+        getAcls(), getVolumeName(), ex);
+    return new OMVolumeAclOpResponse(null,
+        createErrorOMResponse(omResponse, ex));
   }
 }

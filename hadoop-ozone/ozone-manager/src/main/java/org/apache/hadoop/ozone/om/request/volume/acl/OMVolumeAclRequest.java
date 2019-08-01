@@ -12,6 +12,7 @@ import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.utils.db.cache.CacheKey;
@@ -36,21 +37,6 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
     omVolumeAclOp = aclOp;
   }
 
-  /**
-   * Get the Acls from the request.
-   * @return List of OzoneAcls, for add/remove it is a single element list
-   * for set it can be non-single element list.
-   */
-  protected abstract List<OzoneAcl> getAcls();
-
-  /**
-   * Get the volume name from the request.
-   * @return volume name
-   * This is needed for case where volume does not exist and the omVolumeArgs is
-   * null.
-   */
-  protected abstract String getVolumeName();
-
   @Override
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex,
@@ -61,8 +47,10 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
 
     OMMetrics omMetrics = ozoneManager.getMetrics();
     omMetrics.incNumVolumeUpdates();
-    IOException exception = null;
     OmVolumeArgs omVolumeArgs = null;
+
+    OMResponse.Builder omResponse = onInit();
+    OMClientResponse omClientResponse = null;
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     boolean lockAcquired = false;
@@ -87,18 +75,63 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
       omMetadataManager.getVolumeTable().addCacheEntry(
           new CacheKey<>(dbVolumeKey),
           new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
+
+      omClientResponse = onSuccess(omResponse, omVolumeArgs);
     } catch (IOException ex) {
-      exception = ex;
+      omMetrics.incNumVolumeUpdateFails();
+      omClientResponse = onFailure(omResponse, ex);
     } finally {
+      if (omClientResponse != null) {
+        omClientResponse.setFlushFuture(
+            ozoneManagerDoubleBufferHelper.add(omClientResponse,
+                transactionLogIndex));
+      }
       if (lockAcquired) {
         omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
       }
     }
-
-    return handleResult(omVolumeArgs, omMetrics, exception);
+    return omClientResponse;
   }
 
-  abstract protected OMClientResponse handleResult(OmVolumeArgs omVolumeArgs,
-      OMMetrics omMetrics, IOException ex);
+  /**
+   * Get the Acls from the request.
+   * @return List of OzoneAcls, for add/remove it is a single element list
+   * for set it can be non-single element list.
+   */
+  abstract List<OzoneAcl> getAcls();
+
+  /**
+   * Get the volume name from the request.
+   * @return volume name
+   * This is needed for case where volume does not exist and the omVolumeArgs is
+   * null.
+   */
+  abstract String getVolumeName();
+
+  // TODO: Finer grain metrics can be moved to these callbacks. They can also
+  // be abstracted into separate interfaces in future.
+  /**
+   * Get the initial om response builder.
+   * @return om response builder.
+   */
+  abstract OMResponse.Builder onInit();
+
+  /**
+   * Get the om client response on success case.
+   * @param omResponse
+   * @param omVolumeArgs
+   * @return OMClientResponse
+   */
+  abstract OMClientResponse onSuccess(
+      OMResponse.Builder omResponse, OmVolumeArgs omVolumeArgs);
+
+  /**
+   * Handler failure such as debug logging.
+   * @param omResponse
+   * @param ex
+   * @return OMClientResponse
+   */
+  abstract OMClientResponse onFailure(OMResponse.Builder omResponse,
+      IOException ex);
 
 }
