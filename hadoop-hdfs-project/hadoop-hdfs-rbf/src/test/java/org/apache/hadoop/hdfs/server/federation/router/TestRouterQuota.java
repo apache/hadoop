@@ -59,6 +59,7 @@ import org.apache.hadoop.hdfs.server.federation.store.protocol.GetMountTableEntr
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryRequest;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.RemoveMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryRequest;
+import org.apache.hadoop.hdfs.server.federation.store.protocol.UpdateMountTableEntryResponse;
 import org.apache.hadoop.hdfs.server.federation.store.records.MountTable;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.Time;
@@ -242,6 +243,25 @@ public class TestRouterQuota {
     resolver.loadCache(true);
 
     return addResponse.getStatus();
+  }
+
+  /**
+   * Update a mount table entry to the mount table through the admin API.
+   * @param entry Mount table entry to update.
+   * @return If it was successfully updated
+   * @throws IOException Problems update entries
+   */
+  private boolean updateMountTable(final MountTable entry) throws IOException {
+    RouterClient client = routerContext.getAdminClient();
+    MountTableManager mountTableManager = client.getMountTableManager();
+    UpdateMountTableEntryRequest updateRequest =
+        UpdateMountTableEntryRequest.newInstance(entry);
+    UpdateMountTableEntryResponse updateResponse =
+        mountTableManager.updateMountTableEntry(updateRequest);
+
+    // Reload the Router cache
+    resolver.loadCache(true);
+    return updateResponse.getStatus();
   }
 
   /**
@@ -496,11 +516,7 @@ public class TestRouterQuota {
 
     mountTable.setQuota(new RouterQuotaUsage.Builder().quota(updateNsQuota)
         .spaceQuota(updateSsQuota).build());
-    UpdateMountTableEntryRequest updateRequest = UpdateMountTableEntryRequest
-        .newInstance(mountTable);
-    RouterClient client = routerContext.getAdminClient();
-    MountTableManager mountTableManager = client.getMountTableManager();
-    mountTableManager.updateMountTableEntry(updateRequest);
+    updateMountTable(mountTable);
 
     // verify if the quota is updated in real path
     realQuota = nnContext1.getFileSystem().getQuotaUsage(
@@ -512,18 +528,21 @@ public class TestRouterQuota {
     mountTable.setQuota(new RouterQuotaUsage.Builder()
         .quota(HdfsConstants.QUOTA_RESET)
         .spaceQuota(HdfsConstants.QUOTA_RESET).build());
-
-    updateRequest = UpdateMountTableEntryRequest
-        .newInstance(mountTable);
-    client = routerContext.getAdminClient();
-    mountTableManager = client.getMountTableManager();
-    mountTableManager.updateMountTableEntry(updateRequest);
+    updateMountTable(mountTable);
 
     // verify if the quota is updated in real path
     realQuota = nnContext1.getFileSystem().getQuotaUsage(
         new Path("/testsync"));
     assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getQuota());
     assertEquals(HdfsConstants.QUOTA_RESET, realQuota.getSpaceQuota());
+
+    // Verify updating mount entry with actual destinations not present.
+    mountTable = MountTable.newInstance("/testupdate",
+        Collections.singletonMap("ns0", "/testupdate"), Time.now(), Time.now());
+    addMountTable(mountTable);
+    mountTable.setQuota(new RouterQuotaUsage.Builder().quota(1)
+        .spaceQuota(2).build());
+    assertTrue(updateMountTable(mountTable));
   }
 
   @Test
