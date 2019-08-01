@@ -335,9 +335,9 @@ public class InnerNodeImpl extends NodeImpl implements InnerNode {
     for (Node child : childrenMap.values()) {
       int leafCount = child.getNumOfLeaves();
       // skip nodes covered by excluded scopes
-      for (String excludedScope: excludedNodeCount.keySet()) {
-        if (excludedScope.startsWith(child.getNetworkFullPath())) {
-          leafCount -= excludedNodeCount.get(excludedScope);
+      for (Map.Entry<String, Integer> entry: excludedNodeCount.entrySet()) {
+        if (entry.getKey().startsWith(child.getNetworkFullPath())) {
+          leafCount -= entry.getValue();
         }
       }
       // skip nodes covered by excluded nodes and ancestorGen

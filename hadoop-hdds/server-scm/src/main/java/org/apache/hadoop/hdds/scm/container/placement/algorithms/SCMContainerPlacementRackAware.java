@@ -275,7 +275,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
           }
         }
         // there is no constrains to reduce or fallback is true
-        throw new SCMException("No satisfied datanode to meet the " +
+        throw new SCMException("No satisfied datanode to meet the" +
             " excludedNodes and affinityNode constrains.", null);
       }
       if (hasEnoughSpace((DatanodeDetails)node, sizeRequired)) {

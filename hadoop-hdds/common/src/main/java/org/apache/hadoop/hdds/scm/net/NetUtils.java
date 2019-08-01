@@ -72,7 +72,6 @@ public final class NetUtils {
    *  Remove node from mutableExcludedNodes if it's covered by excludedScope.
    *  Please noted that mutableExcludedNodes content might be changed after the
    *  function call.
-   * @return the new excludedScope
    */
   public static void removeDuplicate(NetworkTopology topology,
       Collection<Node> mutableExcludedNodes, List<String> mutableExcludedScopes,

@@ -151,11 +151,14 @@ public class TestSCMContainerPlacementRackAware {
         datanodeDetails.get(1)));
 
     //  3 replicas
+
     nodeNum = 3;
     datanodeDetails = policy.chooseDatanodes(null, null, nodeNum, 15);
     Assert.assertEquals(nodeNum, datanodeDetails.size());
     Assert.assertTrue(cluster.isSameParent(datanodeDetails.get(0),
         datanodeDetails.get(1)));
+    // requires at least 2 racks for following statement
+    assumeTrue(datanodeCount > 5);
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(0),
         datanodeDetails.get(2)));
     Assert.assertFalse(cluster.isSameParent(datanodeDetails.get(1),
@@ -177,6 +180,7 @@ public class TestSCMContainerPlacementRackAware {
   public void chooseNodeWithExcludedNodes() throws SCMException {
     // test choose new datanodes for under replicated pipeline
     // 3 replicas, two existing datanodes on same rack
+    assumeTrue(datanodeCount > 5);
     int nodeNum = 1;
     List<DatanodeDetails> excludedNodes = new ArrayList<>();
 
@@ -213,7 +217,6 @@ public class TestSCMContainerPlacementRackAware {
     Assert.assertTrue(cluster.isSameParent(
         datanodeDetails.get(0), excludedNodes.get(0)) ||
         cluster.isSameParent(datanodeDetails.get(0), excludedNodes.get(1)));
-
   }
 
   @Test
@@ -226,7 +229,7 @@ public class TestSCMContainerPlacementRackAware {
 >>>>>>> HDDS-1879. Support multiple excluded scopes when choosing datanodes in NetworkTopology.
     // allocate the 5th datanode though it will break the rack rule(first
     // 2 replicas on same rack, others on different racks).
-    assumeTrue(datanodeCount >= 5);
+    assumeTrue(datanodeCount > 5);
     int nodeNum = 5;
     List<DatanodeDetails>  datanodeDetails =
         policy.chooseDatanodes(null, null, nodeNum, 15);
