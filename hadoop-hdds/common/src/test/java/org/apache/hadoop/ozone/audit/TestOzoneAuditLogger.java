@@ -153,7 +153,7 @@ public class TestOzoneAuditLogger {
     assertTrue(lines.size() != 0);
     assertTrue(expected.equalsIgnoreCase(lines.get(0)));
     //empty the file
-    lines.remove(0);
+    lines.clear();
     FileUtils.writeLines(file, lines, false);
   }
 
