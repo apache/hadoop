@@ -644,6 +644,10 @@ public class Client implements AutoCloseable {
         LOG.warn("Address change detected. Old: " + server.toString() +
                                  " New: " + currentAddr.toString());
         server = currentAddr;
+        UserGroupInformation ticket = remoteId.getTicket();
+        this.setName("IPC Client (" + socketFactory.hashCode()
+            + ") connection to " + server.toString() + " from "
+            + ((ticket == null) ? "an unknown user" : ticket.getUserName()));
         return true;
       }
       return false;
