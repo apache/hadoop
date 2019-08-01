@@ -34,15 +34,17 @@ import static org.junit.Assert.assertTrue;
 /**
  * This class is to test audit logs for xxxACL APIs of Ozone Client.
  */
-public class TestOzoneRpcClientForAclAuditLog extends TestOzoneRpcClientAbstract {
+public class TestOzoneRpcClientForAclAuditLog extends
+    TestOzoneRpcClientAbstract {
 
   private static UserGroupInformation ugi;
-  private static final OzoneAcl userAcl =
+  private static final OzoneAcl USER_ACL =
       new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
       "johndoe", IAccessAuthorizer.ACLType.ALL, ACCESS);
-  private static final OzoneAcl userAcl2 = new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
+  private static final OzoneAcl USER_ACL_2 =
+      new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
       "jane", IAccessAuthorizer.ACLType.ALL, ACCESS);
-  private static final List<OzoneAcl> aclListToAdd = new ArrayList<>();
+  private static List<OzoneAcl> aclListToAdd = new ArrayList<>();
 
   /**
    * Create a MiniOzoneCluster for testing.
@@ -61,8 +63,8 @@ public class TestOzoneRpcClientForAclAuditLog extends TestOzoneRpcClientAbstract
     conf.set(OZONE_ACL_AUTHORIZER_CLASS,
         OZONE_ACL_AUTHORIZER_CLASS_NATIVE);
     startCluster(conf);
-    aclListToAdd.add(userAcl);
-    aclListToAdd.add(userAcl2);
+    aclListToAdd.add(USER_ACL);
+    aclListToAdd.add(USER_ACL_2);
   }
 
   /**
@@ -108,23 +110,19 @@ public class TestOzoneRpcClientForAclAuditLog extends TestOzoneRpcClientAbstract
 
     //Testing getAcl
     List<OzoneAcl> acls = getStore().getAcl(volObj);
-    verifyLog(OMAction.GET_ACL.name(), volumeName, AuditEventStatus.SUCCESS.name());
+    verifyLog(OMAction.GET_ACL.name(), volumeName,
+        AuditEventStatus.SUCCESS.name());
+    Assert.assertTrue(acls.size() > 0);
 
     //Testing addAcl
-    getStore().addAcl(volObj, userAcl);
+    getStore().addAcl(volObj, USER_ACL);
     verifyLog(OMAction.ADD_ACL.name(), volumeName, "johndoe",
         AuditEventStatus.SUCCESS.name());
 
     //Testing removeAcl
-    getStore().removeAcl(volObj, userAcl);
+    getStore().removeAcl(volObj, USER_ACL);
     verifyLog(OMAction.REMOVE_ACL.name(), volumeName, "johndoe",
         AuditEventStatus.SUCCESS.name());
-
-    OzoneAcl userAcl2 = new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
-        "jane", IAccessAuthorizer.ACLType.ALL, ACCESS);
-    List<OzoneAcl> aclListToAdd = new ArrayList<>();
-    aclListToAdd.add(userAcl);
-    aclListToAdd.add(userAcl2);
 
     //Testing setAcl
     getStore().setAcl(volObj, aclListToAdd);
@@ -165,18 +163,14 @@ public class TestOzoneRpcClientForAclAuditLog extends TestOzoneRpcClientAbstract
     }
 
     try{
-      OzoneAcl userAcl = new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
-          "johndoe", IAccessAuthorizer.ACLType.ALL, ACCESS);
-      getStore().addAcl(volObj, userAcl);
+      getStore().addAcl(volObj, USER_ACL);
     } catch (Exception ex) {
       verifyLog(OMAction.ADD_ACL.name(), volumeName,
           AuditEventStatus.FAILURE.name());
     }
 
     try{
-      OzoneAcl userAcl = new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
-          "johndoe", IAccessAuthorizer.ACLType.ALL, ACCESS);
-      getStore().removeAcl(volObj, userAcl);
+      getStore().removeAcl(volObj, USER_ACL);
     } catch (Exception ex) {
       verifyLog(OMAction.REMOVE_ACL.name(), volumeName,
           AuditEventStatus.FAILURE.name());
@@ -191,7 +185,7 @@ public class TestOzoneRpcClientForAclAuditLog extends TestOzoneRpcClientAbstract
 
   }
 
-  private void verifyLog(String ... expected) throws IOException {
+  private void verifyLog(String... expected) throws IOException {
     File file = new File("audit.log");
     List<String> lines = FileUtils.readLines(file, (String)null);
     final int retry = 5;
