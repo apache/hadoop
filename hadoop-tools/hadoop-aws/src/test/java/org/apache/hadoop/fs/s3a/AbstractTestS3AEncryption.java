@@ -18,18 +18,23 @@
 
 package org.apache.hadoop.fs.s3a;
 
+import java.io.IOException;
+
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import org.junit.Test;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.contract.ContractTestUtils;
-import org.junit.Test;
-
-import java.io.IOException;
 
 import static org.apache.hadoop.fs.contract.ContractTestUtils.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM;
+import static org.apache.hadoop.fs.s3a.Constants.SERVER_SIDE_ENCRYPTION_KEY;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.skipIfEncryptionTestsDisabled;
 
 /**
  * Test whether or not encryption works by turning it on. Some checks
@@ -38,11 +43,18 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.*;
  */
 public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
 
+  protected static final String AWS_KMS_SSE_ALGORITHM = "aws:kms";
+
+  protected static final String SSE_C_ALGORITHM = "AES256";
+
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
     S3ATestUtils.disableFilesystemCaching(conf);
-    conf.set(Constants.SERVER_SIDE_ENCRYPTION_ALGORITHM,
+    removeBaseAndBucketOverrides(getTestBucketName(conf), conf,
+        SERVER_SIDE_ENCRYPTION_ALGORITHM,
+        SERVER_SIDE_ENCRYPTION_KEY);
+    conf.set(SERVER_SIDE_ENCRYPTION_ALGORITHM,
             getSSEAlgorithm().getMethod());
     return conf;
   }
@@ -98,15 +110,16 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
     ObjectMetadata md = getFileSystem().getObjectMetadata(path);
     switch(getSSEAlgorithm()) {
     case SSE_C:
-      assertEquals("AES256", md.getSSECustomerAlgorithm());
+      assertNull("Expected SSE-C but got an SSE algorithm", md.getSSEAlgorithm());
+      assertEquals("Wrong SSE-C algorithm", SSE_C_ALGORITHM, md.getSSECustomerAlgorithm());
       String md5Key = convertKeyToMd5();
-      assertEquals(md5Key, md.getSSECustomerKeyMd5());
+      assertEquals("getSSECustomerKeyMd5() wrong", md5Key, md.getSSECustomerKeyMd5());
       break;
     case SSE_KMS:
-      assertEquals("aws:kms", md.getSSEAlgorithm());
+      assertEquals(AWS_KMS_SSE_ALGORITHM, md.getSSEAlgorithm());
       //S3 will return full arn of the key, so specify global arn in properties
       assertEquals(this.getConfiguration().
-          getTrimmed(Constants.SERVER_SIDE_ENCRYPTION_KEY),
+          getTrimmed(SERVER_SIDE_ENCRYPTION_KEY),
           md.getSSEAwsKmsKeyId());
       break;
     default:
@@ -124,7 +137,7 @@ public abstract class AbstractTestS3AEncryption extends AbstractS3ATestBase {
    */
   private String convertKeyToMd5() {
     String base64Key = getConfiguration().getTrimmed(
-        Constants.SERVER_SIDE_ENCRYPTION_KEY
+        SERVER_SIDE_ENCRYPTION_KEY
     );
     byte[] key = Base64.decodeBase64(base64Key);
     byte[] md5 =  DigestUtils.md5(key);

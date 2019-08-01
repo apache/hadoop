@@ -65,4 +65,8 @@ public class ITestRoleDelegationInFileystem extends
         () -> readLandsatMetadata(delegatedFS));
   }
 
+  @Override
+  public void testDelegatedFileSystem() throws Throwable {
+    super.testDelegatedFileSystem();
+  }
 }
