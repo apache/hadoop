@@ -612,7 +612,7 @@
     <description>
       The actual address the OM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.om.http-address.
+      ozone.om.https-address.
     </description>
   </property>
   <property>
@@ -1040,7 +1040,7 @@
     <description>
       The actual address the SCM web server will bind to using HTTPS.
       If this optional address is set, it overrides only the hostname portion of
-      ozone.scm.http-address.
+      ozone.scm.https-address.
     </description>
   </property>
   <property>
@@ -1525,7 +1525,7 @@
     <value>5m</value>
     <tag>OZONE, OM</tag>
     <description>Time interval used to store the omMetrics in to a
-      file. Background thread perodically stores the OM metrics in to a
+      file. Background thread periodically stores the OM metrics in to a
       file. Unit could be defined with postfix (ns,ms,s,m,h,d)
     </description>
   </property>

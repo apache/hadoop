@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.ozone.recon.spi.impl;
 
-import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_SECURITY_ENABLED_KEY;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_DB_CHECKPOINT_REQUEST_FLUSH;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
 import static org.apache.hadoop.ozone.recon.ReconConstants.RECON_OM_SNAPSHOT_DB;
@@ -45,7 +44,9 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.apache.commons.io.FileUtils;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSUtil;
+import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
@@ -75,13 +76,10 @@ public class OzoneManagerServiceProviderImpl
   private String omDBSnapshotUrl;
 
   @Inject
-  private OzoneConfiguration configuration;
-
-  @Inject
   private ReconOMMetadataManager omMetadataManager;
 
   @Inject
-  public OzoneManagerServiceProviderImpl(OzoneConfiguration configuration) {
+  public OzoneManagerServiceProviderImpl(Configuration configuration) {
 
     String ozoneManagerHttpAddress = configuration.get(OMConfigKeys
         .OZONE_OM_HTTP_ADDRESS_KEY);
@@ -92,8 +90,7 @@ public class OzoneManagerServiceProviderImpl
     omSnapshotDBParentDir = getReconDbDir(configuration,
         OZONE_RECON_OM_SNAPSHOT_DB_DIR);
 
-    boolean ozoneSecurityEnabled = configuration.getBoolean(
-        OZONE_SECURITY_ENABLED_KEY, false);
+    HttpConfig.Policy policy = DFSUtil.getHttpPolicy(configuration);
 
     int socketTimeout = (int) configuration.getTimeDuration(
         RECON_OM_SOCKET_TIMEOUT, RECON_OM_SOCKET_TIMEOUT_DEFAULT,
@@ -118,7 +115,7 @@ public class OzoneManagerServiceProviderImpl
     omDBSnapshotUrl = "http://" + ozoneManagerHttpAddress +
         OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
 
-    if (ozoneSecurityEnabled) {
+    if (policy.isHttpsEnabled()) {
       omDBSnapshotUrl = "https://" + ozoneManagerHttpsAddress +
           OZONE_OM_DB_CHECKPOINT_HTTP_ENDPOINT;
     }

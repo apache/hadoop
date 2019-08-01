@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.ozone.recon;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-
 import com.google.inject.Provider;
+import org.apache.hadoop.conf.Configuration;
+
 
 /**
  * Ozone Configuration Provider.
@@ -27,17 +27,17 @@ import com.google.inject.Provider;
  * As the OzoneConfiguration is created by the CLI application here we inject
  * it via a singleton instance to the Jax-RS/CDI instances.
  */
-public class OzoneConfigurationProvider implements
-    Provider<OzoneConfiguration> {
+public class ConfigurationProvider implements
+    Provider<Configuration> {
 
-  private static OzoneConfiguration configuration;
+  private static Configuration configuration;
 
-  static void setConfiguration(OzoneConfiguration conf) {
-    OzoneConfigurationProvider.configuration = conf;
+  static void setConfiguration(Configuration conf) {
+    ConfigurationProvider.configuration = conf;
   }
 
   @Override
-  public OzoneConfiguration get() {
+  public Configuration get() {
     return configuration;
   }
 }
