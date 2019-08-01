@@ -18,6 +18,8 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -30,7 +32,8 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .BucketInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import com.google.common.base.Preconditions;
@@ -122,6 +125,44 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
    */
   public List<OzoneAcl> getAcls() {
     return acls;
+  }
+
+  public boolean addAcl(OzoneAcl ozoneAcl) {
+
+    // Case 1: When we are adding more rights to existing user/group.
+    boolean addToExistingAcl = false;
+    for(OzoneAcl existingAcl: getAcls()) {
+      if(existingAcl.getName().equals(ozoneAcl.getName()) &&
+          existingAcl.getType().equals(ozoneAcl.getType())) {
+
+        BitSet bits = (BitSet) ozoneAcl.getAclBitSet().clone();
+
+        // We need to do "or" before comparision because think of a case like
+        // existing acl is 777 and newly added acl is 444, we have already
+        // that acl set. In this case if we do direct check they will not
+        // be equal, but if we do or and then check, we shall know it
+        // has acl's already set or not.
+        bits.or(existingAcl.getAclBitSet());
+
+        if (bits.equals(existingAcl.getAclBitSet())) {
+          return false;
+        } else {
+          existingAcl.getAclBitSet().or(ozoneAcl.getAclBitSet());
+          addToExistingAcl = true;
+          break;
+        }
+      }
+    }
+
+    // Case 2: When a completely new acl is added.
+    if(!addToExistingAcl) {
+      List<OzoneAcl> newAcls = getAcls();
+      if(newAcls == null) {
+        newAcls = new ArrayList<>();
+      }
+      newAcls.add(ozoneAcl);
+    }
+    return true;
   }
 
   /**

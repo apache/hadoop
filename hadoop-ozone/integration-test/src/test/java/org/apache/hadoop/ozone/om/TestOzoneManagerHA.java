@@ -19,11 +19,15 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,6 +69,7 @@ import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
@@ -76,6 +81,8 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.NOT_A_FILE;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.READ;
 import static org.junit.Assert.fail;
 
 /**
@@ -757,6 +764,43 @@ public class TestOzoneManagerHA {
       Assert.assertEquals(currentLeaderNodeId,
           proxyProvider.getCurrentProxyOMNodeId());
     }
+  }
+
+  @Test
+  public void testAddBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertTrue(addAcl);
+
+    ozoneBucket.addAcls(Collections.singletonList(defaultUserAcl));
+    List<OzoneAcl> acls = ozoneBucket.getAcls();
+
+    Assert.assertTrue(containsAcl(defaultUserAcl, acls));
+
+    addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertFalse(addAcl);
+  }
+
+  private boolean containsAcl(OzoneAcl ozoneAcl, List<OzoneAcl> ozoneAcls) {
+    for (OzoneAcl acl : ozoneAcls) {
+      if (acl.getType().equals(ozoneAcl.getType())
+          && acl.getName().equals(ozoneAcl.getName())
+          && acl.getAclBitSet().equals(ozoneAcl.getAclBitSet())
+          && acl.getAclScope().equals(ozoneAcl.getAclScope())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test

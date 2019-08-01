@@ -283,6 +283,8 @@ enum Status {
     S3_BUCKET_INVALID_LENGTH = 51; // s3 bucket invalid length.
 
     RATIS_ERROR = 52;
+
+    INVALID_PATH_IN_ACL_REQUEST = 53; // Invalid path name in acl request.
 }
 
 
