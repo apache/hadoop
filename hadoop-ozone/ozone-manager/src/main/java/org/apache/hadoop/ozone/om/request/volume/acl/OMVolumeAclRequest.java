@@ -70,14 +70,22 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
         throw new OMException(OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
 
-      omVolumeAclOp.apply(ozoneAcls, omVolumeArgs);
+      // result is false upon add existing acl or remove non-existing acl
+      boolean result = true;
+      try {
+        omVolumeAclOp.apply(ozoneAcls, omVolumeArgs);
+      } catch (OMException ex) {
+        result = false;
+      }
 
-      // update cache.
-      omMetadataManager.getVolumeTable().addCacheEntry(
-          new CacheKey<>(dbVolumeKey),
-          new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
+      if (result) {
+        // update cache.
+        omMetadataManager.getVolumeTable().addCacheEntry(
+            new CacheKey<>(dbVolumeKey),
+            new CacheValue<>(Optional.of(omVolumeArgs), transactionLogIndex));
+      }
 
-      omClientResponse = onSuccess(omResponse, omVolumeArgs);
+      omClientResponse = onSuccess(omResponse, omVolumeArgs, result);
     } catch (IOException ex) {
       exception = ex;
       omMetrics.incNumVolumeUpdateFails();
@@ -125,10 +133,11 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
    * Get the om client response on success case with lock.
    * @param omResponse
    * @param omVolumeArgs
+   * @param result
    * @return OMClientResponse
    */
   abstract OMClientResponse onSuccess(
-      OMResponse.Builder omResponse, OmVolumeArgs omVolumeArgs);
+      OMResponse.Builder omResponse, OmVolumeArgs omVolumeArgs, boolean result);
 
   /**
    * Get the om client response on failure case with lock.

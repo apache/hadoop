@@ -84,9 +84,9 @@ public class OMVolumeAddAclRequest extends OMVolumeAclRequest {
 
   @Override
   OMClientResponse onSuccess(OMResponse.Builder omResponse,
-      OmVolumeArgs omVolumeArgs){
+      OmVolumeArgs omVolumeArgs, boolean result){
     omResponse.setAddAclResponse(OzoneManagerProtocolProtos.AddAclResponse
-        .newBuilder().setResponse(true).build());
+        .newBuilder().setResponse(result).build());
     return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
   }
 
