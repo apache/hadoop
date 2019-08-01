@@ -22,6 +22,8 @@ import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
 import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.StoreType.*;
 
 /**
@@ -131,4 +133,15 @@ public abstract class OzoneObj implements IOzoneObj {
       value = objType;
     }
   }
+
+  public Map<String, String> toAuditMap() {
+    Map<String, String> auditMap = new LinkedHashMap<>();
+    auditMap.put(OzoneConsts.RESOURCE_TYPE, this.getResourceType().value);
+    auditMap.put(OzoneConsts.STORAGE_TYPE, this.getStoreType().value);
+    auditMap.put(OzoneConsts.VOLUME, this.getVolumeName());
+    auditMap.put(OzoneConsts.BUCKET, this.getBucketName());
+    auditMap.put(OzoneConsts.KEY, this.getKeyName());
+    return auditMap;
+  }
+
 }
