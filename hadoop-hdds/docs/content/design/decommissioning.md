@@ -81,7 +81,7 @@ Both Decommission and Maintenance mode can be canceled any time before the opera
 Decommissioned nodes, if and when added back, shall be treated as new data nodes; if they have blocks or containers on them, they can be used to reconstruct data.
 
 
-## Mainteneance mode in HDFS
+## Maintenance mode in HDFS
 
 HDFS supports decommissioning and maintenance mode similar to Ozone. This is a quick description of the HDFS approach.
 
@@ -109,15 +109,15 @@ One other difference with maintenance mode and decommissioning, is that you must
 
 `NodeStateManager` maintains the state of the connected datanodes. The possible states:
 
-  state             | description
-  ------------------|------------
-  HEALTHY           | The node is up and running.
-  STALE             | Some heartbeats were missing for an already missing nodes.
-  DEAD              | The stale node has not been recovered.
-  ENTER_MAINTENANCE | The in-progress state, scheduling is disabled but the node can't not been turned off due to in-progress replication.
-  IN_MAINTENANCE    | Node can be turned off but we expecteed to get it back and have all the replicas.
-  DECOMMISSIONING   | The in-progress state, scheduling is disabled, all the containers should be replicated to other nodes.
-  DECOMMISSIONED    | The node can be turned off, all the containers are replicated to other machine
+  state                | description
+  ---------------------|------------
+  HEALTHY              | The node is up and running.
+  STALE                | Some heartbeats were missing for an already missing nodes.
+  DEAD                 | The stale node has not been recovered.
+  ENTERING_MAINTENANCE | The in-progress state, scheduling is disabled but the node can't not been turned off due to in-progress replication.
+  IN_MAINTENANCE       | Node can be turned off but we expecteed to get it back and have all the replicas.
+  DECOMMISSIONING      | The in-progress state, scheduling is disabled, all the containers should be replicated to other nodes.
+  DECOMMISSIONED       | The node can be turned off, all the containers are replicated to other machine
   
 
 
