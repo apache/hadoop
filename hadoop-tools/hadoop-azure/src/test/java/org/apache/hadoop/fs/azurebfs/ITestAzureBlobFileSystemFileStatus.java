@@ -21,6 +21,7 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.FsStatus;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -122,4 +123,19 @@ public class ITestAzureBlobFileSystemFileStatus extends
     assertEquals(pathWithHost2.getName(), fileStatus2.getPath().getName());
   }
 
+  @Test
+  public void testLastModifiedTime() throws IOException {
+    AzureBlobFileSystem fs = this.getFileSystem();
+    Path testFilePath = new Path("childfile1");
+    long createStartTime = System.currentTimeMillis();
+    fs.create(testFilePath);
+    long createEndTime = System.currentTimeMillis();
+    FileStatus fStat = fs.getFileStatus(testFilePath);
+    long lastModifiedTime = fStat.getModificationTime();
+    assertTrue((createStartTime / 1000) * 1000 - 1 < lastModifiedTime);
+    //  Dividing and multiplying by 1000 to make last 3 digits 0.
+    //  It is observed that modification time is returned with last 3
+    //  digits 0 always.
+    assertTrue(createEndTime > lastModifiedTime);
+  }
 }
