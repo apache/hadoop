@@ -203,7 +203,8 @@ In the new model, we propose to break the `currentCount` into the two separate g
 /**
  * Calculate the number of the missing replicas.
  *
- * @return the number of the missing replicas. If it's less than zero, the container is over replicated.
+ * @return the number of the missing replicas.
+     If it's less than zero, the container is over replicated.
  */
 int getReplicationCount(int expectedCount, int healthy, int maintenance) {
 
@@ -248,7 +249,7 @@ Both the numbers can be configurable:
   * 1 is the minimum number of healthy replicas (`decommissioning.minimum.healthy-replicas`)
   * 3 is the minimum number of existing replicas (`decommissioning.minimum.replicas`)
 
-For example `decommissioning.minimum.healthy-replicas` can be set to two if administrator would like to survive an additional node failure during the maintenance period. 
+For example `decommissioning.minimum.healthy-replicas` can be set to two if administrator would like to survive an additional node failure during the maintenance period.
 
 **From ENTERING_MAINTENANCE to IN_MAINTENANCE:**
 
@@ -269,7 +270,6 @@ In this section we show example use cases together with the output of the propos
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
   HEALTHY | HEALTHY | HEALTHY|  3     | 3       | 0       | 0
-
 
 The container C1 exists on machines A, B , and C. All the container reports tell us that the container is healthy.  Running the above algorithm, we get:
 
@@ -337,7 +337,6 @@ ReplicaCount(3) = ExpectedCount(3) - (healthy(0) + maintenance(0))
   --------|---------|--------|--------|---------|---------|----------
   HEALTHY | DEAD    | MAINT  |  3     | 2       | 1       | 0
 
-
 This represents the normal maintenance mode, where a single machine is marked as in maintenance mode. This means the following:
 
 ```
@@ -349,8 +348,6 @@ There are no replica flows since the user has asked us to move a single node int
 **Stop condition**: Not that if this containers is the only one on node C, node C can be moved to the IN_MAINTENANCE state.
 
 #### Maintenance + decommissioning
-
-
 
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
@@ -370,11 +367,9 @@ So as expected we have one replication flow in the system.
 
 #### Decommissioning all the replicas
 
-
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
   DECOMM  | DECOMM  | DECOMM |  3     | 0       | 0       | 3
-
 
 In this case, we deal with all the data nodes being decommissioned. The number of healthy replicas for this container is 0, and hence:
 
@@ -386,26 +381,21 @@ This provides us with all 3 independent replica flows in the system.
 
 #### Decommissioning the one remaining replicas
 
-
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
   DEAD    | DEAD    | DECOMM |  3     | 0       | 0       | 3
-
 
 We have two failed nodes and one node in Decomm. It is the opposite of case Line 5, where we have one failed node and 2 nodes in Decomm. The expected results are the same, we get 3 flows.
 
 #### Total failure
 
-
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
   DEAD    | DEAD    | DEAD   |  3     | 0       | 0       | 3
 
-
 This is really an error condition. We have lost all 3 data nodes. The Replica Manager will compute that we need to rebuild 3 replicas, but we might not have a source to rebuild from.
 
 ### Last replica is on ENTERING_MAINTENANCE
-
 
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
@@ -413,13 +403,11 @@ This is really an error condition. We have lost all 3 data nodes. The Replica Ma
 
 Is also an interesting case; we have lost 2 data nodes; and one node is being marked as Maint. Since we have 2 failed nodes, we need 2 replica flows in the system. However, the maintenance mode cannot be entered, since we will lose lone replica if we do that.
 
-
 ### All maintenance
 
   Node A  | Node B  | Node C | expctd | healthy | mainten | repCount
   --------|---------|--------|--------|---------|---------|----------
   MAINT   | MAINT   | MAINT  |  3     | 0       | 3       | *1*
-
 
 This is also a very special case; this is the case where the user is telling us to ignore the peril for all 3 replicas being offline. This means that the system will not be able to get to that container and would lead to potential I/O errors. Ozone will strive to avoid that case; this means that Ozone will hit the “if condition” and discover that we our ReplicCount is 0; since the user asked for it; but we are also going to lose all Replicas. At this point of time, we make a conscious decision to replicate one copy instead of obeying the user command and get to the situation where I/O can fail.
 
