@@ -156,11 +156,7 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
 
     // Case 2: When a completely new acl is added.
     if(!addToExistingAcl) {
-      List<OzoneAcl> newAcls = getAcls();
-      if(newAcls == null) {
-        newAcls = new ArrayList<>();
-      }
-      newAcls.add(ozoneAcl);
+      getAcls().add(ozoneAcl);
     }
     return true;
   }
