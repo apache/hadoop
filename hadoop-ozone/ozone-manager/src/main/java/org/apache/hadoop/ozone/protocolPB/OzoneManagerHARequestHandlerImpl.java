@@ -81,10 +81,16 @@ public class OzoneManagerHARequestHandlerImpl
       // paths.
       OMClientRequest omClientRequest =
           OzoneManagerRatisUtils.createClientRequest(omRequest);
-      OMClientResponse omClientResponse =
-          omClientRequest.validateAndUpdateCache(getOzoneManager(),
-              transactionLogIndex, ozoneManagerDoubleBuffer::add);
-      return omClientResponse.getOMResponse();
+      if (omClientRequest != null) {
+        OMClientResponse omClientResponse =
+            omClientRequest.validateAndUpdateCache(getOzoneManager(),
+                transactionLogIndex, ozoneManagerDoubleBuffer::add);
+        return omClientResponse.getOMResponse();
+      } else {
+        //TODO: remove this once we have all HA support for all write request.
+        return handle(omRequest);
+      }
+
     default:
       // As all request types are not changed so we need to call handle
       // here.
