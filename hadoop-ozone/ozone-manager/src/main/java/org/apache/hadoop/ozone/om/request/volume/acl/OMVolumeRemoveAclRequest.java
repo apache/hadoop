@@ -84,8 +84,6 @@ public class OMVolumeRemoveAclRequest extends OMVolumeAclRequest {
   @Override
   OMClientResponse onSuccess(OMResponse.Builder omResponse,
       OmVolumeArgs omVolumeArgs){
-    LOG.debug("Remove acl: {} from volume: {} success!",
-        getAcl(), getVolumeName());
     omResponse.setRemoveAclResponse(OzoneManagerProtocolProtos.RemoveAclResponse
         .newBuilder().setResponse(true).build());
     return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
@@ -94,9 +92,18 @@ public class OMVolumeRemoveAclRequest extends OMVolumeAclRequest {
   @Override
   OMClientResponse onFailure(OMResponse.Builder omResponse,
       IOException ex) {
-    LOG.error("Remove acl {} from volume {} failed!",
-        getAcl(), getVolumeName(), ex);
     return new OMVolumeAclOpResponse(null,
         createErrorOMResponse(omResponse, ex));
+  }
+
+  @Override
+  void onComplete(IOException ex) {
+    if (ex == null) {
+      LOG.debug("Remove acl: {} from volume: {} success!",
+          getAcl(), getVolumeName());
+    } else {
+      LOG.error("Remove acl {} from volume {} failed!",
+          getAcl(), getVolumeName(), ex);
+    }
   }
 }

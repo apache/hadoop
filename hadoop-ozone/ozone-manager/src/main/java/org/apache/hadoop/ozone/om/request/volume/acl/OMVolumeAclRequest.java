@@ -51,6 +51,7 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
 
     OMResponse.Builder omResponse = onInit();
     OMClientResponse omClientResponse = null;
+    IOException exception = null;
 
     OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
     boolean lockAcquired = false;
@@ -78,6 +79,7 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
 
       omClientResponse = onSuccess(omResponse, omVolumeArgs);
     } catch (IOException ex) {
+      exception = ex;
       omMetrics.incNumVolumeUpdateFails();
       omClientResponse = onFailure(omResponse, ex);
     } finally {
@@ -90,6 +92,9 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
         omMetadataManager.getLock().releaseLock(VOLUME_LOCK, volume);
       }
     }
+
+    onComplete(exception);
+
     return omClientResponse;
   }
 
@@ -111,13 +116,13 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
   // TODO: Finer grain metrics can be moved to these callbacks. They can also
   // be abstracted into separate interfaces in future.
   /**
-   * Get the initial om response builder.
+   * Get the initial om response builder with lock.
    * @return om response builder.
    */
   abstract OMResponse.Builder onInit();
 
   /**
-   * Get the om client response on success case.
+   * Get the om client response on success case with lock.
    * @param omResponse
    * @param omVolumeArgs
    * @return OMClientResponse
@@ -126,7 +131,7 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
       OMResponse.Builder omResponse, OmVolumeArgs omVolumeArgs);
 
   /**
-   * Handler failure such as debug logging.
+   * Get the om client response on failure case with lock.
    * @param omResponse
    * @param ex
    * @return OMClientResponse
@@ -134,4 +139,10 @@ public abstract class OMVolumeAclRequest extends OMClientRequest {
   abstract OMClientResponse onFailure(OMResponse.Builder omResponse,
       IOException ex);
 
+  /**
+   * Completion hook for final processing before return without lock.
+   * Usually used for logging without lock.
+   * @param ex
+   */
+  abstract void onComplete(IOException ex);
 }

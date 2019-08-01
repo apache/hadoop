@@ -16,13 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.ozone.om.request.volume;
+package org.apache.hadoop.ozone.om.request.volume.acl;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.helpers.OmOzoneAclMap;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.request.TestOMRequestUtils;
+import org.apache.hadoop.ozone.om.request.volume.TestOMVolumeRequest;
 import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeSetAclRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -40,7 +41,7 @@ import static org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.
 /**
  * Tests volume setAcl request.
  */
-public class TestOMVolumeSetAclRequest extends TestOMVolumeRequest{
+public class TestOMVolumeSetAclRequest extends TestOMVolumeRequest {
 
   @Test
   public void testPreExecute() throws Exception {

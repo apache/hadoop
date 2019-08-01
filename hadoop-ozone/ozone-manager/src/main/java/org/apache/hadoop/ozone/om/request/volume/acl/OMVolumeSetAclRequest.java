@@ -81,8 +81,6 @@ public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
   @Override
   OMClientResponse onSuccess(OMResponse.Builder omResponse,
       OmVolumeArgs omVolumeArgs){
-    LOG.debug("Set acls: {} to volume: {} success!",
-        getAcls(), getVolumeName());
     omResponse.setSetAclResponse(OzoneManagerProtocolProtos.SetAclResponse
         .newBuilder().setResponse(true).build());
     return new OMVolumeAclOpResponse(omVolumeArgs, omResponse.build());
@@ -91,9 +89,18 @@ public class OMVolumeSetAclRequest extends OMVolumeAclRequest {
   @Override
   OMClientResponse onFailure(OMResponse.Builder omResponse,
       IOException ex) {
-    LOG.error("Set acls {} to volume {} failed!",
-        getAcls(), getVolumeName(), ex);
     return new OMVolumeAclOpResponse(null,
         createErrorOMResponse(omResponse, ex));
+  }
+
+  @Override
+  void onComplete(IOException ex) {
+    if (ex == null) {
+      LOG.debug("Set acls: {} to volume: {} success!",
+          getAcls(), getVolumeName());
+    } else {
+      LOG.error("Set acls {} to volume {} failed!",
+          getAcls(), getVolumeName(), ex);
+    }
   }
 }
