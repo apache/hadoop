@@ -224,6 +224,23 @@ public class NodeStateMap {
     }
   }
 
+  /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param uuid - datanode uuid
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  public void addContainer(final UUID uuid,
+                           final ContainerID containerId)
+      throws NodeNotFoundException {
+    if (!nodeToContainer.containsKey(uuid)) {
+      throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
+    nodeToContainer.get(uuid).add(containerId);
+  }
+
   public void setContainers(UUID uuid, Set<ContainerID> containers)
       throws NodeNotFoundException{
     if (!nodeToContainer.containsKey(uuid)) {
