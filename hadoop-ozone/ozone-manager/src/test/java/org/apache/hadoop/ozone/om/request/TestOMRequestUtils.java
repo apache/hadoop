@@ -315,12 +315,14 @@ public final class TestOMRequestUtils {
 
   public static OMRequest createVolumeRemoveAclRequest(String volumeName,
       OzoneAcl acl) {
-    RemoveAclRequest.Builder removeAclRequestBuilder = RemoveAclRequest.newBuilder();
-    removeAclRequestBuilder.setObj(OzoneObj.toProtobuf(new OzoneObjInfo.Builder()
-        .setVolumeName(volumeName)
-        .setResType(ResourceType.VOLUME)
-        .setStoreType(StoreType.OZONE)
-        .build()));
+    RemoveAclRequest.Builder removeAclRequestBuilder =
+        RemoveAclRequest.newBuilder();
+    removeAclRequestBuilder.setObj(OzoneObj.toProtobuf(
+        new OzoneObjInfo.Builder()
+            .setVolumeName(volumeName)
+            .setResType(ResourceType.VOLUME)
+            .setStoreType(StoreType.OZONE)
+            .build()));
     if (acl != null) {
       removeAclRequestBuilder.setAcl(OzoneAcl.toProtobuf(acl));
     }
