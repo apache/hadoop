@@ -16,7 +16,6 @@
 # limitations under the License.
 
 import logging
-import pytest
 
 from ozone.cluster import OzoneCluster
 
@@ -73,7 +72,6 @@ def test_one_dn_isolate_scm_other_dn():
     assert exit_code == 0, "freon run failed with output=[%s]" % output
 
 
-@pytest.mark.skip(reason="HDDS-1850")
 def test_one_dn_isolate_other_dn():
     """
     In this test, one of the DNs (first DN) cannot communicate
