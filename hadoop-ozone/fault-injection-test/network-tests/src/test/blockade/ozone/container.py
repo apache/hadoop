@@ -26,6 +26,9 @@ class Container:
         self.container_id = container_id
         self.cluster = cluster
 
+    def is_on(self, datanode):
+        return self.cluster.is_container_replica_exist(self.container_id, datanode)
+
     def get_datanode_states(self):
         dns = self.cluster.get_container_datanodes(self.container_id)
         states = []
