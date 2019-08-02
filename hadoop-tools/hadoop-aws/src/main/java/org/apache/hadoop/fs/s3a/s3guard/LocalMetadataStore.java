@@ -605,12 +605,12 @@ public class LocalMetadataStore implements MetadataStore {
   }
 
   @Override
-  public void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
+  public synchronized void setTtlTimeProvider(ITtlTimeProvider ttlTimeProvider) {
     this.ttlTimeProvider = ttlTimeProvider;
   }
 
   @Override
-  public void addAncestors(final Path qualifiedPath,
+  public synchronized void addAncestors(final Path qualifiedPath,
       @Nullable final BulkOperationState operationState) throws IOException {
 
     Collection<PathMetadata> newDirs = new ArrayList<>();
