@@ -109,7 +109,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
   private final AtomicBoolean waiting = new AtomicBoolean(false);
   private int logAggregationTimes = 0;
   private int cleanupOldLogTimes = 0;
-
+  private long logFileSizeThreshold;
   private boolean renameTemporaryLogFileFailed = false;
 
   private final Map<ContainerId, ContainerLogAggregator> containerLogAggregators =
@@ -176,6 +176,9 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
     this.nodeId = nodeId;
     this.logAggPolicy = getLogAggPolicy(conf);
     this.recoveredLogInitedTime = recoveredLogInitedTime;
+    this.logFileSizeThreshold =
+        conf.getLong(YarnConfiguration.LOG_AGGREGATION_DEBUG_FILESIZE,
+        YarnConfiguration.DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE);
     if (logAggregationFileController == null) {
       // by default, use T-File Controller
       this.logAggregationFileController = new LogAggregationTFileController();
@@ -330,6 +333,19 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
           uploadedLogsInThisCycle = true;
           List<Path> uploadedFilePathsInThisCycleList = new ArrayList<>();
           uploadedFilePathsInThisCycleList.addAll(uploadedFilePathsInThisCycle);
+          if (LOG.isDebugEnabled()) {
+            for (Path uploadedFilePath : uploadedFilePathsInThisCycleList) {
+              try {
+                long fileSize = lfs.getFileStatus(uploadedFilePath).getLen();
+                if (fileSize >= logFileSizeThreshold) {
+                  LOG.debug("Log File " + uploadedFilePath
+                      + " size is " + fileSize + " bytes");
+                }
+              } catch (Exception e1) {
+                LOG.error("Failed to get log file size " + e1);
+              }
+            }
+          }
           deletionTask = new FileDeletionTask(delService,
               this.userUgi.getShortUserName(), null,
               uploadedFilePathsInThisCycleList);

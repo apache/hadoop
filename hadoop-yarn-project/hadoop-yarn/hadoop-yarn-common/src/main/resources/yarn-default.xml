@@ -1292,6 +1292,14 @@
   </property>
 
   <property>
+    <description>The log files created under NM Local Directories
+    will be logged if it exceeds the configured bytes. This
+    only takes effect if log4j level is at least Debug.</description>
+    <name>yarn.log-aggregation.debug.filesize</name>
+    <value>104857600</value>
+  </property>
+
+  <property>
     <description>Specify which log file controllers we will support. The first
     file controller we add will be used to write the aggregated logs.
     This comma separated configuration will work with the configuration:
