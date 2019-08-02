@@ -761,6 +761,7 @@ Other File System Operations
           "ContentSummary":
           {
             "directoryCount": 2,
+            "ecPolicy"      : "RS-6-3-1024k",
             "fileCount"     : 1,
             "length"        : 24930,
             "quota"         : -1,

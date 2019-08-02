@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.XAttr;
 import org.apache.hadoop.fs.XAttrCodec;
+import org.apache.hadoop.fs.ContentSummary;
 import org.apache.hadoop.fs.permission.AclEntry;
 import org.apache.hadoop.fs.permission.AclStatus;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -255,6 +256,26 @@ public class TestJsonUtil {
     Assert.assertEquals(jsonString,
         JsonUtil.toJsonString(aclStatusBuilder.build()));
 
+  }
+
+  @Test
+  public void testToJsonFromContentSummary() {
+    String jsonString =
+        "{\"ContentSummary\":{\"directoryCount\":33333,\"ecPolicy\":\"RS-6-3-1024k\",\"fileCount\":22222,\"length\":11111,\"quota\":44444,\"spaceConsumed\":55555,\"spaceQuota\":66666,\"typeQuota\":{}}}";
+    long length = 11111;
+    long fileCount = 22222;
+    long directoryCount = 33333;
+    long quota = 44444;
+    long spaceConsumed = 55555;
+    long spaceQuota = 66666;
+    String ecPolicy = "RS-6-3-1024k";
+
+    ContentSummary contentSummary = new ContentSummary.Builder().length(length).
+        fileCount(fileCount).directoryCount(directoryCount).quota(quota).
+        spaceConsumed(spaceConsumed).spaceQuota(spaceQuota).
+        erasureCodingPolicy(ecPolicy).build();
+
+    Assert.assertEquals(jsonString, JsonUtil.toJsonString(contentSummary));
   }
   
   @Test
