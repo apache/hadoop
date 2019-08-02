@@ -36,15 +36,13 @@ def teardown_function():
     cluster.stop()
 
 
-@pytest.mark.parametrize("flaky_node", ["datanode", "scm", "om"])
+@pytest.mark.parametrize("flaky_node", ["datanode"])
 def test_flaky(flaky_node):
     """
     In these tests, we make the network of the nodes as flaky using blockade.
-    There are 4 tests :
-    1) one of the DNs selected randomly and network of the DN is made flaky.
-    2) scm network is made flaky.
-    3) om network is made flaky.
-    4) Network of all the nodes are made flaky.
+    One of the DNs selected randomly and network of the DN is made flaky.
+
+    Once HA is in place, we can go ahead and make OM and SCM network flaky.
 
     """
     flaky_container_name = {

@@ -230,6 +230,16 @@ class OzoneCluster(object):
             raise ContainerNotFoundError(container_id)
         return Container(container_id, self)
 
+    def is_container_replica_exist(self, container_id, datanode):
+        container_parent_path = "%s/hdds/%s/current/containerDir0" % \
+                                (self.datanode_dir, self.scm_uuid)
+        command = "find %s -type f -name '%s.container'" % (container_parent_path, container_id)
+        exit_code, output = util.run_docker_command(command, datanode)
+        container_path = output.strip()
+        if not container_path:
+            return False
+        return True
+
     def get_containers_on_datanode(self, datanode):
         """
         Returns all the container on given datanode.
@@ -284,7 +294,7 @@ class OzoneCluster(object):
                                     (self.datanode_dir, self.scm_uuid)
             command = "find %s -type f -name '%s.container'" % (container_parent_path, container_id)
             exit_code, output = util.run_docker_command(command, datanode)
-            if exit_code == 0:
+            if output.strip():
                 result.append(datanode)
         return result
 
