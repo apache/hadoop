@@ -54,6 +54,8 @@ import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,11 +115,14 @@ public class BasicOzoneFileSystem extends FileSystem {
     String omPort = String.valueOf(-1);
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      if (parts.length != 2) {
+      // Array length should only be 1 or 2
+      if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      omPort = parts[1];
+      // If port number is not specified, try default OM port
+      omPort = parts.length == 2 ?
+          parts[1] : String.valueOf(OZONE_OM_PORT_DEFAULT);
       if (!isNumber(omPort)) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
