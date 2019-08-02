@@ -49,7 +49,7 @@ public class OMBucketAclResponse extends OMClientResponse {
 
     // If response status is OK and AddAclResponse is true, add to DB batch.
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK &&
-        getOMResponse().getAddAclResponse().getResponse()) {
+        getOMResponse().getSuccess()) {
       String dbBucketKey =
           omMetadataManager.getBucketKey(omBucketInfo.getVolumeName(),
               omBucketInfo.getBucketName());
