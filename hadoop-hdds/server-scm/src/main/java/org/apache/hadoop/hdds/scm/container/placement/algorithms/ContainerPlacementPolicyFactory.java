@@ -36,7 +36,7 @@ public final class ContainerPlacementPolicyFactory {
 
   private static final Class<? extends ContainerPlacementPolicy>
       OZONE_SCM_CONTAINER_PLACEMENT_IMPL_DEFAULT =
-      SCMContainerPlacementRackAware.class;
+      SCMContainerPlacementRandom.class;
 
   private ContainerPlacementPolicyFactory() {
   }
