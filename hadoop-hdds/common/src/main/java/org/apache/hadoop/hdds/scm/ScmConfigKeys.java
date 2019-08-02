@@ -91,12 +91,12 @@ public final class ScmConfigKeys {
   public static final int
       DFS_CONTAINER_RATIS_STATEMACHINEDATA_SYNC_RETRIES_DEFAULT = -1;
   public static final String
-      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS =
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS =
       "dfs.container.ratis.statemachine.max.pending.apply-transactions";
   // The default value of maximum number of pending state machine apply
   // transactions is kept same as default snapshot threshold.
   public static final int
-      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS_DEFAULT =
+      DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT =
       100000;
   public static final String DFS_CONTAINER_RATIS_LOG_QUEUE_NUM_ELEMENTS =
       "dfs.container.ratis.log.queue.num-elements";

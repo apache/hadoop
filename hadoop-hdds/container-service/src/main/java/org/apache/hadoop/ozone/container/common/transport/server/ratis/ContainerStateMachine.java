@@ -91,7 +91,6 @@ import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.OutputStream;
 
-
 /** A {@link org.apache.ratis.statemachine.StateMachine} for containers.
  *
  * The stateMachine is responsible for handling different types of container
@@ -181,9 +180,9 @@ public class ContainerStateMachine extends BaseStateMachine {
         OzoneConfigKeys.DFS_CONTAINER_RATIS_NUM_CONTAINER_OP_EXECUTORS_DEFAULT);
     int maxPendingApplyTransactions = conf.getInt(
         ScmConfigKeys.
-            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS,
+            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS,
         ScmConfigKeys.
-            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TRANSACTIONS_DEFAULT);
+            DFS_CONTAINER_RATIS_STATEMACHINE_MAX_PENDING_APPLY_TXNS_DEFAULT);
     applyTransactionSemaphore = new Semaphore(maxPendingApplyTransactions);
     this.executors = new ExecutorService[numContainerOpExecutors];
     for (int i = 0; i < numContainerOpExecutors; i++) {
