@@ -85,6 +85,7 @@ import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.TestDFSClientRetries;
 import org.apache.hadoop.hdfs.TestFileCreation;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
+import org.apache.hadoop.hdfs.protocol.DSQuotaExceededException;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicyInfo;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
@@ -391,6 +392,57 @@ public class TestWebHDFS {
             return null;
           }
         });
+    } finally {
+      cluster.shutdown();
+    }
+  }
+
+  /**
+   * Test client receives correct DSQuotaExceededException.
+   */
+  @Test
+  public void testExceedingFileSpaceQuota() throws Exception {
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    long spaceQuota = 50L << 20;
+    long fileLength = 80L << 20;
+
+    final MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf)
+        .numDataNodes(3)
+        .build();
+
+    try {
+      cluster.waitActive();
+
+      final FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf,
+          WebHdfsConstants.WEBHDFS_SCHEME);
+      final Path dir = new Path("/test/largeFile");
+      assertTrue(fs.mkdirs(dir));
+
+      final byte[] data = new byte[1 << 20];
+      RANDOM.nextBytes(data);
+
+      cluster.getFileSystem().setQuota(dir, HdfsConstants.QUOTA_DONT_SET,
+          spaceQuota);
+
+      final Path p = new Path(dir, "file");
+
+      FSDataOutputStream out = fs.create(p);
+      try {
+        for (long remaining = fileLength; remaining > 0;) {
+          final int n = (int) Math.min(remaining, data.length);
+          out.write(data, 0, n);
+          remaining -= n;
+        }
+        fail("should have thrown exception during the write");
+      } catch (DSQuotaExceededException e) {
+        //expected
+      } finally {
+        try {
+          out.close();
+        } catch (Exception e) {
+          // discard exception from close
+        }
+      }
     } finally {
       cluster.shutdown();
     }
