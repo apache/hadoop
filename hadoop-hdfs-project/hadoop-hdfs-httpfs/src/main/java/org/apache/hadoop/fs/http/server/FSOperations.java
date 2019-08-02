@@ -254,6 +254,8 @@ public class FSOperations {
     Map json = new LinkedHashMap();
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_DIRECTORY_COUNT_JSON,
         contentSummary.getDirectoryCount());
+    json.put(HttpFSFileSystem.CONTENT_SUMMARY_ECPOLICY_JSON,
+        contentSummary.getErasureCodingPolicy());
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_FILE_COUNT_JSON,
         contentSummary.getFileCount());
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_LENGTH_JSON,
