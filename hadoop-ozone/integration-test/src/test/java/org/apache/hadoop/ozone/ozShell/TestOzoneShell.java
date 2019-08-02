@@ -376,6 +376,54 @@ public class TestOzoneShell {
         expectedError);
   }
 
+  @Test
+  public void testUpdateVolume() throws Exception {
+    LOG.info("Running testUpdateVolume");
+    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
+    String userName = "bilbo";
+    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
+        .setOwner("bilbo")
+        .setQuota("100TB")
+        .build();
+    client.createVolume(volumeName, volumeArgs);
+    OzoneVolume vol = client.getVolumeDetails(volumeName);
+    assertEquals(userName, vol.getOwner());
+    assertEquals(OzoneQuota.parseQuota("100TB").sizeInBytes(), vol.getQuota());
+
+    String[] args = new String[] {"volume", "update", url + "/" + volumeName,
+        "--quota", "500MB"};
+    execute(shell, args);
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(userName, vol.getOwner());
+    assertEquals(OzoneQuota.parseQuota("500MB").sizeInBytes(), vol.getQuota());
+
+    String newUser = "new-user";
+    args = new String[] {"volume", "update", url + "/" + volumeName,
+        "--user", newUser};
+    execute(shell, args);
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(newUser, vol.getOwner());
+
+    //volume with / prefix
+    String volumeWithPrefix = "/" + volumeName;
+    String newUser2 = "new-user2";
+    args = new String[] {"volume", "update", url + "/" + volumeWithPrefix,
+        "--user", newUser2};
+    execute(shell, args);
+    vol = client.getVolumeDetails(volumeName);
+    assertEquals(newUser2, vol.getOwner());
+
+    // test error conditions
+    args = new String[] {"volume", "update", url + "/invalid-volume",
+        "--user", newUser};
+    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
+
+    err.reset();
+    args = new String[] {"volume", "update", url + "/invalid-volume",
+        "--quota", "500MB"};
+    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
+  }
+
   /**
    * Execute command, assert exception message and returns true if error
    * was thrown.
@@ -673,51 +721,6 @@ public class TestOzoneShell {
         url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     executeWithError(shell, args,
         ResultCodes.BUCKET_NOT_FOUND);
-  }
-
-  @Test
-  public void testUpdateBucket() throws Exception {
-    LOG.info("Running testUpdateBucket");
-    OzoneVolume vol = creatVolume();
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    vol.createBucket(bucketName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    int aclSize = bucket.getAcls().size();
-
-    String[] args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--addAcl",
-        "user:frodo:rw,group:samwise:r"};
-    execute(shell, args);
-    String output = out.toString();
-    assertTrue(output.contains("createdOn")
-        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
-
-    bucket = vol.getBucket(bucketName);
-    assertEquals(2 + aclSize, bucket.getAcls().size());
-
-    OzoneAcl acl = bucket.getAcls().get(aclSize);
-    assertTrue(acl.getName().equals("frodo")
-        && acl.getType() == ACLIdentityType.USER
-        && acl.getAclBitSet().get(ACLType.READ.ordinal())
-        && acl.getAclBitSet().get(ACLType.WRITE.ordinal()));
-
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
-        "user:frodo:rw"};
-    execute(shell, args);
-
-    bucket = vol.getBucket(bucketName);
-    acl = bucket.getAcls().get(aclSize);
-    assertEquals(1 + aclSize, bucket.getAcls().size());
-    assertTrue(acl.getName().equals("samwise")
-        && acl.getType() == ACLIdentityType.GROUP
-        && acl.getAclBitSet().get(ACLType.READ.ordinal()));
-
-    // test update bucket for a non-exist bucket
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/invalid-bucket", "--addAcl",
-        "user:frodo:rw"};
-    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test
