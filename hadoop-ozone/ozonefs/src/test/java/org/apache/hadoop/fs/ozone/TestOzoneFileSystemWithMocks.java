@@ -27,6 +27,7 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -76,6 +77,42 @@ public class TestOzoneFileSystemWithMocks {
         "bucket1.volume1.local.host:5899");
     PowerMockito.verifyStatic();
     OzoneClientFactory.getRpcClient("local.host", 5899, conf);
+  }
+
+  @Test
+  public void testFSUriWithHostPortUnspecified() throws Exception {
+    Configuration conf = new OzoneConfiguration();
+    final int omPort = OmUtils.getOmRpcPort(conf);
+
+    OzoneClient ozoneClient = mock(OzoneClient.class);
+    ObjectStore objectStore = mock(ObjectStore.class);
+    OzoneVolume volume = mock(OzoneVolume.class);
+    OzoneBucket bucket = mock(OzoneBucket.class);
+
+    when(ozoneClient.getObjectStore()).thenReturn(objectStore);
+    when(objectStore.getVolume(eq("volume1"))).thenReturn(volume);
+    when(volume.getBucket("bucket1")).thenReturn(bucket);
+
+    PowerMockito.mockStatic(OzoneClientFactory.class);
+    PowerMockito.when(OzoneClientFactory.getRpcClient(eq("local.host"),
+        eq(omPort), eq(conf))).thenReturn(ozoneClient);
+
+    UserGroupInformation ugi = mock(UserGroupInformation.class);
+    PowerMockito.mockStatic(UserGroupInformation.class);
+    PowerMockito.when(UserGroupInformation.getCurrentUser()).thenReturn(ugi);
+    when(ugi.getShortUserName()).thenReturn("user1");
+
+    URI uri = new URI("o3fs://bucket1.volume1.local.host");
+
+    FileSystem fileSystem = FileSystem.get(uri, conf);
+    OzoneFileSystem ozfs = (OzoneFileSystem) fileSystem;
+
+    assertEquals(ozfs.getUri().getHost(), "bucket1.volume1.local.host");
+    // The URI doesn't contain a port number, expect -1 from getPort()
+    assertEquals(ozfs.getUri().getPort(), -1);
+    PowerMockito.verifyStatic();
+    // Check the actual port number in use
+    OzoneClientFactory.getRpcClient("local.host", omPort, conf);
   }
 
   @Test
