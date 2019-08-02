@@ -3436,8 +3436,10 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   }
 
   private void overlay(Properties to, Properties from) {
-    for (Entry<Object, Object> entry: from.entrySet()) {
-      to.put(entry.getKey(), entry.getValue());
+    synchronized (from) {
+      for (Entry<Object, Object> entry : from.entrySet()) {
+        to.put(entry.getKey(), entry.getValue());
+      }
     }
   }
 
