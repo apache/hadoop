@@ -131,14 +131,20 @@ public final class OzoneManagerRatisUtils {
   }
 
   private static OMClientRequest getOMAclRequest(OMRequest omRequest) {
-    ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
     Type cmdType = omRequest.getCmdType();
-    if (ObjectType.VOLUME == type) {
-      if (Type.AddAcl == cmdType) {
+    if (Type.AddAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
         return new OMVolumeAddAclRequest(omRequest);
-      } else if (Type.RemoveAcl == cmdType) {
+      }
+    } else if (Type.RemoveAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
         return new OMVolumeRemoveAclRequest(omRequest);
-      } else if (Type.SetAcl == cmdType) {
+      }
+    } else if (Type.SetAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
         return new OMVolumeSetAclRequest(omRequest);
       }
     }
