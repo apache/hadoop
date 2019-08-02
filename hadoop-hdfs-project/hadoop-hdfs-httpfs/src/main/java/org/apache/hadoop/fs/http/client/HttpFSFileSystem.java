@@ -193,6 +193,7 @@ public class HttpFSFileSystem extends FileSystem
 
   public static final String CONTENT_SUMMARY_JSON = "ContentSummary";
   public static final String CONTENT_SUMMARY_DIRECTORY_COUNT_JSON = "directoryCount";
+  public static final String CONTENT_SUMMARY_ECPOLICY_JSON = "ecPolicy";
   public static final String CONTENT_SUMMARY_FILE_COUNT_JSON = "fileCount";
   public static final String CONTENT_SUMMARY_LENGTH_JSON = "length";
 
@@ -1140,7 +1141,8 @@ public class HttpFSFileSystem extends FileSystem
     ContentSummary.Builder builder = new ContentSummary.Builder()
         .length((Long) json.get(CONTENT_SUMMARY_LENGTH_JSON))
         .fileCount((Long) json.get(CONTENT_SUMMARY_FILE_COUNT_JSON))
-        .directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON));
+        .directoryCount((Long) json.get(CONTENT_SUMMARY_DIRECTORY_COUNT_JSON))
+        .erasureCodingPolicy((String) json.get(CONTENT_SUMMARY_ECPOLICY_JSON));
     builder = buildQuotaUsage(builder, json, ContentSummary.Builder.class);
     return builder.build();
   }
