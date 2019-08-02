@@ -140,7 +140,6 @@ public class TestContainerStateMachine {
             .getContainerPath()));
 
     key.close();
-
     // Make sure the container is marked unhealthy
     Assert.assertTrue(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()

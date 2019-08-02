@@ -182,8 +182,17 @@ public class TestContainerStateMachineFailures {
 
     OzoneKeyDetails keyDetails = objectStore.getVolume(volumeName)
         .getBucket(bucketName).getKey("ratis");
-    Assert.assertTrue("Data length stored in the key does not match writes.",
-        keyDetails.getDataSize() == written);
+
+    /**
+     * Ensure length of data stored in key is equal to number of bytes written.
+     */
+    Assert.assertTrue("Number of bytes stored in the key is not equal " +
+        "to number of bytes written.", keyDetails.getDataSize() == written);
+
+    /**
+     * Pending data from the second write should get written to a new container
+     * during key.close() because the first container is UNHEALTHY by that time
+     */
     Assert.assertTrue("Expect Key to be stored in 2 separate containers",
         keyDetails.getOzoneKeyLocations().size() == 2);
   }
