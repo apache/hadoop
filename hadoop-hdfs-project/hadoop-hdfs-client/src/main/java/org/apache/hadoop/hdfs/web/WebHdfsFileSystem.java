@@ -929,6 +929,10 @@ public class WebHdfsFileSystem extends FileSystem
         return toUrl(op, fspath, parameters);
       }
     }
+
+    Path getFspath() {
+      return fspath;
+    }
   }
 
   /**
@@ -1017,6 +1021,32 @@ public class WebHdfsFileSystem extends FileSystem
         throws IOException {
       return new FSDataOutputStream(new BufferedOutputStream(
           conn.getOutputStream(), bufferSize), statistics) {
+        @Override
+        public void write(int b) throws IOException {
+          try {
+            super.write(b);
+          } catch (IOException e) {
+            LOG.warn("Write to output stream for file '{}' failed. "
+                + "Attempting to fetch the cause from the connection.",
+                getFspath(), e);
+            validateResponse(op, conn, true);
+            throw e;
+          }
+        }
+
+        @Override
+        public void write(byte[] b, int off, int len) throws IOException {
+          try {
+            super.write(b, off, len);
+          } catch (IOException e) {
+            LOG.warn("Write to output stream for file '{}' failed. "
+                + "Attempting to fetch the cause from the connection.",
+                getFspath(), e);
+            validateResponse(op, conn, true);
+            throw e;
+          }
+        }
+
         @Override
         public void close() throws IOException {
           try {
