@@ -429,10 +429,12 @@ class JsonUtilClient {
     final long length = ((Number) m.get("length")).longValue();
     final long fileCount = ((Number) m.get("fileCount")).longValue();
     final long directoryCount = ((Number) m.get("directoryCount")).longValue();
+    final String ecPolicy = ((String) m.get("ecPolicy"));
     ContentSummary.Builder builder = new ContentSummary.Builder()
         .length(length)
         .fileCount(fileCount)
-        .directoryCount(directoryCount);
+        .directoryCount(directoryCount)
+        .erasureCodingPolicy(ecPolicy);
     builder = buildQuotaUsage(builder, m, ContentSummary.Builder.class);
     return builder.build();
   }
