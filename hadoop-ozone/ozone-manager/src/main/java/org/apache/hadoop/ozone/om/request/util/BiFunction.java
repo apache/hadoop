@@ -8,3 +8,4 @@ package org.apache.hadoop.ozone.om.request.util;
 public interface BiFunction<LEFT, RIGHT> {
   boolean apply(LEFT left, RIGHT right);
 }
+
