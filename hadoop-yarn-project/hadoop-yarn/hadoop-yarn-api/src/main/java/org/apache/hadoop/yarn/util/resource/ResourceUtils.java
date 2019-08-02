@@ -81,14 +81,28 @@ public class ResourceUtils {
   private ResourceUtils() {
   }
 
-  private static void checkMandatoryResources(
+  /**
+   * Ensures that historical resource types (like {@link
+   * ResourceInformation#MEMORY_URI}, {@link ResourceInformation#VCORES_URI})
+   * are not getting overridden in the resourceInformationMap.
+   *
+   * Also checks whether {@link ResourceInformation#SPECIAL_RESOURCES} are not
+   * configured poorly: having their proper units and types.
+   *
+   * @param resourceInformationMap Map object having keys as resources names
+   *                               and {@link ResourceInformation} objects as
+   *                               values
+   * @throws YarnRuntimeException if either of the two above
+   * conditions do not hold
+   */
+  private static void checkSpecialResources(
       Map<String, ResourceInformation> resourceInformationMap)
       throws YarnRuntimeException {
     /*
-     * Supporting 'memory', 'memory-mb', 'vcores' also as invalid resource names, in addition to
-     * 'MEMORY' for historical reasons
+     * Supporting 'memory', 'memory-mb', 'vcores' also as invalid resource
+     * names, in addition to 'MEMORY' for historical reasons
      */
-    String keys[] = { "memory", ResourceInformation.MEMORY_URI,
+    String[] keys = { "memory", ResourceInformation.MEMORY_URI,
         ResourceInformation.VCORES_URI };
     for(String key : keys) {
       if (resourceInformationMap.containsKey(key)) {
@@ -99,7 +113,7 @@ public class ResourceUtils {
     }
 
     for (Map.Entry<String, ResourceInformation> mandatoryResourceEntry :
-        ResourceInformation.MANDATORY_RESOURCES.entrySet()) {
+        ResourceInformation.SPECIAL_RESOURCES.entrySet()) {
       String key = mandatoryResourceEntry.getKey();
       ResourceInformation mandatoryRI = mandatoryResourceEntry.getValue();
 
@@ -122,6 +136,13 @@ public class ResourceUtils {
     }
   }
 
+  /**
+   * Ensures that {@link ResourceUtils#MEMORY} and {@link ResourceUtils#VCORES}
+   * resources are contained in the map received as parameter.
+   *
+   * @param res Map object having keys as resources names
+   *            and {@link ResourceInformation} objects as values
+   */
   private static void addMandatoryResources(
       Map<String, ResourceInformation> res) {
     ResourceInformation ri;
@@ -259,7 +280,7 @@ public class ResourceUtils {
       validateNameOfResourceNameAndThrowException(name);
     }
 
-    checkMandatoryResources(resourceInformationMap);
+    checkSpecialResources(resourceInformationMap);
     addMandatoryResources(resourceInformationMap);
 
     setAllocationForMandatoryResources(resourceInformationMap, conf);
@@ -488,7 +509,7 @@ public class ResourceUtils {
         if (!initializedNodeResources) {
           Map<String, ResourceInformation> nodeResources = initializeNodeResourceInformation(
               conf);
-          checkMandatoryResources(nodeResources);
+          checkSpecialResources(nodeResources);
           addMandatoryResources(nodeResources);
           setAllocationForMandatoryResources(nodeResources, conf);
           readOnlyNodeResources = Collections.unmodifiableMap(nodeResources);
