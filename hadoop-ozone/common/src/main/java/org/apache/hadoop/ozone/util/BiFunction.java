@@ -1,4 +1,4 @@
-package org.apache.hadoop.ozone.om.request.util;
+package org.apache.hadoop.ozone.util;
 
 /**
  * Defines a functional interface having two inputs and returns boolean as
