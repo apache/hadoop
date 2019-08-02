@@ -1926,10 +1926,12 @@ public class TestDistributedFileSystem {
       fs.addErasureCodingPolicies(policies);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
           getByName(policyName).getName());
-      fs.disableErasureCodingPolicy(policyName);
       fs.enableErasureCodingPolicy(policyName);
       assertEquals(policyName, ErasureCodingPolicyManager.getInstance().
-          getByName(policyName).getName());
+          getEnabledPolicyByName(policyName).getName());
+      fs.disableErasureCodingPolicy(policyName);
+      assertNull(ErasureCodingPolicyManager.getInstance().
+          getEnabledPolicyByName(policyName));
 
       //test enable a policy that doesn't exist
       try {
