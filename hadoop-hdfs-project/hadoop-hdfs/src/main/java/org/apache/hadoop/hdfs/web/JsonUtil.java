@@ -354,6 +354,7 @@ public class JsonUtil {
     m.put("length", contentsummary.getLength());
     m.put("fileCount", contentsummary.getFileCount());
     m.put("directoryCount", contentsummary.getDirectoryCount());
+    m.put("ecPolicy", contentsummary.getErasureCodingPolicy());
     // For ContentSummary we don't need this since we already have
     // separate count for file and directory.
     m.putAll(toJsonMap(contentsummary, false));
