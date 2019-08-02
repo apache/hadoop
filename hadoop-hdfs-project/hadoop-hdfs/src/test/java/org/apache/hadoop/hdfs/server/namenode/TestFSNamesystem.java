@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.hamcrest.CoreMatchers.either;
@@ -242,10 +243,14 @@ public class TestFSNamesystem {
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
     // Disable top logger
     conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
+    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     fsn = new FSNamesystem(conf, fsImage);
     auditLoggers = fsn.getAuditLoggers();
     assertTrue(auditLoggers.size() == 1);
     assertTrue(auditLoggers.get(0) instanceof FSNamesystem.DefaultAuditLogger);
+    FSNamesystem.DefaultAuditLogger defaultAuditLogger =
+        (FSNamesystem.DefaultAuditLogger) auditLoggers.get(0);
+    assertTrue(defaultAuditLogger.getCallerContextEnabled());
 
     // Not to specify any audit loggers in config
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
