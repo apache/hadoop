@@ -543,6 +543,38 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
   @Test
+  public void testRemoveBucketAclUsingRpcClientRemoveAcl()
+      throws IOException {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    OzoneAcl userAcl = new OzoneAcl(USER, "test",
+        ACLType.ALL, ACCESS);
+    List<OzoneAcl> acls = new ArrayList<>();
+    acls.add(userAcl);
+    acls.add(new OzoneAcl(USER, "test1",
+        ACLType.ALL, ACCESS));
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    BucketArgs.Builder builder = BucketArgs.newBuilder();
+    builder.setAcls(acls);
+    volume.createBucket(bucketName, builder.build());
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setBucketName(bucketName)
+        .setVolumeName(volumeName)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setResType(OzoneObj.ResourceType.BUCKET).build();
+
+    // Remove the 2nd acl added to the list.
+    boolean remove = store.removeAcl(ozoneObj, acls.get(1));
+    Assert.assertTrue(remove);
+    Assert.assertFalse(store.getAcl(ozoneObj).contains(acls.get(1)));
+
+    remove = store.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertTrue(remove);
+    Assert.assertFalse(store.getAcl(ozoneObj).contains(acls.get(0)));
+  }
+
+  @Test
   public void testSetBucketVersioning()
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();

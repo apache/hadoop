@@ -505,6 +505,7 @@ public class BucketManagerImpl implements BucketManager {
             BUCKET_NOT_FOUND);
       }
 
+      boolean removed = false;
       // When we are removing subset of rights from existing acl.
       for(OzoneAcl a: bucketInfo.getAcls()) {
         if(a.getName().equals(acl.getName()) &&
@@ -515,20 +516,21 @@ public class BucketManagerImpl implements BucketManager {
           if (bits.equals(ZERO_BITSET)) {
             return false;
           }
-          bits = (BitSet) acl.getAclBitSet().clone();
-          bits.and(a.getAclBitSet());
+
           a.getAclBitSet().xor(bits);
 
           if(a.getAclBitSet().equals(ZERO_BITSET)) {
             bucketInfo.getAcls().remove(a);
           }
+          removed = true;
           break;
-        } else {
-          return false;
         }
       }
 
-      metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
+      if (removed) {
+        metadataManager.getBucketTable().put(dbBucketKey, bucketInfo);
+      }
+      return removed;
     } catch (IOException ex) {
       if (!(ex instanceof OMException)) {
         LOG.error("Remove acl operation failed for bucket:{}/{} acl:{}",
@@ -538,8 +540,6 @@ public class BucketManagerImpl implements BucketManager {
     } finally {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
     }
-
-    return true;
   }
 
   /**
