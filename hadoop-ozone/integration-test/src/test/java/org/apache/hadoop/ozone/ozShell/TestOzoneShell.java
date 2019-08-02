@@ -376,54 +376,6 @@ public class TestOzoneShell {
         expectedError);
   }
 
-  @Test
-  public void testUpdateVolume() throws Exception {
-    LOG.info("Running testUpdateVolume");
-    String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
-    String userName = "bilbo";
-    VolumeArgs volumeArgs = VolumeArgs.newBuilder()
-        .setOwner("bilbo")
-        .setQuota("100TB")
-        .build();
-    client.createVolume(volumeName, volumeArgs);
-    OzoneVolume vol = client.getVolumeDetails(volumeName);
-    assertEquals(userName, vol.getOwner());
-    assertEquals(OzoneQuota.parseQuota("100TB").sizeInBytes(), vol.getQuota());
-
-    String[] args = new String[] {"volume", "update", url + "/" + volumeName,
-        "--quota", "500MB"};
-    execute(shell, args);
-    vol = client.getVolumeDetails(volumeName);
-    assertEquals(userName, vol.getOwner());
-    assertEquals(OzoneQuota.parseQuota("500MB").sizeInBytes(), vol.getQuota());
-
-    String newUser = "new-user";
-    args = new String[] {"volume", "update", url + "/" + volumeName,
-        "--user", newUser};
-    execute(shell, args);
-    vol = client.getVolumeDetails(volumeName);
-    assertEquals(newUser, vol.getOwner());
-
-    //volume with / prefix
-    String volumeWithPrefix = "/" + volumeName;
-    String newUser2 = "new-user2";
-    args = new String[] {"volume", "update", url + "/" + volumeWithPrefix,
-        "--user", newUser2};
-    execute(shell, args);
-    vol = client.getVolumeDetails(volumeName);
-    assertEquals(newUser2, vol.getOwner());
-
-    // test error conditions
-    args = new String[] {"volume", "update", url + "/invalid-volume",
-        "--user", newUser};
-    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
-
-    err.reset();
-    args = new String[] {"volume", "update", url + "/invalid-volume",
-        "--quota", "500MB"};
-    executeWithError(shell, args, ResultCodes.VOLUME_NOT_FOUND);
-  }
-
   /**
    * Execute command, assert exception message and returns true if error
    * was thrown.
