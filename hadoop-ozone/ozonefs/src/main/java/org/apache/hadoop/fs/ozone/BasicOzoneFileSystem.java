@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -54,6 +55,7 @@ import static org.apache.hadoop.fs.ozone.Constants.OZONE_DEFAULT_USER;
 import static org.apache.hadoop.fs.ozone.Constants.OZONE_USER_DIR;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_DELIMITER;
 import static org.apache.hadoop.ozone.OzoneConsts.OZONE_URI_SCHEME;
+
 import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,9 +87,10 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
-  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
-      "should be either one of the two forms: " +
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
+      "should be one of the following formats: " +
       "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com/key  OR " +
       "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
@@ -113,11 +116,17 @@ public class BasicOzoneFileSystem extends FileSystem {
     String omPort = String.valueOf(-1);
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      if (parts.length != 2) {
+      // Array length should be either 1(host) or 2(host:port)
+      if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      omPort = parts[1];
+      if (parts.length == 2) {
+        omPort = parts[1];
+      } else {
+        // If port number is not specified, read it from config
+        omPort = String.valueOf(OmUtils.getOmRpcPort(conf));
+      }
       if (!isNumber(omPort)) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
