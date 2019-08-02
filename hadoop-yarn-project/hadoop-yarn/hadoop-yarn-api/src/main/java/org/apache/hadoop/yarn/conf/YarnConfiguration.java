@@ -1342,6 +1342,11 @@ public class YarnConfiguration extends Configuration {
   public static final String LOG_AGGREGATION_RETAIN_SECONDS = YARN_PREFIX
       + "log-aggregation.retain-seconds";
   public static final long DEFAULT_LOG_AGGREGATION_RETAIN_SECONDS = -1;
+
+  public static final String LOG_AGGREGATION_DEBUG_FILESIZE = YARN_PREFIX
+      + "log-aggregation.debug.filesize";
+  public static final long DEFAULT_LOG_AGGREGATION_DEBUG_FILESIZE
+      = 100 * 1024 * 1024;
   
   /**
    * How long to wait between aggregated log retention checks. If set to
