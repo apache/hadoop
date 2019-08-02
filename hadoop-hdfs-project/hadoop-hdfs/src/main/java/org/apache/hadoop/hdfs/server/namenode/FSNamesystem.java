@@ -1067,7 +1067,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // Make sure there is at least one logger installed.
     if (auditLoggers.isEmpty()) {
-      auditLoggers.add(new DefaultAuditLogger());
+      DefaultAuditLogger defaultAuditLogger = new DefaultAuditLogger();
+      defaultAuditLogger.initialize(conf);
+      auditLoggers.add(defaultAuditLogger);
     }
 
     // Add audit logger to calculate top users
