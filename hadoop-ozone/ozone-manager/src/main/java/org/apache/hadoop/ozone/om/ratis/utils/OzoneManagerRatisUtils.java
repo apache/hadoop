@@ -24,6 +24,8 @@ import org.apache.hadoop.ozone.om.request.bucket.OMBucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.bucket.OMBucketSetPropertyRequest;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketAddAclRequest;
+import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.bucket.acl.OMBucketSetAclRequest;
 import org.apache.hadoop.ozone.om.request.file.OMDirectoryCreateRequest;
 import org.apache.hadoop.ozone.om.request.file.OMFileCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMAllocateBlockRequest;
@@ -121,6 +123,8 @@ public final class OzoneManagerRatisUtils {
     case CompleteMultiPartUpload:
       return new S3MultipartUploadCompleteRequest(omRequest);
     case AddAcl:
+    case RemoveAcl:
+    case SetAcl:
       return getOMAclRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
@@ -129,17 +133,25 @@ public final class OzoneManagerRatisUtils {
   }
 
   private static OMClientRequest getOMAclRequest(OMRequest omRequest) {
-    ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
     Type cmdType = omRequest.getCmdType();
-    if (ObjectType.BUCKET == type) {
-      if (Type.AddAcl == cmdType) {
+    if (Type.AddAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (type == ObjectType.BUCKET) {
         return new OMBucketAddAclRequest(omRequest);
-      } else {
-       // TODO: remaining operations of acl needs to be supported
-        return null;
+      }
+    } else if (Type.SetAcl == cmdType) {
+      ObjectType type = omRequest.getSetAclRequest().getObj().getResType();
+      if (type == ObjectType.BUCKET) {
+        return new OMBucketSetAclRequest(omRequest);
+      }
+    } else if (Type.RemoveAcl == cmdType) {
+      ObjectType type = omRequest.getRemoveAclRequest().getObj().getResType();
+      if (type == ObjectType.BUCKET) {
+        return new OMBucketRemoveAclRequest(omRequest);
       }
     }
-    //TODO: handle key and prefix AddAcl
+
+    // Because all acl requests are not handled.
     return null;
   }
 

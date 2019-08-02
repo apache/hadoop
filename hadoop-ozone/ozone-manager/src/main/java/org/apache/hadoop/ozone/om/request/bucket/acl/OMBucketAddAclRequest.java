@@ -19,133 +19,103 @@
 package org.apache.hadoop.ozone.om.request.bucket.acl;
 
 import java.io.IOException;
+import java.util.List;
 
-import com.google.common.base.Optional;
-import org.apache.hadoop.ozone.om.request.util.ObjectParser;
+import com.google.common.collect.Lists;
+import org.apache.hadoop.ozone.om.OMMetrics;
+import org.apache.hadoop.ozone.om.request.util.BiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.ozone.OzoneAcl;
-import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OzoneManager;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
-import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.bucket.acl.OMBucketAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .AddAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .AddAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
     .OMResponse;
-import org.apache.hadoop.utils.db.cache.CacheKey;
-import org.apache.hadoop.utils.db.cache.CacheValue;
-
-import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.BUCKET_NOT_FOUND;
-import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 
 /**
  * Handle add Acl request for bucket.
  */
-public class OMBucketAddAclRequest extends OMClientRequest {
+public class OMBucketAddAclRequest extends OMBucketAclRequest {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(OMBucketAddAclRequest.class);
 
+  private static BiFunction<List<OzoneAcl>, OmBucketInfo> bucketAddAclOp;
+  private String path;
+  private List<OzoneAcl> ozoneAcls;
+
+  static {
+    bucketAddAclOp = (ozoneAcls, omBucketInfo) -> {
+      return omBucketInfo.addAcl(ozoneAcls.get(0));
+    };
+  }
+
   public OMBucketAddAclRequest(OMRequest omRequest) {
-    super(omRequest);
+    super(omRequest, bucketAddAclOp);
+    OzoneManagerProtocolProtos.AddAclRequest addAclRequest =
+        getOmRequest().getAddAclRequest();
+    path = addAclRequest.getObj().getPath();
+    ozoneAcls = Lists.newArrayList(
+        OzoneAcl.fromProtobuf(addAclRequest.getAcl()));
   }
 
   @Override
-  public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
-      long transactionLogIndex,
-      OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
-
-    AddAclRequest addAclRequest = getOmRequest().getAddAclRequest();
-
-    OMResponse.Builder omResponse = OMResponse.newBuilder().setCmdType(
-        OzoneManagerProtocolProtos.Type.AddAcl).setStatus(
-        OzoneManagerProtocolProtos.Status.OK).setSuccess(true)
-        .setAddAclResponse(AddAclResponse.newBuilder()
-            .setResponse(true).build());
-
-    OzoneAcl ozoneAcl = OzoneAcl.fromProtobuf(addAclRequest.getAcl());
-
-    OMMetadataManager omMetadataManager = ozoneManager.getMetadataManager();
-    ozoneManager.getMetrics().incNumBucketUpdates();
-
-    boolean acquiredLock = false;
-    OMClientResponse omClientResponse = null;
-    IOException exception = null;
-    String volume = null;
-    String bucket = null;
-    try {
-      ObjectParser objectParser =
-          new ObjectParser(addAclRequest.getObj().getPath(),
-              addAclRequest.getObj().getResType());
-
-      volume= objectParser.getVolume();
-      bucket = objectParser.getBucket();
-
-      acquiredLock = omMetadataManager.getLock().acquireLock(BUCKET_LOCK,
-          volume, bucket);
-
-      String dbBucketKey = omMetadataManager.getBucketKey(volume, bucket);
-
-      OmBucketInfo omBucketInfo =
-          omMetadataManager.getBucketTable().get(dbBucketKey);
-
-      if (omBucketInfo == null) {
-        throw new OMException("Bucket " + bucket + " is not found",
-            BUCKET_NOT_FOUND);
-      }
-
-      boolean addAcl = omBucketInfo.addAcl(ozoneAcl);
-      omResponse.setAddAclResponse(AddAclResponse.newBuilder()
-          .setResponse(addAcl).build());
-
-      if (addAcl) {
-        omMetadataManager.getBucketTable().addCacheEntry(
-            new CacheKey<>(dbBucketKey),
-            new CacheValue<>(Optional.of(omBucketInfo), transactionLogIndex));
-      }
-
-      omClientResponse = new OMBucketAclResponse(omBucketInfo,
-          omResponse.build());
-
-    } catch (IOException ex) {
-      exception = ex;
-      omClientResponse = new OMBucketAclResponse(null,
-          createErrorOMResponse(omResponse, exception));
-    } finally {
-      if (omClientResponse != null) {
-        omClientResponse.setFlushFuture(ozoneManagerDoubleBufferHelper.add(
-            omClientResponse, transactionLogIndex));
-      }
-      if (acquiredLock) {
-        omMetadataManager.getLock().releaseLock(BUCKET_LOCK, volume, bucket);
-      }
-    }
-
-    // TODO: audit log
-    if (!omResponse.getAddAclResponse().getResponse()) {
-      LOG.warn("AddAcl is called to add an already exisiting ACL {} for " +
-          "bucket {} in volume {} ", ozoneAcl, bucket, volume);
-    }
-    if (exception == null) {
-      LOG.debug("AddAcl for bucket {} in volume {} is successful", bucket,
-          volume);
-    } else {
-      ozoneManager.getMetrics().incNumBucketUpdateFails();
-      LOG.error("AddAcl for bucket {} in volume {} failed", bucket, volume,
-          exception);
-    }
-
-    return omClientResponse;
+  List<OzoneAcl> getAcls() {
+    return ozoneAcls;
   }
+
+  @Override
+  String getPath() {
+    return path;
+  }
+
+  @Override
+  OMResponse.Builder onInit() {
+    return OMResponse.newBuilder().setCmdType(
+        OzoneManagerProtocolProtos.Type.AddAcl).setStatus(
+        OzoneManagerProtocolProtos.Status.OK).setSuccess(true);
+
+  }
+
+  @Override
+  OMClientResponse onSuccess(OMResponse.Builder omResponse,
+      OmBucketInfo omBucketInfo, boolean operationResult) {
+    omResponse.setAddAclResponse(AddAclResponse.newBuilder()
+         .setResponse(operationResult));
+    return new OMBucketAclResponse(omBucketInfo,
+        omResponse.build());
+  }
+
+  @Override
+  OMClientResponse onFailure(OMResponse.Builder omResponse,
+      IOException exception) {
+    return new OMBucketAclResponse(null,
+        createErrorOMResponse(omResponse, exception));
+  }
+
+  @Override
+  void onComplete(boolean operationResult, IOException exception,
+      OMMetrics omMetrics) {
+    if (operationResult) {
+      LOG.debug("Add acl: {} to path: {} success!", getAcls(), getPath());
+    } else {
+      omMetrics.incNumBucketUpdateFails();
+      if (exception == null) {
+        LOG.error("Add acl {} to path {} failed, because acl already exist",
+            getAcls(), getPath());
+      } else {
+        LOG.error("Add acl {} to path {} failed!", getAcls(), getPath(),
+            exception);
+      }
+    }
+  }
+
 }
+
