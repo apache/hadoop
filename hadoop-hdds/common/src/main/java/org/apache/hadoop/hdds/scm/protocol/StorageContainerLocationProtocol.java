@@ -177,4 +177,22 @@ public interface StorageContainerLocationProtocol extends Closeable {
    * @throws IOException
    */
   boolean forceExitSafeMode() throws IOException;
+
+  /**
+   * Start ReplicationManager.
+   */
+  void startReplicationManager() throws IOException;
+
+  /**
+   * Stop ReplicationManager.
+   */
+  void stopReplicationManager() throws IOException;
+
+  /**
+   * Returns ReplicationManager status.
+   *
+   * @return True if ReplicationManager is running, false otherwise.
+   */
+  boolean getReplicationManagerStatus() throws IOException;
+
 }
