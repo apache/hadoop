@@ -33,6 +33,10 @@ OZONE-SITE.XML_ozone.om.kerberos.principal=om/om@EXAMPLE.COM
 OZONE-SITE.XML_ozone.om.kerberos.keytab.file=/etc/security/keytabs/om.keytab
 OZONE-SITE.XML_ozone.s3g.keytab.file=/etc/security/keytabs/HTTP.keytab
 OZONE-SITE.XML_ozone.s3g.authentication.kerberos.principal=HTTP/s3g@EXAMPLE.COM
+OZONE-SITE.XML_ozone.recon.authentication.kerberos.principal=HTTP/recon@EXAMPLE.COM
+OZONE-SITE.XML_ozone.recon.keytab.file=/etc/security/keytabs/HTTP.keytab
+OZONE-SITE.XML_ozone.recon.db.dir=/data/metadata/recon
+OZONE-SITE.XML_recon.om.snapshot.task.initial.delay=20s
 
 OZONE-SITE.XML_ozone.security.enabled=true
 OZONE-SITE.XML_ozone.acl.enabled=true
