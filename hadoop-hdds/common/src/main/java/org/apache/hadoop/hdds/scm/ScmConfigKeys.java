@@ -365,7 +365,7 @@ public final class ScmConfigKeys {
       "hdds.scm.http.kerberos.principal";
   public static final String
       HDDS_SCM_HTTP_KERBEROS_KEYTAB_FILE_KEY =
-      "hdds.scm.http.kerberos.keytab.file";
+      "hdds.scm.http.kerberos.keytab";
 
   // Network topology
   public static final String OZONE_SCM_NETWORK_TOPOLOGY_SCHEMA_FILE =
