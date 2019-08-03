@@ -192,6 +192,28 @@ message ForceExitSafeModeResponseProto {
   required bool exitedSafeMode = 1;
 }
 
+message StartReplicationManagerRequestProto {
+  optional string traceID = 1;
+}
+
+message StartReplicationManagerResponseProto {
+}
+
+message StopReplicationManagerRequestProto {
+  optional string traceID = 1;
+}
+
+message StopReplicationManagerResponseProto {
+}
+
+message ReplicationManagerStatusRequestProto {
+  optional string traceID = 1;
+}
+
+message ReplicationManagerStatusResponseProto {
+  required bool isRunning = 1;
+}
+
 /**
  * Protocol used from an HDFS node to StorageContainerManager.  See the request
  * and response messages for details of the RPC calls.
@@ -275,4 +297,13 @@ service StorageContainerLocationProtocolService {
   */
   rpc forceExitSafeMode(ForceExitSafeModeRequestProto)
   returns (ForceExitSafeModeResponseProto);
+
+  rpc startReplicationManager(StartReplicationManagerRequestProto)
+  returns (StartReplicationManagerResponseProto);
+
+  rpc stopReplicationManager(StopReplicationManagerRequestProto)
+  returns (StopReplicationManagerResponseProto);
+
+  rpc getReplicationManagerStatus(ReplicationManagerStatusRequestProto)
+  returns (ReplicationManagerStatusResponseProto);
 }
