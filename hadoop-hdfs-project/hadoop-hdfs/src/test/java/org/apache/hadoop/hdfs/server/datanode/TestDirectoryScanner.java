@@ -1233,8 +1233,8 @@ public class TestDirectoryScanner {
 
   private void writeFile(FileSystem fs, int numFiles) throws IOException {
     final String fileName = "/" + GenericTestUtils.getMethodName();
-    final Path filePath = new Path(fileName);
     for (int i = 0; i < numFiles; i++) {
+      final Path filePath = new Path(fileName + i);
       DFSTestUtil.createFile(fs, filePath, 1, (short) 1, 0);
     }
   }
