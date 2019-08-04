@@ -77,4 +77,21 @@ public interface PipelineManager extends Closeable, PipelineManagerMXBean {
   void triggerPipelineCreation();
 
   void incNumBlocksAllocatedMetric(PipelineID id);
+
+  /**
+   * Activates a dormant pipeline.
+   *
+   * @param pipelineID ID of the pipeline to activate.
+   * @throws IOException in case of any Exception
+   */
+  void activatePipeline(PipelineID pipelineID) throws IOException;
+
+  /**
+   * Deactivates an active pipeline.
+   *
+   * @param pipelineID ID of the pipeline to deactivate.
+   * @throws IOException in case of any Exception
+   */
+  void deactivatePipeline(PipelineID pipelineID) throws IOException;
+
 }

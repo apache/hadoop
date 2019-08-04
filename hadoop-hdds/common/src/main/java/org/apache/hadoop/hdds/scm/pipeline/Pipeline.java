@@ -354,7 +354,7 @@ public final class Pipeline {
    * Possible Pipeline states in SCM.
    */
   public enum PipelineState {
-    ALLOCATED, OPEN, CLOSED;
+    ALLOCATED, OPEN, DORMANT, CLOSED;
 
     public static PipelineState fromProtobuf(HddsProtos.PipelineState state)
         throws UnknownPipelineStateException {
@@ -362,6 +362,7 @@ public final class Pipeline {
       switch (state) {
       case PIPELINE_ALLOCATED: return ALLOCATED;
       case PIPELINE_OPEN: return OPEN;
+      case PIPELINE_DORMANT: return DORMANT;
       case PIPELINE_CLOSED: return CLOSED;
       default:
         throw new UnknownPipelineStateException(
@@ -375,6 +376,7 @@ public final class Pipeline {
       switch (state) {
       case ALLOCATED: return HddsProtos.PipelineState.PIPELINE_ALLOCATED;
       case OPEN: return HddsProtos.PipelineState.PIPELINE_OPEN;
+      case DORMANT: return HddsProtos.PipelineState.PIPELINE_DORMANT;
       case CLOSED: return HddsProtos.PipelineState.PIPELINE_CLOSED;
       default:
         throw new UnknownPipelineStateException(

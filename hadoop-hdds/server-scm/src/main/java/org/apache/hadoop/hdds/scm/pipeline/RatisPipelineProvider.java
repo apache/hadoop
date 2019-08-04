@@ -134,6 +134,7 @@ public class RatisPipelineProvider implements PipelineProvider {
     Set<DatanodeDetails> dnsUsed = new HashSet<>();
     stateManager.getPipelines(ReplicationType.RATIS, factor).stream().filter(
         p -> p.getPipelineState().equals(PipelineState.OPEN) ||
+            p.getPipelineState().equals(PipelineState.DORMANT) ||
             p.getPipelineState().equals(PipelineState.ALLOCATED))
         .forEach(p -> dnsUsed.addAll(p.getNodes()));
 
