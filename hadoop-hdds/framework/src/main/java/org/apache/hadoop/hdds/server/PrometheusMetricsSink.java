@@ -21,8 +21,8 @@ import static org.apache.hadoop.utils.RocksDBStoreMBean.ROCKSDB_CONTEXT_PREFIX;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
@@ -44,7 +44,7 @@ public class PrometheusMetricsSink implements MetricsSink {
   /**
    * Cached output lines for each metrics.
    */
-  private Map<String, String> metricLines = new HashMap<>();
+  private final Map<String, String> metricLines = new ConcurrentHashMap<>();
 
   private static final Pattern SPLIT_PATTERN =
       Pattern.compile("(?<!(^|[A-Z_]))(?=[A-Z])|(?<!^)(?=[A-Z][a-z])");
@@ -65,9 +65,13 @@ public class PrometheusMetricsSink implements MetricsSink {
             metricsRecord.name(), metrics.name());
 
         StringBuilder builder = new StringBuilder();
-        builder.append("# TYPE " + key + " " +
-            metrics.type().toString().toLowerCase() + "\n");
-        builder.append(key + "{");
+        builder.append("# TYPE ")
+            .append(key)
+            .append(" ")
+            .append(metrics.type().toString().toLowerCase())
+            .append("\n")
+            .append(key)
+            .append("{");
         String sep = "";
 
         //add tags
@@ -76,13 +80,17 @@ public class PrometheusMetricsSink implements MetricsSink {
 
           //ignore specific tag which includes sub-hierarchy
           if (!tagName.equals("numopenconnectionsperuser")) {
-            builder.append(
-                sep + tagName + "=\"" + tag.value() + "\"");
+            builder.append(sep)
+                .append(tagName)
+                .append("=\"")
+                .append(tag.value())
+                .append("\"");
             sep = ",";
           }
         }
         builder.append("} ");
         builder.append(metrics.value());
+        builder.append("\n");
         metricLines.put(key, builder.toString());
 
       }
@@ -121,7 +129,7 @@ public class PrometheusMetricsSink implements MetricsSink {
 
   public void writeMetrics(Writer writer) throws IOException {
     for (String line : metricLines.values()) {
-      writer.write(line + "\n");
+      writer.write(line);
     }
   }
 }
