@@ -21,6 +21,8 @@ import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKP
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_CHECKPOINT_INTERVAL_KEY;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.FS_TRASH_INTERVAL_KEY;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.MOVE_TO_TRASH_FOR_TEST_DEFAULT;
+import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.MOVE_TO_TRASH_FOR_TEST_KEY;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -70,6 +72,8 @@ public class TrashPolicyDefault extends TrashPolicy {
 
   private long emptierInterval;
 
+  private volatile boolean moveToTrashForTests = false;
+
   public TrashPolicyDefault() { }
 
   private TrashPolicyDefault(FileSystem fs, Configuration conf)
@@ -107,6 +111,8 @@ public class TrashPolicyDefault extends TrashPolicy {
           + "Changing to default value 0", deletionInterval);
       this.deletionInterval = 0;
     }
+
+    this.moveToTrashForTests = conf.getBoolean(MOVE_TO_TRASH_FOR_TEST_KEY, MOVE_TO_TRASH_FOR_TEST_DEFAULT);
   }
 
   private Path makeTrashRelativePath(Path basePath, Path rmFilePath) {
@@ -157,14 +163,36 @@ public class TrashPolicyDefault extends TrashPolicy {
       } catch (FileAlreadyExistsException e) {
         // find the path which is not a directory, and modify baseTrashPath
         // & trashPath, then mkdirs
+        if (moveToTrashForTests) {
+          flag = true;
+          while (flag)
+            ;
+
+        }
         Path existsFilePath = baseTrashPath;
         while (!fs.exists(existsFilePath)) {
           existsFilePath = existsFilePath.getParent();
         }
-        baseTrashPath = new Path(baseTrashPath.toString().replace(
-            existsFilePath.toString(), existsFilePath.toString() + Time.now())
-        );
-        trashPath = new Path(baseTrashPath, trashPath.getName());
+        // race condition: don't modify baseTrashPath when existsFilePath is deleted.
+        // existsFilePath is /user/test/.Trash/Current/user/test/a/b
+        // another thread delete /user/test/.Trash/Current/user/test/a in this corner case before the code as follow:
+        // baseTrashPath = new Path(baseTrashPath.toString().replace(
+        //                  existsFilePath.toString(), existsFilePath.toString() + Time.now()));
+        // trashPath = new Path(baseTrashPath, trashPath.getName());
+        // baseTrashPath is /user/test/.Trash/Current/user/test+timestamp
+        // trashPath is /user/test/.Trash/Current/user/test+timestamp/a/b. It is not expected result.
+        try {
+          FileStatus fileStatus = fs.getFileStatus(existsFilePath);
+          if (fileStatus.isFile()) {
+            baseTrashPath = new Path(baseTrashPath.toString().replace(
+                    existsFilePath.toString(), existsFilePath.toString() + Time.now())
+            );
+            trashPath = new Path(baseTrashPath, trashPath.getName());
+          }
+        } catch (FileNotFoundException e1) {
+          LOG.warn("The existFilePath was not found " + existsFilePath);
+        }
+
         // retry, ignore current failure
         --i;
         continue;

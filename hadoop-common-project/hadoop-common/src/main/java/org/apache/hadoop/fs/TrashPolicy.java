@@ -36,6 +36,7 @@ public abstract class TrashPolicy extends Configured {
   protected Path trash; // path to trash directory
   protected long deletionInterval; // deletion interval for Emptier
 
+  volatile boolean flag = false; // Control thread execution order
   /**
    * Used to setup the trash policy. Must be implemented by all TrashPolicy
    * implementations.

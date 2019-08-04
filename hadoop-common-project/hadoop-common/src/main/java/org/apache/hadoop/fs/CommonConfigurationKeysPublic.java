@@ -171,6 +171,13 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_TRASH_INTERVAL_KEY = "fs.trash.interval";
   /** Default value for FS_TRASH_INTERVAL_KEY */
   public static final long    FS_TRASH_INTERVAL_DEFAULT = 0;
+
+  public static final String MOVE_TO_TRASH_FOR_TEST_KEY = "move.to.trash.for.tests";
+  /**
+   * Default value for MOVE_TO_TRASH_FOR_TEST_KEY
+   */
+  public static final boolean MOVE_TO_TRASH_FOR_TEST_DEFAULT = false;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">

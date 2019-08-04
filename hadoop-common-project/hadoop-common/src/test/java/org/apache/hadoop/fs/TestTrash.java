@@ -53,6 +53,7 @@ import org.apache.hadoop.util.Time;
  * This class tests commands from Trash.
  */
 public class TestTrash {
+  public static final Logger LOGGER = LoggerFactory.getLogger(TestTrash.class);
 
   private final static File BASE_PATH = new File(GenericTestUtils.getTempPath(
       "testTrash"));
@@ -627,6 +628,45 @@ public class TestTrash {
           e.getLocalizedMessage());
     }
     assertTrue(val2 == 0);
+
+    // Third rm a file which parent path is the same as above.
+    // Make baseTrashPath, at the same time delete existTrashPath
+    conf = new Configuration();
+    conf.setLong(FS_TRASH_INTERVAL_KEY, 10);
+    conf.setBoolean(MOVE_TO_TRASH_FOR_TEST_KEY, true);
+    FileSystem fileSystem = FileSystem.get(conf);
+    Path existingFile = new Path("existingFile");
+    Path subFile = new Path("existingFile", "subFile");
+    fileSystem.delete(existingFile, true);
+    fileSystem.create(existingFile);
+
+    Trash trash = new Trash(fileSystem, conf);
+    // Make sure trash root is clean
+    Path trashRoot = trash.getCurrentTrashDir(existingFile);
+    fileSystem.delete(trashRoot, true);
+    // Move to trash should be succeed
+    assertTrue("The existing file to trash failed",
+        trash.moveToTrash(existingFile));
+    // Verify the existing file is removed
+    assertFalse("The existing file still exists on file system",
+        fileSystem.exists(existingFile));
+    fileSystem.create(subFile);
+
+    new Thread(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          while (!trash.getTrashPolicy().flag)
+            ;
+          fileSystem.delete(trash.getCurrentTrashDir(existingFile), true);
+          trash.getTrashPolicy().flag = false;
+        } catch (IOException e) {
+          LOGGER.warn("Delete filed failed", e);
+        }
+      }
+    }).start();
+    assertTrue("Move a subFile to trash failed", trash.moveToTrash(subFile));
+    assertTrue(fileSystem.exists(trash.getCurrentTrashDir(existingFile)));
   }
 
   @Test
