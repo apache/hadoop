@@ -349,6 +349,7 @@ public class TestZStandardCompressorDecompressor {
 
   @Test
   public void testZStandardCompressDecompress2() throws Exception {
+    assertTrue(false);
     byte[] rawData = null;
     int rawDataSize = 0;
     rawDataSize = IO_FILE_BUFFER_SIZE_DEFAULT;
