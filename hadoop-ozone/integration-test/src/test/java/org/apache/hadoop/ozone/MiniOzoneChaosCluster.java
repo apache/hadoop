@@ -108,7 +108,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("{} Completed restarting Datanode: {}", failString,
             dn.getUuid());
       } catch (Exception e) {
-
+        LOG.error("Failed to restartNodes Datanode", dn.getUuid());
       }
     }
   }
@@ -133,7 +133,7 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
         LOG.info("Completed {} DataNode {}", stopString, dn.getUuid());
 
       } catch (Exception e) {
-
+        LOG.error("Failed to shutdown Datanode", dn.getUuid());
       }
     }
   }
@@ -247,6 +247,8 @@ public class MiniOzoneChaosCluster extends MiniOzoneClusterImpl {
       conf.setInt(OzoneConfigKeys.OZONE_CONTAINER_CACHE_SIZE, 2);
       conf.setInt("hdds.scm.replication.thread.interval", 10 * 1000);
       conf.setInt("hdds.scm.replication.event.timeout", 20 * 1000);
+      conf.setInt(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY, 100);
+      conf.setInt(OzoneConfigKeys.DFS_CONTAINER_RATIS_LOG_PURGE_GAP, 100);
     }
 
     @Override

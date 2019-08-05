@@ -25,6 +25,7 @@ import com.google.common.collect.Sets;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
@@ -45,7 +46,7 @@ import java.util.Set;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
-public class GpuDiscoverer {
+public class GpuDiscoverer extends Configured {
   public static final Logger LOG = LoggerFactory.getLogger(
       GpuDiscoverer.class);
   @VisibleForTesting
@@ -61,7 +62,6 @@ public class GpuDiscoverer {
   private static final int MAX_EXEC_TIMEOUT_MS = 10 * 1000;
   private static final int MAX_REPEATED_ERROR_ALLOWED = 10;
 
-  private Configuration conf = null;
   private String pathOfGpuBinary = null;
   private Map<String, String> environment = new HashMap<>();
 
@@ -71,7 +71,7 @@ public class GpuDiscoverer {
   private List<GpuDevice> gpuDevicesFromUser;
 
   private void validateConfOrThrowException() throws YarnException {
-    if (conf == null) {
+    if (getConf() == null) {
       throw new YarnException("Please initialize (call initialize) before use "
           + GpuDiscoverer.class.getSimpleName());
     }
@@ -144,7 +144,7 @@ public class GpuDiscoverer {
   }
 
   private boolean IsAutoDiscoveryEnabled() {
-    String allowedDevicesStr = conf.get(
+    String allowedDevicesStr = getConf().get(
         YarnConfiguration.NM_GPU_ALLOWED_DEVICES,
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES);
     return allowedDevicesStr.equals(
@@ -205,7 +205,7 @@ public class GpuDiscoverer {
    */
   private List<GpuDevice> parseGpuDevicesFromUserDefinedValues()
       throws YarnException {
-    String devices = conf.get(
+    String devices = getConf().get(
         YarnConfiguration.NM_GPU_ALLOWED_DEVICES,
         YarnConfiguration.AUTOMATICALLY_DISCOVER_GPU_DEVICES);
 
@@ -249,7 +249,7 @@ public class GpuDiscoverer {
 
   public synchronized void initialize(Configuration config)
       throws YarnException {
-    this.conf = config;
+    setConf(config);
     if (IsAutoDiscoveryEnabled()) {
       numOfErrorExecutionSinceLastSucceed = 0;
       lookUpAutoDiscoveryBinary(config);

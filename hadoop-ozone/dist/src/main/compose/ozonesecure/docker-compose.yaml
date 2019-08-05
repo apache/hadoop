@@ -65,6 +65,19 @@ services:
     env_file:
       - ./docker-config
     command: ["/opt/hadoop/bin/ozone","s3g"]
+  recon:
+    image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
+    hostname: recon
+    volumes:
+      - ../..:/opt/hadoop
+    ports:
+      - 9888:9888
+    env_file:
+      - ./docker-config
+    environment:
+      WAITFOR: om:9874
+      ENSURE_OM_INITIALIZED: /data/metadata/om/current/VERSION
+    command: ["/opt/hadoop/bin/ozone","recon"]
   scm:
     image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
     hostname: scm

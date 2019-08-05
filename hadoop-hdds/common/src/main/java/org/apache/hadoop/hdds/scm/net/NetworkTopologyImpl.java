@@ -595,7 +595,7 @@ public class NetworkTopologyImpl implements NetworkTopology{
     try {
       if ((node1.getAncestor(maxLevel - 1) != clusterTree) ||
           (node2.getAncestor(maxLevel - 1) != clusterTree)) {
-        LOG.warn("One of the nodes is outside of network topology");
+        LOG.debug("One of the nodes is outside of network topology");
         return Integer.MAX_VALUE;
       }
       int level1 = node1.getLevel();

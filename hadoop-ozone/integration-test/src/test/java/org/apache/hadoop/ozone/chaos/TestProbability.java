@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -7,7 +7,7 @@
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,29 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.ozone.recon;
+package org.apache.hadoop.ozone.chaos;
 
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-
-import com.google.inject.Provider;
+import com.google.common.base.Preconditions;
+import org.apache.commons.lang3.RandomUtils;
 
 /**
- * Ozone Configuration Provider.
- * <p>
- * As the OzoneConfiguration is created by the CLI application here we inject
- * it via a singleton instance to the Jax-RS/CDI instances.
+ * This class is used to find out if a certain event is true.
+ * Every event is assigned a propbability and the isTrue function returns true
+ * when the probability has been met.
  */
-public class OzoneConfigurationProvider implements
-    Provider<OzoneConfiguration> {
+final public class TestProbability {
+  private int pct;
 
-  private static OzoneConfiguration configuration;
-
-  static void setConfiguration(OzoneConfiguration conf) {
-    OzoneConfigurationProvider.configuration = conf;
+  private TestProbability(int pct) {
+    Preconditions.checkArgument(pct <= 100 && pct > 0);
+    this.pct = pct;
   }
 
-  @Override
-  public OzoneConfiguration get() {
-    return configuration;
+  public boolean isTrue() {
+    return (RandomUtils.nextInt(0, 100) <= pct);
+  }
+
+  public static TestProbability valueOf(int pct) {
+    return new TestProbability(pct);
   }
 }

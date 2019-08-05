@@ -29,6 +29,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQ
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQL_MAX_IDLE_CONNECTION_AGE;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQL_MAX_IDLE_CONNECTION_TEST_STMT;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
 import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
@@ -53,7 +54,7 @@ import com.google.inject.Singleton;
 public class ReconControllerModule extends AbstractModule {
   @Override
   protected void configure() {
-    bind(OzoneConfiguration.class).toProvider(OzoneConfigurationProvider.class);
+    bind(Configuration.class).toProvider(ConfigurationProvider.class);
     bind(ReconHttpServer.class).in(Singleton.class);
     bind(DBStore.class)
         .toProvider(ReconContainerDBProvider.class).in(Singleton.class);
