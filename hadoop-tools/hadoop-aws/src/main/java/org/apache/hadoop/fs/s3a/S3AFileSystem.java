@@ -3160,10 +3160,19 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String action = "copyFile(" + srcKey + ", " + dstKey + ")";
     Invoker readInvoker = readContext.getReadInvoker();
 
-    ObjectMetadata srcom =
-        once(action, srcKey,
-            () ->
-                getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
+    ObjectMetadata srcom;
+    try {
+      srcom = once(action, srcKey,
+          () ->
+              getObjectMetadata(srcKey, changeTracker, readInvoker, "copy"));
+    } catch (FileNotFoundException e) {
+      // if rename fails at this point it means that the expected file was not
+      // found.
+      throw new RemoteFileChangedException(
+          keyToQualifiedPath(srcKey).toString(),
+          action,
+          RemoteFileChangedException.FILE_NEVER_FOUND, e);
+    }
     ObjectMetadata dstom = cloneObjectMetadata(srcom);
     setOptionalObjectMetadata(dstom);
 
