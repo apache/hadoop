@@ -97,7 +97,8 @@ public class ChangeTracker {
     this.versionMismatches = versionMismatches;
     this.revisionId = policy.getRevisionId(s3ObjectAttributes);
     if (revisionId != null) {
-      LOG.debug("Revision ID for object at {}: {}", uri, revisionId);
+      LOG.debug("tracker {}/{} has revision ID for object at {}: {}",
+          policy.getSource(), policy.getMode(), uri, revisionId);
     }
   }
 

@@ -33,6 +33,8 @@ import java.util.concurrent.TimeUnit;
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.dynamodbv2.model.ProvisionedThroughputExceededException;
 import com.google.common.base.Preconditions;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidRequestException;
@@ -80,13 +82,18 @@ import static org.apache.hadoop.fs.s3a.Constants.*;
 @SuppressWarnings("visibilitymodifier")  // I want a struct of finals, for real.
 public class S3ARetryPolicy implements RetryPolicy {
 
+  private static final Logger LOG = LoggerFactory.getLogger(
+      S3ARetryPolicy.class);
+
+  private final Configuration conf;
+
   /** Final retry policy we end up with. */
   private final RetryPolicy retryPolicy;
 
   // Retry policies for mapping exceptions to
 
   /** Base policy from configuration. */
-  protected final RetryPolicy fixedRetries;
+  protected final RetryPolicy defaultRetries;
 
   /** Rejection of all non-idempotent calls except specific failures. */
   protected final RetryPolicy retryIdempotentCalls;
@@ -107,19 +114,25 @@ public class S3ARetryPolicy implements RetryPolicy {
    */
   public S3ARetryPolicy(Configuration conf) {
     Preconditions.checkArgument(conf != null, "Null configuration");
+    this.conf = conf;
 
     // base policy from configuration
-    fixedRetries = exponentialBackoffRetry(
-        conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
-        conf.getTimeDuration(RETRY_INTERVAL,
-            RETRY_INTERVAL_DEFAULT,
-            TimeUnit.MILLISECONDS),
+    int limit = conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT);
+    long interval = conf.getTimeDuration(RETRY_INTERVAL,
+        RETRY_INTERVAL_DEFAULT,
         TimeUnit.MILLISECONDS);
+    defaultRetries = exponentialBackoffRetry(
+        limit,
+        interval,
+        TimeUnit.MILLISECONDS);
+
+    LOG.debug("Retrying on recoverable AWS failures {} times with an interval"
+        + " of {}ms", limit, interval);
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.
     retryIdempotentCalls = new FailNonIOEs(
-        new IdempotencyRetryFilter(fixedRetries));
+        new IdempotencyRetryFilter(defaultRetries));
 
     // and a separate policy for throttle requests, which are considered
     // repeatable, even for non-idempotent calls, as the service
@@ -127,7 +140,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     throttlePolicy = createThrottleRetryPolicy(conf);
 
     // client connectivity: fixed retries without care for idempotency
-    connectivityFailure = fixedRetries;
+    connectivityFailure = defaultRetries;
 
     Map<Class<? extends Exception>, RetryPolicy> policyMap =
         createExceptionMap();
@@ -237,6 +250,14 @@ public class S3ARetryPolicy implements RetryPolicy {
           (AmazonClientException) exception);
     }
     return retryPolicy.shouldRetry(ex, retries, failovers, idempotent);
+  }
+
+  /**
+   * Get the configuration this policy was created from.
+   * @return the configuration.
+   */
+  protected Configuration getConf() {
+    return conf;
   }
 
   /**

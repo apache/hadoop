@@ -53,8 +53,7 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
-import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
+import static org.apache.hadoop.fs.s3a.Constants.AUTHORITATIVE_PATH;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
@@ -224,7 +223,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
     removeBaseAndBucketOverrides(uri.getHost(), config,
         METADATASTORE_AUTHORITATIVE,
-        METADATASTORE_METADATA_TTL);
+        METADATASTORE_METADATA_TTL,
+        AUTHORITATIVE_PATH);
     config.setBoolean(METADATASTORE_AUTHORITATIVE, authoritativeMode);
     config.setLong(METADATASTORE_METADATA_TTL,
         DEFAULT_METADATASTORE_METADATA_TTL);
@@ -247,7 +247,8 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
     removeBaseAndBucketOverrides(uri.getHost(), config,
         S3_METADATA_STORE_IMPL);
     removeBaseAndBucketOverrides(uri.getHost(), config,
-        METADATASTORE_AUTHORITATIVE);
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     return createFS(uri, config);
   }
 

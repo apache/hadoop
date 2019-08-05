@@ -280,15 +280,21 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,
         RETRY_INTERVAL,
-        METADATASTORE_AUTHORITATIVE);
+        S3GUARD_CONSISTENCY_RETRY_LIMIT,
+        S3GUARD_CONSISTENCY_RETRY_INTERVAL,
+        METADATASTORE_AUTHORITATIVE,
+        AUTHORITATIVE_PATH);
     conf.set(CHANGE_DETECT_SOURCE, changeDetectionSource);
     conf.set(CHANGE_DETECT_MODE, changeDetectionMode);
     conf.setBoolean(METADATASTORE_AUTHORITATIVE, authMode);
+    conf.set(AUTHORITATIVE_PATH, "");
 
     // reduce retry limit so FileNotFoundException cases timeout faster,
     // speeding up the tests
     conf.setInt(RETRY_LIMIT, TEST_MAX_RETRIES);
     conf.set(RETRY_INTERVAL, TEST_RETRY_INTERVAL);
+    conf.setInt(S3GUARD_CONSISTENCY_RETRY_LIMIT, TEST_MAX_RETRIES);
+    conf.set(S3GUARD_CONSISTENCY_RETRY_INTERVAL, TEST_RETRY_INTERVAL);
 
     if (conf.getClass(S3_METADATA_STORE_IMPL, MetadataStore.class) ==
         NullMetadataStore.class) {
@@ -724,6 +730,82 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Tests doing a rename() on a file which is eventually visible
+   */
+  @Test
+  public void testRenameEventuallyVisibleFile() throws Throwable {
+    requireS3Guard();
+    AmazonS3 s3ClientSpy = spyOnFilesystem();
+    Path basedir = path();
+    Path sourcedir = new Path(basedir, "sourcedir");
+    fs.mkdirs(sourcedir);
+    Path destdir = new Path(basedir, "destdir");
+    String inconsistent = "inconsistent";
+    String consistent = "consistent";
+    Path inconsistentFile = new Path(sourcedir, inconsistent);
+    Path consistentFile = new Path(sourcedir, consistent);
+
+    // write the consistent data
+    writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(0);
+    int metadataInconsistencyCount = counts.getLeft();
+
+    writeDataset(fs, inconsistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    stubTemporaryNotFound(s3ClientSpy, metadataInconsistencyCount,
+        inconsistentFile);
+
+    // must not fail since the inconsistency doesn't last through the
+    // configured retry limit
+    fs.rename(sourcedir, destdir);
+  }
+
+  /**
+   * Tests doing a rename() on a file which never quite appears will
+   * fail with a RemoteFileChangedException rather than have the exception
+   * downgraded to a failure.
+   */
+  @Test
+  public void testRenameEventuallyVisibleFileNeverStabilizes() throws Throwable {
+    requireS3Guard();
+    AmazonS3 s3ClientSpy = spyOnFilesystem();
+    Path basedir = path();
+    Path sourcedir = new Path(basedir, "sourcedir");
+    fs.mkdirs(sourcedir);
+    Path destdir = new Path(basedir, "destdir");
+    String inconsistent = "inconsistent";
+    String consistent = "consistent";
+    Path inconsistentFile = new Path(sourcedir, inconsistent);
+    Path consistentFile = new Path(sourcedir, consistent);
+
+    // write the consistent data
+    writeDataset(fs, consistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    Pair<Integer, Integer> counts = renameInconsistencyCounts(0);
+    int metadataInconsistencyCount = counts.getLeft();
+
+    writeDataset(fs, inconsistentFile, TEST_DATA_BYTES, TEST_DATA_BYTES.length,
+        1024, true, true);
+
+    stubTemporaryNotFound(s3ClientSpy, metadataInconsistencyCount + 1,
+        inconsistentFile);
+
+    RemoteFileChangedException ex = intercept(
+        RemoteFileChangedException.class,
+        RemoteFileChangedException.FILE_NEVER_FOUND,
+        () -> fs.rename(sourcedir, destdir));
+    assertEquals("Path in " + ex,
+        inconsistentFile, ex.getPath());
+    if (!(ex.getCause() instanceof FileNotFoundException)) {
+      throw ex;
+    }
+  }
+
+  /**
    * Ensures a file can be renamed when there is no version metadata
    * (ETag, versionId).
    */
@@ -910,6 +992,9 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     LOG.debug("Updated file info: {}: version={}, etag={}", testpath,
         newStatus.getVersionId(), newStatus.getETag());
 
+    LOG.debug("File {} will be inconsistent for {} HEAD and {} GET requests",
+        testpath, getMetadataInconsistencyCount, getObjectInconsistencyCount);
+
     stubTemporaryUnavailable(s3ClientSpy, getObjectInconsistencyCount,
         testpath, newStatus);
 
@@ -919,6 +1004,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     if (versionCheckingIsOnServer()) {
       // only stub inconsistency when mode is server since no constraints that
       // should trigger inconsistency are passed in any other mode
+      LOG.debug("File {} will be inconsistent for {} COPY operations",
+          testpath, copyInconsistencyCount);
       stubTemporaryCopyInconsistency(s3ClientSpy, testpath, newStatus,
           copyInconsistencyCount);
     }
@@ -1231,6 +1318,18 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
+   * Match any getObjectMetadata request against a given path.
+   * @param path path to to match.
+   * @return the matching request.
+   */
+  private GetObjectMetadataRequest matchingMetadataRequest(Path path) {
+    return ArgumentMatchers.argThat(request -> {
+      return request.getBucketName().equals(fs.getBucket())
+          && request.getKey().equals(fs.pathToKey(path));
+    });
+  }
+
+  /**
    * Skip a test case if it needs S3Guard and the filesystem does
    * not have it.
    */
@@ -1290,4 +1389,41 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   private boolean versionCheckingIsOnServer() {
     return fs.getChangeDetectionPolicy().getMode() == Mode.Server;
   }
+
+  /**
+   * Stubs {@link AmazonS3#getObject(GetObjectRequest)}
+   * within s3ClientSpy to return throw a FileNotFoundException
+   * until inconsistentCallCount calls have been made.
+   * This simulates the condition where the S3 endpoint is caching
+   * a 404 request, or there is a tombstone in the way which has yet
+   * to clear.
+   * @param s3ClientSpy the spy to stub
+   * @param inconsistentCallCount the number of calls that should return the
+   * null response
+   * @param testpath the path of the object the stub should apply to
+   */
+  private void stubTemporaryNotFound(AmazonS3 s3ClientSpy,
+      int inconsistentCallCount, Path testpath) {
+    Answer<ObjectMetadata> notFound = new Answer<ObjectMetadata>() {
+      private int callCount = 0;
+
+      @Override
+      public ObjectMetadata answer(InvocationOnMock invocation) throws Throwable {
+        // simulates delayed visibility.
+        callCount++;
+        if (callCount <= inconsistentCallCount) {
+          LOG.info("Temporarily unavailable {} count {} of {}",
+              testpath, callCount, inconsistentCallCount);
+          logLocationAtDebug();
+          throw new FileNotFoundException(testpath.toString());
+        }
+        return (ObjectMetadata) invocation.callRealMethod();
+      }
+    };
+
+    // HEAD requests will fail
+    doAnswer(notFound).when(s3ClientSpy).getObjectMetadata(
+        matchingMetadataRequest(testpath));
+  }
+
 }
