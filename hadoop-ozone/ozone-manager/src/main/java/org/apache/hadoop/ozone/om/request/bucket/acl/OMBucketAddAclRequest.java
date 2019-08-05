@@ -87,7 +87,7 @@ public class OMBucketAddAclRequest extends OMBucketAclRequest {
   @Override
   OMClientResponse onSuccess(OMResponse.Builder omResponse,
       OmBucketInfo omBucketInfo, boolean operationResult) {
-    omResponse.setSuccess(false);
+    omResponse.setSuccess(operationResult);
     omResponse.setAddAclResponse(AddAclResponse.newBuilder()
          .setResponse(operationResult));
     return new OMBucketAclResponse(omBucketInfo,
