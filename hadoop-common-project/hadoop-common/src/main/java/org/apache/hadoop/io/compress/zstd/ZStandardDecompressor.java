@@ -113,6 +113,11 @@ public class ZStandardDecompressor implements Decompressor {
     compressedDirectBuf.put(
         userBuf, userBufOff, bytesInCompressedBuffer);
 
+    // if there are some bytes in compressedDirectBuf, need set finished to false.
+    if (compressedDirectBuf.position() > 0 && finished == true) {
+      finished = false;
+    }
+
     userBufOff += bytesInCompressedBuffer;
     userBufferBytesToConsume -= bytesInCompressedBuffer;
   }
@@ -186,6 +191,11 @@ public class ZStandardDecompressor implements Decompressor {
         0,
         directBufferSize
     );
+
+    if (remaining > 0 && finished == true) {
+      finished = false;
+    }
+
     uncompressedDirectBuf.limit(n);
 
     // Get at most 'len' bytes

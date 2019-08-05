@@ -235,6 +235,56 @@ public class TestZStandardCompressorDecompressor {
   }
 
   @Test
+  public void testCompressorDecompressorLogicWithCompressionStreams2()
+      throws Exception {
+    DataOutputStream deflateOut = null;
+    DataInputStream inflateIn = null;
+    int byteSize = 1024 * 100;
+    byte[] bytes = generate(byteSize);
+    int firstLength = 1024 * 30;
+
+    int bufferSize = IO_FILE_BUFFER_SIZE_DEFAULT;
+    try {
+      DataOutputBuffer compressedDataBuffer = new DataOutputBuffer();
+      CompressionOutputStream deflateFilter =
+          new CompressorStream(compressedDataBuffer, new ZStandardCompressor(),
+              bufferSize);
+      deflateOut =
+          new DataOutputStream(new BufferedOutputStream(deflateFilter));
+      deflateOut.write(bytes, 0, firstLength);
+      deflateFilter.finish();
+      deflateOut.flush();
+      deflateFilter.resetState();
+      deflateOut.write(bytes, firstLength, firstLength);
+      deflateFilter.finish();
+      deflateOut.flush();
+      deflateFilter.resetState();
+      deflateOut.write(bytes, firstLength * 2, byteSize - firstLength * 2);
+      deflateFilter.finish();
+      deflateOut.flush();
+
+      DataInputBuffer deCompressedDataBuffer = new DataInputBuffer();
+      deCompressedDataBuffer.reset(compressedDataBuffer.getData(), 0,
+          compressedDataBuffer.getLength());
+
+      CompressionInputStream inflateFilter =
+          new DecompressorStream(deCompressedDataBuffer,
+              new ZStandardDecompressor(bufferSize), bufferSize);
+
+      inflateIn = new DataInputStream(new BufferedInputStream(inflateFilter));
+
+      byte[] result = new byte[byteSize];
+      inflateIn.read(result);
+      assertArrayEquals("original array not equals compress/decompressed array",
+          result, bytes);
+    } finally {
+      IOUtils.closeQuietly(deflateOut);
+      IOUtils.closeQuietly(inflateIn);
+    }
+  }
+
+
+  @Test
   public void testZStandardCompressDecompressInMultiThreads() throws Exception {
     MultithreadedTestUtil.TestContext ctx =
         new MultithreadedTestUtil.TestContext();
@@ -337,51 +387,6 @@ public class TestZStandardCompressorDecompressor {
     assertEquals(rawDataSize, compressor.getBytesRead());
     assertTrue("compressed size no less then original size",
         cSize < rawDataSize);
-    decompressor.setInput(compressedResult, 0, cSize);
-    byte[] decompressedBytes = new byte[rawDataSize];
-    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
-    String decompressed = bytesToHex(decompressedBytes);
-    String original = bytesToHex(rawData);
-    assertEquals(original, decompressed);
-    compressor.reset();
-    decompressor.reset();
-  }
-
-  @Test
-  public void testZStandardCompressDecompress2() throws Exception {
-    assertTrue(false);
-    byte[] rawData = null;
-    int rawDataSize = 0;
-    rawDataSize = IO_FILE_BUFFER_SIZE_DEFAULT;
-    rawData = generate(rawDataSize);
-    int firstLength = rawDataSize/2;
-
-    ZStandardCompressor compressor = new ZStandardCompressor();
-    assertTrue(compressor.needsInput());
-    assertFalse("testZStandardCompressDecompress finished error",
-        compressor.finished());
-    compressor.setInput(rawData, 0, firstLength);
-    compressor.finish();
-    byte[] compressedResult = new byte[rawDataSize];
-    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
-    assertEquals(firstLength, compressor.getBytesRead());
-    assertTrue("compressed size no less then original size",
-        cSize < firstLength);
-    /// ?????
-    assertTrue(compressor.finished());
-    compressor.reset();
-    assertFalse("testZStandardCompressDecompress finished error",
-        compressor.finished());
-    compressor.setInput(rawData, firstLength, rawDataSize);
-    compressor.finish();
-    cSize = compressor.compress(compressedResult, cSize, rawDataSize);
-    assertEquals(rawDataSize - firstLength, compressor.getBytesRead());
-    assertTrue("compressed size no less then original size",
-        cSize < rawDataSize - firstLength);
-    assertTrue(compressor.finished());
-
-
-    ZStandardDecompressor decompressor = new ZStandardDecompressor(rawDataSize);
     decompressor.setInput(compressedResult, 0, cSize);
     byte[] decompressedBytes = new byte[rawDataSize];
     decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
