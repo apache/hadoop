@@ -122,14 +122,14 @@ public class TestReplicationManager {
    */
   @Test
   public void testReplicationManagerRestart() throws InterruptedException {
-   Assert.assertTrue(replicationManager.isRunning());
-   replicationManager.stop();
-   // Stop is a non-blocking call, it might take sometime for the
-   // ReplicationManager to shutdown
-   Thread.sleep(500);
-   Assert.assertFalse(replicationManager.isRunning());
-   replicationManager.start();
-   Assert.assertTrue(replicationManager.isRunning());
+    Assert.assertTrue(replicationManager.isRunning());
+    replicationManager.stop();
+    // Stop is a non-blocking call, it might take sometime for the
+    // ReplicationManager to shutdown
+    Thread.sleep(500);
+    Assert.assertFalse(replicationManager.isRunning());
+    replicationManager.start();
+    Assert.assertTrue(replicationManager.isRunning());
   }
 
   /**

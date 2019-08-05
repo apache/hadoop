@@ -166,7 +166,13 @@ public class ReplicationManager {
    * @return true if running, false otherwise
    */
   public boolean isRunning() {
-    return replicationMonitor != null && replicationMonitor.isAlive();
+    if (!running) {
+      synchronized (this) {
+        return replicationMonitor != null
+            && replicationMonitor.isAlive();
+      }
+    }
+    return true;
   }
 
   /**

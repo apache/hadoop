@@ -418,7 +418,7 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
           StartReplicationManagerRequestProto.getDefaultInstance();
       rpcProxy.startReplicationManager(NULL_RPC_CONTROLLER, request);
     } catch (ServiceException e) {
-    throw ProtobufHelper.getRemoteException(e);
+      throw ProtobufHelper.getRemoteException(e);
     }
   }
 
