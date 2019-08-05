@@ -148,7 +148,7 @@ public class ReplicationManager {
    * Starts Replication Monitor thread.
    */
   public synchronized void start() {
-    if (!running) {
+    if (!isRunning()) {
       LOG.info("Starting Replication Monitor Thread.");
       running = true;
       replicationMonitor = new Thread(this::run);

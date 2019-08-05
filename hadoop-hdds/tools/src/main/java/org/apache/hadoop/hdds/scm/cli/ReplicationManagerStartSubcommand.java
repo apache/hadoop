@@ -19,6 +19,8 @@ package org.apache.hadoop.hdds.scm.cli;
 
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.scm.client.ScmClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ParentCommand;
 
@@ -34,6 +36,9 @@ import java.util.concurrent.Callable;
     versionProvider = HddsVersionProvider.class)
 public class ReplicationManagerStartSubcommand implements Callable<Void> {
 
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReplicationManagerStartSubcommand.class);
+
   @ParentCommand
   private ReplicationManagerCommands parent;
 
@@ -41,6 +46,7 @@ public class ReplicationManagerStartSubcommand implements Callable<Void> {
   public Void call() throws Exception {
     try (ScmClient scmClient = parent.getParent().createScmClient()) {
       scmClient.startReplicationManager();
+      LOG.info("Starting ReplicationManager...");
       return null;
     }
   }
