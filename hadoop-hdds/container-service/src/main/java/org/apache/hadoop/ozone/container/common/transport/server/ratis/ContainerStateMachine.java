@@ -674,30 +674,54 @@ public class ContainerStateMachine extends BaseStateMachine {
       if (cmdType == Type.WriteChunk || cmdType ==Type.PutSmallFile) {
         builder.setCreateContainerSet(createContainerSet);
       }
+      CompletableFuture<Message> applyTransactionFuture =
+          new CompletableFuture<>();
       // Ensure the command gets executed in a separate thread than
       // stateMachineUpdater thread which is calling applyTransaction here.
-      CompletableFuture<Message> future = CompletableFuture
-          .supplyAsync(() -> runCommand(requestProto, builder.build()),
+      CompletableFuture<ContainerCommandResponseProto> future =
+          CompletableFuture.supplyAsync(
+              () -> runCommandGetResponse(requestProto, builder.build()),
               getCommandExecutor(requestProto));
-
-      future.thenAccept(m -> {
+      future.thenApply(r -> {
         if (trx.getServerRole() == RaftPeerRole.LEADER) {
           long startTime = (long) trx.getStateMachineContext();
           metrics.incPipelineLatency(cmdType,
               Time.monotonicNowNanos() - startTime);
         }
-
-        final Long previous =
-            applyTransactionCompletionMap
-                .put(index, trx.getLogEntry().getTerm());
-        Preconditions.checkState(previous == null);
-        if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
-          metrics.incNumBytesCommittedCount(
+        if (r.getResult() != ContainerProtos.Result.SUCCESS) {
+          StorageContainerException sce =
+              new StorageContainerException(r.getMessage(), r.getResult());
+          LOG.error(gid + ": ApplyTransaction failed: cmd " + r.getCmdType()
+              + " logIndex " + index + " Error message: " + r.getMessage()
+              + " Container Result: " + r.getResult());
+          metrics.incNumApplyTransactionsFails();
+          ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
+          // Since the applyTransaction now is completed exceptionally,
+          // before any further snapshot is taken , the exception will be
+          // caught in stateMachineUpdater in Ratis and ratis server will
+          // shutdown.
+          applyTransactionFuture.completeExceptionally(sce);
+        } else {
+          metrics.incNumBytesWrittenCount(
               requestProto.getWriteChunk().getChunkData().getLen());
+          LOG.debug(gid + ": ApplyTransaction completed: cmd " + r.getCmdType()
+              + " logIndex " + index + " Error message: " + r.getMessage()
+              + " Container Result: " + r.getResult());
+          applyTransactionFuture.complete(r::toByteString);
+          if (cmdType == Type.WriteChunk || cmdType == Type.PutSmallFile) {
+            metrics.incNumBytesCommittedCount(
+                requestProto.getWriteChunk().getChunkData().getLen());
+          }
         }
+
+        final Long previous = applyTransactionCompletionMap
+            .put(index, trx.getLogEntry().getTerm());
+        Preconditions.checkState(previous == null);
         updateLastApplied();
-      }).whenComplete((r, t) -> applyTransactionSemaphore.release());
-      return future;
+        applyTransactionSemaphore.release();
+        return applyTransactionFuture;
+      });
+      return applyTransactionFuture;
     } catch (IOException | InterruptedException e) {
       metrics.incNumApplyTransactionsFails();
       return completeExceptionally(e);
