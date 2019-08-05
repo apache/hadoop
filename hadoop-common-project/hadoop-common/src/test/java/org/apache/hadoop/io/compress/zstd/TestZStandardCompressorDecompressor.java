@@ -348,6 +348,50 @@ public class TestZStandardCompressorDecompressor {
   }
 
   @Test
+  public void testZStandardCompressDecompress2() throws Exception {
+    byte[] rawData = null;
+    int rawDataSize = 0;
+    rawDataSize = IO_FILE_BUFFER_SIZE_DEFAULT;
+    rawData = generate(rawDataSize);
+    int firstLength = rawDataSize/2;
+
+    ZStandardCompressor compressor = new ZStandardCompressor();
+    assertTrue(compressor.needsInput());
+    assertFalse("testZStandardCompressDecompress finished error",
+        compressor.finished());
+    compressor.setInput(rawData, 0, firstLength);
+    compressor.finish();
+    byte[] compressedResult = new byte[rawDataSize];
+    int cSize = compressor.compress(compressedResult, 0, rawDataSize);
+    assertEquals(firstLength, compressor.getBytesRead());
+    assertTrue("compressed size no less then original size",
+        cSize < firstLength);
+    /// ?????
+    assertTrue(compressor.finished());
+    compressor.reset();
+    assertFalse("testZStandardCompressDecompress finished error",
+        compressor.finished());
+    compressor.setInput(rawData, firstLength, rawDataSize);
+    compressor.finish();
+    cSize = compressor.compress(compressedResult, cSize, rawDataSize);
+    assertEquals(rawDataSize - firstLength, compressor.getBytesRead());
+    assertTrue("compressed size no less then original size",
+        cSize < rawDataSize - firstLength);
+    assertTrue(compressor.finished());
+
+
+    ZStandardDecompressor decompressor = new ZStandardDecompressor(rawDataSize);
+    decompressor.setInput(compressedResult, 0, cSize);
+    byte[] decompressedBytes = new byte[rawDataSize];
+    decompressor.decompress(decompressedBytes, 0, decompressedBytes.length);
+    String decompressed = bytesToHex(decompressedBytes);
+    String original = bytesToHex(rawData);
+    assertEquals(original, decompressed);
+    compressor.reset();
+    decompressor.reset();
+  }
+
+  @Test
   public void testDecompressingOutput() throws Exception {
     byte[] expectedDecompressedResult =
         FileUtils.readFileToByteArray(uncompressedFile);
