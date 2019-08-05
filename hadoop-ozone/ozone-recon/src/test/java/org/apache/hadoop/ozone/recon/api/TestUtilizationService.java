@@ -36,7 +36,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.powermock.api.mockito.PowerMockito.*;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 /**
  * Test for Filesize count service.
@@ -70,6 +73,10 @@ public class TestUtilizationService extends AbstractOMMetadataManagerTest {
     when(utilizationService.getDao()).thenReturn(fileCountBySizeDao);
     when(fileCountBySizeDao.findAll()).thenReturn(resultList);
 
+    utilizationService.getFileCounts();
+    verify(utilizationService, times(1)).getFileCounts();
+    verify(fileCountBySizeDao, times(1)).findAll();
+
     assertEquals(41, resultList.size());
     long fileSize = 4096L;
     int index =  findIndex(fileSize);
@@ -78,7 +85,7 @@ public class TestUtilizationService extends AbstractOMMetadataManagerTest {
 
     fileSize = 1125899906842624L;
     index = findIndex(fileSize);
-    if(index == Integer.MIN_VALUE) {
+    if (index == Integer.MIN_VALUE) {
       throw new IOException("File Size larger than permissible file size");
     }
 
@@ -95,11 +102,11 @@ public class TestUtilizationService extends AbstractOMMetadataManagerTest {
 
   public int findIndex(long dataSize) {
     int logValue = (int) Math.ceil(Math.log(dataSize)/Math.log(2));
-    if(logValue < 10){
+    if (logValue < 10) {
       return 0;
-    } else{
+    } else {
       int index = logValue - 10;
-      if(index > maxBinSize) {
+      if (index > maxBinSize) {
         return Integer.MIN_VALUE;
       }
       return (dataSize % ONE_KB == 0) ? index + 1 : index;

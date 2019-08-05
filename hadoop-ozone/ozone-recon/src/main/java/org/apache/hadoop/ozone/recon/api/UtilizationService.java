@@ -63,7 +63,7 @@ public class UtilizationService {
     List<FileCountBySize> resultSet = fileCountBySizeDao.findAll();
 
     Map<Long, Long> fileSizeCountResponseMap = new LinkedHashMap<>();
-    for(FileCountBySize row : resultSet){
+    for (FileCountBySize row : resultSet) {
       fileSizeCountResponseMap.put(row.getFileSizeKb(), row.getCount());
     }
     return Response.ok(fileSizeCountResponseMap).build();

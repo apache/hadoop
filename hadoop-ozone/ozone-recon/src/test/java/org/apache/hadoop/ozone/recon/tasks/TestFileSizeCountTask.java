@@ -18,351 +18,123 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
-import com.google.inject.Injector;
-import org.apache.hadoop.hdds.client.BlockID;
-import org.apache.hadoop.hdds.conf.OzoneConfiguration;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
-import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
-import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
-import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
-import org.apache.hadoop.ozone.recon.ReconUtils;
-import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
-import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
-import org.apache.hadoop.utils.db.Table;
-import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
-import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
-import org.hadoop.ozone.recon.schema.tables.pojos.FileCountBySize;
-import org.jooq.Configuration;
-import org.jooq.impl.DSL;
-import org.jooq.impl.DefaultConfiguration;
-import org.junit.Before;
-import org.junit.Rule;
+import org.apache.hadoop.utils.db.TypedTable;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
+
 import org.junit.runner.RunWith;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.Collections;
-import java.util.List;
-import java.util.ArrayList;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.powermock.api.mockito.PowerMockito.mock;
+import static org.powermock.api.mockito.PowerMockito.when;
 
 /**
  * Unit test for Container Key mapper task.
  */
 @RunWith(PowerMockRunner.class)
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
-@PrepareForTest(ReconUtils.class)
+@PrepareForTest(OmKeyInfo.class)
+
 public class TestFileSizeCountTask extends AbstractOMMetadataManagerTest {
-  private OMMetadataManager omMetadataManager;
-  private ReconOMMetadataManager reconOMMetadataManager;
-  private Injector injector;
-  private OzoneManagerServiceProviderImpl ozoneManagerServiceProvider;
-  private boolean setUpIsDone = false;
-  private GuiceInjectorUtilsForTestsImpl guiceInjectorTest =
-      new GuiceInjectorUtilsForTestsImpl();
+  @Test
+  public void testCalculateBinIndex() {
+    FileSizeCountTask fileSizeCountTask = mock(FileSizeCountTask.class);
 
-  private Injector getInjector() {
-    return injector;
-  }
-  private Configuration sqlConfiguration;
-  private int maxBinSize = 41;
-  @Rule
-  TemporaryFolder temporaryFolder = new TemporaryFolder();
+    when(fileSizeCountTask.getMaxFileSizeUpperBound()).
+        thenReturn(1125899906842624L);    // 1 PB
+    when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
+    when(fileSizeCountTask.getMaxBinSize()).thenReturn(42);
 
-  private void initializeInjector() throws Exception {
-    omMetadataManager = initializeNewOmMetadataManager();
-    OzoneConfiguration configuration =
-        guiceInjectorTest.getTestOzoneConfiguration(temporaryFolder);
+    doCallRealMethod().when(fileSizeCountTask).setMaxBinSize();
+    when(fileSizeCountTask.calculateBinIndex(anyLong())).thenCallRealMethod();
 
-    ozoneManagerServiceProvider = new OzoneManagerServiceProviderImpl(
-        configuration);
-    reconOMMetadataManager = getTestMetadataManager(omMetadataManager);
+    fileSizeCountTask.setMaxBinSize();
 
-    injector = guiceInjectorTest.getInjector(
-        ozoneManagerServiceProvider, reconOMMetadataManager, temporaryFolder);
-  }
+    long fileSize = 1024L;            // 1 KB
+    int binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(1L, binIndex);
 
-  @Before
-  public void setUp() throws Exception {
-    // The following setup is run only once
-    if (!setUpIsDone) {
-      initializeInjector();
+    fileSize = 1023L;
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(0L, binIndex);
 
-      DSL.using(new DefaultConfiguration().set(
-          injector.getInstance(DataSource.class)));
+    fileSize = 562949953421312L;      // 512 TB
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(40L, binIndex);
 
-      UtilizationSchemaDefinition utilizationSchemaDefinition =
-          getInjector().getInstance(UtilizationSchemaDefinition.class);
-      utilizationSchemaDefinition.initializeSchema();
+    fileSize = 562949953421313L;      // (512 TB + 1B)
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(40L, binIndex);
 
-      sqlConfiguration = getInjector().getInstance(Configuration.class);
-      setUpIsDone = true;
-    }
+    fileSize = 562949953421311L;      // (512 TB - 1B)
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(39L, binIndex);
+
+    fileSize = 1125899906842624L;      // 1 PB - last (extra) bin
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(41L, binIndex);
+
+    fileSize = 100000L;
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(7L, binIndex);
   }
 
   @Test
   public void testFileCountBySizeReprocess() throws IOException {
-    Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
-    assertTrue(omKeyInfoTable.isEmpty());
+    OmKeyInfo omKeyInfo1 = mock(OmKeyInfo.class);
+    given(omKeyInfo1.getKeyName()).willReturn("key1");
+    given(omKeyInfo1.getDataSize()).willReturn(1000L);
 
-    Pipeline pipeline = getRandomPipeline();
-    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
-    BlockID blockID1 = new BlockID(1, 1);
-    OmKeyLocationInfo omKeyLocationInfo1 =
-        getOmKeyLocationInfo(blockID1, pipeline);
+    OMMetadataManager omMetadataManager = mock(OmMetadataManagerImpl.class);
+    TypedTable<String, OmKeyInfo> keyTable = mock(TypedTable.class);
 
-    BlockID blockID2 = new BlockID(2, 1);
-    OmKeyLocationInfo omKeyLocationInfo2 =
-        getOmKeyLocationInfo(blockID2, pipeline);
 
-    omKeyLocationInfoList.add(omKeyLocationInfo1);
-    omKeyLocationInfoList.add(omKeyLocationInfo2);
+    TypedTable.TypedTableIterator mockKeyIter = mock(TypedTable
+        .TypedTableIterator.class);
+    TypedTable.TypedKeyValue mockKeyValue = mock(
+        TypedTable.TypedKeyValue.class);
 
-    OmKeyLocationInfoGroup omKeyLocationInfoGroup =
-        new OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
+    when(keyTable.iterator()).thenReturn(mockKeyIter);
+    when(omMetadataManager.getKeyTable()).thenReturn(keyTable);
+    when(mockKeyIter.hasNext()).thenReturn(true).thenReturn(false);
+    when(mockKeyIter.next()).thenReturn(mockKeyValue);
+    when(mockKeyValue.getValue()).thenReturn(omKeyInfo1);
 
-    writeDataToOm(omMetadataManager,
-        "key_1",
-        "bucket_1",
-        "sampleVol_1",
-            1048576L,
-        Collections.singletonList(omKeyLocationInfoGroup));
+    FileSizeCountTask fileSizeCountTask = mock(FileSizeCountTask.class);
 
-    writeDataToOm(omMetadataManager,
-            "key_2",
-            "bucket_2",
-            "sampleVol_2",
-        1048575L,
-            Collections.singletonList(omKeyLocationInfoGroup));
+    when(fileSizeCountTask.getMaxFileSizeUpperBound()).
+        thenReturn(4096L);
+    when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
+    when(fileSizeCountTask.getMaxBinSize()).thenReturn(3);
 
-    writeDataToOm(omMetadataManager,
-            "key_3",
-            "bucket_3",
-            "sampleVol_3",
-            1023L,
-            Collections.singletonList(omKeyLocationInfoGroup));
+    when(fileSizeCountTask.reprocess(omMetadataManager)).thenCallRealMethod();
+    doCallRealMethod().when(fileSizeCountTask).
+        fetchUpperBoundCount("reprocess");
+    doCallRealMethod().when(fileSizeCountTask).setMaxBinSize();
 
-    writeDataToOm(omMetadataManager,
-            "key_4",
-            "bucket_4",
-            "sampleVol_4",
-            1024L,
-            Collections.singletonList(omKeyLocationInfoGroup));
-
-    writeDataToOm(omMetadataManager,
-        "key_5",
-        "bucket_5",
-        "sampleVol_5",
-        1048577L,
-        Collections.singletonList(omKeyLocationInfoGroup));
-
-    writeDataToOm(omMetadataManager,
-        "key_6",
-        "bucket_6",
-        "sampleVol_6",
-        1125899906842623L,
-        Collections.singletonList(omKeyLocationInfoGroup));
-
-    writeDataToOm(omMetadataManager,
-        "key_7",
-        "bucket_7",
-        "sampleVol_7",
-        562949953421313L,
-        Collections.singletonList(omKeyLocationInfoGroup));
-
-    writeDataToOm(omMetadataManager,
-        "key_8",
-        "bucket_8",
-        "sampleVol_8",
-        562949953421311L,
-        Collections.singletonList(omKeyLocationInfoGroup));
-
-    FileSizeCountTask fileSizeCountTask =
-        new FileSizeCountTask(omMetadataManager, sqlConfiguration);
+    //call reprocess()
     fileSizeCountTask.reprocess(omMetadataManager);
 
-    omKeyInfoTable = omMetadataManager.getKeyTable();
-    assertFalse(omKeyInfoTable.isEmpty());
-
-    FileCountBySizeDao fileCountBySizeDao =
-        new FileCountBySizeDao(sqlConfiguration);
-
-    List<FileCountBySize> resultSet = fileCountBySizeDao.findAll();
-    assertEquals(maxBinSize, resultSet.size());
-
-    FileCountBySize dbRecord = fileCountBySizeDao.findById(1024L); // 1KB
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(2048L); // 2KB
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(1048576L); // 1MB
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(2097152L); // 2MB
-    assertEquals(Long.valueOf(2), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(562949953421312L); // 512TB
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(1125899906842624L); // 1PB
-    assertEquals(Long.valueOf(2), dbRecord.getCount());
-  }
-
-  @Test
-  public void testFileCountBySizeProcess() throws IOException {
-    Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
-    assertTrue(omKeyInfoTable.isEmpty());
-
-    Pipeline pipeline = getRandomPipeline();
-    List<OmKeyLocationInfo> omKeyLocationInfoList = new ArrayList<>();
-    BlockID blockID1 = new BlockID(1, 1);
-    OmKeyLocationInfo omKeyLocationInfo1 =
-            getOmKeyLocationInfo(blockID1, pipeline);
-
-    BlockID blockID2 = new BlockID(2, 1);
-    OmKeyLocationInfo omKeyLocationInfo2 =
-            getOmKeyLocationInfo(blockID2, pipeline);
-
-    omKeyLocationInfoList.add(omKeyLocationInfo1);
-    omKeyLocationInfoList.add(omKeyLocationInfo2);
-
-    OmKeyLocationInfoGroup omKeyLocationInfoGroup =
-            new OmKeyLocationInfoGroup(0, omKeyLocationInfoList);
-
-    String bucket = "bucketOne";
-    String volume = "sampleOne";
-    String key = "keyOne";
-    long dataSize = 2049L;
-    String omKey = omMetadataManager.getOzoneKey(volume, bucket, key);
-
-    OmKeyInfo omKeyInfo = buildOmKeyInfo(volume, bucket, key, dataSize,
-            omKeyLocationInfoGroup);
-
-    OMDBUpdateEvent keyEvent1 = new OMDBUpdateEvent.
-            OMUpdateEventBuilder<String, OmKeyInfo>()
-            .setKey(omKey)
-            .setValue(omKeyInfo)
-            .setTable(omMetadataManager.getKeyTable().getName())
-            .setAction(OMDBUpdateEvent.OMDBUpdateAction.PUT)
-            .build();
-
-    BlockID blockID3 = new BlockID(1, 2);
-    OmKeyLocationInfo omKeyLocationInfo3 =
-            getOmKeyLocationInfo(blockID3, pipeline);
-
-    BlockID blockID4 = new BlockID(3, 1);
-    OmKeyLocationInfo omKeyLocationInfo4
-            = getOmKeyLocationInfo(blockID4, pipeline);
-
-    omKeyLocationInfoList = new ArrayList<>();
-    omKeyLocationInfoList.add(omKeyLocationInfo3);
-    omKeyLocationInfoList.add(omKeyLocationInfo4);
-    omKeyLocationInfoGroup = new OmKeyLocationInfoGroup(0,
-            omKeyLocationInfoList);
-
-    String key2 = "keyTwo";
-    writeDataToOm(omMetadataManager, key2, bucket, volume, 2048L,
-            Collections.singletonList(omKeyLocationInfoGroup));
-
-    omKey = omMetadataManager.getOzoneKey(volume, bucket, key2);
-    omKeyInfo = buildOmKeyInfo(volume, bucket, key2, 2048L,
-            omKeyLocationInfoGroup);
-
-    OMDBUpdateEvent keyEvent2 =
-        new OMDBUpdateEvent.OMUpdateEventBuilder<String, OmKeyInfo>()
-            .setKey(omKey)
-            .setValue(omKeyInfo)
-            .setTable(omMetadataManager.getKeyTable().getName())
-            .setAction(OMDBUpdateEvent.OMDBUpdateAction.DELETE)
-            .build();
-
-    String dummyKey = omMetadataManager.getOzoneKey(volume, bucket, "dummyKey");
-    omKeyInfo = buildOmKeyInfo(volume, bucket, "dummyKey", 1125899906842624L,
-            omKeyLocationInfoGroup);
-
-    OMDBUpdateEvent keyEvent3 =
-        new OMDBUpdateEvent.OMUpdateEventBuilder<String, OmKeyInfo>()
-            .setKey(dummyKey)
-            .setValue(omKeyInfo)
-            .setTable(omMetadataManager.getKeyTable().getName())
-            .setAction(OMDBUpdateEvent.OMDBUpdateAction.PUT)
-            .build();
-
-    String key3 = omMetadataManager.getOzoneKey(volume, bucket, "dummyKey");
-    omKeyInfo = buildOmKeyInfo(volume, bucket, "dummyKey", 1024L,
-        omKeyLocationInfoGroup);
-
-    OMDBUpdateEvent keyEvent4 =
-        new OMDBUpdateEvent.OMUpdateEventBuilder<String, OmKeyInfo>()
-        .setKey(key3)
-        .setValue(omKeyInfo)
-        .setTable(omMetadataManager.getKeyTable().getName())
-        .setAction(OMDBUpdateEvent.OMDBUpdateAction.PUT)
-        .build();
-
-    OMUpdateEventBatch omUpdateEventBatch = new
-            OMUpdateEventBatch(new ArrayList<OMDBUpdateEvent>() {{
-                add(keyEvent1);
-                add(keyEvent2);
-                add(keyEvent4);
-                add(keyEvent3);
-                add(keyEvent1);
-              }});
-
-    FileSizeCountTask fileSizeCountTask =
-            new FileSizeCountTask(omMetadataManager, sqlConfiguration);
-    // call reprocess()
-    fileSizeCountTask.reprocess(omMetadataManager);
-
-    omKeyInfoTable = omMetadataManager.getKeyTable();
-    assertFalse(omKeyInfoTable.isEmpty());
-
-    FileCountBySizeDao fileCountBySizeDao =
-        new FileCountBySizeDao(sqlConfiguration);
-
-    FileCountBySize dbRecord = fileCountBySizeDao.findById(4096L);
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    // call process()
-    fileSizeCountTask.process(omUpdateEventBatch);
-
-    dbRecord = fileCountBySizeDao.findById(4096L);
-
-    //test halts after keyEvent 3. No count update for keyEvent1 in the end.
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-
-    dbRecord = fileCountBySizeDao.findById(2048L);
-    assertEquals(Long.valueOf(1), dbRecord.getCount());
-  }
-
-  private OmKeyInfo buildOmKeyInfo(String volume,
-                                   String bucket,
-                                   String key,
-                                   Long dataSize,
-                                   OmKeyLocationInfoGroup
-                                           omKeyLocationInfoGroup) {
-    return new OmKeyInfo.Builder()
-            .setBucketName(bucket)
-            .setVolumeName(volume)
-            .setKeyName(key)
-            .setDataSize(dataSize)
-            .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
-            .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
-            .setOmKeyLocationInfos(Collections.singletonList(
-                    omKeyLocationInfoGroup))
-            .build();
+    // verify invocation of calls for reprocess()
+    verify(fileSizeCountTask, times(1)).
+        fetchUpperBoundCount("reprocess");
+    verify(fileSizeCountTask,
+        times(1)).countFileSize(omKeyInfo1);
+    verify(fileSizeCountTask,
+        times(1)).populateFileCountBySizeDB();
   }
 }

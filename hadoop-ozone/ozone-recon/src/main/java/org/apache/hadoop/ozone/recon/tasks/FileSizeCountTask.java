@@ -47,9 +47,8 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   private static final Logger LOG =
       LoggerFactory.getLogger(FileSizeCountTask.class);
 
-  private int maxBinSize = 41;
-  private long maxFileSizeUpperBound = 1125899906842624L;
-  private long SIZE_512_TB = 562949953421312L;
+  private int maxBinSize;
+  private long maxFileSizeUpperBound = 1125899906842624L; // 1 PB
   private long[] upperBoundCount = new long[maxBinSize];
   private long ONE_KB = 1024L;
   private Collection<String> tables = new ArrayList<>();
@@ -65,6 +64,18 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     } catch (Exception e) {
       LOG.error("Unable to fetch Key Table updates ", e);
     }
+  }
+
+  protected long getOneKB() {
+    return ONE_KB;
+  }
+
+  protected long getMaxFileSizeUpperBound() {
+    return maxFileSizeUpperBound;
+  }
+
+  protected int getMaxBinSize() {
+    return maxBinSize;
   }
 
   /**
@@ -83,11 +94,10 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
     try (TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
         keyIter = omKeyInfoTable.iterator()) {
-      while(keyIter.hasNext()) {
+      while (keyIter.hasNext()) {
         Table.KeyValue<String, OmKeyInfo> kv = keyIter.next();
         countFileSize(kv.getValue());
       }
-
     } catch (IOException ioEx) {
       LOG.error("Unable to populate File Size Count in Recon DB. ", ioEx);
       return new ImmutablePair<>(getTaskName(), false);
@@ -99,18 +109,26 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     return new ImmutablePair<>(getTaskName(), true);
   }
 
-  private void fetchUpperBoundCount(String type) {
-    if(type.equals("process")) {
+  void setMaxBinSize() {
+    maxBinSize = (int)(long) (Math.log(getMaxFileSizeUpperBound())
+        /Math.log(2)) - 10;
+    maxBinSize += 2;  // extra bin to add files > 1PB.
+  }
+
+  void fetchUpperBoundCount(String type) {
+    setMaxBinSize();
+    if (type.equals("process")) {
+      //update array with file size count from DB
       List<FileCountBySize> resultSet = fileCountBySizeDao.findAll();
       int index = 0;
-      if(resultSet != null) {
+      if (resultSet != null) {
         for (FileCountBySize row : resultSet) {
           upperBoundCount[index] = row.getCount();
           index++;
         }
       }
     } else {
-      upperBoundCount = new long[maxBinSize];
+      upperBoundCount = new long[getMaxBinSize()];    //initialize array
     }
   }
 
@@ -165,45 +183,50 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
 
   /**
    * Calculate the bin index based on size of the Key.
+   * The logic is works by setting all bits after the
+   * leftmost set bit in (n-1).
    *
    * @param dataSize Size of the key.
    * @return int bin index in upperBoundCount
    */
-  private int calcBinIndex(long dataSize) {
-    if(dataSize >= maxFileSizeUpperBound) {
-      return Integer.MIN_VALUE;
-    } else if (dataSize > SIZE_512_TB) {
-      //given the small difference in 512TB and 512TB + 1B, index for both would
-      //return same, to differentiate specific condition added.
-      return maxBinSize - 1;
+  int calculateBinIndex(long dataSize) {
+    // files >= 1PB go into the last bin.
+    if (dataSize >= getMaxFileSizeUpperBound()) {
+      return getMaxBinSize() - 1;
     }
-    int logValue = (int) Math.ceil(Math.log(dataSize)/Math.log(2));
-    if(logValue < 10){
-      return 0;
-    } else{
-      return (dataSize % ONE_KB == 0) ? logValue - 10 + 1: logValue - 10;
+    int index = 0;
+    if (dataSize % getOneKB() == 0) {
+      index = (int) (long) (Math.log(dataSize)/Math.log(2)) + 1;
+    } else {
+      dataSize--;
+      dataSize |= dataSize >> 1;
+      dataSize |= dataSize >> 2;
+      dataSize |= dataSize >> 4;
+      dataSize |= dataSize >> 8;
+      dataSize |= dataSize >> 16;
+      dataSize |= dataSize >> 32;
+      dataSize++;
+
+      index = (int) (long) (Math.log(dataSize)/Math.log(2));
     }
+    return index < 10 ? 0 : index - 10;
   }
 
-  private void countFileSize(OmKeyInfo omKeyInfo) throws IOException{
-    int index = calcBinIndex(omKeyInfo.getDataSize());
-    if(index == Integer.MIN_VALUE) {
-      throw new IOException("File Size larger than permissible file size "
-          + maxFileSizeUpperBound +" bytes");
-    }
+  void countFileSize(OmKeyInfo omKeyInfo) {
+    int index = calculateBinIndex(omKeyInfo.getDataSize());
     upperBoundCount[index]++;
   }
 
-  private void populateFileCountBySizeDB() {
+  void populateFileCountBySizeDB() {
     for (int i = 0; i < upperBoundCount.length; i++) {
       long fileSizeUpperBound = (long) Math.pow(2, (10 + i));
       FileCountBySize fileCountRecord =
           fileCountBySizeDao.findById(fileSizeUpperBound);
       FileCountBySize newRecord = new
           FileCountBySize(fileSizeUpperBound, upperBoundCount[i]);
-      if(fileCountRecord == null){
+      if (fileCountRecord == null) {
         fileCountBySizeDao.insert(newRecord);
-      } else{
+      } else {
         fileCountBySizeDao.update(newRecord);
       }
     }
@@ -211,14 +234,14 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
 
   private void updateUpperBoundCount(OmKeyInfo value, String operation)
       throws IOException {
-    int binIndex = calcBinIndex(value.getDataSize());
-    if(binIndex == Integer.MIN_VALUE) {
+    int binIndex = calculateBinIndex(value.getDataSize());
+    if (binIndex == Integer.MIN_VALUE) {
       throw new IOException("File Size larger than permissible file size");
     }
-    if(operation.equals("PUT")) {
+    if (operation.equals("PUT")) {
       upperBoundCount[binIndex]++;
-    } else if(operation.equals("DELETE")) {
-      if(upperBoundCount[binIndex] != 0) {
+    } else if (operation.equals("DELETE")) {
+      if (upperBoundCount[binIndex] != 0) {
         //decrement only if it had files before, default DB value is 0
         upperBoundCount[binIndex]--;
       } else {
