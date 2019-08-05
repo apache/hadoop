@@ -42,25 +42,4 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 
   </dependencies>
 
-  <build>
-    <plugins>
-      <plugin>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.1</version>
-        <executions>
-        <execution>
-          <id>default-compile</id>
-          <phase>compile</phase>
-          <goals>
-            <goal>compile</goal>
-          </goals>
-          <configuration>
-            <!-- don't need to activate annotation processor (which may not be available yet) for compilation -->
-            <compilerArgument>-proc:none</compilerArgument>
-          </configuration>
-        </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>
