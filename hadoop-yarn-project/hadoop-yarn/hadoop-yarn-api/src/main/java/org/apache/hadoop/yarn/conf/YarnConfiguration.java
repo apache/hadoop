@@ -3330,6 +3330,12 @@ public class YarnConfiguration extends Configuration {
       DEFAULT_TIMELINE_SERVICE_COLLECTOR_WEBAPP_HTTPS_ADDRESS =
       DEFAULT_TIMELINE_SERVICE_WEBAPP_HTTPS_ADDRESS;
 
+  /**
+   * Containers launcher implementation to use.
+   */
+  public static final String NM_CONTAINERS_LAUNCHER_CLASS =
+      NM_PREFIX + "containers-launcher.class";
+
   public YarnConfiguration() {
     super();
   }
