@@ -2316,8 +2316,6 @@ public abstract class TestOzoneRpcClientAbstract {
 
   private void validateDefaultAcls(OzoneObj parentObj, OzoneObj childObj,
       OzoneVolume volume,  OzoneBucket bucket) throws Exception {
-    assumeFalse("Remove this once ACL HA is supported",
-        getClass().equals(TestOzoneRpcClientWithRatis.class));
     assertTrue(store.addAcl(parentObj, defaultUserAcl));
     assertTrue(store.addAcl(parentObj, defaultGroupAcl));
     if (volume != null) {
