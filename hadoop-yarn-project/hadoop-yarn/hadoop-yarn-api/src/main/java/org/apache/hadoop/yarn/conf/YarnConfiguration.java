@@ -4053,6 +4053,12 @@ public class YarnConfiguration extends Configuration {
   public static final int
       DEFAULT_RM_ACTIVITIES_MANAGER_APP_ACTIVITIES_MAX_QUEUE_LENGTH = 100;
 
+  /**
+   * Containers launcher implementation to use.
+   */
+  public static final String NM_CONTAINERS_LAUNCHER_CLASS =
+      NM_PREFIX + "containers-launcher.class";
+
   public YarnConfiguration() {
     super();
   }
