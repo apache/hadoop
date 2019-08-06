@@ -2207,6 +2207,7 @@ public abstract class TestOzoneRpcClientAbstract {
     validateOzoneAccessAcl(ozObj);
   }
 
+  @Ignore("This will be fixed when HA support is added to acl operations")
   @Test
   public void testNativeAclsForBucket() throws Exception {
     assumeFalse("Remove this once ACL HA is supported",
@@ -2269,6 +2270,7 @@ public abstract class TestOzoneRpcClientAbstract {
         acls.contains(inheritedGroupAcl));
   }
 
+  @Ignore("This will be fixed when HA support is added to acl operations")
   @Test
   public void testNativeAclsForKey() throws Exception {
     assumeFalse("Remove this once ACL HA is supported",
@@ -2333,6 +2335,7 @@ public abstract class TestOzoneRpcClientAbstract {
     validateDefaultAcls(prefixObj, ozObj, null, bucket);
   }
 
+  @Ignore("This will be fixed when HA support is added to acl operations")
   @Test
   public void testNativeAclsForPrefix() throws Exception {
     assumeFalse("Remove this once ACL HA is supported",
