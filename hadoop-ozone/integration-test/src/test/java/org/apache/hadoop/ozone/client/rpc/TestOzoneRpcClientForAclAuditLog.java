@@ -14,7 +14,9 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
 import org.junit.Test;
+import org.junit.runners.MethodSorters;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,6 +36,7 @@ import static org.junit.Assert.assertTrue;
 /**
  * This class is to test audit logs for xxxACL APIs of Ozone Client.
  */
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestOzoneRpcClientForAclAuditLog extends
     TestOzoneRpcClientAbstract {
 
