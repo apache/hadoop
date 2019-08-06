@@ -37,6 +37,9 @@ import org.apache.hadoop.ozone.om.request.key.OMKeyRenameRequest;
 import org.apache.hadoop.ozone.om.request.key.acl.OMKeyAddAclRequest;
 import org.apache.hadoop.ozone.om.request.key.acl.OMKeyRemoveAclRequest;
 import org.apache.hadoop.ozone.om.request.key.acl.OMKeySetAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixAddAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.prefix.OMPrefixSetAclRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUploadRequest;
@@ -146,6 +149,8 @@ public final class OzoneManagerRatisUtils {
         return new OMBucketAddAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
         return new OMKeyAddAclRequest(omRequest);
+      } else {
+        return new OMPrefixAddAclRequest(omRequest);
       }
     } else if (Type.RemoveAcl == cmdType) {
       ObjectType type = omRequest.getRemoveAclRequest().getObj().getResType();
@@ -155,8 +160,10 @@ public final class OzoneManagerRatisUtils {
         return new OMBucketRemoveAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
         return new OMKeyRemoveAclRequest(omRequest);
+      } else {
+        return new OMPrefixRemoveAclRequest(omRequest);
       }
-    } else if (Type.SetAcl == cmdType) {
+    } else {
       ObjectType type = omRequest.getSetAclRequest().getObj().getResType();
       if (ObjectType.VOLUME == type) {
         return new OMVolumeSetAclRequest(omRequest);
@@ -164,10 +171,10 @@ public final class OzoneManagerRatisUtils {
         return new OMBucketSetAclRequest(omRequest);
       } else if (ObjectType.KEY == type) {
         return new OMKeySetAclRequest(omRequest);
+      } else {
+        return new OMPrefixSetAclRequest(omRequest);
       }
     }
-    //TODO: handle key and prefix AddAcl
-    return null;
   }
 
   /**

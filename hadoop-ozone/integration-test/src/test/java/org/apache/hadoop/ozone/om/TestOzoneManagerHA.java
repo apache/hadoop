@@ -70,6 +70,7 @@ import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
@@ -899,13 +900,87 @@ public class TestOzoneManagerHA {
 
   }
 
+  @Test
+  public void testAddPrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    testAddAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+  @Test
+  public void testRemovePrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, ACCESS);
+    OzoneAcl userAcl1 = new OzoneAcl(USER, "remote",
+        READ, ACCESS);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    boolean result = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(result);
+
+    result = objectStore.addAcl(ozoneObj, userAcl1);
+    Assert.assertTrue(result);
+
+    result = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertTrue(result);
+
+    // try removing already removed acl.
+    result = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertFalse(result);
+
+    result = objectStore.removeAcl(ozoneObj, userAcl1);
+    Assert.assertTrue(result);
+
+  }
+
+  @Test
+  public void testSetPrefixAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    String prefixName = RandomStringUtils.randomAlphabetic(5) +"/";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.PREFIX)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setPrefixName(prefixName).build();
+
+    testSetAcl(remoteUserName, ozoneObj, defaultUserAcl);
+  }
+
 
   private void testSetAcl(String remoteUserName, OzoneObj ozoneObj,
       OzoneAcl userAcl) throws Exception {
     // As by default create will add some default acls in RpcClient.
-    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
 
-    Assert.assertTrue(acls.size() > 0);
+    if (!ozoneObj.getResourceType().name().equals(
+        OzoneObj.ResourceType.PREFIX.name())) {
+      List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+      Assert.assertTrue(acls.size() > 0);
+    }
 
     OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
         WRITE, DEFAULT);
