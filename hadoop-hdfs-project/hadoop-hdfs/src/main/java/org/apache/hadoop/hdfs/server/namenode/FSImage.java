@@ -72,6 +72,7 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.log.LogThrottlingHelper;
 import org.apache.hadoop.log.LogThrottlingHelper.LogAction;
 import org.apache.hadoop.util.ExitUtil;
+import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.base.Joiner;
@@ -86,6 +87,11 @@ import com.google.common.collect.Lists;
 @InterfaceStability.Evolving
 public class FSImage implements Closeable {
   public static final Log LOG = LogFactory.getLog(FSImage.class.getName());
+
+  /**
+   * Priority of the FSImageSaver shutdown hook: {@value}.
+   */
+  public static final int SHUTDOWN_HOOK_PRIORITY = 10;
 
   protected FSEditLog editLog = null;
   private boolean isUpgradeFinalized = false;
@@ -1035,6 +1041,21 @@ public class FSImage implements Closeable {
 
     @Override
     public void run() {
+      // Deletes checkpoint file in every storage directory when shutdown.
+      Runnable cancelCheckpointFinalizer = new Runnable() {
+        @Override
+        public void run() {
+          try {
+            deleteCancelledCheckpoint(context.getTxId());
+            LOG.info("FSImageSaver clean checkpoint: txid = "
+                + context.getTxId() + " when meet shutdown.");
+          } catch (IOException e) {
+            LOG.error("FSImageSaver cancel checkpoint threw an exception:", e);
+          }
+        }
+      };
+      ShutdownHookManager.get().addShutdownHook(cancelCheckpointFinalizer,
+          SHUTDOWN_HOOK_PRIORITY);
       try {
         saveFSImage(context, sd, nnf);
       } catch (SaveNamespaceCancelledException snce) {
@@ -1044,6 +1065,13 @@ public class FSImage implements Closeable {
       } catch (Throwable t) {
         LOG.error("Unable to save image for " + sd.getRoot(), t);
         context.reportErrorOnStorageDirectory(sd);
+        try {
+          deleteCancelledCheckpoint(context.getTxId());
+          LOG.info("FSImageSaver clean checkpoint: txid = "
+              + context.getTxId() + " when meet Throwable.");
+        } catch (IOException e) {
+          LOG.error("FSImageSaver cancel checkpoint threw an exception:", e);
+        }
       }
     }
     
