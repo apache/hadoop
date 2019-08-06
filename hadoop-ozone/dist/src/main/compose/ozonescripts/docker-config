@@ -14,7 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64/
 CORE-SITE.XML_fs.defaultFS=hdfs://namenode:9000
 OZONE-SITE.XML_ozone.ksm.address=ksm
 OZONE-SITE.XML_ozone.scm.names=scm
