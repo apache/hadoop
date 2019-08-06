@@ -47,7 +47,8 @@ public class OMVolumeAclOpResponse extends OMClientResponse {
 
     // For OmResponse with failure, this should do nothing. This method is
     // not called in failure scenario in OM code.
-    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
+    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK &&
+        getOMResponse().getSuccess()) {
       omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
           omMetadataManager.getVolumeKey(omVolumeArgs.getVolume()),
           omVolumeArgs);
