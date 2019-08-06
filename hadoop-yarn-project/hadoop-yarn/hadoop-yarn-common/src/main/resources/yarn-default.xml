@@ -4015,4 +4015,13 @@
     <name>yarn.node-attribute.fs-store.impl.class</name>
     <value>org.apache.hadoop.yarn.server.resourcemanager.nodelabels.FileSystemNodeAttributeStore</value>
   </property>
+
+  <property>
+    <description>
+      Containers launcher implementation for determining how containers
+      are launched within NodeManagers.
+    </description>
+    <name>yarn.nodemanager.containers-launcher.class</name>
+    <value>org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher</value>
+  </property>
 </configuration>

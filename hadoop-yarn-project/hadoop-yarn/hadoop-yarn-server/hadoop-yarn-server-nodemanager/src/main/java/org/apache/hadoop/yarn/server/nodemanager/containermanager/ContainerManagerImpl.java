@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.ByteString;
+import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.UpdateContainerTokenEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerTokenUpdatedEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.scheduler.ContainerSchedulerEvent;
@@ -128,6 +129,7 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Cont
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerReInitEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.AbstractContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncher;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.SignalContainersLauncherEvent;
@@ -205,7 +207,7 @@ public class ContainerManagerImpl extends CompositeService implements
   private final ContainersMonitor containersMonitor;
   private Server server;
   private final ResourceLocalizationService rsrcLocalizationSrvc;
-  private final ContainersLauncher containersLauncher;
+  private final AbstractContainersLauncher containersLauncher;
   private final AuxServices auxiliaryServices;
   private final NodeManagerMetrics metrics;
 
@@ -571,9 +573,21 @@ public class ContainerManagerImpl extends CompositeService implements
     return nmTimelinePublisherLocal;
   }
 
-  protected ContainersLauncher createContainersLauncher(Context context,
-      ContainerExecutor exec) {
-    return new ContainersLauncher(context, this.dispatcher, exec, dirsHandler, this);
+  protected AbstractContainersLauncher createContainersLauncher(
+      Context ctxt, ContainerExecutor exec) {
+    Class<? extends AbstractContainersLauncher> containersLauncherClass =
+        ctxt.getConf()
+            .getClass(YarnConfiguration.NM_CONTAINERS_LAUNCHER_CLASS,
+                ContainersLauncher.class, AbstractContainersLauncher.class);
+    AbstractContainersLauncher launcher;
+    try {
+      launcher = ReflectionUtils.newInstance(containersLauncherClass,
+          ctxt.getConf());
+      launcher.init(ctxt, this.dispatcher, exec, dirsHandler, this);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
+    return launcher;
   }
 
   protected EventHandler<ApplicationEvent> createApplicationEventDispatcher() {
