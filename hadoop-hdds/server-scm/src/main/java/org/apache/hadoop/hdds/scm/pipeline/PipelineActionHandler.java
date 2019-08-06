@@ -61,6 +61,7 @@ public class PipelineActionHandler
                   "Reason : {}", action.getAction(), pipeline,
               report.getDatanodeDetails(),
               action.getClosePipeline().getDetailedReason());
+          pipelineManager.finalizeAndDestroyPipeline(pipeline, true);
         } catch (IOException ioe) {
           LOG.error("Could not execute pipeline action={} pipeline={} {}",
               action, pipelineID, ioe);
