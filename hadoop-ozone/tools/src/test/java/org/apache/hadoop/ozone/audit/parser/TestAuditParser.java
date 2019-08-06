@@ -42,7 +42,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tests GenerateOzoneRequiredConfigurations.
+ * Tests TestAuditParser.
  */
 public class TestAuditParser {
   private static File outputBaseDir;
