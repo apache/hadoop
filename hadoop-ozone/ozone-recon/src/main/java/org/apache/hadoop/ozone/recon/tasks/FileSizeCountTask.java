@@ -185,6 +185,8 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
       dataSize >>= 1;
       index += 1;
     }
+    // The smallest file size being tracked for count
+    // is 1 KB i.e. 1024 = 2 ^ 10.
     return index < 10 ? 0 : index - 10;
   }
 
@@ -205,7 +207,9 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    */
   void populateFileCountBySizeDB() {
     for (int i = 0; i < upperBoundCount.length; i++) {
-      long fileSizeUpperBound = (long) Math.pow(2, (10 + i));
+      long fileSizeUpperBound = (i == upperBoundCount.length - 1) ?
+          Long.MAX_VALUE : (long) Math.pow(2, (10 + i));
+      //long fileSizeUpperBound = (long) Math.pow(2, (10 + i));
       FileCountBySize fileCountRecord =
           fileCountBySizeDao.findById(fileSizeUpperBound);
       FileCountBySize newRecord = new
@@ -221,9 +225,9 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   private void updateUpperBoundCount(OmKeyInfo value, String operation)
       throws IOException {
     int binIndex = calculateBinIndex(value.getDataSize());
-    if (binIndex == Integer.MIN_VALUE) {
-      throw new IOException("File Size larger than permissible file size");
-    }
+//    if (binIndex == Integer.MIN_VALUE) {
+//      throw new IOException("File Size larger than permissible file size");
+//    }
     if (operation.equals("PUT")) {
       upperBoundCount[binIndex]++;
     } else if (operation.equals("DELETE")) {
