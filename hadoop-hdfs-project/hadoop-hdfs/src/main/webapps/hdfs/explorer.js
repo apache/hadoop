@@ -442,8 +442,7 @@
     for(var i = 0; i < $('#modal-upload-file-input').prop('files').length; i++) {
       (function() {
         var file = $('#modal-upload-file-input').prop('files')[i];
-        var url = '/webhdfs/v1' + current_directory;
-        url = encode_path(append_path(url, file.name));
+        var url = '/webhdfs/v1' + encode_path(append_path(current_directory, file.name));
         url += '?op=CREATE&noredirect=true';
         files.push( { file: file } )
         files[i].request = $.ajax({
