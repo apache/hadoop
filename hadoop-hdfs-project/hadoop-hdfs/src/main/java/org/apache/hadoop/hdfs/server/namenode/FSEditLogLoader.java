@@ -1284,6 +1284,12 @@ public class FSEditLogLoader {
             + lastPos, t);
         in.resync();
         FSImage.LOG.warn("After resync, position is " + in.getPosition());
+        if (in.getPosition() <= lastPos) {
+          FSImage.LOG.warn("After resync, the position, " +
+              in.getPosition() + " is not greater than the previous " +
+              "position " + lastPos + ". Skipping remainder of this log.");
+          break;
+        }
         continue;
       }
       if (lastTxId == HdfsServerConstants.INVALID_TXID || txid > lastTxId) {

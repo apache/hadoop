@@ -163,6 +163,16 @@ public class EditLogFileInputStream extends EditLogInputStream {
       } catch (EOFException eofe) {
         throw new LogHeaderCorruptException("No header found in log");
       }
+      if (logVersion == -1) {
+        // The edits in progress file is pre-allocated with 1MB of "-1" bytes
+        // when it is created, then the header is written. If the header is
+        // -1, it indicates the an exception occurred pre-allocating the file
+        // and the header was never written. Therefore this is effectively a
+        // corrupt and empty log.
+        throw new LogHeaderCorruptException("No header present in log (value " +
+            "is -1), probably due to disk space issues when it was created. " +
+            "The log has no transactions and will be sidelined.");
+      }
       // We assume future layout will also support ADD_LAYOUT_FLAGS
       if (NameNodeLayoutVersion.supports(
           LayoutVersion.Feature.ADD_LAYOUT_FLAGS, logVersion) ||
