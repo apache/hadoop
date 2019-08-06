@@ -44,7 +44,7 @@ import java.util.List;
 /**
  * Tests TestAuditParser.
  */
-public class TestAuditParser {
+public class AuditParser {
   private static File outputBaseDir;
   private static AuditParser parserTool;
   private static final Logger LOG =
