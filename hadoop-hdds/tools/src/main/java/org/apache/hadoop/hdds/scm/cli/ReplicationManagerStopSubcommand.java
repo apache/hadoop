@@ -47,6 +47,8 @@ public class ReplicationManagerStopSubcommand implements Callable<Void> {
     try (ScmClient scmClient = parent.getParent().createScmClient()) {
       scmClient.stopReplicationManager();
       LOG.info("Stopping ReplicationManager...");
+      LOG.info("Requested SCM to stop ReplicationManager, " +
+          "it might take sometime for the ReplicationManager to stop.");
       return null;
     }
   }
