@@ -2743,6 +2743,15 @@
 </property>
 
 <property>
+  <name>ha.health-monitor.rpc.connect.max.retries</name>
+  <value>1</value>
+  <description>
+    The number of retries on connect error when establishing RPC proxy
+    connection to NameNode, used for monitorHealth() calls.
+  </description>
+</property>
+
+<property>
   <name>ha.health-monitor.rpc-timeout.ms</name>
   <value>45000</value>
   <description>
