@@ -68,7 +68,11 @@
         <configuration>
           <includes>
             <include>ITestOzoneContract*.java</include>
-          </includes>          
+            <include>**/Test*.java</include>
+            <include>**/*Test.java</include>
+            <include>**/*Tests.java</include>
+            <include>**/*TestCase.java</include>
+          </includes>
         </configuration>
       </plugin>
       <plugin>
