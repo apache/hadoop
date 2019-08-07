@@ -1407,8 +1407,8 @@ public class RouterClientProtocol implements ClientProtocol {
   @Override
   public HAServiceProtocol.HAServiceState getHAServiceState()
       throws IOException {
-    rpcServer.checkOperation(NameNode.OperationCategory.READ, false);
-    return null;
+    throw new UnsupportedOperationException(
+        "Router does not support getHAServiceState");
   }
 
   /**
