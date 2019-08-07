@@ -21,7 +21,6 @@ package org.apache.hadoop.fs.azurebfs;
 import java.io.IOException;
 
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FsStatus;
 import org.junit.Test;
 
 import org.apache.hadoop.fs.FileStatus;
@@ -128,14 +127,17 @@ public class ITestAzureBlobFileSystemFileStatus extends
     AzureBlobFileSystem fs = this.getFileSystem();
     Path testFilePath = new Path("childfile1.txt");
     long createStartTime = System.currentTimeMillis();
+    long minCreateStartTime = (createStartTime / 1000) * 1000 - 1;
+    //  Dividing and multiplying by 1000 to make last 3 digits 0.
+    //  It is observed that modification time is returned with last 3
+    //  digits 0 always.
     fs.create(testFilePath);
     long createEndTime = System.currentTimeMillis();
     FileStatus fStat = fs.getFileStatus(testFilePath);
     long lastModifiedTime = fStat.getModificationTime();
-    assertTrue((createStartTime / 1000) * 1000 - 1 < lastModifiedTime);
-    //  Dividing and multiplying by 1000 to make last 3 digits 0.
-    //  It is observed that modification time is returned with last 3
-    //  digits 0 always.
-    assertTrue(createEndTime > lastModifiedTime);
+    assertTrue("lastModifiedTime should be greater than minCreateStartTime",
+        minCreateStartTime < lastModifiedTime);
+    assertTrue("lastModifiedTime should be lesser than createEndTime",
+        createEndTime > lastModifiedTime);
   }
 }
