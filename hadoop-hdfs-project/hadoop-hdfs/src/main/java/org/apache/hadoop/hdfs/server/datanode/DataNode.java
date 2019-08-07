@@ -2627,6 +2627,11 @@ public class DataNode extends ReconfigurableBase
         IOUtils.closeSocket(sock);
       }
     }
+
+    @Override
+    public String toString() {
+      return "DataTransfer " + b + " to " + Arrays.asList(targets);
+    }
   }
 
   /***
