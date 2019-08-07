@@ -2363,7 +2363,7 @@
     </description>
   </property>
   <property>
-    <name>dfs.network.topology.aware.read.enable</name>
+    <name>ozone.network.topology.aware.read</name>
     <value>false</value>
     <tag>OZONE, PERFORMANCE</tag>
     <description>

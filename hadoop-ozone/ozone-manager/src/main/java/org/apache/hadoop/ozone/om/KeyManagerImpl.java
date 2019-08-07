@@ -694,7 +694,9 @@ public class KeyManagerImpl implements KeyManager {
           });
         }
       }
-      sortDatanodeInPipeline(value, clientAddress);
+      if (args.getSortDatanodes()) {
+        sortDatanodeInPipeline(value, clientAddress);
+      }
       return value;
     } catch (IOException ex) {
       LOG.debug("Get key failed for volume:{} bucket:{} key:{}",
@@ -1916,7 +1918,9 @@ public class KeyManagerImpl implements KeyManager {
     try {
       OzoneFileStatus fileStatus = getFileStatus(args);
       if (fileStatus.isFile()) {
-        sortDatanodeInPipeline(fileStatus.getKeyInfo(), clientAddress);
+        if (args.getSortDatanodes()) {
+          sortDatanodeInPipeline(fileStatus.getKeyInfo(), clientAddress);
+        }
         return fileStatus.getKeyInfo();
       }
       //if key is not of type file or if key is not found we throw an exception
