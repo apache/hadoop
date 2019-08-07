@@ -373,7 +373,7 @@ Usage:
         hdfs dfsadmin [-evictWriters <datanode_host:ipc_port>]
         hdfs dfsadmin [-getDatanodeInfo <datanode_host:ipc_port>]
         hdfs dfsadmin [-metasave filename]
-        [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode] <namenode_host:ipc_port>]
+        hdfs dfsadmin [-triggerBlockReport [-incremental] <datanode_host:ipc_port> [-namenode] <namenode_host:ipc_port>]
         hdfs dfsadmin [-listOpenFiles [-blockingDecommission] [-path <path>]]
         hdfs dfsadmin [-help [cmd]]
 

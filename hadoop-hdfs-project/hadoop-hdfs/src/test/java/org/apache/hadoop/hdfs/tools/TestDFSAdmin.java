@@ -464,7 +464,7 @@ public class TestDFSAdmin {
 
     /* init cluster using topology */
     try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
-        .numDataNodes(1).racks(racks).build()) {
+        .numDataNodes(numDn).racks(racks).build()) {
 
       miniCluster.waitActive();
       assertEquals(numDn, miniCluster.getDataNodes().size());
