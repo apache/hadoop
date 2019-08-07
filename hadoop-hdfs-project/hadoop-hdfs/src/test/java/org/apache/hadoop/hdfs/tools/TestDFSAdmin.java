@@ -260,13 +260,13 @@ public class TestDFSAdmin {
     resetStream();
     final List<String> outs = Lists.newArrayList();
     final int ret = ToolRunner.run(dfsAdmin,
-        new String[]{"-triggerBlockReport", dnAddr, "-namenode", nnAddr});
+        new String[]{"-triggerBlockReport", dnAddr, "-incremental", "-namenode", nnAddr});
     assertEquals(0, ret);
 
     scanIntoList(out, outs);
     assertEquals(1, outs.size());
     assertThat(outs.get(0),
-        is(allOf(containsString("Triggering a full block report on "),
+        is(allOf(containsString("Triggering an incremental block report on "),
             containsString(" to namenode "))));
   }
 
