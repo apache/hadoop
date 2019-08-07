@@ -635,7 +635,7 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
-  public static final int RETRY_LIMIT_DEFAULT = 8;
+  public static final int RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Interval between retry attempts.: {@value}.
@@ -645,7 +645,7 @@ public final class Constants {
   /**
    * Default retry interval: {@value}.
    */
-  public static final String RETRY_INTERVAL_DEFAULT = "1000ms";
+  public static final String RETRY_INTERVAL_DEFAULT = "500ms";
 
   /**
    * Number of times to retry any throttled request: {@value}.
