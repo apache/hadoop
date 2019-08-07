@@ -1539,8 +1539,8 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
       if (paths.get(0).equals(CHECK_FLAG)) {
         // do the check
-        S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms, false);
-        s3GuardFsck.compareS3toMs(fs.qualify(new Path("/")));
+        S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
+        s3GuardFsck.compareS3RootToMs(fs.qualify(new Path("/")));
       } else {
         errorln(USAGE);
         return ERROR;

@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
@@ -33,9 +34,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Main class for the FSCK factored out from S3GuardTool
@@ -58,10 +59,8 @@ public class S3GuardFsck {
    * Creates an S3GuardFsck
    * @param fs the filesystem to compare to
    * @param ms metadatastore the metadatastore to compare with (dynamo)
-   * @param versionIdCheck if true than checks the versionId between S3 and
-   *                       the metadata store.
    */
-  S3GuardFsck(S3AFileSystem fs, MetadataStore ms, boolean versionIdCheck)
+  S3GuardFsck(S3AFileSystem fs, MetadataStore ms)
       throws InvalidParameterException {
     this.rawFS = fs;
 
@@ -71,7 +70,7 @@ public class S3GuardFsck {
     }
     this.metadataStore = (DynamoDBMetadataStore) ms;
 
-    if(rawFS.hasMetadataStore()) {
+    if (rawFS.hasMetadataStore()) {
       throw new InvalidParameterException("Raw fs should not have a "
           + "metadatastore.");
     }
@@ -89,12 +88,11 @@ public class S3GuardFsck {
    * @throws IOException
    * @return
    */
-  public List<ComparePair> compareS3toMs(final Path rootPath) throws IOException {
+  public List<ComparePair> compareS3RootToMs(final Path rootPath) throws IOException {
     final S3AFileStatus root =
         (S3AFileStatus) rawFS.getFileStatus(rootPath);
     final List<ComparePair> comparePairs = new ArrayList<>();
     final Queue<S3AFileStatus> queue = new ArrayDeque<>();
-    boolean checkVersionId = false;
     queue.add(root);
 
     while (!queue.isEmpty()) {
@@ -106,19 +104,30 @@ public class S3GuardFsck {
       // Files should be casted to S3AFileStatus instead of plain FileStatus
       // to get the VersionID and Etag.
       final Path currentDirPath = currentDir.getPath();
-      // TODO Do we need to do a HEAD for each children in the path if we
-      //  want the versionID? In the listing it is empty.
 
+      final FileStatus[] s3DirListing = rawFS.listStatus(currentDirPath);
       final List<S3AFileStatus> children =
-          Arrays.asList(rawFS.listStatus(currentDirPath)).stream()
+          Arrays.asList(s3DirListing).stream()
               .filter(status -> !status.isDirectory())
               .map(S3AFileStatus.class::cast).collect(toList());
 
-      comparePairs.addAll(
+      // Compare the directory contents if the listing is authoritative
+      final DirListingMetadata msDirListing =
+          metadataStore.listChildren(currentDirPath);
+      if (msDirListing.isAuthoritative()) {
+        final ComparePair cP =
+            compareAuthDirListing(s3DirListing, msDirListing);
+        if (cP.containsViolation()) {
+          comparePairs.add(cP);
+        }
+      }
+
+      // Compare directory and contents, but not the listing
+      final List<ComparePair> compareResult =
           compareS3DirToMs(currentDir, children).stream()
               .filter(comparePair -> comparePair.containsViolation())
-              .collect(Collectors.toList())
-      );
+              .collect(toList());
+      comparePairs.addAll(compareResult);
 
       // Add each dir to queue
       children.stream().filter(pm -> pm.isDirectory())
@@ -131,6 +140,29 @@ public class S3GuardFsck {
     comparePairs.forEach(handler::handle);
 
     return comparePairs;
+  }
+
+  private ComparePair compareAuthDirListing(FileStatus[] s3DirListing,
+      DirListingMetadata msDirListing) {
+    ComparePair cP = new ComparePair(s3DirListing, msDirListing);
+
+    if (!msDirListing.isAuthoritative()) {
+      return cP;
+    }
+
+    if (s3DirListing.length != msDirListing.numEntries()) {
+      cP.violations.add(Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
+    } else {
+      final Set<Path> msPaths = msDirListing.getListing().stream()
+              .map(pm -> pm.getFileStatus().getPath()).collect(toSet());
+      final Set<Path> s3Paths = Arrays.stream(s3DirListing)
+              .map(pm -> pm.getPath()).collect(toSet());
+      if (!s3Paths.equals(msPaths)) {
+        cP.violations.add(Violation.AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH);
+      }
+    }
+
+    return cP;
   }
 
   protected List<ComparePair> compareS3DirToMs(S3AFileStatus s3CurrentDir,
@@ -187,7 +219,7 @@ public class S3GuardFsck {
       LOG.info("Entry is in the root, so there's no parent");
     }
 
-    if(msPathMetadata == null) {
+    if (msPathMetadata == null) {
       comparePair.violations.add(Violation.NO_METADATA_ENTRY);
       return comparePair;
     }
@@ -195,38 +227,27 @@ public class S3GuardFsck {
     if (s3FileStatus.isDirectory() && !msFileStatus.isDirectory()) {
       comparePair.violations.add(Violation.DIR_IN_S3_FILE_IN_MS);
     }
+    if (!s3FileStatus.isDirectory() && msFileStatus.isDirectory()) {
+      comparePair.violations.add(Violation.FILE_IN_S3_DIR_IN_MS);
+    }
 
     /**
      * Attribute check
      */
-    if(s3FileStatus.getLen() != msFileStatus.getLen()) {
+    if (s3FileStatus.getLen() != msFileStatus.getLen()) {
       comparePair.violations.add(Violation.LENGTH_MISMATCH);
     }
 
-    if(s3FileStatus.getModificationTime() !=
+    if (s3FileStatus.getModificationTime() !=
         msFileStatus.getModificationTime()) {
       comparePair.violations.add(Violation.MOD_TIME_MISMATCH);
     }
 
-    if(s3FileStatus.getBlockSize() != msFileStatus.getBlockSize()) {
-      comparePair.violations.add(Violation.BLOCKSIZE_MISMATCH);
-    }
-
-    if(s3FileStatus.getOwner() != msFileStatus.getOwner()) {
-      comparePair.violations.add(Violation.OWNER_MISMATCH);
-    }
-
-    if(msPathMetadata.getFileStatus().getETag() == null) {
+    if (msPathMetadata.getFileStatus().getETag() == null) {
       comparePair.violations.add(Violation.NO_ETAG);
     } else if (s3FileStatus.getETag() != null &&
         !s3FileStatus.getETag().equals(msFileStatus.getETag())) {
       comparePair.violations.add(Violation.ETAG_MISMATCH);
-    }
-
-    if(msPathMetadata.getFileStatus().getVersionId() == null) {
-      comparePair.violations.add(Violation.NO_VERSIONID);
-    } else if(s3FileStatus.getVersionId() != msFileStatus.getVersionId()) {
-      comparePair.violations.add(Violation.VERSIONID_MISMATCH);
     }
 
     return comparePair;
@@ -238,14 +259,30 @@ public class S3GuardFsck {
 
 
   public static class ComparePair {
-    private S3AFileStatus s3FileStatus;
-    private PathMetadata msPathMetadata;
+    private final S3AFileStatus s3FileStatus;
+    private final PathMetadata msPathMetadata;
+
+    private final FileStatus[] s3DirListing;
+    private final DirListingMetadata msDirListing;
+
+    private final Path path;
 
     private Set<Violation> violations = new HashSet<>();
 
     ComparePair(S3AFileStatus status, PathMetadata pm) {
       this.s3FileStatus = status;
       this.msPathMetadata = pm;
+      this.s3DirListing = null;
+      this.msDirListing = null;
+      this.path = status.getPath();
+    }
+
+    ComparePair(FileStatus[] s3DirListing, DirListingMetadata msDirListing) {
+      this.s3DirListing = s3DirListing;
+      this.msDirListing = msDirListing;
+      this.s3FileStatus = null;
+      this.msPathMetadata = null;
+      this.path = msDirListing.getPath();
     }
 
     public S3AFileStatus getS3FileStatus() {
@@ -269,29 +306,55 @@ public class S3GuardFsck {
           + ", msPathMetadata=" + msPathMetadata + ", violations=" + violations
           + '}';
     }
+
+    public DirListingMetadata getMsDirListing() {
+      return msDirListing;
+    }
+
+    public FileStatus[] getS3DirListing() {
+      return s3DirListing;
+    }
+
+    public Path getPath() {
+      return path;
+    }
   }
 
+  /**
+   * Violation with severity:
+   * Defines the severity of the violation between 0-2
+   * where 0 is the most severe and 2 is the least severe.
+   */
   public enum Violation {
     // No entry in metadatastore
-    NO_METADATA_ENTRY,
+    NO_METADATA_ENTRY(1),
     // A file or directory entry does not have a parent entry - excluding
     // files and directories in the root.
-    NO_PARENT_ENTRY,
+    NO_PARENT_ENTRY(0),
     // An entry’s parent is a file
-    PARENT_IS_A_FILE,
-    // A file exists under a path for which there is a tombstone entry in the
-    // MS
-     PARENT_TOMBSTONED,
+    PARENT_IS_A_FILE(0),
+    // A file exists under a path for which there is
+    // a tombstone entry in the MS
+    PARENT_TOMBSTONED(0),
     // A directory in S3 is a file entry in the MS
-    DIR_IN_S3_FILE_IN_MS,
+    DIR_IN_S3_FILE_IN_MS(0),
+    // A file in S3 is a directory in the MS
+    FILE_IN_S3_DIR_IN_MS(0),
+    AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1),
     // Attribute mismatch
-    LENGTH_MISMATCH,
-    MOD_TIME_MISMATCH,
-    BLOCKSIZE_MISMATCH,
-    OWNER_MISMATCH,
-    VERSIONID_MISMATCH,
-    ETAG_MISMATCH,
-    NO_ETAG,
-    NO_VERSIONID
+    LENGTH_MISMATCH(0),
+    MOD_TIME_MISMATCH(2),
+    // If there's a versionID the mismatch is severe
+    VERSIONID_MISMATCH(0),
+    // If there's an etag the mismatch is severe
+    ETAG_MISMATCH(0),
+    // Don't worry too much if we don't have an etag
+    NO_ETAG(2);
+
+    int severity;
+
+    Violation(int s) {
+      this.severity = s;
+    }
   }
 }

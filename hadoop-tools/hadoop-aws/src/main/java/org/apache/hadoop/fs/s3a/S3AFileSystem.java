@@ -1491,8 +1491,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @return true if there is a metadata store and the authoritative flag
    * is set for this filesystem.
    */
-  @VisibleForTesting
-  boolean hasAuthoritativeMetadataStore() {
+  @VisibleForTesting public boolean hasAuthoritativeMetadataStore() {
     return hasMetadataStore() && allowAuthoritativeMetadataStore;
   }
 
