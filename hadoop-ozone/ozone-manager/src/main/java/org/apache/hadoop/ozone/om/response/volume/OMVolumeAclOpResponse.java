@@ -47,11 +47,17 @@ public class OMVolumeAclOpResponse extends OMClientResponse {
 
     // For OmResponse with failure, this should do nothing. This method is
     // not called in failure scenario in OM code.
-    if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK &&
-        getOMResponse().getSuccess()) {
-      omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
-          omMetadataManager.getVolumeKey(omVolumeArgs.getVolume()),
-          omVolumeArgs);
+    if (getOMResponse().getSuccess()) {
+      if ((getOMResponse().hasAddAclResponse() &&
+          getOMResponse().getAddAclResponse().getResponse()) ||
+          (getOMResponse().hasRemoveAclResponse() &&
+              getOMResponse().getRemoveAclResponse().getResponse()) ||
+          (getOMResponse().hasSetAclResponse() &&
+              getOMResponse().getSetAclResponse().getResponse())) {
+        omMetadataManager.getVolumeTable().putWithBatch(batchOperation,
+            omMetadataManager.getVolumeKey(omVolumeArgs.getVolume()),
+            omVolumeArgs);
+      }
     }
   }
 
@@ -59,6 +65,5 @@ public class OMVolumeAclOpResponse extends OMClientResponse {
   public OmVolumeArgs getOmVolumeArgs() {
     return omVolumeArgs;
   }
-
 }
 
