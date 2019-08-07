@@ -89,8 +89,7 @@ public class OMBucketSetAclRequest extends OMBucketAclRequest {
     } else {
       omMetrics.incNumBucketUpdateFails();
       if (exception == null) {
-        LOG.error("Set acl {} for path {} failed, because acl already exist",
-            getAcls(), getPath());
+        LOG.error("Set acl {} for path {} failed", getAcls(), getPath());
       } else {
         LOG.error("Set acl {} for path {} failed!", getAcls(), getPath(),
             exception);

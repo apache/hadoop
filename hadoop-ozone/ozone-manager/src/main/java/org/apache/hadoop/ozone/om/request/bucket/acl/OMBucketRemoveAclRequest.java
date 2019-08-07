@@ -88,7 +88,8 @@ public class OMBucketRemoveAclRequest extends OMBucketAclRequest {
     } else {
       omMetrics.incNumBucketUpdateFails();
       if (exception == null) {
-        LOG.error("Remove acl {} for path {} failed, because acl already exist",
+        LOG.error("Remove acl {} for path {} failed, because acl does not " +
+                "exist",
             getAcls(), getPath());
       } else {
         LOG.error("Remove acl {} for path {} failed!", getAcls(), getPath(),
