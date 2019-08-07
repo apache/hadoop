@@ -53,6 +53,9 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
   private boolean fallback;
   private static final int RACK_LEVEL = 1;
   private static final int MAX_RETRY= 3;
+  private int numOfTotalRequests = 0;
+  private int numOfSuccessRequests = 0;
+  private int getNumOfSuccessRequestsWithCondition = 0;
 
   /**
    * Constructs a Container Placement with rack awareness.
@@ -93,6 +96,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       List<DatanodeDetails> excludedNodes, List<DatanodeDetails> favoredNodes,
       int nodesRequired, final long sizeRequired) throws SCMException {
     Preconditions.checkArgument(nodesRequired > 0);
+    numOfTotalRequests += nodesRequired;
 
     int datanodeCount = networkTopology.getNumOfLeafNode(NetConstants.ROOT);
     int excludedNodesCount = excludedNodes == null ? 0 : excludedNodes.size();
@@ -125,6 +129,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       }
       chosenNodes.add(firstNode);
       nodesRequired--;
+      numOfSuccessRequests++;
       if (nodesRequired == 0) {
         return Arrays.asList(chosenNodes.toArray(new DatanodeDetails[0]));
       }
@@ -142,6 +147,7 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       }
       chosenNodes.add(secondNode);
       nodesRequired--;
+      numOfSuccessRequests++;
       if (nodesRequired == 0) {
         return Arrays.asList(chosenNodes.toArray(new DatanodeDetails[0]));
       }
@@ -170,6 +176,8 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
         }
         chosenNodes.add(firstNode);
         nodesRequired--;
+        numOfSuccessRequests++;
+        getNumOfSuccessRequestsWithCondition++;
         if (nodesRequired == 0) {
           return Arrays.asList(chosenNodes.toArray(new DatanodeDetails[0]));
         }
@@ -206,6 +214,8 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
       chosenNodes.add(secondNode);
       mutableExcludedNodes.add(secondNode);
       nodesRequired--;
+      numOfSuccessRequests++;
+      getNumOfSuccessRequestsWithCondition++;
       if (nodesRequired == 0) {
         return Arrays.asList(chosenNodes.toArray(new DatanodeDetails[0]));
       }
@@ -334,9 +344,45 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
         chosenNodes.add(chosenNode);
       }
       nodesRequired--;
+      numOfSuccessRequests++;
+      getNumOfSuccessRequestsWithCondition++;
       if (nodesRequired == 0) {
         return Arrays.asList(chosenNodes.toArray(new DatanodeDetails[0]));
       }
     }
   }
+
+  /**
+   * Get the total number of total requests.
+   *
+   *
+   * @return the total number of requests for data node.
+   */
+  public int getNumOfTotalRequests() {
+    return numOfTotalRequests;
+  }
+
+  /**
+   * Get the number of requests which return data node successfully.
+   *
+   *
+   * @return the number of requests which return data node successfully
+   */
+  public int getGetNumOfSuccessRequests() {
+    return numOfSuccessRequests;
+  }
+
+  /**
+   * Get the number of requests with conditions and return data node
+   * successfully.
+   *
+   *
+   * @return the number of requests with conditions and return data node
+   *         successfully
+   */
+  public int getGetNumOfSuccessRequestsWithCondition() {
+    return getNumOfSuccessRequestsWithCondition;
+  }
+
+
 }
