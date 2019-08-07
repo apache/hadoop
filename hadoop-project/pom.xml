@@ -1626,30 +1626,6 @@
         <artifactId>findbugs-maven-plugin</artifactId>
       </plugin>
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-remote-resources-plugin</artifactId>
-        <version>${maven-remote-resources-plugin.version}</version>
-        <configuration>
-          <resourceBundles>
-            <resourceBundle>org.apache.hadoop:hadoop-build-tools:${hadoop.version}</resourceBundle>
-          </resourceBundles>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-build-tools</artifactId>
-            <version>${hadoop.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <goals>
-              <goal>process</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>animal-sniffer-maven-plugin</artifactId>
         <version>1.16</version>
@@ -1922,6 +1898,36 @@
                 <goals>
                  <goal>enforce</goal>
                 </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>resource-bundle</id>
+      <!-- activate profile only when we build the whole project from project root directory -->
+      <activation>
+        <file>
+          <exists>${env.PWD}/LICENSE.txt</exists>
+        </file>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-remote-resources-plugin</artifactId>
+            <version>${maven-remote-resources-plugin.version}</version>
+            <executions>
+              <execution>
+                <goals>
+                  <goal>process</goal>
+                </goals>
+                <configuration>
+                  <resourceBundles>
+                    <resourceBundle>org.apache.hadoop:hadoop-build-tools:${hadoop.version}</resourceBundle>
+                  </resourceBundles>
+                </configuration>
               </execution>
             </executions>
           </plugin>
