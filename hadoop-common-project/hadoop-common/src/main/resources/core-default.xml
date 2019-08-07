@@ -3513,4 +3513,24 @@
     </description>
   </property>
 
+  <property>
+    <name>fs.getspaceused.classname</name>
+    <value></value>
+    <description>
+      The class that can tell estimate much space is used in a directory.
+      There are four impl classes that being supported:
+      org.apache.hadoop.fs.DU(default), org.apache.hadoop.fs.WindowsGetSpaceUsed
+      org.apache.hadoop.fs.DFCachingGetSpaceUsed and
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaCachingGetSpaceUsed.
+      And the ReplicaCachingGetSpaceUsed impl class only used in HDFS module.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.jitterMillis</name>
+    <value>60000</value>
+    <description>
+      fs space usage statistics refresh jitter in msec.
+    </description>
+  </property>
 </configuration>
