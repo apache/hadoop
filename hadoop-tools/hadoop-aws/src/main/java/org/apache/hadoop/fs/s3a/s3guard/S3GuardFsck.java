@@ -309,12 +309,6 @@ public class S3GuardFsck {
       return !violations.isEmpty();
     }
 
-    @Override public String toString() {
-      return "ComparePair{" + "s3FileStatus=" + s3FileStatus
-          + ", msPathMetadata=" + msPathMetadata + ", violations=" + violations
-          + '}';
-    }
-
     public DirListingMetadata getMsDirListing() {
       return msDirListing;
     }
@@ -325,6 +319,13 @@ public class S3GuardFsck {
 
     public Path getPath() {
       return path;
+    }
+
+    @Override public String toString() {
+      return "ComparePair{" + "s3FileStatus=" + s3FileStatus
+          + ", msPathMetadata=" + msPathMetadata + ", s3DirListing=" + Arrays
+          .toString(s3DirListing) + ", msDirListing=" + msDirListing + ", path="
+          + path + ", violations=" + violations + '}';
     }
   }
 

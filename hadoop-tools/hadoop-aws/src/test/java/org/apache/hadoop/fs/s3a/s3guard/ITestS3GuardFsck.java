@@ -22,6 +22,8 @@ package org.apache.hadoop.fs.s3a.s3guard;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+
+import org.apache.hadoop.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -65,6 +67,15 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
     rawFS = createUnguardedFS();
     assertFalse("Raw FS still has S3Guard " + rawFS,
         rawFS.hasMetadataStore());
+  }
+
+  @Override
+  public void teardown() throws Exception {
+    if (guardedFs != null) {
+      IOUtils.cleanupWithLogger(LOG, guardedFs);
+    }
+    IOUtils.cleanupWithLogger(LOG, rawFS);
+    super.teardown();
   }
 
   /**
