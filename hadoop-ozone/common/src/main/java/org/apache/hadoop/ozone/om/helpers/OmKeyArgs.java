@@ -46,6 +46,7 @@ public final class OmKeyArgs implements Auditable {
   private final int multipartUploadPartNumber;
   private Map<String, String> metadata;
   private boolean refreshPipeline;
+  private boolean sortDatanodesInPipeline;
   private List<OzoneAcl> acls;
 
   @SuppressWarnings("parameternumber")
@@ -54,7 +55,7 @@ public final class OmKeyArgs implements Auditable {
       List<OmKeyLocationInfo> locationInfoList, boolean isMultipart,
       String uploadID, int partNumber,
       Map<String, String> metadataMap, boolean refreshPipeline,
-      List<OzoneAcl> acls) {
+      List<OzoneAcl> acls, boolean sortDatanode) {
     this.volumeName = volumeName;
     this.bucketName = bucketName;
     this.keyName = keyName;
@@ -68,6 +69,7 @@ public final class OmKeyArgs implements Auditable {
     this.metadata = metadataMap;
     this.refreshPipeline = refreshPipeline;
     this.acls = acls;
+    this.sortDatanodesInPipeline = sortDatanode;
   }
 
   public boolean getIsMultipartKey() {
@@ -134,6 +136,10 @@ public final class OmKeyArgs implements Auditable {
     return refreshPipeline;
   }
 
+  public boolean getSortDatanodes() {
+    return sortDatanodesInPipeline;
+  }
+
   @Override
   public Map<String, String> toAuditMap() {
     Map<String, String> auditMap = new LinkedHashMap<>();
@@ -174,6 +180,7 @@ public final class OmKeyArgs implements Auditable {
     private int multipartUploadPartNumber;
     private Map<String, String> metadata = new HashMap<>();
     private boolean refreshPipeline;
+    private boolean sortDatanodesInPipeline;
     private List<OzoneAcl> acls;
 
     public Builder setVolumeName(String volume) {
@@ -246,10 +253,16 @@ public final class OmKeyArgs implements Auditable {
       return this;
     }
 
+    public Builder setSortDatanodesInPipeline(boolean sort) {
+      this.sortDatanodesInPipeline = sort;
+      return this;
+    }
+
     public OmKeyArgs build() {
       return new OmKeyArgs(volumeName, bucketName, keyName, dataSize, type,
           factor, locationInfoList, isMultipartKey, multipartUploadID,
-          multipartUploadPartNumber, metadata, refreshPipeline, acls);
+          multipartUploadPartNumber, metadata, refreshPipeline, acls,
+          sortDatanodesInPipeline);
     }
 
   }

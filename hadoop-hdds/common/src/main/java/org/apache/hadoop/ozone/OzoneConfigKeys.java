@@ -1,4 +1,4 @@
- /**
+/**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -29,7 +29,7 @@ import org.apache.ratis.util.TimeDuration;
 
 import java.util.concurrent.TimeUnit;
 
- /**
+/**
  * This class contains constants for configuration keys used in Ozone.
  */
 @InterfaceAudience.Public
@@ -446,6 +446,10 @@ public final class OzoneConfigKeys {
   public static final String
       OZONE_FREON_HTTP_KERBEROS_KEYTAB_FILE_KEY =
       "ozone.freon.http.kerberos.keytab";
+
+  public static final String OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY =
+      "ozone.network.topology.aware.read";
+  public static final boolean OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT = false;
 
   /**
    * There is no need to instantiate this class.

@@ -97,7 +97,10 @@ public final class SCMContainerPlacementRackAware extends SCMCommonPolicy {
     int datanodeCount = networkTopology.getNumOfLeafNode(NetConstants.ROOT);
     int excludedNodesCount = excludedNodes == null ? 0 : excludedNodes.size();
     if (datanodeCount < nodesRequired + excludedNodesCount) {
-      throw new SCMException("No enough datanodes to choose.", null);
+      throw new SCMException("No enough datanodes to choose. " +
+          "TotalNode = " + datanodeCount +
+          "RequiredNode = " + nodesRequired +
+          "ExcludedNode = " + excludedNodesCount, null);
     }
     List<DatanodeDetails> mutableFavoredNodes = favoredNodes;
     // sanity check of favoredNodes
