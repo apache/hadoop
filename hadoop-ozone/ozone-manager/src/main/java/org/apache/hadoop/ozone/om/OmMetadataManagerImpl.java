@@ -279,12 +279,10 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
 
     // As now we have eviction policies, and for non-HA code path we don't
     // support cache and cleanup policies setting cache to manual.
-    TableCacheImpl.CacheCleanupPolicy cleanupPolicy;
-    if (isRatisEnabled) {
-      cleanupPolicy = TableCacheImpl.CacheCleanupPolicy.NEVER;
-    } else {
-      cleanupPolicy = TableCacheImpl.CacheCleanupPolicy.MANUAL;
-    }
+    TableCacheImpl.CacheCleanupPolicy cleanupPolicy = isRatisEnabled ?
+        TableCacheImpl.CacheCleanupPolicy.NEVER :
+        TableCacheImpl.CacheCleanupPolicy.MANUAL;
+
     volumeTable =
         this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class,
             cleanupPolicy);
