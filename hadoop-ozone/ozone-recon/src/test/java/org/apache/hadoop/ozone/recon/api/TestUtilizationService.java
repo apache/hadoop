@@ -18,13 +18,10 @@
 
 package org.apache.hadoop.ozone.recon.api;
 
-import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.FileCountBySize;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.powermock.core.classloader.annotations.PowerMockIgnore;
@@ -42,20 +39,16 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * Test for Filesize count service.
+ * Test for File size count service.
  */
 @RunWith(PowerMockRunner.class)
 @PowerMockIgnore({"javax.management.*", "javax.net.ssl.*"})
 @PrepareForTest(ReconUtils.class)
-public class TestUtilizationService extends AbstractOMMetadataManagerTest {
-
-  @Rule
-  public TemporaryFolder temporaryFolder = new TemporaryFolder();
-
+public class TestUtilizationService {
   private UtilizationService utilizationService;
   @Mock private FileCountBySizeDao fileCountBySizeDao;
   private List<FileCountBySize> resultList = new ArrayList<>();
-  private int ONE_KB = 1024;
+  private int oneKb = 1024;
   private int maxBinSize = 41;
 
   public void setUpResultList() {
@@ -109,7 +102,7 @@ public class TestUtilizationService extends AbstractOMMetadataManagerTest {
       if (index > maxBinSize) {
         return Integer.MIN_VALUE;
       }
-      return (dataSize % ONE_KB == 0) ? index + 1 : index;
+      return (dataSize % oneKb == 0) ? index + 1 : index;
     }
   }
 }

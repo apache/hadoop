@@ -48,7 +48,6 @@ import static org.powermock.api.mockito.PowerMockito.when;
 @PrepareForTest(OmKeyInfo.class)
 
 public class TestFileSizeCountTask {
-
   @Test
   public void testCalculateBinIndex() {
     FileSizeCountTask fileSizeCountTask = mock(FileSizeCountTask.class);

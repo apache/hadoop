@@ -40,7 +40,7 @@ import java.util.List;
 
 /**
  * Class to iterate over the OM DB and store the counts of existing/new
- * files binned into ranges (1KB, 10Kb..,10MB,..1PB) to the Recon
+ * files binned into ranges (1KB, 2Kb..,4MB,.., 1TB,..1PB) to the Recon
  * fileSize DB.
  */
 public class FileSizeCountTask extends ReconDBUpdateTask {
@@ -50,7 +50,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   private int maxBinSize = -1;
   private long maxFileSizeUpperBound = 1125899906842624L; // 1 PB
   private long[] upperBoundCount;
-  private long ONE_KB = 1024L;
+  private long oneKb = 1024L;
   private Collection<String> tables = new ArrayList<>();
   private FileCountBySizeDao fileCountBySizeDao;
 
@@ -68,7 +68,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   }
 
   protected long getOneKB() {
-    return ONE_KB;
+    return oneKb;
   }
 
   protected long getMaxFileSizeUpperBound() {
@@ -139,6 +139,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   Pair<String, Boolean> process(OMUpdateEventBatch events) {
     LOG.info("Starting a 'process' run of FileSizeCountTask.");
     Iterator<OMDBUpdateEvent> eventIterator = events.getIterator();
+
     //update array with file size count from DB
     updateCountFromDB();
 
@@ -209,7 +210,6 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     for (int i = 0; i < upperBoundCount.length; i++) {
       long fileSizeUpperBound = (i == upperBoundCount.length - 1) ?
           Long.MAX_VALUE : (long) Math.pow(2, (10 + i));
-      //long fileSizeUpperBound = (long) Math.pow(2, (10 + i));
       FileCountBySize fileCountRecord =
           fileCountBySizeDao.findById(fileSizeUpperBound);
       FileCountBySize newRecord = new
@@ -225,9 +225,6 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   private void updateUpperBoundCount(OmKeyInfo value, String operation)
       throws IOException {
     int binIndex = calculateBinIndex(value.getDataSize());
-//    if (binIndex == Integer.MIN_VALUE) {
-//      throw new IOException("File Size larger than permissible file size");
-//    }
     if (operation.equals("PUT")) {
       upperBoundCount[binIndex]++;
     } else if (operation.equals("DELETE")) {

@@ -49,8 +49,11 @@ public class UtilizationService {
   private Configuration sqlConfiguration;
 
 
-  public FileCountBySizeDao getDao() {
-    return new FileCountBySizeDao(sqlConfiguration);
+  FileCountBySizeDao getDao() {
+    if (fileCountBySizeDao == null) {
+      fileCountBySizeDao = new FileCountBySizeDao(sqlConfiguration);
+    }
+    return fileCountBySizeDao;
   }
   /**
    * Return the file counts from Recon DB.
