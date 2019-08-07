@@ -109,7 +109,7 @@ public class S3ARetryPolicy implements RetryPolicy {
     Preconditions.checkArgument(conf != null, "Null configuration");
 
     // base policy from configuration
-    fixedRetries = retryUpToMaximumCountWithFixedSleep(
+    fixedRetries = exponentialBackoffRetry(
         conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT),
         conf.getTimeDuration(RETRY_INTERVAL,
             RETRY_INTERVAL_DEFAULT,
