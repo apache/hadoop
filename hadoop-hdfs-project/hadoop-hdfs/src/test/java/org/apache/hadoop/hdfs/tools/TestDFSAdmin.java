@@ -246,6 +246,31 @@ public class TestDFSAdmin {
   }
 
   @Test(timeout = 30000)
+  public void testTriggerBlockReport() throws Exception {
+    redirectStream();
+    final DFSAdmin dfsAdmin = new DFSAdmin(conf);
+    final DataNode dn = cluster.getDataNodes().get(0);
+    final NameNode nn = cluster.getNameNode();
+
+    final String dnAddr = String.format(
+        "%s:%d",
+        dn.getXferAddress().getHostString(),
+        dn.getIpcPort());
+    final String nnAddr = nn.getHostAndPort();
+    resetStream();
+    final List<String> outs = Lists.newArrayList();
+    final int ret = ToolRunner.run(dfsAdmin,
+        new String[]{"-triggerBlockReport", dnAddr, "-namenode", nnAddr});
+    assertEquals(0, ret);
+
+    scanIntoList(out, outs);
+    assertEquals(1, outs.size());
+    assertThat(outs.get(0),
+        is(allOf(containsString("Triggering a full block report on "),
+            containsString(" to namenode "))));
+  }
+
+  @Test(timeout = 30000)
   public void testGetVolumeReport() throws Exception {
     redirectStream();
     final DFSAdmin dfsAdmin = new DFSAdmin(conf);
@@ -439,7 +464,7 @@ public class TestDFSAdmin {
 
     /* init cluster using topology */
     try (MiniDFSCluster miniCluster = new MiniDFSCluster.Builder(dfsConf)
-        .numDataNodes(numDn).racks(racks).build()) {
+        .numDataNodes(1).racks(racks).build()) {
 
       miniCluster.waitActive();
       assertEquals(numDn, miniCluster.getDataNodes().size());
