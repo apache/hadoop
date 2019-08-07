@@ -28,6 +28,20 @@ mkdir -p "$RESULT_DIR"
 #Should be writeable from the docker containers where user is different.
 chmod ogu+w "$RESULT_DIR"
 
+## @description print the number of datanodes up
+## @param the docker-compose file
+count_datanodes() {
+  local compose_file=$1
+
+  local jmx_url='http://scm:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo'
+  if [[ "${SECURITY_ENABLED}" == 'true' ]]; then
+    docker-compose -f "${compose_file}" exec -T scm bash -c "kinit -k HTTP/scm@EXAMPLE.COM -t /etc/security/keytabs/HTTP.keytab && curl --negotiate -u : -s '${jmx_url}'"
+  else
+    docker-compose -f "${compose_file}" exec -T scm curl -s "${jmx_url}"
+  fi \
+    | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value'
+}
+
 ## @description wait until datanodes are up (or 30 seconds)
 ## @param the docker-compose file
 ## @param number of datanodes to wait for (default: 3)
@@ -43,7 +57,7 @@ wait_for_datanodes(){
 
      #This line checks the number of HEALTHY datanodes registered in scm over the
      # jmx HTTP servlet
-     datanodes=$(docker-compose -f "${compose_file}" exec -T scm curl -s 'http://localhost:9876/jmx?qry=Hadoop:service=SCMNodeManager,name=SCMNodeManagerInfo' | jq -r '.beans[0].NodeCount[] | select(.key=="HEALTHY") | .value')
+     datanodes=$(count_datanodes "${compose_file}")
      if [[ "$datanodes" ]]; then
        if [[ ${datanodes} -ge ${datanode_count} ]]; then
 
