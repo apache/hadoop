@@ -72,6 +72,25 @@ public class CommonConfigurationKeysPublic {
   public static final String  FS_DU_INTERVAL_KEY = "fs.du.interval";
   /** Default value for FS_DU_INTERVAL_KEY */
   public static final long    FS_DU_INTERVAL_DEFAULT = 600000;
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String FS_GETSPACEUSED_CLASSNAME =
+      "fs.getspaceused.classname";
+
+  /**
+   * @see
+   * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">
+   * core-default.xml</a>
+   */
+  public static final String FS_GETSPACEUSED_JITTER_KEY =
+      "fs.getspaceused.jitterMillis";
+  /** Default value for FS_GETSPACEUSED_JITTER_KEY */
+  public static final long FS_GETSPACEUSED_JITTER_DEFAULT = 60000;
+
   /**
    * @see
    * <a href="{@docRoot}/../hadoop-project-dist/hadoop-common/core-default.xml">

@@ -30,6 +30,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -197,6 +198,18 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
     }
   }
 
+  /**
+   * The deepCopyReplica call doesn't use the datasetock since it will lead the
+   * potential deadlock with the {@link FsVolumeList#addBlockPool} call.
+   */
+  @Override
+  public Set<? extends Replica> deepCopyReplica(String bpid)
+      throws IOException {
+    Set<? extends Replica> replicas =
+        new HashSet<>(volumeMap.replicas(bpid) == null ? Collections.EMPTY_SET
+            : volumeMap.replicas(bpid));
+    return Collections.unmodifiableSet(replicas);
+  }
 
   /**
    * This should be primarily used for testing.
