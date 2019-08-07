@@ -67,7 +67,7 @@ public class UtilizationService {
 
     Map<Long, Long> fileSizeCountResponseMap = new LinkedHashMap<>();
     for (FileCountBySize row : resultSet) {
-      fileSizeCountResponseMap.put(row.getFileSizeKb(), row.getCount());
+      fileSizeCountResponseMap.put(row.getFileSize(), row.getCount());
     }
     return Response.ok(fileSizeCountResponseMap).build();
   }

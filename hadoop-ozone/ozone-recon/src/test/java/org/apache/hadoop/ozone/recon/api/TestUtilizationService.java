@@ -49,11 +49,18 @@ public class TestUtilizationService {
   @Mock private FileCountBySizeDao fileCountBySizeDao;
   private List<FileCountBySize> resultList = new ArrayList<>();
   private int oneKb = 1024;
-  private int maxBinSize = 41;
+  private int maxBinSize = 42;
 
   public void setUpResultList() {
-    for(int i = 0; i < 41; i++){
-      resultList.add(new FileCountBySize((long) Math.pow(2, (10+i)), (long) i));
+    for (int i = 0; i < maxBinSize; i++) {
+      if (i == maxBinSize - 1) {
+        // for last bin file count is 41.
+        resultList.add(new FileCountBySize(Long.MAX_VALUE, (long) i));
+      } else {
+        // count of files of upperBound is equal to it's index.
+        resultList.add(new FileCountBySize((long) Math.pow(2, (10+i)),
+            (long) i));
+      }
     }
   }
 
@@ -70,39 +77,51 @@ public class TestUtilizationService {
     verify(utilizationService, times(1)).getFileCounts();
     verify(fileCountBySizeDao, times(1)).findAll();
 
-    assertEquals(41, resultList.size());
-    long fileSize = 4096L;
+    assertEquals(maxBinSize, resultList.size());
+    long fileSize = 4096L;              // 4KB
     int index =  findIndex(fileSize);
     long count = resultList.get(index).getCount();
     assertEquals(index, count);
 
-    fileSize = 1125899906842624L;
-    index = findIndex(fileSize);
-    if (index == Integer.MIN_VALUE) {
-      throw new IOException("File Size larger than permissible file size");
-    }
-
-    fileSize = 1025L;
+    fileSize = 1125899906842624L;       // 1PB
     index = findIndex(fileSize);
     count = resultList.get(index).getCount();
+    assertEquals(maxBinSize - 1, index);
+    assertEquals(index, count);
+
+    fileSize = 1025L;                   // 1 KB + 1B
+    index = findIndex(fileSize);
+    count = resultList.get(index).getCount(); //last extra bin for files >= 1PB
     assertEquals(index, count);
 
     fileSize = 25L;
     index = findIndex(fileSize);
     count = resultList.get(index).getCount();
     assertEquals(index, count);
+
+    fileSize = 1125899906842623L;       // 1PB - 1B
+    index = findIndex(fileSize);
+    count = resultList.get(index).getCount();
+    assertEquals(index, count);
+
+    fileSize = 1125899906842624L * 4;       // 4 PB
+    index = findIndex(fileSize);
+    count = resultList.get(index).getCount();
+    assertEquals(maxBinSize - 1, index);
+    assertEquals(index, count);
   }
 
   public int findIndex(long dataSize) {
-    int logValue = (int) Math.ceil(Math.log(dataSize)/Math.log(2));
-    if (logValue < 10) {
-      return 0;
-    } else {
-      int index = logValue - 10;
-      if (index > maxBinSize) {
-        return Integer.MIN_VALUE;
-      }
-      return (dataSize % oneKb == 0) ? index + 1 : index;
+    if (dataSize > Math.pow(2, (maxBinSize + 10 - 2))) {  // 1 PB = 2 ^ 50
+      return maxBinSize - 1;
     }
+    int index = 0;
+    while(dataSize != 0) {
+      dataSize >>= 1;
+      index += 1;
+    }
+    // The smallest file size being tracked for count
+    // is 1 KB i.e. 1024 = 2 ^ 10.
+    return index < 10 ? 0 : index - 10;
   }
 }

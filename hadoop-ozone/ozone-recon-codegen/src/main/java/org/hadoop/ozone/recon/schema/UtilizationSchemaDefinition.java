@@ -71,10 +71,10 @@ public class UtilizationSchemaDefinition implements ReconSchemaDefinition {
 
   void createFileSizeCount(Connection conn) {
     DSL.using(conn).createTableIfNotExists(FILE_COUNT_BY_SIZE_TABLE_NAME)
-        .column("file_size_kb", SQLDataType.BIGINT)
+        .column("file_size", SQLDataType.BIGINT)
         .column("count", SQLDataType.BIGINT)
-        .constraint(DSL.constraint("pk_file_size_kb")
-            .primaryKey("file_size_kb"))
+        .constraint(DSL.constraint("pk_file_size")
+            .primaryKey("file_size"))
         .execute();
   }
 }

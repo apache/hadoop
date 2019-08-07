@@ -78,7 +78,8 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
   protected int getMaxBinSize() {
     if (maxBinSize == -1) {
       // extra bin to add files > 1PB.
-      maxBinSize = calculateBinIndex(maxFileSizeUpperBound) + 1;
+      // 1 KB (2 ^ 10) is the smallest tracked file.
+      maxBinSize = nextClosetPowerIndexOfTwo(maxFileSizeUpperBound) - 10 + 1;
     }
     return maxBinSize;
   }
@@ -98,7 +99,9 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
         keyIter = omKeyInfoTable.iterator()) {
       while (keyIter.hasNext()) {
         Table.KeyValue<String, OmKeyInfo> kv = keyIter.next();
-        countFileSize(kv.getValue());
+
+        // reprocess() is a PUT operation on the DB.
+        updateUpperBoundCount(kv.getValue(), "PUT");
       }
     } catch (IOException ioEx) {
       LOG.error("Unable to populate File Size Count in Recon DB. ", ioEx);
@@ -115,7 +118,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     return tables;
   }
 
-  void updateCountFromDB() {
+  private void updateCountFromDB() {
     // Read - Write operations to DB are in ascending order
     // of file size upper bounds.
     List<FileCountBySize> resultSet = fileCountBySizeDao.findAll();
@@ -146,16 +149,16 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     while (eventIterator.hasNext()) {
       OMDBUpdateEvent<String, OmKeyInfo> omdbUpdateEvent = eventIterator.next();
       String updatedKey = omdbUpdateEvent.getKey();
-      OmKeyInfo updatedValue = omdbUpdateEvent.getValue();
+      OmKeyInfo omKeyInfo = omdbUpdateEvent.getValue();
 
       try{
         switch (omdbUpdateEvent.getAction()) {
         case PUT:
-          updateUpperBoundCount(updatedValue, "PUT");
+          updateUpperBoundCount(omKeyInfo, "PUT");
           break;
 
         case DELETE:
-          updateUpperBoundCount(updatedValue, "DELETE");
+          updateUpperBoundCount(omKeyInfo, "DELETE");
           break;
 
         default: LOG.trace("Skipping DB update event : " + omdbUpdateEvent
@@ -181,24 +184,22 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    * @return int bin index in upperBoundCount
    */
   int calculateBinIndex(long dataSize) {
-    int index = 0;
-    while(dataSize != 0) {
-      dataSize >>= 1;
-      index += 1;
+    if (dataSize >= getMaxFileSizeUpperBound()) {
+      return getMaxBinSize() - 1;
     }
+    int index = nextClosetPowerIndexOfTwo(dataSize);
     // The smallest file size being tracked for count
     // is 1 KB i.e. 1024 = 2 ^ 10.
     return index < 10 ? 0 : index - 10;
   }
 
-  void countFileSize(OmKeyInfo omKeyInfo) {
-    int index;
-    if (omKeyInfo.getDataSize() >= maxFileSizeUpperBound) {
-      index = maxBinSize - 1;
-    } else {
-      index = calculateBinIndex(omKeyInfo.getDataSize());
+  int nextClosetPowerIndexOfTwo(long dataSize) {
+    int index = 0;
+    while(dataSize != 0) {
+      dataSize >>= 1;
+      index += 1;
     }
-    upperBoundCount[index]++;
+    return index;
   }
 
   /**
@@ -222,9 +223,17 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     }
   }
 
-  private void updateUpperBoundCount(OmKeyInfo value, String operation)
+  /**
+   * Calculate and update the count of files being tracked by
+   * upperBoundCount[].
+   * Used by reprocess() and process().
+   *
+   * @param omKeyInfo OmKey being updated for count
+   * @param operation (PUT, DELETE)
+   */
+  void updateUpperBoundCount(OmKeyInfo omKeyInfo, String operation)
       throws IOException {
-    int binIndex = calculateBinIndex(value.getDataSize());
+    int binIndex = calculateBinIndex(omKeyInfo.getDataSize());
     if (operation.equals("PUT")) {
       upperBoundCount[binIndex]++;
     } else if (operation.equals("DELETE")) {

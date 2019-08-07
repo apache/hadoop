@@ -92,7 +92,7 @@ public class TestUtilizationSchemaDefinition extends AbstractSqlDatabaseTest {
 
     List<Pair<String, Integer>> expectedPairsFileCount = new ArrayList<>();
     expectedPairsFileCount.add(
-        new ImmutablePair<>("file_size_kb", Types.INTEGER));
+        new ImmutablePair<>("file_size", Types.INTEGER));
     expectedPairsFileCount.add(
         new ImmutablePair<>("count", Types.INTEGER));
 
@@ -207,7 +207,7 @@ public class TestUtilizationSchemaDefinition extends AbstractSqlDatabaseTest {
         getInjector().getInstance(Configuration.class));
 
     FileCountBySize newRecord = new FileCountBySize();
-    newRecord.setFileSizeKb(1024L);
+    newRecord.setFileSize(1024L);
     newRecord.setCount(1L);
 
     fileCountBySizeDao.insert(newRecord);

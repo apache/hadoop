@@ -57,12 +57,14 @@ public class TestFileSizeCountTask {
     when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
     when(fileSizeCountTask.getMaxBinSize()).thenReturn(42);
     when(fileSizeCountTask.calculateBinIndex(anyLong())).thenCallRealMethod();
+    when(fileSizeCountTask.nextClosetPowerIndexOfTwo(
+        anyLong())).thenCallRealMethod();
 
     long fileSize = 1024L;            // 1 KB
     int binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
     assertEquals(1, binIndex);
 
-    fileSize = 1023L;
+    fileSize = 1023L;                // 1KB - 1B
     binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
     assertEquals(0, binIndex);
 
@@ -86,9 +88,17 @@ public class TestFileSizeCountTask {
     binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
     assertEquals(7, binIndex);
 
-    fileSize = 1125899906842623L;
+    fileSize = 1125899906842623L;      // (1 PB - 1B)
     binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
     assertEquals(40, binIndex);
+
+    fileSize = 1125899906842624L * 4;      // 4 PB - last extra bin
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(41, binIndex);
+
+    fileSize = Long.MAX_VALUE;        // extra bin
+    binIndex = fileSizeCountTask.calculateBinIndex(fileSize);
+    assertEquals(41, binIndex);
   }
 
   @Test
@@ -116,13 +126,13 @@ public class TestFileSizeCountTask {
     when(fileSizeCountTask.getMaxFileSizeUpperBound()).
         thenReturn(4096L);
     when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
-    when(fileSizeCountTask.getMaxBinSize()).thenReturn(3);
+//    when(fileSizeCountTask.getMaxBinSize()).thenReturn(3);
 
     when(fileSizeCountTask.reprocess(omMetadataManager)).thenCallRealMethod();
     //call reprocess()
     fileSizeCountTask.reprocess(omMetadataManager);
     verify(fileSizeCountTask,
-        times(1)).countFileSize(omKeyInfo1);
+        times(1)).updateUpperBoundCount(omKeyInfo1, "PUT");
     verify(fileSizeCountTask,
         times(1)).populateFileCountBySizeDB();
   }
