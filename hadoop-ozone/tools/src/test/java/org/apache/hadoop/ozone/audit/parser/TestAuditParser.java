@@ -42,9 +42,9 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Tests TestAuditParser.
+ * Tests AuditParser.
  */
-public class AuditParser {
+public class TestAuditParser {
   private static File outputBaseDir;
   private static AuditParser parserTool;
   private static final Logger LOG =
