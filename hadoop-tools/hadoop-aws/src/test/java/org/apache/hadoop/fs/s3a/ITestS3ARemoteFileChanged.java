@@ -61,7 +61,6 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
@@ -276,8 +275,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
-    removeBaseAndBucketOverrides(bucketName, conf,
+    removeBaseAndBucketOverrides(conf,
         CHANGE_DETECT_SOURCE,
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,
