@@ -191,6 +191,15 @@ public abstract class ChangeDetectionPolicy {
   }
 
   /**
+   * String value for logging.
+   * @return source and mode.
+   */
+  @Override
+  public String toString() {
+    return "Policy " + getSource() + "/" + getMode();
+  }
+
+  /**
    * Pulls the attribute this policy uses to detect change out of the S3 object
    * metadata.  The policy generically refers to this attribute as
    * {@code revisionId}.

@@ -40,7 +40,14 @@ public class RemoteFileChangedException extends PathIOException {
    * file never became visible in S3.
    */
   public static final String FILE_NEVER_FOUND =
-      "File not found after repeated attempts";
+      "File not found on S3 after repeated attempts";
+
+  /**
+   * The file wasn't found in rename after a single attempt -the unguarded
+   * codepath.
+   */
+  public static final String FILE_NOT_FOUND_SINGLE_ATTEMPT =
+      "File not found on S3";
 
   /**
    * Constructs a RemoteFileChangedException.
