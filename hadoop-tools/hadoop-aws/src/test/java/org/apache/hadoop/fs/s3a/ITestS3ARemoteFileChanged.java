@@ -794,15 +794,20 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     stubTemporaryNotFound(s3ClientSpy, metadataInconsistencyCount + 1,
         inconsistentFile);
 
+    String expected = fs.hasMetadataStore()
+        ? RemoteFileChangedException.FILE_NEVER_FOUND
+        : RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT;
     RemoteFileChangedException ex = intercept(
         RemoteFileChangedException.class,
-        RemoteFileChangedException.FILE_NEVER_FOUND,
+        expected,
         () -> fs.rename(sourcedir, destdir));
     assertEquals("Path in " + ex,
         inconsistentFile, ex.getPath());
     if (!(ex.getCause() instanceof FileNotFoundException)) {
       throw ex;
     }
+    // throw this anyway
+//    throw ex;
   }
 
   /**

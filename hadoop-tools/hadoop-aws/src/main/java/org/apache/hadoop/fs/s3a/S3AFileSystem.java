@@ -1660,6 +1660,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     ObjectMetadata meta = changeInvoker.retryUntranslated("GET " + key, true,
         () -> {
           incrementStatistic(OBJECT_METADATA_REQUESTS);
+          LOG.debug("HEAD {} with change tracker {}", key, changeTracker);
           if (changeTracker != null) {
             changeTracker.maybeApplyConstraint(request);
           }
@@ -3168,10 +3169,20 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     } catch (FileNotFoundException e) {
       // if rename fails at this point it means that the expected file was not
       // found.
+      // The cause is believed to always be one of
+      //  - File has been deleted since LIST/S3Guard list knew of it.
+      //  - S3Guard is asking for a specific version and it's been removed by
+      //    lifecycle rules.
+      //  - there's a 404 cached in S3 load balancers
+      // We create an exception, but the text depends on the S3Guard state
+      String message = hasMetadataStore()
+          ? RemoteFileChangedException.FILE_NEVER_FOUND
+          : RemoteFileChangedException.FILE_NOT_FOUND_SINGLE_ATTEMPT;
       throw new RemoteFileChangedException(
           keyToQualifiedPath(srcKey).toString(),
           action,
-          RemoteFileChangedException.FILE_NEVER_FOUND, e);
+          message,
+          e);
     }
     ObjectMetadata dstom = cloneObjectMetadata(srcom);
     setOptionalObjectMetadata(dstom);
