@@ -120,6 +120,8 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
+
 import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -2268,6 +2270,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForVolume() throws Exception {
+    assumeFalse("Remove this once ACL HA is supported",
+        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     store.createVolume(volumeName);
 
@@ -2282,6 +2286,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForBucket() throws Exception {
+    assumeFalse("Remove this once ACL HA is supported",
+        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
@@ -2342,6 +2348,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForKey() throws Exception {
+    assumeFalse("Remove this once ACL HA is supported",
+        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
     String key1 = "dir1/dir2" + UUID.randomUUID().toString();
@@ -2404,6 +2412,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
   @Test
   public void testNativeAclsForPrefix() throws Exception {
+    assumeFalse("Remove this once ACL HA is supported",
+        getClass().equals(TestOzoneRpcClientWithRatis.class));
     String volumeName = UUID.randomUUID().toString();
     String bucketName = UUID.randomUUID().toString();
 
