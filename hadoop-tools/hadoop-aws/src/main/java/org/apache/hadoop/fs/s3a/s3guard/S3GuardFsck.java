@@ -114,7 +114,8 @@ public class S3GuardFsck {
       // Compare the directory contents if the listing is authoritative
       final DirListingMetadata msDirListing =
           metadataStore.listChildren(currentDirPath);
-      if (msDirListing.isAuthoritative()) {
+      if (msDirListing != null &&
+          msDirListing.isAuthoritative()) {
         final ComparePair cP =
             compareAuthDirListing(s3DirListing, msDirListing);
         if (cP.containsViolation()) {
@@ -243,6 +244,13 @@ public class S3GuardFsck {
       comparePair.violations.add(Violation.MOD_TIME_MISMATCH);
     }
 
+    if(msPathMetadata.getFileStatus().getVersionId() == null) {
+      // we don't handle missing versionIDs
+    } else if(s3FileStatus.getVersionId() != msFileStatus.getVersionId()) {
+      comparePair.violations.add(Violation.VERSIONID_MISMATCH);
+    }
+
+
     if (msPathMetadata.getFileStatus().getETag() == null) {
       comparePair.violations.add(Violation.NO_ETAG);
     } else if (s3FileStatus.getETag() != null &&
@@ -321,40 +329,55 @@ public class S3GuardFsck {
   }
 
   /**
-   * Violation with severity:
+   * Violation with severity and the handler.
    * Defines the severity of the violation between 0-2
    * where 0 is the most severe and 2 is the least severe.
    */
   public enum Violation {
     // No entry in metadatastore
-    NO_METADATA_ENTRY(1),
+    NO_METADATA_ENTRY(1,
+        S3GuardFsckViolationHandler.NoMetadataEntry.class),
     // A file or directory entry does not have a parent entry - excluding
     // files and directories in the root.
-    NO_PARENT_ENTRY(0),
+    NO_PARENT_ENTRY(0,
+        S3GuardFsckViolationHandler.NoParentEntry.class),
     // An entry’s parent is a file
-    PARENT_IS_A_FILE(0),
+    PARENT_IS_A_FILE(0,
+        S3GuardFsckViolationHandler.ParentIsAFile.class),
     // A file exists under a path for which there is
     // a tombstone entry in the MS
-    PARENT_TOMBSTONED(0),
+    PARENT_TOMBSTONED(0,
+        S3GuardFsckViolationHandler.ParentTombstoned.class),
     // A directory in S3 is a file entry in the MS
-    DIR_IN_S3_FILE_IN_MS(0),
+    DIR_IN_S3_FILE_IN_MS(0,
+        S3GuardFsckViolationHandler.DirInS3FileInMs.class),
     // A file in S3 is a directory in the MS
-    FILE_IN_S3_DIR_IN_MS(0),
-    AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1),
+    FILE_IN_S3_DIR_IN_MS(0,
+        S3GuardFsckViolationHandler.FileInS3DirInMs.class),
+    AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH(1,
+        S3GuardFsckViolationHandler.AuthDirContentMismatch.class),
     // Attribute mismatch
-    LENGTH_MISMATCH(0),
-    MOD_TIME_MISMATCH(2),
+    LENGTH_MISMATCH(0,
+        S3GuardFsckViolationHandler.LengthMismatch.class),
+    MOD_TIME_MISMATCH(2,
+        S3GuardFsckViolationHandler.ModTimeMismatch.class),
     // If there's a versionID the mismatch is severe
-    VERSIONID_MISMATCH(0),
+    VERSIONID_MISMATCH(0,
+        S3GuardFsckViolationHandler.VersionIdMismatch.class),
     // If there's an etag the mismatch is severe
-    ETAG_MISMATCH(0),
+    ETAG_MISMATCH(0,
+        S3GuardFsckViolationHandler.EtagMismatch.class),
     // Don't worry too much if we don't have an etag
-    NO_ETAG(2);
+    NO_ETAG(2,
+        S3GuardFsckViolationHandler.NoEtag.class);
 
     int severity;
+    Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
 
-    Violation(int s) {
+    Violation(int s,
+        Class<? extends S3GuardFsckViolationHandler.ViolationHandler> h) {
       this.severity = s;
+      this.handler = h;
     }
   }
 }

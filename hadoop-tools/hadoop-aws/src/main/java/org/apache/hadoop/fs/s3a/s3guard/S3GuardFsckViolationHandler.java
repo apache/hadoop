@@ -18,19 +18,17 @@
 
 package org.apache.hadoop.fs.s3a.s3guard;
 
-import com.google.common.collect.Lists;
-import org.apache.commons.math3.ode.UnknownParameterException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 /**
  * Violation handler for the S3Guard's fsck
- * 
  */
 public class S3GuardFsckViolationHandler {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -53,67 +51,26 @@ public class S3GuardFsckViolationHandler {
       return;
     }
 
-    ViolationHandler handler;
-
     StringBuilder sB = new StringBuilder(
         String.format("%sOn path: %s%n", NEWLINE, comparePair.getPath())
     );
 
+    // Create a new instance of the handler and use it.
     for (S3GuardFsck.Violation violation : comparePair.getViolations()) {
-      switch (violation) {
-      case NO_METADATA_ENTRY:
-        handler = new NoMetadataEntryViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case NO_PARENT_ENTRY:
-        handler = new NoParentEntryViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case PARENT_IS_A_FILE:
-        handler = new ParentIsAFileViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case PARENT_TOMBSTONED:
-        handler = new ParentTombstonedViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case DIR_IN_S3_FILE_IN_MS:
-        handler = new DirInS3FileInMsViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case FILE_IN_S3_DIR_IN_MS:
-        handler = new FileInS3DirInMsViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case AUTHORITATIVE_DIRECTORY_CONTENT_MISMATCH:
-        handler = new AuthDirContentMismatchViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case LENGTH_MISMATCH:
-        handler = new LengthMismatchViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case MOD_TIME_MISMATCH:
-        handler = new ModTimeMismatchViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case VERSIONID_MISMATCH:
-        handler = new VersionIdMismatchViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case ETAG_MISMATCH:
-        handler = new EtagMismatchViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      case NO_ETAG:
-        handler = new NoEtagViolation(comparePair);
-        sB.append(handler.getError());
-        break;
-      default:
-        LOG.error("UNKNOWN VIOLATION: {}", violation.toString());
-        throw new UnknownParameterException("Unknown Violation: " +
-            violation.toString());
+      try {
+        ViolationHandler handler =
+            violation.handler.getDeclaredConstructor(S3GuardFsck.ComparePair.class)
+            .newInstance(comparePair);
+        final String errorStr = handler.getError();
+        sB.append(errorStr);
+      } catch (NoSuchMethodException e) {
+        LOG.error("Can not find declared constructor for handler: {}",
+            violation.handler);
+      } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
+        LOG.error("Can not instantiate handler: {}",
+            violation.handler);
       }
+
       sB.append(NEWLINE);
     }
 
@@ -142,9 +99,9 @@ public class S3GuardFsckViolationHandler {
     abstract String getError();
   }
 
-  public static class NoMetadataEntryViolation extends ViolationHandler {
+  public static class NoMetadataEntry extends ViolationHandler {
 
-    public NoMetadataEntryViolation(S3GuardFsck.ComparePair comparePair) {
+    public NoMetadataEntry(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -154,9 +111,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class NoParentEntryViolation extends ViolationHandler {
+  public static class NoParentEntry extends ViolationHandler {
 
-    public NoParentEntryViolation(S3GuardFsck.ComparePair comparePair) {
+    public NoParentEntry(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -166,9 +123,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class ParentIsAFileViolation extends ViolationHandler {
+  public static class ParentIsAFile extends ViolationHandler {
 
-    public ParentIsAFileViolation(S3GuardFsck.ComparePair comparePair) {
+    public ParentIsAFile(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -178,9 +135,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class ParentTombstonedViolation extends ViolationHandler {
+  public static class ParentTombstoned extends ViolationHandler {
 
-    public ParentTombstonedViolation(S3GuardFsck.ComparePair comparePair) {
+    public ParentTombstoned(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -190,9 +147,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class DirInS3FileInMsViolation extends ViolationHandler {
+  public static class DirInS3FileInMs extends ViolationHandler {
 
-    public DirInS3FileInMsViolation(S3GuardFsck.ComparePair comparePair) {
+    public DirInS3FileInMs(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -202,9 +159,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class FileInS3DirInMsViolation extends ViolationHandler {
+  public static class FileInS3DirInMs extends ViolationHandler {
 
-    public FileInS3DirInMsViolation(S3GuardFsck.ComparePair comparePair) {
+    public FileInS3DirInMs(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -214,9 +171,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class AuthDirContentMismatchViolation extends ViolationHandler {
+  public static class AuthDirContentMismatch extends ViolationHandler {
 
-    public AuthDirContentMismatchViolation(S3GuardFsck.ComparePair comparePair) {
+    public AuthDirContentMismatch(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -230,9 +187,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class LengthMismatchViolation extends ViolationHandler {
+  public static class LengthMismatch extends ViolationHandler {
 
-    public LengthMismatchViolation(S3GuardFsck.ComparePair comparePair) {
+    public LengthMismatch(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -242,9 +199,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class ModTimeMismatchViolation extends ViolationHandler {
+  public static class ModTimeMismatch extends ViolationHandler {
 
-    public ModTimeMismatchViolation(S3GuardFsck.ComparePair comparePair) {
+    public ModTimeMismatch(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -256,9 +213,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class VersionIdMismatchViolation extends ViolationHandler {
+  public static class VersionIdMismatch extends ViolationHandler {
 
-    public VersionIdMismatchViolation(S3GuardFsck.ComparePair comparePair) {
+    public VersionIdMismatch(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -269,9 +226,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class EtagMismatchViolation extends ViolationHandler {
+  public static class EtagMismatch extends ViolationHandler {
 
-    public EtagMismatchViolation(S3GuardFsck.ComparePair comparePair) {
+    public EtagMismatch(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
@@ -282,9 +239,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
-  public static class NoEtagViolation extends ViolationHandler {
+  public static class NoEtag extends ViolationHandler {
 
-    public NoEtagViolation(S3GuardFsck.ComparePair comparePair) {
+    public NoEtag(S3GuardFsck.ComparePair comparePair) {
       super(comparePair);
     }
 
