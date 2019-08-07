@@ -137,7 +137,7 @@ public class ITestAzureBlobFileSystemFileStatus extends
     long lastModifiedTime = fStat.getModificationTime();
     assertTrue("lastModifiedTime should be greater than minCreateStartTime",
         minCreateStartTime < lastModifiedTime);
-    assertTrue("lastModifiedTime should be lesser than createEndTime",
+    assertTrue("lastModifiedTime should be smaller than createEndTime",
         createEndTime > lastModifiedTime);
   }
 }
