@@ -18,7 +18,7 @@ cd "$DIR/../../.." || exit 1
 
 export MAVEN_OPTS="-Xmx4096m"
 mvn -B install -f pom.ozone.xml -DskipTests
-mvn -B -fn test -f pom.ozone.xml -pl :hadoop-ozone-integration-test,:hadoop-ozone-filesystem
+mvn -B -fn test -f pom.ozone.xml -pl :hadoop-ozone-integration-test,:hadoop-ozone-filesystem,:hadoop-ozone-tools
 module_failed_tests=$(find "." -name 'TEST*.xml' -print0 \
     | xargs -0 -n1 "grep" -l -E "<failure|<error"\
     | awk -F/ '{sub("'"TEST-JUNIT_TEST_OUTPUT_DIR"'",""); sub(".xml",""); print $NF}')
