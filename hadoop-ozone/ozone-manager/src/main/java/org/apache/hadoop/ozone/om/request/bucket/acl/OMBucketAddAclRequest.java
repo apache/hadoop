@@ -23,7 +23,7 @@ import java.util.List;
 
 import com.google.common.collect.Lists;
 import org.apache.hadoop.ozone.om.OMMetrics;
-import org.apache.hadoop.ozone.util.BiFunction;
+import org.apache.hadoop.ozone.util.BooleanBiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ public class OMBucketAddAclRequest extends OMBucketAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMBucketAddAclRequest.class);
 
-  private static BiFunction<List<OzoneAcl>, OmBucketInfo> bucketAddAclOp;
+  private static BooleanBiFunction<List<OzoneAcl>, OmBucketInfo> bucketAddAclOp;
   private String path;
   private List<OzoneAcl> ozoneAcls;
 

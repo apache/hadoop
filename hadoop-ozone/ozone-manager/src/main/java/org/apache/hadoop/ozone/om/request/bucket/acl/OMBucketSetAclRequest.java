@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
-import org.apache.hadoop.ozone.util.BiFunction;
+import org.apache.hadoop.ozone.util.BooleanBiFunction;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.om.response.bucket.acl.OMBucketAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
@@ -25,8 +25,8 @@ public class OMBucketSetAclRequest extends OMBucketAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMBucketAddAclRequest.class);
 
-  private static BiFunction< List<OzoneAcl>,
-      OmBucketInfo > bucketAddAclOp;
+  private static BooleanBiFunction< List<OzoneAcl>,
+        OmBucketInfo > bucketAddAclOp;
   private String path;
   private List<OzoneAcl> ozoneAcls;
 

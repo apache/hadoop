@@ -784,7 +784,6 @@ public class TestOzoneManagerHA {
     boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
     Assert.assertTrue(addAcl);
 
-    ozoneBucket.addAcls(Collections.singletonList(defaultUserAcl));
     List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
 
     Assert.assertTrue(containsAcl(defaultUserAcl, acls));

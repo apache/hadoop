@@ -30,7 +30,7 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
-import org.apache.hadoop.ozone.util.BiFunction;
+import org.apache.hadoop.ozone.util.BooleanBiFunction;
 import org.apache.hadoop.ozone.om.request.util.ObjectParser;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
@@ -48,10 +48,10 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_L
  */
 public abstract class OMBucketAclRequest extends OMClientRequest {
 
-  private BiFunction<List<OzoneAcl>, OmBucketInfo> omBucketAclOp;
+  private BooleanBiFunction<List<OzoneAcl>, OmBucketInfo> omBucketAclOp;
 
   public OMBucketAclRequest(OMRequest omRequest,
-      BiFunction<List<OzoneAcl>, OmBucketInfo> aclOp) {
+      BooleanBiFunction<List<OzoneAcl>, OmBucketInfo> aclOp) {
     super(omRequest);
     omBucketAclOp = aclOp;
   }

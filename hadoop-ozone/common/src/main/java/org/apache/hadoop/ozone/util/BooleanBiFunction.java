@@ -5,7 +5,7 @@ package org.apache.hadoop.ozone.util;
  * output.
  */
 @FunctionalInterface
-public interface BiFunction<LEFT, RIGHT> {
+public interface BooleanBiFunction<LEFT, RIGHT> {
   boolean apply(LEFT left, RIGHT right);
 }
 
