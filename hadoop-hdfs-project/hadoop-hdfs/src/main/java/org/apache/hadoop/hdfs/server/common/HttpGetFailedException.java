@@ -22,6 +22,10 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
+/**
+ * The exception is thrown when HTTP GET operation has failed.
+ *
+ */
 @InterfaceAudience.Private
 public class HttpGetFailedException extends IOException {
   private static final long serialVersionUID = 1L;

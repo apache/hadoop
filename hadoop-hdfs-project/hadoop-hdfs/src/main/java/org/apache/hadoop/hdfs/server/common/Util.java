@@ -39,9 +39,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.google.common.collect.Lists;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.namenode.ImageServlet;
@@ -56,11 +53,13 @@ import org.apache.hadoop.hdfs.web.URLConnectionFactory;
 public final class Util {
   private final static Log LOG = LogFactory.getLog(Util.class.getName());
 
+  /* Required headers for FSImage transfer. */
   public final static String FILE_LENGTH = "File-Length";
   public final static String CONTENT_LENGTH = "Content-Length";
   public final static String MD5_HEADER = "X-MD5-Digest";
   public final static String CONTENT_TYPE = "Content-Type";
-  public final static String CONTENT_TRANSFER_ENCODING = "Content-Transfer-Encoding";
+  public final static String CONTENT_TRANSFER_ENCODING =
+      "Content-Transfer-Encoding";
 
   public final static int IO_FILE_BUFFER_SIZE;
   private static final boolean isSpnegoEnabled;

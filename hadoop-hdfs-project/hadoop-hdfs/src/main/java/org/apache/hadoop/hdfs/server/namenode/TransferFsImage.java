@@ -312,7 +312,8 @@ public class TransferFsImage {
   private static void writeFileToPutRequest(Configuration conf,
       HttpURLConnection connection, File imageFile, Canceler canceler)
       throws IOException {
-    connection.setRequestProperty(Util.CONTENT_TYPE, "application/octet-stream");
+    connection.setRequestProperty(Util.CONTENT_TYPE,
+        "application/octet-stream");
     connection.setRequestProperty(Util.CONTENT_TRANSFER_ENCODING, "binary");
     OutputStream output = connection.getOutputStream();
     FileInputStream input = new FileInputStream(imageFile);
