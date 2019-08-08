@@ -49,6 +49,7 @@ Setup v2 headers
                         Set Environment Variable   AWS_SECRET_ACCESS_KEY   ANYKEY
 
 Setup v4 headers
+    Run Keyword if      '${SECURITY_ENABLED}' == 'true'     Kinit test user    testuser    testuser.keytab
     ${result} =         Execute                    ozone s3 getsecret
     ${accessKey} =      Get Regexp Matches         ${result}     (?<=awsAccessKey=).*
     ${accessKey} =      Get Variable Value         ${accessKey}  sdsdasaasdasd

@@ -54,6 +54,10 @@ Install aws cli
     ${rc}              ${output} =                 Run And Return Rc And Output           yum --help
     Run Keyword if     '${rc}' == '0'              Install aws cli s3 centos
 
+Kinit HTTP user
+    ${hostname} =       Execute                    hostname
+    Wait Until Keyword Succeeds      2min       10sec      Execute            kinit -k HTTP/${hostname}@EXAMPLE.COM -t /etc/security/keytabs/HTTP.keytab
+
 Kinit test user
     [arguments]                      ${user}       ${keytab}
     ${hostname} =       Execute                    hostname
