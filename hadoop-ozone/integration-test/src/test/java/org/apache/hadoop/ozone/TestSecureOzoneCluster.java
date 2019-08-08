@@ -35,6 +35,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdds.HddsConfigKeys;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.SCMSecurityProtocol;
+import org.apache.hadoop.hdds.scm.HddsTestUtils;
 import org.apache.hadoop.hdds.scm.ScmConfigKeys;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
@@ -271,7 +272,7 @@ public final class TestSecureOzoneCluster {
   public void testSCMSecurityProtocol() throws Exception {
 
     initSCM();
-    scm = StorageContainerManager.createSCM(conf);
+    scm = HddsTestUtils.getScm(conf);
     //Reads the SCM Info from SCM instance
     try {
       scm.start();
@@ -739,7 +740,7 @@ public final class TestSecureOzoneCluster {
 
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(conf);
+      scm = HddsTestUtils.getScm(conf);
       scm.start();
       conf.setBoolean(OZONE_SECURITY_ENABLED_KEY, false);
       OMStorage omStore = new OMStorage(conf);
@@ -785,7 +786,7 @@ public final class TestSecureOzoneCluster {
     omLogs.clearOutput();
     initSCM();
     try {
-      scm = StorageContainerManager.createSCM(conf);
+      scm = HddsTestUtils.getScm(conf);
       scm.start();
 
       OMStorage omStore = new OMStorage(conf);
