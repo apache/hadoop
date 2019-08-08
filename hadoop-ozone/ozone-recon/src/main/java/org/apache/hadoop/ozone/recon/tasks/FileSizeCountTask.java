@@ -18,11 +18,13 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.TableIterator;
 import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
@@ -37,6 +39,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+
+import static org.apache.hadoop.utils.BatchOperation.Operation.DELETE;
+import static org.apache.hadoop.utils.BatchOperation.Operation.PUT;
 
 /**
  * Class to iterate over the OM DB and store the counts of existing/new
@@ -67,19 +72,22 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     upperBoundCount = new long[getMaxBinSize()];
   }
 
-  protected long getOneKB() {
+  @VisibleForTesting
+  public long getOneKB() {
     return oneKb;
   }
 
-  protected long getMaxFileSizeUpperBound() {
+  @VisibleForTesting
+  public long getMaxFileSizeUpperBound() {
     return maxFileSizeUpperBound;
   }
 
-  protected int getMaxBinSize() {
+  @VisibleForTesting
+  public int getMaxBinSize() {
     if (maxBinSize == -1) {
       // extra bin to add files > 1PB.
       // 1 KB (2 ^ 10) is the smallest tracked file.
-      maxBinSize = nextClosetPowerIndexOfTwo(maxFileSizeUpperBound) - 10 + 1;
+      maxBinSize = nextClosestPowerIndexOfTwo(maxFileSizeUpperBound) - 10 + 1;
     }
     return maxBinSize;
   }
@@ -101,7 +109,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
         Table.KeyValue<String, OmKeyInfo> kv = keyIter.next();
 
         // reprocess() is a PUT operation on the DB.
-        updateUpperBoundCount(kv.getValue(), "PUT");
+        updateUpperBoundCount(kv.getValue(), PUT);
       }
     } catch (IOException ioEx) {
       LOG.error("Unable to populate File Size Count in Recon DB. ", ioEx);
@@ -154,11 +162,11 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
       try{
         switch (omdbUpdateEvent.getAction()) {
         case PUT:
-          updateUpperBoundCount(omKeyInfo, "PUT");
+          updateUpperBoundCount(omKeyInfo, PUT);
           break;
 
         case DELETE:
-          updateUpperBoundCount(omKeyInfo, "DELETE");
+          updateUpperBoundCount(omKeyInfo, DELETE);
           break;
 
         default: LOG.trace("Skipping DB update event : " + omdbUpdateEvent
@@ -183,17 +191,17 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    * @param dataSize Size of the key.
    * @return int bin index in upperBoundCount
    */
-  int calculateBinIndex(long dataSize) {
+  public int calculateBinIndex(long dataSize) {
     if (dataSize >= getMaxFileSizeUpperBound()) {
       return getMaxBinSize() - 1;
     }
-    int index = nextClosetPowerIndexOfTwo(dataSize);
+    int index = nextClosestPowerIndexOfTwo(dataSize);
     // The smallest file size being tracked for count
     // is 1 KB i.e. 1024 = 2 ^ 10.
     return index < 10 ? 0 : index - 10;
   }
 
-  int nextClosetPowerIndexOfTwo(long dataSize) {
+  int nextClosestPowerIndexOfTwo(long dataSize) {
     int index = 0;
     while(dataSize != 0) {
       dataSize >>= 1;
@@ -231,12 +239,12 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    * @param omKeyInfo OmKey being updated for count
    * @param operation (PUT, DELETE)
    */
-  void updateUpperBoundCount(OmKeyInfo omKeyInfo, String operation)
-      throws IOException {
+  void updateUpperBoundCount(OmKeyInfo omKeyInfo,
+      BatchOperation.Operation operation) throws IOException {
     int binIndex = calculateBinIndex(omKeyInfo.getDataSize());
-    if (operation.equals("PUT")) {
+    if (operation == PUT) {
       upperBoundCount[binIndex]++;
-    } else if (operation.equals("DELETE")) {
+    } else if (operation == DELETE) {
       if (upperBoundCount[binIndex] != 0) {
         //decrement only if it had files before, default DB value is 0
         upperBoundCount[binIndex]--;

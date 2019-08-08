@@ -21,6 +21,7 @@ package org.apache.hadoop.ozone.recon.tasks;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
+import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.db.TypedTable;
 import org.junit.Test;
 
@@ -57,7 +58,7 @@ public class TestFileSizeCountTask {
     when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
     when(fileSizeCountTask.getMaxBinSize()).thenReturn(42);
     when(fileSizeCountTask.calculateBinIndex(anyLong())).thenCallRealMethod();
-    when(fileSizeCountTask.nextClosetPowerIndexOfTwo(
+    when(fileSizeCountTask.nextClosestPowerIndexOfTwo(
         anyLong())).thenCallRealMethod();
 
     long fileSize = 1024L;            // 1 KB
@@ -126,13 +127,12 @@ public class TestFileSizeCountTask {
     when(fileSizeCountTask.getMaxFileSizeUpperBound()).
         thenReturn(4096L);
     when(fileSizeCountTask.getOneKB()).thenReturn(1024L);
-//    when(fileSizeCountTask.getMaxBinSize()).thenReturn(3);
 
     when(fileSizeCountTask.reprocess(omMetadataManager)).thenCallRealMethod();
     //call reprocess()
     fileSizeCountTask.reprocess(omMetadataManager);
-    verify(fileSizeCountTask,
-        times(1)).updateUpperBoundCount(omKeyInfo1, "PUT");
+    verify(fileSizeCountTask, times(1)).
+        updateUpperBoundCount(omKeyInfo1, BatchOperation.Operation.PUT);
     verify(fileSizeCountTask,
         times(1)).populateFileCountBySizeDB();
   }
