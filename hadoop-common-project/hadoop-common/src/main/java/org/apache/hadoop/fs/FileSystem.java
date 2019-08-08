@@ -1789,6 +1789,34 @@ public abstract class FileSystem extends Configured
   }
 
   /**
+   * Set quota for the given {@link Path}.
+   *
+   * @param src the target path to set quota for
+   * @param namespaceQuota the namespace quota (i.e., # of files/directories) to set
+   * @param storagespaceQuota the storage space quota to set
+   * @throws IOException IO failure
+   */
+  public void setQuota(Path src, final long namespaceQuota,
+      final long storagespaceQuota) throws IOException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        "does not support setQuota");
+  }
+
+  /**
+   * Set per storage type quota for the given {@link Path}.
+   *
+   * @param src the target path to set storage type quota for
+   * @param type the storage type to set
+   * @param quota the quota to set for the given storage type
+   * @throws IOException IO failure
+   */
+  public void setQuotaByStorageType(Path src, final StorageType type,
+      final long quota) throws IOException {
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        "does not support setQuotaByStorageType");
+  }
+
+  /**
    * The default filter accepts all paths.
    */
   private static final PathFilter DEFAULT_FILTER = new PathFilter() {

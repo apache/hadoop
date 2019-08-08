@@ -1129,8 +1129,87 @@ public class TestWebHDFS {
         cluster.shutdown();
       }
     }
-
   }
+
+  @Test
+  public void testSetQuota() throws Exception {
+    MiniDFSCluster cluster = null;
+    final Configuration conf = WebHdfsTestUtil.createConf();
+    final Path path = new Path("/TestDir");
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(3).build();
+      final WebHdfsFileSystem webHdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          conf, WebHdfsConstants.WEBHDFS_SCHEME);
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+
+      final long nsQuota = 100;
+      final long spaceQuota = 1024;
+
+      webHdfs.mkdirs(path);
+
+      webHdfs.setQuota(path, nsQuota, spaceQuota);
+      QuotaUsage quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(nsQuota, quotaUsage.getQuota());
+      assertEquals(spaceQuota, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuota(path,
+          HdfsConstants.QUOTA_RESET, HdfsConstants.QUOTA_RESET);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getQuota());
+      assertEquals(HdfsConstants.QUOTA_RESET, quotaUsage.getSpaceQuota());
+
+      webHdfs.setQuotaByStorageType(path, StorageType.DISK, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.ARCHIVE, spaceQuota);
+      webHdfs.setQuotaByStorageType(path, StorageType.SSD, spaceQuota);
+      quotaUsage = dfs.getQuotaUsage(path);
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.DISK));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.ARCHIVE));
+      assertEquals(spaceQuota, quotaUsage.getTypeQuota(StorageType.SSD));
+
+      // Test invalid parameters
+
+      try {
+        webHdfs.setQuota(path, -100, 100);
+        fail("Should have thrown exception");
+      } catch (IllegalArgumentException e) {
+        assertTrue(e.getMessage().contains("Invalid values for quota"));
+      }
+
+      try {
+        webHdfs.setQuota(path, 100, -100);
+        fail("Should have thrown exception");
+      } catch (IllegalArgumentException e) {
+        assertTrue(e.getMessage().contains("Invalid values for quota"));
+      }
+
+      try {
+        webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100);
+        fail("Should have thrown exception");
+      } catch (IllegalArgumentException e) {
+        assertTrue(e.getMessage().contains("Invalid values for quota"));
+      }
+
+      try {
+        webHdfs.setQuotaByStorageType(path, null, 100);
+        fail("Should have thrown exception");
+      } catch (IllegalArgumentException e) {
+        assertTrue(e.getMessage().contains("Invalid storage type"));
+      }
+
+      try {
+        webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100);
+        fail("Should have thrown exception");
+      } catch (IllegalArgumentException e) {
+        assertTrue(e.getMessage().contains("is not supported"));
+      }
+
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
 
   @Test
   public void testWebHdfsPread() throws Exception {

@@ -547,6 +547,47 @@ public class FSOperations {
     }
   }
 
+  @InterfaceAudience.Private
+  public static class FSSetQuota
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+    private final Path path;
+    private final long namespaceQuota;
+    private final long storagespaceQuota;
+
+    public FSSetQuota(String path, long namespaceQuota,
+        long storagespaceQuota) {
+      this.path = new Path(path);
+      this.namespaceQuota = namespaceQuota;
+      this.storagespaceQuota = storagespaceQuota;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.setQuota(path, namespaceQuota, storagespaceQuota);
+      return null;
+    }
+  }
+
+  @InterfaceAudience.Private
+  public static class FSSetQuotaByStorageType
+      implements FileSystemAccess.FileSystemExecutor<Void> {
+    private final Path path;
+    private final StorageType type;
+    private final long quota;
+
+    public FSSetQuotaByStorageType(String path, StorageType type, long quota) {
+      this.path = new Path(path);
+      this.type = type;
+      this.quota = quota;
+    }
+
+    @Override
+    public Void execute(FileSystem fs) throws IOException {
+      fs.setQuotaByStorageType(path, type, quota);
+      return null;
+    }
+  }
+
   /**
    * Executor that performs a create FileSystemAccess files system operation.
    */
