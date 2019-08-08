@@ -442,32 +442,6 @@ public class RpcClient implements ClientProtocol {
         userRights, groupRights);
   }
 
-  @Override
-  public void addBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> addAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(addAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setAddAcls(addAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
-  }
-
-  @Override
-  public void removeBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> removeAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(removeAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setRemoveAcls(removeAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
-  }
-
   /**
    * Get a valid Delegation Token.
    *

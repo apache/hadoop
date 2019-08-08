@@ -515,7 +515,9 @@ public abstract class TestOzoneRpcClientAbstract {
     List<OzoneAcl> acls = new ArrayList<>();
     acls.add(new OzoneAcl(USER, "test", ACLType.ALL, ACCESS));
     OzoneBucket bucket = volume.getBucket(bucketName);
-    bucket.addAcls(acls);
+    for (OzoneAcl acl : acls) {
+      assertTrue(bucket.addAcls(acl));
+    }
     OzoneBucket newBucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, newBucket.getName());
     Assert.assertTrue(bucket.getAcls().contains(acls.get(0)));
@@ -536,7 +538,9 @@ public abstract class TestOzoneRpcClientAbstract {
     builder.setAcls(acls);
     volume.createBucket(bucketName, builder.build());
     OzoneBucket bucket = volume.getBucket(bucketName);
-    bucket.removeAcls(acls);
+    for (OzoneAcl acl : acls) {
+      assertTrue(bucket.removeAcls(acl));
+    }
     OzoneBucket newBucket = volume.getBucket(bucketName);
     Assert.assertEquals(bucketName, newBucket.getName());
     Assert.assertTrue(!bucket.getAcls().contains(acls.get(0)));

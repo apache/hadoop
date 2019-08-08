@@ -272,16 +272,6 @@ public class BucketManagerImpl implements BucketManager {
           .setBucketName(oldBucketInfo.getBucketName());
       bucketInfoBuilder.addAllMetadata(args.getMetadata());
 
-      //Check ACLs to update
-      if (args.getAddAcls() != null || args.getRemoveAcls() != null) {
-        bucketInfoBuilder.setAcls(getUpdatedAclList(oldBucketInfo.getAcls(),
-            args.getRemoveAcls(), args.getAddAcls()));
-        LOG.debug("Updating ACLs for bucket: {} in volume: {}",
-            bucketName, volumeName);
-      } else {
-        bucketInfoBuilder.setAcls(oldBucketInfo.getAcls());
-      }
-
       //Check StorageType to update
       StorageType storageType = args.getStorageType();
       if (storageType != null) {
@@ -316,27 +306,6 @@ public class BucketManagerImpl implements BucketManager {
       metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
           bucketName);
     }
-  }
-
-  /**
-   * Updates the existing ACL list with remove and add ACLs that are passed.
-   * Remove is done before Add.
-   *
-   * @param existingAcls - old ACL list.
-   * @param removeAcls - ACLs to be removed.
-   * @param addAcls - ACLs to be added.
-   * @return updated ACL list.
-   */
-  private List<OzoneAcl> getUpdatedAclList(List<OzoneAcl> existingAcls,
-      List<OzoneAcl> removeAcls, List<OzoneAcl> addAcls) {
-    if (removeAcls != null && !removeAcls.isEmpty()) {
-      existingAcls.removeAll(removeAcls);
-    }
-    if (addAcls != null && !addAcls.isEmpty()) {
-      addAcls.stream().filter(acl -> !existingAcls.contains(acl)).forEach(
-          existingAcls::add);
-    }
-    return existingAcls;
   }
 
   /**

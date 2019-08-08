@@ -32,6 +32,7 @@ import org.apache.hadoop.ozone.web.request.OzoneQuota;
 import org.apache.hadoop.ozone.web.utils.OzoneUtils;
 import org.apache.hadoop.util.Time;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -54,6 +55,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.junit.Assume.assumeFalse;
 
 /**
  * Test Ozone Bucket Lifecycle.
@@ -177,6 +179,8 @@ public class TestBuckets {
 
   @Test
   public void testAddBucketAcls() throws Exception {
+    assumeFalse("Rest Client does not support ACL",
+        clientProtocol.equals(RestClient.class));
     runTestAddBucketAcls(client);
   }
 
@@ -194,11 +198,14 @@ public class TestBuckets {
     String bucketName = OzoneUtils.getRequestID().toLowerCase();
     vol.createBucket(bucketName);
     OzoneBucket bucket = vol.getBucket(bucketName);
+
     List<OzoneAcl> aclList =
         Arrays.stream(acls).map(acl -> OzoneAcl.parseAcl(acl))
             .collect(Collectors.toList());
     int numAcls = bucket.getAcls().size();
-    bucket.addAcls(aclList);
+    for (OzoneAcl ozoneAcl : aclList) {
+      Assert.assertTrue(bucket.addAcls(ozoneAcl));
+    }
     OzoneBucket updatedBucket = vol.getBucket(bucketName);
     assertEquals(updatedBucket.getAcls().size(), 2 + numAcls);
     // verify if the creation time is missing after update operation
@@ -209,6 +216,8 @@ public class TestBuckets {
 
   @Test
   public void testRemoveBucketAcls() throws Exception {
+    assumeFalse("Rest Client does not support ACL",
+        clientProtocol.equals(RestClient.class));
     runTestRemoveBucketAcls(client);
   }
 
@@ -230,9 +239,13 @@ public class TestBuckets {
     vol.createBucket(bucketName);
     OzoneBucket bucket = vol.getBucket(bucketName);
     int numAcls = bucket.getAcls().size();
-    bucket.addAcls(aclList);
+    for (OzoneAcl ozoneAcl : aclList) {
+      Assert.assertTrue(bucket.addAcls(ozoneAcl));
+    }
     assertEquals(bucket.getAcls().size(), 2 + numAcls);
-    bucket.removeAcls(aclList);
+    for (OzoneAcl ozoneAcl : aclList) {
+      Assert.assertTrue(bucket.removeAcls(ozoneAcl));
+    }
     OzoneBucket updatedBucket = vol.getBucket(bucketName);
 
     // We removed all acls
