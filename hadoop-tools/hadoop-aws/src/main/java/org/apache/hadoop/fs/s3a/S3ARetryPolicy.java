@@ -85,7 +85,7 @@ public class S3ARetryPolicy implements RetryPolicy {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3ARetryPolicy.class);
 
-  private final Configuration conf;
+  private final Configuration configuration;
 
   /** Final retry policy we end up with. */
   private final RetryPolicy retryPolicy;
@@ -114,7 +114,7 @@ public class S3ARetryPolicy implements RetryPolicy {
    */
   public S3ARetryPolicy(Configuration conf) {
     Preconditions.checkArgument(conf != null, "Null configuration");
-    this.conf = conf;
+    this.configuration = conf;
 
     // base policy from configuration
     int limit = conf.getInt(RETRY_LIMIT, RETRY_LIMIT_DEFAULT);
@@ -256,8 +256,8 @@ public class S3ARetryPolicy implements RetryPolicy {
    * Get the configuration this policy was created from.
    * @return the configuration.
    */
-  protected Configuration getConf() {
-    return conf;
+  protected Configuration getConfiguration() {
+    return configuration;
   }
 
   /**

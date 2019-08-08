@@ -766,7 +766,8 @@ public final class Constants {
    * Number of times to retry any repeatable S3 client request on failure,
    * excluding throttling requests: {@value}.
    */
-  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT = "fs.s3a.s3guard.consistency.retry.limit";
+  public static final String S3GUARD_CONSISTENCY_RETRY_LIMIT =
+      "fs.s3a.s3guard.consistency.retry.limit";
 
   /**
    * Default retry limit: {@value}.
@@ -776,7 +777,8 @@ public final class Constants {
   /**
    * Interval between retry attempts.: {@value}.
    */
-  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL = "fs.s3a.s3guard.consistency.retry.interval";
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
+      "fs.s3a.s3guard.consistency.retry.interval";
 
   /**
    * Default retry interval: {@value}.
