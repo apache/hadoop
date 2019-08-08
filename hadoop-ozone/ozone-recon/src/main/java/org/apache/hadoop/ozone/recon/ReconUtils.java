@@ -51,11 +51,11 @@ import org.slf4j.LoggerFactory;
 /**
  * Recon Utility class.
  */
-public final class ReconUtils {
+public class ReconUtils {
 
   private final static int WRITE_BUFFER = 1048576; //1MB
 
-  private ReconUtils() {
+  public ReconUtils() {
   }
 
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -69,7 +69,7 @@ public final class ReconUtils {
    * @param dirConfigKey key to check
    * @return Return File based on configured or fallback value.
    */
-  public static File getReconDbDir(Configuration conf, String dirConfigKey) {
+  public File getReconDbDir(Configuration conf, String dirConfigKey) {
 
     File metadataDir = getDirectoryFromConfig(conf, dirConfigKey,
         "Recon");
@@ -90,7 +90,7 @@ public final class ReconUtils {
    * @param destPath destination path to untar to.
    * @throws IOException ioException
    */
-  public static void untarCheckpointFile(File tarFile, Path destPath)
+  public void untarCheckpointFile(File tarFile, Path destPath)
       throws IOException {
 
     FileInputStream fileInputStream = null;
@@ -153,7 +153,7 @@ public final class ReconUtils {
    * @return Inputstream to the response of the HTTP call.
    * @throws IOException While reading the response.
    */
-  public static InputStream makeHttpCall(CloseableHttpClient httpClient,
+  public InputStream makeHttpCall(CloseableHttpClient httpClient,
                                          String url)
       throws IOException {
 

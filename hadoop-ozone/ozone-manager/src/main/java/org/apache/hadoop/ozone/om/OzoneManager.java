@@ -3359,6 +3359,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    * @return Wrapper containing the updates.
    * @throws SequenceNumberNotFoundException if db is unable to read the data.
    */
+  @Override
   public DBUpdatesWrapper getDBUpdates(
       DBUpdatesRequest dbUpdatesRequest)
       throws SequenceNumberNotFoundException {

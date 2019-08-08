@@ -31,7 +31,7 @@ public class OMUpdateEventBatch {
 
   private List<OMDBUpdateEvent> events;
 
-  OMUpdateEventBatch(Collection<OMDBUpdateEvent> e) {
+  public OMUpdateEventBatch(Collection<OMDBUpdateEvent> e) {
     events = new ArrayList<>(e);
   }
 
@@ -39,11 +39,11 @@ public class OMUpdateEventBatch {
    * Get Sequence Number and timestamp of last event in this batch.
    * @return Event Info instance.
    */
-  OMDBUpdateEvent.EventInfo getLastEventInfo() {
+  long getLastSequenceNumber() {
     if (events.isEmpty()) {
-      return new OMDBUpdateEvent.EventInfo(-1, -1);
+      return -1;
     } else {
-      return events.get(events.size() - 1).getEventInfo();
+      return events.get(events.size() - 1).getLastSequenceNumber();
     }
   }
 

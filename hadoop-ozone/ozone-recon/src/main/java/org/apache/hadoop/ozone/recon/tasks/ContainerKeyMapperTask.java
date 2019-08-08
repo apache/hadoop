@@ -41,6 +41,8 @@ import org.apache.hadoop.utils.db.TableIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Inject;
+
 /**
  * Class to iterate over the OM DB and populate the Recon container DB with
  * the container -> Key reverse mapping.
@@ -53,6 +55,7 @@ public class ContainerKeyMapperTask extends ReconDBUpdateTask {
   private ContainerDBServiceProvider containerDBServiceProvider;
   private Collection<String> tables = new ArrayList<>();
 
+  @Inject
   public ContainerKeyMapperTask(ContainerDBServiceProvider
                                     containerDBServiceProvider,
                                 OMMetadataManager omMetadataManager) {

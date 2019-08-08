@@ -1,5 +1,3 @@
-package org.apache.hadoop.ozone.recon.spi;
-
 /**
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -18,21 +16,23 @@ package org.apache.hadoop.ozone.recon.spi;
  * limitations under the License.
  */
 
-import org.apache.hadoop.ozone.om.OMMetadataManager;
+package org.apache.hadoop.ozone.recon;
+
+import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
+import org.apache.hadoop.ozone.recon.tasks.ReconDBUpdateTask;
+
+import com.google.inject.AbstractModule;
+import com.google.inject.multibindings.Multibinder;
 
 /**
- * Interface to access OM endpoints.
+ * Binds the various Recon Tasks.
  */
-public interface OzoneManagerServiceProvider {
+public class ReconTaskBindingModule extends AbstractModule{
 
-  /**
-   * Start a task to sync data from OM.
-   */
-  void start();
-
-  /**
-   * Return instance of OM Metadata manager.
-   * @return OM metadata manager instance.
-   */
-  OMMetadataManager getOMMetadataManagerInstance();
+  @Override
+  protected void configure() {
+    Multibinder<ReconDBUpdateTask> taskBinder =
+        Multibinder.newSetBinder(binder(), ReconDBUpdateTask.class);
+    taskBinder.addBinding().to(ContainerKeyMapperTask.class);
+  }
 }

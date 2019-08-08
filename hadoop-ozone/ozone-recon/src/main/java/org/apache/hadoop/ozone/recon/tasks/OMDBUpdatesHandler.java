@@ -78,6 +78,11 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
 
   /**
    *
+   * @param cfIndex
+   * @param keyBytes
+   * @param valueBytes
+   * @param action
+   * @throws IOException
    */
   private void processEvent(int cfIndex, byte[] keyBytes, byte[]
       valueBytes, OMDBUpdateEvent.OMDBUpdateAction action)

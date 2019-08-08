@@ -31,6 +31,7 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQ
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
 import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
@@ -60,11 +61,13 @@ public class ReconControllerModule extends AbstractModule {
         .toProvider(ReconContainerDBProvider.class).in(Singleton.class);
     bind(ReconOMMetadataManager.class)
         .to(ReconOmMetadataManagerImpl.class).in(Singleton.class);
+    bind(OMMetadataManager.class).to(ReconOmMetadataManagerImpl.class)
+        .in(Singleton.class);
     bind(ContainerDBServiceProvider.class)
         .to(ContainerDBServiceProviderImpl.class).in(Singleton.class);
     bind(OzoneManagerServiceProvider.class)
         .to(OzoneManagerServiceProviderImpl.class).in(Singleton.class);
-
+    bind(ReconUtils.class).in(Singleton.class);
     // Persistence - inject configuration provider
     install(new JooqPersistenceModule(
         getProvider(DataSourceConfiguration.class)));
