@@ -26,7 +26,6 @@ Ozone shell supports the following bucket commands.
   * [delete](#delete)
   * [info](#info)
   * [list](#list)
-  * [update](#update)
 
 ### Create
 
@@ -98,23 +97,6 @@ This command will list all buckets on the volume _hive_.
 
 
 
-### Update
-
-The bucket update command allows changing access permissions on bucket.
-
-***Params:***
-
-| Arguments                      |  Comment                                |
-|--------------------------------|-----------------------------------------|
-| --addAcl                       | Optional, Comma separated ACLs that will added to bucket.
-|  --removeAcl                   | Optional, Comma separated list of acl to remove.
-|  Uri                           | The name of the bucket.
-
-{{< highlight bash >}}
-ozone sh bucket update --addAcl=user:bilbo:rw /hive/jan
-{{< /highlight >}}
-
-The above command gives user bilbo read/write permission to the bucket.
 
 ### path
 The bucket command to provide ozone mapping for s3 bucket (Created via aws cli)
