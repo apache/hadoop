@@ -20,5 +20,5 @@ package org.apache.hadoop.yarn.submarine.client.cli;
  * Represents a Submarine command.
  */
 public enum Command {
-  RUN_JOB, SHOW_JOB
+  RUN_JOB, SHOW_JOB, KILL_JOB
 }
