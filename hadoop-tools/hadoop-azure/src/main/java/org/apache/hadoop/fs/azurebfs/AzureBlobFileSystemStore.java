@@ -118,7 +118,7 @@ public class AzureBlobFileSystemStore implements Closeable {
   private URI uri;
   private String userName;
   private String primaryUserGroup;
-  private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss 'GMT'";
+  private static final String DATE_TIME_PATTERN = "E, dd MMM yyyy HH:mm:ss z";
   private static final String TOKEN_DATE_PATTERN = "yyyy-MM-dd'T'HH:mm:ss.SSSSSSS'Z'";
   private static final String XMS_PROPERTIES_ENCODING = "ISO-8859-1";
   private static final int LIST_MAX_RESULTS = 500;
