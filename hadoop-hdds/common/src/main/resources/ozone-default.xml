@@ -331,7 +331,7 @@
 
   <property>
     <name>hdds.prometheus.endpoint.enabled</name>
-    <value>false</value>
+    <value>true</value>
     <tag>OZONE, MANAGEMENT</tag>
     <description>Enable prometheus compatible metric page on the HTTP
       servers.

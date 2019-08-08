@@ -54,6 +54,7 @@
     <module>upgrade</module>
     <module>csi</module>
     <module>fault-injection-test</module>
+    <module>insight</module>
   </modules>
 
   <repositories>
@@ -166,6 +167,11 @@
       <dependency>
         <groupId>org.apache.hadoop</groupId>
         <artifactId>hadoop-hdds-tools</artifactId>
+        <version>${hdds.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-ozone-insight</artifactId>
         <version>${hdds.version}</version>
       </dependency>
       <dependency>
