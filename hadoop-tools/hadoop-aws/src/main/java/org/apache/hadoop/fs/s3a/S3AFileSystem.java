@@ -1059,8 +1059,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     String key = pathToKey(path);
     FileStatus status = null;
     try {
-      // get the status or throw an FNFE
-      status = getFileStatus(path);
+      // get the status or throw an FNFE.
+      // when overwriting, there is no need to look for any existing file,
+      // and attempting to do so can poison the load balancers with 404
+      // entries.
+      status = resolveFileStatus(path, false, overwrite);
 
       // if the thread reaches here, there is something at the path
       if (status.isDirectory()) {
@@ -2304,7 +2307,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
   private void createFakeDirectoryIfNecessary(Path f)
       throws IOException, AmazonClientException {
     String key = pathToKey(f);
-    if (!key.isEmpty() && !s3Exists(f)) {
+    if (!key.isEmpty() && !s3Exists(f, true)) {
       LOG.debug("Creating new fake directory at {}", f);
       createFakeDirectory(key);
     }
@@ -2588,6 +2591,30 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
     entryPoint(INVOCATION_GET_FILE_STATUS);
     checkNotClosed();
     final Path path = qualify(f);
+    return resolveFileStatus(path, needEmptyDirectoryFlag, false);
+  }
+
+
+  /**
+   * Get the status of a file or directory, first through S3Guard and then
+   * through S3.
+   * The S3 probes can leave 404 responses in the S3 load balancers; if
+   * a check is only needed for a directory, declaring this saves time and
+   * avoids creating one for the object.
+   * When only probing for directories, if an entry for a file is found in
+   * S3Guard it is returned, but checks for updated values are skipped.
+   * @param path fully qualified path
+   * @param needEmptyDirectoryFlag if true, implementation will calculate
+   *        a TRUE or FALSE value for {@link S3AFileStatus#isEmptyDirectory()}
+   * @param onlyProbeForDirectory skip the simple object probe
+   * @return a S3AFileStatus object
+   * @throws FileNotFoundException when the path does not exist
+   * @throws IOException on other problems.
+   */
+  private S3AFileStatus resolveFileStatus(final Path path,
+      boolean needEmptyDirectoryFlag,
+      final boolean onlyProbeForDirectory) throws IOException {
+
     String key = pathToKey(path);
     LOG.debug("Getting path status for {}  ({})", path, key);
 
@@ -2603,7 +2630,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
         OffsetDateTime deletedAt = OffsetDateTime.ofInstant(
             Instant.ofEpochMilli(pm.getFileStatus().getModificationTime()),
             ZoneOffset.UTC);
-        throw new FileNotFoundException("Path " + f + " is recorded as " +
+        throw new FileNotFoundException("Path " + path + " is recorded as " +
             "deleted by S3Guard at " + deletedAt);
       }
 
@@ -2613,15 +2640,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // dest is also a directory, there's no difference.
       // TODO After HADOOP-16085 the modification detection can be done with
       //  etags or object version instead of modTime
-      boolean allowAuthoritative = allowAuthoritative(f);
+      boolean allowAuthoritative = allowAuthoritative(path;
       if (!pm.getFileStatus().isDirectory() &&
-          !allowAuthoritative) {
+          !allowAuthoritative &&
+          !onlyProbeForDirectory) {
+        // a file has been found in a non-auth path and the caller has not said
+        // they only care about directories
         LOG.debug("Metadata for {} found in the non-auth metastore.", path);
         final long msModTime = pm.getFileStatus().getModificationTime();
 
         S3AFileStatus s3AFileStatus;
         try {
-          s3AFileStatus = s3GetFileStatus(path, key, tombstones);
+          s3AFileStatus = s3GetFileStatus(key, path, false, tombstones);
         } catch (FileNotFoundException fne) {
           s3AFileStatus = null;
         }
@@ -2663,7 +2693,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // S3 yet, we'll assume the empty directory is true;
       S3AFileStatus s3FileStatus;
       try {
-        s3FileStatus = s3GetFileStatus(path, key, tombstones);
+        s3FileStatus = s3GetFileStatus(key, path, onlyProbeForDirectory, tombstones);
       } catch (FileNotFoundException e) {
         return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE,
             null, null);
@@ -2675,7 +2705,7 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // there was no entry in S3Guard
       // retrieve the data and update the metadata store in the process.
       return S3Guard.putAndReturn(metadataStore,
-          s3GetFileStatus(path, key, tombstones), instrumentation,
+          s3GetFileStatus(key, path, false, tombstones), instrumentation,
           ttlTimeProvider);
     }
   }
@@ -2685,16 +2715,18 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * Used to implement {@link #innerGetFileStatus(Path, boolean)},
    * and for direct management of empty directory blobs.
    * Retry policy: retry translated.
-   * @param path Qualified path
    * @param key  Key string for the path
+   * @param path Qualified path
+   * @param onlyProbeForDirectory skip the simple object probe
    * @return Status
    * @throws FileNotFoundException when the path does not exist
    * @throws IOException on other problems.
    */
   @Retries.RetryTranslated
-  private S3AFileStatus s3GetFileStatus(final Path path, String key,
+  private S3AFileStatus s3GetFileStatus(String key, final Path path,
+      final boolean onlyProbeForDirectory,
       Set<Path> tombstones) throws IOException {
-    if (!key.isEmpty()) {
+    if (!key.isEmpty() && !onlyProbeForDirectory) {
       try {
         ObjectMetadata meta = getObjectMetadata(key);
 
@@ -2839,11 +2871,11 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private boolean s3Exists(final Path f) throws IOException {
+  private boolean s3Exists(final Path f, boolean onlyProbeForDirectory) throws IOException {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
-      s3GetFileStatus(path, key, null);
+      s3GetFileStatus(key, path, onlyProbeForDirectory, null);
       return true;
     } catch (FileNotFoundException e) {
       return false;
