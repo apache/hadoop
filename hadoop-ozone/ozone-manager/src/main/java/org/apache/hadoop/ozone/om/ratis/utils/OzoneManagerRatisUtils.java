@@ -147,7 +147,7 @@ public final class OzoneManagerRatisUtils {
       if (ObjectType.VOLUME == type) {
         return new OMVolumeRemoveAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
-        return new OMBucketSetAclRequest(omRequest);
+        return new OMBucketRemoveAclRequest(omRequest);
       }
     } else if (Type.SetAcl == cmdType) {
       ObjectType type = omRequest.getSetAclRequest().getObj().getResType();
