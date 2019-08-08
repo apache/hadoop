@@ -88,9 +88,10 @@ public class BasicOzoneFileSystem extends FileSystem {
   private static final Pattern URL_SCHEMA_PATTERN =
       Pattern.compile("([^\\.]+)\\.([^\\.]+)\\.{0,1}(.*)");
 
-  private static final String URI_EXCEPTION_TEXT = "Ozone file system url " +
-      "should be either one of the two forms: " +
+  private static final String URI_EXCEPTION_TEXT = "Ozone file system URL " +
+      "should be one of the following formats: " +
       "o3fs://bucket.volume/key  OR " +
+      "o3fs://bucket.volume.om-host.example.com/key  OR " +
       "o3fs://bucket.volume.om-host.example.com:5678/key";
 
   @Override
