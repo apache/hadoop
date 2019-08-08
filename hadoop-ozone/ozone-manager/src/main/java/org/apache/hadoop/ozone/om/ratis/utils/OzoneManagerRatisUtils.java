@@ -41,9 +41,12 @@ import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetQuotaRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeAddAclRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.volume.acl.OMVolumeSetAclRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Status;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.Type;
 
@@ -117,10 +120,36 @@ public final class OzoneManagerRatisUtils {
       return new S3MultipartUploadAbortRequest(omRequest);
     case CompleteMultiPartUpload:
       return new S3MultipartUploadCompleteRequest(omRequest);
+    case AddAcl:
+    case RemoveAcl:
+    case SetAcl:
+      return getOMAclRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;
     }
+  }
+
+  private static OMClientRequest getOMAclRequest(OMRequest omRequest) {
+    Type cmdType = omRequest.getCmdType();
+    if (Type.AddAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeAddAclRequest(omRequest);
+      }
+    } else if (Type.RemoveAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeRemoveAclRequest(omRequest);
+      }
+    } else if (Type.SetAcl == cmdType) {
+      ObjectType type = omRequest.getAddAclRequest().getObj().getResType();
+      if (ObjectType.VOLUME == type) {
+        return new OMVolumeSetAclRequest(omRequest);
+      }
+    }
+    //TODO: handle bucket, key and prefix AddAcl
+    return null;
   }
 
   /**
