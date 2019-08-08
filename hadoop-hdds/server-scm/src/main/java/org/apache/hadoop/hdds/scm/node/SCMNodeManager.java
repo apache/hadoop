@@ -500,6 +500,13 @@ public class SCMNodeManager implements NodeManager {
     nodeStateManager.removePipeline(pipeline);
   }
 
+  @Override
+  public void addContainer(final DatanodeDetails datanodeDetails,
+                           final ContainerID containerId)
+      throws NodeNotFoundException {
+    nodeStateManager.addContainer(datanodeDetails.getUuid(), containerId);
+  }
+
   /**
    * Update set of containers available on a datanode.
    * @param datanodeDetails - DatanodeID
