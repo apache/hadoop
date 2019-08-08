@@ -88,7 +88,7 @@ public class ResourcePluginManager {
     }
     LOG.info("Found Resource plugins from configuration: "
         + Arrays.toString(plugins));
-    
+
     for (String resourceName : plugins) {
       resourceName = resourceName.trim();
       if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
@@ -125,7 +125,7 @@ public class ResourcePluginManager {
       pluginMap.put(resourceName, plugin);
     }
   }
-    
+
   public void initializePluggableDevicePlugins(Context context,
       Configuration configuration,
       Map<String, ResourcePlugin> pluginMap)
