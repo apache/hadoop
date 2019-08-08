@@ -730,7 +730,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   }
 
   /**
-   * Tests doing a rename() on a file which is eventually visible
+   * Tests doing a rename() on a file which is eventually visible.
    */
   @Test
   public void testRenameEventuallyVisibleFile() throws Throwable {
@@ -769,7 +769,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * downgraded to a failure.
    */
   @Test
-  public void testRenameEventuallyVisibleFileNeverStabilizes() throws Throwable {
+  public void testRenameEventuallyVisibleFileNeverStabilizes()
+      throws Throwable {
     requireS3Guard();
     AmazonS3 s3ClientSpy = spyOnFilesystem();
     Path basedir = path();
@@ -1413,7 +1414,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
       private int callCount = 0;
 
       @Override
-      public ObjectMetadata answer(InvocationOnMock invocation) throws Throwable {
+      public ObjectMetadata answer(InvocationOnMock invocation
+      ) throws Throwable {
         // simulates delayed visibility.
         callCount++;
         if (callCount <= inconsistentCallCount) {

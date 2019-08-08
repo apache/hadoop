@@ -28,15 +28,10 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.retry.RetryPolicy;
 
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL_DEFAULT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
-import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_INTERVAL;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT;
-import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithFixedSleep;
 import static org.apache.hadoop.io.retry.RetryPolicies.retryUpToMaximumCountWithProportionalSleep;
 
 /**
@@ -59,7 +54,7 @@ public class S3GuardExistsRetryPolicy extends S3ARetryPolicy {
   @Override
   protected Map<Class<? extends Exception>, RetryPolicy> createExceptionMap() {
     Map<Class<? extends Exception>, RetryPolicy> b = super.createExceptionMap();
-    Configuration conf = getConf();
+    Configuration conf = getConfiguration();
 
     // base policy from configuration
     int limit = conf.getInt(S3GUARD_CONSISTENCY_RETRY_LIMIT,
