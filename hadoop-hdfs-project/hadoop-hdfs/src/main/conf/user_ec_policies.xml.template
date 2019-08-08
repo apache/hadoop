@@ -35,20 +35,21 @@
   <schema id="XORk2m1">
     <!-- The combination of codec, k, m and options as the schema ID, defines
      a unique schema, for example 'xor-2-1'. schema ID is case insensitive -->
-    <!-- codec with this specific name should exist already in this system -->
+    <!-- codec with this specific name should exist already in this system.
+     The codec name is case sensitive -->
     <codec>xor</codec>
     <k>2</k>
     <m>1</m>
     <options> </options>
   </schema>
   <schema id="RSk12m4">
-    <codec>RS</codec>
+    <codec>rs</codec>
     <k>12</k>
     <m>4</m>
     <options> </options>
   </schema>
   <schema id="RS-legacyk12m4">
-    <codec>RS-legacy</codec>
+    <codec>rs-legacy</codec>
     <k>12</k>
     <m>4</m>
     <options> </options>

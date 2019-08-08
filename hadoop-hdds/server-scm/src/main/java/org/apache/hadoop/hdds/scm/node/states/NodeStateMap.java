@@ -108,6 +108,7 @@ public class NodeStateMap {
                               NodeState newState)throws NodeNotFoundException {
     lock.writeLock().lock();
     try {
+      checkIfNodeExist(nodeId);
       if (stateMap.get(currentState).remove(nodeId)) {
         stateMap.get(newState).add(nodeId);
       } else {
@@ -131,10 +132,8 @@ public class NodeStateMap {
   public DatanodeInfo getNodeInfo(UUID uuid) throws NodeNotFoundException {
     lock.readLock().lock();
     try {
-      if (nodeMap.containsKey(uuid)) {
-        return nodeMap.get(uuid);
-      }
-      throw new NodeNotFoundException("Node UUID: " + uuid);
+      checkIfNodeExist(uuid);
+      return nodeMap.get(uuid);
     } finally {
       lock.readLock().unlock();
     }
@@ -213,41 +212,70 @@ public class NodeStateMap {
   public NodeState getNodeState(UUID uuid) throws NodeNotFoundException {
     lock.readLock().lock();
     try {
+      checkIfNodeExist(uuid);
       for (Map.Entry<NodeState, Set<UUID>> entry : stateMap.entrySet()) {
         if (entry.getValue().contains(uuid)) {
           return entry.getKey();
         }
       }
-      throw new NodeNotFoundException("Node UUID: " + uuid);
+      throw new NodeNotFoundException("Node not found in node state map." +
+          " UUID: " + uuid);
     } finally {
       lock.readLock().unlock();
     }
   }
 
+  /**
+   * Adds the given container to the specified datanode.
+   *
+   * @param uuid - datanode uuid
+   * @param containerId - containerID
+   * @throws NodeNotFoundException - if datanode is not known. For new datanode
+   *                        use addDatanodeInContainerMap call.
+   */
+  public void addContainer(final UUID uuid,
+                           final ContainerID containerId)
+      throws NodeNotFoundException {
+    lock.writeLock().lock();
+    try {
+      checkIfNodeExist(uuid);
+      nodeToContainer.get(uuid).add(containerId);
+    } finally {
+      lock.writeLock().unlock();
+    }
+  }
+
   public void setContainers(UUID uuid, Set<ContainerID> containers)
       throws NodeNotFoundException{
-    if (!nodeToContainer.containsKey(uuid)) {
-      throw new NodeNotFoundException("Node UUID: " + uuid);
+    lock.writeLock().lock();
+    try {
+      checkIfNodeExist(uuid);
+      nodeToContainer.put(uuid, containers);
+    } finally {
+      lock.writeLock().unlock();
     }
-    nodeToContainer.put(uuid, containers);
   }
 
   public Set<ContainerID> getContainers(UUID uuid)
       throws NodeNotFoundException {
-    Set<ContainerID> containers = nodeToContainer.get(uuid);
-    if (containers == null) {
-      throw new NodeNotFoundException("Node UUID: " + uuid);
+    lock.readLock().lock();
+    try {
+      checkIfNodeExist(uuid);
+      return Collections.unmodifiableSet(nodeToContainer.get(uuid));
+    } finally {
+      lock.readLock().unlock();
     }
-    return Collections.unmodifiableSet(containers);
   }
 
   public void removeContainer(UUID uuid, ContainerID containerID) throws
       NodeNotFoundException {
-    Set<ContainerID> containers = nodeToContainer.get(uuid);
-    if (containers == null) {
-      throw new NodeNotFoundException("Node UUID: " + uuid);
+    lock.writeLock().lock();
+    try {
+      checkIfNodeExist(uuid);
+      nodeToContainer.get(uuid).remove(containerID);
+    } finally {
+      lock.writeLock().unlock();
     }
-    containers.remove(containerID);
   }
 
   /**
@@ -268,5 +296,17 @@ public class NodeStateMap {
           .append(getNodeCount(state));
     }
     return builder.toString();
+  }
+
+  /**
+   * Throws NodeNotFoundException if the Node for given id doesn't exist.
+   *
+   * @param uuid Node UUID
+   * @throws NodeNotFoundException If the node is missing.
+   */
+  private void checkIfNodeExist(UUID uuid) throws NodeNotFoundException {
+    if (!nodeToContainer.containsKey(uuid)) {
+      throw new NodeNotFoundException("Node UUID: " + uuid);
+    }
   }
 }

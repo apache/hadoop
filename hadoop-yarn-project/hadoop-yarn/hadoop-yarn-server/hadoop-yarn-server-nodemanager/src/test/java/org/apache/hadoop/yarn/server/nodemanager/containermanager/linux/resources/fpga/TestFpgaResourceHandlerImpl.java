@@ -76,7 +76,7 @@ import org.junit.rules.ExpectedException;
 import com.google.common.io.Files;
 import com.google.common.io.FileWriteMode;
 
-public class TestFpgaResourceHandler {
+public class TestFpgaResourceHandlerImpl {
   @Rule
   public ExpectedException expected = ExpectedException.none();
 
@@ -99,7 +99,7 @@ public class TestFpgaResourceHandler {
 
   private String getTestParentFolder() {
     File f = new File("target/temp/" +
-        TestFpgaResourceHandler.class.getName());
+        TestFpgaResourceHandlerImpl.class.getName());
     return f.getAbsolutePath();
   }
 

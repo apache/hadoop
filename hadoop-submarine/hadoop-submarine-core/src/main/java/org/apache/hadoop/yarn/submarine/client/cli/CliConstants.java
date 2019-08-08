@@ -18,6 +18,7 @@ package org.apache.hadoop.yarn.submarine.client.cli;
  * NOTE: use lowercase + "_" for the option name
  */
 public class CliConstants {
+  public static final String KILL = "kill";
   public static final String RUN = "run";
   public static final String SERVE = "serve";
   public static final String LIST = "list";

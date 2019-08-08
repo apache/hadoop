@@ -25,9 +25,8 @@ ${DATANODE_HOST}        datanode
 *** Test Cases ***
 
 Check webui static resources
-    ${result} =        Execute                curl -s -I http://scm:9876/static/bootstrap-3.3.7/js/bootstrap.min.js
-                       Should contain         ${result}    200
-    ${result} =        Execute                curl -s -I http://om:9874/static/bootstrap-3.3.7/js/bootstrap.min.js
+    Run Keyword if    '${SECURITY_ENABLED}' == 'true'    Kinit HTTP user
+    ${result} =        Execute                curl --negotiate -u : -s -I http://scm:9876/static/bootstrap-3.3.7/js/bootstrap.min.js
                        Should contain         ${result}    200
 
 Start freon testing

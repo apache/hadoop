@@ -72,8 +72,8 @@ public class OzoneManagerHARequestHandlerImpl
     case AbortMultiPartUpload:
     case CompleteMultiPartUpload:
     case AddAcl:
-    case SetAcl:
     case RemoveAcl:
+    case SetAcl:
       //TODO: We don't need to pass transactionID, this will be removed when
       // complete write requests is changed to new model. And also we can
       // return OMClientResponse, then adding to doubleBuffer can be taken
@@ -87,8 +87,10 @@ public class OzoneManagerHARequestHandlerImpl
                 transactionLogIndex, ozoneManagerDoubleBuffer::add);
         return omClientResponse.getOMResponse();
       } else {
+        //TODO: remove this once we have all HA support for all write request.
         return handle(omRequest);
       }
+
     default:
       // As all request types are not changed so we need to call handle
       // here.

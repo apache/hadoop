@@ -1662,9 +1662,25 @@
   <name>dfs.ha.tail-edits.period</name>
   <value>60s</value>
   <description>
-    How often, in seconds, the StandbyNode should check for new
-    finalized log segments in the shared edits log.
-    Support multiple time unit suffix(case insensitive), as described
+    How often, the StandbyNode and ObserverNode should check if there are new
+    edit log entries ready to be consumed. This is the minimum period between
+    checking; exponential backoff will be applied if no edits are found and
+    dfs.ha.tail-edits.period.backoff-max is configured. By default, no
+    backoff is applied.
+    Supports multiple time unit suffix (case insensitive), as described
+    in dfs.heartbeat.interval.
+  </description>
+</property>
+
+<property>
+  <name>dfs.ha.tail-edits.period.backoff-max</name>
+  <value>0</value>
+  <description>
+    The maximum time the tailer should wait between checking for new edit log
+    entries. Exponential backoff will be applied when an edit log tail is
+    performed but no edits are available to be read. Values less than or
+    equal to zero disable backoff entirely; this is the default behavior.
+    Supports multiple time unit suffix (case insensitive), as described
     in dfs.heartbeat.interval.
   </description>
 </property>

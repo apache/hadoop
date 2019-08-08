@@ -43,7 +43,6 @@ import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.tracing.StringCodec;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneKey;
@@ -57,8 +56,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.ServiceInfo;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.ServicePort;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType;
-import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType;
 import org.apache.hadoop.ozone.web.ozShell.OzoneShell;
 import org.apache.hadoop.ozone.web.ozShell.Shell;
 import org.apache.hadoop.ozone.web.request.OzoneQuota;
@@ -721,51 +718,6 @@ public class TestOzoneShell {
         url + "/" + vol.getName() + "/invalid-bucket" + bucketName};
     executeWithError(shell, args,
         ResultCodes.BUCKET_NOT_FOUND);
-  }
-
-  @Test
-  public void testUpdateBucket() throws Exception {
-    LOG.info("Running testUpdateBucket");
-    OzoneVolume vol = creatVolume();
-    String bucketName = "bucket" + RandomStringUtils.randomNumeric(5);
-    vol.createBucket(bucketName);
-    OzoneBucket bucket = vol.getBucket(bucketName);
-    int aclSize = bucket.getAcls().size();
-
-    String[] args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--addAcl",
-        "user:frodo:rw,group:samwise:r"};
-    execute(shell, args);
-    String output = out.toString();
-    assertTrue(output.contains("createdOn")
-        && output.contains(OzoneConsts.OZONE_TIME_ZONE));
-
-    bucket = vol.getBucket(bucketName);
-    assertEquals(2 + aclSize, bucket.getAcls().size());
-
-    OzoneAcl acl = bucket.getAcls().get(aclSize);
-    assertTrue(acl.getName().equals("frodo")
-        && acl.getType() == ACLIdentityType.USER
-        && acl.getAclBitSet().get(ACLType.READ.ordinal())
-        && acl.getAclBitSet().get(ACLType.WRITE.ordinal()));
-
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/" + bucketName, "--removeAcl",
-        "user:frodo:rw"};
-    execute(shell, args);
-
-    bucket = vol.getBucket(bucketName);
-    acl = bucket.getAcls().get(aclSize);
-    assertEquals(1 + aclSize, bucket.getAcls().size());
-    assertTrue(acl.getName().equals("samwise")
-        && acl.getType() == ACLIdentityType.GROUP
-        && acl.getAclBitSet().get(ACLType.READ.ordinal()));
-
-    // test update bucket for a non-exist bucket
-    args = new String[] {"bucket", "update",
-        url + "/" + vol.getName() + "/invalid-bucket", "--addAcl",
-        "user:frodo:rw"};
-    executeWithError(shell, args, BUCKET_NOT_FOUND);
   }
 
   @Test

@@ -69,7 +69,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class TestGpuResourceHandler {
+public class TestGpuResourceHandlerImpl {
   private CGroupsHandler mockCGroupsHandler;
   private PrivilegedOperationExecutor mockPrivilegedExecutor;
   private GpuResourceHandlerImpl gpuResourceHandler;
@@ -86,7 +86,7 @@ public class TestGpuResourceHandler {
   }
 
   private String getTestParentDirectory() {
-    File f = new File("target/temp/" + TestGpuResourceHandler.class.getName());
+    File f = new File("target/temp/" + TestGpuResourceHandlerImpl.class.getName());
     return f.getAbsolutePath();
   }
 

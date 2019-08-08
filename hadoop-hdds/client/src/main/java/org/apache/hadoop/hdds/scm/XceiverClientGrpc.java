@@ -99,9 +99,9 @@ public class XceiverClientGrpc extends XceiverClientSpi {
     this.metrics = XceiverClientManager.getXceiverClientMetrics();
     this.channels = new HashMap<>();
     this.asyncStubs = new HashMap<>();
-    this.topologyAwareRead = Boolean.parseBoolean(config.get(
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED,
-        ScmConfigKeys.DFS_NETWORK_TOPOLOGY_AWARE_READ_ENABLED_DEFAULT));
+    this.topologyAwareRead = config.getBoolean(
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
   }
 
   /**

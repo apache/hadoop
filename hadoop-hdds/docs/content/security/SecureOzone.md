@@ -102,7 +102,7 @@ All these settings should be made in ozone-site.xml.
               <td>SCM http server service principal.</td>
             </tr>
             <tr>
-              <th scope="row">hdds.scm.http.kerberos.keytab.file</th>
+              <th scope="row">hdds.scm.http.kerberos.keytab</th>
               <td>The keytab file used by SCM http server to login as its service principal.</td>
             </tr>
           </tbody>
@@ -126,7 +126,7 @@ All these settings should be made in ozone-site.xml.
                 </thead>
                 <tbody>
                   <tr>
-                    <th scope="row">ozone.om.kerberos.principal </th>
+                    <th scope="row">ozone.om.kerberos.principal</th>
                     <td>The OzoneManager service principal. e.g. om/_HOST@REALM
                     .COM</td>
                   </tr>
@@ -139,7 +139,7 @@ All these settings should be made in ozone-site.xml.
                     <td>Ozone Manager http server service principal.</td>
                   </tr>
                   <tr>
-                    <th scope="row">  ozone.om.http.kerberos.keytab.file</th>
+                    <th scope="row">ozone.om.http.kerberos.keytab</th>
                     <td>The keytab file used by OM http server to login as its service principal.</td>
                   </tr>
                 </tbody>

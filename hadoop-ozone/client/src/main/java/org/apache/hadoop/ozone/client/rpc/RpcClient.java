@@ -134,6 +134,7 @@ public class RpcClient implements ClientProtocol {
   private final int maxRetryCount;
   private final long retryInterval;
   private Text dtService;
+  private final boolean topologyAwareReadEnabled;
 
    /**
     * Creates RpcClient instance with the given configuration.
@@ -228,6 +229,9 @@ public class RpcClient implements ClientProtocol {
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED,
         OzoneConfigKeys.OZONE_UNSAFEBYTEOPERATIONS_ENABLED_DEFAULT);
     ByteStringHelper.init(isUnsafeByteOperationsEnabled);
+    topologyAwareReadEnabled = conf.getBoolean(
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_KEY,
+        OzoneConfigKeys.OZONE_NETWORK_TOPOLOGY_AWARE_READ_DEFAULT);
   }
 
   private InetSocketAddress getScmAddressForClient() throws IOException {
@@ -658,6 +662,7 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
     return createInputStream(keyInfo);
@@ -721,6 +726,7 @@ public class RpcClient implements ClientProtocol {
         .setBucketName(bucketName)
         .setKeyName(keyName)
         .setRefreshPipeline(true)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupKey(keyArgs);
 
@@ -981,6 +987,7 @@ public class RpcClient implements ClientProtocol {
         .setVolumeName(volumeName)
         .setBucketName(bucketName)
         .setKeyName(keyName)
+        .setSortDatanodesInPipeline(topologyAwareReadEnabled)
         .build();
     OmKeyInfo keyInfo = ozoneManagerClient.lookupFile(keyArgs);
     return createInputStream(keyInfo);

@@ -787,7 +787,9 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
-        .setDataSize(args.getDataSize()).build();
+        .setDataSize(args.getDataSize())
+        .setSortDatanodes(args.getSortDatanodes())
+        .build();
     req.setKeyArgs(keyArgs);
 
     OMRequest omRequest = createOMRequest(Type.LookupKey)
@@ -1315,6 +1317,7 @@ public final class OzoneManagerProtocolClientSideTranslatorPB
         .setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName())
         .setKeyName(args.getKeyName())
+        .setSortDatanodes(args.getSortDatanodes())
         .build();
     LookupFileRequest lookupFileRequest = LookupFileRequest.newBuilder()
             .setKeyArgs(keyArgs)
