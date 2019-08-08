@@ -140,12 +140,19 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
   private Table s3SecretTable;
   private Table dTokenTable;
   private Table prefixTable;
+  private boolean isRatisEnabled;
 
   public OmMetadataManagerImpl(OzoneConfiguration conf) throws IOException {
     this.lock = new OzoneManagerLock(conf);
     this.openKeyExpireThresholdMS = 1000L * conf.getInt(
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS,
         OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS_DEFAULT);
+    // TODO: This is a temporary check. Once fully implemented, all OM state
+    //  change should go through Ratis - be it standalone (for non-HA) or
+    //  replicated (for HA).
+    isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     start(conf);
   }
 
@@ -269,14 +276,21 @@ public class OmMetadataManagerImpl implements OMMetadataManager {
     userTable =
         this.store.getTable(USER_TABLE, String.class, VolumeList.class);
     checkTableStatus(userTable, USER_TABLE);
+
+    // As now we have eviction policies, and for non-HA code path we don't
+    // support cache and cleanup policies setting cache to manual.
+    TableCacheImpl.CacheCleanupPolicy cleanupPolicy = isRatisEnabled ?
+        TableCacheImpl.CacheCleanupPolicy.NEVER :
+        TableCacheImpl.CacheCleanupPolicy.MANUAL;
+
     volumeTable =
         this.store.getTable(VOLUME_TABLE, String.class, OmVolumeArgs.class,
-            TableCacheImpl.CacheCleanupPolicy.NEVER);
+            cleanupPolicy);
     checkTableStatus(volumeTable, VOLUME_TABLE);
 
     bucketTable =
         this.store.getTable(BUCKET_TABLE, String.class, OmBucketInfo.class,
-            TableCacheImpl.CacheCleanupPolicy.NEVER);
+            cleanupPolicy);
 
     checkTableStatus(bucketTable, BUCKET_TABLE);
 
