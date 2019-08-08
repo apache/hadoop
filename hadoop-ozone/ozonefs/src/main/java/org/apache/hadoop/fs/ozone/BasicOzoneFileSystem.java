@@ -43,6 +43,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathIsNotEmptyDirectoryException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -120,9 +121,13 @@ public class BasicOzoneFileSystem extends FileSystem {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
       omHost = parts[0];
-      // If port number is not specified, try default OM port
-      omPort = parts.length == 2 ?
-          parts[1] : String.valueOf(OZONE_OM_PORT_DEFAULT);
+      if (parts.length == 2) {
+        omPort = parts[1];
+      } else {
+        // If port number is not specified, read it from config
+        omPort = String.valueOf(OmUtils.getOmRpcPort(conf));
+        authority += ":" + omPort;
+      }
       if (!isNumber(omPort)) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
