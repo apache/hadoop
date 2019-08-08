@@ -22,7 +22,6 @@ import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -31,7 +30,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.s3a.Retries;
 import org.apache.hadoop.fs.s3a.Retries.RetryTranslated;
 import org.apache.hadoop.fs.s3a.S3AFileStatus;
 import org.apache.hadoop.fs.s3a.impl.StoreContext;

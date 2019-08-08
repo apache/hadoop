@@ -2426,7 +2426,7 @@ public class DynamoDBMetadataStore implements MetadataStore,
       // log the operations
       String stateStr = AncestorState.stateAsString(state);
       for (Item item : items) {
-        boolean tombstone = itemExists(item);
+        boolean tombstone = !itemExists(item);
         OPERATIONS_LOG.debug("{} {} {}",
             stateStr,
             tombstone ? "TOMBSTONE" : "PUT",
