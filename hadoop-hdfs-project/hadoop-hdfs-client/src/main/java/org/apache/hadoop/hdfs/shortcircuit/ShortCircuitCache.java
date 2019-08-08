@@ -202,10 +202,11 @@ public class ShortCircuitCache implements Closeable {
         LOG.trace("{}: released {}", this, slot);
         success = true;
       } catch (IOException e) {
-        LOG.error(ShortCircuitCache.this + ": failed to release " +
-            "short-circuit shared memory slot " + slot + " by sending " +
-            "ReleaseShortCircuitAccessRequestProto to " + path +
-            ".  Closing shared memory segment.", e);
+        LOG.warn(ShortCircuitCache.this + ": failed to release "
+            + "short-circuit shared memory slot " + slot + " by sending "
+            + "ReleaseShortCircuitAccessRequestProto to " + path
+            + ".  Closing shared memory segment. "
+            + "DataNode may have been stopped or restarted", e);
       } finally {
         if (success) {
           shmManager.freeSlot(slot);
