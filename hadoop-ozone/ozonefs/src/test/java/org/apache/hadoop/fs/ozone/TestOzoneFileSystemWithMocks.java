@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.fs.ozone;
 
+import static org.apache.hadoop.ozone.om.OMConfigKeys.OZONE_OM_PORT_DEFAULT;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -27,6 +28,7 @@ import java.net.URI;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneBucket;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -76,6 +78,41 @@ public class TestOzoneFileSystemWithMocks {
         "bucket1.volume1.local.host:5899");
     PowerMockito.verifyStatic();
     OzoneClientFactory.getRpcClient("local.host", 5899, conf);
+  }
+
+  @Test
+  public void testFSUriWithHostPortUnspecified() throws Exception {
+    Configuration conf = new OzoneConfiguration();
+    final int OM_PORT_DEFAULT = OmUtils.getOmRpcPort(conf);
+
+    OzoneClient ozoneClient = mock(OzoneClient.class);
+    ObjectStore objectStore = mock(ObjectStore.class);
+    OzoneVolume volume = mock(OzoneVolume.class);
+    OzoneBucket bucket = mock(OzoneBucket.class);
+
+    when(ozoneClient.getObjectStore()).thenReturn(objectStore);
+    when(objectStore.getVolume(eq("volume1"))).thenReturn(volume);
+    when(volume.getBucket("bucket1")).thenReturn(bucket);
+
+    PowerMockito.mockStatic(OzoneClientFactory.class);
+    PowerMockito.when(OzoneClientFactory.getRpcClient(eq("local.host"),
+        eq(OM_PORT_DEFAULT), eq(conf))).thenReturn(ozoneClient);
+
+    UserGroupInformation ugi = mock(UserGroupInformation.class);
+    PowerMockito.mockStatic(UserGroupInformation.class);
+    PowerMockito.when(UserGroupInformation.getCurrentUser()).thenReturn(ugi);
+    when(ugi.getShortUserName()).thenReturn("user1");
+
+    URI uri = new URI("o3fs://bucket1.volume1.local.host");
+
+    FileSystem fileSystem = FileSystem.get(uri, conf);
+    OzoneFileSystem ozfs = (OzoneFileSystem) fileSystem;
+
+    assertEquals(ozfs.getUri().getHost(), "bucket1.volume1.local.host");
+    // Check if FS has resolved the URI with the default port
+    assertEquals(ozfs.getUri().getPort(), OM_PORT_DEFAULT);
+    PowerMockito.verifyStatic();
+    OzoneClientFactory.getRpcClient("local.host", OM_PORT_DEFAULT, conf);
   }
 
   @Test
