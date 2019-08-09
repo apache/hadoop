@@ -52,7 +52,7 @@ public class ResourcePluginManager {
   private Map<String, ResourcePlugin> configuredPlugins =
           Collections.emptyMap();
 
-  public synchronized void initialize(Context context)
+  public void initialize(Context context)
       throws YarnException {
     Configuration conf = context.getConf();
 
@@ -108,7 +108,7 @@ public class ResourcePluginManager {
     }
   }
 
-  public synchronized void cleanup() throws YarnException {
+  public void cleanup() throws YarnException {
     for (ResourcePlugin plugin : configuredPlugins.values()) {
       plugin.cleanup();
     }
