@@ -493,9 +493,7 @@ abstract class CommandWithDestination extends FsCommand {
           }
         }
         throw e;
-      }
-
-      finally {
+      } finally {
         IOUtils.closeStream(out); // just in case copyBytes didn't
       }
     }

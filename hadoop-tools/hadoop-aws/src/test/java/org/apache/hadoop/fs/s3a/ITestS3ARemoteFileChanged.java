@@ -769,7 +769,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
    * downgraded to a failure.
    */
   @Test
-  public void testRenameEventuallyVisibleFileNeverStabilizes()
+  public void testRenameMissingFile()
       throws Throwable {
     requireS3Guard();
     AmazonS3 s3ClientSpy = spyOnFilesystem();
@@ -807,8 +807,6 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
     if (!(ex.getCause() instanceof FileNotFoundException)) {
       throw ex;
     }
-    // throw this anyway
-//    throw ex;
   }
 
   /**

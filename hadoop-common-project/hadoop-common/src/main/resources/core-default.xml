@@ -1692,28 +1692,28 @@
   </description>
 </property>
 
-  <property>
-    <name>fs.s3a.s3guard.consistency.retry.limit</name>
-    <value>10</value>
-    <description>
-      Number of times to retry attempts to read/open/copy files when
-      S3Guard believes a specific version of the file to be available,
-      but the S3 request does not find any version of a file, or a different
-      version.
-    </description>
-  </property>
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.limit</name>
+  <value>7</value>
+  <description>
+    Number of times to retry attempts to read/open/copy files when
+    S3Guard believes a specific version of the file to be available,
+    but the S3 request does not find any version of a file, or a different
+    version.
+  </description>
+</property>
 
-  <property>
-    <name>fs.s3a.s3guard.consistency.retry.interval</name>
-    <value>500ms</value>
-    <description>
-      Interval between attempts to retry operations while waiting for S3
-      to become consistent with the S3Guard data.
-      An exponential back-off is used here: every failure doubles the delay.
-    </description>
-  </property>
+<property>
+  <name>fs.s3a.s3guard.consistency.retry.interval</name>
+  <value>2s</value>
+  <description>
+    Initial interval between attempts to retry operations while waiting for S3
+    to become consistent with the S3Guard data.
+    An exponential back-off is used here: every failure doubles the delay.
+  </description>
+</property>
 
-  <property>
+<property>
   <name>fs.s3a.committer.name</name>
   <value>file</value>
   <description>

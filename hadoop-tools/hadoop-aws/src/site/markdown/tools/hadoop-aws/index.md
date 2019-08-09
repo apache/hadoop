@@ -1202,9 +1202,9 @@ The configurations items controlling this behavior are:
 In the default configuration, S3 object eTags are used to detect changes.  When
 the filesystem retrieves a file from S3 using
 [Get Object](https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectGET.html),
-it captures the eTag and uses that eTag in an 'If-Match' condition on each
+it captures the eTag and uses that eTag in an `If-Match` condition on each
 subsequent request.  If a concurrent writer has overwritten the file, the
-'If-Match' condition will fail and a RemoteFileChangedException will be thrown.
+'If-Match' condition will fail and a `RemoteFileChangedException` will be thrown.
 
 Even in this default configuration, a new write may not trigger this exception
 on an open reader.  For example, if the reader only reads forward in the file
@@ -1229,7 +1229,7 @@ It is possible to switch to using the
 instead of eTag as the change detection mechanism.  Use of this option requires
 object versioning to be enabled on any S3 buckets used by the filesystem.  The
 benefit of using version id instead of eTag is potentially reduced frequency
-of RemoteFileChangedException. With object versioning enabled, old versions
+of `RemoteFileChangedException`. With object versioning enabled, old versions
 of objects remain available after they have been overwritten.
 This means an open input stream will still be able to seek backwards after a
 concurrent writer has overwritten the file.
