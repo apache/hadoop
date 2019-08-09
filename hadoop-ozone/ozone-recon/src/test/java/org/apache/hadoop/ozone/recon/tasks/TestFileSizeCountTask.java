@@ -21,7 +21,6 @@ package org.apache.hadoop.ozone.recon.tasks;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OmMetadataManagerImpl;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.db.TypedTable;
 import org.junit.Test;
 
@@ -32,6 +31,8 @@ import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.io.IOException;
 
+import static org.apache.hadoop.ozone.recon.tasks.
+    OMDBUpdateEvent.OMDBUpdateAction.PUT;
 import static org.junit.Assert.assertEquals;
 
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -132,7 +133,7 @@ public class TestFileSizeCountTask {
     //call reprocess()
     fileSizeCountTask.reprocess(omMetadataManager);
     verify(fileSizeCountTask, times(1)).
-        updateUpperBoundCount(omKeyInfo1, BatchOperation.Operation.PUT);
+        updateUpperBoundCount(omKeyInfo1, PUT);
     verify(fileSizeCountTask,
         times(1)).populateFileCountBySizeDB();
   }

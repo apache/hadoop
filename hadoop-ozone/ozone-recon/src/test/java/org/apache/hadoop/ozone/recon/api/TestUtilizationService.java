@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.recon.api;
 
 import org.apache.hadoop.ozone.recon.ReconUtils;
-import org.apache.hadoop.ozone.recon.tasks.FileSizeCountTask;
 import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.FileCountBySize;
 import org.junit.Test;
@@ -30,12 +29,10 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.powermock.api.mockito.PowerMockito.mock;
 import static org.powermock.api.mockito.PowerMockito.when;
 import static org.mockito.Mockito.times;
@@ -68,7 +65,7 @@ public class TestUtilizationService {
   }
 
   @Test
-  public void testGetFileCounts() throws IOException {
+  public void testGetFileCounts() {
     List<FileCountBySize> resultList = setUpResultList();
 
     utilizationService = mock(UtilizationService.class);
@@ -81,56 +78,9 @@ public class TestUtilizationService {
     List<FileCountBySize> responseList =
         (List<FileCountBySize>) response.getEntity();
 
-    verify(utilizationService, times(1)).getFileCounts();
     verify(fileCountBySizeDao, times(1)).findAll();
-
-    FileSizeCountTask fileSizeCountTask = mock(FileSizeCountTask.class);
-    when(fileSizeCountTask.getMaxFileSizeUpperBound()).
-        thenReturn(1125899906842624L);
-    when(fileSizeCountTask.getMaxBinSize()).thenReturn(maxBinSize);
-    when(fileSizeCountTask.calculateBinIndex(anyLong())).thenCallRealMethod();
     assertEquals(maxBinSize, responseList.size());
 
-    long fileSize = 4096L;              // 4KB
-    int index =  fileSizeCountTask.calculateBinIndex(fileSize);
-
-    long count = responseList.get(index).getCount();
-    assertEquals(index, count);
-
-    fileSize = 1125899906842624L;       // 1PB
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    //last extra bin for files >= 1PB
-    assertEquals(maxBinSize - 1, index);
-    assertEquals(index, count);
-
-    fileSize = 1025L;                   // 1 KB + 1B
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    assertEquals(index, count);
-
-    fileSize = 25L;
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    assertEquals(index, count);
-
-    fileSize = 1125899906842623L;       // 1PB - 1B
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    assertEquals(index, count);
-
-    fileSize = 1125899906842624L * 4;       // 4 PB
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    //last extra bin for files >= 1PB
-    assertEquals(maxBinSize - 1, index);
-    assertEquals(index, count);
-
-    fileSize = Long.MAX_VALUE;    // extra bin
-    index = fileSizeCountTask.calculateBinIndex(fileSize);
-    count = responseList.get(index).getCount();
-    //last extra bin for files >= 1PB
-    assertEquals(maxBinSize - 1, index);
-    assertEquals(index, count);
+    assertEquals(resultList, responseList);
   }
 }

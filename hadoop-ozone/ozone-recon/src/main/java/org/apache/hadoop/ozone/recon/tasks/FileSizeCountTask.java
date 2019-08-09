@@ -18,13 +18,11 @@
 
 package org.apache.hadoop.ozone.recon.tasks;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
-import org.apache.hadoop.utils.BatchOperation;
 import org.apache.hadoop.utils.db.Table;
 import org.apache.hadoop.utils.db.TableIterator;
 import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
@@ -40,8 +38,10 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import static org.apache.hadoop.utils.BatchOperation.Operation.DELETE;
-import static org.apache.hadoop.utils.BatchOperation.Operation.PUT;
+import static org.apache.hadoop.ozone.recon.tasks.
+    OMDBUpdateEvent.OMDBUpdateAction.DELETE;
+import static org.apache.hadoop.ozone.recon.tasks.
+    OMDBUpdateEvent.OMDBUpdateAction.PUT;
 
 /**
  * Class to iterate over the OM DB and store the counts of existing/new
@@ -72,18 +72,15 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
     upperBoundCount = new long[getMaxBinSize()];
   }
 
-  @VisibleForTesting
-  public long getOneKB() {
+  long getOneKB() {
     return oneKb;
   }
 
-  @VisibleForTesting
-  public long getMaxFileSizeUpperBound() {
+  long getMaxFileSizeUpperBound() {
     return maxFileSizeUpperBound;
   }
 
-  @VisibleForTesting
-  public int getMaxBinSize() {
+  int getMaxBinSize() {
     if (maxBinSize == -1) {
       // extra bin to add files > 1PB.
       // 1 KB (2 ^ 10) is the smallest tracked file.
@@ -240,7 +237,7 @@ public class FileSizeCountTask extends ReconDBUpdateTask {
    * @param operation (PUT, DELETE)
    */
   void updateUpperBoundCount(OmKeyInfo omKeyInfo,
-      BatchOperation.Operation operation) throws IOException {
+      OMDBUpdateEvent.OMDBUpdateAction operation) throws IOException {
     int binIndex = calculateBinIndex(omKeyInfo.getDataSize());
     if (operation == PUT) {
       upperBoundCount[binIndex]++;
