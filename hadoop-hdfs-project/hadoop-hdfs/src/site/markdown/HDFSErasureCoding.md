@@ -170,6 +170,7 @@ Deployment
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
          [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 
@@ -217,6 +218,10 @@ Below are the details about each command.
 *  `[-enablePolicy -policy <policyName>]`
 
      Enable an erasure coding policy.
+
+*  `[-removePolicy -policy <policyName>]`
+
+     Remove an erasure coding policy.
 
 *  `[-disablePolicy -policy <policyName>]`
 
