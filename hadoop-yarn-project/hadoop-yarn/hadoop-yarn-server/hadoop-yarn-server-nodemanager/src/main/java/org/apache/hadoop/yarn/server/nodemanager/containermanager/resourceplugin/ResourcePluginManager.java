@@ -65,7 +65,7 @@ public class ResourcePluginManager {
 
   private DeviceMappingManager deviceMappingManager = null;
 
-  public synchronized void initialize(Context context)
+  public void initialize(Context context)
       throws YarnException, ClassNotFoundException {
     Configuration conf = context.getConf();
     Map<String, ResourcePlugin> pluginMap = new HashMap<>();
@@ -274,7 +274,7 @@ public class ResourcePluginManager {
     return deviceMappingManager;
   }
 
-  public synchronized void cleanup() throws YarnException {
+  public void cleanup() throws YarnException {
     for (ResourcePlugin plugin : configuredPlugins.values()) {
       plugin.cleanup();
     }
