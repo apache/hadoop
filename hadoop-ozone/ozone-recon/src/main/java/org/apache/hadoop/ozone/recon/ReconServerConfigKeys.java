@@ -73,7 +73,7 @@ public final class ReconServerConfigKeys {
   public static final String RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY =
       "recon.om.snapshot.task.initial.delay";
   public static final String
-      RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT = "10s";
+      RECON_OM_SNAPSHOT_TASK_INITIAL_DELAY_DEFAULT = "1m";
 
   public static final String OZONE_RECON_CONTAINER_DB_STORE_IMPL =
       "ozone.recon.container.db.impl";
@@ -83,7 +83,7 @@ public final class ReconServerConfigKeys {
   public static final String RECON_OM_SNAPSHOT_TASK_INTERVAL =
       "recon.om.snapshot.task.interval.delay";
   public static final String RECON_OM_SNAPSHOT_TASK_INTERVAL_DEFAULT
-      = "1m";
+      = "10m";
 
   public static final String RECON_OM_SNAPSHOT_TASK_FLUSH_PARAM =
       "recon.om.snapshot.task.flush.param";
