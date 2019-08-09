@@ -390,7 +390,7 @@ public class RpcClient implements ClientProtocol {
       throws IOException {
     // Set acls of current user.
     createBucket(volumeName, bucketName,
-        BucketArgs.newBuilder().setAcls(getAclList()).build());
+        BucketArgs.newBuilder().build());
   }
 
   @Override
