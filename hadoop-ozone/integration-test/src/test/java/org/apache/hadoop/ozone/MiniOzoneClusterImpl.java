@@ -375,6 +375,17 @@ public class MiniOzoneClusterImpl implements MiniOzoneCluster {
     });
   }
 
+  @Override
+  public void shutdownHddsDatanodes() {
+    hddsDatanodes.forEach((datanode) -> {
+      try {
+        shutdownHddsDatanode(datanode.getDatanodeDetails());
+      } catch (IOException e) {
+        LOG.error("Exception while trying to shutdown datanodes:", e);
+      }
+    });
+  }
+
   private CertificateClient getCAClient() {
     return this.caClient;
   }
