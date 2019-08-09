@@ -66,4 +66,12 @@ public class OMUpdateEventBatch {
         .filter(e -> tables.contains(e.getTable()))
         .collect(Collectors.toList()));
   }
+
+  /**
+   * Return if empty.
+   * @return true if empty, else false.
+   */
+  public boolean isEmpty() {
+    return !getIterator().hasNext();
+  }
 }

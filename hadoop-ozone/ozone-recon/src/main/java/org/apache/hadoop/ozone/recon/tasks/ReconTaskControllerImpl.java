@@ -58,17 +58,14 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   private ExecutorService executorService;
   private int threadCount = 1;
   private final Semaphore taskSemaphore = new Semaphore(1);
-  private OMMetadataManager omMetadataManager;
   private Map<String, AtomicInteger> taskFailureCounter = new HashMap<>();
   private static final int TASK_FAILURE_THRESHOLD = 2;
   private ReconTaskStatusDao reconTaskStatusDao;
 
   @Inject
   public ReconTaskControllerImpl(OzoneConfiguration configuration,
-                                 OMMetadataManager omMetadataManager,
                                  Configuration sqlConfiguration,
                                  Set<ReconDBUpdateTask> tasks) {
-    this.omMetadataManager = omMetadataManager;
     reconDBUpdateTasks = new HashMap<>();
     threadCount = configuration.getInt(OZONE_RECON_TASK_THREAD_COUNT_KEY,
         OZONE_RECON_TASK_THREAD_COUNT_DEFAULT);
@@ -91,7 +88,9 @@ public class ReconTaskControllerImpl implements ReconTaskController {
     // Create DB record for the task.
     ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(taskName,
         0L, 0L);
-    reconTaskStatusDao.insert(reconTaskStatusRecord);
+    if (!reconTaskStatusDao.existsById(taskName)) {
+      reconTaskStatusDao.insert(reconTaskStatusRecord);
+    }
   }
 
   /**
@@ -103,51 +102,55 @@ public class ReconTaskControllerImpl implements ReconTaskController {
    * @throws InterruptedException
    */
   @Override
-  public void consumeOMEvents(OMUpdateEventBatch events)
+  public void consumeOMEvents(OMUpdateEventBatch events,
+                              OMMetadataManager omMetadataManager)
       throws InterruptedException {
     taskSemaphore.acquire();
 
     try {
-      Collection<Callable<Pair>> tasks = new ArrayList<>();
-      for (Map.Entry<String, ReconDBUpdateTask> taskEntry :
-          reconDBUpdateTasks.entrySet()) {
-        ReconDBUpdateTask task = taskEntry.getValue();
-        tasks.add(() -> task.process(events));
-      }
-
-      List<Future<Pair>> results = executorService.invokeAll(tasks);
-      List<String> failedTasks = processTaskResults(results, events);
-
-      // Retry
-      List<String> retryFailedTasks = new ArrayList<>();
-      if (!failedTasks.isEmpty()) {
-        tasks.clear();
-        for (String taskName : failedTasks) {
-          ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
+      if (!events.isEmpty()) {
+        Collection<Callable<Pair>> tasks = new ArrayList<>();
+        for (Map.Entry<String, ReconDBUpdateTask> taskEntry :
+            reconDBUpdateTasks.entrySet()) {
+          ReconDBUpdateTask task = taskEntry.getValue();
           tasks.add(() -> task.process(events));
         }
-        results = executorService.invokeAll(tasks);
-        retryFailedTasks = processTaskResults(results, events);
-      }
 
-      // Reprocess the
-      // TODO Move to a separate task queue since reprocess may be a heavy
-      // operation for large OM DB instances
-      if (!retryFailedTasks.isEmpty()) {
-        tasks.clear();
-        for (String taskName : failedTasks) {
-          ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
-          tasks.add(() -> task.reprocess(omMetadataManager));
+        List<Future<Pair>> results = executorService.invokeAll(tasks);
+        List<String> failedTasks = processTaskResults(results, events);
+
+        // Retry
+        List<String> retryFailedTasks = new ArrayList<>();
+        if (!failedTasks.isEmpty()) {
+          tasks.clear();
+          for (String taskName : failedTasks) {
+            ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
+            tasks.add(() -> task.process(events));
+          }
+          results = executorService.invokeAll(tasks);
+          retryFailedTasks = processTaskResults(results, events);
         }
-        results = executorService.invokeAll(tasks);
-        List<String> reprocessFailedTasks = processTaskResults(results, events);
-        for (String taskName : reprocessFailedTasks) {
-          LOG.info("Reprocess step failed for task : " + taskName);
-          if (taskFailureCounter.get(taskName).incrementAndGet() >
-              TASK_FAILURE_THRESHOLD) {
-            LOG.info("Blacklisting Task since it failed retry and " +
-                "reprocess more than " + TASK_FAILURE_THRESHOLD + " times.");
-            reconDBUpdateTasks.remove(taskName);
+
+        // Reprocess the failed tasks.
+        // TODO Move to a separate task queue since reprocess may be a heavy
+        // operation for large OM DB instances
+        if (!retryFailedTasks.isEmpty()) {
+          tasks.clear();
+          for (String taskName : failedTasks) {
+            ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
+            tasks.add(() -> task.reprocess(omMetadataManager));
+          }
+          results = executorService.invokeAll(tasks);
+          List<String> reprocessFailedTasks =
+              processTaskResults(results, events);
+          for (String taskName : reprocessFailedTasks) {
+            LOG.info("Reprocess step failed for task : " + taskName);
+            if (taskFailureCounter.get(taskName).incrementAndGet() >
+                TASK_FAILURE_THRESHOLD) {
+              LOG.info("Blacklisting Task since it failed retry and " +
+                  "reprocess more than " + TASK_FAILURE_THRESHOLD + " times.");
+              reconDBUpdateTasks.remove(taskName);
+            }
           }
         }
       }
@@ -159,7 +162,7 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   }
 
   @Override
-  public void reInitializeTasks(OMMetadataManager updatedOMMetadataManager)
+  public void reInitializeTasks(OMMetadataManager omMetadataManager)
       throws InterruptedException {
     taskSemaphore.acquire();
 
@@ -168,7 +171,7 @@ public class ReconTaskControllerImpl implements ReconTaskController {
       for (Map.Entry<String, ReconDBUpdateTask> taskEntry :
           reconDBUpdateTasks.entrySet()) {
         ReconDBUpdateTask task = taskEntry.getValue();
-        tasks.add(() -> task.reprocess(updatedOMMetadataManager));
+        tasks.add(() -> task.reprocess(omMetadataManager));
       }
 
       List<Future<Pair>> results = executorService.invokeAll(tasks);
@@ -183,9 +186,6 @@ public class ReconTaskControllerImpl implements ReconTaskController {
     } finally {
       taskSemaphore.release();
     }
-
-    // Update the OM Metadata Manager to new instance.
-    this.omMetadataManager = updatedOMMetadataManager;
   }
 
   /**
@@ -197,7 +197,7 @@ public class ReconTaskControllerImpl implements ReconTaskController {
   private void storeLastCompletedTransaction(
       String taskName, long lastSequenceNumber) {
     ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(taskName,
-        System.nanoTime(), lastSequenceNumber);
+        System.currentTimeMillis(), lastSequenceNumber);
     reconTaskStatusDao.update(reconTaskStatusRecord);
   }
 

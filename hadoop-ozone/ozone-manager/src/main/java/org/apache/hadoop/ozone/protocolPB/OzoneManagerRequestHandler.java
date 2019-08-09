@@ -394,9 +394,10 @@ public class OzoneManagerRequestHandler implements RequestHandler {
     DBUpdatesWrapper dbUpdatesWrapper =
         impl.getDBUpdates(dbUpdatesRequest);
     for (int i = 0; i < dbUpdatesWrapper.getData().size(); i++) {
-      builder.setData(i,
-          OMPBHelper.getByteString(dbUpdatesWrapper.getData().get(i)));
+      builder.addData(OMPBHelper.getByteString(
+          dbUpdatesWrapper.getData().get(i)));
     }
+    builder.setSequenceNumber(dbUpdatesWrapper.getCurrentSequenceNumber());
     return builder.build();
   }
 

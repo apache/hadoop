@@ -136,8 +136,7 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         Collections.singletonList(omKeyLocationInfoGroup));
 
     ContainerKeyMapperTask containerKeyMapperTask =
-        new ContainerKeyMapperTask(containerDbServiceProvider,
-        ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+        new ContainerKeyMapperTask(containerDbServiceProvider);
     containerKeyMapperTask.reprocess(reconOMMetadataManager);
 
     keyPrefixesForContainer =
@@ -242,8 +241,7 @@ public class TestContainerKeyMapperTask extends AbstractOMMetadataManagerTest {
         }});
 
     ContainerKeyMapperTask containerKeyMapperTask =
-        new ContainerKeyMapperTask(containerDbServiceProvider,
-            ozoneManagerServiceProvider.getOMMetadataManagerInstance());
+        new ContainerKeyMapperTask(containerDbServiceProvider);
     containerKeyMapperTask.reprocess(reconOMMetadataManager);
 
     keyPrefixesForContainer = containerDbServiceProvider

@@ -23,9 +23,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,13 +36,11 @@ import javax.ws.rs.core.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.ozone.OmUtils;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.recon.AbstractOMMetadataManagerTest;
 import org.apache.hadoop.ozone.recon.GuiceInjectorUtilsForTestsImpl;
-import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.api.types.ContainerMetadata;
 import org.apache.hadoop.ozone.recon.api.types.ContainersResponse;
 import org.apache.hadoop.ozone.recon.api.types.KeyMetadata;
@@ -54,15 +49,12 @@ import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
 import org.apache.hadoop.ozone.recon.spi.ContainerDBServiceProvider;
 import org.apache.hadoop.ozone.recon.spi.impl.OzoneManagerServiceProviderImpl;
 import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
-import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.Table;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.hadoop.ozone.recon.schema.StatsSchemaDefinition;
 import org.jooq.impl.DSL;
 import org.jooq.impl.DefaultConfiguration;
 import org.junit.Before;
 import org.junit.Test;
-import org.powermock.api.mockito.PowerMockito;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
@@ -180,23 +172,13 @@ public class TestContainerKeyService extends AbstractOMMetadataManagerTest {
         "key_three", "bucketOne", "sampleVol",
         Collections.singletonList(omKeyLocationInfoGroup2));
 
-    //Take snapshot of OM DB and copy over to Recon OM DB.
-    DBCheckpoint checkpoint = reconOMMetadataManager.getStore()
-        .getCheckpoint(true);
-    File tarFile = OmUtils.createTarFile(checkpoint.getCheckpointLocation());
-    InputStream inputStream = new FileInputStream(tarFile);
-    PowerMockito.stub(PowerMockito.method(ReconUtils.class, "makeHttpCall",
-        CloseableHttpClient.class, String.class))
-        .toReturn(inputStream);
-
     //Generate Recon container DB data.
     OMMetadataManager omMetadataManagerMock = mock(OMMetadataManager.class);
     Table tableMock = mock(Table.class);
     when(tableMock.getName()).thenReturn("KeyTable");
     when(omMetadataManagerMock.getKeyTable()).thenReturn(tableMock);
     ContainerKeyMapperTask containerKeyMapperTask  =
-        new ContainerKeyMapperTask(containerDbServiceProvider,
-            omMetadataManagerMock);
+        new ContainerKeyMapperTask(containerDbServiceProvider);
     containerKeyMapperTask.reprocess(reconOMMetadataManager);
   }
 

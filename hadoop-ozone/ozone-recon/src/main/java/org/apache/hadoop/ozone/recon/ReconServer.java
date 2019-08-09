@@ -86,18 +86,19 @@ public class ReconServer extends GenericCli {
       reconInternalSchemaDefinition.initializeSchema();
 
       LOG.info("Recon server initialized successfully!");
+
+      httpServer = injector.getInstance(ReconHttpServer.class);
+      LOG.info("Starting Recon server");
+      httpServer.start();
+
+      //Start Ozone Manager Service that pulls data from OM.
+      OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
+          .getInstance(OzoneManagerServiceProvider.class);
+      ozoneManagerServiceProvider.start();
     } catch (Exception e) {
       LOG.error("Error during initializing Recon server.", e);
+      stop();
     }
-
-    httpServer = injector.getInstance(ReconHttpServer.class);
-    LOG.info("Starting Recon server");
-    httpServer.start();
-
-    //Start Ozone Manager Service that pulls data from OM.
-    OzoneManagerServiceProvider ozoneManagerServiceProvider = injector
-        .getInstance(OzoneManagerServiceProvider.class);
-    ozoneManagerServiceProvider.start();
 
     Runtime.getRuntime().addShutdownHook(new Thread(() -> {
       try {

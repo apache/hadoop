@@ -39,7 +39,9 @@ public interface ReconTaskController {
    * @param events set of events
    * @throws InterruptedException InterruptedException
    */
-  void consumeOMEvents(OMUpdateEventBatch events) throws InterruptedException;
+  void consumeOMEvents(OMUpdateEventBatch events,
+                       OMMetadataManager omMetadataManager)
+      throws InterruptedException;
 
   /**
    * Pass on the handle to a new OM DB instance to the registered tasks.

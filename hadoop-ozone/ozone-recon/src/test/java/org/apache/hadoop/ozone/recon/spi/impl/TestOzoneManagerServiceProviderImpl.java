@@ -273,7 +273,8 @@ public class TestOzoneManagerServiceProviderImpl extends
     when(reconTaskControllerMock.getReconTaskStatusDao())
         .thenReturn(reconTaskStatusDaoMock);
     doNothing().when(reconTaskControllerMock)
-        .consumeOMEvents(any(OMUpdateEventBatch.class));
+        .consumeOMEvents(any(OMUpdateEventBatch.class),
+            any(OMMetadataManager.class));
 
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration, omMetadataManager,
@@ -295,7 +296,8 @@ public class TestOzoneManagerServiceProviderImpl extends
     assertTrue(captor.getValue().getTaskName().equals("OM_DB_DELTA_UPDATES"));
 
     verify(reconTaskControllerMock, times(1))
-        .consumeOMEvents(any(OMUpdateEventBatch.class));
+        .consumeOMEvents(any(OMUpdateEventBatch.class),
+            any(OMMetadataManager.class));
   }
 
   private ReconTaskController getMockTaskController() {

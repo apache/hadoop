@@ -265,10 +265,11 @@ public class OzoneManagerServiceProviderImpl
         .setSequenceNumber(fromSequenceNumber).build();
     DBUpdatesWrapper dbUpdates = ozoneManagerClient.getDBUpdates(
         dbUpdatesRequest);
-    RDBStore rocksDBStore = (RDBStore)omMetadataManager.getStore();
-    RocksDB rocksDB = rocksDBStore.getDb();
-
     if (null != dbUpdates) {
+      RDBStore rocksDBStore = (RDBStore)omMetadataManager.getStore();
+      RocksDB rocksDB = rocksDBStore.getDb();
+      LOG.debug("Number of updates received from OM : " +
+          dbUpdates.getData().size());
       for (byte[] data : dbUpdates.getData()) {
         WriteBatch writeBatch = new WriteBatch(data);
         writeBatch.iterate(omdbUpdatesHandler);
@@ -299,11 +300,11 @@ public class OzoneManagerServiceProviderImpl
         // Update timestamp of successful delta updates query.
         ReconTaskStatus reconTaskStatusRecord = new ReconTaskStatus(
             OmSnapshotTaskName.OM_DB_DELTA_UPDATES.name(),
-                System.nanoTime(), getCurrentOMDBSequenceNumber());
+                System.currentTimeMillis(), getCurrentOMDBSequenceNumber());
         reconTaskStatusDao.update(reconTaskStatusRecord);
         // Pass on DB update events to tasks that are listening.
-        reconTaskController.consumeOMEvents(
-            new OMUpdateEventBatch(omdbUpdatesHandler.getEvents()));
+        reconTaskController.consumeOMEvents(new OMUpdateEventBatch(
+            omdbUpdatesHandler.getEvents()), omMetadataManager);
       } catch (IOException | InterruptedException | RocksDBException e) {
         LOG.warn("Unable to get and apply delta updates from OM.", e);
         fullSnapshot = true;
@@ -318,7 +319,7 @@ public class OzoneManagerServiceProviderImpl
         ReconTaskStatus reconTaskStatusRecord =
             new ReconTaskStatus(
                 OmSnapshotTaskName.OM_DB_FULL_SNAPSHOT.name(),
-                System.nanoTime(), getCurrentOMDBSequenceNumber());
+                System.currentTimeMillis(), getCurrentOMDBSequenceNumber());
         reconTaskStatusDao.update(reconTaskStatusRecord);
         // Reinitialize tasks that are listening.
         reconTaskController.reInitializeTasks(omMetadataManager);
@@ -334,7 +335,11 @@ public class OzoneManagerServiceProviderImpl
    */
   private long getCurrentOMDBSequenceNumber() {
     RDBStore rocksDBStore = (RDBStore)omMetadataManager.getStore();
-    return rocksDBStore.getDb().getLatestSequenceNumber();
+    if (null == rocksDBStore) {
+      return 0;
+    } else {
+      return rocksDBStore.getDb().getLatestSequenceNumber();
+    }
   }
 }
 

@@ -20,5 +20,16 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-
+  <properties>
+    <property><name>ozone.enabled</name><value>true</value></property>
+    <property><name>ozone.scm.datanode.id</name><value>/tmp/ozone/data/datanode.id</value></property>
+    <property><name>ozone.replication</name><value>1</value></property>
+    <property><name>ozone.metadata.dirs</name><value>/tmp/ozone/data/metadata</value></property>
+    <property><name>ozone.scm.names</name><value>localhost</value></property>
+    <property><name>ozone.om.address</name><value>localhost</value></property>
+    <property><name>ozone.metadata.dirs</name><value>/tmp/ozone/data/metadata</value></property>
+    <property><name>ozone.recon.sql.db.jdbc.url</name><value>jdbc:sqlite:/tmp/ozone/data/metadata/ozone_recon_sqlite.db</value></property>
+    <property><name>recon.om.snapshot.task.interval.delay</name><value>1m</value></property>
+    <property><name>recon.om.snapshot.task.initial.delay</name><value>10s</value></property>
+  </properties>
 </configuration>

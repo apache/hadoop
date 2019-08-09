@@ -27,7 +27,7 @@ import com.google.inject.multibindings.Multibinder;
 /**
  * Binds the various Recon Tasks.
  */
-public class ReconTaskBindingModule extends AbstractModule{
+public class ReconTaskBindingModule extends AbstractModule {
 
   @Override
   protected void configure() {
