@@ -1660,7 +1660,7 @@
 
 <property>
   <name>fs.s3a.retry.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
     excluding throttling requests.
@@ -1671,7 +1671,7 @@
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between attempts to retry operations for any reason other
+    Initial retry interval when retrying operations for any reason other
     than S3 throttle errors.
   </description>
 </property>

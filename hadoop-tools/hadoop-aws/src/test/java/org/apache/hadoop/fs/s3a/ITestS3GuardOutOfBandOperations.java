@@ -53,9 +53,13 @@ import org.apache.hadoop.fs.contract.ContractTestUtils;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readBytesToString;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.touch;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeTextFile;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_MODE;
+import static org.apache.hadoop.fs.s3a.Constants.CHANGE_DETECT_SOURCE;
 import static org.apache.hadoop.fs.s3a.Constants.DEFAULT_METADATASTORE_METADATA_TTL;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_AUTHORITATIVE;
 import static org.apache.hadoop.fs.s3a.Constants.METADATASTORE_METADATA_TTL;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_INTERVAL;
+import static org.apache.hadoop.fs.s3a.Constants.RETRY_LIMIT;
 import static org.apache.hadoop.fs.s3a.Constants.S3_METADATA_STORE_IMPL;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingContainsPath;
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.checkListingDoesNotContainPath;
@@ -115,7 +119,7 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
 
   public static final int STABILIZATION_TIME = 20_000;
 
-  public static final int PROBE_INTERVAL_MILLIS = 500;
+  public static final int PROBE_INTERVAL_MILLIS = 2500;
 
   private S3AFileSystem guardedFs;
   private S3AFileSystem rawFS;
@@ -151,6 +155,19 @@ public class ITestS3GuardOutOfBandOperations extends AbstractS3ATestBase {
   protected String getMethodName() {
     return super.getMethodName() +
         (authoritative ? "-auth" : "-nonauth");
+  }
+
+  @Override
+  protected Configuration createConfiguration() {
+    Configuration conf = super.createConfiguration();
+    // reduce retry limit so FileNotFoundException cases timeout faster,
+    // speeding up the tests
+    removeBaseAndBucketOverrides(conf,
+        RETRY_LIMIT,
+        RETRY_INTERVAL);
+    conf.setInt(RETRY_LIMIT, 3);
+    conf.set(RETRY_INTERVAL, "10ms");
+    return conf;
   }
 
   @Before
