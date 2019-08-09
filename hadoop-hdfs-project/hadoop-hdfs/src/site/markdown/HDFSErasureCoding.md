@@ -219,10 +219,6 @@ Below are the details about each command.
 
      Enable an erasure coding policy.
 
-*  `[-removePolicy -policy <policyName>]`
-
-     Remove an erasure coding policy.
-
 *  `[-disablePolicy -policy <policyName>]`
 
      Disable an erasure coding policy.
