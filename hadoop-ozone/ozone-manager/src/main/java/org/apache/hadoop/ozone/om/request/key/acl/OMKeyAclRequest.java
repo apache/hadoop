@@ -164,7 +164,7 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
   abstract void onComplete(boolean operationResult, IOException exception);
 
   /**
-   * Apply the acl operation, and if successfully completed returns true,
+   * Apply the acl operation, if successfully completed returns true,
    * else false.
    * @param omKeyInfo
    */
