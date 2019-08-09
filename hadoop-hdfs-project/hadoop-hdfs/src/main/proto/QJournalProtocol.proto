@@ -279,7 +279,6 @@ message GetJournaledEditsRequestProto {
   required JournalIdProto jid = 1;
   required uint64 sinceTxId = 2;
   required uint32 maxTxns = 3;
-  optional string nameServiceId = 4;
 }
 
 message GetJournaledEditsResponseProto {

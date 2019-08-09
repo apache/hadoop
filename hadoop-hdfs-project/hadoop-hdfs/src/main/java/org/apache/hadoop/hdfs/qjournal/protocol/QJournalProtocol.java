@@ -142,14 +142,13 @@ public interface QJournalProtocol {
    * {@value DFSConfigKeys#DFS_HA_TAILEDITS_INPROGRESS_KEY} configuration key.
    *
    * @param jid The ID of the journal from which to fetch edits.
-   * @param nameServiceId The ID of the namespace for which to fetch edits.
    * @param sinceTxId Fetch edits starting at this transaction ID
    * @param maxTxns Request at most this many transactions to be returned
    * @throws IOException If there was an issue encountered while fetching edits
    *     from the cache, including a cache miss (cache does not contain the
    *     requested edits). The caller should then attempt to fetch the edits via
    *     the streaming mechanism (starting with
-   *     {@link #getEditLogManifest(String, String, long, boolean)}).
+   *     {@link #getEditLogManifest(String, long, boolean)}).
    * @return Response containing serialized edits to be loaded
    * @see org.apache.hadoop.hdfs.qjournal.server.JournaledEditsCache
    */

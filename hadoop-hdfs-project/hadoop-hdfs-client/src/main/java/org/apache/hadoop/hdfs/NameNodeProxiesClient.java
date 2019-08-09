@@ -129,7 +129,6 @@ public class NameNodeProxiesClient {
    * @return an object containing both the proxy and the associated
    *         delegation token service it corresponds to
    * @throws IOException if there is an error creating the proxy
-   * @see {@link NameNodeProxies#createProxy(Configuration, URI, Class)}.
    */
   public static ProxyAndInfo<ClientProtocol> createProxyWithClientProtocol(
       Configuration conf, URI nameNodeUri, AtomicBoolean fallbackToSimpleAuth)

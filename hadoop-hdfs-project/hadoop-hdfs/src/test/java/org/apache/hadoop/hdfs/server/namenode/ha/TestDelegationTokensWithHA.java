@@ -137,8 +137,12 @@ public class TestDelegationTokensWithHA {
         getDelegationToken(dfs, ugi.getShortUserName());
     ugi.addToken(token);
     // Recreate the DFS, this time authenticating using a DT
-    dfs = ugi.doAs((PrivilegedExceptionAction<DistributedFileSystem>)
-        () -> (DistributedFileSystem) FileSystem.get(conf));
+    dfs = ugi.doAs(new PrivilegedExceptionAction<DistributedFileSystem>() {
+      @Override
+      public DistributedFileSystem run() throws Exception {
+        return (DistributedFileSystem) FileSystem.get(conf);
+      }
+    });
 
     GenericTestUtils.setLogLevel(ObserverReadProxyProvider.LOG, Level.DEBUG);
     GenericTestUtils.LogCapturer logCapture = GenericTestUtils.LogCapturer

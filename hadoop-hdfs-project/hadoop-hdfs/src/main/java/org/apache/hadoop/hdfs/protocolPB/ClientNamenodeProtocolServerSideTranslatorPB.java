@@ -1592,7 +1592,7 @@ public class ClientNamenodeProtocolServerSideTranslatorPB implements
       throw new ServiceException(e);
     }
   }
-  
+
   @Override
   public MsyncResponseProto msync(RpcController controller,
       MsyncRequestProto req) throws ServiceException {

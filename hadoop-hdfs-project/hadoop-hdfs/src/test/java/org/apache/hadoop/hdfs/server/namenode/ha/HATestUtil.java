@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAccumulator;
 
 import com.google.common.base.Function;
@@ -214,12 +215,15 @@ public abstract class HATestUtil {
 
     conf.setBoolean(DFS_HA_TAILEDITS_INPROGRESS_KEY, fastTailing);
     if(fastTailing) {
-      conf.setTimeDuration(
-          DFS_HA_TAILEDITS_PERIOD_KEY, 100, TimeUnit.MILLISECONDS);
+      // TODO: In trunk, the below setting is 100ms. But
+      // without backporting HDFS-9847, specifying time unit is not supported
+      conf.setInt(DFS_HA_TAILEDITS_PERIOD_KEY, 0);
     } else {
       // disable fast tailing so that coordination takes time.
-      conf.setTimeDuration(DFS_HA_LOGROLL_PERIOD_KEY, 300, TimeUnit.SECONDS);
-      conf.setTimeDuration(DFS_HA_TAILEDITS_PERIOD_KEY, 200, TimeUnit.SECONDS);
+      // TODO: In trunk, the below setting is 300s and 200s. But
+      // without backporting HDFS-9847, specifying time unit is not supported
+      conf.setInt(DFS_HA_LOGROLL_PERIOD_KEY, 300);
+      conf.setInt(DFS_HA_TAILEDITS_PERIOD_KEY, 200);
     }
 
     MiniQJMHACluster.Builder qjmBuilder = new MiniQJMHACluster.Builder(conf)
@@ -362,9 +366,9 @@ public abstract class HATestUtil {
     ClientGSIContext ac = (ClientGSIContext)(provider.getAlignmentContext());
     Field f = ac.getClass().getDeclaredField("lastSeenStateId");
     f.setAccessible(true);
-    LongAccumulator lastSeenStateId = (LongAccumulator)f.get(ac);
-    long currentStateId = lastSeenStateId.getThenReset();
-    lastSeenStateId.accumulate(stateId);
+    AtomicLong lastSeenStateId = (AtomicLong)f.get(ac);
+    long currentStateId = lastSeenStateId.get();
+    lastSeenStateId.set(stateId);
     return currentStateId;
   }
 }

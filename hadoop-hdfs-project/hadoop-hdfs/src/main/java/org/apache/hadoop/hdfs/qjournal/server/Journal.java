@@ -727,7 +727,7 @@ public class Journal implements Closeable {
   }
 
   /**
-   * @see QJournalProtocol#getJournaledEdits(String, String, long, int)
+   * @see QJournalProtocol#getJournaledEdits(String, long, int)
    */
   public GetJournaledEditsResponseProto getJournaledEdits(long sinceTxId,
       int maxTxns) throws IOException {

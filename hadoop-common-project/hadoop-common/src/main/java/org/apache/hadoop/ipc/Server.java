@@ -140,10 +140,6 @@ public abstract class Server {
   private ExceptionsHandler exceptionsHandler = new ExceptionsHandler();
   private Tracer tracer;
   private AlignmentContext alignmentContext;
-  /**
-   * Logical name of the server used in metrics and monitor.
-   */
-  private final String serverName;
 
   /**
    * Add exception classes for which server won't log stack traces.
@@ -2814,7 +2810,6 @@ public abstract class Server {
     this.rpcRequestClass = rpcRequestClass; 
     this.handlerCount = handlerCount;
     this.socketSendBufferSize = 0;
-    this.serverName = serverName;
     this.maxDataLength = conf.getInt(CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH,
         CommonConfigurationKeys.IPC_MAXIMUM_DATA_LENGTH_DEFAULT);
     if (queueSizePerHandler != -1) {
