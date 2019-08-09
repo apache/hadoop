@@ -135,6 +135,8 @@ public class TestFilterFileSystem {
     public Path fixRelativePart(Path p);
     public ContentSummary getContentSummary(Path f);
     public QuotaUsage getQuotaUsage(Path f);
+    public void setQuota(Path f, long namespaceQuota, long storagespaceQuota);
+    public void setQuotaByStorageType(Path f, StorageType type, long quota);
     StorageStatistics getStorageStatistics();
   }
 
