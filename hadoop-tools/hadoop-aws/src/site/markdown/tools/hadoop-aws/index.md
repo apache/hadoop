@@ -1018,7 +1018,7 @@ is unrecoverable; it's the generic "No" response. Very rarely it
 does recover, which is why it is in this category, rather than that
 of unrecoverable failures.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 
@@ -1033,7 +1033,7 @@ after the request was processed by S3.
 * "No response from Server" (443, 444) HTTP responses.
 * Any other AWS client, service or S3 exception.
 
-These failures will be retried with a fixed sleep interval set in
+These failures will be retried with an exponential sleep interval set in
 `fs.s3a.retry.interval`, up to the limit set in `fs.s3a.retry.limit`.
 
 *Important*: DELETE is considered idempotent, hence: `FileSystem.delete()`
