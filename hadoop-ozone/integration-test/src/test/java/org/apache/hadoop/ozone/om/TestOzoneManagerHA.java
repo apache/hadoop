@@ -19,11 +19,16 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
+import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.security.acl.OzoneObj;
+import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,6 +70,7 @@ import org.apache.hadoop.util.Time;
 
 import static org.apache.hadoop.ozone.MiniOzoneHAClusterImpl
     .NODE_FAILURE_TIMEOUT;
+import static org.apache.hadoop.ozone.OzoneAcl.AclScope.DEFAULT;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_ENABLED;
 import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_CLIENT_FAILOVER_MAX_ATTEMPTS_KEY;
@@ -76,6 +82,9 @@ import static org.apache.hadoop.ozone.OzoneConfigKeys
     .OZONE_OPEN_KEY_EXPIRE_THRESHOLD_SECONDS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.FILE_ALREADY_EXISTS;
 import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.NOT_A_FILE;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLIdentityType.USER;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.READ;
+import static org.apache.hadoop.ozone.security.acl.IAccessAuthorizer.ACLType.WRITE;
 import static org.junit.Assert.fail;
 
 /**
@@ -757,6 +766,139 @@ public class TestOzoneManagerHA {
       Assert.assertEquals(currentLeaderNodeId,
           proxyProvider.getCurrentProxyOMNodeId());
     }
+  }
+
+  @Test
+  public void testAddBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertTrue(addAcl);
+
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(containsAcl(defaultUserAcl, acls));
+
+    // Add an already existing acl.
+    addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertFalse(addAcl);
+
+    // Add an acl by changing acl type with same type, name and scope.
+    defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertTrue(addAcl);
+  }
+
+  @Test
+  public void testRemoveBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    // As by default create bucket we add some default acls in RpcClient.
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(acls.size() > 0);
+
+    // Remove an existing acl.
+    boolean removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertTrue(removeAcl);
+
+    // Trying to remove an already removed acl.
+    removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertFalse(removeAcl);
+
+    boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
+    Assert.assertTrue(addAcl);
+
+    // Just changed acl type here to write, rest all is same as defaultUserAcl.
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(addAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(removeAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, defaultUserAcl);
+    Assert.assertTrue(removeAcl);
+
+  }
+
+  @Test
+  public void testSetBucketAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl defaultUserAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.BUCKET)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName()).build();
+
+    // As by default create bucket we add some default acls in RpcClient.
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(acls.size() > 0);
+
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+
+    List<OzoneAcl> newAcls = Collections.singletonList(modifiedUserAcl);
+    boolean setAcl = objectStore.setAcl(ozoneObj, newAcls);
+    Assert.assertTrue(setAcl);
+
+    // Get acls and check whether they are reset or not.
+    List<OzoneAcl> getAcls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(newAcls.size() == getAcls.size());
+    int i = 0;
+    for (OzoneAcl ozoneAcl : newAcls) {
+      Assert.assertTrue(compareAcls(getAcls.get(i++), ozoneAcl));
+    }
+  }
+
+  private boolean containsAcl(OzoneAcl ozoneAcl, List<OzoneAcl> ozoneAcls) {
+    for (OzoneAcl acl : ozoneAcls) {
+      boolean result = compareAcls(ozoneAcl, acl);
+      if (result) {
+        // We found a match, return.
+        return result;
+      }
+    }
+    return false;
+  }
+
+  private boolean compareAcls(OzoneAcl givenAcl, OzoneAcl existingAcl) {
+    if (givenAcl.getType().equals(existingAcl.getType())
+        && givenAcl.getName().equals(existingAcl.getName())
+        && givenAcl.getAclScope().equals(existingAcl.getAclScope())) {
+      BitSet bitSet = (BitSet) givenAcl.getAclBitSet().clone();
+      bitSet.and(existingAcl.getAclBitSet());
+      if (bitSet.equals(existingAcl.getAclBitSet())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   @Test
