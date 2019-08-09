@@ -513,7 +513,7 @@ public class TestParam {
         new NameSpaceQuotaParam(NameSpaceQuotaParam.DEFAULT);
     assertEquals(Long.valueOf(NameSpaceQuotaParam.DEFAULT), p.getValue());
     p = new NameSpaceQuotaParam(100L);
-    assertEquals(new Long(100), p.getValue());
+    assertEquals(100L, p.getValue().longValue());
   }
 
   @Test
