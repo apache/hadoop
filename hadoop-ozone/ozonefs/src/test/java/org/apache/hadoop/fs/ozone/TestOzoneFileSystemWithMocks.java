@@ -82,7 +82,7 @@ public class TestOzoneFileSystemWithMocks {
   @Test
   public void testFSUriWithHostPortUnspecified() throws Exception {
     Configuration conf = new OzoneConfiguration();
-    final int OM_PORT_DEFAULT = OmUtils.getOmRpcPort(conf);
+    final int omPort = OmUtils.getOmRpcPort(conf);
 
     OzoneClient ozoneClient = mock(OzoneClient.class);
     ObjectStore objectStore = mock(ObjectStore.class);
@@ -95,7 +95,7 @@ public class TestOzoneFileSystemWithMocks {
 
     PowerMockito.mockStatic(OzoneClientFactory.class);
     PowerMockito.when(OzoneClientFactory.getRpcClient(eq("local.host"),
-        eq(OM_PORT_DEFAULT), eq(conf))).thenReturn(ozoneClient);
+        eq(omPort), eq(conf))).thenReturn(ozoneClient);
 
     UserGroupInformation ugi = mock(UserGroupInformation.class);
     PowerMockito.mockStatic(UserGroupInformation.class);
@@ -112,7 +112,7 @@ public class TestOzoneFileSystemWithMocks {
     assertEquals(ozfs.getUri().getPort(), -1);
     PowerMockito.verifyStatic();
     // Check the actual port number in use
-    OzoneClientFactory.getRpcClient("local.host", OM_PORT_DEFAULT, conf);
+    OzoneClientFactory.getRpcClient("local.host", omPort, conf);
   }
 
   @Test
