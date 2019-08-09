@@ -227,6 +227,11 @@ public interface MiniOzoneCluster {
   void startHddsDatanodes();
 
   /**
+   * Shuts down all the DataNodes.
+   */
+  void shutdownHddsDatanodes();
+
+  /**
    * Builder class for MiniOzoneCluster.
    */
   @SuppressWarnings("visibilitymodifier")
