@@ -108,9 +108,10 @@ public class TestOzoneFileSystemWithMocks {
     OzoneFileSystem ozfs = (OzoneFileSystem) fileSystem;
 
     assertEquals(ozfs.getUri().getHost(), "bucket1.volume1.local.host");
-    // Check if FS has resolved the URI with the default port
-    assertEquals(ozfs.getUri().getPort(), OM_PORT_DEFAULT);
+    // The URI doesn't contain a port number, expect -1 from getPort()
+    assertEquals(ozfs.getUri().getPort(), -1);
     PowerMockito.verifyStatic();
+    // Check the actual port number in use
     OzoneClientFactory.getRpcClient("local.host", OM_PORT_DEFAULT, conf);
   }
 
