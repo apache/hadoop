@@ -575,11 +575,13 @@ public class ResourceManager extends CompositeService
   protected SystemMetricsPublisher createSystemMetricsPublisher() {
     List<SystemMetricsPublisher> publishers =
         new ArrayList<SystemMetricsPublisher>();
-    if (YarnConfiguration.timelineServiceV1Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV1Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       SystemMetricsPublisher publisherV1 = new TimelineServiceV1Publisher();
       publishers.add(publisherV1);
     }
-    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf) &&
+        YarnConfiguration.systemMetricsPublisherEnabled(conf)) {
       // we're dealing with the v.2.x publisher
       LOG.info("system metrics publisher with the timeline service V2 is "
           + "configured");
