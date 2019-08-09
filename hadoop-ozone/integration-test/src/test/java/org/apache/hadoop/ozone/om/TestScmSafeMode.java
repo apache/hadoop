@@ -58,6 +58,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_DEADNODE_INTERVAL;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_STALENODE_INTERVAL;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -91,6 +93,8 @@ public class TestScmSafeMode {
   @Before
   public void init() throws Exception {
     conf = new OzoneConfiguration();
+    conf.set(OZONE_SCM_STALENODE_INTERVAL, "10s");
+    conf.set(OZONE_SCM_DEADNODE_INTERVAL, "25s");
     builder = MiniOzoneCluster.newBuilder(conf)
         .setHbInterval(1000)
         .setHbProcessorInterval(500)
@@ -328,6 +332,8 @@ public class TestScmSafeMode {
     }, 50, 1000 * 30);
     assertTrue(clientProtocolServer.getSafeModeStatus());
 
+    cluster.shutdownHddsDatanodes();
+    Thread.sleep(30000);
     LambdaTestUtils.intercept(SCMException.class,
         "Open container " + containers.get(0).getContainerID() + " "
             + "doesn't have enough replicas to service this operation in Safe"
