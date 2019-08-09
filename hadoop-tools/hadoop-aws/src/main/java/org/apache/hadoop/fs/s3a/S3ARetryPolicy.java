@@ -126,8 +126,8 @@ public class S3ARetryPolicy implements RetryPolicy {
         interval,
         TimeUnit.MILLISECONDS);
 
-    LOG.debug("Retrying on recoverable AWS failures {} times with an interval"
-        + " of {}ms", limit, interval);
+    LOG.debug("Retrying on recoverable AWS failures {} times with an"
+        + " initial interval of {}ms", limit, interval);
 
     // which is wrapped by a rejection of all non-idempotent calls except
     // for specific failures.

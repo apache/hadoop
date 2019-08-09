@@ -772,17 +772,18 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
-  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 10;
+  public static final int S3GUARD_CONSISTENCY_RETRY_LIMIT_DEFAULT = 7;
 
   /**
-   * Interval between retry attempts.: {@value}.
+   * Initial retry interval: {@value}.
    */
   public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL =
       "fs.s3a.s3guard.consistency.retry.interval";
 
   /**
-   * Default retry interval: {@value}.
+   * Default initial retry interval: {@value}.
    */
-  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT = "500ms";
+  public static final String S3GUARD_CONSISTENCY_RETRY_INTERVAL_DEFAULT =
+      "2s";
 
 }

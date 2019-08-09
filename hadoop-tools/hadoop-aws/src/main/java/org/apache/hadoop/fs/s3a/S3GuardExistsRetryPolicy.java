@@ -67,7 +67,7 @@ public class S3GuardExistsRetryPolicy extends S3ARetryPolicy {
         interval,
         TimeUnit.MILLISECONDS);
     LOG.debug("Retrying on recoverable S3Guard table/S3 inconsistencies {}"
-        + " times with an interval of {}ms", limit, interval);
+        + " times with an initial interval of {}ms", limit, interval);
 
     b.put(FileNotFoundException.class, retryPolicy);
     b.put(RemoteFileChangedException.class, retryPolicy);
