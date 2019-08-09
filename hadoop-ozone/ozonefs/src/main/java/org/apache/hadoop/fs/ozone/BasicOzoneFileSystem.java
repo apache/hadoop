@@ -117,7 +117,7 @@ public class BasicOzoneFileSystem extends FileSystem {
     String omPort = String.valueOf(-1);
     if (!isEmpty(remaining)) {
       String[] parts = remaining.split(":");
-      // Array length should only be 1 or 2
+      // Array length should be either 1(host) or 2(host:port)
       if (parts.length > 2) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
       }
@@ -127,7 +127,6 @@ public class BasicOzoneFileSystem extends FileSystem {
       } else {
         // If port number is not specified, read it from config
         omPort = String.valueOf(OmUtils.getOmRpcPort(conf));
-        authority += ":" + omPort;
       }
       if (!isNumber(omPort)) {
         throw new IllegalArgumentException(URI_EXCEPTION_TEXT);
