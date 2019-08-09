@@ -35,7 +35,7 @@
           {{#if model.apps}}
             {{#each model.apps as |app|}}
                 <tr>
-                  <td><a href="#/yarn-node-app/{{model.nodeInfo.id}}/{{model.nodeInfo.addr}}/{{app.appId}}">{{app.appId}}</a></td>
+                  <td><a href="#/yarn-node-app/{{model.nodeInfo.id}}/{{encodedNodeAddr}}/{{app.appId}}">{{app.appId}}</a></td>
                   <td><span class={{app.appStateStyle}}>{{app.state}}</span></td>
                   <td>{{app.user}}</td>
                 </tr>
