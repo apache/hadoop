@@ -18,6 +18,7 @@
 package org.apache.hadoop.ozone.om.helpers;
 
 
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -30,10 +31,13 @@ import org.apache.hadoop.hdds.protocol.StorageType;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.audit.Auditable;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.BucketInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
+    .BucketInfo;
 import org.apache.hadoop.ozone.protocolPB.OMPBHelper;
 
 import com.google.common.base.Preconditions;
+
+import static org.apache.hadoop.ozone.OzoneAcl.ZERO_BITSET;
 
 /**
  * A class that encapsulates Bucket Info.
@@ -122,6 +126,95 @@ public final class OmBucketInfo extends WithMetadata implements Auditable {
    */
   public List<OzoneAcl> getAcls() {
     return acls;
+  }
+
+  /**
+   * Add an ozoneAcl to list of existing Acl set.
+   * @param ozoneAcl
+   * @return true - if successfully added, false if not added or acl is
+   * already existing in the acl list.
+   */
+  public boolean addAcl(OzoneAcl ozoneAcl) {
+    // Case 1: When we are adding more rights to existing user/group.
+    boolean addToExistingAcl = false;
+    for(OzoneAcl existingAcl: getAcls()) {
+      if(existingAcl.getName().equals(ozoneAcl.getName()) &&
+          existingAcl.getType().equals(ozoneAcl.getType())) {
+
+        BitSet bits = (BitSet) ozoneAcl.getAclBitSet().clone();
+
+        // We need to do "or" before comparision because think of a case like
+        // existing acl is 777 and newly added acl is 444, we have already
+        // that acl set. In this case if we do direct check they will not
+        // be equal, but if we do or and then check, we shall know it
+        // has acl's already set or not.
+        bits.or(existingAcl.getAclBitSet());
+
+        if (bits.equals(existingAcl.getAclBitSet())) {
+          return false;
+        } else {
+          existingAcl.getAclBitSet().or(ozoneAcl.getAclBitSet());
+          addToExistingAcl = true;
+          break;
+        }
+      }
+    }
+
+    // Case 2: When a completely new acl is added.
+    if(!addToExistingAcl) {
+      getAcls().add(ozoneAcl);
+    }
+    return true;
+  }
+
+  /**
+   * Remove acl from existing acl list.
+   * @param ozoneAcl
+   * @return true - if successfully removed, false if not able to remove due
+   * to that acl is not in the existing acl list.
+   */
+  public boolean removeAcl(OzoneAcl ozoneAcl) {
+    boolean removed = false;
+
+    // When we are removing subset of rights from existing acl.
+    for(OzoneAcl existingAcl: getAcls()) {
+      if (existingAcl.getName().equals(ozoneAcl.getName()) &&
+          existingAcl.getType().equals(ozoneAcl.getType())) {
+        BitSet bits = (BitSet) ozoneAcl.getAclBitSet().clone();
+        bits.and(existingAcl.getAclBitSet());
+
+        // This happens when the acl bitset is not existing for current name
+        // and type.
+        // Like a case we have 444 permission, 333 is asked to removed.
+        if (bits.equals(ZERO_BITSET)) {
+          return false;
+        }
+
+        // We have some matching. Remove them.
+        existingAcl.getAclBitSet().xor(bits);
+
+        // If existing acl has same bitset as passed acl bitset, remove that
+        // acl from the list
+        if (existingAcl.getAclBitSet().equals(ZERO_BITSET)) {
+          getAcls().remove(existingAcl);
+        }
+        removed = true;
+        break;
+      }
+    }
+
+    return removed;
+  }
+
+  /**
+   * Reset the existing acl list.
+   * @param ozoneAcls
+   * @return true - if successfully able to reset.
+   */
+  public boolean setAcls(List<OzoneAcl> ozoneAcls) {
+    this.acls.clear();
+    this.acls = ozoneAcls;
+    return true;
   }
 
   /**

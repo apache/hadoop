@@ -3270,6 +3270,8 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .getVolumeTable()));
     metrics.setNumBuckets(metadataManager.countRowsInTable(metadataManager
         .getBucketTable()));
+    metrics.setNumKeys(metadataManager.countEstimatedRowsInTable(metadataManager
+        .getKeyTable()));
 
     // Delete the omMetrics file if it exists and save the a new metrics file
     // with new data

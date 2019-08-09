@@ -20,8 +20,11 @@ package org.apache.hadoop.hdds.scm.container;
 
 import java.io.IOException;
 
+import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerDatanodeProtocolProtos
     .ContainerReplicaProto;
+import org.apache.hadoop.hdds.scm.node.NodeManager;
+import org.apache.hadoop.hdds.scm.node.states.NodeNotFoundException;
 import org.apache.hadoop.hdds.scm.server.SCMDatanodeHeartbeatDispatcher
     .IncrementalContainerReportFromDatanode;
 import org.apache.hadoop.hdds.server.events.EventHandler;
@@ -39,9 +42,13 @@ public class IncrementalContainerReportHandler extends
   private static final Logger LOG = LoggerFactory.getLogger(
       IncrementalContainerReportHandler.class);
 
+  private final NodeManager nodeManager;
+
   public IncrementalContainerReportHandler(
+      final NodeManager nodeManager,
       final ContainerManager containerManager)  {
     super(containerManager, LOG);
+    this.nodeManager = nodeManager;
   }
 
   @Override
@@ -53,9 +60,16 @@ public class IncrementalContainerReportHandler extends
     for (ContainerReplicaProto replicaProto :
         report.getReport().getReportList()) {
       try {
-        processContainerReplica(report.getDatanodeDetails(), replicaProto);
+        final DatanodeDetails dd = report.getDatanodeDetails();
+        final ContainerID id = ContainerID.valueof(
+            replicaProto.getContainerID());
+        nodeManager.addContainer(dd, id);
+        processContainerReplica(dd, replicaProto);
       } catch (ContainerNotFoundException e) {
         LOG.warn("Container {} not found!", replicaProto.getContainerID());
+      } catch (NodeNotFoundException ex) {
+        LOG.error("Received ICR from unknown datanode {} {}",
+            report.getDatanodeDetails(), ex);
       } catch (IOException e) {
         LOG.error("Exception while processing ICR for container {}",
             replicaProto.getContainerID());

@@ -2824,16 +2824,28 @@ class FsDatasetImpl implements FsDatasetSpi<FsVolumeImpl> {
       return replica.getVisibleLength();
     }
   }
-  
+
   @Override
   public void addBlockPool(String bpid, Configuration conf)
       throws IOException {
     LOG.info("Adding block pool " + bpid);
+    AddBlockPoolException volumeExceptions = new AddBlockPoolException();
     try (AutoCloseableLock lock = datasetLock.acquire()) {
-      volumes.addBlockPool(bpid, conf);
+      try {
+        volumes.addBlockPool(bpid, conf);
+      } catch (AddBlockPoolException e) {
+        volumeExceptions.mergeException(e);
+      }
       volumeMap.initBlockPool(bpid);
     }
-    volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
+    try {
+      volumes.getAllVolumesMap(bpid, volumeMap, ramDiskReplicaTracker);
+    } catch (AddBlockPoolException e) {
+      volumeExceptions.mergeException(e);
+    }
+    if (volumeExceptions.hasExceptions()) {
+      throw volumeExceptions;
+    }
   }
 
   @Override

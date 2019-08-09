@@ -278,6 +278,7 @@ Usage:
               [-blockpools <comma-separated list of blockpool ids>]
               [-idleiterations <idleiterations>]
               [-runDuringUpgrade]
+              [-asService]
 
 | COMMAND\_OPTION | Description |
 |:---- |:---- |
@@ -289,6 +290,7 @@ Usage:
 | `-blockpools` \<comma-separated list of blockpool ids\> | The balancer will only run on blockpools included in this list. |
 | `-idleiterations` \<iterations\> | Maximum number of idle iterations before exit. This overwrites the default idleiterations(5). |
 | `-runDuringUpgrade` | Whether to run the balancer during an ongoing HDFS upgrade. This is usually not desired since it will not affect used space on over-utilized machines. |
+| `-asService` | Run Balancer as a long running service. |
 | `-h`\|`--help` | Display the tool usage and help information and exit. |
 
 Runs a cluster balancing utility. An administrator can simply press Ctrl-C to stop the rebalancing process. See [Balancer](./HdfsUserGuide.html#Balancer) for more details.
@@ -296,6 +298,8 @@ Runs a cluster balancing utility. An administrator can simply press Ctrl-C to st
 Note that the `blockpool` policy is more strict than the `datanode` policy.
 
 Besides the above command options, a pinning feature is introduced starting from 2.7.0 to prevent certain replicas from getting moved by balancer/mover. This pinning feature is disabled by default, and can be enabled by configuration property "dfs.datanode.block-pinning.enabled". When enabled, this feature only affects blocks that are written to favored nodes specified in the create() call. This feature is useful when we want to maintain the data locality, for applications such as HBase regionserver.
+
+If you want to run Balancer as a long running service, please start Balancer using `-asService` parameter with daemon-mode. You can do this by using the following command: `hdfs --daemon start balancer -asService`, or just use sbin/start-balancer.sh script with parameter `-asService`.
 
 ### `cacheadmin`
 

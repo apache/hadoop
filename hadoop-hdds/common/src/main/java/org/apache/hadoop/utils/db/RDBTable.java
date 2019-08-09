@@ -183,4 +183,14 @@ class RDBTable implements Table<byte[], byte[]> {
   public void close() throws Exception {
     // Nothing do for a Column Family.
   }
+
+  @Override
+  public long getEstimatedKeyCount() throws IOException {
+    try {
+      return db.getLongProperty(handle, "rocksdb.estimate-num-keys");
+    } catch (RocksDBException e) {
+      throw toIOException(
+          "Failed to get estimated key count of table " + getName(), e);
+    }
+  }
 }

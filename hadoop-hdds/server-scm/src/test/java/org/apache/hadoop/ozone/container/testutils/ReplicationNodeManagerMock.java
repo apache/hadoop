@@ -182,6 +182,13 @@ public class ReplicationNodeManagerMock implements NodeManager {
     throw new UnsupportedOperationException("Not yet implemented");
   }
 
+  @Override
+  public void addContainer(DatanodeDetails datanodeDetails,
+                           ContainerID containerId)
+      throws NodeNotFoundException {
+    throw new UnsupportedOperationException("Not yet implemented");
+  }
+
   /**
    * Update set of containers available on a datanode.
    * @param uuid - DatanodeID
