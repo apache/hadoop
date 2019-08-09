@@ -24,7 +24,6 @@ public class NameSpaceQuotaParam extends LongParam {
   /** Parameter name. */
   public static final String NAME = "namespacequota";
   /** Default parameter value ({@link Long#MAX_VALUE}). */
-  // public static final String DEFAULT = String.valueOf(Long.MAX_VALUE);
   public static final String DEFAULT = "9223372036854775807";
 
   private static final Domain DOMAIN = new Domain(NAME);

@@ -523,7 +523,7 @@ public class TestParam {
     assertEquals(Long.valueOf(StorageSpaceQuotaParam.DEFAULT),
         sp.getValue());
     sp = new StorageSpaceQuotaParam(100L);
-    assertEquals(new Long(100), sp.getValue());
+    assertEquals(100L, sp.getValue().longValue());
   }
 
   @Test

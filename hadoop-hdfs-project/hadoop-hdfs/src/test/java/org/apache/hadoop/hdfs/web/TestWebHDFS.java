@@ -55,6 +55,7 @@ import java.util.Random;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.fs.QuotaUsage;
+import org.apache.hadoop.test.LambdaTestUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -1168,40 +1169,18 @@ public class TestWebHDFS {
 
       // Test invalid parameters
 
-      try {
-        webHdfs.setQuota(path, -100, 100);
-        fail("Should have thrown exception");
-      } catch (IllegalArgumentException e) {
-        assertTrue(e.getMessage().contains("Invalid values for quota"));
-      }
-
-      try {
-        webHdfs.setQuota(path, 100, -100);
-        fail("Should have thrown exception");
-      } catch (IllegalArgumentException e) {
-        assertTrue(e.getMessage().contains("Invalid values for quota"));
-      }
-
-      try {
-        webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100);
-        fail("Should have thrown exception");
-      } catch (IllegalArgumentException e) {
-        assertTrue(e.getMessage().contains("Invalid values for quota"));
-      }
-
-      try {
-        webHdfs.setQuotaByStorageType(path, null, 100);
-        fail("Should have thrown exception");
-      } catch (IllegalArgumentException e) {
-        assertTrue(e.getMessage().contains("Invalid storage type"));
-      }
-
-      try {
-        webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100);
-        fail("Should have thrown exception");
-      } catch (IllegalArgumentException e) {
-        assertTrue(e.getMessage().contains("is not supported"));
-      }
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, -100, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuota(path, 100, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, null, 100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.SSD, -100));
+      LambdaTestUtils.intercept(IllegalArgumentException.class,
+          () -> webHdfs.setQuotaByStorageType(path, StorageType.RAM_DISK, 100));
 
     } finally {
       if (cluster != null) {
