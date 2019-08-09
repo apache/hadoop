@@ -594,6 +594,28 @@ public abstract class TestOzoneRpcClientAbstract {
   }
 
   @Test
+  public void testAclsAfterCallingSetBucketProperty() throws Exception {
+    String volumeName = UUID.randomUUID().toString();
+    String bucketName = UUID.randomUUID().toString();
+    store.createVolume(volumeName);
+    OzoneVolume volume = store.getVolume(volumeName);
+    volume.createBucket(bucketName);
+
+    OzoneBucket ozoneBucket = volume.getBucket(bucketName);
+    List<OzoneAcl> currentAcls = ozoneBucket.getAcls();
+
+    ozoneBucket.setVersioning(true);
+
+    OzoneBucket newBucket = volume.getBucket(bucketName);
+    Assert.assertEquals(bucketName, newBucket.getName());
+    Assert.assertEquals(true, newBucket.getVersioning());
+
+    List<OzoneAcl> aclsAfterSet = newBucket.getAcls();
+    Assert.assertEquals(currentAcls, aclsAfterSet);
+
+  }
+
+  @Test
   public void testSetBucketStorageType()
       throws IOException, OzoneException {
     String volumeName = UUID.randomUUID().toString();

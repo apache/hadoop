@@ -294,7 +294,14 @@ public class BucketManagerImpl implements BucketManager {
       }
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
 
+      // Set acls from oldBucketInfo if it has any.
+      if (oldBucketInfo.getAcls() != null) {
+        bucketInfoBuilder.setAcls(oldBucketInfo.getAcls());
+      }
+
       OmBucketInfo omBucketInfo = bucketInfoBuilder.build();
+
+
       commitBucketInfoToDB(omBucketInfo);
     } catch (IOException | DBException ex) {
       if (!(ex instanceof OMException)) {

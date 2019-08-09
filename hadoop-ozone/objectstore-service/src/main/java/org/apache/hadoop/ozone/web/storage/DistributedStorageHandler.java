@@ -291,9 +291,6 @@ public final class DistributedStorageHandler implements StorageHandler {
     OmBucketInfo.Builder builder = OmBucketInfo.newBuilder();
     builder.setVolumeName(args.getVolumeName())
         .setBucketName(args.getBucketName());
-    if(args.getAddAcls() != null) {
-      builder.setAcls(args.getAddAcls());
-    }
     if(args.getStorageType() != null) {
       builder.setStorageType(args.getStorageType());
     }

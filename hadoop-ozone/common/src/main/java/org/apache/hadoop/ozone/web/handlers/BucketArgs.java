@@ -18,10 +18,7 @@
 package org.apache.hadoop.ozone.web.handlers;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-
-import java.util.List;
 
 /**
  * BucketArgs packages all bucket related arguments to
@@ -29,7 +26,6 @@ import java.util.List;
  */
 public class BucketArgs extends VolumeArgs {
   private final String bucketName;
-  private List<OzoneAcl> addAcls;
   private OzoneConsts.Versioning versioning;
   private StorageType storageType;
 
@@ -77,15 +73,6 @@ public class BucketArgs extends VolumeArgs {
    */
   public String getBucketName() {
     return bucketName;
-  }
-
-  /**
-   * Returns Additive ACLs for the Bucket if specified.
-   *
-   * @return acls
-   */
-  public List<OzoneAcl> getAddAcls() {
-    return addAcls;
   }
 
   /**

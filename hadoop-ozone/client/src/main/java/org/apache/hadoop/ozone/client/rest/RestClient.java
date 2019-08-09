@@ -530,7 +530,6 @@ public class RestClient implements ClientProtocol {
           this,
           bucketInfo.getVolumeName(),
           bucketInfo.getBucketName(),
-          bucketInfo.getAcls(),
           bucketInfo.getStorageType(),
           getBucketVersioningFlag(bucketInfo.getVersioning()),
           HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()),
@@ -571,11 +570,9 @@ public class RestClient implements ClientProtocol {
           LOG.warn("Parse exception in getting creation time for volume", e);
         }
         return new OzoneBucket(conf, this, volumeName,
-            bucketInfo.getBucketName(), bucketInfo.getAcls(),
-            bucketInfo.getStorageType(),
+            bucketInfo.getBucketName(), bucketInfo.getStorageType(),
             getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime,
-            new HashMap<>(), bucketInfo
-            .getEncryptionKeyName());
+            new HashMap<>(), bucketInfo.getEncryptionKeyName());
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);

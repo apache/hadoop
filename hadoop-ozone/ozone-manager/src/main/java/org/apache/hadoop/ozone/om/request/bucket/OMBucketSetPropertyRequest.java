@@ -152,7 +152,13 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
         bucketInfoBuilder
             .setIsVersionEnabled(oldBucketInfo.getIsVersionEnabled());
       }
+
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
+
+      // Set acls from oldBucketInfo if it has any.
+      if (oldBucketInfo.getAcls() != null) {
+        bucketInfoBuilder.setAcls(oldBucketInfo.getAcls());
+      }
 
       omBucketInfo = bucketInfoBuilder.build();
 

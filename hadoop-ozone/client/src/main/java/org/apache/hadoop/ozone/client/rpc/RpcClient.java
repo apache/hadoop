@@ -388,7 +388,9 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void createBucket(String volumeName, String bucketName)
       throws IOException {
-    createBucket(volumeName, bucketName, BucketArgs.newBuilder().build());
+    // Set acls of current user.
+    createBucket(volumeName, bucketName,
+        BucketArgs.newBuilder().setAcls(getAclList()).build());
   }
 
   @Override
@@ -560,7 +562,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucketInfo.getVolumeName(),
         bucketInfo.getBucketName(),
-        bucketInfo.getAcls(),
         bucketInfo.getStorageType(),
         bucketInfo.getIsVersionEnabled(),
         bucketInfo.getCreationTime(),
@@ -581,7 +582,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
@@ -768,7 +768,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),

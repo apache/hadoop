@@ -72,10 +72,6 @@ public class OzoneBucket extends WithMetadata {
    * Default replication type to be used while creating keys.
    */
   private final ReplicationType defaultReplicationType;
-  /**
-   * Bucket ACLs.
-   */
-  private List<OzoneAcl> acls;
 
   /**
    * Type of storage to be used for this bucket.
@@ -136,13 +132,10 @@ public class OzoneBucket extends WithMetadata {
   }
   @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
-                     String volumeName, String bucketName,
-                     List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime,
-                     Map<String, String> metadata,
-                     String encryptionKeyName) {
+      String volumeName, String bucketName, StorageType storageType,
+      Boolean versioning, long creationTime, Map<String, String> metadata,
+      String encryptionKeyName) {
     this(conf, volumeName, bucketName, null, null, proxy);
-    this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
@@ -157,19 +150,15 @@ public class OzoneBucket extends WithMetadata {
    * @param proxy ClientProtocol proxy.
    * @param volumeName Name of the volume the bucket belongs to.
    * @param bucketName Name of the bucket.
-   * @param acls ACLs associated with the bucket.
    * @param storageType StorageType of the bucket.
    * @param versioning versioning status of the bucket.
    * @param creationTime creation time of the bucket.
    */
   @SuppressWarnings("parameternumber")
   public OzoneBucket(Configuration conf, ClientProtocol proxy,
-                     String volumeName, String bucketName,
-                     List<OzoneAcl> acls, StorageType storageType,
-                     Boolean versioning, long creationTime,
-                     Map<String, String> metadata) {
+      String volumeName, String bucketName, StorageType storageType,
+      Boolean versioning, long creationTime, Map<String, String> metadata) {
     this(conf, volumeName, bucketName, null, null, proxy);
-    this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
     this.listCacheSize = HddsClientUtils.getListCacheSize(conf);
@@ -181,15 +170,13 @@ public class OzoneBucket extends WithMetadata {
   @SuppressWarnings("parameternumber")
   OzoneBucket(String volumeName, String name,
       ReplicationFactor defaultReplication,
-      ReplicationType defaultReplicationType,
-      List<OzoneAcl> acls, StorageType storageType, Boolean versioning,
-      long creationTime) {
+      ReplicationType defaultReplicationType, StorageType storageType,
+      Boolean versioning, long creationTime) {
     this.proxy = null;
     this.volumeName = volumeName;
     this.name = name;
     this.defaultReplication = defaultReplication;
     this.defaultReplicationType = defaultReplicationType;
-    this.acls = acls;
     this.storageType = storageType;
     this.versioning = versioning;
     this.creationTime = creationTime;
