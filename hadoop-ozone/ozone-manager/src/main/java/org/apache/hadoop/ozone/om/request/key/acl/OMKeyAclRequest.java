@@ -23,7 +23,6 @@ import java.util.List;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
-import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
@@ -37,7 +36,6 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMReque
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
-import org.apache.hadoop.ozone.util.BooleanBiFunction;
 import org.apache.hadoop.utils.db.cache.CacheKey;
 import org.apache.hadoop.utils.db.cache.CacheValue;
 
@@ -48,12 +46,9 @@ import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_L
  */
 public abstract class OMKeyAclRequest extends OMClientRequest {
 
-  private BooleanBiFunction<List<OzoneAclInfo>, OmKeyInfo> omKeyAclOp;
 
-  public OMKeyAclRequest(OMRequest omRequest,
-      BooleanBiFunction<List<OzoneAclInfo>, OmKeyInfo> aclOp) {
+  public OMKeyAclRequest(OMRequest omRequest) {
     super(omRequest);
-    omKeyAclOp = aclOp;
   }
 
   @Override
@@ -100,7 +95,7 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
         throw new OMException(OMException.ResultCodes.KEY_NOT_FOUND);
       }
 
-      operationResult = omKeyAclOp.apply(ozoneAcls, omKeyInfo);
+      operationResult = apply(omKeyInfo);
 
       if (operationResult) {
         // update cache.
@@ -126,7 +121,7 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
     }
 
 
-    onComplete(operationResult, exception, ozoneManager.getMetrics());
+    onComplete(operationResult, exception);
 
     return omClientResponse;
   }
@@ -177,11 +172,14 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
    * Usually used for logging without lock and metric update.
    * @param operationResult
    * @param exception
-   * @param omMetrics
    */
-  abstract void onComplete(boolean operationResult, IOException exception,
-      OMMetrics omMetrics);
+  abstract void onComplete(boolean operationResult, IOException exception);
 
-
+  /**
+   * Apply the acl operation, and if successfully completed returns true,
+   * else false.
+   * @param omKeyInfo
+   */
+  abstract boolean apply(OmKeyInfo omKeyInfo);
 }
 

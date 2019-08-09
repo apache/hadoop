@@ -144,7 +144,7 @@ public final class OzoneManagerRatisUtils {
         return new OMVolumeAddAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketAddAclRequest(omRequest);
-      } else if (type == ObjectType.KEY) {
+      } else if (ObjectType.KEY == type) {
         return new OMKeyAddAclRequest(omRequest);
       }
     } else if (Type.RemoveAcl == cmdType) {
@@ -153,7 +153,7 @@ public final class OzoneManagerRatisUtils {
         return new OMVolumeRemoveAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketRemoveAclRequest(omRequest);
-      } else if (type == ObjectType.KEY) {
+      } else if (ObjectType.KEY == type) {
         return new OMKeyRemoveAclRequest(omRequest);
       }
     } else if (Type.SetAcl == cmdType) {

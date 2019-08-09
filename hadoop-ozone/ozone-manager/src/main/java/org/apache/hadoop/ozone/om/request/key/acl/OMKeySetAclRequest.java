@@ -21,11 +21,9 @@ package org.apache.hadoop.ozone.om.request.key.acl;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.response.key.acl.OMKeyAclResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
-import org.apache.hadoop.ozone.util.BooleanBiFunction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,18 +41,11 @@ public class OMKeySetAclRequest extends OMKeyAclRequest {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMKeyAddAclRequest.class);
 
-  private static BooleanBiFunction<List<OzoneAclInfo>, OmKeyInfo> keySetAclOp;
   private String path;
   private List<OzoneAclInfo> ozoneAcls;
 
-  static {
-    keySetAclOp = (ozoneAcls, omKeyInfo) -> {
-      return omKeyInfo.setAcls(ozoneAcls);
-    };
-  }
-
   public OMKeySetAclRequest(OMRequest omRequest) {
-    super(omRequest, keySetAclOp);
+    super(omRequest);
     OzoneManagerProtocolProtos.SetAclRequest setAclRequest =
         getOmRequest().getSetAclRequest();
     path = setAclRequest.getObj().getPath();
@@ -97,20 +88,23 @@ public class OMKeySetAclRequest extends OMKeyAclRequest {
   }
 
   @Override
-  void onComplete(boolean operationResult, IOException exception,
-      OMMetrics omMetrics) {
+  void onComplete(boolean operationResult, IOException exception) {
     if (operationResult) {
       LOG.debug("Set acl: {} to path: {} success!", getAcls(), getPath());
     } else {
-      omMetrics.incNumBucketUpdateFails();
       if (exception == null) {
-        LOG.error("Set acl {} to path {} failed, because acl already exist",
-            getAcls(), getPath());
+        LOG.debug("Set acl {} to path {} failed!", getAcls(), getPath());
       } else {
         LOG.error("Set acl {} to path {} failed!", getAcls(), getPath(),
             exception);
       }
     }
+  }
+
+  @Override
+  boolean apply(OmKeyInfo omKeyInfo) {
+    // No need to check not null here, this will be never called with null.
+    return omKeyInfo.setAcls(ozoneAcls);
   }
 
 }
