@@ -54,11 +54,6 @@ public class OMKeyAddAclRequest extends OMKeyAclRequest {
   }
 
   @Override
-  List<OzoneAclInfo> getAcls() {
-    return ozoneAcls;
-  }
-
-  @Override
   String getPath() {
     return path;
   }
@@ -91,14 +86,13 @@ public class OMKeyAddAclRequest extends OMKeyAclRequest {
   @Override
   void onComplete(boolean operationResult, IOException exception) {
     if (operationResult) {
-      LOG.debug("Add acl: {} to path: {} success!", getAcls(), getPath());
+      LOG.debug("Add acl: {} to path: {} success!", ozoneAcls, path);
     } else {
       if (exception == null) {
         LOG.debug("Add acl {} to path {} failed, because acl already exist",
-            getAcls(), getPath());
+            ozoneAcls, path);
       } else {
-        LOG.error("Add acl {} to path {} failed!", getAcls(), getPath(),
-            exception);
+        LOG.error("Add acl {} to path {} failed!", ozoneAcls, path, exception);
       }
     }
   }

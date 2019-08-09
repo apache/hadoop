@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.request.key.acl;
 
 import java.io.IOException;
-import java.util.List;
 
 import com.google.common.base.Optional;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
@@ -28,7 +27,6 @@ import org.apache.hadoop.ozone.om.exceptions.OMException;
 import org.apache.hadoop.ozone.om.helpers.OmKeyInfo;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
 import org.apache.hadoop.ozone.om.request.util.ObjectParser;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneObj.ObjectType;
@@ -55,9 +53,6 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
   public OMClientResponse validateAndUpdateCache(OzoneManager ozoneManager,
       long transactionLogIndex,
       OzoneManagerDoubleBufferHelper ozoneManagerDoubleBufferHelper) {
-
-    // protobuf guarantees acls are non-null.
-    List<OzoneAclInfo> ozoneAcls = getAcls();
 
     OmKeyInfo omKeyInfo = null;
 
@@ -125,13 +120,6 @@ public abstract class OMKeyAclRequest extends OMClientRequest {
 
     return omClientResponse;
   }
-
-  /**
-   * Get the Acls from the request.
-   * @return List of OzoneAcls, for add/remove it is a single element list
-   * for set it can be non-single element list.
-   */
-  abstract List<OzoneAclInfo> getAcls();
 
   /**
    * Get the path name from the request.

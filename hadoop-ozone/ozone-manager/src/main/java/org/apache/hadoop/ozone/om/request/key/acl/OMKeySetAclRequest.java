@@ -53,11 +53,6 @@ public class OMKeySetAclRequest extends OMKeyAclRequest {
   }
 
   @Override
-  List<OzoneAclInfo> getAcls() {
-    return ozoneAcls;
-  }
-
-  @Override
   String getPath() {
     return path;
   }
@@ -90,13 +85,12 @@ public class OMKeySetAclRequest extends OMKeyAclRequest {
   @Override
   void onComplete(boolean operationResult, IOException exception) {
     if (operationResult) {
-      LOG.debug("Set acl: {} to path: {} success!", getAcls(), getPath());
+      LOG.debug("Set acl: {} to path: {} success!", ozoneAcls, path);
     } else {
       if (exception == null) {
-        LOG.debug("Set acl {} to path {} failed!", getAcls(), getPath());
+        LOG.debug("Set acl {} to path {} failed!", ozoneAcls, path);
       } else {
-        LOG.error("Set acl {} to path {} failed!", getAcls(), getPath(),
-            exception);
+        LOG.error("Set acl {} to path {} failed!", ozoneAcls, path, exception);
       }
     }
   }

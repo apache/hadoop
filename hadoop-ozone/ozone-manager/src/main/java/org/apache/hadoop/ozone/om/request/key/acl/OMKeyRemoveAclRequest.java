@@ -54,11 +54,6 @@ public class OMKeyRemoveAclRequest extends OMKeyAclRequest {
   }
 
   @Override
-  List<OzoneAclInfo> getAcls() {
-    return ozoneAcls;
-  }
-
-  @Override
   String getPath() {
     return path;
   }
@@ -91,13 +86,13 @@ public class OMKeyRemoveAclRequest extends OMKeyAclRequest {
   @Override
   void onComplete(boolean operationResult, IOException exception) {
     if (operationResult) {
-      LOG.debug("Remove acl: {} to path: {} success!", getAcls(), getPath());
+      LOG.debug("Remove acl: {} to path: {} success!", ozoneAcls, path);
     } else {
       if (exception == null) {
         LOG.debug("Remove acl {} to path {} failed, because acl already exist",
-            getAcls(), getPath());
+            ozoneAcls, path);
       } else {
-        LOG.error("Remove acl {} to path {} failed!", getAcls(), getPath(),
+        LOG.error("Remove acl {} to path {} failed!", ozoneAcls, path,
             exception);
       }
     }
