@@ -2693,7 +2693,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
       // S3 yet, we'll assume the empty directory is true;
       S3AFileStatus s3FileStatus;
       try {
-        s3FileStatus = s3GetFileStatus(key, path, onlyProbeForDirectory, tombstones);
+        s3FileStatus = s3GetFileStatus(key, path, onlyProbeForDirectory,
+            tombstones);
       } catch (FileNotFoundException e) {
         return S3AFileStatus.fromFileStatus(msStatus, Tristate.TRUE,
             null, null);
@@ -2871,7 +2872,8 @@ public class S3AFileSystem extends FileSystem implements StreamCapabilities,
    * @throws IOException IO failure
    */
   @Retries.RetryTranslated
-  private boolean s3Exists(final Path f, boolean onlyProbeForDirectory) throws IOException {
+  private boolean s3Exists(final Path f, final boolean onlyProbeForDirectory)
+      throws IOException {
     Path path = qualify(f);
     String key = pathToKey(path);
     try {
