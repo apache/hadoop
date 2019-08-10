@@ -699,6 +699,7 @@ public class TestKeyManagerImpl {
     String keyName = RandomStringUtils.randomAlphabetic(5);
     OmKeyArgs keyArgs = createBuilder()
         .setKeyName(keyName)
+        .setSortDatanodesInPipeline(true)
         .build();
 
     // lookup for a non-existent key
