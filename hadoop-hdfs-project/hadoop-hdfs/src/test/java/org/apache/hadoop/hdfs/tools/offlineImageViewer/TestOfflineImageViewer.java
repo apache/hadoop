@@ -294,6 +294,8 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(snapshotDir2);
       // Simply enable snapshot on it, no need to create one
       hdfs.allowSnapshot(snapshotDir2);
+      writtenFiles.put(snapshotDir2.toString(),
+          hdfs.getFileStatus(snapshotDir2));
 
       // Set XAttrs so the fsimage contains XAttr ops
       final Path xattr = new Path("/xattr");
