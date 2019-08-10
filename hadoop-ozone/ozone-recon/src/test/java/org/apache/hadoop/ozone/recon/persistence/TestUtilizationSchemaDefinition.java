@@ -18,11 +18,14 @@
 package org.apache.hadoop.ozone.recon.persistence;
 
 import static org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition.CLUSTER_GROWTH_DAILY_TABLE_NAME;
+import static org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition.FILE_COUNT_BY_SIZE_TABLE_NAME;
 import static org.hadoop.ozone.recon.schema.tables.ClusterGrowthDailyTable.CLUSTER_GROWTH_DAILY;
+import static org.junit.Assert.assertEquals;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -34,8 +37,13 @@ import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.hadoop.ozone.recon.schema.UtilizationSchemaDefinition;
 import org.hadoop.ozone.recon.schema.tables.daos.ClusterGrowthDailyDao;
+import org.hadoop.ozone.recon.schema.tables.daos.FileCountBySizeDao;
 import org.hadoop.ozone.recon.schema.tables.pojos.ClusterGrowthDaily;
+import org.hadoop.ozone.recon.schema.tables.pojos.FileCountBySize;
+import org.hadoop.ozone.recon.schema.tables.records.FileCountBySizeRecord;
 import org.jooq.Configuration;
+import org.jooq.Table;
+import org.jooq.UniqueKey;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -78,6 +86,26 @@ public class TestUtilizationSchemaDefinition extends AbstractSqlDatabaseTest {
 
     Assert.assertEquals(8, actualPairs.size());
     Assert.assertEquals(expectedPairs, actualPairs);
+
+    ResultSet resultSetFileCount = metaData.getColumns(null, null,
+        FILE_COUNT_BY_SIZE_TABLE_NAME, null);
+
+    List<Pair<String, Integer>> expectedPairsFileCount = new ArrayList<>();
+    expectedPairsFileCount.add(
+        new ImmutablePair<>("file_size", Types.INTEGER));
+    expectedPairsFileCount.add(
+        new ImmutablePair<>("count", Types.INTEGER));
+
+    List<Pair<String, Integer>> actualPairsFileCount = new ArrayList<>();
+    while(resultSetFileCount.next()) {
+      actualPairsFileCount.add(new ImmutablePair<>(resultSetFileCount.getString(
+          "COLUMN_NAME"), resultSetFileCount.getInt(
+              "DATA_TYPE")));
+    }
+    assertEquals("Unexpected number of columns",
+        2, actualPairsFileCount.size());
+    assertEquals("Columns Do not Match ",
+        expectedPairsFileCount, actualPairsFileCount);
   }
 
   @Test
@@ -85,7 +113,6 @@ public class TestUtilizationSchemaDefinition extends AbstractSqlDatabaseTest {
     // Verify table exists
     UtilizationSchemaDefinition schemaDefinition = getInjector().getInstance(
         UtilizationSchemaDefinition.class);
-
     schemaDefinition.initializeSchema();
 
     DataSource ds = getInjector().getInstance(DataSource.class);
@@ -156,5 +183,52 @@ public class TestUtilizationSchemaDefinition extends AbstractSqlDatabaseTest {
             .value1(new Timestamp(now)).value2(10));
 
     Assert.assertNull(dbRecord);
+  }
+
+  @Test
+  public void testFileCountBySizeCRUDOperations() throws SQLException {
+    UtilizationSchemaDefinition schemaDefinition = getInjector().getInstance(
+        UtilizationSchemaDefinition.class);
+    schemaDefinition.initializeSchema();
+
+    DataSource ds = getInjector().getInstance(DataSource.class);
+    Connection connection = ds.getConnection();
+
+    DatabaseMetaData metaData = connection.getMetaData();
+    ResultSet resultSet = metaData.getTables(null, null,
+        FILE_COUNT_BY_SIZE_TABLE_NAME, null);
+
+    while (resultSet.next()) {
+      Assert.assertEquals(FILE_COUNT_BY_SIZE_TABLE_NAME,
+          resultSet.getString("TABLE_NAME"));
+    }
+
+    FileCountBySizeDao fileCountBySizeDao = new FileCountBySizeDao(
+        getInjector().getInstance(Configuration.class));
+
+    FileCountBySize newRecord = new FileCountBySize();
+    newRecord.setFileSize(1024L);
+    newRecord.setCount(1L);
+
+    fileCountBySizeDao.insert(newRecord);
+
+    FileCountBySize dbRecord = fileCountBySizeDao.findById(1024L);
+    assertEquals(Long.valueOf(1), dbRecord.getCount());
+
+    dbRecord.setCount(2L);
+    fileCountBySizeDao.update(dbRecord);
+
+    dbRecord = fileCountBySizeDao.findById(1024L);
+    assertEquals(Long.valueOf(2), dbRecord.getCount());
+
+
+
+    Table<FileCountBySizeRecord> fileCountBySizeRecordTable =
+        fileCountBySizeDao.getTable();
+    List<UniqueKey<FileCountBySizeRecord>> tableKeys =
+        fileCountBySizeRecordTable.getKeys();
+    for (UniqueKey key : tableKeys) {
+      String name = key.getName();
+    }
   }
 }
