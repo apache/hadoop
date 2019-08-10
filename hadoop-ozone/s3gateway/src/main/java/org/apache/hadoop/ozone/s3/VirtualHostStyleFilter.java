@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.s3;
 
+import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
@@ -46,6 +47,7 @@ import static org.apache.hadoop.ozone.s3.S3GatewayConfigKeys.OZONE_S3G_DOMAIN_NA
 
 @Provider
 @PreMatching
+@Priority(100)
 public class VirtualHostStyleFilter implements ContainerRequestFilter {
 
   private static final Logger LOG = LoggerFactory.getLogger(
