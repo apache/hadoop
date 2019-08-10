@@ -781,24 +781,8 @@ public class TestOzoneManagerHA {
         .setVolumeName(ozoneBucket.getVolumeName())
         .setBucketName(ozoneBucket.getName()).build();
 
-    boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
-    Assert.assertTrue(addAcl);
-
-    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
-
-    Assert.assertTrue(containsAcl(defaultUserAcl, acls));
-
-    // Add an already existing acl.
-    addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
-    Assert.assertFalse(addAcl);
-
-    // Add an acl by changing acl type with same type, name and scope.
-    defaultUserAcl = new OzoneAcl(USER, remoteUserName,
-        WRITE, DEFAULT);
-    addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
-    Assert.assertTrue(addAcl);
+    testAddAcl(remoteUserName, ozoneObj, defaultUserAcl);
   }
-
   @Test
   public void testRemoveBucketAcl() throws Exception {
     OzoneBucket ozoneBucket = setupBucket();
@@ -812,33 +796,7 @@ public class TestOzoneManagerHA {
         .setVolumeName(ozoneBucket.getVolumeName())
         .setBucketName(ozoneBucket.getName()).build();
 
-    // As by default create bucket we add some default acls in RpcClient.
-    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
-
-    Assert.assertTrue(acls.size() > 0);
-
-    // Remove an existing acl.
-    boolean removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
-    Assert.assertTrue(removeAcl);
-
-    // Trying to remove an already removed acl.
-    removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
-    Assert.assertFalse(removeAcl);
-
-    boolean addAcl = objectStore.addAcl(ozoneObj, defaultUserAcl);
-    Assert.assertTrue(addAcl);
-
-    // Just changed acl type here to write, rest all is same as defaultUserAcl.
-    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
-        WRITE, DEFAULT);
-    addAcl = objectStore.addAcl(ozoneObj, modifiedUserAcl);
-    Assert.assertTrue(addAcl);
-
-    removeAcl = objectStore.removeAcl(ozoneObj, modifiedUserAcl);
-    Assert.assertTrue(removeAcl);
-
-    removeAcl = objectStore.removeAcl(ozoneObj, defaultUserAcl);
-    Assert.assertTrue(removeAcl);
+    testRemoveAcl(remoteUserName, ozoneObj, defaultUserAcl);
 
   }
 
@@ -855,26 +813,7 @@ public class TestOzoneManagerHA {
         .setVolumeName(ozoneBucket.getVolumeName())
         .setBucketName(ozoneBucket.getName()).build();
 
-    // As by default create bucket we add some default acls in RpcClient.
-    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
-
-    Assert.assertTrue(acls.size() > 0);
-
-    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
-        WRITE, DEFAULT);
-
-    List<OzoneAcl> newAcls = Collections.singletonList(modifiedUserAcl);
-    boolean setAcl = objectStore.setAcl(ozoneObj, newAcls);
-    Assert.assertTrue(setAcl);
-
-    // Get acls and check whether they are reset or not.
-    List<OzoneAcl> getAcls = objectStore.getAcl(ozoneObj);
-
-    Assert.assertTrue(newAcls.size() == getAcls.size());
-    int i = 0;
-    for (OzoneAcl ozoneAcl : newAcls) {
-      Assert.assertTrue(compareAcls(getAcls.get(i++), ozoneAcl));
-    }
+    testSetAcl(remoteUserName, ozoneObj, defaultUserAcl);
   }
 
   private boolean containsAcl(OzoneAcl ozoneAcl, List<OzoneAcl> ozoneAcls) {
@@ -900,6 +839,145 @@ public class TestOzoneManagerHA {
     }
     return false;
   }
+
+  @Test
+  public void testAddKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testAddAcl(remoteUserName, ozoneObj, userAcl);
+  }
+
+  @Test
+  public void testRemoveKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testRemoveAcl(remoteUserName, ozoneObj, userAcl);
+
+  }
+
+  @Test
+  public void testSetKeyAcl() throws Exception {
+    OzoneBucket ozoneBucket = setupBucket();
+    String remoteUserName = "remoteUser";
+    OzoneAcl userAcl = new OzoneAcl(USER, remoteUserName,
+        READ, DEFAULT);
+
+    String key = createKey(ozoneBucket);
+
+    OzoneObj ozoneObj = OzoneObjInfo.Builder.newBuilder()
+        .setResType(OzoneObj.ResourceType.KEY)
+        .setStoreType(OzoneObj.StoreType.OZONE)
+        .setVolumeName(ozoneBucket.getVolumeName())
+        .setBucketName(ozoneBucket.getName())
+        .setKeyName(key).build();
+
+    testSetAcl(remoteUserName, ozoneObj, userAcl);
+
+  }
+
+
+  private void testSetAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl) throws Exception {
+    // As by default create will add some default acls in RpcClient.
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(acls.size() > 0);
+
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+
+    List<OzoneAcl> newAcls = Collections.singletonList(modifiedUserAcl);
+    boolean setAcl = objectStore.setAcl(ozoneObj, newAcls);
+    Assert.assertTrue(setAcl);
+
+    // Get acls and check whether they are reset or not.
+    List<OzoneAcl> getAcls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(newAcls.size() == getAcls.size());
+    int i = 0;
+    for (OzoneAcl ozoneAcl : newAcls) {
+      Assert.assertTrue(compareAcls(getAcls.get(i++), ozoneAcl));
+    }
+
+  }
+
+  private void testAddAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl) throws Exception {
+    boolean addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(containsAcl(userAcl, acls));
+
+    // Add an already existing acl.
+    addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertFalse(addAcl);
+
+    // Add an acl by changing acl type with same type, name and scope.
+    userAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+  }
+
+  private void testRemoveAcl(String remoteUserName, OzoneObj ozoneObj,
+      OzoneAcl userAcl)
+      throws Exception{
+    // As by default create will add some default acls in RpcClient.
+    List<OzoneAcl> acls = objectStore.getAcl(ozoneObj);
+
+    Assert.assertTrue(acls.size() > 0);
+
+    // Remove an existing acl.
+    boolean removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertTrue(removeAcl);
+
+    // Trying to remove an already removed acl.
+    removeAcl = objectStore.removeAcl(ozoneObj, acls.get(0));
+    Assert.assertFalse(removeAcl);
+
+    boolean addAcl = objectStore.addAcl(ozoneObj, userAcl);
+    Assert.assertTrue(addAcl);
+
+    // Just changed acl type here to write, rest all is same as defaultUserAcl.
+    OzoneAcl modifiedUserAcl = new OzoneAcl(USER, remoteUserName,
+        WRITE, DEFAULT);
+    addAcl = objectStore.addAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(addAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, modifiedUserAcl);
+    Assert.assertTrue(removeAcl);
+
+    removeAcl = objectStore.removeAcl(ozoneObj, userAcl);
+    Assert.assertTrue(removeAcl);
+  }
+
+
 
   @Test
   public void testOMRatisSnapshot() throws Exception {

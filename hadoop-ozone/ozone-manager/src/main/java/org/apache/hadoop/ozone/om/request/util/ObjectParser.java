@@ -52,7 +52,7 @@ public class ObjectParser {
     } else if (objectType == ObjectType.KEY && tokens.length == 3) {
       volume = tokens[0];
       bucket = tokens[1];
-      key = tokens[3];
+      key = tokens[2];
     } else {
       throw new OMException("Illegal path " + path,
           OMException.ResultCodes.INVALID_PATH_IN_ACL_REQUEST);

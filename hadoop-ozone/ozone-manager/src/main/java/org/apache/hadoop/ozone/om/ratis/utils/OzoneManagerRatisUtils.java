@@ -34,6 +34,9 @@ import org.apache.hadoop.ozone.om.request.key.OMKeyCreateRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyDeleteRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyPurgeRequest;
 import org.apache.hadoop.ozone.om.request.key.OMKeyRenameRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeyAddAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeyRemoveAclRequest;
+import org.apache.hadoop.ozone.om.request.key.acl.OMKeySetAclRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketCreateRequest;
 import org.apache.hadoop.ozone.om.request.s3.bucket.S3BucketDeleteRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUploadRequest;
@@ -141,6 +144,8 @@ public final class OzoneManagerRatisUtils {
         return new OMVolumeAddAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketAddAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeyAddAclRequest(omRequest);
       }
     } else if (Type.RemoveAcl == cmdType) {
       ObjectType type = omRequest.getRemoveAclRequest().getObj().getResType();
@@ -148,6 +153,8 @@ public final class OzoneManagerRatisUtils {
         return new OMVolumeRemoveAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketRemoveAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeyRemoveAclRequest(omRequest);
       }
     } else if (Type.SetAcl == cmdType) {
       ObjectType type = omRequest.getSetAclRequest().getObj().getResType();
@@ -155,6 +162,8 @@ public final class OzoneManagerRatisUtils {
         return new OMVolumeSetAclRequest(omRequest);
       } else if (ObjectType.BUCKET == type) {
         return new OMBucketSetAclRequest(omRequest);
+      } else if (ObjectType.KEY == type) {
+        return new OMKeySetAclRequest(omRequest);
       }
     }
     //TODO: handle key and prefix AddAcl
