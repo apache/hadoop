@@ -1878,6 +1878,18 @@ function hadoop_start_daemon_wrapper
   return 0
 }
 
+## @description  Test if versionA is lower than versionB
+## @audience     private
+## @stability    evolving
+## @replaceable  yes
+## @param        versionA
+## @param        versionB
+function is_lower_version
+{
+  # Use version sort
+  test "$(printf '%s\n' "$@" | sort -V | head -n1)" != "$1";
+}
+
 ## @description  Start a privileged daemon in the foreground.
 ## @audience     private
 ## @stability    evolving
@@ -1919,6 +1931,31 @@ function hadoop_start_secure_daemon
     hadoop_error "http://archive.apache.org/dist/commons/daemon/binaries/ "
     hadoop_error "and set JSVC_HOME to the directory containing the jsvc binary."
     exit 1
+  fi
+
+  if [[ -z "${HADOOP_DAEMON_JSVC_EXTRA_OPTS}" ]]; then
+    # If HADOOP_DAEMON_JSVC_EXTRA_OPTS is not set
+    # Default jsvc option to be added for all jsvc >= 1.0.11
+    local jsvccwdopt="-cwd ."
+    # Detect local jsvc version
+    jsvcver=$(${jsvc} -help | tail -n3 | head -n1 | awk -F' ' '{print $NF}')
+    # The lowest jsvc version that introduced cwd option
+    jsvcverhascwd=1.0.11
+
+    # The reason to put old version (no cwd option) in true branch is in case
+    # of a future jsvc release breaking the above jsvc version detection,
+    # it should go to the false branch.
+    if is_lower_version ${jsvcverhascwd} ${jsvcver}; then
+      hadoop_debug "jsvc ${jsvcver} < ${jsvcverhascwd}." \
+        "No need to add jsvc cwd option. See HADOOP-16276 for details."
+    else
+      hadoop_debug "jsvc ${jsvcver} >= ${jsvcverhascwd}." \
+        "Adding jsvc cwd option. See HADOOP-16276 for details."
+      HADOOP_DAEMON_JSVC_EXTRA_OPTS="${jsvccwdopt}"
+    fi
+  else
+    hadoop_debug "HADOOP_DAEMON_JSVC_EXTRA_OPTS is set." \
+      "Ignoring auto cwd option selection based on jsvc version."
   fi
 
   # note that shellcheck will throw a
