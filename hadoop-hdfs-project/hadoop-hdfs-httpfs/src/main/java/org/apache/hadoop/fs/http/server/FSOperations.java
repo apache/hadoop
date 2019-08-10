@@ -118,9 +118,12 @@ public class FSOperations {
     if (fileStatus instanceof HdfsFileStatus) {
       // Add HDFS-specific fields to response
       HdfsFileStatus hdfsFileStatus = (HdfsFileStatus) fileStatus;
-      json.put(HttpFSFileSystem.CHILDREN_NUM_JSON, hdfsFileStatus.getChildrenNum());
-      json.put(HttpFSFileSystem.FILE_ID_JSON, hdfsFileStatus.getFileId());
-      json.put(HttpFSFileSystem.STORAGEPOLICY_JSON, hdfsFileStatus.getStoragePolicy());
+      json.put(HttpFSFileSystem.CHILDREN_NUM_JSON,
+          hdfsFileStatus.getChildrenNum());
+      json.put(HttpFSFileSystem.FILE_ID_JSON,
+          hdfsFileStatus.getFileId());
+      json.put(HttpFSFileSystem.STORAGEPOLICY_JSON,
+          hdfsFileStatus.getStoragePolicy());
     }
     if (fileStatus.getPermission().getAclBit()) {
       json.put(HttpFSFileSystem.ACL_BIT_JSON, true);
