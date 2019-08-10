@@ -2183,6 +2183,19 @@ public class TestDFSShell {
     return results;
   }
 
+  @Test
+  public void testLsInodeId() throws Exception {
+    dfs.mkdirs(new Path("/d1/d2"));
+    dfs.mkdirs(new Path("/d4/d5"));
+    final File f3 = createLocalFile(new File(TEST_ROOT_DIR, "f3"));
+    dfs.moveFromLocalFile(new Path(f3.getPath()), new Path("/d1/d2"));
+
+    FsShell shell = new FsShell(dfs.getConf());
+    // Check return value
+    assertThat(shell.run(new String[]{"-ls", "-i", "/"}), is(0));
+    assertThat(shell.run(new String[]{"-ls", "-i", "-R", "/"}), is(0));
+  }
+
   /**
    * default setting is file:// which is not a DFS
    * so DFSAdmin should throw and catch InvalidArgumentException
