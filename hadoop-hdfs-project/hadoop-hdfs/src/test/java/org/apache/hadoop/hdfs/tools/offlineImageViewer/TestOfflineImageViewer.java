@@ -294,6 +294,7 @@ public class TestOfflineImageViewer {
       hdfs.mkdirs(snapshotDir2);
       // Simply enable snapshot on it, no need to create one
       hdfs.allowSnapshot(snapshotDir2);
+      dirCount++;
       writtenFiles.put(snapshotDir2.toString(),
           hdfs.getFileStatus(snapshotDir2));
 
