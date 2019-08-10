@@ -54,7 +54,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
 import java.util.EnumSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -74,7 +73,7 @@ public class FSOperations {
    * @return JSON map suitable for wire transport
    */
   private static Map<String, Object> toJson(FileStatus fileStatus) {
-    Map<String, Object> json = new LinkedHashMap<>();
+    Map<String, Object> json = new TreeMap<>();
     json.put(HttpFSFileSystem.FILE_STATUS_JSON, toJsonInner(fileStatus, true));
     return json;
   }
@@ -87,8 +86,8 @@ public class FSOperations {
   @SuppressWarnings({"unchecked"})
   private static Map<String, Object> toJson(FileStatus[] fileStatuses,
       boolean isFile) {
-    Map<String, Object> json = new LinkedHashMap<>();
-    Map<String, Object> inner = new LinkedHashMap<>();
+    Map<String, Object> json = new TreeMap<>();
+    Map<String, Object> inner = new TreeMap<>();
     JSONArray statuses = new JSONArray();
     for (FileStatus f : fileStatuses) {
       statuses.add(toJsonInner(f, isFile));
@@ -103,7 +102,7 @@ public class FSOperations {
    */
   private static Map<String, Object> toJsonInner(FileStatus fileStatus,
       boolean emptyPathSuffix) {
-    Map<String, Object> json = new LinkedHashMap<String, Object>();
+    Map<String, Object> json = new TreeMap<String, Object>();
     json.put(HttpFSFileSystem.PATH_SUFFIX_JSON,
         (emptyPathSuffix) ? "" : fileStatus.getPath().getName());
     json.put(HttpFSFileSystem.TYPE_JSON,
@@ -145,8 +144,8 @@ public class FSOperations {
    */
   private static Map<String, Object> toJson(FileSystem.DirectoryEntries
       entries, boolean isFile) {
-    Map<String, Object> json = new LinkedHashMap<>();
-    Map<String, Object> inner = new LinkedHashMap<>();
+    Map<String, Object> json = new TreeMap<>();
+    Map<String, Object> inner = new TreeMap<>();
     Map<String, Object> fileStatuses = toJson(entries.getEntries(), isFile);
     inner.put(HttpFSFileSystem.PARTIAL_LISTING_JSON, fileStatuses);
     inner.put(HttpFSFileSystem.REMAINING_ENTRIES_JSON, entries.hasMore() ? 1
@@ -163,8 +162,8 @@ public class FSOperations {
    */
   @SuppressWarnings({"unchecked"})
   private static Map<String,Object> aclStatusToJSON(AclStatus aclStatus) {
-    Map<String,Object> json = new LinkedHashMap<String,Object>();
-    Map<String,Object> inner = new LinkedHashMap<String,Object>();
+    Map<String,Object> json = new TreeMap<String,Object>();
+    Map<String,Object> inner = new TreeMap<String,Object>();
     JSONArray entriesArray = new JSONArray();
     inner.put(HttpFSFileSystem.OWNER_JSON, aclStatus.getOwner());
     inner.put(HttpFSFileSystem.GROUP_JSON, aclStatus.getGroup());
@@ -187,12 +186,12 @@ public class FSOperations {
    */
   @SuppressWarnings({"unchecked"})
   private static Map fileChecksumToJSON(FileChecksum checksum) {
-    Map json = new LinkedHashMap();
+    Map json = new TreeMap();
     json.put(HttpFSFileSystem.CHECKSUM_ALGORITHM_JSON, checksum.getAlgorithmName());
     json.put(HttpFSFileSystem.CHECKSUM_BYTES_JSON,
              org.apache.hadoop.util.StringUtils.byteToHexString(checksum.getBytes()));
     json.put(HttpFSFileSystem.CHECKSUM_LENGTH_JSON, checksum.getLength());
-    Map response = new LinkedHashMap();
+    Map response = new TreeMap();
     response.put(HttpFSFileSystem.FILE_CHECKSUM_JSON, json);
     return response;
   }
@@ -209,11 +208,11 @@ public class FSOperations {
   @SuppressWarnings({"unchecked", "rawtypes"})
   private static Map xAttrsToJSON(Map<String, byte[]> xAttrs, 
       XAttrCodec encoding) throws IOException {
-    Map jsonMap = new LinkedHashMap();
+    Map jsonMap = new TreeMap();
     JSONArray jsonArray = new JSONArray();
     if (xAttrs != null) {
       for (Entry<String, byte[]> e : xAttrs.entrySet()) {
-        Map json = new LinkedHashMap();
+        Map json = new TreeMap();
         json.put(HttpFSFileSystem.XATTR_NAME_JSON, e.getKey());
         if (e.getValue() != null) {
           json.put(HttpFSFileSystem.XATTR_VALUE_JSON, 
@@ -236,7 +235,7 @@ public class FSOperations {
    */
   @SuppressWarnings({"unchecked", "rawtypes"})
   private static Map xAttrNamesToJSON(List<String> names) throws IOException {
-    Map jsonMap = new LinkedHashMap();
+    Map jsonMap = new TreeMap();
     jsonMap.put(HttpFSFileSystem.XATTRNAMES_JSON, JSONArray.toJSONString(names));
     return jsonMap;
   }
@@ -251,7 +250,7 @@ public class FSOperations {
    */
   @SuppressWarnings({"unchecked"})
   private static Map contentSummaryToJSON(ContentSummary contentSummary) {
-    Map json = new LinkedHashMap();
+    Map json = new TreeMap();
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_DIRECTORY_COUNT_JSON,
         contentSummary.getDirectoryCount());
     json.put(HttpFSFileSystem.CONTENT_SUMMARY_ECPOLICY_JSON,
@@ -269,7 +268,7 @@ public class FSOperations {
         json.put(e.getKey(), e.getValue());
       }
     }
-    Map response = new LinkedHashMap();
+    Map response = new TreeMap();
     response.put(HttpFSFileSystem.CONTENT_SUMMARY_JSON, json);
     return response;
   }
@@ -280,14 +279,14 @@ public class FSOperations {
    */
   @SuppressWarnings({"unchecked"})
   private static Map quotaUsageToJSON(QuotaUsage quotaUsage) {
-    Map response = new LinkedHashMap();
+    Map response = new TreeMap();
     Map quotaUsageMap = quotaUsageToMap(quotaUsage);
     response.put(HttpFSFileSystem.QUOTA_USAGE_JSON, quotaUsageMap);
     return response;
   }
 
   private static Map<String, Object> quotaUsageToMap(QuotaUsage quotaUsage) {
-    Map<String, Object> result = new LinkedHashMap<>();
+    Map<String, Object> result = new TreeMap<>();
     result.put(HttpFSFileSystem.QUOTA_USAGE_FILE_AND_DIRECTORY_COUNT_JSON,
         quotaUsage.getFileAndDirectoryCount());
     result.put(HttpFSFileSystem.QUOTA_USAGE_QUOTA_JSON, quotaUsage.getQuota());
