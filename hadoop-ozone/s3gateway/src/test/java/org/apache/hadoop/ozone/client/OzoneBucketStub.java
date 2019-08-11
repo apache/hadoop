@@ -210,16 +210,23 @@ public class OzoneBucketStub extends OzoneBucket {
       }
 
       int count = 1;
+
+      ByteArrayOutputStream output = new ByteArrayOutputStream();
+
       for (Map.Entry<Integer, String> part: partsMap.entrySet()) {
+        Part recordedPart = partsList.get(part.getKey());
         if (part.getKey() != count) {
           throw new OMException(ResultCodes.MISSING_UPLOAD_PARTS);
-        } else if (!part.getValue().equals(
-            partsList.get(part.getKey()).getPartName())) {
-          throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
         } else {
-          count++;
+          if (!part.getValue().equals(recordedPart.getPartName())) {
+            throw new OMException(ResultCodes.MISMATCH_MULTIPART_LIST);
+          } else {
+            count++;
+            output.write(recordedPart.getContent());
+          }
         }
       }
+      keyContents.put(key, output.toByteArray());
     }
 
     return new OmMultipartUploadCompleteInfo(getVolumeName(), getName(), key,
