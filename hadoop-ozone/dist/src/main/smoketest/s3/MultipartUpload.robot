@@ -201,6 +201,7 @@ Test Multipart Upload with the simplified aws s3 cp API
                         Execute AWSS3Cli        rm s3://${BUCKET}/mpyawscli
                         Compare files           /tmp/part1        /tmp/part1.result
 
+<<<<<<< HEAD
 Test Multipart Upload Put With Copy
     Run Keyword         Create Random file      5
     ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key copytest/source --body /tmp/part1
@@ -252,3 +253,23 @@ Test Multipart Upload Put With Copy and range
                         Execute AWSS3APICli     get-object --bucket ${BUCKET} --key copyrange/destination /tmp/part-result
 
                         Compare files           /tmp/part1        /tmp/part-result
+
+Test Multipart Upload list
+    ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key listtest/key1
+    ${uploadID1} =      Execute and checkrc     echo '${result}' | jq -r '.UploadId'    0
+                        Should contain          ${result}    ${BUCKET}
+                        Should contain          ${result}    listtest/key1
+                        Should contain          ${result}    UploadId
+
+    ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key listtest/key2
+    ${uploadID2} =      Execute and checkrc     echo '${result}' | jq -r '.UploadId'    0
+                        Should contain          ${result}    ${BUCKET}
+                        Should contain          ${result}    listtest/key2
+                        Should contain          ${result}    UploadId
+
+    ${result} =         Execute AWSS3APICli     list-multipart-uploads --bucket ${BUCKET} --prefix listtest
+                        Should contain          ${result}    ${uploadID1}
+                        Should contain          ${result}    ${uploadID2}
+
+    ${count} =          Execute and checkrc      echo '${result}' | jq -r '.Uploads | length'  0
+                        Should Be Equal          ${count}     2

@@ -77,6 +77,7 @@ import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneIllegalArgumentException;
 import org.apache.hadoop.ozone.OzoneSecurityUtil;
 import org.apache.hadoop.ozone.om.ha.OMFailoverProxyProvider;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.S3SecretValue;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerServerProtocol;
 import org.apache.hadoop.ozone.om.ratis.OMRatisSnapshotInfo;
@@ -111,7 +112,7 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
-import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
@@ -2771,7 +2772,7 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
 
   @Override
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
-      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      OmKeyArgs omKeyArgs, OmMultipartUploadCompleteList multipartUploadList)
       throws IOException {
     OmMultipartUploadCompleteInfo omMultipartUploadCompleteInfo;
     metrics.incNumCompleteMultipartUploads();
@@ -2839,6 +2840,15 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
           .LIST_MULTIPART_UPLOAD_PARTS, auditMap, ex));
       throw ex;
     }
+  }
+
+  @Override
+  public OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws IOException {
+    //TODO add metrics and audit information
+    OmMultipartUploadList omMultipartUploadListParts =
+        keyManager.listMultipartUploads(volumeName, bucketName, prefix);
+    return omMultipartUploadListParts;
   }
 
   @Override

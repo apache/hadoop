@@ -90,6 +90,8 @@ enum Type {
   GetAcl = 78;
 
   PurgeKeys = 81;
+
+  ListMultipartUploads = 82;
 }
 
 message OMRequest {
@@ -158,6 +160,7 @@ message OMRequest {
   optional PurgeKeysRequest                 purgeKeysRequest               = 81;
 
   optional UpdateGetS3SecretRequest         updateGetS3SecretRequest       = 82;
+  optional ListMultipartUploadsRequest      listMultipartUploadsRequest    = 83;
 }
 
 message OMResponse {
@@ -225,6 +228,8 @@ message OMResponse {
   optional GetAclResponse                    getAclResponse                = 78;
 
   optional PurgeKeysResponse                  purgeKeysResponse            = 81;
+
+  optional ListMultipartUploadsResponse listMultipartUploadsResponse = 82;
 }
 
 enum Status {
@@ -1020,6 +1025,25 @@ message MultipartUploadListPartsResponse {
 
 }
 
+message ListMultipartUploadsRequest {
+    required string volume = 1;
+    required string bucket = 2;
+    required string prefix = 3;
+}
+
+message ListMultipartUploadsResponse {
+    optional bool isTruncated = 1;
+    repeated MultipartUploadInfo uploadsList = 2;
+}
+
+message MultipartUploadInfo {
+    required string volumeName = 1;
+    required string bucketName = 2;
+    required string keyName = 3;
+    required string uploadId = 4;
+    required uint64 creationTime = 5;
+}
+
 message PartInfo {
     required uint32 partNumber = 1;
     required string partName = 2;
@@ -1027,12 +1051,12 @@ message PartInfo {
     required uint64 size = 4;
 }
 
-message GetDelegationTokenResponseProto{
+message GetDelegationTokenResponseProto {
 
     optional hadoop.common.GetDelegationTokenResponseProto response = 2;
 }
 
-message RenewDelegationTokenResponseProto{
+message RenewDelegationTokenResponseProto {
 
     optional hadoop.common.RenewDelegationTokenResponseProto response = 2;
 }

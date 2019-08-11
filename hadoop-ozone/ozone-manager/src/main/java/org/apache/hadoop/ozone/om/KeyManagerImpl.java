@@ -19,6 +19,9 @@ package org.apache.hadoop.ozone.om;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
+import java.security.PrivilegedExceptionAction;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -30,12 +33,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.security.GeneralSecurityException;
-import java.security.PrivilegedExceptionAction;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Strings;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.hadoop.conf.StorageUnit;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
@@ -44,6 +42,7 @@ import org.apache.hadoop.hdds.client.BlockID;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.DatanodeDetails;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
+import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
 import org.apache.hadoop.hdds.scm.container.common.helpers.AllocatedBlock;
@@ -51,10 +50,20 @@ import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline
 import org.apache.hadoop.hdds.scm.container.common.helpers.ExcludeList;
 import org.apache.hadoop.hdds.scm.exceptions.SCMException;
 import org.apache.hadoop.hdds.scm.protocol.ScmBlockLocationProtocol;
+import org.apache.hadoop.hdds.utils.BackgroundService;
+import org.apache.hadoop.hdds.utils.UniqueId;
+import org.apache.hadoop.hdds.utils.db.BatchOperation;
+import org.apache.hadoop.hdds.utils.db.CodecRegistry;
+import org.apache.hadoop.hdds.utils.db.DBStore;
+import org.apache.hadoop.hdds.utils.db.RDBStore;
+import org.apache.hadoop.hdds.utils.db.Table;
+import org.apache.hadoop.hdds.utils.db.TableIterator;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.OzoneConsts;
-import org.apache.hadoop.ipc.Server;
-import org.apache.hadoop.hdds.protocol.proto.HddsProtos.BlockTokenSecretProto.AccessModeProto;
+import org.apache.hadoop.ozone.common.BlockGroup;
+import org.apache.hadoop.ozone.om.exceptions.OMException;
+import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
 import org.apache.hadoop.ozone.om.helpers.BucketEncryptionKeyInfo;
 import org.apache.hadoop.ozone.om.helpers.OmBucketInfo;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
@@ -64,7 +73,9 @@ import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfoGroup;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartCommitUploadPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartInfo;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartKeyInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUpload;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteInfo;
+import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadCompleteList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadList;
 import org.apache.hadoop.ozone.om.helpers.OmMultipartUploadListParts;
 import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
@@ -73,28 +84,18 @@ import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneAclUtil;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.om.helpers.OzoneFileStatus;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.PartKeyInfo;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.ozone.common.BlockGroup;
-import org.apache.hadoop.ozone.om.exceptions.OMException;
-import org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes;
-import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos
-    .PartKeyInfo;
 import org.apache.hadoop.util.Time;
-import org.apache.hadoop.hdds.utils.BackgroundService;
-import org.apache.hadoop.hdds.utils.UniqueId;
-import org.apache.hadoop.hdds.utils.db.BatchOperation;
-import org.apache.hadoop.hdds.utils.db.DBStore;
-import org.apache.hadoop.hdds.utils.db.CodecRegistry;
-import org.apache.hadoop.hdds.utils.db.RDBStore;
-import org.apache.hadoop.hdds.utils.db.TableIterator;
-import org.apache.hadoop.hdds.utils.db.Table;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-
+import com.google.common.base.Strings;
+import org.apache.commons.codec.digest.DigestUtils;
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_KEY_PROVIDER_PATH;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED;
 import static org.apache.hadoop.hdds.HddsConfigKeys.HDDS_BLOCK_TOKEN_ENABLED_DEFAULT;
@@ -120,7 +121,6 @@ import static org.apache.hadoop.ozone.om.exceptions.OMException.ResultCodes.VOLU
 import static org.apache.hadoop.ozone.om.lock.OzoneManagerLock.Resource.BUCKET_LOCK;
 import static org.apache.hadoop.ozone.security.acl.OzoneObj.ResourceType.KEY;
 import static org.apache.hadoop.util.Time.monotonicNow;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -1058,7 +1058,7 @@ public class KeyManagerImpl implements KeyManager {
   @Override
   @SuppressWarnings("methodlength")
   public OmMultipartUploadCompleteInfo completeMultipartUpload(
-      OmKeyArgs omKeyArgs, OmMultipartUploadList multipartUploadList)
+      OmKeyArgs omKeyArgs, OmMultipartUploadCompleteList multipartUploadList)
       throws IOException {
     Preconditions.checkNotNull(omKeyArgs);
     Preconditions.checkNotNull(multipartUploadList);
@@ -1277,6 +1277,60 @@ public class KeyManagerImpl implements KeyManager {
 
   }
 
+  @Override
+  public OmMultipartUploadList listMultipartUploads(String volumeName,
+      String bucketName, String prefix) throws OMException {
+    Preconditions.checkNotNull(volumeName);
+    Preconditions.checkNotNull(bucketName);
+    String multipartKey = metadataManager.getMultipartKey(volumeName,
+        bucketName, prefix, "");
+
+    metadataManager.getLock().acquireLock(BUCKET_LOCK, volumeName, bucketName);
+    try {
+
+      List<String> multipartUploadKeys =
+          metadataManager
+              .getMultipartUploadKeys(volumeName, bucketName, prefix);
+
+      List<OmMultipartUpload> collect = multipartUploadKeys.stream()
+          .map(OmMultipartUpload::from)
+          .map(upload -> {
+            String dbKey = metadataManager
+                .getOzoneKey(upload.getVolumeName(),
+                    upload.getBucketName(),
+                    upload.getKeyName());
+            try {
+              Table<String, OmKeyInfo> openKeyTable =
+                  metadataManager.getOpenKeyTable();
+
+              OmKeyInfo omKeyInfo =
+                  openKeyTable.get(upload.getDbKey());
+              upload.setCreationTime(
+                  Instant.ofEpochMilli(omKeyInfo.getCreationTime()));
+            } catch (IOException e) {
+              LOG.warn(
+                  "Open key entry for multipart upload record can be read  {}",
+                  dbKey);
+            }
+            return upload;
+          })
+          .collect(Collectors.toList());
+
+      OmMultipartUploadList omMultipartUploadList =
+          new OmMultipartUploadList(collect);
+
+      return omMultipartUploadList;
+
+    } catch (IOException ex) {
+      LOG.error("List Multipart Uploads Failed: volume: " + volumeName +
+          "bucket: " + bucketName + "prefix: " + prefix, ex);
+      throw new OMException(ex.getMessage(), ResultCodes
+          .LIST_MULTIPART_UPLOAD_PARTS_FAILED);
+    } finally {
+      metadataManager.getLock().releaseLock(BUCKET_LOCK, volumeName,
+          bucketName);
+    }
+  }
 
   @Override
   public OmMultipartUploadListParts listParts(String volumeName,
