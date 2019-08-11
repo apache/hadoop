@@ -200,3 +200,26 @@ Test Multipart Upload with the simplified aws s3 cp API
                         Execute AWSS3Cli        cp s3://${BUCKET}/mpyawscli /tmp/part1.result
                         Execute AWSS3Cli        rm s3://${BUCKET}/mpyawscli
                         Compare files           /tmp/part1        /tmp/part1.result
+
+Test Multipart Upload Put With Copy
+    Run Keyword         Create Random file      5
+    ${result} =         Execute AWSS3APICli     put-object --bucket ${BUCKET} --key copytest/source --body /tmp/part1
+
+
+    ${result} =         Execute AWSS3APICli     create-multipart-upload --bucket ${BUCKET} --key copytest/destination
+
+    ${uploadID} =       Execute and checkrc      echo '${result}' | jq -r '.UploadId'    0
+                        Should contain           ${result}    ${BUCKET}
+                        Should contain           ${result}    UploadId
+
+    ${result} =         Execute AWSS3APICli      upload-part-copy --bucket ${BUCKET} --key copytest/destination --upload-id ${uploadID} --part-number 1 --copy-source ${BUCKET}/copytest/source
+                        Should contain           ${result}    ${BUCKET}
+                        Should contain           ${result}    ETag
+                        Should contain           ${result}    LastModified
+    ${eTag1} =          Execute and checkrc      echo '${result}' | jq -r '.CopyPartResult.ETag'   0
+
+
+                        Execute AWSS3APICli     complete-multipart-upload --upload-id ${uploadID} --bucket ${BUCKET} --key copytest/destination --multipart-upload 'Parts=[{ETag=${eTag1},PartNumber=1}]'
+                        Execute AWSS3APICli     get-object --bucket ${BUCKET} --key copytest/destination /tmp/part-result
+
+                        Compare files           /tmp/part1        /tmp/part-result
