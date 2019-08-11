@@ -100,7 +100,7 @@ public class Cli {
       }
     } else {
       printHelp();
-      throw new IllegalArgumentException("Bad parameters <TODO>");
+      throw new IllegalArgumentException("Unrecognized option: " + args[0]);
     }
   }
 }

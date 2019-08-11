@@ -498,6 +498,7 @@ Usage:
          [-listCodecs]
          [-enablePolicy -policy <policyName>]
          [-disablePolicy -policy <policyName>]
+         [-removePolicy -policy <policyName>]
          [-verifyClusterSetup -policy <policyName>...<policyName>]
          [-help [cmd ...]]
 
@@ -511,6 +512,7 @@ Usage:
 |-listCodecs| Get the list of supported erasure coding codecs and coders in system|
 |-enablePolicy| Enable an ErasureCoding policy in system|
 |-disablePolicy| Disable an ErasureCoding policy in system|
+|-removePolicy| Remove an ErasureCoding policy from system|
 |-verifyClusterSetup| Verify if the cluster setup can support a list of erasure coding policies|
 
 Runs the ErasureCoding CLI. See [HDFS ErasureCoding](./HDFSErasureCoding.html#Administrative_commands) for more information on this command.

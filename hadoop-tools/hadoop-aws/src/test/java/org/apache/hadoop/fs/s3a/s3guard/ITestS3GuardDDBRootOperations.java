@@ -186,6 +186,7 @@ public class ITestS3GuardDDBRootOperations extends AbstractS3ATestBase {
     int result = S3GuardTool.run(conf,
         S3GuardTool.Prune.NAME,
         "-meta", checkNotNull(metastoreUriStr),
+        "-region", fs.getBucketLocation(),
         "-seconds", "1");
     Assertions.assertThat(result)
         .describedAs("Result of prune %s", fsUriStr)
