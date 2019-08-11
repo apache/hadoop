@@ -113,7 +113,8 @@ public class ReconTaskControllerImpl implements ReconTaskController {
         for (Map.Entry<String, ReconDBUpdateTask> taskEntry :
             reconDBUpdateTasks.entrySet()) {
           ReconDBUpdateTask task = taskEntry.getValue();
-          tasks.add(() -> task.process(events));
+          Collection<String> tables = task.getTaskTables();
+          tasks.add(() -> task.process(events.filter(tables)));
         }
 
         List<Future<Pair>> results = executorService.invokeAll(tasks);
@@ -125,7 +126,8 @@ public class ReconTaskControllerImpl implements ReconTaskController {
           tasks.clear();
           for (String taskName : failedTasks) {
             ReconDBUpdateTask task = reconDBUpdateTasks.get(taskName);
-            tasks.add(() -> task.process(events));
+            Collection<String> tables = task.getTaskTables();
+            tasks.add(() -> task.process(events.filter(tables)));
           }
           results = executorService.invokeAll(tasks);
           retryFailedTasks = processTaskResults(results, events);
