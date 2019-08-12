@@ -791,12 +791,27 @@ public final class HttpServer2 implements FilterContainer {
    */
   public void addJerseyResourcePackage(final String packageName,
       final String pathSpec) {
+    addJerseyResourcePackage(packageName, pathSpec,
+        Collections.<String, String>emptyMap());
+  }
+
+  /**
+   * Add a Jersey resource package.
+   * @param packageName The Java package name containing the Jersey resource.
+   * @param pathSpec The path spec for the servlet
+   * @param params properties and features for ResourceConfig
+   */
+  public void addJerseyResourcePackage(final String packageName,
+      final String pathSpec, Map<String, String> params) {
     LOG.info("addJerseyResourcePackage: packageName=" + packageName
         + ", pathSpec=" + pathSpec);
     final ServletHolder sh = new ServletHolder(ServletContainer.class);
     sh.setInitParameter("com.sun.jersey.config.property.resourceConfigClass",
         "com.sun.jersey.api.core.PackagesResourceConfig");
     sh.setInitParameter("com.sun.jersey.config.property.packages", packageName);
+    for (Map.Entry<String, String> entry : params.entrySet()) {
+      sh.setInitParameter(entry.getKey(), entry.getValue());
+    }
     webAppContext.addServlet(sh, pathSpec);
   }
 
