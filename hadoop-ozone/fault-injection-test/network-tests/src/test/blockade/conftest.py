@@ -64,7 +64,7 @@ def pytest_configure(config):
   OUTPUT_DIR = "%s/%s" % (config.option.output_dir, EPOCH_TIME)
   try:
     os.makedirs(OUTPUT_DIR)
-  except OSError, e:
+  except OSError as e:
     raise Exception(e.strerror + ": " + e.filename)
   log_file = os.path.join(OUTPUT_DIR, "output.log")
 
