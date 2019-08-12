@@ -501,14 +501,14 @@ public class TestBlockOutputStreamWithFailures {
     // and one flush for partial chunk
     key.flush();
 
+    Throwable ioException = HddsClientUtils.checkForException(
+        blockOutputStream.getIoException());
     // Since, 2 datanodes went down, if the pipeline gets destroyed quickly,
     // it will hit GroupMismatchException else, it will fail with
     // RaftRetryFailureException
-    Assert.assertTrue((HddsClientUtils.
-        checkForException(blockOutputStream
-            .getIoException()) instanceof RaftRetryFailureException)
-        || HddsClientUtils.checkForException(
-        blockOutputStream.getIoException()) instanceof GroupMismatchException);
+    Assert.assertTrue(ioException instanceof RaftRetryFailureException
+        || ioException instanceof GroupMismatchException
+        || ioException instanceof ContainerNotOpenException);
     // Make sure the retryCount is reset after the exception is handled
     Assert.assertTrue(keyOutputStream.getRetryCount() == 0);
     // now close the stream, It will update the ack length after watchForCommit
