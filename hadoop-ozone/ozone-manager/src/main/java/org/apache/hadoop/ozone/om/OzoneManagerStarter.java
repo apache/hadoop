@@ -20,6 +20,7 @@ package org.apache.hadoop.ozone.om;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.discovery.DiscoveryUtil;
 import org.apache.hadoop.hdds.tracing.TracingUtil;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.util.StringUtils;
@@ -100,6 +101,10 @@ public class OzoneManagerStarter extends GenericCli {
    */
   private void commonInit() {
     conf = createOzoneConfiguration();
+    if (DiscoveryUtil.loadGlobalConfig(conf)) {
+      //reload the configuration with the downloaded new configs.
+      conf = createOzoneConfiguration();
+    }
 
     String[] originalArgs = getCmd().getParseResult().originalArgs()
         .toArray(new String[0]);

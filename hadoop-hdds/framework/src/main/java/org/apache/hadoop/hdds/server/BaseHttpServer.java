@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import javax.servlet.http.HttpServlet;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.apache.hadoop.hdds.HddsUtils.getHostNameFromConfigKeys;
@@ -125,6 +126,18 @@ public abstract class BaseHttpServer {
   protected void addServlet(String servletName, String pathSpec,
       Class<? extends HttpServlet> clazz) {
     httpServer.addServlet(servletName, pathSpec, clazz);
+  }
+
+  /**
+   * Add a servlet to BaseHttpServer.
+   *
+   * @param servletName The name of the servlet
+   * @param pathSpec    The path spec for the servlet
+   * @param clazz       The servlet class
+   */
+  protected void addInternalServlet(String servletName, String pathSpec,
+      Class<? extends HttpServlet> clazz, Map<String, String> initParams) {
+    httpServer.addInternalServlet(servletName, pathSpec, clazz, initParams);
   }
 
   /**
