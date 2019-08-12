@@ -22,6 +22,7 @@ import java.io.IOException;
 import org.apache.hadoop.hdds.cli.GenericCli;
 import org.apache.hadoop.hdds.cli.HddsVersionProvider;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.discovery.DiscoveryUtil;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -47,6 +48,10 @@ public class Gateway extends GenericCli {
   @Override
   public Void call() throws Exception {
     OzoneConfiguration ozoneConfiguration = createOzoneConfiguration();
+    if (DiscoveryUtil.loadGlobalConfig(ozoneConfiguration)) {
+      //reload the configuration with the downloaded new configs.
+      ozoneConfiguration = createOzoneConfiguration();
+    }
     OzoneConfigurationHolder.setConfiguration(ozoneConfiguration);
     httpServer = new S3GatewayHttpServer(ozoneConfiguration, "s3gateway");
     start();

@@ -96,7 +96,17 @@ public final class ServerUtils {
         rpcServer.getListenerAddress());
   }
 
-
+  public static InetSocketAddress updateRPCListenPort(
+      OzoneConfiguration conf, String rpcAddressKey,
+      InetSocketAddress listenerAddress) {
+    String originalValue = conf.get(rpcAddressKey);
+    //remove existing port
+    originalValue = originalValue.replaceAll(":.*", "");
+    conf.set(rpcAddressKey,
+        originalValue + ":" + listenerAddress.getPort());
+    return new InetSocketAddress(originalValue,
+        listenerAddress.getPort());
+  }
   /**
    * After starting an server, updates configuration with the actual
    * listening address of that server. The listening address may be different
