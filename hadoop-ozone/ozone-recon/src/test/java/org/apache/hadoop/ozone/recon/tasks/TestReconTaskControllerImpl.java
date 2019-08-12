@@ -86,6 +86,8 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     reconTaskController.registerTask(reconDBUpdateTaskMock);
     OMUpdateEventBatch omUpdateEventBatchMock = mock(OMUpdateEventBatch.class);
     when(omUpdateEventBatchMock.isEmpty()).thenReturn(false);
+    when(omUpdateEventBatchMock.filter(Collections.singleton("MockTable")))
+        .thenReturn(omUpdateEventBatchMock);
     reconTaskController.consumeOMEvents(
         omUpdateEventBatchMock,
         mock(OMMetadataManager.class));
@@ -182,6 +184,8 @@ public class TestReconTaskControllerImpl extends AbstractSqlDatabaseTest {
     when(reconDBUpdateTaskMock.getTaskTables()).thenReturn(Collections
         .EMPTY_LIST);
     when(reconDBUpdateTaskMock.getTaskName()).thenReturn(taskName);
+    when(reconDBUpdateTaskMock.getTaskTables())
+        .thenReturn(Collections.singleton("MockTable"));
     return reconDBUpdateTaskMock;
   }
 }
