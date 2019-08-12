@@ -2460,7 +2460,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
       assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
       final Optional<OzoneAcl> readAcl = store.getAcl(ozObj).stream()
-          .filter(acl -> acl.getName().equals(newAcl.getName()))
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
           .findFirst();
       assertTrue("New acl expected but not found.", readAcl.isPresent());
       assertTrue("READ_ACL should exist in current acls:"
@@ -2473,7 +2474,8 @@ public abstract class TestOzoneRpcClientAbstract {
 
       assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
       final Optional<OzoneAcl> nonReadAcl = store.getAcl(ozObj).stream()
-          .filter(acl -> acl.getName().equals(newAcl.getName()))
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
           .findFirst();
       assertTrue("New acl expected but not found.", nonReadAcl.isPresent());
       assertFalse("READ_ACL should not exist in current acls:"
