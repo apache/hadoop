@@ -38,6 +38,7 @@ import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.WebHdfs;
 import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.hdfs.DFSTestUtil;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier;
 import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
@@ -76,7 +77,7 @@ public class TestWebHdfsUrl {
         uri, conf);
 
     // Construct a file path that contains percentage-encoded string
-    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668";
+    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668+";
     Path fsPath = new Path(pathName);
     URL encodedPathUrl = webhdfs.toUrl(PutOpParam.Op.CREATE, fsPath);
     // We should get back the original file path after cycling back and decoding
@@ -415,15 +416,11 @@ public class TestWebHdfsUrl {
   }
 
   private static final String BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME =
-          "specialFile ?\"\\()[]_-=&,{}#'`~!@$^*|<>.";
+          "specialFile ?\"\\()[]_-=&,{}#'`~!@$^*|<>.+%";
 
   @Test
   public void testWebHdfsBackwardCompatibleSpecialCharacterFile()
           throws Exception {
-
-    assertFalse(BACKWARD_COMPATIBLE_SPECIAL_CHARACTER_FILENAME
-            .matches(WebHdfsFileSystem.SPECIAL_FILENAME_CHARACTERS_REGEX));
-
     UserGroupInformation ugi =
             UserGroupInformation.createRemoteUser("test-user");
     ugi.setAuthenticationMethod(KERBEROS);
@@ -482,5 +479,34 @@ public class TestWebHdfsUrl {
         WebHdfsTestUtil.toUrl(fs, GetOpParam.Op.LISTSTATUS, new Path(path));
     WebHdfsTestUtil.LOG.info(url.getPath());
     assertEquals(WebHdfsFileSystem.PATH_PREFIX + path, url.getPath());
+  }
+
+  @Test
+  public void testWebHdfsPathWithSemicolon() throws Exception {
+    try (MiniDFSCluster cluster =
+        new MiniDFSCluster.Builder(WebHdfsTestUtil.createConf())
+            .numDataNodes(1)
+            .build()) {
+      cluster.waitActive();
+
+      // regression test for HDFS-14423.
+      final Path semicolon = new Path("/a;b");
+      final Path plus = new Path("/a+b");
+      final Path percent = new Path("/a%b");
+
+      final WebHdfsFileSystem webhdfs = WebHdfsTestUtil.getWebHdfsFileSystem(
+          cluster.getConfiguration(0), WebHdfs.SCHEME);
+      webhdfs.create(semicolon).close();
+      webhdfs.create(plus).close();
+      webhdfs.create(percent).close();
+
+      final DistributedFileSystem dfs = cluster.getFileSystem();
+      assertEquals(semicolon.getName(),
+          dfs.getFileStatus(semicolon).getPath().getName());
+      assertEquals(plus.getName(),
+          dfs.getFileStatus(plus).getPath().getName());
+      assertEquals(percent.getName(),
+          dfs.getFileStatus(percent).getPath().getName());
+    }
   }
 }
