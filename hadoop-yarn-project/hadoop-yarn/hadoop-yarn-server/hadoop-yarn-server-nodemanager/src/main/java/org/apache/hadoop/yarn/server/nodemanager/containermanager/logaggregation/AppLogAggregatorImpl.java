@@ -400,7 +400,7 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
             "following diagnostic message:\"{}\"", diagnosticMessage);
       }
       if (!logAggregationSucceedInThisCycle) {
-        LOG.info("Log aggregation did not succeed in this cycle");
+        LOG.warn("Log aggregation did not succeed in this cycle");
       }
       sendLogAggregationReport(logAggregationSucceedInThisCycle,
           diagnosticMessage, appFinished);
@@ -538,8 +538,8 @@ public class AppLogAggregatorImpl implements AppLogAggregator {
         lfs.getFileStatus(logPath);
         localAppLogDirs.add(logPath);
       } catch (UnsupportedFileSystemException ue) {
-        LOG.warn("Log dir " + rootLogDir +
-            " is in an unsupported file system", ue);
+        LOG.warn("Log dir {} is in an unsupported file system", rootLogDir,
+            ue);
         continue;
       } catch (IOException fe) {
         LOG.warn("An exception occurred while getting file information", fe);
