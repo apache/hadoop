@@ -1504,7 +1504,6 @@ public abstract class S3GuardTool extends Configured implements Tool {
 
     Fsck(Configuration conf) {
       super(conf, CHECK_FLAG);
-      addAgeOptions();
     }
 
     @Override
@@ -1520,32 +1519,52 @@ public abstract class S3GuardTool extends Configured implements Tool {
     public int run(String[] args, PrintStream out) throws
         InterruptedException, IOException {
       List<String> paths = parseArgs(args);
-      try {
-        parseDynamoDBRegion(paths);
-      } catch (ExitUtil.ExitException e) {
-        errorln(USAGE);
-        throw e;
+      if (paths.isEmpty()) {
+        out.println(USAGE);
+        throw invalidArgs("no arguments");
       }
 
-      if (paths.size() == 0) {
+      String s3Path = paths.get(0);
+      try {
+        initS3AFileSystem(s3Path);
+      } catch (Exception e) {
+        errorln("Failed to initialize S3AFileSystem from path: " + s3Path);
         errorln(USAGE);
         return ERROR;
       }
 
-      final MetadataStore ms = initMetadataStore(false);
-      String tableName = getConf().getTrimmed(S3GUARD_DDB_TABLE_NAME_KEY);
-      initS3AFileSystem("s3a://" + tableName);
-      final S3AFileSystem fs = getFilesystem();
+      URI uri = toUri(s3Path);
+      Path root;
+      if (uri.getPath().isEmpty()) {
+        root = new Path("/");
+      } else {
+        root = new Path(uri.getPath());
+      }
 
-      if (paths.get(0).equals(CHECK_FLAG)) {
+      final S3AFileSystem fs = getFilesystem();
+      initMetadataStore(false);
+      final MetadataStore ms = getStore();
+
+      if (ms == null ||
+          !(ms instanceof DynamoDBMetadataStore)) {
+        errorln(s3Path + " path uses MS: " + ms.toString());
+        errorln(NAME + " can be only used with a DynamoDB backed s3a bucket.");
+        errorln(USAGE);
+        return ERROR;
+      }
+
+      final CommandFormat commandFormat = getCommandFormat();
+      if (commandFormat.getOpt(CHECK_FLAG)) {
         // do the check
         S3GuardFsck s3GuardFsck = new S3GuardFsck(fs, ms);
-        s3GuardFsck.compareS3RootToMs(fs.qualify(new Path("/")));
+        s3GuardFsck.compareS3RootToMs(fs.qualify(root));
       } else {
+        errorln("No supported operation is selected.");
         errorln(USAGE);
         return ERROR;
       }
 
+      out.flush();
       return SUCCESS;
     }
   }

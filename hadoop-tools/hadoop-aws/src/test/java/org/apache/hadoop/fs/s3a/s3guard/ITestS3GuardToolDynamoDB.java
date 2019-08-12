@@ -32,6 +32,7 @@ import com.amazonaws.services.dynamodbv2.model.ListTagsOfResourceRequest;
 import com.amazonaws.services.dynamodbv2.model.ResourceInUseException;
 import com.amazonaws.services.dynamodbv2.model.ResourceNotFoundException;
 import com.amazonaws.services.dynamodbv2.model.Tag;
+import org.apache.hadoop.util.ExitUtil;
 import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.AssumptionViolatedException;
@@ -291,18 +292,14 @@ public class ITestS3GuardToolDynamoDB extends AbstractS3GuardToolTestBase {
 
   @Test
   public void testCLIFsckWithoutParam() throws Exception {
-    run(S3GuardTool.Fsck.NAME, "check");
+    intercept(ExitUtil.ExitException.class, () -> run(Fsck.NAME));
   }
 
   @Test
-  public void testCLIFsckWithPathParam() throws Exception {
-    fail("TODO implement");
-    run(S3GuardTool.Fsck.NAME, "check");
-  }
-
-  @Test
-  public void testCLIFsckWithVersionIdParam() throws Exception {
-    fail("TODO implement");
-    run(S3GuardTool.Fsck.NAME, "check");
+  public void testCLIFsckWithParam() throws Exception {
+    final int result = run(S3GuardTool.Fsck.NAME, "-check",
+        "s3a://" + getFileSystem().getBucket());
+    assertEquals("The result should be success when fsck is running with "
+        + "correct parameters.", SUCCESS, result);
   }
 }

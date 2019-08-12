@@ -84,11 +84,12 @@ public class S3GuardFsck {
    * Uses {@link S3GuardFsckViolationHandler} to handle violations.
    * The violations are listed in Enums: {@link Violation}
    *
-   * @param rootPath the root path to start the traversal
+   * @param p the root path to start the traversal
    * @throws IOException
    * @return
    */
-  public List<ComparePair> compareS3RootToMs(final Path rootPath) throws IOException {
+  public List<ComparePair> compareS3RootToMs(Path p) throws IOException {
+    final Path rootPath = rawFS.qualify(p);
     final S3AFileStatus root =
         (S3AFileStatus) rawFS.getFileStatus(rootPath);
     final List<ComparePair> comparePairs = new ArrayList<>();
@@ -114,8 +115,7 @@ public class S3GuardFsck {
       // Compare the directory contents if the listing is authoritative
       final DirListingMetadata msDirListing =
           metadataStore.listChildren(currentDirPath);
-      if (msDirListing != null &&
-          msDirListing.isAuthoritative()) {
+      if (msDirListing != null && msDirListing.isAuthoritative()) {
         final ComparePair cP =
             compareAuthDirListing(s3DirListing, msDirListing);
         if (cP.containsViolation()) {

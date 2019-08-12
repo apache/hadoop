@@ -28,7 +28,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 
 /**
- * Violation handler for the S3Guard's fsck
+ * Violation handler for the S3Guard's fsck.
  */
 public class S3GuardFsckViolationHandler {
   private static final Logger LOG = LoggerFactory.getLogger(
@@ -51,9 +51,9 @@ public class S3GuardFsckViolationHandler {
       return;
     }
 
-    StringBuilder sB = new StringBuilder(
-        String.format("%sOn path: %s%n", NEWLINE, comparePair.getPath())
-    );
+    StringBuilder sB = new StringBuilder();
+    sB.append(NEWLINE)
+        .append("On path: ").append(comparePair.getPath()).append(NEWLINE);
 
     // Create a new instance of the handler and use it.
     for (S3GuardFsck.Violation violation : comparePair.getViolations()) {
@@ -70,10 +70,8 @@ public class S3GuardFsckViolationHandler {
         LOG.error("Can not instantiate handler: {}",
             violation.handler);
       }
-
       sB.append(NEWLINE);
     }
-
     LOG.error(sB.toString());
   }
 
