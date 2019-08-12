@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.mapreduce.v2.app.launcher;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -124,7 +125,7 @@ public class TestContainerLauncher {
     ThreadPoolExecutor threadPool = containerLauncher.getThreadPool();
 
     // No events yet
-    Assert.assertEquals(containerLauncher.initialPoolSize,
+    assertThat(containerLauncher.initialPoolSize).isEqualTo(
         MRJobConfig.DEFAULT_MR_AM_CONTAINERLAUNCHER_THREADPOOL_INITIAL_SIZE);
     Assert.assertEquals(0, threadPool.getPoolSize());
     Assert.assertEquals(containerLauncher.initialPoolSize,
@@ -190,7 +191,7 @@ public class TestContainerLauncher {
         20);
     containerLauncher = new CustomContainerLauncher(context);
     containerLauncher.init(conf);
-    Assert.assertEquals(containerLauncher.initialPoolSize, 20);
+    assertThat(containerLauncher.initialPoolSize).isEqualTo(20);
   }
 
   @Test(timeout = 5000)

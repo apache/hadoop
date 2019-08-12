@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.mapreduce.v2.hs;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -181,10 +182,10 @@ public class TestJHSDelegationTokenSecretManager {
       JHSDelegationTokenSecretManagerForTest mgr) {
     mgr.stopThreads();
     mgr.reset();
-    Assert.assertEquals("Secret manager should not contain keys",
-        mgr.getAllKeys().length, 0);
-    Assert.assertEquals("Secret manager should not contain tokens",
-        mgr.getAllTokens().size(), 0);
+    assertThat(mgr.getAllKeys().length)
+        .withFailMessage("Secret manager should not contain keys").isZero();
+    assertThat(mgr.getAllTokens().size())
+        .withFailMessage("Secret manager should not contain tokens").isZero();
   }
 
   private static class JHSDelegationTokenSecretManagerForTest
