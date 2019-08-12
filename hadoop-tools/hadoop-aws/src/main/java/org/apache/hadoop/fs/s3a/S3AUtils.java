@@ -26,6 +26,8 @@ import com.amazonaws.Protocol;
 import com.amazonaws.SdkBaseException;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
+import com.amazonaws.auth.Signer;
+import com.amazonaws.auth.SignerFactory;
 import com.amazonaws.retry.RetryUtils;
 import com.amazonaws.services.dynamodbv2.model.AmazonDynamoDBException;
 import com.amazonaws.services.dynamodbv2.model.LimitExceededException;
@@ -1239,7 +1241,19 @@ public final class S3AUtils {
     awsConf.setSocketBufferSizeHints(sockSendBuffer, sockRecvBuffer);
     String signerOverride = conf.getTrimmed(SIGNING_ALGORITHM, "");
     if (!signerOverride.isEmpty()) {
-     LOG.debug("Signer override = {}", signerOverride);
+      try {
+        SignerFactory.getSignerByTypeAndService(signerOverride, null);
+      } catch (IllegalArgumentException e) {
+        LOG.debug("{}, preparing to load custom signer : {} ", e.getMessage(), signerOverride);
+        Class<? extends Signer> klass;
+        try {
+          klass = (Class<? extends Signer>) Class.forName(signerOverride);
+        } catch (ClassNotFoundException cnfe) {
+          throw new RuntimeException(String.format("Signer Class %s not found", signerOverride), cnfe);
+        }
+        SignerFactory.registerSigner(signerOverride, klass);
+      }
+      LOG.debug("Signer override = {}", signerOverride);
       awsConf.setSignerOverride(signerOverride);
     }
   }
