@@ -52,6 +52,8 @@ import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.http.RestCsrfPreventionFilter;
 
+import com.sun.jersey.api.core.ResourceConfig;
+
 /**
  * Encapsulates the HTTP server started by the NameNode. 
  */
@@ -114,9 +116,11 @@ public class NameNodeHttpServer {
       }
 
       // add webhdfs packages
+      final Map<String, String> resourceParams = new HashMap<>();
+      resourceParams.put(ResourceConfig.FEATURE_MATCH_MATRIX_PARAMS, "true");
       httpServer2.addJerseyResourcePackage(
-          jerseyResourcePackage+ ";" + Param.class.getPackage().getName(),
-          pathSpec);
+          jerseyResourcePackage + ";" + Param.class.getPackage().getName(),
+          pathSpec, resourceParams);
     }
   }
 
