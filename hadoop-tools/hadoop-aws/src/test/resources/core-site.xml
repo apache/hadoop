@@ -136,6 +136,11 @@
     <value>${central.endpoint}</value>
   </property>
 
+  <property>
+    <name>fs.s3a.signing-algorithm</name>
+    <value>TestHadoopAWSCustomSigner</value>
+  </property>
+
   <!-- Scale integration tests may time out on slower connections
        you can reduce the operation count like so to mitigate this.
   <property>

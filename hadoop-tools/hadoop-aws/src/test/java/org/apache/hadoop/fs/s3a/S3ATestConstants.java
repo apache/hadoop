@@ -207,4 +207,9 @@ public interface S3ATestConstants {
    */
   String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.test.table";
+
+  /**
+   * Custom Signer Name to be set in the conf file to be checked
+   */
+  String CUSTOM_SIGNING_ALGORITHM = "TestHadoopAWSCustomSigner";
 }
