@@ -17,6 +17,7 @@
 Documentation       Test ozone shell CLI usage
 Library             OperatingSystem
 Resource            ../commonlib.robot
+Test Setup          Run Keyword if    '${SECURITY_ENABLED}' == 'true'    Kinit test user     testuser     testuser.keytab
 Test Timeout        2 minute
 
 *** Variables ***
@@ -60,10 +61,6 @@ Test ozone shell
                     Execute             ozone sh bucket create ${protocol}${server}/${volume}/bb1
     ${result} =     Execute             ozone sh bucket info ${protocol}${server}/${volume}/bb1 | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .storageType'
                     Should Be Equal     ${result}       DISK
-    ${result} =     Execute             ozone sh bucket update ${protocol}${server}/${volume}/bb1 --addAcl user:frodo:rw,group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="samwise") | .type'
-                    Should Be Equal     ${result}       GROUP
-    ${result} =     Execute             ozone sh bucket update ${protocol}${server}/${volume}/bb1 --removeAcl group:samwise:r | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '. | select(.bucketName=="bb1") | .acls | .[] | select(.name=="frodo") | .type'
-                    Should Be Equal     ${result}       USER
     ${result} =     Execute             ozone sh bucket list ${protocol}${server}/${volume}/ | grep -Ev 'Removed|WARN|DEBUG|ERROR|INFO|TRACE' | jq -r '.[] | select(.bucketName=="bb1") | .volumeName'
                     Should Be Equal     ${result}       ${volume}
                     Run Keyword         Test key handling       ${protocol}       ${server}       ${volume}

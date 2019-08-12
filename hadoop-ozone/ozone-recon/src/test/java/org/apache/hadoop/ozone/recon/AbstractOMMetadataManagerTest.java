@@ -161,6 +161,34 @@ public abstract class AbstractOMMetadataManagerTest {
   }
 
   /**
+   * Write a key to OM instance.
+   * @throws IOException while writing.
+   */
+  protected void writeDataToOm(OMMetadataManager omMetadataManager,
+      String key,
+      String bucket,
+      String volume,
+      Long dataSize,
+      List<OmKeyLocationInfoGroup>
+          omKeyLocationInfoGroupList)
+      throws IOException {
+
+    String omKey = omMetadataManager.getOzoneKey(volume,
+        bucket, key);
+
+    omMetadataManager.getKeyTable().put(omKey,
+        new OmKeyInfo.Builder()
+            .setBucketName(bucket)
+            .setVolumeName(volume)
+            .setKeyName(key)
+            .setDataSize(dataSize)
+            .setReplicationFactor(HddsProtos.ReplicationFactor.ONE)
+            .setReplicationType(HddsProtos.ReplicationType.STAND_ALONE)
+            .setOmKeyLocationInfos(omKeyLocationInfoGroupList)
+            .build());
+  }
+
+  /**
    * Return random pipeline.
    * @return pipeline
    */

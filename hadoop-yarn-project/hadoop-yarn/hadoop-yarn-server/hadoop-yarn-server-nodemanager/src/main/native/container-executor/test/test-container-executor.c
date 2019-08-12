@@ -1539,6 +1539,18 @@ int main(int argc, char **argv) {
   LOGFILE = stdout;
   ERRORFILE = stderr;
 
+  if (setvbuf(LOGFILE, NULL, _IOLBF, BUFSIZ)) {
+    fprintf(LOGFILE, "Failed to invoke setvbuf() for LOGFILE: %s\n", strerror(errno));
+    fflush(LOGFILE);
+    exit(ERROR_CALLING_SETVBUF);
+  }
+
+  if (setvbuf(ERRORFILE, NULL, _IOLBF, BUFSIZ)) {
+    fprintf(ERRORFILE, "Failed to invoke setvbuf() for ERRORFILE: %s\n", strerror(errno));
+    fflush(ERRORFILE);
+    exit(ERROR_CALLING_SETVBUF);
+  }
+
   nm_uid = getuid();
 
   printf("Attempting to clean up from any previous runs\n");

@@ -1660,7 +1660,7 @@
 
 <property>
   <name>fs.s3a.retry.limit</name>
-  <value>${fs.s3a.attempts.maximum}</value>
+  <value>7</value>
   <description>
     Number of times to retry any repeatable S3 client request on failure,
     excluding throttling requests.
@@ -1671,7 +1671,7 @@
   <name>fs.s3a.retry.interval</name>
   <value>500ms</value>
   <description>
-    Interval between attempts to retry operations for any reason other
+    Initial retry interval when retrying operations for any reason other
     than S3 throttle errors.
   </description>
 </property>
@@ -2743,6 +2743,15 @@
 </property>
 
 <property>
+  <name>ha.health-monitor.rpc.connect.max.retries</name>
+  <value>1</value>
+  <description>
+    The number of retries on connect error when establishing RPC proxy
+    connection to NameNode, used for monitorHealth() calls.
+  </description>
+</property>
+
+<property>
   <name>ha.health-monitor.rpc-timeout.ms</name>
   <value>45000</value>
   <description>
@@ -3504,4 +3513,24 @@
     </description>
   </property>
 
+  <property>
+    <name>fs.getspaceused.classname</name>
+    <value></value>
+    <description>
+      The class that can tell estimate much space is used in a directory.
+      There are four impl classes that being supported:
+      org.apache.hadoop.fs.DU(default), org.apache.hadoop.fs.WindowsGetSpaceUsed
+      org.apache.hadoop.fs.DFCachingGetSpaceUsed and
+      org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.ReplicaCachingGetSpaceUsed.
+      And the ReplicaCachingGetSpaceUsed impl class only used in HDFS module.
+    </description>
+  </property>
+
+  <property>
+    <name>fs.getspaceused.jitterMillis</name>
+    <value>60000</value>
+    <description>
+      fs space usage statistics refresh jitter in msec.
+    </description>
+  </property>
 </configuration>

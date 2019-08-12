@@ -635,7 +635,7 @@ public final class Constants {
   /**
    * Default retry limit: {@value}.
    */
-  public static final int RETRY_LIMIT_DEFAULT = DEFAULT_MAX_ERROR_RETRIES;
+  public static final int RETRY_LIMIT_DEFAULT = 7;
 
   /**
    * Interval between retry attempts.: {@value}.

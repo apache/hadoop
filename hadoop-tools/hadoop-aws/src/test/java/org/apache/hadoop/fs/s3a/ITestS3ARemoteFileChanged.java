@@ -61,8 +61,7 @@ import static org.apache.hadoop.fs.contract.ContractTestUtils.dataset;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.readUTF8;
 import static org.apache.hadoop.fs.contract.ContractTestUtils.writeDataset;
 import static org.apache.hadoop.fs.s3a.Constants.*;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.getTestBucketName;
-import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBucketOverrides;
+import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.apache.hadoop.fs.s3a.impl.ChangeDetectionPolicy.CHANGE_DETECTED;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.S3_SELECT_CAPABILITY;
 import static org.apache.hadoop.fs.s3a.select.SelectConstants.SELECT_SQL;
@@ -123,8 +122,8 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
 
   private static final byte[] TEST_DATA_BYTES = TEST_DATA.getBytes(
       Charsets.UTF_8);
-  private static final int TEST_MAX_RETRIES = 5;
-  private static final String TEST_RETRY_INTERVAL = "10ms";
+  private static final int TEST_MAX_RETRIES = 4;
+  private static final String TEST_RETRY_INTERVAL = "1ms";
   private static final String QUOTED_TEST_DATA =
       "\"" + TEST_DATA + "\"";
 
@@ -276,8 +275,7 @@ public class ITestS3ARemoteFileChanged extends AbstractS3ATestBase {
   @Override
   protected Configuration createConfiguration() {
     Configuration conf = super.createConfiguration();
-    String bucketName = getTestBucketName(conf);
-    removeBucketOverrides(bucketName, conf,
+    removeBaseAndBucketOverrides(conf,
         CHANGE_DETECT_SOURCE,
         CHANGE_DETECT_MODE,
         RETRY_LIMIT,

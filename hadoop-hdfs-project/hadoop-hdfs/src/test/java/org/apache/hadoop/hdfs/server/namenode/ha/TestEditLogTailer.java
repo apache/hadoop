@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -27,9 +28,14 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -42,8 +48,10 @@ import org.apache.hadoop.hdfs.HAUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.MiniDFSNNTopology;
+import org.apache.hadoop.hdfs.server.common.HdfsServerConstants;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLog;
 import org.apache.hadoop.hdfs.server.namenode.FSImage;
+import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
@@ -150,7 +158,47 @@ public class TestEditLogTailer {
       cluster.shutdown();
     }
   }
-  
+
+  @Test
+  public void testTailerBackoff() throws Exception {
+    Configuration conf = new Configuration();
+    NameNode.initMetrics(conf, HdfsServerConstants.NamenodeRole.NAMENODE);
+    conf.setTimeDuration(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_KEY,
+        1, TimeUnit.MILLISECONDS);
+    conf.setTimeDuration(DFSConfigKeys.DFS_HA_TAILEDITS_PERIOD_BACKOFF_MAX_KEY,
+        10, TimeUnit.MILLISECONDS);
+    FSNamesystem mockNamesystem = mock(FSNamesystem.class);
+    FSImage mockImage = mock(FSImage.class);
+    NNStorage mockStorage = mock(NNStorage.class);
+    when(mockNamesystem.getFSImage()).thenReturn(mockImage);
+    when(mockImage.getStorage()).thenReturn(mockStorage);
+    final Queue<Long> sleepDurations = new ConcurrentLinkedQueue<>();
+    final int zeroEditCount = 5;
+    final AtomicInteger tailEditsCallCount = new AtomicInteger(0);
+    EditLogTailer tailer = new EditLogTailer(mockNamesystem, conf) {
+      @Override
+      void sleep(long sleepTimeMs) {
+        if (sleepDurations.size() <= zeroEditCount) {
+          sleepDurations.add(sleepTimeMs);
+        }
+      }
+
+      @Override
+      public long doTailEdits() {
+        return tailEditsCallCount.getAndIncrement() < zeroEditCount ? 0 : 1;
+      }
+    };
+    tailer.start();
+    try {
+      GenericTestUtils.waitFor(
+          () -> sleepDurations.size() > zeroEditCount, 50, 10000);
+    } finally {
+      tailer.stop();
+    }
+    List<Long> expectedDurations = Arrays.asList(2L, 4L, 8L, 10L, 10L, 1L);
+    assertEquals(expectedDurations, new ArrayList<>(sleepDurations));
+  }
+
   @Test
   public void testNN0TriggersLogRolls() throws Exception {
     testStandbyTriggersLogRolls(0);

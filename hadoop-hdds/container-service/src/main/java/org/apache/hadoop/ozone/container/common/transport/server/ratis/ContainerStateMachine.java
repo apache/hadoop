@@ -137,8 +137,8 @@ public class ContainerStateMachine extends BaseStateMachine {
   private final ContainerDispatcher dispatcher;
   private ThreadPoolExecutor chunkExecutor;
   private final XceiverServerRatis ratisServer;
-  private final ConcurrentHashMap<Long, CompletableFuture<Message>>
-      writeChunkFutureMap;
+  private final ConcurrentHashMap<Long,
+      CompletableFuture<ContainerCommandResponseProto>> writeChunkFutureMap;
 
   // keeps track of the containers created per pipeline
   private final Set<Long> createContainerSet;
@@ -385,9 +385,15 @@ public class ContainerStateMachine extends BaseStateMachine {
     return response;
   }
 
+  private ContainerCommandResponseProto runCommandGetResponse(
+      ContainerCommandRequestProto requestProto,
+      DispatcherContext context) {
+    return dispatchCommand(requestProto, context);
+  }
+
   private Message runCommand(ContainerCommandRequestProto requestProto,
       DispatcherContext context) {
-    return dispatchCommand(requestProto, context)::toByteString;
+    return runCommandGetResponse(requestProto, context)::toByteString;
   }
 
   private ExecutorService getCommandExecutor(
@@ -417,8 +423,11 @@ public class ContainerStateMachine extends BaseStateMachine {
             .build();
     // ensure the write chunk happens asynchronously in writeChunkExecutor pool
     // thread.
-    CompletableFuture<Message> writeChunkFuture = CompletableFuture
-        .supplyAsync(() -> runCommand(requestProto, context), chunkExecutor);
+    CompletableFuture<ContainerCommandResponseProto> writeChunkFuture =
+        CompletableFuture.supplyAsync(() ->
+            runCommandGetResponse(requestProto, context), chunkExecutor);
+
+    CompletableFuture<Message> raftFuture = new CompletableFuture<>();
 
     writeChunkFutureMap.put(entryIndex, writeChunkFuture);
     LOG.debug(gid + ": writeChunk writeStateMachineData : blockId " +
@@ -427,15 +436,29 @@ public class ContainerStateMachine extends BaseStateMachine {
     // Remove the future once it finishes execution from the
     // writeChunkFutureMap.
     writeChunkFuture.thenApply(r -> {
-      metrics.incNumBytesWrittenCount(
-          requestProto.getWriteChunk().getChunkData().getLen());
+      if (r.getResult() != ContainerProtos.Result.SUCCESS) {
+        StorageContainerException sce =
+            new StorageContainerException(r.getMessage(), r.getResult());
+        LOG.error(gid + ": writeChunk writeStateMachineData failed: blockId" +
+            write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
+            write.getChunkData().getChunkName() + " Error message: " +
+            r.getMessage() + " Container Result: " + r.getResult());
+        metrics.incNumWriteDataFails();
+        raftFuture.completeExceptionally(sce);
+      } else {
+        metrics.incNumBytesWrittenCount(
+            requestProto.getWriteChunk().getChunkData().getLen());
+        LOG.debug(gid +
+            ": writeChunk writeStateMachineData  completed: blockId" +
+            write.getBlockID() + " logIndex " + entryIndex + " chunkName " +
+            write.getChunkData().getChunkName());
+        raftFuture.complete(r::toByteString);
+      }
+
       writeChunkFutureMap.remove(entryIndex);
-      LOG.debug(gid + ": writeChunk writeStateMachineData  completed: blockId" +
-           write.getBlockID() + " logIndex " + entryIndex + " chunkName "
-          + write.getChunkData().getChunkName());
       return r;
     });
-    return writeChunkFuture;
+    return raftFuture;
   }
 
   /*
@@ -544,7 +567,7 @@ public class ContainerStateMachine extends BaseStateMachine {
    */
   @Override
   public CompletableFuture<Void> flushStateMachineData(long index) {
-    List<CompletableFuture<Message>> futureList =
+    List<CompletableFuture<ContainerCommandResponseProto>> futureList =
         writeChunkFutureMap.entrySet().stream().filter(x -> x.getKey() <= index)
             .map(Map.Entry::getValue).collect(Collectors.toList());
     return CompletableFuture.allOf(

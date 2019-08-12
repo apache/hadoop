@@ -54,7 +54,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public synchronized void initialize(Context context) throws YarnException {
+  public void initialize(Context context) throws YarnException {
     this.gpuDiscoverer.initialize(context.getConf());
     this.dockerCommandPlugin =
         GpuDockerCommandPluginFactory.createGpuDockerCommandPlugin(
@@ -62,7 +62,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public synchronized ResourceHandler createResourceHandler(
+  public ResourceHandler createResourceHandler(
       Context context, CGroupsHandler cGroupsHandler,
       PrivilegedOperationExecutor privilegedOperationExecutor) {
     if (gpuResourceHandler == null) {
@@ -74,7 +74,7 @@ public class GpuResourcePlugin implements ResourcePlugin {
   }
 
   @Override
-  public synchronized NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
+  public NodeResourceUpdaterPlugin getNodeResourceHandlerInstance() {
     return resourceDiscoverHandler;
   }
 

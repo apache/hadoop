@@ -299,7 +299,8 @@ public final class StorageContainerManager extends ServiceRuntimeInfoImpl
         new ContainerReportHandler(scmNodeManager, containerManager);
 
     IncrementalContainerReportHandler incrementalContainerReportHandler =
-        new IncrementalContainerReportHandler(containerManager);
+        new IncrementalContainerReportHandler(
+            scmNodeManager, containerManager);
 
     PipelineActionHandler pipelineActionHandler =
         new PipelineActionHandler(pipelineManager, conf);
