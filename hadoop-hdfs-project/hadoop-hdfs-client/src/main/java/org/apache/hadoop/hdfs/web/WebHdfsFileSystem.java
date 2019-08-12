@@ -37,8 +37,6 @@ import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
-import java.net.URLDecoder;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -146,8 +144,6 @@ public class WebHdfsFileSystem extends FileSystem
       + "/v" + VERSION;
   public static final String EZ_HEADER = "X-Hadoop-Accept-EZ";
   public static final String FEFINFO_HEADER = "X-Hadoop-feInfo";
-
-  public static final String SPECIAL_FILENAME_CHARACTERS_REGEX = ".*[;+%].*";
 
   /**
    * Default connection factory may be overridden in tests to use smaller
@@ -611,44 +607,8 @@ public class WebHdfsFileSystem extends FileSystem
       final Param<?,?>... parameters) throws IOException {
     //initialize URI path and query
 
-    Path encodedFSPath = fspath;
-    if (fspath != null) {
-      URI fspathUri = fspath.toUri();
-      String fspathUriDecoded = fspathUri.getPath();
-      boolean pathAlreadyEncoded = false;
-      try {
-        fspathUriDecoded = URLDecoder.decode(fspathUri.getPath(), "UTF-8");
-        //below condition check added as part of fixing HDFS-14323 to make
-        //sure pathAlreadyEncoded is not set in the case the input url does
-        //not have any encoded sequence already.This will help pulling data
-        //from 2.x hadoop cluster to 3.x using 3.x distcp client operation
-        if(!fspathUri.getPath().equals(fspathUriDecoded)) {
-          pathAlreadyEncoded = true;
-        }
-      } catch (IllegalArgumentException ex) {
-        LOG.trace("Cannot decode URL encoded file", ex);
-      }
-      String[] fspathItems = fspathUriDecoded.split("/");
-
-      if (fspathItems.length > 0) {
-        StringBuilder fsPathEncodedItems = new StringBuilder();
-        for (String fsPathItem : fspathItems) {
-          fsPathEncodedItems.append("/");
-          if (fsPathItem.matches(SPECIAL_FILENAME_CHARACTERS_REGEX) ||
-              pathAlreadyEncoded) {
-            fsPathEncodedItems.append(URLEncoder.encode(fsPathItem, "UTF-8"));
-          } else {
-            fsPathEncodedItems.append(fsPathItem);
-          }
-        }
-        encodedFSPath = new Path(fspathUri.getScheme(),
-                fspathUri.getAuthority(), fsPathEncodedItems.substring(1));
-      }
-    }
-
     final String path = PATH_PREFIX
-        + (encodedFSPath == null ? "/" :
-            makeQualified(encodedFSPath).toUri().getRawPath());
+        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
     final String query = op.toQueryString()
         + Param.toSortedString("&", getAuthParameters(op))
         + Param.toSortedString("&", parameters);
