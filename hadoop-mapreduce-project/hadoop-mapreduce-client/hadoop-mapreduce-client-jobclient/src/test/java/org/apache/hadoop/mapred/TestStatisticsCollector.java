@@ -23,6 +23,7 @@ import org.apache.hadoop.mapred.StatisticsCollector.TimeWindow;
 import org.apache.hadoop.mapred.StatisticsCollector.Stat;
 import org.junit.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
@@ -88,14 +89,14 @@ public class TestStatisticsCollector {
     
     //  test Stat class 
     Map updaters= collector.getUpdaters();
-    assertEquals(updaters.size(),2);
+    assertThat(updaters.size()).isEqualTo(2);
     Map<String, Stat> ststistics=collector.getStatistics();
     assertNotNull(ststistics.get("m1"));
     
    Stat newStat= collector.createStat("m2"); 
-    assertEquals(newStat.name, "m2");
+    assertThat(newStat.name).isEqualTo("m2");
     Stat st=collector.removeStat("m1");
-    assertEquals(st.name, "m1");
+    assertThat(st.name).isEqualTo("m1");
     assertEquals((10+10+10+12+13+14), stat.getValues().get(window).getValue());
     assertEquals(95, stat.getValues().get(sincStart).getValue());
      st=collector.removeStat("m1");
