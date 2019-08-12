@@ -616,8 +616,7 @@ public class DistCpUtils {
         boolean addSkipHint = false;
         String srcScheme = sourceFS.getScheme();
         String targetScheme = targetFS.getScheme();
-        if (!srcScheme.equals(targetScheme)
-            && !(srcScheme.contains("hdfs") && targetScheme.contains("hdfs"))) {
+        if (!srcScheme.equals(targetScheme)) {
           // the filesystems are different and they aren't both hdfs connectors
           errorMessage.append("Source and destination filesystems are of"
               + " different types\n")
@@ -630,8 +629,12 @@ public class DistCpUtils {
           addSkipHint = true;
         }
         if (addSkipHint) {
-          errorMessage.append(" You can skip checksum-checks altogether "
-              + " with -skipcrccheck.\n")
+          errorMessage
+              .append(" You can choose file-level checksum validation via "
+                  + "-Ddfs.checksum.combine.mode=COMPOSITE_CRC when block-sizes"
+                  + " or filesystems are different.")
+              .append(" Or you can skip checksum-checks altogether "
+                  + " with -skipcrccheck.\n")
               .append(" (NOTE: By skipping checksums, one runs the risk of " +
                   "masking data-corruption during file-transfer.)\n");
         }
