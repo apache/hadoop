@@ -3,9 +3,14 @@ package org.apache.hadoop.ozone.client.rpc;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
+import org.apache.hadoop.hdds.scm.protocolPB.StorageContainerLocationProtocolClientSideTranslatorPB;
+import org.apache.hadoop.ozone.MiniOzoneCluster;
 import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.audit.AuditEventStatus;
 import org.apache.hadoop.ozone.audit.OMAction;
+import org.apache.hadoop.ozone.client.ObjectStore;
+import org.apache.hadoop.ozone.client.OzoneClient;
+import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
@@ -17,11 +22,14 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static org.apache.hadoop.ozone.OzoneAcl.AclScope.ACCESS;
 import static org.apache.hadoop.ozone.OzoneConfigKeys.OZONE_ACL_AUTHORIZER_CLASS;
@@ -37,9 +45,10 @@ import static org.junit.Assert.assertTrue;
  * This class is to test audit logs for xxxACL APIs of Ozone Client.
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class TestOzoneRpcClientForAclAuditLog extends
-    TestOzoneRpcClientAbstract {
+public class TestOzoneRpcClientForAclAuditLog {
 
+  static final Logger LOG =
+      LoggerFactory.getLogger(TestOzoneRpcClientForAclAuditLog.class);
   private static UserGroupInformation ugi;
   private static final OzoneAcl USER_ACL =
       new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
@@ -48,6 +57,13 @@ public class TestOzoneRpcClientForAclAuditLog extends
       new OzoneAcl(IAccessAuthorizer.ACLIdentityType.USER,
       "jane", IAccessAuthorizer.ACLType.ALL, ACCESS);
   private static List<OzoneAcl> aclListToAdd = new ArrayList<>();
+  private static MiniOzoneCluster cluster = null;
+  private static OzoneClient ozClient = null;
+  private static ObjectStore store = null;
+  private static StorageContainerLocationProtocolClientSideTranslatorPB
+      storageContainerLocationClient;
+  private static String scmId = UUID.randomUUID().toString();
+
 
   /**
    * Create a MiniOzoneCluster for testing.
@@ -70,11 +86,28 @@ public class TestOzoneRpcClientForAclAuditLog extends
     aclListToAdd.add(USER_ACL_2);
   }
 
+  private   /**
+   * Create a MiniOzoneCluster for testing.
+   * @param conf Configurations to start the cluster.
+   * @throws Exception
+   */
+  static void startCluster(OzoneConfiguration conf) throws Exception {
+    cluster = MiniOzoneCluster.newBuilder(conf)
+        .setNumDatanodes(3)
+        .setScmId(scmId)
+        .build();
+    cluster.waitForClusterToBeReady();
+    ozClient = OzoneClientFactory.getRpcClient(conf);
+    store = ozClient.getObjectStore();
+    storageContainerLocationClient =
+        cluster.getStorageContainerLocationClient();
+  }
+
   /**
    * Close OzoneClient and shutdown MiniOzoneCluster.
    */
   @AfterClass
-  public static void shutdown() throws IOException {
+  public static void teardown() throws IOException {
     shutdownCluster();
     File file = new File("audit.log");
     if (FileUtils.deleteQuietly(file)) {
@@ -82,6 +115,23 @@ public class TestOzoneRpcClientForAclAuditLog extends
           " has been deleted as all tests have completed.");
     } else {
       LOG.info("audit.log could not be deleted.");
+    }
+  }
+
+  /**
+   * Close OzoneClient and shutdown MiniOzoneCluster.
+   */
+  private static void shutdownCluster() throws IOException {
+    if(ozClient != null) {
+      ozClient.close();
+    }
+
+    if (storageContainerLocationClient != null) {
+      storageContainerLocationClient.close();
+    }
+
+    if (cluster != null) {
+      cluster.shutdown();
     }
   }
 
@@ -97,10 +147,10 @@ public class TestOzoneRpcClientForAclAuditLog extends
             .setAdmin(adminName)
             .setOwner(userName)
             .build();
-    getStore().createVolume(volumeName, createVolumeArgs);
+    store.createVolume(volumeName, createVolumeArgs);
     verifyLog(OMAction.CREATE_VOLUME.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
-    OzoneVolume retVolumeinfo = getStore().getVolume(volumeName);
+    OzoneVolume retVolumeinfo = store.getVolume(volumeName);
     verifyLog(OMAction.READ_VOLUME.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
     Assert.assertTrue(retVolumeinfo.getName().equalsIgnoreCase(volumeName));
@@ -112,23 +162,23 @@ public class TestOzoneRpcClientForAclAuditLog extends
         .build();
 
     //Testing getAcl
-    List<OzoneAcl> acls = getStore().getAcl(volObj);
+    List<OzoneAcl> acls = store.getAcl(volObj);
     verifyLog(OMAction.GET_ACL.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
     Assert.assertTrue(acls.size() > 0);
 
     //Testing addAcl
-    getStore().addAcl(volObj, USER_ACL);
+    store.addAcl(volObj, USER_ACL);
     verifyLog(OMAction.ADD_ACL.name(), volumeName, "johndoe",
         AuditEventStatus.SUCCESS.name());
 
     //Testing removeAcl
-    getStore().removeAcl(volObj, USER_ACL);
+    store.removeAcl(volObj, USER_ACL);
     verifyLog(OMAction.REMOVE_ACL.name(), volumeName, "johndoe",
         AuditEventStatus.SUCCESS.name());
 
     //Testing setAcl
-    getStore().setAcl(volObj, aclListToAdd);
+    store.setAcl(volObj, aclListToAdd);
     verifyLog(OMAction.SET_ACL.name(), volumeName, "johndoe", "jane",
         AuditEventStatus.SUCCESS.name());
 
@@ -146,7 +196,7 @@ public class TestOzoneRpcClientForAclAuditLog extends
             .setAdmin(adminName)
             .setOwner(userName)
             .build();
-    getStore().createVolume(volumeName, createVolumeArgs);
+    store.createVolume(volumeName, createVolumeArgs);
     verifyLog(OMAction.CREATE_VOLUME.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
 
@@ -159,28 +209,28 @@ public class TestOzoneRpcClientForAclAuditLog extends
     // xxxAcl will fail as current ugi user doesn't have the required access
     // for volume
     try{
-      List<OzoneAcl> acls = getStore().getAcl(volObj);
+      List<OzoneAcl> acls = store.getAcl(volObj);
     } catch (Exception ex) {
       verifyLog(OMAction.GET_ACL.name(), volumeName,
           AuditEventStatus.FAILURE.name());
     }
 
     try{
-      getStore().addAcl(volObj, USER_ACL);
+      store.addAcl(volObj, USER_ACL);
     } catch (Exception ex) {
       verifyLog(OMAction.ADD_ACL.name(), volumeName,
           AuditEventStatus.FAILURE.name());
     }
 
     try{
-      getStore().removeAcl(volObj, USER_ACL);
+      store.removeAcl(volObj, USER_ACL);
     } catch (Exception ex) {
       verifyLog(OMAction.REMOVE_ACL.name(), volumeName,
           AuditEventStatus.FAILURE.name());
     }
 
     try{
-      getStore().setAcl(volObj, aclListToAdd);
+      store.setAcl(volObj, aclListToAdd);
     } catch (Exception ex) {
       verifyLog(OMAction.SET_ACL.name(), volumeName, "johndoe", "jane",
           AuditEventStatus.FAILURE.name());
@@ -214,209 +264,5 @@ public class TestOzoneRpcClientForAclAuditLog extends
     lines.clear();
     FileUtils.writeLines(file, lines, false);
   }
-
-
-  //Overriding all tests from base class as empty methods to avoid it from
-  // getting executed. This was done as those tests don't rely on ACL enabled
-  // with Native Authorizer. The current test class uses ACLs with Native
-  // Authorizer and will thus cause the base class tests to fail.
-
-  @Override
-  public void testOMClientProxyProvider(){}
-
-  @Override
-  public void testSetVolumeQuota(){}
-
-  @Override
-  public void testDeleteVolume(){}
-
-  @Override
-  public void testCreateVolumeWithMetadata(){}
-
-  @Override
-  public void testCreateBucketWithMetadata(){}
-
-  @Override
-  public void testCreateBucket(){}
-
-  @Override
-  public void testCreateS3Bucket(){}
-
-  @Override
-  public void testCreateSecureS3Bucket(){}
-
-  @Override
-  public void testListS3Buckets(){}
-
-  @Override
-  public void testListS3BucketsFail(){}
-
-  @Override
-  public void testDeleteS3Bucket(){}
-
-  @Override
-  public void testDeleteS3NonExistingBucket(){}
-
-  @Override
-  public void testCreateS3BucketMapping(){}
-
-  @Override
-  public void testCreateBucketWithVersioning(){}
-
-  @Override
-  public void testCreateBucketWithStorageType(){}
-
-  @Override
-  public void testCreateBucketWithAcls(){}
-
-  @Override
-  public void testCreateBucketWithAllArgument(){}
-
-  @Override
-  public void testInvalidBucketCreation(){}
-
-  @Override
-  public void testAddBucketAcl(){}
-
-  @Override
-  public void testRemoveBucketAcl(){}
-
-  @Override
-  public void testSetBucketVersioning(){}
-
-  @Override
-  public void testSetBucketStorageType(){}
-
-  @Override
-  public void testDeleteBucket(){}
-
-  @Override
-  public void testPutKey(){}
-
-  @Override
-  public void testValidateBlockLengthWithCommitKey(){}
-
-  @Override
-  public void testGetKeyAndFileWithNetworkTopology(){}
-
-  @Override
-  public void testPutKeyRatisOneNode(){}
-
-  @Override
-  public void testPutKeyRatisThreeNodes(){}
-
-  @Override
-  public void testPutKeyRatisThreeNodesParallel(){}
-
-  @Override
-  public void testReadKeyWithVerifyChecksumFlagEnable(){}
-
-  @Override
-  public void testReadKeyWithVerifyChecksumFlagDisable(){}
-
-  @Override
-  public void testGetKeyDetails(){}
-
-  @Override
-  public void testReadKeyWithCorruptedData(){}
-
-  @Override
-  public void testReadKeyWithCorruptedDataWithMutiNodes(){}
-
-  @Override
-  public void testDeleteKey(){}
-
-  @Override
-  public void testRenameKey(){}
-
-  @Override
-  public void testListVolume(){}
-
-  @Override
-  public void testListBucket(){}
-
-  @Override
-  public void testListBucketsOnEmptyVolume(){}
-
-  @Override
-  public void testListKey(){}
-
-  @Override
-  public void testListKeyOnEmptyBucket(){}
-
-  @Override
-  public void testInitiateMultipartUploadWithReplicationInformationSet(){}
-
-  @Override
-  public void testInitiateMultipartUploadWithDefaultReplication(){}
-
-  @Override
-  public void testUploadPartWithNoOverride(){}
-
-  @Override
-  public void testUploadPartOverrideWithStandAlone(){}
-
-  @Override
-  public void testUploadPartOverrideWithRatis(){}
-
-  @Override
-  public void testNoSuchUploadError(){}
-
-  @Override
-  public void testMultipartUpload(){}
-
-  @Override
-  public void testMultipartUploadOverride(){}
-
-  @Override
-  public void testMultipartUploadWithPartsLessThanMinSize(){}
-
-  @Override
-  public void testMultipartUploadWithPartsMisMatchWithListSizeDifferent(){}
-
-  @Override
-  public void testMultipartUploadWithPartsMisMatchWithIncorrectPartName(){}
-
-  @Override
-  public void testMultipartUploadWithMissingParts(){}
-
-  @Override
-  public void testAbortUploadFail(){}
-
-  @Override
-  public void testAbortUploadSuccessWithOutAnyParts(){}
-
-  @Override
-  public void testAbortUploadSuccessWithParts(){}
-
-  @Override
-  public void testListMultipartUploadParts(){}
-
-  @Override
-  public void testListMultipartUploadPartsWithContinuation(){}
-
-  @Override
-  public void testListPartsInvalidPartMarker(){}
-
-  @Override
-  public void testListPartsInvalidMaxParts(){}
-
-  @Override
-  public void testListPartsWithPartMarkerGreaterThanPartCount(){}
-
-  @Override
-  public void testListPartsWithInvalidUploadID(){}
-
-  @Override
-  public void testNativeAclsForVolume(){}
-
-  @Override
-  public void testNativeAclsForBucket(){}
-
-  @Override
-  public void testNativeAclsForKey(){}
-
-  @Override
-  public void testNativeAclsForPrefix(){}
 
 }

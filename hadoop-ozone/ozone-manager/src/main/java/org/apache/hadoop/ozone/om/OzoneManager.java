@@ -30,6 +30,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.KeyPair;
 import java.security.cert.CertificateException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -2989,6 +2990,22 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
     }
   }
 
+  private void auditAcl(OzoneObj ozoneObj, List<OzoneAcl> ozoneAcl,
+      OMAction omAction, boolean auditSuccess, Exception ex) {
+    Map<String, String> auditMap = ozoneObj.toAuditMap();
+    if(ozoneAcl != null) {
+      auditMap.put(OzoneConsts.ACL, ozoneAcl.toString());
+    }
+
+    if(auditSuccess) {
+      AUDIT.logWriteSuccess(
+          buildAuditMessageForSuccess(omAction, auditMap));
+    } else {
+      AUDIT.logWriteFailure(
+          buildAuditMessageForFailure(omAction, auditMap, ex));
+    }
+  }
+
   /**
    * Add acl for Ozone object. Return true if acl is added successfully else
    * false.
@@ -2999,8 +3016,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public boolean addAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
-    Map<String, String> auditMap = obj.toAuditMap();
-    auditMap.put(OzoneConsts.ACL, acl.toString());
     boolean auditSuccess = true;
 
     try{
@@ -3023,13 +3038,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      AUDIT.logWriteFailure(
-          buildAuditMessageForFailure(OMAction.ADD_ACL, auditMap, ex));
+      auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL,
+          auditSuccess, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        AUDIT.logWriteSuccess(
-            buildAuditMessageForSuccess(OMAction.ADD_ACL, auditMap));
+        auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL,
+            auditSuccess, null);
       }
     }
   }
@@ -3044,8 +3059,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public boolean removeAcl(OzoneObj obj, OzoneAcl acl) throws IOException {
-    Map<String, String> auditMap = obj.toAuditMap();
-    auditMap.put(OzoneConsts.ACLS, acl.toString());
     boolean auditSuccess = true;
 
     try{
@@ -3069,13 +3082,12 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      AUDIT.logWriteFailure(
-          buildAuditMessageForFailure(OMAction.REMOVE_ACL, auditMap, ex));
+      auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL, auditSuccess, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        AUDIT.logWriteSuccess(
-            buildAuditMessageForSuccess(OMAction.REMOVE_ACL, auditMap));
+        auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL,
+            auditSuccess, null);
       }
     }
   }
@@ -3090,8 +3102,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public boolean setAcl(OzoneObj obj, List<OzoneAcl> acls) throws IOException {
-    Map<String, String> auditMap = obj.toAuditMap();
-    auditMap.put(OzoneConsts.ACLS, acls.toString());
     boolean auditSuccess = true;
 
     try{
@@ -3114,13 +3124,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      AUDIT.logWriteFailure(
-          buildAuditMessageForFailure(OMAction.SET_ACL, auditMap, ex));
+      auditAcl(obj, acls, OMAction.SET_ACL, auditSuccess, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        AUDIT.logWriteSuccess(
-            buildAuditMessageForSuccess(OMAction.SET_ACL, auditMap));
+        auditAcl(obj, acls, OMAction.SET_ACL, auditSuccess, null);
       }
     }
   }
@@ -3133,7 +3141,6 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
    */
   @Override
   public List<OzoneAcl> getAcl(OzoneObj obj) throws IOException {
-    Map<String, String> auditMap = obj.toAuditMap();
     boolean auditSuccess = true;
 
     try{
@@ -3157,13 +3164,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      AUDIT.logReadFailure(
-          buildAuditMessageForFailure(OMAction.GET_ACL, auditMap, ex));
+      auditAcl(obj, null, OMAction.GET_ACL, auditSuccess, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        AUDIT.logReadSuccess(
-            buildAuditMessageForSuccess(OMAction.GET_ACL, auditMap));
+        auditAcl(obj, null, OMAction.GET_ACL, auditSuccess, null);
       }
     }
   }
