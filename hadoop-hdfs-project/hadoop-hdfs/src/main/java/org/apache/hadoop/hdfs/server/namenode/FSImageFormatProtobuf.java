@@ -368,10 +368,7 @@ public final class FSImageFormatProtobuf {
        * a particular step to be started for once.
        */
       Step currentStep = null;
-      boolean loadInParallel =
-          conf.getBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY,
-              DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT);
-      // TODO - check for compression and if enabled disable parallel
+      boolean loadInParallel = enableParallelSaveAndLoad(conf);
 
       ExecutorService executorService = null;
       ArrayList<FileSummary.Section> subSections =
@@ -556,6 +553,25 @@ public final class FSImageFormatProtobuf {
     }
   }
 
+  private static boolean enableParallelSaveAndLoad(Configuration conf) {
+    boolean loadInParallel =
+        conf.getBoolean(DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY,
+            DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT);
+    boolean compressionEnabled = conf.getBoolean(
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
+        DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
+
+    if (loadInParallel) {
+      if (compressionEnabled) {
+        LOG.warn("Parallel Image loading and saving is not supported when {}" +
+                " is set to true. Parallel will be disabled.",
+            DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY);
+        loadInParallel = false;
+      }
+    }
+    return loadInParallel;
+  }
+
   public static final class Saver {
     public static final int CHECK_CANCEL_INTERVAL = 4096;
     private boolean writeSubSections = false;
@@ -690,30 +706,18 @@ public final class FSImageFormatProtobuf {
     }
 
     private void enableSubSectionsIfRequired() {
-      boolean parallelEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_KEY,
-          DFSConfigKeys.DFS_IMAGE_PARALLEL_LOAD_DEFAULT);
+      boolean parallelEnabled = enableParallelSaveAndLoad(conf);
       int inodeThreshold = conf.getInt(
           DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY,
           DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_DEFAULT);
       int targetSections = conf.getInt(
           DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY,
           DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_DEFAULT);
-      boolean compressionEnabled = conf.getBoolean(
-          DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY,
-          DFSConfigKeys.DFS_IMAGE_COMPRESS_DEFAULT);
 
       if (parallelEnabled) {
-        if (compressionEnabled) {
-          LOG.warn("Parallel Image loading is not supported when {} is set to" +
-              " true. Parallel loading will be disabled.",
-              DFSConfigKeys.DFS_IMAGE_COMPRESS_KEY);
-          writeSubSections = false;
-          return;
-        }
         if (targetSections <= 0) {
           LOG.warn("{} is set to {}. It must be greater than zero. Setting to" +
-              "default of {}",
+              " default of {}",
               DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_KEY,
               targetSections,
               DFSConfigKeys.DFS_IMAGE_PARALLEL_TARGET_SECTIONS_DEFAULT);

@@ -1394,6 +1394,9 @@
         will be used for an image previously created with sub-sections.
         If the image contains sub-sections and this is set to false,
         parallel loading will not be used.
+        Parallel loading is not compatible with image compression,
+        so if dfs.image.compress is set to true this setting will be
+        ignored and no parallel loading will occur.
   </description>
 </property>
 
