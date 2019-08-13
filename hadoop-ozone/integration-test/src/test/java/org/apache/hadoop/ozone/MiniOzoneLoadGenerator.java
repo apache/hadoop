@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class MiniOzoneLoadGenerator {
 
-  static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(MiniOzoneLoadGenerator.class);
 
   private static String keyNameDelimiter = "_";
@@ -135,10 +135,12 @@ public class MiniOzoneLoadGenerator {
     int bufferCapacity = buffer.capacity();
 
     String keyName = getKeyName(keyIndex, threadName);
+    LOG.trace("LOADGEN: Writing key {}", keyName);
     try (OzoneOutputStream stream = bucket.createKey(keyName,
         bufferCapacity, ReplicationType.RATIS, ReplicationFactor.THREE,
         new HashMap<>())) {
       stream.write(buffer.array());
+      LOG.trace("LOADGEN: Written key {}", keyName);
     } catch (Throwable t) {
       LOG.error("LOADGEN: Create key:{} failed with exception, skipping",
           keyName, t);
@@ -149,6 +151,8 @@ public class MiniOzoneLoadGenerator {
   }
 
   private void readData(OzoneBucket bucket, String keyName) throws Exception {
+    LOG.trace("LOADGEN: Reading key {}", keyName);
+
     int index = Integer.valueOf(keyName.split(keyNameDelimiter)[1]);
 
 
@@ -169,6 +173,7 @@ public class MiniOzoneLoadGenerator {
         throw new IOException("Read mismatch, key:" + keyName +
             " read data does not match the written data");
       }
+      LOG.trace("LOADGEN: Read key {}", keyName);
     } catch (Throwable t) {
       LOG.error("LOADGEN: Read key:{} failed with exception", keyName, t);
       throw t;
@@ -176,8 +181,10 @@ public class MiniOzoneLoadGenerator {
   }
 
   private void deleteKey(OzoneBucket bucket, String keyName) throws Exception {
+    LOG.trace("LOADGEN: Deleting key {}", keyName);
     try {
       bucket.deleteKey(keyName);
+      LOG.trace("LOADGEN: Deleted key {}", keyName);
     } catch (Throwable t) {
       LOG.error("LOADGEN: Unable to delete key:{}", keyName, t);
       throw t;
