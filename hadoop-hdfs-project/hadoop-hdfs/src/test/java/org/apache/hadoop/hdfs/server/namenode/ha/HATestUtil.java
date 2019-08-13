@@ -36,7 +36,6 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.LongAccumulator;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
