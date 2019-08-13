@@ -43,7 +43,7 @@ public class OMUpdateEventBatch {
     if (events.isEmpty()) {
       return -1;
     } else {
-      return events.get(events.size() - 1).getLastSequenceNumber();
+      return events.get(events.size() - 1).getSequenceNumber();
     }
   }
 

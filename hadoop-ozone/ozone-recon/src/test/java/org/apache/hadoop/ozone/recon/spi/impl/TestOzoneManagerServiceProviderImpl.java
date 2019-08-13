@@ -38,7 +38,6 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.Field;
 import java.nio.file.Paths;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -72,6 +71,7 @@ public class TestOzoneManagerServiceProviderImpl extends
     AbstractOMMetadataManagerTest {
 
   private OzoneConfiguration configuration;
+  private OzoneManagerProtocol ozoneManagerProtocol;
 
   @Before
   public void setUp() throws Exception {
@@ -81,6 +81,7 @@ public class TestOzoneManagerServiceProviderImpl extends
     configuration.set(OZONE_RECON_DB_DIR,
         temporaryFolder.newFolder().getAbsolutePath());
     configuration.set("ozone.om.address", "localhost:9862");
+    ozoneManagerProtocol = getMockOzoneManagerClient(new DBUpdatesWrapper());
   }
 
   @Test
@@ -105,7 +106,8 @@ public class TestOzoneManagerServiceProviderImpl extends
 
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration,
-            reconOMMetadataManager, reconTaskController, reconUtilsMock);
+            reconOMMetadataManager, reconTaskController, reconUtilsMock,
+            ozoneManagerProtocol);
 
     Assert.assertNull(reconOMMetadataManager.getKeyTable()
         .get("/sampleVol/bucketOne/key_one"));
@@ -156,7 +158,8 @@ public class TestOzoneManagerServiceProviderImpl extends
     ReconTaskController reconTaskController = getMockTaskController();
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration,
-            reconOMMetadataManager, reconTaskController, reconUtilsMock);
+            reconOMMetadataManager, reconTaskController, reconUtilsMock,
+            ozoneManagerProtocol);
 
     DBCheckpoint checkpoint = ozoneManagerServiceProvider
         .getOzoneManagerDBSnapshot();
@@ -194,13 +197,8 @@ public class TestOzoneManagerServiceProviderImpl extends
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration,
             getTestMetadataManager(omMetadataManager),
-            getMockTaskController(), new ReconUtils());
-    OzoneManagerProtocol ozoneManagerProtocolMock =
-        mock(OzoneManagerProtocol.class);
-    when(ozoneManagerProtocolMock.getDBUpdates(any(OzoneManagerProtocolProtos
-        .DBUpdatesRequest.class))).thenReturn(dbUpdatesWrapper);
-    injectOzoneServiceProviderField(ozoneManagerServiceProvider,
-        ozoneManagerProtocolMock, "ozoneManagerClient");
+            getMockTaskController(), new ReconUtils(),
+            getMockOzoneManagerClient(dbUpdatesWrapper));
 
     OMDBUpdatesHandler updatesHandler =
         new OMDBUpdatesHandler(omMetadataManager);
@@ -244,7 +242,7 @@ public class TestOzoneManagerServiceProviderImpl extends
 
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration, omMetadataManager,
-            reconTaskControllerMock, new ReconUtils());
+            reconTaskControllerMock, new ReconUtils(), ozoneManagerProtocol);
 
     //Should trigger full snapshot request.
     ozoneManagerServiceProvider.syncDataFromOM();
@@ -278,13 +276,7 @@ public class TestOzoneManagerServiceProviderImpl extends
 
     OzoneManagerServiceProviderImpl ozoneManagerServiceProvider =
         new OzoneManagerServiceProviderImpl(configuration, omMetadataManager,
-            reconTaskControllerMock, new ReconUtils());
-    OzoneManagerProtocol ozoneManagerProtocolMock =
-        mock(OzoneManagerProtocol.class);
-    when(ozoneManagerProtocolMock.getDBUpdates(any(OzoneManagerProtocolProtos
-        .DBUpdatesRequest.class))).thenReturn(new DBUpdatesWrapper());
-    injectOzoneServiceProviderField(ozoneManagerServiceProvider,
-        ozoneManagerProtocolMock, "ozoneManagerClient");
+            reconTaskControllerMock, new ReconUtils(), ozoneManagerProtocol);
 
     // Should trigger delta updates.
     ozoneManagerServiceProvider.syncDataFromOM();
@@ -313,14 +305,13 @@ public class TestOzoneManagerServiceProviderImpl extends
     return reconUtilsMock;
   }
 
-  private void injectOzoneServiceProviderField(
-      OzoneManagerServiceProviderImpl ozoneManagerServiceProvider,
-      Object fieldValue, String fieldName)
-      throws NoSuchFieldException, IllegalAccessException {
-    Field f1 = ozoneManagerServiceProvider.getClass()
-        .getDeclaredField(fieldName);
-    f1.setAccessible(true);
-    f1.set(ozoneManagerServiceProvider, fieldValue);
+  private OzoneManagerProtocol getMockOzoneManagerClient(
+      DBUpdatesWrapper dbUpdatesWrapper) throws IOException {
+    OzoneManagerProtocol ozoneManagerProtocolMock =
+        mock(OzoneManagerProtocol.class);
+    when(ozoneManagerProtocolMock.getDBUpdates(any(OzoneManagerProtocolProtos
+        .DBUpdatesRequest.class))).thenReturn(dbUpdatesWrapper);
+    return ozoneManagerProtocolMock;
   }
 
 }

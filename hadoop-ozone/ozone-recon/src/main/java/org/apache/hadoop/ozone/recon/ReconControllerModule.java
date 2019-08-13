@@ -29,9 +29,13 @@ import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQ
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQL_MAX_IDLE_CONNECTION_AGE;
 import static org.apache.hadoop.ozone.recon.ReconServerConfigKeys.OZONE_RECON_SQL_MAX_IDLE_CONNECTION_TEST_STMT;
 
+import java.io.IOException;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
+import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
+import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.recon.persistence.DataSourceConfiguration;
 import org.apache.hadoop.ozone.recon.persistence.JooqPersistenceModule;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
@@ -45,7 +49,11 @@ import org.apache.hadoop.ozone.recon.tasks.ContainerKeyMapperTask;
 import org.apache.hadoop.ozone.recon.tasks.FileSizeCountTask;
 import org.apache.hadoop.ozone.recon.tasks.ReconTaskController;
 import org.apache.hadoop.ozone.recon.tasks.ReconTaskControllerImpl;
+import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.db.DBStore;
+import org.apache.ratis.protocol.ClientId;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -55,6 +63,9 @@ import com.google.inject.Singleton;
  * Guice controller that defines concrete bindings.
  */
 public class ReconControllerModule extends AbstractModule {
+  private static final Logger LOG =
+      LoggerFactory.getLogger(ReconControllerModule.class);
+
   @Override
   protected void configure() {
     bind(Configuration.class).toProvider(ConfigurationProvider.class);
@@ -78,6 +89,22 @@ public class ReconControllerModule extends AbstractModule {
         .to(ReconTaskControllerImpl.class).in(Singleton.class);
     bind(ContainerKeyMapperTask.class);
     bind(FileSizeCountTask.class);
+  }
+
+  @Provides
+  OzoneManagerProtocol getOzoneManagerProtocol(
+      final OzoneConfiguration ozoneConfiguration) {
+    OzoneManagerProtocol ozoneManagerClient = null;
+    try {
+      ClientId clientId = ClientId.randomId();
+      UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+      ozoneManagerClient = new
+          OzoneManagerProtocolClientSideTranslatorPB(
+          ozoneConfiguration, clientId.toString(), ugi);
+    } catch (IOException ioEx) {
+      LOG.error("Error in provisioning OzoneManagerProtocol ", ioEx);
+    }
+    return ozoneManagerClient;
   }
 
   @Provides

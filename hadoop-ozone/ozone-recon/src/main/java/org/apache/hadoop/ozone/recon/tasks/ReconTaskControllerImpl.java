@@ -213,6 +213,11 @@ public class ReconTaskControllerImpl implements ReconTaskController {
     return reconTaskStatusDao;
   }
 
+  @Override
+  public void stop() {
+    this.executorService.shutdownNow();
+  }
+
   /**
    * Wait on results of all tasks.
    * @param results Set of Futures.

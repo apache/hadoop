@@ -91,7 +91,6 @@ public class FileSizeCountTask implements ReconDBUpdateTask {
    */
   @Override
   public Pair<String, Boolean> reprocess(OMMetadataManager omMetadataManager) {
-    LOG.info("Starting a 'reprocess' run of FileSizeCountTask.");
     Table<String, OmKeyInfo> omKeyInfoTable = omMetadataManager.getKeyTable();
     try (TableIterator<String, ? extends Table.KeyValue<String, OmKeyInfo>>
         keyIter = omKeyInfoTable.iterator()) {
@@ -143,7 +142,6 @@ public class FileSizeCountTask implements ReconDBUpdateTask {
    */
   @Override
   public Pair<String, Boolean> process(OMUpdateEventBatch events) {
-    LOG.info("Starting a 'process' run of FileSizeCountTask.");
     Iterator<OMDBUpdateEvent> eventIterator = events.getIterator();
 
     //update array with file size count from DB
@@ -244,9 +242,9 @@ public class FileSizeCountTask implements ReconDBUpdateTask {
         //decrement only if it had files before, default DB value is 0
         upperBoundCount[binIndex]--;
       } else {
-        LOG.debug("Cannot decrement count. Default value is 0 (zero).");
-        throw new IOException("Cannot decrement count. "
-            + "Default value is 0 (zero).");
+        LOG.warn("Unexpected error while updating bin count. Found 0 count " +
+            "for index : " + binIndex + " while processing DELETE event for "
+            + omKeyInfo.getKeyName());
       }
     }
   }

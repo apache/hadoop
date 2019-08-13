@@ -31,6 +31,11 @@ public interface OzoneManagerServiceProvider {
   void start();
 
   /**
+   * Stop the OM sync data.
+   */
+  void stop();
+
+  /**
    * Return instance of OM Metadata manager.
    * @return OM metadata manager instance.
    */

@@ -56,5 +56,14 @@ public interface ReconTaskController {
    */
   Map<String, ReconDBUpdateTask> getRegisteredTasks();
 
+  /**
+   * Get instance of ReconTaskStatusDao.
+   * @return instance of ReconTaskStatusDao
+   */
   ReconTaskStatusDao getReconTaskStatusDao();
+
+  /**
+   * Stop the tasks. Start API is not needed since it is implicit.
+   */
+  void stop();
 }

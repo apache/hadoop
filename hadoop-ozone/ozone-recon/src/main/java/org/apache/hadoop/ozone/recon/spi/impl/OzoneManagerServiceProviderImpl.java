@@ -53,7 +53,6 @@ import org.apache.hadoop.http.HttpConfig;
 import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.protocol.OzoneManagerProtocol;
-import org.apache.hadoop.ozone.om.protocolPB.OzoneManagerProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.DBUpdatesRequest;
 import org.apache.hadoop.ozone.recon.ReconUtils;
 import org.apache.hadoop.ozone.recon.recovery.ReconOMMetadataManager;
@@ -61,7 +60,6 @@ import org.apache.hadoop.ozone.recon.spi.OzoneManagerServiceProvider;
 import org.apache.hadoop.ozone.recon.tasks.OMDBUpdatesHandler;
 import org.apache.hadoop.ozone.recon.tasks.OMUpdateEventBatch;
 import org.apache.hadoop.ozone.recon.tasks.ReconTaskController;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.utils.db.DBCheckpoint;
 import org.apache.hadoop.utils.db.DBUpdatesWrapper;
 import org.apache.hadoop.utils.db.RDBBatchOperation;
@@ -116,7 +114,8 @@ public class OzoneManagerServiceProviderImpl
       OzoneConfiguration configuration,
       ReconOMMetadataManager omMetadataManager,
       ReconTaskController reconTaskController,
-      ReconUtils reconUtils) throws IOException {
+      ReconUtils reconUtils,
+      OzoneManagerProtocol ozoneManagerClient) throws IOException {
 
     String ozoneManagerHttpAddress = configuration.get(OMConfigKeys
         .OZONE_OM_HTTP_ADDRESS_KEY);
@@ -168,10 +167,7 @@ public class OzoneManagerServiceProviderImpl
     this.omMetadataManager = omMetadataManager;
     this.reconTaskController = reconTaskController;
     this.reconTaskStatusDao = reconTaskController.getReconTaskStatusDao();
-
-    UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    this.ozoneManagerClient = new OzoneManagerProtocolClientSideTranslatorPB(
-        configuration, clientId.toString(), ugi);
+    this.ozoneManagerClient = ozoneManagerClient;
     this.configuration = configuration;
   }
 
@@ -194,6 +190,12 @@ public class OzoneManagerServiceProviderImpl
         initialDelay,
         interval,
         TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public void stop() {
+    reconTaskController.stop();
+    scheduler.shutdownNow();
   }
 
   /**

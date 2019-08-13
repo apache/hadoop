@@ -30,18 +30,18 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
   private final String table;
   private final KEY updatedKey;
   private final VALUE updatedValue;
-  private final long lastSequenceNumber;
+  private final long sequenceNumber;
 
   private OMDBUpdateEvent(OMDBUpdateAction action,
                           String table,
                           KEY updatedKey,
                           VALUE updatedValue,
-                          long lastSequenceNumber) {
+                          long sequenceNumber) {
     this.action = action;
     this.table = table;
     this.updatedKey = updatedKey;
     this.updatedValue = updatedValue;
-    this.lastSequenceNumber = lastSequenceNumber;
+    this.sequenceNumber = sequenceNumber;
   }
 
   public OMDBUpdateAction getAction() {
@@ -60,8 +60,8 @@ public final class OMDBUpdateEvent<KEY, VALUE> {
     return updatedValue;
   }
 
-  public long getLastSequenceNumber() {
-    return lastSequenceNumber;
+  public long getSequenceNumber() {
+    return sequenceNumber;
   }
 
   /**

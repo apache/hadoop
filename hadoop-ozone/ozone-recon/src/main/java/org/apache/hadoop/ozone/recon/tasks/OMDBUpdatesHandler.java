@@ -105,7 +105,7 @@ public class OMDBUpdatesHandler extends WriteBatch.Handler {
 
       builder.setAction(action);
       OMDBUpdateEvent event = builder.build();
-      LOG.info("Generated OM update Event for table : " + event.getTable()
+      LOG.debug("Generated OM update Event for table : " + event.getTable()
           + ", Key = " + event.getKey() + ", action = " + event.getAction());
       // Temporarily adding to an event buffer for testing. In subsequent JIRAs,
       // a Recon side class will be implemented that requests delta updates
