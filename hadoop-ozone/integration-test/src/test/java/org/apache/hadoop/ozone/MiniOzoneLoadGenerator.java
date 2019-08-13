@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -133,7 +134,7 @@ public class MiniOzoneLoadGenerator {
     ByteBuffer buffer = buffers.get(keyIndex % numBuffers);
     int bufferCapacity = buffer.capacity();
 
-    String keyName = threadName + keyNameDelimiter + keyIndex;
+    String keyName = getKeyName(keyIndex, threadName);
     try (OzoneOutputStream stream = bucket.createKey(keyName,
         bufferCapacity, ReplicationType.RATIS, ReplicationFactor.THREE,
         new HashMap<>())) {
@@ -183,10 +184,11 @@ public class MiniOzoneLoadGenerator {
     }
   }
 
-  private String getKeyToRead() {
+  private Optional<Integer> randomKeyToRead() {
     int currentIndex = agedFileWrittenIndex.get();
-    return currentIndex != 0 ?
-        String.valueOf(RandomUtils.nextInt(0, currentIndex)): null;
+    return currentIndex != 0
+      ? Optional.of(RandomUtils.nextInt(0, currentIndex))
+      : Optional.empty();
   }
 
   private void startAgedFilesLoad(long runTimeMillis) {
@@ -204,8 +206,9 @@ public class MiniOzoneLoadGenerator {
           keyName = writeData(agedFileWrittenIndex.incrementAndGet(),
               agedLoadBucket, threadName);
         } else {
-          keyName = getKeyToRead();
-          if (keyName != null) {
+          Optional<Integer> index = randomKeyToRead();
+          if (index.isPresent()) {
+            keyName = getKeyName(index.get(), threadName);
             readData(agedLoadBucket, keyName);
           }
         }
@@ -252,5 +255,9 @@ public class MiniOzoneLoadGenerator {
     } catch (Exception e) {
       LOG.error("error while closing ", e);
     }
+  }
+
+  private static String getKeyName(int keyIndex, String threadName) {
+    return threadName + keyNameDelimiter + keyIndex;
   }
 }
