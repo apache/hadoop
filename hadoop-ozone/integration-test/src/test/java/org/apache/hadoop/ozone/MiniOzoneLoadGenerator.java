@@ -114,7 +114,7 @@ public class MiniOzoneLoadGenerator {
         int index = RandomUtils.nextInt();
         String keyName = writeData(index, bucket, threadName);
 
-        readData(bucket, keyName);
+        readData(bucket, keyName, index);
 
         deleteKey(bucket, keyName);
       } catch (Exception e) {
@@ -150,11 +150,9 @@ public class MiniOzoneLoadGenerator {
     return keyName;
   }
 
-  private void readData(OzoneBucket bucket, String keyName) throws Exception {
+  private void readData(OzoneBucket bucket, String keyName, int index)
+      throws Exception {
     LOG.trace("LOADGEN: Reading key {}", keyName);
-
-    int index = Integer.valueOf(keyName.split(keyNameDelimiter)[1]);
-
 
     ByteBuffer buffer = buffers.get(index % numBuffers);
     int bufferCapacity = buffer.capacity();
@@ -216,7 +214,7 @@ public class MiniOzoneLoadGenerator {
           Optional<Integer> index = randomKeyToRead();
           if (index.isPresent()) {
             keyName = getKeyName(index.get(), threadName);
-            readData(agedLoadBucket, keyName);
+            readData(agedLoadBucket, keyName, index.get());
           }
         }
       } catch (Throwable t) {
