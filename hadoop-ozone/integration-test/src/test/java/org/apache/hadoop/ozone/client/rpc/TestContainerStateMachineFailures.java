@@ -25,10 +25,10 @@ import org.apache.hadoop.hdds.protocol.datanode.proto.ContainerProtos;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos;
 import org.apache.hadoop.hdds.scm.XceiverClientManager;
 import org.apache.hadoop.hdds.scm.XceiverClientSpi;
-import org.apache.hadoop.hdds.scm.container.common.helpers.StorageContainerException;
+import org.apache.hadoop.hdds.scm.client.HddsClientUtils;
 import org.apache.hadoop.hdds.scm.pipeline.Pipeline;
-import org.apache.hadoop.hdds.scm.pipeline.PipelineNotFoundException;
 import org.apache.hadoop.ozone.MiniOzoneCluster;
+import org.apache.hadoop.ozone.OzoneConfigKeys;
 import org.apache.hadoop.ozone.OzoneConsts;
 import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
@@ -36,17 +36,20 @@ import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneKeyDetails;
 import org.apache.hadoop.ozone.client.io.KeyOutputStream;
 import org.apache.hadoop.ozone.client.io.OzoneOutputStream;
+import org.apache.hadoop.ozone.container.ContainerTestHelper;
 import org.apache.hadoop.ozone.container.common.impl.ContainerData;
 import org.apache.hadoop.ozone.container.common.impl.ContainerDataYaml;
 import org.apache.hadoop.ozone.container.common.impl.HddsDispatcher;
-import org.apache.hadoop.ozone.container.common.transport.server.ratis.XceiverServerRatis;
+import org.apache.hadoop.ozone.container.common.transport.server.ratis.ContainerStateMachine;
 import org.apache.hadoop.ozone.container.keyvalue.KeyValueContainerData;
 import org.apache.hadoop.ozone.container.ozoneimpl.OzoneContainer;
 import org.apache.hadoop.ozone.om.helpers.OmKeyArgs;
 import org.apache.hadoop.ozone.om.helpers.OmKeyLocationInfo;
 import org.apache.hadoop.test.GenericTestUtils;
+import org.apache.ratis.protocol.RaftRetryFailureException;
 import org.apache.ratis.protocol.StateMachineException;
-import org.apache.ratis.util.LifeCycle;
+import org.apache.ratis.server.storage.FileInfo;
+import org.apache.ratis.statemachine.impl.SimpleStateMachineStorage;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -54,6 +57,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -110,6 +114,7 @@ public class TestContainerStateMachineFailures {
     conf.setTimeDuration(OZONE_SCM_PIPELINE_DESTROY_TIMEOUT, 10,
         TimeUnit.SECONDS);
     conf.setQuietMode(false);
+    conf.setLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY , 1);
     cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).setHbInterval(200)
             .build();
@@ -281,7 +286,7 @@ public class TestContainerStateMachineFailures {
   }
 
   @Test
-  public void testAppyTransactionFailure() throws Exception {
+  public void testApplyTransactionFailure() throws Exception {
     OzoneOutputStream key =
         objectStore.getVolume(volumeName).getBucket(bucketName)
             .createKey("ratis", 1024, ReplicationType.RATIS,
@@ -310,13 +315,22 @@ public class TestContainerStateMachineFailures {
     KeyValueContainerData keyValueContainerData =
         (KeyValueContainerData) containerData;
     key.close();
-
+    ContainerStateMachine stateMachine =
+        (ContainerStateMachine)ContainerTestHelper.getStateMachine(cluster);
+    SimpleStateMachineStorage storage =
+        (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
+    Path path = storage.findLatestSnapshot().getFile().getPath();
+    // Since the snapshot threshold is set to 1, since there are
+    // applyTransactions, we should see snapshots
+    Assert.assertTrue(path.getParent().toFile().listFiles().length > 0);
+    FileInfo snapshot = storage.findLatestSnapshot().getFile();
+    Assert.assertNotNull(snapshot);
     long containerID = omKeyLocationInfo.getContainerID();
     // delete the container db file
     FileUtil.fullyDelete(new File(keyValueContainerData.getContainerPath()));
     Pipeline pipeline = cluster.getStorageContainerLocationClient()
         .getContainerWithPipeline(containerID).getPipeline();
-    XceiverClientSpi client = xceiverClientManager.acquireClient(pipeline);
+    XceiverClientSpi xceiverClient = xceiverClientManager.acquireClient(pipeline);
     ContainerProtos.ContainerCommandRequestProto.Builder request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder();
     request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
@@ -324,28 +338,34 @@ public class TestContainerStateMachineFailures {
     request.setContainerID(containerID);
     request.setCloseContainer(
         ContainerProtos.CloseContainerRequestProto.getDefaultInstance());
-    // close container transaction will fail over Ratis and will cause the raft
+    // close container transaction will fail over Ratis and will initiate
+    // a pipeline close action
+
+    // Since the applyTransaction failure is propagated to Ratis,
+    // stateMachineUpdater will it exception while taking the next snapshot
+    // and should shutdown the RaftServerImpl. The client request will fail
+    // with RaftRetryFailureException.
     try {
-      client.sendCommand(request.build());
+      xceiverClient.sendCommand(request.build());
       Assert.fail("Expected exception not thrown");
     } catch (IOException e) {
+      Assert.assertTrue(HddsClientUtils
+          .checkForException(e) instanceof RaftRetryFailureException);
     }
-
     // Make sure the container is marked unhealthy
     Assert.assertTrue(
         cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
             .getContainer().getContainerSet().getContainer(containerID)
             .getContainerState()
             == ContainerProtos.ContainerDataProto.State.UNHEALTHY);
-    XceiverServerRatis raftServer = (XceiverServerRatis)
-        cluster.getHddsDatanodes().get(0).getDatanodeStateMachine()
-            .getContainer().getWriteChannel();
-    Assert.assertTrue(raftServer.isClosed());
     try {
-      cluster.getStorageContainerManager().getPipelineManager()
-          .getPipeline(pipeline.getId());
-      Assert.fail("Expected exception not thrown");
-    } catch(PipelineNotFoundException e) {
+      // try to take a new snapshot, ideally it should just fail
+      stateMachine.takeSnapshot();
+    } catch(IOException ioe) {
+      Assert.assertTrue(ioe instanceof StateMachineException);
     }
+    // Make sure the latest snapshot is same as the previous one
+    FileInfo latestSnapshot = storage.findLatestSnapshot().getFile();
+    Assert.assertTrue(snapshot.getPath().equals(latestSnapshot.getPath()));
   }
 }

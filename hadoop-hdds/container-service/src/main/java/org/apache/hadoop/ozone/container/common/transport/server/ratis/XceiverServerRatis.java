@@ -613,11 +613,10 @@ public final class XceiverServerRatis extends XceiverServer {
       RaftProtos.RaftPeerRole role) {
     UUID dnId = RatisHelper.toDatanodeId(getServer().getId());
     String msg =
-        "Ratis Transaction failure in datanode" + dnId + " with role " + role
-            + " Triggering pipeline close action.";
-    triggerPipelineClose(groupId, msg, ClosePipelineInfo.Reason.PIPELINE_FAILED,
-        false);
-    stop();
+        "Ratis Transaction failure in datanode " + dnId + " with role " + role
+            + " .Triggering pipeline close action.";
+    triggerPipelineClose(groupId, msg,
+        ClosePipelineInfo.Reason.STATEMACHINE_TRANSACTION_FAILED, true);
   }
   /**
    * The fact that the snapshot contents cannot be used to actually catch up
@@ -640,10 +639,6 @@ public final class XceiverServerRatis extends XceiverServer {
     handlePipelineFailure(groupId, roleInfoProto);
   }
 
-  @VisibleForTesting
-  public boolean isClosed() {
-    return !isStarted;
-  }
   /**
    * Notify the Datanode Ratis endpoint of Ratis log failure.
    * Expected to be invoked from the Container StateMachine
