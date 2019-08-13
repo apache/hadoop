@@ -1486,7 +1486,7 @@ public class KeyManagerImpl implements KeyManager {
         // Acl to be removed might be a subset of existing acls.
         for(OzoneAclInfo a: keyInfo.getAcls()) {
           if (a.getName().equals(acl.getName()) &&
-          a.getType().equals(OzoneAclType.valueOf(acl.getType().name()))) {
+              a.getType().equals(OzoneAclType.valueOf(acl.getType().name()))) {
             BitSet currentAcls = BitSet.valueOf(a.getRights().toByteArray());
             acl.getAclBitSet().xor(currentAcls);
             currentAcls.and(acl.getAclBitSet());
