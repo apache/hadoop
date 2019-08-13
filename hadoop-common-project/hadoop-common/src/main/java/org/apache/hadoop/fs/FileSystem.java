@@ -1798,8 +1798,7 @@ public abstract class FileSystem extends Configured
    */
   public void setQuota(Path src, final long namespaceQuota,
       final long storagespaceQuota) throws IOException {
-    throw new UnsupportedOperationException(getClass().getCanonicalName() +
-        "does not support setQuota");
+    methodNotSupported();
   }
 
   /**
@@ -1812,8 +1811,7 @@ public abstract class FileSystem extends Configured
    */
   public void setQuotaByStorageType(Path src, final StorageType type,
       final long quota) throws IOException {
-    throw new UnsupportedOperationException(getClass().getCanonicalName() +
-        "does not support setQuotaByStorageType");
+    methodNotSupported();
   }
 
   /**
@@ -4481,6 +4479,22 @@ public abstract class FileSystem extends Configured
       result.completeExceptionally(tx);
     }
     return result;
+  }
+
+  /**
+   * Helper method that throws an {@link UnsupportedOperationException} for the
+   * current {@link FileSystem} method being called.
+   */
+  protected void methodNotSupported() {
+    // The order of the stacktrace elements look like this (from top to bottom):
+    //   - java.lang.Thread.getStackTrace
+    //   - org.apache.hadoop.fs.FileSystem.methodNotSupported
+    //   - <the FileSystem method>
+    // therefore, to find out the current method name, we use the element at
+    // index 2.
+    String name = Thread.currentThread().getStackTrace()[2].getMethodName();
+    throw new UnsupportedOperationException(getClass().getCanonicalName() +
+        " does not support method " + name);
   }
 
   /**
