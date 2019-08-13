@@ -86,7 +86,7 @@ public class S3GuardFsck {
    *
    * @param p the root path to start the traversal
    * @throws IOException
-   * @return
+   * @return a list of {@link ComparePair}
    */
   public List<ComparePair> compareS3RootToMs(Path p) throws IOException {
     final Path rootPath = rawFS.qualify(p);

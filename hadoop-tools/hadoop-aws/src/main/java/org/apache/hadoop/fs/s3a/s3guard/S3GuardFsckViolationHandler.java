@@ -35,8 +35,11 @@ public class S3GuardFsckViolationHandler {
   private static final Logger LOG = LoggerFactory.getLogger(
       S3GuardFsckViolationHandler.class);
 
+  // The rawFS and metadataStore are here to prepare when the ViolationHandlers
+  // will not just log, but fix the violations, so they will have access.
   private S3AFileSystem rawFs;
   private DynamoDBMetadataStore metadataStore;
+
   private static String newLine = System.getProperty("line.separator");
 
   public S3GuardFsckViolationHandler(S3AFileSystem fs,
