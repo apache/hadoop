@@ -56,7 +56,7 @@ public class S3GuardFsck {
   private DynamoDBMetadataStore metadataStore;
 
   /**
-   * Creates an S3GuardFsck
+   * Creates an S3GuardFsck.
    * @param fs the filesystem to compare to
    * @param ms metadatastore the metadatastore to compare with (dynamo)
    */
@@ -245,7 +245,8 @@ public class S3GuardFsck {
     }
 
     if(msPathMetadata.getFileStatus().getVersionId() == null) {
-      // we don't handle missing versionIDs
+      LOG.debug("Missing versionIDs are skipped right now. A HEAD request is "
+          + "required for each object to get the versionID.");
     } else if(s3FileStatus.getVersionId() != msFileStatus.getVersionId()) {
       comparePair.violations.add(Violation.VERSIONID_MISMATCH);
     }
@@ -265,12 +266,14 @@ public class S3GuardFsck {
     return rawFS.makeQualified(new Path(s));
   }
 
-
+  /**
+   * A compare pair with the pair of metadata and the list of violations.
+   */
   public static class ComparePair {
     private final S3AFileStatus s3FileStatus;
     private final PathMetadata msPathMetadata;
 
-    private final FileStatus[] s3DirListing;
+    private final List<FileStatus> s3DirListing;
     private final DirListingMetadata msDirListing;
 
     private final Path path;
@@ -286,7 +289,7 @@ public class S3GuardFsck {
     }
 
     ComparePair(FileStatus[] s3DirListing, DirListingMetadata msDirListing) {
-      this.s3DirListing = s3DirListing;
+      this.s3DirListing = Arrays.asList(s3DirListing);
       this.msDirListing = msDirListing;
       this.s3FileStatus = null;
       this.msPathMetadata = null;
@@ -313,7 +316,7 @@ public class S3GuardFsck {
       return msDirListing;
     }
 
-    public FileStatus[] getS3DirListing() {
+    public List<FileStatus> getS3DirListing() {
       return s3DirListing;
     }
 
@@ -323,8 +326,8 @@ public class S3GuardFsck {
 
     @Override public String toString() {
       return "ComparePair{" + "s3FileStatus=" + s3FileStatus
-          + ", msPathMetadata=" + msPathMetadata + ", s3DirListing=" + Arrays
-          .toString(s3DirListing) + ", msDirListing=" + msDirListing + ", path="
+          + ", msPathMetadata=" + msPathMetadata + ", s3DirListing=" +
+          s3DirListing + ", msDirListing=" + msDirListing + ", path="
           + path + ", violations=" + violations + '}';
     }
   }
@@ -372,13 +375,21 @@ public class S3GuardFsck {
     NO_ETAG(2,
         S3GuardFsckViolationHandler.NoEtag.class);
 
-    int severity;
-    Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
+    private int severity;
+    private Class<? extends S3GuardFsckViolationHandler.ViolationHandler> handler;
 
     Violation(int s,
         Class<? extends S3GuardFsckViolationHandler.ViolationHandler> h) {
       this.severity = s;
       this.handler = h;
+    }
+
+    public int getSeverity() {
+      return severity;
+    }
+
+    public Class<? extends S3GuardFsckViolationHandler.ViolationHandler> getHandler() {
+      return handler;
     }
   }
 }

@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Violation handler for the S3Guard's fsck.
@@ -36,7 +37,7 @@ public class S3GuardFsckViolationHandler {
 
   private S3AFileSystem rawFs;
   private DynamoDBMetadataStore metadataStore;
-  private static String NEWLINE = System.getProperty("line.separator");
+  private static String newLine = System.getProperty("line.separator");
 
   public S3GuardFsckViolationHandler(S3AFileSystem fs,
       DynamoDBMetadataStore ddbms) {
@@ -52,35 +53,39 @@ public class S3GuardFsckViolationHandler {
     }
 
     StringBuilder sB = new StringBuilder();
-    sB.append(NEWLINE)
-        .append("On path: ").append(comparePair.getPath()).append(NEWLINE);
+    sB.append(newLine)
+        .append("On path: ").append(comparePair.getPath()).append(newLine);
 
     // Create a new instance of the handler and use it.
     for (S3GuardFsck.Violation violation : comparePair.getViolations()) {
       try {
-        ViolationHandler handler =
-            violation.handler.getDeclaredConstructor(S3GuardFsck.ComparePair.class)
+        ViolationHandler handler = violation.getHandler()
+            .getDeclaredConstructor(S3GuardFsck.ComparePair.class)
             .newInstance(comparePair);
         final String errorStr = handler.getError();
         sB.append(errorStr);
       } catch (NoSuchMethodException e) {
         LOG.error("Can not find declared constructor for handler: {}",
-            violation.handler);
+            violation.getHandler());
       } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
         LOG.error("Can not instantiate handler: {}",
-            violation.handler);
+            violation.getHandler());
       }
-      sB.append(NEWLINE);
+      sB.append(newLine);
     }
     LOG.error(sB.toString());
   }
 
+  /**
+   * Violation handler abstract class.
+   * This class should be extended for violation handlers.
+   */
   public static abstract class ViolationHandler {
-    final PathMetadata pathMetadata;
-    final S3AFileStatus s3FileStatus;
-    final S3AFileStatus msFileStatus;
-    final FileStatus[] s3DirListing;
-    final DirListingMetadata msDirListing;
+    private final PathMetadata pathMetadata;
+    private final S3AFileStatus s3FileStatus;
+    private final S3AFileStatus msFileStatus;
+    private final List<FileStatus> s3DirListing;
+    private final DirListingMetadata msDirListing;
 
     public ViolationHandler(S3GuardFsck.ComparePair comparePair) {
       pathMetadata = comparePair.getMsPathMetadata();
@@ -95,8 +100,31 @@ public class S3GuardFsckViolationHandler {
     }
 
     abstract String getError();
+
+    public PathMetadata getPathMetadata() {
+      return pathMetadata;
+    }
+
+    public S3AFileStatus getS3FileStatus() {
+      return s3FileStatus;
+    }
+
+    public S3AFileStatus getMsFileStatus() {
+      return msFileStatus;
+    }
+
+    public List<FileStatus> getS3DirListing() {
+      return s3DirListing;
+    }
+
+    public DirListingMetadata getMsDirListing() {
+      return msDirListing;
+    }
   }
 
+  /**
+   * The violation handler when there's no matching metadata entry in the MS.
+   */
   public static class NoMetadataEntry extends ViolationHandler {
 
     public NoMetadataEntry(S3GuardFsck.ComparePair comparePair) {
@@ -109,6 +137,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when there's no parent entry.
+   */
   public static class NoParentEntry extends ViolationHandler {
 
     public NoParentEntry(S3GuardFsck.ComparePair comparePair) {
@@ -121,6 +152,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when the parent of an entry is a file.
+   */
   public static class ParentIsAFile extends ViolationHandler {
 
     public ParentIsAFile(S3GuardFsck.ComparePair comparePair) {
@@ -133,6 +167,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when the parent of an entry is tombstoned.
+   */
   public static class ParentTombstoned extends ViolationHandler {
 
     public ParentTombstoned(S3GuardFsck.ComparePair comparePair) {
@@ -145,6 +182,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when there's a directory is a file metadata in MS.
+   */
   public static class DirInS3FileInMs extends ViolationHandler {
 
     public DirInS3FileInMs(S3GuardFsck.ComparePair comparePair) {
@@ -157,6 +197,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when a file metadata is a directory in MS.
+   */
   public static class FileInS3DirInMs extends ViolationHandler {
 
     public FileInS3DirInMs(S3GuardFsck.ComparePair comparePair) {
@@ -169,6 +212,9 @@ public class S3GuardFsckViolationHandler {
     }
   }
 
+  /**
+   * The violation handler when there's a directory listing content mismatch.
+   */
   public static class AuthDirContentMismatch extends ViolationHandler {
 
     public AuthDirContentMismatch(S3GuardFsck.ComparePair comparePair) {
@@ -180,11 +226,14 @@ public class S3GuardFsckViolationHandler {
       final String str = String.format(
           "The content of an authoritative directory listing does "
               + "not match the content of the S3 listing. S3: %s, MS: %s",
-          Arrays.asList(s3DirListing), msDirListing.getListing());
+          Arrays.asList(getS3DirListing()), getMsDirListing().getListing());
       return str;
     }
   }
 
+  /**
+   * The violation handler when there's a length mismatch.
+   */
   public static class LengthMismatch extends ViolationHandler {
 
     public LengthMismatch(S3GuardFsck.ComparePair comparePair) {
@@ -193,10 +242,13 @@ public class S3GuardFsckViolationHandler {
 
     @Override public String getError() {
       return String.format("getLen mismatch - s3: %s, ms: %s",
-          s3FileStatus.getLen(), msFileStatus.getLen());
+          getS3FileStatus().getLen(), getMsFileStatus().getLen());
     }
   }
 
+  /**
+   * The violation handler when there's a modtime mismatch.
+   */
   public static class ModTimeMismatch extends ViolationHandler {
 
     public ModTimeMismatch(S3GuardFsck.ComparePair comparePair) {
@@ -206,11 +258,14 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return String.format("getModificationTime mismatch - s3: %s, ms: %s",
-          s3FileStatus.getModificationTime(),
-          msFileStatus.getModificationTime());
+          getS3FileStatus().getModificationTime(),
+          getMsFileStatus().getModificationTime());
     }
   }
 
+  /**
+   * The violation handler when there's a version id mismatch
+   */
   public static class VersionIdMismatch extends ViolationHandler {
 
     public VersionIdMismatch(S3GuardFsck.ComparePair comparePair) {
@@ -220,10 +275,13 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return String.format("getVersionId mismatch - s3: %s, ms: %s",
-          s3FileStatus.getVersionId(), msFileStatus.getVersionId());
+          getS3FileStatus().getVersionId(), getMsFileStatus().getVersionId());
     }
   }
 
+  /**
+   * The violation handler when there's an etag mismatch.
+   */
   public static class EtagMismatch extends ViolationHandler {
 
     public EtagMismatch(S3GuardFsck.ComparePair comparePair) {
@@ -233,10 +291,13 @@ public class S3GuardFsckViolationHandler {
     @Override
     public String getError() {
       return String.format("getETag mismatch - s3: %s, ms: %s",
-        s3FileStatus.getETag(), msFileStatus.getETag());
+        getS3FileStatus().getETag(), getMsFileStatus().getETag());
     }
   }
 
+  /**
+   * The violation handler when there's no etag.
+   */
   public static class NoEtag extends ViolationHandler {
 
     public NoEtag(S3GuardFsck.ComparePair comparePair) {

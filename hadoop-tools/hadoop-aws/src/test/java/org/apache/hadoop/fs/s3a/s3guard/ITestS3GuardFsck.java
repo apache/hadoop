@@ -43,6 +43,10 @@ import static org.apache.hadoop.fs.s3a.S3ATestUtils.metadataStorePersistsAuthori
 import static org.apache.hadoop.fs.s3a.S3ATestUtils.removeBaseAndBucketOverrides;
 import static org.junit.Assume.assumeTrue;
 
+/**
+ * Integration tests for the S3Guard Fsck against a dyamodb backed metadata
+ * store.
+ */
 public class ITestS3GuardFsck extends AbstractS3ATestBase {
 
   private S3AFileSystem guardedFs;
@@ -551,8 +555,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       awaitFileStatus(guardedFs, file);
 
       // modify the file metadata so the versionId will not match
-      final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, ""
-          , "etag", "versionId");
+      final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, "",
+          "etag", "versionId");
       metadataStore.put(new PathMetadata(newFileStatus));
 
       final S3GuardFsck s3GuardFsck =
@@ -601,8 +605,8 @@ public class ITestS3GuardFsck extends AbstractS3ATestBase {
       awaitFileStatus(guardedFs, file);
 
       // modify the file metadata so the etag will not match
-      final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, ""
-          , "etag", "versionId");
+      final S3AFileStatus newFileStatus = new S3AFileStatus(1, 1, file, 1, "",
+          "etag", "versionId");
       metadataStore.put(new PathMetadata(newFileStatus));
 
       final S3GuardFsck s3GuardFsck =
