@@ -97,7 +97,6 @@ import org.apache.hadoop.yarn.client.api.YarnClientApplication;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.util.Records;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -253,10 +252,7 @@ public class Client extends Configured implements Tool {
    */
   public static void main(String[] args) throws Exception {
     Client client = new Client(
-        ClassUtil.findContainingJar(ApplicationMaster.class),
-        // JUnit is required by MiniDFSCluster at runtime, but is not included
-        // in standard Hadoop dependencies, so it must explicitly included here
-        ClassUtil.findContainingJar(Assert.class));
+        ClassUtil.findContainingJar(ApplicationMaster.class));
     System.exit(ToolRunner.run(new YarnConfiguration(), client, args));
   }
 
