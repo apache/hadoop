@@ -203,7 +203,7 @@ public class MiniOzoneLoadGenerator {
       String keyName = null;
       try {
         if (agedWriteProbability.isTrue()) {
-          keyName = writeData(agedFileWrittenIndex.incrementAndGet(),
+          keyName = writeData(agedFileWrittenIndex.getAndIncrement(),
               agedLoadBucket, threadName);
         } else {
           Optional<Integer> index = randomKeyToRead();
