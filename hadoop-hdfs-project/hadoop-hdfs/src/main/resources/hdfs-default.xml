@@ -1427,7 +1427,7 @@
   <value>4</value>
   <description>
         The number of threads to use when dfs.image.parallel.load is
-        enabled. This setting should be less than 
+        enabled. This setting should be less than
         dfs.image.parallel.target.sections. The optimal number of
         threads will depend on the hardware and environment.
   </description>
