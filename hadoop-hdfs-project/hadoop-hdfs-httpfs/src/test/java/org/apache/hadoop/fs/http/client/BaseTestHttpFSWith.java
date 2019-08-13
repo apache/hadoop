@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
+import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.SnapshotDiffReport;
 import org.apache.hadoop.hdfs.protocol.SnapshotException;
 import org.apache.hadoop.hdfs.protocol.SnapshottableDirectoryStatus;
@@ -360,6 +361,7 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
 
   private void testListStatus() throws Exception {
     FileSystem fs = FileSystem.get(getProxiedFSConf());
+    boolean isDFS = fs instanceof DistributedFileSystem;
     Path path = new Path(getProxiedFSTestDir(), "foo.txt");
     OutputStream os = fs.create(path);
     os.write(1);
@@ -381,6 +383,18 @@ public abstract class BaseTestHttpFSWith extends HFSTestCase {
     assertEquals(status2.getOwner(), status1.getOwner());
     assertEquals(status2.getGroup(), status1.getGroup());
     assertEquals(status2.getLen(), status1.getLen());
+    if (isDFS && status2 instanceof HdfsFileStatus) {
+      assertTrue(status1 instanceof HdfsFileStatus);
+      HdfsFileStatus hdfsFileStatus1 = (HdfsFileStatus) status1;
+      HdfsFileStatus hdfsFileStatus2 = (HdfsFileStatus) status2;
+      // Check HDFS-specific fields
+      assertEquals(hdfsFileStatus2.getChildrenNum(),
+          hdfsFileStatus1.getChildrenNum());
+      assertEquals(hdfsFileStatus2.getFileId(),
+          hdfsFileStatus1.getFileId());
+      assertEquals(hdfsFileStatus2.getStoragePolicy(),
+          hdfsFileStatus1.getStoragePolicy());
+    }
 
     FileStatus[] stati = fs.listStatus(path.getParent());
     assertEquals(1, stati.length);
