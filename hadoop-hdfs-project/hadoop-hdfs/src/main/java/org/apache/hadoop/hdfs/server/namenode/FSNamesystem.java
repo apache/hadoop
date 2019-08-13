@@ -1061,7 +1061,7 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
         try {
           AuditLogger logger;
           if (DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME.equals(className)) {
-            logger = new DefaultAuditLogger();
+            logger = new FSNamesystemAuditLogger();
           } else {
             logger = (AuditLogger) Class.forName(className).newInstance();
           }
@@ -1077,9 +1077,9 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
 
     // Make sure there is at least one logger installed.
     if (auditLoggers.isEmpty()) {
-      DefaultAuditLogger defaultAuditLogger = new DefaultAuditLogger();
-      defaultAuditLogger.initialize(conf);
-      auditLoggers.add(defaultAuditLogger);
+      FSNamesystemAuditLogger fsNamesystemAuditLogger = new FSNamesystemAuditLogger();
+      fsNamesystemAuditLogger.initialize(conf);
+      auditLoggers.add(fsNamesystemAuditLogger);
     }
 
     // Add audit logger to calculate top users
@@ -7976,46 +7976,12 @@ public class FSNamesystem implements Namesystem, FSNamesystemMBean,
   }
 
   /**
-   * Default AuditLogger implementation; used when no access logger is
-   * defined in the config file. It can also be explicitly listed in the
+   * FSNamesystem Default AuditLogger implementation;used when no access logger
+   * is defined in the config file. It can also be explicitly listed in the
    * config file.
    */
   @VisibleForTesting
-  static class DefaultAuditLogger extends HdfsAuditLogger {
-    private static final ThreadLocal<StringBuilder> STRING_BUILDER =
-        new ThreadLocal<StringBuilder>() {
-          @Override
-          protected StringBuilder initialValue() {
-            return new StringBuilder();
-          }
-        };
-
-    private volatile boolean isCallerContextEnabled;
-    private int callerContextMaxLen;
-    private int callerSignatureMaxLen;
-
-    private boolean logTokenTrackingId;
-    private Set<String> debugCmdSet = new HashSet<String>();
-
-    /**
-     * Enable or disable CallerContext.
-     *
-     * @param value
-     *          true, enable CallerContext, otherwise false to disable it.
-     */
-    void setCallerContextEnabled(final boolean value) {
-      isCallerContextEnabled = value;
-    }
-
-    /**
-     * Get the value indicating if CallerContext is enabled.
-     *
-     * @return true, if CallerContext is enabled, otherwise false, if it's
-     *         disabled.
-     */
-    boolean getCallerContextEnabled() {
-      return isCallerContextEnabled;
-    }
+  static class FSNamesystemAuditLogger extends DefaultAuditLogger {
 
     @Override
     public void initialize(Configuration conf) {
