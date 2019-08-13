@@ -89,6 +89,7 @@ import org.apache.hadoop.hdfs.inotify.EventBatchList;
 import org.apache.hadoop.hdfs.protocol.AclException;
 import org.apache.hadoop.hdfs.protocol.AddErasureCodingPolicyResponse;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
+import org.apache.hadoop.hdfs.protocol.BatchedDirectoryListing;
 import org.apache.hadoop.hdfs.protocol.BlockListAsLongs;
 import org.apache.hadoop.hdfs.protocol.BlockStoragePolicy;
 import org.apache.hadoop.hdfs.protocol.CacheDirectiveEntry;
@@ -1177,6 +1178,16 @@ public class NameNodeRpcServer implements NamenodeProtocols {
       metrics.incrFilesInGetListingOps(files.getPartialListing().length);
     }
     return files;
+  }
+
+  @Override
+  public BatchedDirectoryListing getBatchedListing(
+      String[] srcs,
+      byte[] startAfter,
+      boolean needLocation) throws IOException {
+    BatchedDirectoryListing listing = namesystem.getBatchedListing(
+        srcs, startAfter, needLocation);
+    return listing;
   }
 
   @Override // ClientProtocol

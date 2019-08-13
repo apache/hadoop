@@ -697,6 +697,12 @@ public interface ClientProtocol {
   DirectoryListing getListing(String src, byte[] startAfter,
       boolean needLocation) throws IOException;
 
+  @Idempotent
+  BatchedDirectoryListing getBatchedListing(
+      String[] srcs,
+      byte[] startAfter,
+      boolean needLocation) throws IOException;
+
   /**
    * Get the list of snapshottable directories that are owned
    * by the current user. Return all the snapshottable directories if the
