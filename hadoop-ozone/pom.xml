@@ -31,7 +31,7 @@
     <ozone.version>0.4.1-SNAPSHOT</ozone.version>
     <ratis.version>0.4.0-2337318-SNAPSHOT</ratis.version>
     <bouncycastle.version>1.60</bouncycastle.version>
-    <ozone.release>Crater Lake</ozone.release>
+    <ozone.release>Biscayne</ozone.release>
     <declared.ozone.version>${ozone.version}</declared.ozone.version>
     <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
     <guice.version>4.0</guice.version>
