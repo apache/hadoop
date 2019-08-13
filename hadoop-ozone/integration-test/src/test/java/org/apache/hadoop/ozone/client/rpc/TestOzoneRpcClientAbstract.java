@@ -2464,7 +2464,6 @@ public abstract class TestOzoneRpcClientAbstract {
               && acl.getType().equals(newAcl.getType()))
           .findFirst();
       assertTrue("New acl expected but not found.", readAcl.isPresent());
-      System.out.println(readAcl.get());
       assertTrue("READ_ACL should exist in current acls:"
           + readAcl.get(),
           readAcl.get().getAclList().contains(ACLType.READ_ACL));
@@ -2479,9 +2478,8 @@ public abstract class TestOzoneRpcClientAbstract {
               && acl.getType().equals(newAcl.getType()))
           .findFirst();
       assertTrue("New acl expected but not found.", nonReadAcl.isPresent());
-      System.out.println(nonReadAcl.get());
       assertFalse("READ_ACL should not exist in current acls:"
-              + nonReadAcl.get().getAclList(),
+              + nonReadAcl.get(),
           nonReadAcl.get().getAclList().contains(ACLType.READ_ACL));
     } else {
       fail("Default acl should not be empty.");
