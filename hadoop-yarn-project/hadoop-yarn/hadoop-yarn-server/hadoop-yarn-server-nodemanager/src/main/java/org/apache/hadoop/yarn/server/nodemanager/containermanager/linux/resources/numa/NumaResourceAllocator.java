@@ -31,7 +31,6 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import com.google.common.collect.Maps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.util.StringUtils;
@@ -248,19 +247,17 @@ public class NumaResourceAllocator {
 
     // If there is no single node matched for the container resource
     // Check the NUMA nodes for Memory resources
-    long memoryRequirement = resource.getMemorySize();
-    Map<String, Long> memoryAllocations = Maps.newHashMap();
+    NumaResourceAllocation assignedNumaNodeInfo = new NumaResourceAllocation();
+    long memreq = resource.getMemorySize();
     for (NumaNodeResource numaNode : numaNodesList) {
-      long memoryRemaining = numaNode.
-          assignAvailableMemory(memoryRequirement, containerId);
-      memoryAllocations.put(numaNode.getNodeId(),
-          memoryRequirement - memoryRemaining);
-      memoryRequirement = memoryRemaining;
-      if (memoryRequirement == 0) {
+      long memrem = numaNode.assignAvailableMemory(memreq, containerId);
+      assignedNumaNodeInfo.addMemoryNode(numaNode.getNodeId(), memreq - memrem);
+      memreq = memrem;
+      if (memreq == 0) {
         break;
       }
     }
-    if (memoryRequirement != 0) {
+    if (memreq != 0) {
       LOG.info("There is no available memory:" + resource.getMemorySize()
           + " in numa nodes for " + containerId);
       releaseNumaResource(containerId);
@@ -268,31 +265,26 @@ public class NumaResourceAllocator {
     }
 
     // Check the NUMA nodes for CPU resources
-    int cpusRequirement = resource.getVirtualCores();
-    Map<String, Integer> cpuAllocations = Maps.newHashMap();
+    int cpusreq = resource.getVirtualCores();
     for (int index = 0; index < numaNodesList.size(); index++) {
       NumaNodeResource numaNode = numaNodesList
           .get((currentAssignNode + index) % numaNodesList.size());
-      int cpusRemaining = numaNode.
-          assignAvailableCpus(cpusRequirement, containerId);
-      cpuAllocations.put(numaNode.getNodeId(), cpusRequirement - cpusRemaining);
-      cpusRequirement = cpusRemaining;
-      if (cpusRequirement == 0) {
+      int cpusrem = numaNode.assignAvailableCpus(cpusreq, containerId);
+      assignedNumaNodeInfo.addCpuNode(numaNode.getNodeId(), cpusreq - cpusrem);
+      cpusreq = cpusrem;
+      if (cpusreq == 0) {
         currentAssignNode = (currentAssignNode + index + 1)
             % numaNodesList.size();
         break;
       }
     }
 
-    if (cpusRequirement != 0) {
+    if (cpusreq != 0) {
       LOG.info("There are no available cpus:" + resource.getVirtualCores()
           + " in numa nodes for " + containerId);
       releaseNumaResource(containerId);
       return null;
     }
-
-    NumaResourceAllocation assignedNumaNodeInfo =
-        new NumaResourceAllocation(memoryAllocations, cpuAllocations);
     LOG.info("Assigning multiple NUMA nodes ("
         + StringUtils.join(",", assignedNumaNodeInfo.getMemNodes())
         + ") for memory, ("
