@@ -211,5 +211,5 @@ public interface S3ATestConstants {
   /**
    * Custom Signer Name to be set in the conf file to be checked
    */
-  String S3A_SIGNING_ALGORITHM = "CustomSignerName";
+  String S3A_SIGNING_ALGORITHM = "TestCustomSignerName";
 }
