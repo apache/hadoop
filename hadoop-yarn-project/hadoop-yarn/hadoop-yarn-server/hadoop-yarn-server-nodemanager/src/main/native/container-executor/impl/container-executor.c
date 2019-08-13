@@ -721,8 +721,8 @@ int check_dir(const char* npath, mode_t st_mode, mode_t desired, int finalCompon
  */
 static int create_container_directories(const char* user, const char *app_id,
     const char *container_id, char* const* local_dir, char* const* log_dir, const char *work_dir) {
-  // create dirs as 0750
-  const mode_t perms = S_IRWXU | S_IRGRP | S_IXGRP;
+  // create dirs as 0710
+  const mode_t perms = S_IRWXU | S_IXGRP;
   if (user == NULL || app_id == NULL || container_id == NULL ||
       local_dir == NULL || log_dir == NULL || work_dir == NULL ||
       user_detail == NULL || user_detail->pw_name == NULL) {
@@ -764,6 +764,9 @@ static int create_container_directories(const char* user, const char *app_id,
   } else {
     sprintf(combined_name, "%s/%s", app_id, container_id);
     char* const* log_dir_ptr;
+    // Log dirs need 750 access
+    const mode_t logdir_perms = S_IRWXU | S_IRGRP | S_IXGRP;
+
     for(log_dir_ptr = log_dir; *log_dir_ptr != NULL; ++log_dir_ptr) {
       char *container_log_dir = get_app_log_directory(*log_dir_ptr, combined_name);
       int check = check_nm_local_dir(nm_uid, *log_dir_ptr);
@@ -777,7 +780,7 @@ static int create_container_directories(const char* user, const char *app_id,
       if (container_log_dir == NULL) {
         free(combined_name);
         return OUT_OF_MEMORY;
-      } else if (mkdirs(container_log_dir, perms) != 0) {
+      } else if (mkdirs(container_log_dir, logdir_perms) != 0) {
         free(container_log_dir);
       } else {
         result = 0;
@@ -1229,6 +1232,37 @@ int create_container_log_dirs(const char *container_id, const char *app_id,
 }
 
 /**
+ * Function to create the application directories.
+ * Returns pointer to primary_app_dir or NULL if it fails.
+ */
+static char *create_app_dirs(const char *user,
+                             const char *app_id,
+                             char* const* local_dirs)
+{
+  // 750
+  mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
+  char* const* nm_root;
+  char *primary_app_dir = NULL;
+  for(nm_root=local_dirs; *nm_root != NULL; ++nm_root) {
+    char *app_dir = get_app_directory(*nm_root, user, app_id);
+    if (app_dir == NULL) {
+      // try the next one
+    } else if (mkdirs(app_dir, permissions) != 0) {
+      free(app_dir);
+    } else if (primary_app_dir == NULL) {
+      primary_app_dir = app_dir;
+    } else {
+      free(app_dir);
+    }
+  }
+
+  if (primary_app_dir == NULL) {
+    fprintf(LOGFILE, "Did not create any app directories\n");
+  }
+  return primary_app_dir;
+}
+
+/**
  * Function to prepare the application directories for the container.
  */
 int initialize_app(const char *user, const char *app_id,
@@ -1271,25 +1305,9 @@ int initialize_app(const char *user, const char *app_id,
     return -1;
   }
 
-  // 750
-  mode_t permissions = S_IRWXU | S_IRGRP | S_IXGRP;
-  char* const* nm_root;
-  char *primary_app_dir = NULL;
-  for(nm_root=local_dirs; *nm_root != NULL; ++nm_root) {
-    char *app_dir = get_app_directory(*nm_root, user, app_id);
-    if (app_dir == NULL) {
-      // try the next one
-    } else if (mkdirs(app_dir, permissions) != 0) {
-      free(app_dir);
-    } else if (primary_app_dir == NULL) {
-      primary_app_dir = app_dir;
-    } else {
-      free(app_dir);
-    }
-  }
-
+  // Create application directories
+  char *primary_app_dir = create_app_dirs(user, app_id, local_dirs);
   if (primary_app_dir == NULL) {
-    fprintf(LOGFILE, "Did not create any app directories\n");
     return -1;
   }
 
@@ -1480,8 +1498,17 @@ int create_local_dirs(const char * user, const char *app_id,
       goto cleanup;
     }
   }
+
+  // Create application directories if not already created by localization
+  char *primary_app_dir = create_app_dirs(user, app_id, local_dirs);
+  if (primary_app_dir == NULL) {
+    exit_code = COULD_NOT_CREATE_WORK_DIRECTORIES;
+    goto cleanup;
+  }
+  free(primary_app_dir);
+
   // Create container specific directories as user. If there are no resources
-  // to localize for this container, app-directories and log-directories are
+  // to localize for this container, log-directories are
   // also created automatically as part of this call.
   int directory_create_result = create_container_directories(user, app_id,
     container_id, local_dirs, log_dirs, work_dir);
