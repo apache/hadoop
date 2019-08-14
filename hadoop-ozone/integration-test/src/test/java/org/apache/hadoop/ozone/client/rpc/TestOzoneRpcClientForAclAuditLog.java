@@ -12,10 +12,12 @@ import org.apache.hadoop.ozone.client.ObjectStore;
 import org.apache.hadoop.ozone.client.OzoneClient;
 import org.apache.hadoop.ozone.client.OzoneClientFactory;
 import org.apache.hadoop.ozone.client.OzoneVolume;
+import org.apache.hadoop.ozone.client.VolumeArgs;
 import org.apache.hadoop.ozone.security.acl.IAccessAuthorizer;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.OzoneObjInfo;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -86,12 +88,12 @@ public class TestOzoneRpcClientForAclAuditLog {
     aclListToAdd.add(USER_ACL_2);
   }
 
-  private   /**
+  /**
    * Create a MiniOzoneCluster for testing.
    * @param conf Configurations to start the cluster.
    * @throws Exception
    */
-  static void startCluster(OzoneConfiguration conf) throws Exception {
+  private static void startCluster(OzoneConfiguration conf) throws Exception {
     cluster = MiniOzoneCluster.newBuilder(conf)
         .setNumDatanodes(3)
         .setScmId(scmId)
@@ -142,11 +144,10 @@ public class TestOzoneRpcClientForAclAuditLog {
     String adminName = ugi.getUserName();
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
 
-    org.apache.hadoop.ozone.client.VolumeArgs createVolumeArgs =
-        org.apache.hadoop.ozone.client.VolumeArgs.newBuilder()
-            .setAdmin(adminName)
-            .setOwner(userName)
-            .build();
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setAdmin(adminName)
+        .setOwner(userName)
+        .build();
     store.createVolume(volumeName, createVolumeArgs);
     verifyLog(OMAction.CREATE_VOLUME.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
@@ -191,11 +192,10 @@ public class TestOzoneRpcClientForAclAuditLog {
     String adminName = "bilbo";
     String volumeName = "volume" + RandomStringUtils.randomNumeric(5);
 
-    org.apache.hadoop.ozone.client.VolumeArgs createVolumeArgs =
-        org.apache.hadoop.ozone.client.VolumeArgs.newBuilder()
-            .setAdmin(adminName)
-            .setOwner(userName)
-            .build();
+    VolumeArgs createVolumeArgs = VolumeArgs.newBuilder()
+        .setAdmin(adminName)
+        .setOwner(userName)
+        .build();
     store.createVolume(volumeName, createVolumeArgs);
     verifyLog(OMAction.CREATE_VOLUME.name(), volumeName,
         AuditEventStatus.SUCCESS.name());
@@ -238,21 +238,11 @@ public class TestOzoneRpcClientForAclAuditLog {
 
   }
 
-  private void verifyLog(String... expected) throws IOException {
+  private void verifyLog(String... expected) throws Exception {
     File file = new File("audit.log");
-    List<String> lines = FileUtils.readLines(file, (String)null);
-    final int retry = 5;
-    int i = 0;
-    while (lines.isEmpty() && i < retry) {
-      lines = FileUtils.readLines(file, (String)null);
-      try {
-        Thread.sleep(500 * (i + 1));
-      } catch(InterruptedException ie) {
-        Thread.currentThread().interrupt();
-        break;
-      }
-      i++;
-    }
+    final List<String> lines = FileUtils.readLines(file, (String)null);
+    GenericTestUtils.waitFor(() ->
+        (lines != null) ? true : false, 100, 60000);
 
     // When log entry is expected, the log file will contain one line and
     // that must be equal to the expected string
