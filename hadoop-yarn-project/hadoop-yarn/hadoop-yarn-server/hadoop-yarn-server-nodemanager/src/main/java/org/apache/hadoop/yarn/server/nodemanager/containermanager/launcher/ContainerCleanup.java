@@ -215,18 +215,4 @@ public class ContainerCleanup implements Runnable {
         new ContainerSignalContext.Builder().setContainer(container)
             .setUser(user).setPid(processId).setSignal(signal).build());
   }
-
-  private void reapDockerContainerNoPid(String user) throws IOException {
-    String containerIdStr =
-        container.getContainerTokenIdentifier().getContainerID().toString();
-    LOG.info("Unable to obtain pid, but docker container request detected. "
-        + "Attempting to reap container " + containerIdStr);
-    boolean result = exec.reapContainer(
-        new ContainerReapContext.Builder()
-            .setContainer(container)
-            .setUser(container.getUser())
-            .build());
-    LOG.debug("Sent signal to docker container {} as user {}, result={}",
-        containerIdStr, user, (result ? "success" : "failed"));
-  }
 }
