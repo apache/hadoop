@@ -207,5 +207,4 @@ public interface S3ATestConstants {
    */
   String S3GUARD_DDB_TEST_TABLE_NAME_KEY =
       "fs.s3a.s3guard.ddb.test.table";
-
 }
