@@ -211,5 +211,5 @@ public interface S3ATestConstants {
   /**
    * Custom Signer Name to be set in the conf file to be checked
    */
-  String S3A_SIGNING_ALGORITHM = "TestCustomSignerName";
+  String S3A_SIGNING_ALGORITHM = "com.amazonaws.services.s3.internal.AWSS3V4Signer";
 }
