@@ -364,13 +364,14 @@ public final class FSImageFormatPBINode {
     }
 
 
-    private void loadINodeSectionHeader(InputStream in, StartupProgress prog,
+    private long loadINodeSectionHeader(InputStream in, StartupProgress prog,
         Step currentStep) throws IOException {
       INodeSection s = INodeSection.parseDelimitedFrom(in);
       fsn.dir.resetLastInodeId(s.getLastInodeId());
       long numInodes = s.getNumInodes();
       LOG.info("Loading " + numInodes + " INodes.");
       prog.setTotal(Phase.LOADING_FSIMAGE, currentStep, numInodes);
+      return numInodes;
     }
 
     void loadINodeSectionInParallel(ExecutorService service,
@@ -379,6 +380,7 @@ public final class FSImageFormatPBINode {
         Step currentStep) throws IOException {
       LOG.info("Loading the INode section in parallel with {} sub-sections",
           sections.size());
+      long expectedInodes = 0;
       CountDownLatch latch = new CountDownLatch(sections.size());
       AtomicInteger totalLoaded = new AtomicInteger(0);
       final CopyOnWriteArrayList<IOException> exceptions =
@@ -389,7 +391,7 @@ public final class FSImageFormatPBINode {
         InputStream ins = parent.getInputStreamForSection(s, compressionCodec);
         if (i == 0) {
           // The first inode section has a header which must be processed first
-          loadINodeSectionHeader(ins, prog, currentStep);
+          expectedInodes = loadINodeSectionHeader(ins, prog, currentStep);
         }
         service.submit(() -> {
           try {
@@ -418,7 +420,11 @@ public final class FSImageFormatPBINode {
         LOG.error("{} exceptions occurred loading INodes", exceptions.size());
         throw exceptions.get(0);
       }
-      // TODO - should we fail if total_loaded != total_expected?
+      if (totalLoaded.get() != expectedInodes) {
+        throw new IOException("Expected to load "+expectedInodes+" in " +
+            "parallel, but loaded "+totalLoaded.get()+". The image may " +
+            "be corrupt.");
+      }
       LOG.info("Completed loading all INode sections. Loaded {} inodes.",
           totalLoaded.get());
     }
