@@ -324,6 +324,29 @@ public final class FSImageFormatProtobuf {
       return subSec;
     }
 
+    /**
+     * Checks the number of threads configured for parallel loading and
+     * return an ExecutorService with configured number of threads. If the
+     * thread count is set to less than 1, it will be reset to the default
+     * value
+     * @return ExecutorServie with the correct number of threads
+     */
+    private ExecutorService getParallelExecutorService() {
+      int threads = conf.getInt(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY,
+          DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_DEFAULT);
+      if (threads < 1) {
+        LOG.warn("Parallel is enabled and {} is set to {}. Setting to the " +
+            "default value {}", DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY,
+            threads, DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_DEFAULT);
+        threads = DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_DEFAULT;
+      }
+      ExecutorService executorService = Executors.newFixedThreadPool(
+          threads);
+      LOG.info("The fsimage will be loaded in parallel using {} threads",
+          threads);
+      return executorService;
+    }
+
     private void loadInternal(RandomAccessFile raFile, FileInputStream fin)
         throws IOException {
       if (!FSImageUtil.checkFileFormat(raFile)) {
@@ -374,9 +397,7 @@ public final class FSImageFormatProtobuf {
       ArrayList<FileSummary.Section> subSections =
           getAndRemoveSubSections(sections);
       if (loadInParallel) {
-        executorService = Executors.newFixedThreadPool(
-            conf.getInt(DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_KEY,
-                DFSConfigKeys.DFS_IMAGE_PARALLEL_THREADS_DEFAULT));
+        executorService = getParallelExecutorService();
       }
 
       for (FileSummary.Section s : sections) {
@@ -726,7 +747,7 @@ public final class FSImageFormatProtobuf {
         }
         if (inodeThreshold <= 0) {
           LOG.warn("{} is set to {}. It must be greater than zero. Setting to" +
-                  "default of {}",
+                  " default of {}",
               DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_KEY,
               inodeThreshold,
               DFSConfigKeys.DFS_IMAGE_PARALLEL_INODE_THRESHOLD_DEFAULT);

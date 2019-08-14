@@ -95,6 +95,8 @@ public final class FSImageFormatPBINode {
   private static final Logger LOG =
       LoggerFactory.getLogger(FSImageFormatPBINode.class);
 
+  private static final int DIRECTORY_ENTRY_BATCH_SIZE = 1000;
+
   // the loader must decode all fields referencing serial number based fields
   // via to<Item> methods with the string table.
   public final static class Loader {
@@ -276,10 +278,13 @@ public final class FSImageFormatPBINode {
             if (child.isFile()) {
               inodeList.add(child);
             }
-            if (inodeList.size() >= 1000) {
+            if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
               addToCacheAndBlockMap(inodeList);
               inodeList.clear();
             }
+          } else {
+            LOG.warn("Failed to add the inode {} to the directory {}",
+                child.getId(), p.getId());
           }
         }
 
@@ -289,10 +294,13 @@ public final class FSImageFormatPBINode {
             if (ref.isFile()) {
               inodeList.add(ref);
             }
-            if (inodeList.size() >= 1000) {
+            if (inodeList.size() >= DIRECTORY_ENTRY_BATCH_SIZE) {
               addToCacheAndBlockMap(inodeList);
               inodeList.clear();
             }
+          } else {
+            LOG.warn("Failed to add the inode reference {} to the directory {}",
+                ref.getId(), p.getId());
           }
         }
       }
