@@ -19,6 +19,7 @@
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.resourceplugin;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
@@ -33,7 +34,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -56,6 +56,17 @@ public class ResourcePluginManager {
       throws YarnException {
     Configuration conf = context.getConf();
 
+    String[] plugins = getPluginsFromConfig(conf);
+
+    Map<String, ResourcePlugin> pluginMap = Maps.newHashMap();
+    if (plugins != null) {
+      pluginMap = initializePlugins(context, plugins);
+    }
+
+    configuredPlugins = Collections.unmodifiableMap(pluginMap);
+  }
+
+  private String[] getPluginsFromConfig(Configuration conf) {
     String[] plugins = conf.getStrings(YarnConfiguration.NM_RESOURCE_PLUGINS);
     if (plugins == null || plugins.length == 0) {
       LOG.info("No Resource plugins found from configuration!");
@@ -63,27 +74,19 @@ public class ResourcePluginManager {
     LOG.info("Found Resource plugins from configuration: "
         + Arrays.toString(plugins));
 
-    if (plugins != null) {
-      Map<String, ResourcePlugin> pluginMap = new HashMap<>();
+    return plugins;
+  }
 
-      // Initialize each plugins
-      for (String resourceName : plugins) {
-        resourceName = resourceName.trim();
-        if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
-          String msg =
-              "Trying to initialize resource plugin with name=" + resourceName
-                  + ", it is not supported, list of supported plugins:"
-                  + StringUtils.join(",", SUPPORTED_RESOURCE_PLUGINS);
-          LOG.error(msg);
-          throw new YarnException(msg);
-        }
 
-        if (pluginMap.containsKey(resourceName)) {
-          LOG.warn("Ignoring duplicate Resource plugin definition: " +
-              resourceName);
-          continue;
-        }
+  private Map<String, ResourcePlugin> initializePlugins(
+      Context context, String[] plugins) throws YarnException {
+    Map<String, ResourcePlugin> pluginMap = Maps.newHashMap();
 
+    for (String resourceName : plugins) {
+      resourceName = resourceName.trim();
+      ensurePluginIsSupported(resourceName);
+
+      if (!isPluginDuplicate(pluginMap, resourceName)) {
         ResourcePlugin plugin = null;
         if (resourceName.equals(GPU_URI)) {
           final GpuDiscoverer gpuDiscoverer = new GpuDiscoverer();
@@ -103,10 +106,32 @@ public class ResourcePluginManager {
         LOG.info("Initialized plugin {}", plugin);
         pluginMap.put(resourceName, plugin);
       }
+    }
+    return pluginMap;
+  }
 
-      configuredPlugins = Collections.unmodifiableMap(pluginMap);
+  private void ensurePluginIsSupported(String resourceName)
+      throws YarnException {
+    if (!SUPPORTED_RESOURCE_PLUGINS.contains(resourceName)) {
+      String msg =
+          "Trying to initialize resource plugin with name=" + resourceName
+              + ", it is not supported, list of supported plugins:"
+              + StringUtils.join(",", SUPPORTED_RESOURCE_PLUGINS);
+      LOG.error(msg);
+      throw new YarnException(msg);
     }
   }
+
+  private boolean isPluginDuplicate(Map<String, ResourcePlugin> pluginMap,
+      String resourceName) {
+    if (pluginMap.containsKey(resourceName)) {
+      LOG.warn("Ignoring duplicate Resource plugin definition: " +
+          resourceName);
+      return true;
+    }
+    return false;
+  }
+
 
   public void cleanup() throws YarnException {
     for (ResourcePlugin plugin : configuredPlugins.values()) {
