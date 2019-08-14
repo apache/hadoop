@@ -469,8 +469,8 @@ public class EntityGroupFSTimelineStore extends CompositeService
     RemoteIterator<FileStatus> iter = list(dirpath);
     while (iter.hasNext()) {
       FileStatus stat = iter.next();
-      Path clusterTimeStampPath = stat.getPath();
-      if (isValidClusterTimeStampDir(clusterTimeStampPath)) {
+      if (isValidClusterTimeStampDir(stat)) {
+        Path clusterTimeStampPath = stat.getPath();
         MutableBoolean appLogDirPresent = new MutableBoolean(false);
         cleanAppLogDir(clusterTimeStampPath, retainMillis, appLogDirPresent);
         if (appLogDirPresent.isFalse() &&
@@ -520,11 +520,9 @@ public class EntityGroupFSTimelineStore extends CompositeService
     }
   }
 
-  private boolean isValidClusterTimeStampDir(Path clusterTimeStampPath)
-      throws IOException {
-    FileStatus stat = fs.getFileStatus(clusterTimeStampPath);
+  private boolean isValidClusterTimeStampDir(FileStatus stat) {
     return stat.isDirectory() &&
-        StringUtils.isNumeric(clusterTimeStampPath.getName());
+        StringUtils.isNumeric(stat.getPath().getName());
   }
 
 
