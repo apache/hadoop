@@ -43,6 +43,7 @@ import org.apache.hadoop.ozone.om.request.s3.multipart.S3InitiateMultipartUpload
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadAbortRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCommitPartRequest;
 import org.apache.hadoop.ozone.om.request.s3.multipart.S3MultipartUploadCompleteRequest;
+import org.apache.hadoop.ozone.om.request.security.OMGetDelegationTokenRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeCreateRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeDeleteRequest;
 import org.apache.hadoop.ozone.om.request.volume.OMVolumeSetOwnerRequest;
@@ -130,6 +131,8 @@ public final class OzoneManagerRatisUtils {
     case RemoveAcl:
     case SetAcl:
       return getOMAclRequest(omRequest);
+    case GetDelegationToken:
+      return new OMGetDelegationTokenRequest(omRequest);
     default:
       // TODO: will update once all request types are implemented.
       return null;

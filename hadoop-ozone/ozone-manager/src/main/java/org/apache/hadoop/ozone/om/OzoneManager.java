@@ -3368,4 +3368,9 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
         .getUpdatesSince(dbUpdatesRequest.getSequenceNumber());
 
   }
+
+  public OzoneDelegationTokenSecretManager getDelegationTokenMgr() {
+    return delegationTokenMgr;
+  }
+
 }
