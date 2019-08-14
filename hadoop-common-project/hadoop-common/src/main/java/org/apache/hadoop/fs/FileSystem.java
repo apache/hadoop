@@ -4486,7 +4486,7 @@ public abstract class FileSystem extends Configured
    * current {@link FileSystem} method being called.
    */
   protected void methodNotSupported() {
-    // The order of the stacktrace elements look like this (from top to bottom):
+    // The order of the stacktrace elements looks like this (from top to bottom):
     //   - java.lang.Thread.getStackTrace
     //   - org.apache.hadoop.fs.FileSystem.methodNotSupported
     //   - <the FileSystem method>
