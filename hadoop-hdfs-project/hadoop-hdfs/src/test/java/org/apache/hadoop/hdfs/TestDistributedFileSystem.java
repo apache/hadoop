@@ -86,6 +86,8 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.RollingUpgradeAction;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.OpenFileEntry;
+import org.apache.hadoop.hdfs.protocol.OpenFilesIterator;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
@@ -184,8 +186,10 @@ public class TestDistributedFileSystem {
    * Tests DFSClient.close throws no ConcurrentModificationException if 
    * multiple files are open.
    * Also tests that any cached sockets are closed. (HDFS-3359)
+   * Also tests deprecated listOpenFiles(EnumSet<>). (HDFS-14595)
    */
   @Test
+  @SuppressWarnings("deprecation") // call to listOpenFiles(EnumSet<>)
   public void testDFSClose() throws Exception {
     Configuration conf = getTestConfiguration();
     MiniDFSCluster cluster = null;
@@ -196,6 +200,19 @@ public class TestDistributedFileSystem {
       // create two files, leaving them open
       fileSys.create(new Path("/test/dfsclose/file-0"));
       fileSys.create(new Path("/test/dfsclose/file-1"));
+
+      // Test listOpenFiles(EnumSet<>)
+      List<OpenFilesIterator.OpenFilesType> types = new ArrayList<>();
+      types.add(OpenFilesIterator.OpenFilesType.ALL_OPEN_FILES);
+      RemoteIterator<OpenFileEntry> listOpenFiles =
+          fileSys.listOpenFiles(EnumSet.copyOf(types));
+      assertTrue("Two files should be open", listOpenFiles.hasNext());
+      int countOpenFiles = 0;
+      while (listOpenFiles.hasNext()) {
+        listOpenFiles.next();
+        ++countOpenFiles;
+      }
+      assertEquals("Mismatch of open files count", 2, countOpenFiles);
 
       // create another file, close it, and read it, so
       // the client gets a socket in its SocketCache
