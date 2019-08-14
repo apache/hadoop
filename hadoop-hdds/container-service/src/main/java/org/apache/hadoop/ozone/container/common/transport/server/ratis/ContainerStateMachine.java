@@ -274,6 +274,7 @@ public class ContainerStateMachine extends BaseStateMachine {
           "Failed to take snapshot " + " for " + gid + " as the stateMachine"
               + " is unhealthy. The last applied index is at " + ti;
       StateMachineException sme = new StateMachineException(msg);
+      LOG.error(msg);
       throw sme;
     }
     if (ti != null && ti.getIndex() != RaftLog.INVALID_LOG_INDEX) {
@@ -703,13 +704,13 @@ public class ContainerStateMachine extends BaseStateMachine {
                   + "{} Container Result: {}", gid, r.getCmdType(), index,
               r.getMessage(), r.getResult());
           metrics.incNumApplyTransactionsFails();
-          ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
           // Since the applyTransaction now is completed exceptionally,
           // before any further snapshot is taken , the exception will be
           // caught in stateMachineUpdater in Ratis and ratis server will
           // shutdown.
           applyTransactionFuture.completeExceptionally(sce);
           isStateMachineHealthy.compareAndSet(true, false);
+          ratisServer.handleApplyTransactionFailure(gid, trx.getServerRole());
         } else {
           metrics.incNumBytesWrittenCount(
               requestProto.getWriteChunk().getChunkData().getLen());

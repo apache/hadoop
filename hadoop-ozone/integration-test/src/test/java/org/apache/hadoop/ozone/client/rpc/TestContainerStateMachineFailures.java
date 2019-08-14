@@ -114,7 +114,7 @@ public class TestContainerStateMachineFailures {
     conf.setTimeDuration(OZONE_SCM_PIPELINE_DESTROY_TIMEOUT, 10,
         TimeUnit.SECONDS);
     conf.setQuietMode(false);
-    conf.setLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY , 1);
+    conf.setLong(OzoneConfigKeys.DFS_RATIS_SNAPSHOT_THRESHOLD_KEY, 1);
     cluster =
         MiniOzoneCluster.newBuilder(conf).setNumDatanodes(1).setHbInterval(200)
             .build();
@@ -319,10 +319,10 @@ public class TestContainerStateMachineFailures {
         (ContainerStateMachine)ContainerTestHelper.getStateMachine(cluster);
     SimpleStateMachineStorage storage =
         (SimpleStateMachineStorage) stateMachine.getStateMachineStorage();
-    Path path = storage.findLatestSnapshot().getFile().getPath();
+    Path parentPath = storage.findLatestSnapshot().getFile().getPath();
     // Since the snapshot threshold is set to 1, since there are
     // applyTransactions, we should see snapshots
-    Assert.assertTrue(path.getParent().toFile().listFiles().length > 0);
+    Assert.assertTrue(parentPath.getParent().toFile().listFiles().length > 0);
     FileInfo snapshot = storage.findLatestSnapshot().getFile();
     Assert.assertNotNull(snapshot);
     long containerID = omKeyLocationInfo.getContainerID();
@@ -330,7 +330,8 @@ public class TestContainerStateMachineFailures {
     FileUtil.fullyDelete(new File(keyValueContainerData.getContainerPath()));
     Pipeline pipeline = cluster.getStorageContainerLocationClient()
         .getContainerWithPipeline(containerID).getPipeline();
-    XceiverClientSpi xceiverClient = xceiverClientManager.acquireClient(pipeline);
+    XceiverClientSpi xceiverClient =
+        xceiverClientManager.acquireClient(pipeline);
     ContainerProtos.ContainerCommandRequestProto.Builder request =
         ContainerProtos.ContainerCommandRequestProto.newBuilder();
     request.setDatanodeUuid(pipeline.getFirstNode().getUuidString());
