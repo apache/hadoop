@@ -503,9 +503,13 @@ public class TestBlockOutputStreamWithFailures {
 
     Throwable ioException = HddsClientUtils.checkForException(
         blockOutputStream.getIoException());
-    // Since, 2 datanodes went down, if the pipeline gets destroyed quickly,
-    // it will hit GroupMismatchException else, it will fail with
-    // RaftRetryFailureException
+    // Since, 2 datanodes went down,
+    // a) if the pipeline gets destroyed quickly it will hit
+    //    GroupMismatchException.
+    // b) will hit close container exception if the container is closed
+    //    but pipeline is still not destroyed.
+    // c) will fail with RaftRetryFailureException if the leader election
+    //    did not finish before the request retry count finishes.
     Assert.assertTrue(ioException instanceof RaftRetryFailureException
         || ioException instanceof GroupMismatchException
         || ioException instanceof ContainerNotOpenException);
