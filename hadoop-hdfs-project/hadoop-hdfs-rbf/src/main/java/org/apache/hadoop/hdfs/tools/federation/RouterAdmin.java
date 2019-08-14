@@ -127,7 +127,7 @@ public class RouterAdmin extends Configured implements Tool {
           {"-add", "-update", "-rm", "-ls", "-getDestination",
               "-setQuota", "-clrQuota",
               "-safemode", "-nameservice", "-getDisabledNameservices",
-              "-refresh"};
+              "-refresh", "-refreshRouterArgs"};
       StringBuilder usage = new StringBuilder();
       usage.append("Usage: hdfs dfsrouteradmin :\n");
       for (int i = 0; i < commands.length; i++) {
