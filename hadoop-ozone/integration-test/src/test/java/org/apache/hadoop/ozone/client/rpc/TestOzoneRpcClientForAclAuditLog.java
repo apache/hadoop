@@ -250,7 +250,7 @@ public class TestOzoneRpcClientForAclAuditLog {
       // that must be equal to the expected string
       assertTrue(lines.size() != 0);
       for(String exp: expected){
-        assertTrue(lines.get(0).contains(exp + "adsada"));
+        assertTrue(lines.get(0).contains(exp));
       }
       //empty the file
       lines.clear();
