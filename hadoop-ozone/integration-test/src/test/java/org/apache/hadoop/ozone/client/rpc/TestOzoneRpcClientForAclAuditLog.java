@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,7 +50,7 @@ import static org.junit.Assert.assertTrue;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestOzoneRpcClientForAclAuditLog {
 
-  static final Logger LOG =
+  private static final Logger LOG =
       LoggerFactory.getLogger(TestOzoneRpcClientForAclAuditLog.class);
   private static UserGroupInformation ugi;
   private static final OzoneAcl USER_ACL =
@@ -244,15 +245,24 @@ public class TestOzoneRpcClientForAclAuditLog {
     GenericTestUtils.waitFor(() ->
         (lines != null) ? true : false, 100, 60000);
 
-    // When log entry is expected, the log file will contain one line and
-    // that must be equal to the expected string
-    assertTrue(lines.size() != 0);
-    for(String exp: expected){
-      assertTrue(lines.get(0).contains(exp));
+    try{
+      // When log entry is expected, the log file will contain one line and
+      // that must be equal to the expected string
+      assertTrue(lines.size() != 0);
+      for(String exp: expected){
+        assertTrue(lines.get(0).contains(exp + "adsada"));
+      }
+      //empty the file
+      lines.clear();
+      FileUtils.writeLines(file, lines, false);
+    } catch (AssertionError ex){
+      LOG.error("Error occurred in log verification", ex);
+      if(lines.size() !=0 ){
+        LOG.error("Actual line ::: " + lines.get(0));
+        LOG.error("Expected tokens ::: " + Arrays.toString(expected));
+      }
+      throw ex;
     }
-    //empty the file
-    lines.clear();
-    FileUtils.writeLines(file, lines, false);
   }
 
 }
