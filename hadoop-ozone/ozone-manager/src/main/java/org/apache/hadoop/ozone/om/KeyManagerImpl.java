@@ -77,6 +77,7 @@ import org.apache.hadoop.ozone.om.helpers.OmPartInfo;
 import org.apache.hadoop.ozone.om.helpers.OpenKeySession;
 import org.apache.hadoop.ozone.om.helpers.OzoneFSUtils;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo;
+import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OzoneAclInfo.OzoneAclType;
 import org.apache.hadoop.ozone.security.OzoneBlockTokenSecretManager;
 import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.security.acl.RequestContext;
@@ -1406,7 +1407,8 @@ public class KeyManagerImpl implements KeyManager {
       List<OzoneAclInfo> newAcls = new ArrayList<>(keyInfo.getAcls());
       OzoneAclInfo newAcl = null;
       for(OzoneAclInfo a: keyInfo.getAcls()) {
-        if(a.getName().equals(acl.getName())) {
+        if (a.getName().equals(acl.getName()) &&
+            a.getType().equals(OzoneAclType.valueOf(acl.getType().name()))) {
           BitSet currentAcls = BitSet.valueOf(a.getRights().toByteArray());
           currentAcls.or(acl.getAclBitSet());
 
@@ -1483,7 +1485,8 @@ public class KeyManagerImpl implements KeyManager {
       } else {
         // Acl to be removed might be a subset of existing acls.
         for(OzoneAclInfo a: keyInfo.getAcls()) {
-          if(a.getName().equals(acl.getName())) {
+          if (a.getName().equals(acl.getName()) &&
+              a.getType().equals(OzoneAclType.valueOf(acl.getType().name()))) {
             BitSet currentAcls = BitSet.valueOf(a.getRights().toByteArray());
             acl.getAclBitSet().xor(currentAcls);
             currentAcls.and(acl.getAclBitSet());

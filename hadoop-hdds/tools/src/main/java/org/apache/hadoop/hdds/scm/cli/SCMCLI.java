@@ -85,7 +85,8 @@ import picocli.CommandLine.Option;
         CloseSubcommand.class,
         ListPipelinesSubcommand.class,
         ClosePipelineSubcommand.class,
-        TopologySubcommand.class
+        TopologySubcommand.class,
+        ReplicationManagerCommands.class
     },
     mixinStandardHelpOptions = true)
 public class SCMCLI extends GenericCli {

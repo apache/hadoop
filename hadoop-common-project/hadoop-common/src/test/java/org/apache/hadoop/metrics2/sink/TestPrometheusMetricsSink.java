@@ -99,6 +99,28 @@ public class TestPrometheusMetricsSink {
         sink.prometheusName(recordName, metricName));
   }
 
+  @Test
+  public void testNamingPeriods() {
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+
+    String recordName = "org.apache.hadoop.hdfs.server.datanode.fsdataset.impl.FsDatasetImpl";
+    String metricName = "DfsUsed";
+    Assert.assertEquals(
+        "org_apache_hadoop_hdfs_server_datanode_fsdataset_impl_fs_dataset_impl_dfs_used",
+        sink.prometheusName(recordName, metricName));
+  }
+
+  @Test
+  public void testNamingWhitespaces() {
+    PrometheusMetricsSink sink = new PrometheusMetricsSink();
+
+    String recordName = "JvmMetrics";
+    String metricName = "GcCount" + "G1 Old Generation";
+    Assert.assertEquals(
+        "jvm_metrics_gc_count_g1_old_generation",
+        sink.prometheusName(recordName, metricName));
+  }
+
   /**
    * Example metric pojo.
    */

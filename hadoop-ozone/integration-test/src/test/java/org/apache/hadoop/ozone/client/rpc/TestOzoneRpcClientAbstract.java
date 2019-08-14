@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -2456,31 +2457,30 @@ public abstract class TestOzoneRpcClientAbstract {
           ACLType.READ_ACL, ACCESS);
       // Verify that operation successful.
       assertTrue(store.addAcl(ozObj, newAcl));
-      List<OzoneAcl> acls = store.getAcl(ozObj);
 
-      assertTrue(acls.size() == expectedAcls.size());
-      boolean aclVerified = false;
-      for(OzoneAcl acl: acls) {
-        if(acl.getName().equals(newAcl.getName())) {
-          assertTrue(acl.getAclList().contains(ACLType.READ_ACL));
-          aclVerified = true;
-        }
-      }
-      assertTrue("New acl expected but not found.", aclVerified);
-      aclVerified = false;
+      assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
+      final Optional<OzoneAcl> readAcl = store.getAcl(ozObj).stream()
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
+          .findFirst();
+      assertTrue("New acl expected but not found.", readAcl.isPresent());
+      assertTrue("READ_ACL should exist in current acls:"
+          + readAcl.get(),
+          readAcl.get().getAclList().contains(ACLType.READ_ACL));
+
 
       // Case:2 Remove newly added acl permission.
       assertTrue(store.removeAcl(ozObj, newAcl));
-      acls = store.getAcl(ozObj);
-      assertTrue(acls.size() == expectedAcls.size());
-      for(OzoneAcl acl: acls) {
-        if(acl.getName().equals(newAcl.getName())) {
-          assertFalse("READ_ACL should not exist in current acls:" +
-              acls, acl.getAclList().contains(ACLType.READ_ACL));
-          aclVerified = true;
-        }
-      }
-      assertTrue("New acl expected but not found.", aclVerified);
+
+      assertEquals(expectedAcls.size(), store.getAcl(ozObj).size());
+      final Optional<OzoneAcl> nonReadAcl = store.getAcl(ozObj).stream()
+          .filter(acl -> acl.getName().equals(newAcl.getName())
+              && acl.getType().equals(newAcl.getType()))
+          .findFirst();
+      assertTrue("New acl expected but not found.", nonReadAcl.isPresent());
+      assertFalse("READ_ACL should not exist in current acls:"
+              + nonReadAcl.get(),
+          nonReadAcl.get().getAclList().contains(ACLType.READ_ACL));
     } else {
       fail("Default acl should not be empty.");
     }
@@ -2493,17 +2493,17 @@ public abstract class TestOzoneRpcClientAbstract {
       store.removeAcl(ozObj, a);
     }
     List<OzoneAcl> newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == 0);
+    assertEquals(0, newAcls.size());
 
     // Add acl's and then call getAcl.
     int aclCount = 0;
     for (OzoneAcl a : expectedAcls) {
       aclCount++;
       assertTrue(store.addAcl(ozObj, a));
-      assertTrue(store.getAcl(ozObj).size() == aclCount);
+      assertEquals(aclCount, store.getAcl(ozObj).size());
     }
     newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == expectedAcls.size());
+    assertEquals(expectedAcls.size(), newAcls.size());
     List<OzoneAcl> finalNewAcls = newAcls;
     expectedAcls.forEach(a -> assertTrue(finalNewAcls.contains(a)));
 
@@ -2514,7 +2514,7 @@ public abstract class TestOzoneRpcClientAbstract {
         ACLType.ALL, ACCESS);
     store.setAcl(ozObj, Arrays.asList(ua, ug));
     newAcls = store.getAcl(ozObj);
-    assertTrue(newAcls.size() == 2);
+    assertEquals(2, newAcls.size());
     assertTrue(newAcls.contains(ua));
     assertTrue(newAcls.contains(ug));
   }

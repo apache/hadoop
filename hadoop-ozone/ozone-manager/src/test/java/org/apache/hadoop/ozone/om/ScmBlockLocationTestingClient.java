@@ -62,9 +62,9 @@ import static org.apache.hadoop.hdds.protocol.proto
  * TODO: Move this class to a generic test utils so we can use this class in
  * other Ozone Manager tests.
  */
-public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
+public class ScmBlockLocationTestingClient implements ScmBlockLocationProtocol {
   private static final Logger LOG =
-      LoggerFactory.getLogger(ScmBlockLocationTestIngClient.class);
+      LoggerFactory.getLogger(ScmBlockLocationTestingClient.class);
   private final String clusterID;
   private final String scmId;
 
@@ -81,7 +81,7 @@ public class ScmBlockLocationTestIngClient implements ScmBlockLocationProtocol {
    * @param failCallsFrequency - Set to 0 for no failures, 1 for always to fail,
    * a positive number for that frequency of failure.
    */
-  public ScmBlockLocationTestIngClient(String clusterID, String scmId,
+  public ScmBlockLocationTestingClient(String clusterID, String scmId,
       int failCallsFrequency) {
     this.clusterID = StringUtils.isNotBlank(clusterID) ? clusterID :
         UUID.randomUUID().toString();

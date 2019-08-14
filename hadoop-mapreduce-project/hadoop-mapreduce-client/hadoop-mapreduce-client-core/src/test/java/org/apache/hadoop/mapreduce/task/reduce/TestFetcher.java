@@ -27,11 +27,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -182,12 +182,12 @@ public class TestFetcher {
         except, key, connection);
     fetcher.copyFromHost(host);
 
-    Assert.assertEquals("No host failure is expected.",
-        ss.hostFailureCount(host.getHostName()), 0);
-    Assert.assertEquals("No fetch failure is expected.",
-        ss.fetchFailureCount(map1ID), 0);
-    Assert.assertEquals("No fetch failure is expected.",
-        ss.fetchFailureCount(map2ID), 0);
+    assertThat(ss.hostFailureCount(host.getHostName()))
+        .withFailMessage("No host failure is expected.").isEqualTo(0);
+    assertThat(ss.fetchFailureCount(map1ID))
+        .withFailMessage("No fetch failure is expected.").isEqualTo(0);
+    assertThat(ss.fetchFailureCount(map2ID))
+        .withFailMessage("No fetch failure is expected.").isEqualTo(0);
 
     verify(ss).penalize(eq(host), anyLong());
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));

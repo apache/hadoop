@@ -1039,6 +1039,17 @@ void test_launch_container(const char* app, int https) {
     printf("FAIL: failed to create container directory %s\n", container_dir);
     exit(1);
   }
+  // Verify no group read permission on container_dir
+  struct stat st_buf;
+  if (stat(container_dir, &st_buf) < 0) {
+    printf("FAIL: failed to stat container directory %s\n", container_dir);
+    exit(1);
+  }
+  if ((st_buf.st_mode & S_IRGRP) != 0) {
+    printf("FAIL: group read permission should not be set on "
+           "container directory %s\n", container_dir);
+    exit(1);
+  }
   char touchfile[100000];
   sprintf(touchfile, "%s/foobar", container_dir);
   if (access(touchfile, R_OK) != 0) {
