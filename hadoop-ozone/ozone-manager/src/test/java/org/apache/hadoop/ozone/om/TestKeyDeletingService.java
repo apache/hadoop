@@ -91,7 +91,7 @@ public class TestKeyDeletingService {
     OmMetadataManagerImpl metaMgr = new OmMetadataManagerImpl(conf);
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 0),
+            new ScmBlockLocationTestingClient(null, null, 0),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
@@ -113,7 +113,7 @@ public class TestKeyDeletingService {
     //failCallsFrequency = 1 , means all calls fail.
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 1),
+            new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 1);
@@ -140,7 +140,7 @@ public class TestKeyDeletingService {
     //failCallsFrequency = 1 , means all calls fail.
     KeyManager keyManager =
         new KeyManagerImpl(
-            new ScmBlockLocationTestIngClient(null, null, 1),
+            new ScmBlockLocationTestingClient(null, null, 1),
             metaMgr, conf, UUID.randomUUID().toString(), null);
     final int keyCount = 100;
     createAndDeleteKeys(keyManager, keyCount, 0);
