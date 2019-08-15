@@ -88,7 +88,7 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(0|-?[1-9]\\d*)\\s*(#.*)?$");
 
   final private long timeout;
-
+  
   // Maps for id to name map. Guarded by this object monitor lock
   private BiMap<Integer, String> uidNameMap = HashBiMap.create();
   private BiMap<Integer, String> gidNameMap = HashBiMap.create();
