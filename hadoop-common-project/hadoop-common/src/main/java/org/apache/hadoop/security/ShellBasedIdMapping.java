@@ -88,11 +88,13 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
       Pattern.compile("^(uid|gid)\\s+(\\d+)\\s+(0|-?[1-9]\\d*)\\s*(#.*)?$");
 
   final private long timeout;
-  
+
   // Maps for id to name map. Guarded by this object monitor lock
   private BiMap<Integer, String> uidNameMap = HashBiMap.create();
   private BiMap<Integer, String> gidNameMap = HashBiMap.create();
   private long lastUpdateTime = 0; // Last time maps were updated
+  private long lastUsersUpdateTime = 0; // Last time uidNameMap were updated
+  private long lastGroupsUpdateTime = 0; // Last time gidNameMap were updated
 
   /*
    * Constructor
@@ -158,6 +160,14 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
   synchronized private boolean isExpired() {
     return Time.monotonicNow() - lastUpdateTime > timeout;
+  }
+
+  synchronized private boolean isUsersExpired() {
+    return Time.monotonicNow() - lastUsersUpdateTime > timeout;
+  }
+
+  synchronized private boolean isGroupsExpired() {
+    return Time.monotonicNow() - lastGroupsUpdateTime > timeout;
   }
 
   // If can't update the maps, will keep using the old ones
@@ -469,28 +479,45 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
     if (OS.startsWith("Linux") || OS.equals("SunOS") || OS.contains("BSD")) {
       if (isGrp) {
-        updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdNIX(name, true), ":",
-            staticMapping.gidMapping);
+        if (isGroupsExpired()) {
+          LOG.info("Update gidNameMap now");
+          updated = updateMapInternal(gidNameMap, "group",
+                  getName2IdCmdNIX(name, true), ":",
+                  staticMapping.gidMapping);
+        }
       } else {
-        updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdNIX(name, false), ":",
-            staticMapping.uidMapping);
+        if (isUsersExpired()) {
+          LOG.info("Update uidNameMap now");
+          updated = updateMapInternal(uidNameMap, "user",
+                  getName2IdCmdNIX(name, false), ":",
+                  staticMapping.uidMapping);
+        }
       }
     } else {
       // Mac
-      if (isGrp) {        
-        updated = updateMapInternal(gidNameMap, "group",
-            getName2IdCmdMac(name, true), "\\s+",
-            staticMapping.gidMapping);
+      if (isGrp) {
+        if (isGroupsExpired()) {
+          LOG.info("Update gidNameMap now");
+          updated = updateMapInternal(gidNameMap, "group",
+                  getName2IdCmdMac(name, true), "\\s+",
+                  staticMapping.gidMapping);
+        }
       } else {
-        updated = updateMapInternal(uidNameMap, "user",
-            getName2IdCmdMac(name, false), "\\s+",
-            staticMapping.uidMapping);
+        if (isUsersExpired()) {
+          LOG.info("Update uidNameMap now");
+          updated = updateMapInternal(uidNameMap, "user",
+                  getName2IdCmdMac(name, false), "\\s+",
+                  staticMapping.uidMapping);
+        }
       }
     }
     if (updated) {
       lastUpdateTime = Time.monotonicNow();
+      if (isGrp) {
+        lastGroupsUpdateTime = Time.monotonicNow();
+      } else {
+        lastUsersUpdateTime = Time.monotonicNow();
+      }
     }
   }
 
@@ -505,28 +532,45 @@ public class ShellBasedIdMapping implements IdMappingServiceProvider {
 
     if (OS.startsWith("Linux") || OS.equals("SunOS") || OS.contains("BSD")) {
       if (isGrp) {
-        updated = updateMapInternal(gidNameMap, "group",
-            getId2NameCmdNIX(id, true), ":",
-            staticMapping.gidMapping);
+        if (isGroupsExpired()) {
+          LOG.info("Update gidNameMap now");
+          updated = updateMapInternal(gidNameMap, "group",
+                  getId2NameCmdNIX(id, true), ":",
+                  staticMapping.gidMapping);
+        }
       } else {
-        updated = updateMapInternal(uidNameMap, "user",
-            getId2NameCmdNIX(id, false), ":",
-            staticMapping.uidMapping);
+        if (isUsersExpired()) {
+          LOG.info("Update uidNameMap now");
+          updated = updateMapInternal(uidNameMap, "user",
+                  getId2NameCmdNIX(id, false), ":",
+                  staticMapping.uidMapping);
+        }
       }
     } else {
       // Mac
       if (isGrp) {
-        updated = updateMapInternal(gidNameMap, "group",
-            getId2NameCmdMac(id, true), "\\s+",
-            staticMapping.gidMapping);
+        if (isGroupsExpired()) {
+          LOG.info("Update gidNameMap now");
+          updated = updateMapInternal(gidNameMap, "group",
+                  getId2NameCmdMac(id, true), "\\s+",
+                  staticMapping.gidMapping);
+        }
       } else {
-        updated = updateMapInternal(uidNameMap, "user",
-            getId2NameCmdMac(id, false), "\\s+",
-            staticMapping.uidMapping);
+        if (isUsersExpired()) {
+          LOG.info("Update uidNameMap now");
+          updated = updateMapInternal(uidNameMap, "user",
+                  getId2NameCmdMac(id, false), "\\s+",
+                  staticMapping.uidMapping);
+        }
       }
     }
     if (updated) {
       lastUpdateTime = Time.monotonicNow();
+      if (isGrp) {
+        lastGroupsUpdateTime = Time.monotonicNow();
+      } else {
+        lastUsersUpdateTime = Time.monotonicNow();
+      }
     }
   }
 
