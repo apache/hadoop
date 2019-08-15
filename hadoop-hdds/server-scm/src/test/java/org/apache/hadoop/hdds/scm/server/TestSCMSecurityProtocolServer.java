@@ -16,6 +16,12 @@
  */
 package org.apache.hadoop.hdds.scm.server;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT;
+
+import java.net.ServerSocket;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.junit.After;
 import org.junit.Before;
@@ -35,7 +41,11 @@ public class TestSCMSecurityProtocolServer {
 
   @Before
   public void setUp() throws Exception {
+    int port = new ServerSocket(0).getLocalPort();
     config = new OzoneConfiguration();
+    config.set(OZONE_SCM_CLIENT_ADDRESS_KEY,
+        StringUtils.join(OZONE_SCM_CLIENT_BIND_HOST_DEFAULT, ":",
+            String.valueOf(port)));
     securityProtocolServer = new SCMSecurityProtocolServer(config, null);
   }
 

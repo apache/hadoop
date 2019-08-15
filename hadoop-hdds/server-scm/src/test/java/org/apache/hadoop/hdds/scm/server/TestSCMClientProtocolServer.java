@@ -18,6 +18,12 @@
 
 package org.apache.hadoop.hdds.scm.server;
 
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_ADDRESS_KEY;
+import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_CLIENT_BIND_HOST_DEFAULT;
+
+import java.net.ServerSocket;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationFactor;
 import org.apache.hadoop.hdds.protocol.proto.HddsProtos.ReplicationType;
@@ -46,7 +52,11 @@ public class TestSCMClientProtocolServer {
 
   @Before
   public void setUp() throws Exception {
+    int port = new ServerSocket(0).getLocalPort();
     config = new OzoneConfiguration();
+    config.set(OZONE_SCM_CLIENT_ADDRESS_KEY,
+        StringUtils.join(OZONE_SCM_CLIENT_BIND_HOST_DEFAULT, ":",
+            String.valueOf(port)));
     eventQueue = new EventQueue();
     scmClientProtocolServer = new SCMClientProtocolServer(config, null);
     BlockManager blockManager = Mockito.mock(BlockManagerImpl.class);
