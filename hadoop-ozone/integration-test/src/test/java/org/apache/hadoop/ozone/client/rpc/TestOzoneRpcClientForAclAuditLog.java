@@ -1,5 +1,6 @@
 package org.apache.hadoop.ozone.client.rpc;
 
+import net.jcip.annotations.NotThreadSafe;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -46,7 +47,13 @@ import static org.junit.Assert.assertTrue;
 
 /**
  * This class is to test audit logs for xxxACL APIs of Ozone Client.
+ * It is annotated as NotThreadSafe intentionally since this test reads from
+ * the generated audit logs to verify the operations. Since the
+ * maven test plugin will trigger parallel test execution, there is a
+ * possibility of other audit events being logged and leading to failure of
+ * all assertion based test in this class.
  */
+@NotThreadSafe
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class TestOzoneRpcClientForAclAuditLog {
 
@@ -87,6 +94,7 @@ public class TestOzoneRpcClientForAclAuditLog {
     startCluster(conf);
     aclListToAdd.add(USER_ACL);
     aclListToAdd.add(USER_ACL_2);
+    emptyAuditLog();
   }
 
   /**
@@ -112,13 +120,22 @@ public class TestOzoneRpcClientForAclAuditLog {
   @AfterClass
   public static void teardown() throws IOException {
     shutdownCluster();
+    deleteAuditLog();
+  }
+
+  private static void deleteAuditLog() throws IOException {
     File file = new File("audit.log");
     if (FileUtils.deleteQuietly(file)) {
       LOG.info(file.getName() +
-          " has been deleted as all tests have completed.");
+          " has been deleted.");
     } else {
       LOG.info("audit.log could not be deleted.");
     }
+  }
+
+  private static void emptyAuditLog() throws IOException {
+    File file = new File("audit.log");
+    FileUtils.writeLines(file, new ArrayList<>(), false);
   }
 
   /**
@@ -252,16 +269,15 @@ public class TestOzoneRpcClientForAclAuditLog {
       for(String exp: expected){
         assertTrue(lines.get(0).contains(exp));
       }
-      //empty the file
-      lines.clear();
-      FileUtils.writeLines(file, lines, false);
     } catch (AssertionError ex){
       LOG.error("Error occurred in log verification", ex);
-      if(lines.size() !=0 ){
+      if(lines.size() != 0){
         LOG.error("Actual line ::: " + lines.get(0));
         LOG.error("Expected tokens ::: " + Arrays.toString(expected));
       }
       throw ex;
+    } finally {
+      emptyAuditLog();
     }
   }
 

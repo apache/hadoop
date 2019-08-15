@@ -2991,13 +2991,13 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
   }
 
   private void auditAcl(OzoneObj ozoneObj, List<OzoneAcl> ozoneAcl,
-      OMAction omAction, boolean auditSuccess, Exception ex) {
+      OMAction omAction, Exception ex) {
     Map<String, String> auditMap = ozoneObj.toAuditMap();
     if(ozoneAcl != null) {
       auditMap.put(OzoneConsts.ACL, ozoneAcl.toString());
     }
 
-    if(auditSuccess) {
+    if(ex == null) {
       AUDIT.logWriteSuccess(
           buildAuditMessageForSuccess(omAction, auditMap));
     } else {
@@ -3038,13 +3038,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL,
-          auditSuccess, ex);
+      auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL,
-            auditSuccess, null);
+        auditAcl(obj, Arrays.asList(acl), OMAction.ADD_ACL, null);
       }
     }
   }
@@ -3082,12 +3080,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL, auditSuccess, ex);
+      auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL,
-            auditSuccess, null);
+        auditAcl(obj, Arrays.asList(acl), OMAction.REMOVE_ACL, null);
       }
     }
   }
@@ -3124,11 +3121,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      auditAcl(obj, acls, OMAction.SET_ACL, auditSuccess, ex);
+      auditAcl(obj, acls, OMAction.SET_ACL, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        auditAcl(obj, acls, OMAction.SET_ACL, auditSuccess, null);
+        auditAcl(obj, acls, OMAction.SET_ACL, null);
       }
     }
   }
@@ -3164,11 +3161,11 @@ public final class OzoneManager extends ServiceRuntimeInfoImpl
       }
     } catch(Exception ex) {
       auditSuccess = false;
-      auditAcl(obj, null, OMAction.GET_ACL, auditSuccess, ex);
+      auditAcl(obj, null, OMAction.GET_ACL, ex);
       throw ex;
     } finally {
       if(auditSuccess){
-        auditAcl(obj, null, OMAction.GET_ACL, auditSuccess, null);
+        auditAcl(obj, null, OMAction.GET_ACL, null);
       }
     }
   }
