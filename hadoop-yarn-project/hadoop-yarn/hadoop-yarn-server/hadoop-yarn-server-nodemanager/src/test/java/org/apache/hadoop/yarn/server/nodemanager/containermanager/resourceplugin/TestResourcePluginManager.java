@@ -48,7 +48,6 @@ import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
 import org.apache.hadoop.yarn.util.resource.TestResourceUtils;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -57,6 +56,8 @@ import java.util.List;
 import java.util.Map;
 import java.io.File;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.mock;
@@ -67,14 +68,10 @@ import static org.mockito.Mockito.spy;
 
 public class TestResourcePluginManager extends NodeManagerTestBase {
   private NodeManager nm;
-
-  private YarnConfiguration conf;
-
   private String tempResourceTypesFile;
 
   @Before
   public void setup() throws Exception {
-    this.conf = createNMConfig();
     // setup resource-types.xml
     ResourceUtils.resetResourceTypes();
     String resourceTypesFile = "resource-types-pluggable-devices.xml";
@@ -82,7 +79,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
         TestResourceUtils.setupResourceTypes(this.conf, resourceTypesFile);
   }
 
-  ResourcePluginManager stubResourcePluginmanager() {
+  private ResourcePluginManager stubResourcePluginmanager() {
     // Stub ResourcePluginManager
     final ResourcePluginManager rpm = mock(ResourcePluginManager.class);
     Map<String, ResourcePlugin> plugins = new HashMap<>();
@@ -117,7 +114,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     // cleanup resource-types.xml
     File dest = new File(this.tempResourceTypesFile);
     if (dest.exists()) {
-      dest.delete();
+      assertThat(dest.delete()).isTrue();
     }
   }
 
@@ -155,10 +152,10 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     }
   }
 
-  private class MyMockNM extends NodeManager {
+  private class ResourcePluginMockNM extends NodeManager {
     private final ResourcePluginManager rpm;
 
-    public MyMockNM(ResourcePluginManager rpm) {
+    ResourcePluginMockNM(ResourcePluginManager rpm) {
       this.rpm = rpm;
     }
 
@@ -196,28 +193,28 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     }
   }
 
-  /*
-   * Make sure ResourcePluginManager is initialized during NM start up.
+  /**
+   * Make sure {@link ResourcePluginManager} is initialized during NM start up.
    */
   @Test(timeout = 30000)
   public void testResourcePluginManagerInitialization() throws Exception {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
-    nm = new MyMockNM(rpm);
+    nm = new ResourcePluginMockNM(rpm);
 
     nm.init(conf);
     verify(rpm).initialize(
         any(Context.class));
   }
 
-  /*
-   * Make sure ResourcePluginManager is invoked during NM update.
+  /**
+   * Make sure {@link ResourcePluginManager} is invoked during NM update.
    */
   @Test(timeout = 30000)
   public void testNodeStatusUpdaterWithResourcePluginsEnabled()
       throws Exception {
     final ResourcePluginManager rpm = stubResourcePluginmanager();
 
-    nm = new MyMockNM(rpm);
+    nm = new ResourcePluginMockNM(rpm);
 
     nm.init(conf);
     nm.start();
@@ -230,8 +227,8 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
         .updateConfiguredResource(any(Resource.class));
   }
 
-  /*
-   * Make sure ResourcePluginManager is used to initialize ResourceHandlerChain
+  /**
+   * Make sure ResourcePluginManager is used to initialize ResourceHandlerChain.
    */
   @Test(timeout = 30000)
   public void testLinuxContainerExecutorWithResourcePluginsEnabled() {
@@ -270,33 +267,36 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     nm.start();
 
     ResourceHandler handler = lce.getResourceHandler();
-    Assert.assertNotNull(handler);
-    Assert.assertTrue(handler instanceof ResourceHandlerChain);
+    assertThat(handler).isNotNull();
+    assertThat(handler instanceof ResourceHandlerChain).isTrue();
 
     boolean newHandlerAdded = false;
     for (ResourceHandler h : ((ResourceHandlerChain) handler)
         .getResourceHandlerList()) {
       if (h instanceof DevicePluginAdapter) {
-        Assert.assertTrue(false);
+        fail("ResourceHandler is a DevicePluginAdapter.");
       }
       if (h instanceof CustomizedResourceHandler) {
         newHandlerAdded = true;
         break;
       }
     }
-    Assert.assertTrue("New ResourceHandler should be added", newHandlerAdded);
+    assertThat(newHandlerAdded).withFailMessage(
+        "New ResourceHandler should be added").isTrue();
   }
 
-  // Disabled pluggable framework in configuration.
-  // We use spy object of real rpm to verify "initializePluggableDevicePlugins"
-  // because use mock rpm will not working
+  /**
+   * Disabled pluggable framework in configuration.
+   * We use spy object of real rpm to verify "initializePluggableDevicePlugins"
+   * because use mock rpm will not working
+   */
   @Test(timeout = 30000)
   public void testInitializationWithPluggableDeviceFrameworkDisabled()
       throws Exception {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         false);
@@ -315,7 +315,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     nm.init(conf);
     nm.start();
@@ -332,7 +332,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -355,7 +355,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
     boolean fail = false;
     try {
       conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
@@ -366,11 +366,11 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     } catch (YarnRuntimeException e) {
       fail = true;
     } catch (Exception ignored) {
-
+      // ignore
     }
     verify(rpmSpy).initializePluggableDevicePlugins(
         any(Context.class), any(Configuration.class), anyMap());
-    Assert.assertTrue(fail);
+    assertThat(fail).isTrue();
   }
 
   @Test(timeout = 30000)
@@ -378,7 +378,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -388,10 +388,10 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     nm.init(conf);
     nm.start();
     Map<String, ResourcePlugin> pluginMap = rpmSpy.getNameToPlugins();
-    Assert.assertEquals(1, pluginMap.size());
+    assertThat(pluginMap.size()).isOne();
     ResourcePlugin rp = pluginMap.get("cmpA.com/hdwA");
     if (!(rp instanceof DevicePluginAdapter)) {
-      Assert.fail();
+      fail("ResourcePlugin is not DevicePluginAdapter.");
     }
     verify(rpmSpy).checkInterfaceCompatibility(
         DevicePlugin.class, FakeTestDevicePlugin1.class);
@@ -403,7 +403,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -421,7 +421,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     } catch (YarnRuntimeException e) {
       actualMessage = e.getMessage();
     }
-    Assert.assertEquals(expectedMessage, actualMessage);
+    assertThat(actualMessage).isEqualTo(expectedMessage);
   }
 
   // Fail to register duplicated resource name.
@@ -430,7 +430,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -451,7 +451,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     } catch (YarnRuntimeException e) {
       actualMessage = e.getMessage();
     }
-    Assert.assertEquals(expectedMessage, actualMessage);
+    assertThat(actualMessage).isEqualTo(expectedMessage);
   }
 
   /**
@@ -463,7 +463,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpm = new ResourcePluginManager();
 
     ResourcePluginManager rpmSpy = spy(rpm);
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -481,7 +481,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     } catch (YarnRuntimeException e) {
       actualMessage = e.getMessage();
     }
-    Assert.assertEquals(expectedMessage, actualMessage);
+    assertThat(actualMessage).isEqualTo(expectedMessage);
   }
 
   @Test
@@ -493,7 +493,7 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
     ResourcePluginManager rpmSpy = spy(rpm);
     rpmSpy.setDeviceMappingManager(dmmSpy);
 
-    nm = new MyMockNM(rpmSpy);
+    nm = new ResourcePluginMockNM(rpmSpy);
 
     conf.setBoolean(YarnConfiguration.NM_PLUGGABLE_DEVICE_FRAMEWORK_ENABLED,
         true);
@@ -508,16 +508,16 @@ public class TestResourcePluginManager extends NodeManagerTestBase {
         DevicePlugin.class, FakeTestDevicePlugin1.class);
     verify(dmmSpy).addDevicePluginScheduler(
         any(String.class), any(DevicePluginScheduler.class));
-    Assert.assertEquals(1, dmm.getDevicePluginSchedulers().size());
+    assertThat(dmm.getDevicePluginSchedulers().size()).isOne();
   }
 
   @Test(timeout = 30000)
   public void testRequestedResourceNameIsConfigured() {
     ResourcePluginManager rpm = new ResourcePluginManager();
     String resourceName = "a.com/a";
-    Assert.assertFalse(rpm.isConfiguredResourceName(resourceName));
+    assertThat(rpm.isConfiguredResourceName(resourceName)).isFalse();
     resourceName = "cmp.com/cmp";
-    Assert.assertTrue(rpm.isConfiguredResourceName(resourceName));
+    assertThat(rpm.isConfiguredResourceName(resourceName)).isTrue();
   }
 
 }
