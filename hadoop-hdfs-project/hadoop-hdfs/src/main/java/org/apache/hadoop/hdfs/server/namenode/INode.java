@@ -39,6 +39,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockStoragePolicySuite;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockUnderConstructionFeature;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.DstReference;
+import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithCount;
 import org.apache.hadoop.hdfs.server.namenode.INodeReference.WithName;
 import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.hdfs.util.Diff;
@@ -644,6 +645,18 @@ public abstract class INode implements INodeAttributes, Diff.Element<byte[]> {
    */
   public INodeReference getParentReference() {
     return parent == null || !parent.isReference()? null: (INodeReference)parent;
+  }
+
+  /**
+   * @return true if this is a reference and the reference count is 1;
+   *         otherwise, return false.
+   */
+  public boolean isLastReference() {
+    final INodeReference ref = getParentReference();
+    if (!(ref instanceof WithCount)) {
+      return false;
+    }
+    return ((WithCount)ref).getReferenceCount() == 1;
   }
 
   /** Set parent directory */
