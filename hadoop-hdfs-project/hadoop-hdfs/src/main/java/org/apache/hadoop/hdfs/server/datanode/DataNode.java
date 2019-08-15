@@ -3312,10 +3312,11 @@ public class DataNode extends ReconfigurableBase
       throws IOException {
     checkSuperuserPrivilege();
     InetSocketAddress namenodeAddr = options.getNamenodeAddr();
+    boolean shouldTriggerToAllNn = (namenodeAddr == null);
     for (BPOfferService bpos : blockPoolManager.getAllNamenodeThreads()) {
       if (bpos != null) {
         for (BPServiceActor actor : bpos.getBPServiceActors()) {
-          if (namenodeAddr == null || namenodeAddr.equals(actor.nnAddr)) {
+          if (shouldTriggerToAllNn || namenodeAddr.equals(actor.nnAddr)) {
             actor.triggerBlockReport(options);
           }
         }
