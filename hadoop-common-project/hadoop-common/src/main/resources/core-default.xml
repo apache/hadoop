@@ -2196,7 +2196,7 @@
 
 <property>
   <name>ipc.server.listen.queue.size</name>
-  <value>128</value>
+  <value>256</value>
   <description>Indicates the length of the listen queue for servers accepting
                client connections.
   </description>
