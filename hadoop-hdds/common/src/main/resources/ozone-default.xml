@@ -106,7 +106,7 @@
   </property>
   <property>
     <name>dfs.container.ratis.log.purge.gap</name>
-    <value>1000000000</value>
+    <value>1000000</value>
     <tag>OZONE, DEBUG, CONTAINER, RATIS</tag>
     <description>Purge gap between the last purged commit index
       and the current index, when the leader decides to purge its log.
