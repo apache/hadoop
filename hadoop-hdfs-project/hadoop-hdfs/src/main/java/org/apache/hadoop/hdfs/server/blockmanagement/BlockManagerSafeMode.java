@@ -85,7 +85,7 @@ class BlockManagerSafeMode {
   private volatile BMSafeModeStatus status = BMSafeModeStatus.OFF;
 
   /** Safe mode threshold condition %.*/
-  private final double threshold;
+  private final float threshold;
   /** Number of blocks needed to satisfy safe mode threshold condition. */
   private long blockThreshold;
   /** Total number of blocks. */
@@ -97,7 +97,7 @@ class BlockManagerSafeMode {
   /** Min replication required by safe mode. */
   private final int safeReplication;
   /** Threshold for populating needed replication queues. */
-  private final double replQueueThreshold;
+  private final float replQueueThreshold;
   /** Number of blocks needed before populating replication queues. */
   private long blockReplQueueThreshold;
 
@@ -150,8 +150,7 @@ class BlockManagerSafeMode {
     // default to safe mode threshold (i.e., don't populate queues before
     // leaving safe mode)
     this.replQueueThreshold =
-        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY,
-            (float) threshold);
+        conf.getFloat(DFS_NAMENODE_REPL_QUEUE_THRESHOLD_PCT_KEY, threshold);
     this.extension = conf.getTimeDuration(DFS_NAMENODE_SAFEMODE_EXTENSION_KEY,
         DFS_NAMENODE_SAFEMODE_EXTENSION_DEFAULT,
         MILLISECONDS);
