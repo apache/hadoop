@@ -67,7 +67,7 @@ public abstract class AbstractLivelinessMonitor<O> extends AbstractService {
     assert !stopped : "starting when already stopped";
     resetTimer();
     checkerThread = new Thread(new PingChecker());
-    checkerThread.setName("Ping Checker");
+    checkerThread.setName("Ping Checker for "+getName());
     checkerThread.start();
     super.serviceStart();
   }

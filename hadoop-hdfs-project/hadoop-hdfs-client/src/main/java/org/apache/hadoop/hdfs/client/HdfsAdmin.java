@@ -626,6 +626,12 @@ public class HdfsAdmin {
     return dfs.listOpenFiles();
   }
 
+  @Deprecated
+  public RemoteIterator<OpenFileEntry> listOpenFiles(
+      EnumSet<OpenFilesType> openFilesTypes) throws IOException {
+    return dfs.listOpenFiles(openFilesTypes);
+  }
+
   public RemoteIterator<OpenFileEntry> listOpenFiles(
       EnumSet<OpenFilesType> openFilesTypes, String path) throws IOException {
     return dfs.listOpenFiles(openFilesTypes, path);

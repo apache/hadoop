@@ -29,6 +29,10 @@ import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolPro
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.GetContainerWithPipelineResponseProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeRequestProto;
 import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.InSafeModeResponseProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StartReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.StopReplicationManagerRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusRequestProto;
+import org.apache.hadoop.hdds.protocol.proto.StorageContainerLocationProtocolProtos.ReplicationManagerStatusResponseProto;
 import org.apache.hadoop.hdds.scm.ScmInfo;
 import org.apache.hadoop.hdds.scm.container.common.helpers.ContainerWithPipeline;
 import org.apache.hadoop.hdds.scm.container.ContainerInfo;
@@ -402,6 +406,41 @@ public final class StorageContainerLocationProtocolClientSideTranslatorPB
       ForceExitSafeModeResponseProto resp = rpcProxy
           .forceExitSafeMode(NULL_RPC_CONTROLLER, request);
       return resp.getExitedSafeMode();
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void startReplicationManager() throws IOException {
+    try {
+      StartReplicationManagerRequestProto request =
+          StartReplicationManagerRequestProto.getDefaultInstance();
+      rpcProxy.startReplicationManager(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public void stopReplicationManager() throws IOException {
+    try {
+      StopReplicationManagerRequestProto request =
+          StopReplicationManagerRequestProto.getDefaultInstance();
+      rpcProxy.stopReplicationManager(NULL_RPC_CONTROLLER, request);
+    } catch (ServiceException e) {
+      throw ProtobufHelper.getRemoteException(e);
+    }
+  }
+
+  @Override
+  public boolean getReplicationManagerStatus() throws IOException {
+    try {
+      ReplicationManagerStatusRequestProto request =
+          ReplicationManagerStatusRequestProto.getDefaultInstance();
+      ReplicationManagerStatusResponseProto response =
+          rpcProxy.getReplicationManagerStatus(NULL_RPC_CONTROLLER, request);
+      return response.getIsRunning();
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

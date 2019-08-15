@@ -233,6 +233,9 @@ public class TestHdfsAdmin {
       closedFileSet.add(filePath);
     }
     verifyOpenFiles(closedFileSet, openFileMap);
+    // Verify again with the old listOpenFiles(EnumSet<>) API
+    // Just to verify old API's validity
+    verifyOpenFilesOld(closedFileSet, openFileMap);
 
     openFileMap.putAll(
         DFSTestUtil.createOpenFiles(fs, "open-file-1", numOpenFiles));
@@ -252,13 +255,10 @@ public class TestHdfsAdmin {
     }
   }
 
-  private void verifyOpenFiles(HashSet<Path> closedFiles,
-      HashMap<Path, FSDataOutputStream> openFileMap) throws IOException {
-    HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
-    HashSet<Path> openFiles = new HashSet<>(openFileMap.keySet());
-    RemoteIterator<OpenFileEntry> openFilesRemoteItr =
-        hdfsAdmin.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
-            OpenFilesIterator.FILTER_PATH_DEFAULT);
+  private void verifyOpenFilesHelper(
+      RemoteIterator<OpenFileEntry> openFilesRemoteItr,
+      HashSet<Path> closedFiles,
+      HashSet<Path> openFiles) throws IOException {
     while (openFilesRemoteItr.hasNext()) {
       String filePath = openFilesRemoteItr.next().getFilePath();
       assertFalse(filePath + " should not be listed under open files!",
@@ -266,6 +266,30 @@ public class TestHdfsAdmin {
       assertTrue(filePath + " is not listed under open files!",
           openFiles.remove(new Path(filePath)));
     }
+  }
+
+  private void verifyOpenFiles(HashSet<Path> closedFiles,
+      HashMap<Path, FSDataOutputStream> openFileMap) throws IOException {
+    HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    HashSet<Path> openFiles = new HashSet<>(openFileMap.keySet());
+    RemoteIterator<OpenFileEntry> openFilesRemoteItr =
+        hdfsAdmin.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES),
+            OpenFilesIterator.FILTER_PATH_DEFAULT);
+    verifyOpenFilesHelper(openFilesRemoteItr, closedFiles, openFiles);
+    assertTrue("Not all open files are listed!", openFiles.isEmpty());
+  }
+
+  /**
+   * Using deprecated HdfsAdmin#listOpenFiles(EnumSet<>) to verify open files.
+   */
+  @SuppressWarnings("deprecation") // call to listOpenFiles(EnumSet<>)
+  private void verifyOpenFilesOld(HashSet<Path> closedFiles,
+      HashMap<Path, FSDataOutputStream> openFileMap) throws IOException {
+    HdfsAdmin hdfsAdmin = new HdfsAdmin(FileSystem.getDefaultUri(conf), conf);
+    HashSet<Path> openFiles = new HashSet<>(openFileMap.keySet());
+    RemoteIterator<OpenFileEntry> openFilesRemoteItr =
+        hdfsAdmin.listOpenFiles(EnumSet.of(OpenFilesType.ALL_OPEN_FILES));
+    verifyOpenFilesHelper(openFilesRemoteItr, closedFiles, openFiles);
     assertTrue("Not all open files are listed!", openFiles.isEmpty());
   }
 }

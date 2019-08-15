@@ -469,6 +469,27 @@ public class SCMClientProtocolServer implements
     return scm.exitSafeMode();
   }
 
+  @Override
+  public void startReplicationManager() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.START_REPLICATION_MANAGER, null));
+    scm.getReplicationManager().start();
+  }
+
+  @Override
+  public void stopReplicationManager() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.STOP_REPLICATION_MANAGER, null));
+    scm.getReplicationManager().stop();
+  }
+
+  @Override
+  public boolean getReplicationManagerStatus() {
+    AUDIT.logWriteSuccess(buildAuditMessageForSuccess(
+        SCMAction.GET_REPLICATION_MANAGER_STATUS, null));
+    return scm.getReplicationManager().isRunning();
+  }
+
   /**
    * Queries a list of Node that match a set of statuses.
    *

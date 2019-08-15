@@ -550,7 +550,7 @@
   </property>
   <property>
     <name>ozone.om.address</name>
-    <value/>
+    <value>0.0.0.0:9862</value>
     <tag>OM, REQUIRED</tag>
     <description>
       The address of the Ozone OM service. This allows clients to discover

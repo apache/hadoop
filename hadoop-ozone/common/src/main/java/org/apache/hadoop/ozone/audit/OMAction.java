@@ -58,6 +58,12 @@ public enum OMAction implements AuditAction {
   LIST_MULTIPART_UPLOAD_PARTS,
   ABORT_MULTIPART_UPLOAD,
 
+  //ACL Actions
+  ADD_ACL,
+  GET_ACL,
+  SET_ACL,
+  REMOVE_ACL,
+
   //FS Actions
   GET_FILE_STATUS,
   CREATE_DIRECTORY,

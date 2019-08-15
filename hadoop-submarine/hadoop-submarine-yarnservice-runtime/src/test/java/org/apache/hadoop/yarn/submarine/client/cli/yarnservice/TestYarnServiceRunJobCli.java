@@ -65,6 +65,7 @@ import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnSe
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_WORKER_DOCKER_IMAGE;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_WORKER_LAUNCH_CMD;
 import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_WORKER_RESOURCES;
+import static org.apache.hadoop.yarn.submarine.client.cli.yarnservice.TestYarnServiceRunJobCliCommons.DEFAULT_QUEUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -134,6 +135,7 @@ public class TestYarnServiceRunJobCli {
     assertEquals(DEFAULT_WORKER_DOCKER_IMAGE, workerComp.getArtifact().getId());
     assertEquals(DEFAULT_PS_DOCKER_IMAGE, psComp.getArtifact().getId());
 
+    assertEquals(DEFAULT_QUEUE, serviceSpec.getQueue());
     assertTrue(SubmarineLogs.isVerbose());
   }
 
@@ -183,6 +185,7 @@ public class TestYarnServiceRunJobCli {
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
+        .withQueue(DEFAULT_QUEUE)
         .withNumberOfWorkers(3)
         .withWorkerDockerImage(DEFAULT_WORKER_DOCKER_IMAGE)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
@@ -219,6 +222,7 @@ public class TestYarnServiceRunJobCli {
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
+        .withQueue(DEFAULT_QUEUE)
         .withNumberOfWorkers(3)
         .withWorkerDockerImage(DEFAULT_WORKER_DOCKER_IMAGE)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
@@ -562,6 +566,7 @@ public class TestYarnServiceRunJobCli {
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
+        .withQueue(DEFAULT_QUEUE)
         .withNumberOfWorkers(3)
         .withWorkerDockerImage(DEFAULT_WORKER_DOCKER_IMAGE)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
@@ -602,6 +607,7 @@ public class TestYarnServiceRunJobCli {
         .withDockerImage(DEFAULT_DOCKER_IMAGE)
         .withInputPath(DEFAULT_INPUT_PATH)
         .withCheckpointPath(DEFAULT_CHECKPOINT_PATH)
+        .withQueue(DEFAULT_QUEUE)
         .withNumberOfWorkers(3)
         .withWorkerDockerImage(DEFAULT_WORKER_DOCKER_IMAGE)
         .withWorkerLaunchCommand(DEFAULT_WORKER_LAUNCH_CMD)
