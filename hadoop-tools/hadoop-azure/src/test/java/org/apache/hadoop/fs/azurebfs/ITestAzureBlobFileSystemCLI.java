@@ -18,11 +18,12 @@
 
 package org.apache.hadoop.fs.azurebfs;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FsShell;
+import java.util.UUID;
+
 import org.junit.Test;
 
-import java.util.UUID;
+import org.apache.hadoop.fs.FsShell;
+import org.apache.hadoop.conf.Configuration;
 
 import static org.apache.hadoop.fs.azurebfs.constants.FileSystemUriSchemes.ABFS_SCHEME;
 import static org.apache.hadoop.fs.azurebfs.constants.TestConfigurationKeys.FS_AZURE_ABFS_ACCOUNT_NAME;
