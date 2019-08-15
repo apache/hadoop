@@ -156,6 +156,7 @@ import org.apache.hadoop.yarn.exceptions.ApplicationAttemptNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.ContainerNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
+import org.apache.hadoop.yarn.exceptions.YARNFeatureNotEnabledException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.ipc.RPCUtil;
@@ -283,7 +284,8 @@ public class ClientRMService extends AbstractService implements
     
     this.server.addTerseExceptions(ApplicationNotFoundException.class,
         ApplicationAttemptNotFoundException.class,
-        ContainerNotFoundException.class);
+        ContainerNotFoundException.class,
+        YARNFeatureNotEnabledException.class);
 
     // Enable service authorization?
     if (conf.getBoolean(
