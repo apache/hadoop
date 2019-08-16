@@ -24,6 +24,7 @@ import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.ozone.om.OMConfigKeys;
 import org.apache.hadoop.ozone.om.S3SecretManager;
 import org.apache.hadoop.ozone.om.S3SecretManagerImpl;
 import org.apache.hadoop.ozone.om.exceptions.OMException;
@@ -71,6 +72,8 @@ public class OzoneDelegationTokenSecretManager
    */
   private Object noInterruptsLock = new Object();
 
+  private boolean isRatisEnabled;
+
   /**
    * Create a secret manager.
    *
@@ -93,6 +96,9 @@ public class OzoneDelegationTokenSecretManager
     this.s3SecretManager = (S3SecretManagerImpl) s3SecretManager;
     this.store = new OzoneSecretStore(conf,
         this.s3SecretManager.getOmMetadataManager());
+    isRatisEnabled = conf.getBoolean(
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_KEY,
+        OMConfigKeys.OZONE_OM_RATIS_ENABLE_DEFAULT);
     loadTokenSecretState(store.loadState());
   }
 
@@ -131,13 +137,35 @@ public class OzoneDelegationTokenSecretManager
     byte[] password = createPassword(identifier.getBytes(),
         getCurrentKey().getPrivateKey());
     long expiryTime = identifier.getIssueDate() + getTokenRenewInterval();
-    addToTokenStore(identifier, password, expiryTime);
+
+    // For HA ratis will take care of updating.
+    // This will be removed, when HA/Non-HA code is merged.
+    if (!isRatisEnabled) {
+      addToTokenStore(identifier, password, expiryTime);
+    }
+
     Token<OzoneTokenIdentifier> token = new Token<>(identifier.getBytes(),
         password, identifier.getKind(), getService());
     if (LOG.isDebugEnabled()) {
       LOG.debug("Created delegation token: {}", token);
     }
     return token;
+  }
+
+  /**
+   * Add delegation token in to in-memory map of tokens.
+   * @param token
+   * @param ozoneTokenIdentifier
+   * @return renewTime - If updated successfully, return renewTime.
+   */
+  public long updateToken(Token<OzoneTokenIdentifier> token,
+      OzoneTokenIdentifier ozoneTokenIdentifier) {
+    long renewTime =
+        ozoneTokenIdentifier.getIssueDate() + getTokenRenewInterval();
+    TokenInfo tokenInfo = new TokenInfo(renewTime, token.getPassword(),
+        ozoneTokenIdentifier.getTrackingId());
+    currentTokens.put(ozoneTokenIdentifier, tokenInfo);
+    return renewTime;
   }
 
   /**
