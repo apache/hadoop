@@ -274,6 +274,23 @@ public class TestMutableMetrics {
     }
   }
 
+  @Test
+  public void testDuplicateMetrics() {
+    MutableRatesWithAggregation rates = new MutableRatesWithAggregation();
+    MutableRatesWithAggregation deferredRpcRates =
+        new MutableRatesWithAggregation();
+    Class<?> protocol = Long.class;
+    rates.init(protocol);
+    deferredRpcRates.init(protocol, "Deferred");
+    MetricsRecordBuilder rb = mockMetricsRecordBuilder();
+    rates.snapshot(rb, true);
+    deferredRpcRates.snapshot(rb, true);
+    verify(rb, times(1))
+        .addCounter(info("GetLongNumOps", "Number of ops for getLong"), 0L);
+    verify(rb, times(1)).addCounter(
+        info("GetLongDeferredNumOps", "Number of ops for getLongDeferred"), 0L);
+  }
+
   /**
    * Tests that when using {@link MutableStat#add(long, long)}, even with a high
    * sample count, the mean does not lose accuracy.
