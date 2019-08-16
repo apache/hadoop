@@ -84,7 +84,8 @@ For example, you can specify both host and port:
 hdfs dfs -ls o3fs://bucket.volume.om-host.example.com:5678/key
 {{< /highlight >}}
 
-When the port number is not specified, it will be retrieved from config key `ozone.om.address`.
+When the port number is not specified, it will be retrieved from config key `ozone.om.address`
+if defined; or it will fall back to the default port `9862`.
 For example, we have `ozone.om.address` configured as following in `ozone-site.xml`:
 
 {{< highlight xml >}}
@@ -106,9 +107,8 @@ The above command is essentially equivalent to:
 hdfs dfs -ls o3fs://bucket.volume.om-host.example.com:6789/key
 {{< /highlight >}}
 
-Note only the port number in the config is relevant. The host name in config `ozone.om.address` is ignored in this case.
-
-When `ozone.om.address` is not configured, the default port `9862` would be used.
+Note: Only port number from the config is used in this case, 
+whereas the host name in the config `ozone.om.address` is ignored.
 
 
 ## Supporting older Hadoop version (Legacy jar, BasicOzoneFilesystem)
