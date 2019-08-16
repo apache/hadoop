@@ -59,8 +59,10 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fifo.FifoScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmissionContextInfo;
 import org.codehaus.jettison.json.JSONObject;
+import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -84,8 +86,8 @@ public class TestRMWebServicesDelegationTokenAuthentication {
 
   private static boolean miniKDCStarted = false;
   private static MiniKdc testMiniKDC;
-  private static MockRM rm;
   private static String sunSecurityKrb5RcacheValue;
+  private MockRM rm;
 
   String delegationTokenHeader;
 
@@ -107,7 +109,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
       System.setProperty(SUN_SECURITY_KRB5_RCACHE_KEY, "none");
       testMiniKDC = new MiniKdc(MiniKdc.createConf(), testRootDir);
       setupKDC();
-      setupAndStartRM();
+
     } catch (Exception e) {
       assertTrue("Couldn't create MiniKDC", false);
     }
@@ -118,14 +120,23 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     if (testMiniKDC != null) {
       testMiniKDC.stop();
     }
-    if (rm != null) {
-      rm.stop();
-    }
     if (sunSecurityKrb5RcacheValue == null) {
       System.clearProperty(SUN_SECURITY_KRB5_RCACHE_KEY);
     } else {
       System.setProperty(SUN_SECURITY_KRB5_RCACHE_KEY,
           sunSecurityKrb5RcacheValue);
+    }
+  }
+
+  @Before
+  public void before() throws Exception {
+    setupAndStartRM();
+  }
+
+  @After
+  public void after() {
+    if (rm != null) {
+      rm.stop();
     }
   }
 
@@ -139,7 +150,7 @@ public class TestRMWebServicesDelegationTokenAuthentication {
     this.delegationTokenHeader = header;
   }
 
-  private static void setupAndStartRM() throws Exception {
+  private void setupAndStartRM() throws Exception {
     Configuration rmconf = new Configuration();
     rmconf.setInt(YarnConfiguration.RM_AM_MAX_ATTEMPTS,
       YarnConfiguration.DEFAULT_RM_AM_MAX_ATTEMPTS);
