@@ -44,7 +44,6 @@ import org.apache.hadoop.ozone.container.common.utils.ReferenceCountedDB;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -82,8 +81,6 @@ public class TestStorageContainerManagerHelper {
     storageHandler.createVolume(createVolumeArgs);
 
     BucketArgs bucketArgs = new BucketArgs(bucket, createVolumeArgs);
-    bucketArgs.setAddAcls(new ArrayList<>());
-    bucketArgs.setRemoveAcls(new ArrayList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     storageHandler.createBucket(bucketArgs);
 

@@ -384,7 +384,9 @@ public class RpcClient implements ClientProtocol {
   @Override
   public void createBucket(String volumeName, String bucketName)
       throws IOException {
-    createBucket(volumeName, bucketName, BucketArgs.newBuilder().build());
+    // Set acls of current user.
+    createBucket(volumeName, bucketName,
+        BucketArgs.newBuilder().build());
   }
 
   @Override
@@ -436,32 +438,6 @@ public class RpcClient implements ClientProtocol {
   private List<OzoneAcl> getAclList() {
     return OzoneUtils.getAclList(ugi.getUserName(), ugi.getGroups(),
         userRights, groupRights);
-  }
-
-  @Override
-  public void addBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> addAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(addAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setAddAcls(addAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
-  }
-
-  @Override
-  public void removeBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> removeAcls)
-      throws IOException {
-    HddsClientUtils.verifyResourceName(volumeName, bucketName);
-    Preconditions.checkNotNull(removeAcls);
-    OmBucketArgs.Builder builder = OmBucketArgs.newBuilder();
-    builder.setVolumeName(volumeName)
-        .setBucketName(bucketName)
-        .setRemoveAcls(removeAcls);
-    ozoneManagerClient.setBucketProperty(builder.build());
   }
 
   /**
@@ -582,7 +558,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucketInfo.getVolumeName(),
         bucketInfo.getBucketName(),
-        bucketInfo.getAcls(),
         bucketInfo.getStorageType(),
         bucketInfo.getIsVersionEnabled(),
         bucketInfo.getCreationTime(),
@@ -603,7 +578,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),
@@ -788,7 +762,6 @@ public class RpcClient implements ClientProtocol {
         this,
         bucket.getVolumeName(),
         bucket.getBucketName(),
-        bucket.getAcls(),
         bucket.getStorageType(),
         bucket.getIsVersionEnabled(),
         bucket.getCreationTime(),

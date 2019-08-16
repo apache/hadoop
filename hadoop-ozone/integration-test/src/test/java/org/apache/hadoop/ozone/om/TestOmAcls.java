@@ -16,7 +16,6 @@
  */
 package org.apache.hadoop.ozone.om;
 
-import java.util.LinkedList;
 import java.util.UUID;
 
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
@@ -128,8 +127,6 @@ public class TestOmAcls {
         "authorized to create Ozone"));
 
     BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     OzoneTestUtils.expectOmException(ResultCodes.PERMISSION_DENIED,
         () -> storageHandler.createBucket(bucketArgs));
@@ -147,8 +144,6 @@ public class TestOmAcls {
     createVolumeArgs.setAdminName(adminName);
     createVolumeArgs.setQuota(new OzoneQuota(100, OzoneQuota.Units.GB));
     BucketArgs bucketArgs = new BucketArgs("bucket1", createVolumeArgs);
-    bucketArgs.setAddAcls(new LinkedList<>());
-    bucketArgs.setRemoveAcls(new LinkedList<>());
     bucketArgs.setStorageType(StorageType.DISK);
     logCapturer.clearOutput();
 

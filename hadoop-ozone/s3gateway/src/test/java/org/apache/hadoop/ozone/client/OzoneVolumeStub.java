@@ -56,7 +56,6 @@ public class OzoneVolumeStub extends OzoneVolume {
     buckets.put(bucketName, new OzoneBucketStub(
         getName(),
         bucketName,
-        bucketArgs.getAcls(),
         bucketArgs.getStorageType(),
         bucketArgs.getVersioning(),
         System.currentTimeMillis()));
