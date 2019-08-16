@@ -21,7 +21,6 @@ import static org.apache.hadoop.hdds.scm.ScmConfigKeys.OZONE_SCM_SECURITY_SERVIC
 
 import java.net.ServerSocket;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hdds.conf.OzoneConfiguration;
 import org.junit.After;
 import org.junit.Before;
@@ -50,8 +49,7 @@ public class TestSCMSecurityProtocolServer {
   public void setUp() throws Exception {
     config = new OzoneConfiguration();
     config.set(OZONE_SCM_SECURITY_SERVICE_ADDRESS_KEY,
-        StringUtils.join(OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT,
-            ":", String.valueOf(scmRpcSecurePort)));
+        OZONE_SCM_SECURITY_SERVICE_BIND_HOST_DEFAULT + ":" + scmRpcSecurePort);
     securityProtocolServer = new SCMSecurityProtocolServer(config, null);
   }
 
