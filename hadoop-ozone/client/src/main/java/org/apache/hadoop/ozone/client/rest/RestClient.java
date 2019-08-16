@@ -447,54 +447,6 @@ public class RestClient implements ClientProtocol {
   }
 
   @Override
-  public void addBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> addAcls)
-      throws IOException {
-    try {
-      HddsClientUtils.verifyResourceName(volumeName, bucketName);
-      Preconditions.checkNotNull(addAcls);
-      URIBuilder builder = new URIBuilder(ozoneRestUri);
-
-      builder.setPath(PATH_SEPARATOR + volumeName +
-          PATH_SEPARATOR + bucketName);
-      HttpPut httpPut = new HttpPut(builder.build());
-      addOzoneHeaders(httpPut);
-
-      for (OzoneAcl acl : addAcls) {
-        httpPut.addHeader(
-            Header.OZONE_ACLS, Header.OZONE_ACL_ADD + " " + acl.toString());
-      }
-      EntityUtils.consume(executeHttpRequest(httpPut));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
-  public void removeBucketAcls(
-      String volumeName, String bucketName, List<OzoneAcl> removeAcls)
-      throws IOException {
-    try {
-      HddsClientUtils.verifyResourceName(volumeName, bucketName);
-      Preconditions.checkNotNull(removeAcls);
-      URIBuilder builder = new URIBuilder(ozoneRestUri);
-
-      builder.setPath(PATH_SEPARATOR + volumeName +
-          PATH_SEPARATOR + bucketName);
-      HttpPut httpPut = new HttpPut(builder.build());
-      addOzoneHeaders(httpPut);
-
-      for (OzoneAcl acl : removeAcls) {
-        httpPut.addHeader(
-            Header.OZONE_ACLS, Header.OZONE_ACL_REMOVE + " " + acl.toString());
-      }
-      EntityUtils.consume(executeHttpRequest(httpPut));
-    } catch (URISyntaxException e) {
-      throw new IOException(e);
-    }
-  }
-
-  @Override
   public void setBucketVersioning(
       String volumeName, String bucketName, Boolean versioning)
       throws IOException {
@@ -578,7 +530,6 @@ public class RestClient implements ClientProtocol {
           this,
           bucketInfo.getVolumeName(),
           bucketInfo.getBucketName(),
-          bucketInfo.getAcls(),
           bucketInfo.getStorageType(),
           getBucketVersioningFlag(bucketInfo.getVersioning()),
           HddsClientUtils.formatDateTime(bucketInfo.getCreatedOn()),
@@ -619,11 +570,9 @@ public class RestClient implements ClientProtocol {
           LOG.warn("Parse exception in getting creation time for volume", e);
         }
         return new OzoneBucket(conf, this, volumeName,
-            bucketInfo.getBucketName(), bucketInfo.getAcls(),
-            bucketInfo.getStorageType(),
+            bucketInfo.getBucketName(), bucketInfo.getStorageType(),
             getBucketVersioningFlag(bucketInfo.getVersioning()), creationTime,
-            new HashMap<>(), bucketInfo
-            .getEncryptionKeyName());
+            new HashMap<>(), bucketInfo.getEncryptionKeyName());
       }).collect(Collectors.toList());
     } catch (URISyntaxException e) {
       throw new IOException(e);

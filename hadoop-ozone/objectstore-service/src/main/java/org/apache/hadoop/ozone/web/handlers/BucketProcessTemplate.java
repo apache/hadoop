@@ -109,35 +109,6 @@ public abstract class BucketProcessTemplate {
   }
 
   /**
-   * Reads ACLs from headers and throws appropriate exception if needed.
-   *
-   * @param args - bucketArgs
-   *
-   * @throws OzoneException
-   */
-  void getAclsFromHeaders(BucketArgs args, boolean parseRemoveACL)
-      throws OzoneException {
-    try {
-      List<String> acls = getAcls(args, Header.OZONE_ACL_REMOVE);
-      if (acls != null && !acls.isEmpty()) {
-        args.removeAcls(acls);
-      }
-      if ((!parseRemoveACL) && args.getRemoveAcls() != null) {
-        OzoneException ex = ErrorTable.newError(ErrorTable.MALFORMED_ACL, args);
-        ex.setMessage("Invalid Remove ACLs");
-        throw ex;
-      }
-
-      acls = getAcls(args, Header.OZONE_ACL_ADD);
-      if (acls != null && !acls.isEmpty()) {
-        args.addAcls(acls);
-      }
-    } catch (IllegalArgumentException ex) {
-      throw ErrorTable.newError(ErrorTable.MALFORMED_ACL, args, ex);
-    }
-  }
-
-  /**
    * Converts FileSystem IO exceptions to OZONE exceptions.
    *
    * @param bucket Name of the bucket
