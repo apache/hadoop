@@ -24,6 +24,7 @@ import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
 import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.BatchOperation;
+import org.apache.hadoop.utils.db.Table;
 
 import java.io.IOException;
 
@@ -44,10 +45,16 @@ public class OMDelegationTokenResponse extends OMClientResponse {
   @Override
   public void addToDBBatch(OMMetadataManager omMetadataManager,
       BatchOperation batchOperation) throws IOException {
-
+    Table table = omMetadataManager.getDelegationTokenTable();
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
-      omMetadataManager.getDelegationTokenTable().putWithBatch(batchOperation,
-          ozoneTokenIdentifier, renewTime);
+      if (OzoneManagerProtocolProtos.Type.GetDelegationToken ==
+          getOMResponse().getCmdType()) {
+        table.putWithBatch(batchOperation,
+            ozoneTokenIdentifier, renewTime);
+      } else if (OzoneManagerProtocolProtos.Type.CancelDelegationToken ==
+          getOMResponse().getCmdType()) {
+        table.deleteWithBatch(batchOperation, ozoneTokenIdentifier);
+      }
     }
   }
 }
