@@ -59,7 +59,7 @@ services:
       volumes:
          - ../..:/opt/hadoop
       ports:
-         - 9878:9878
+         - 9879:9878
       env_file:
           - ./docker-config
       command: ["ozone","s3g"]
@@ -68,7 +68,7 @@ services:
       volumes:
          - ../..:/opt/hadoop
       ports:
-         - 9879:9878
+         - 9880:9878
       env_file:
          - ./docker-config
       command: ["ozone","s3g"]
@@ -77,7 +77,7 @@ services:
       volumes:
          - ../..:/opt/hadoop
       ports:
-         - 9880:9878
+         - 9881:9878
       env_file:
          - ./docker-config
       command: ["ozone","s3g"]
