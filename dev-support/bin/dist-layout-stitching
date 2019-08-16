@@ -120,6 +120,8 @@ echo
 run rm -rf "hadoop-${VERSION}"
 run mkdir "hadoop-${VERSION}"
 run cd "hadoop-${VERSION}"
+run cp -p "${ROOT}/LICENSE.txt" .
+run cp -p "${ROOT}/NOTICE.txt" .
 run cp -p "${ROOT}/LICENSE-binary" .
 run mkdir licenses-binary
 run cp -p "${ROOT}/licenses-binary"/* licenses-binary/
