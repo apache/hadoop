@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.ozone.client;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -45,7 +46,7 @@ public final class OzoneClientUtils {
    *               be created.
    * @return BucketInfo instance
    */
-  public static BucketInfo asBucketInfo(OzoneBucket bucket) {
+  public static BucketInfo asBucketInfo(OzoneBucket bucket) throws IOException {
     BucketInfo bucketInfo =
         new BucketInfo(bucket.getVolumeName(), bucket.getName());
     bucketInfo
@@ -53,7 +54,6 @@ public final class OzoneClientUtils {
     bucketInfo.setStorageType(bucket.getStorageType());
     bucketInfo.setVersioning(
         OzoneConsts.Versioning.getVersioning(bucket.getVersioning()));
-    bucketInfo.setAcls(bucket.getAcls());
     bucketInfo.setEncryptionKeyName(
         bucket.getEncryptionKeyName()==null? "N/A" :
             bucket.getEncryptionKeyName());

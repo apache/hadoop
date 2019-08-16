@@ -67,7 +67,6 @@ public class BucketHandler implements Bucket {
       public Response doProcess(BucketArgs args)
           throws OzoneException, IOException {
         StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
-        getAclsFromHeaders(args, false);
         args.setVersioning(getVersioning(args));
         args.setStorageType(getStorageType(args));
         fs.createBucket(args);
@@ -103,14 +102,8 @@ public class BucketHandler implements Bucket {
       public Response doProcess(BucketArgs args)
           throws OzoneException, IOException {
         StorageHandler fs = StorageHandlerBuilder.getStorageHandler();
-        getAclsFromHeaders(args, true);
         args.setVersioning(getVersioning(args));
         args.setStorageType(getStorageType(args));
-
-        if ((args.getAddAcls() != null) || (args.getRemoveAcls() != null)) {
-          fs.setBucketAcls(args);
-        }
-
         if (args.getVersioning() != OzoneConsts.Versioning.NOT_DEFINED) {
           fs.setBucketVersioning(args);
         }

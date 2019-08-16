@@ -19,7 +19,6 @@
 package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.io.IOException;
-import java.util.List;
 
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -35,7 +34,6 @@ import org.apache.hadoop.ozone.security.acl.OzoneObj;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 
 import org.apache.hadoop.hdds.protocol.StorageType;
-import org.apache.hadoop.ozone.OzoneAcl;
 import org.apache.hadoop.ozone.om.OMMetadataManager;
 import org.apache.hadoop.ozone.om.OMMetrics;
 import org.apache.hadoop.ozone.om.OzoneManager;
@@ -134,17 +132,6 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       bucketInfoBuilder.addAllMetadata(KeyValueUtil
           .getFromProtobuf(bucketArgs.getMetadataList()));
 
-      //Check ACLs to update
-      if (omBucketArgs.getAddAcls() != null ||
-          omBucketArgs.getRemoveAcls() != null) {
-        bucketInfoBuilder.setAcls(getUpdatedAclList(oldBucketInfo.getAcls(),
-            omBucketArgs.getRemoveAcls(), omBucketArgs.getAddAcls()));
-        LOG.debug("Updating ACLs for bucket: {} in volume: {}",
-            bucketName, volumeName);
-      } else {
-        bucketInfoBuilder.setAcls(oldBucketInfo.getAcls());
-      }
-
       //Check StorageType to update
       StorageType storageType = omBucketArgs.getStorageType();
       if (storageType != null) {
@@ -165,7 +152,13 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
         bucketInfoBuilder
             .setIsVersionEnabled(oldBucketInfo.getIsVersionEnabled());
       }
+
       bucketInfoBuilder.setCreationTime(oldBucketInfo.getCreationTime());
+
+      // Set acls from oldBucketInfo if it has any.
+      if (oldBucketInfo.getAcls() != null) {
+        bucketInfoBuilder.setAcls(oldBucketInfo.getAcls());
+      }
 
       omBucketInfo = bucketInfoBuilder.build();
 
@@ -209,26 +202,5 @@ public class OMBucketSetPropertyRequest extends OMClientRequest {
       omMetrics.incNumBucketUpdateFails();
       return omClientResponse;
     }
-  }
-
-  /**
-   * Updates the existing ACL list with remove and add ACLs that are passed.
-   * Remove is done before Add.
-   *
-   * @param existingAcls - old ACL list.
-   * @param removeAcls - ACLs to be removed.
-   * @param addAcls - ACLs to be added.
-   * @return updated ACL list.
-   */
-  private List< OzoneAcl > getUpdatedAclList(List<OzoneAcl> existingAcls,
-      List<OzoneAcl> removeAcls, List<OzoneAcl> addAcls) {
-    if (removeAcls != null && !removeAcls.isEmpty()) {
-      existingAcls.removeAll(removeAcls);
-    }
-    if (addAcls != null && !addAcls.isEmpty()) {
-      addAcls.stream().filter(acl -> !existingAcls.contains(acl)).forEach(
-          existingAcls::add);
-    }
-    return existingAcls;
   }
 }
