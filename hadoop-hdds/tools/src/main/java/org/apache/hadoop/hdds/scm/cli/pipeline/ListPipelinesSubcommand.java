@@ -38,11 +38,33 @@ public class ListPipelinesSubcommand implements Callable<Void> {
   @CommandLine.ParentCommand
   private SCMCLI parent;
 
+  @CommandLine.Option( names = {"-ffc", "--filterByFactor"},
+          description = "Filter listed pipelines by Factor(ONE/one)", defaultValue = "",
+          required = false)
+  private String factor;
+
+  @CommandLine.Option( names = {"-fst", "--filterByState"},
+          description = "Filter listed pipelines by State(OPEN/CLOSE)", defaultValue = "",
+          required = false)
+  private String state;
+
+
   @Override
   public Void call() throws Exception {
     try (ScmClient scmClient = parent.createScmClient()) {
-      scmClient.listPipelines().forEach(System.out::println);
+      if (isNullOrEmpty(factor) && isNullOrEmpty(state)) {
+        scmClient.listPipelines().forEach(System.out::println);
+      } else {
+        scmClient.listPipelines().stream()
+                .filter(p -> ((isNullOrEmpty(factor) || (p.getFactor().toString().compareToIgnoreCase(factor) == 0))
+                        && (isNullOrEmpty(state) || (p.getPipelineState().toString().compareToIgnoreCase(state) == 0))))
+                .forEach(System.out::println);
+      }
       return null;
     }
+  }
+
+  protected static boolean isNullOrEmpty(String str) {
+    return ((str == null) || str.trim().isEmpty());
   }
 }
