@@ -158,7 +158,7 @@ public class TestGpuResourceHandlerImpl {
     gpuResourceHandler.bootstrap(conf);
 
     List<GpuDevice> allowedGpus =
-        gpuResourceHandler.getGpuAllocator().getAllowedGpusCopy();
+        gpuResourceHandler.getGpuAllocator().getAllowedGpus();
     assertEquals("Unexpected number of allowed GPU devices!", 1,
         allowedGpus.size());
     assertEquals("Expected GPU device does not equal to found device!",
@@ -497,7 +497,7 @@ public class TestGpuResourceHandlerImpl {
     gpuResourceHandler.reacquireContainer(getContainerId(1));
 
     Map<GpuDevice, ContainerId> deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
     assertEquals("Unexpected number of allocated GPU devices!", 2,
         deviceAllocationMapping.size());
     assertTrue("Expected GPU device is not found in allocations!",
@@ -533,7 +533,7 @@ public class TestGpuResourceHandlerImpl {
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
     assertEquals("Unexpected number of allocated GPU devices!",
         2, deviceAllocationMapping.size());
     assertTrue("Expected GPU devices are not found in allocations!",
@@ -568,7 +568,7 @@ public class TestGpuResourceHandlerImpl {
 
     // Make sure internal state not changed.
     deviceAllocationMapping =
-        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMappingCopy();
+        gpuResourceHandler.getGpuAllocator().getDeviceAllocationMapping();
     assertEquals("Unexpected number of allocated GPU devices!",
         2, deviceAllocationMapping.size());
     assertTrue("Expected GPU devices are not found in allocations!",
