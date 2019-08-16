@@ -25,7 +25,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.response.security.OMDelegationTokenResponse;
+import org.apache.hadoop.ozone.om.response.security.OMGetDelegationTokenResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.GetDelegationTokenResponseProto;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
@@ -129,14 +129,14 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
           new CacheValue<>(Optional.of(renewTime), transactionLogIndex));
 
       omClientResponse =
-          new OMDelegationTokenResponse(ozoneTokenIdentifier, renewTime,
+          new OMGetDelegationTokenResponse(ozoneTokenIdentifier, renewTime,
               omResponse.setGetDelegationTokenResponse(
                   updateGetDelegationTokenRequest
                       .getGetDelegationTokenResponse()).build());
     } catch (IOException ex) {
       LOG.error("Error in Updating DelegationToken {}",
           ozoneTokenIdentifierToken, ex);
-      omClientResponse = new OMDelegationTokenResponse(null, -1L,
+      omClientResponse = new OMGetDelegationTokenResponse(null, -1L,
           createErrorOMResponse(omResponse, ex));
     } finally {
       if (omClientResponse != null) {

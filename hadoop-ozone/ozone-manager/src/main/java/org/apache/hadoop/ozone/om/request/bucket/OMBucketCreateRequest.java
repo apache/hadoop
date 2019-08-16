@@ -19,8 +19,12 @@
 package org.apache.hadoop.ozone.om.request.bucket;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.google.common.base.Optional;
+import org.apache.hadoop.ozone.OzoneAcl;
+import org.apache.hadoop.ozone.om.helpers.OmVolumeArgs;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -137,7 +141,7 @@ public class OMBucketCreateRequest extends OMClientRequest {
     try {
       // check Acl
       if (ozoneManager.getAclsEnabled()) {
-        checkAcls(ozoneManager, OzoneObj.ResourceType.BUCKET,
+        checkAcls(ozoneManager, OzoneObj.ResourceType.VOLUME,
             OzoneObj.StoreType.OZONE, IAccessAuthorizer.ACLType.CREATE,
             volumeName, bucketName, null);
       }
@@ -147,17 +151,24 @@ public class OMBucketCreateRequest extends OMClientRequest {
       acquiredBucketLock = metadataManager.getLock().acquireLock(BUCKET_LOCK,
           volumeName, bucketName);
       //Check if the volume exists
-      if (metadataManager.getVolumeTable().get(volumeKey) == null) {
+      OmVolumeArgs omVolumeArgs =
+          metadataManager.getVolumeTable().get(volumeKey);
+
+      if (omVolumeArgs == null) {
         LOG.debug("volume: {} not found ", volumeName);
         throw new OMException("Volume doesn't exist",
             OMException.ResultCodes.VOLUME_NOT_FOUND);
       }
+
       //Check if bucket already exists
       if (metadataManager.getBucketTable().get(bucketKey) != null) {
         LOG.debug("bucket: {} already exists ", bucketName);
         throw new OMException("Bucket already exist",
             OMException.ResultCodes.BUCKET_ALREADY_EXISTS);
       }
+
+      // Add default acls from volume.
+      addDefaultAcls(omBucketInfo, omVolumeArgs);
 
       // Update table cache.
       metadataManager.getBucketTable().addCacheEntry(new CacheKey<>(bucketKey),
@@ -201,6 +212,18 @@ public class OMBucketCreateRequest extends OMClientRequest {
           bucketName, volumeName, exception);
       return omClientResponse;
     }
+  }
+
+  private void addDefaultAcls(OmBucketInfo omBucketInfo, OmVolumeArgs omVolumeArgs) {
+    // Add default acls from volume.
+    List<OzoneAcl> acls = new ArrayList<>();
+    if (omBucketInfo.getAcls() != null) {
+      acls.addAll(omBucketInfo.getAcls());
+    }
+    omVolumeArgs.getAclMap().getDefaultAclList().forEach(
+        defaultAcl -> acls.add(
+            OzoneAcl.fromProtobufWithAccessType(defaultAcl)));
+    omBucketInfo.setAcls(acls);
   }
 
 

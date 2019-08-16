@@ -24,7 +24,7 @@ import org.apache.hadoop.ozone.om.OzoneManager;
 import org.apache.hadoop.ozone.om.ratis.utils.OzoneManagerDoubleBufferHelper;
 import org.apache.hadoop.ozone.om.request.OMClientRequest;
 import org.apache.hadoop.ozone.om.response.OMClientResponse;
-import org.apache.hadoop.ozone.om.response.security.OMDelegationTokenResponse;
+import org.apache.hadoop.ozone.om.response.security.OMCancelDelegationTokenResponse;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMRequest;
 import org.apache.hadoop.ozone.protocol.proto.OzoneManagerProtocolProtos.OMResponse;
@@ -90,14 +90,14 @@ public class OMCancelDelegationTokenRequest extends OMClientRequest {
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
       omClientResponse =
-          new OMDelegationTokenResponse(ozoneTokenIdentifier,
+          new OMCancelDelegationTokenResponse(ozoneTokenIdentifier,
               omResponse.setCancelDelegationTokenResponse(
                   CancelDelegationTokenResponseProto.newBuilder().setResponse(
                       SecurityProtos.CancelDelegationTokenResponseProto
                           .newBuilder())).build());
     } catch (IOException ex) {
       LOG.error("Error in cancel DelegationToken {}", ozoneTokenIdentifier, ex);
-      omClientResponse = new OMDelegationTokenResponse(null,
+      omClientResponse = new OMCancelDelegationTokenResponse(null,
           createErrorOMResponse(omResponse, ex));
     } finally {
       if (omClientResponse != null) {
