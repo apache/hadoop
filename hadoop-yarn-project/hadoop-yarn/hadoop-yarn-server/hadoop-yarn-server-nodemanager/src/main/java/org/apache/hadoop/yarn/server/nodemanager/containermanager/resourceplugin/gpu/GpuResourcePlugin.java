@@ -97,9 +97,9 @@ public class GpuResourcePlugin implements ResourcePlugin {
 
     GpuResourceAllocator gpuResourceAllocator =
         gpuResourceHandler.getGpuAllocator();
-    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpusCopy();
+    List<GpuDevice> totalGpus = gpuResourceAllocator.getAllowedGpus();
     List<AssignedGpuDevice> assignedGpuDevices =
-        gpuResourceAllocator.getAssignedGpusCopy();
+        gpuResourceAllocator.getAssignedGpus();
 
     return new NMGpuResourceInfo(gpuDeviceInformation, totalGpus,
         assignedGpuDevices);
