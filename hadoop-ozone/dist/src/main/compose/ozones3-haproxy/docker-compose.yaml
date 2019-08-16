@@ -16,13 +16,13 @@
 
 version: "3"
 services:
-   s3-proxy:
+   s3g:
       image: haproxy:latest
       volumes:
          - ../..:/opt/hadoop
          - ./haproxy-conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg
       ports:
-         - 8081:5001
+         - 8081:9878
    datanode:
       image: apache/ozone-runner:${HADOOP_RUNNER_VERSION}
       volumes:
