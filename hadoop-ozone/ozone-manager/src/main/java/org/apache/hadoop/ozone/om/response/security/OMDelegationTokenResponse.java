@@ -49,8 +49,7 @@ public class OMDelegationTokenResponse extends OMClientResponse {
     if (getOMResponse().getStatus() == OzoneManagerProtocolProtos.Status.OK) {
       if (OzoneManagerProtocolProtos.Type.GetDelegationToken ==
           getOMResponse().getCmdType()) {
-        table.putWithBatch(batchOperation,
-            ozoneTokenIdentifier, renewTime);
+        table.putWithBatch(batchOperation, ozoneTokenIdentifier, renewTime);
       } else if (OzoneManagerProtocolProtos.Type.CancelDelegationToken ==
           getOMResponse().getCmdType()) {
         table.deleteWithBatch(batchOperation, ozoneTokenIdentifier);
