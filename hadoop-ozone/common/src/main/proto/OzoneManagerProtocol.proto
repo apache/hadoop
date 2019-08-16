@@ -309,8 +309,9 @@ message UserInfo {
 }
 
 /**
-  This will be used during OM HA, once leader generates token send's this
-  request via ratis to persist to OM DB.
+  This will be used during OM HA, once leader generates token sends this
+  request via ratis to persist to OM DB. This request will be internally used
+   by OM for replicating token across a quorum of OMs.
 */
 message UpdateGetDelegationTokenRequest {
     required GetDelegationTokenResponseProto getDelegationTokenResponse = 1;

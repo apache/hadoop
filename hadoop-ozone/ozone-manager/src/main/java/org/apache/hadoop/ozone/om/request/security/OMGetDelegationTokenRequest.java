@@ -64,6 +64,15 @@ public class OMGetDelegationTokenRequest extends OMClientRequest {
     Token<OzoneTokenIdentifier> token = ozoneManager
         .getDelegationToken(new Text(getDelegationTokenRequest.getRenewer()));
 
+
+    // Client issues GetDelegationToken request, when received by OM leader will
+    // it generate Token. Original GetDelegationToken request is converted to
+    // UpdateGetDelegationToken request with the generated token information.
+    // This updated request will be submitted to Ratis. In this way delegation
+    // token created by leader, will be replicated across all OMs.
+    // And also original GetDelegationToken request from client does not need
+    // any proto changes.
+
     // Create UpdateGetDelegationTokenRequest with token response.
     OMRequest.Builder omRequest = OMRequest.newBuilder()
         .setUserInfo(getUserInfo())
