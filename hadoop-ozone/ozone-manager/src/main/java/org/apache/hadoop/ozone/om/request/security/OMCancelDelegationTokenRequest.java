@@ -90,14 +90,14 @@ public class OMCancelDelegationTokenRequest extends OMClientRequest {
           new CacheValue<>(Optional.absent(), transactionLogIndex));
 
       omClientResponse =
-          new OMDelegationTokenResponse(ozoneTokenIdentifier, -1L,
+          new OMDelegationTokenResponse(ozoneTokenIdentifier,
               omResponse.setCancelDelegationTokenResponse(
                   CancelDelegationTokenResponseProto.newBuilder().setResponse(
                       SecurityProtos.CancelDelegationTokenResponseProto
                           .newBuilder())).build());
     } catch (IOException ex) {
       LOG.error("Error in cancel DelegationToken {}", ozoneTokenIdentifier, ex);
-      omClientResponse = new OMDelegationTokenResponse(null, -1L,
+      omClientResponse = new OMDelegationTokenResponse(null,
           createErrorOMResponse(omResponse, ex));
     } finally {
       if (omClientResponse != null) {

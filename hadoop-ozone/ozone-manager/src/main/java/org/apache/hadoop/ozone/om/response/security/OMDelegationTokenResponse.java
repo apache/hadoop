@@ -26,6 +26,7 @@ import org.apache.hadoop.ozone.security.OzoneTokenIdentifier;
 import org.apache.hadoop.utils.db.BatchOperation;
 import org.apache.hadoop.utils.db.Table;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 
 /**
@@ -34,12 +35,21 @@ import java.io.IOException;
 public class OMDelegationTokenResponse extends OMClientResponse {
 
   private OzoneTokenIdentifier ozoneTokenIdentifier;
-  private long renewTime;
-  public OMDelegationTokenResponse(OzoneTokenIdentifier ozoneTokenIdentifier,
-      long renewTime, OMResponse omResponse) {
+  private long renewTime = -1L;
+
+  public OMDelegationTokenResponse(
+      @Nonnull OzoneTokenIdentifier ozoneTokenIdentifier,
+      long renewTime, @Nonnull OMResponse omResponse) {
     super(omResponse);
     this.ozoneTokenIdentifier = ozoneTokenIdentifier;
     this.renewTime = renewTime;
+  }
+
+  public OMDelegationTokenResponse(
+      @Nonnull OzoneTokenIdentifier ozoneTokenIdentifier,
+      @Nonnull OMResponse omResponse) {
+    super(omResponse);
+    this.ozoneTokenIdentifier = ozoneTokenIdentifier;
   }
 
   @Override
