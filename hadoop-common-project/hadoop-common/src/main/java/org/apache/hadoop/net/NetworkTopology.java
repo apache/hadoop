@@ -295,22 +295,12 @@ public class NetworkTopology {
   
   /** @return the total number of racks */
   public int getNumOfRacks() {
-    netlock.readLock().lock();
-    try {
-      return numOfRacks;
-    } finally {
-      netlock.readLock().unlock();
-    }
+    return numOfRacks;
   }
 
   /** @return the total number of leaf nodes */
   public int getNumOfLeaves() {
-    netlock.readLock().lock();
-    try {
-      return clusterMap.getNumOfLeaves();
-    } finally {
-      netlock.readLock().unlock();
-    }
+    return clusterMap.getNumOfLeaves();
   }
 
   /** Return the distance between two nodes
