@@ -3763,10 +3763,10 @@
   <name>dfs.client.failover.proxy.provider</name>
   <value></value>
   <description>
-    The prefix (plus a required nameservice ID) for the class name of the
-    configured Failover proxy provider for the host.  For more detailed
-    information, please consult the "Configuration Details" section of
-    the HDFS High Availability documentation.
+    The prefix (plus a required nameservice ID) for the class name of the configured
+    Failover proxy provider for the host. For normal HA mode, please consult
+    the "Configuration Details" section of the HDFS High Availability documentation.
+    For observer reading mode, please choose a custom class--ObserverReadProxyProvider.
   </description>
 </property>
 
