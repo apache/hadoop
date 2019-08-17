@@ -139,7 +139,8 @@ public class TestCertificateClientInit {
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig);
+      CertificateCodec codec = new CertificateCodec(securityConfig,
+          DNCertificateClient.COMPONENT_NAME);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
     } else {
@@ -179,7 +180,8 @@ public class TestCertificateClientInit {
     }
 
     if (certPresent) {
-      CertificateCodec codec = new CertificateCodec(securityConfig);
+      CertificateCodec codec = new CertificateCodec(securityConfig,
+          OMCertificateClient.COMPONENT_NAME);
       codec.writeCertificate(new X509CertificateHolder(
           x509Certificate.getEncoded()));
     } else {

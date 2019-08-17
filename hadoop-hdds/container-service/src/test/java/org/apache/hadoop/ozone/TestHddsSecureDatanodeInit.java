@@ -93,7 +93,8 @@ public class TestHddsSecureDatanodeInit {
       service.initializeCertificateClient(conf);
       return null;
     });
-    certCodec = new CertificateCodec(securityConfig);
+    certCodec = new CertificateCodec(securityConfig,
+        DNCertificateClient.COMPONENT_NAME);
     keyCodec = new KeyCodec(securityConfig);
     dnLogs.clearOutput();
     privateKey = service.getCertificateClient().getPrivateKey();
@@ -120,7 +121,7 @@ public class TestHddsSecureDatanodeInit {
     FileUtils.deleteQuietly(Paths.get(securityConfig.getKeyLocation()
         .toString(), securityConfig.getPublicKeyFileName()).toFile());
     FileUtils.deleteQuietly(Paths.get(securityConfig
-        .getCertificateLocation().toString(),
+        .getCertificateLocation(DNCertificateClient.COMPONENT_NAME).toString(),
         securityConfig.getCertificateFileName()).toFile());
     dnLogs.clearOutput();
     client = new DNCertificateClient(securityConfig,

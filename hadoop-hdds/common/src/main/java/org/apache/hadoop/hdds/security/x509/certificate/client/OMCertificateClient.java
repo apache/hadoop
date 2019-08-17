@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hdds.security.x509.SecurityConfig;
 import org.apache.hadoop.hdds.security.x509.exceptions.CertificateException;
 
+import java.nio.file.Paths;
+
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.FAILURE;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.GETCERT;
 import static org.apache.hadoop.hdds.security.x509.certificate.client.CertificateClient.InitResponse.RECOVER;
@@ -39,13 +41,15 @@ public class OMCertificateClient extends DefaultCertificateClient {
   private static final Logger LOG =
       LoggerFactory.getLogger(OMCertificateClient.class);
 
+  public static final String COMPONENT_NAME = Paths.get("om").toString();
+
   public OMCertificateClient(SecurityConfig securityConfig,
       String certSerialId) {
-    super(securityConfig, LOG, certSerialId);
+    super(securityConfig, LOG, certSerialId, COMPONENT_NAME);
   }
 
   public OMCertificateClient(SecurityConfig securityConfig) {
-    super(securityConfig, LOG, null);
+    super(securityConfig, LOG, null, COMPONENT_NAME);
   }
 
   protected InitResponse handleCase(InitCase init) throws

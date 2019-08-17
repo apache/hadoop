@@ -89,16 +89,18 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   private X509Certificate x509Certificate;
   private Map<String, X509Certificate> certificateMap;
   private String certSerialId;
+  private String component;
 
 
   DefaultCertificateClient(SecurityConfig securityConfig, Logger log,
-      String certSerialId) {
+      String certSerialId, String component) {
     Objects.requireNonNull(securityConfig);
     this.securityConfig = securityConfig;
     keyCodec = new KeyCodec(securityConfig);
     this.logger = log;
     this.certificateMap = new ConcurrentHashMap<>();
     this.certSerialId = certSerialId;
+    this.component = component;
 
     loadAllCertificates();
   }
@@ -108,7 +110,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
    * */
   private void loadAllCertificates() {
     // See if certs directory exists in file system.
-    Path certPath = securityConfig.getCertificateLocation();
+    Path certPath = securityConfig.getCertificateLocation(component);
     if (Files.exists(certPath) && Files.isDirectory(certPath)) {
       getLogger().info("Loading certificate from location:{}.",
           certPath);
@@ -116,7 +118,7 @@ public abstract class DefaultCertificateClient implements CertificateClient {
 
       if (certFiles != null) {
         CertificateCodec certificateCodec =
-            new CertificateCodec(securityConfig);
+            new CertificateCodec(securityConfig, component);
         for (File file : certFiles) {
           if (file.isFile()) {
             try {
@@ -477,9 +479,10 @@ public abstract class DefaultCertificateClient implements CertificateClient {
   @Override
   public void storeCertificate(String pemEncodedCert, boolean force,
       boolean caCert) throws CertificateException {
-    CertificateCodec certificateCodec = new CertificateCodec(securityConfig);
+    CertificateCodec certificateCodec = new CertificateCodec(securityConfig,
+        component);
     try {
-      Path basePath = securityConfig.getCertificateLocation();
+      Path basePath = securityConfig.getCertificateLocation(component);
 
       X509Certificate cert =
           CertificateCodec.getX509Certificate(pemEncodedCert);

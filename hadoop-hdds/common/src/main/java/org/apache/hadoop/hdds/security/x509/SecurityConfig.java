@@ -271,7 +271,7 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the File path to where keys are stored.
+   * Returns the File path to where certificates are stored.
    *
    * @return path Key location.
    */
@@ -282,7 +282,8 @@ public class SecurityConfig {
   }
 
   /**
-   * Returns the File path to where keys are stored with an addition component
+   * Returns the File path to where certificates are stored with an addition
+   * component
    * name inserted in between.
    *
    * @param component - Component Name - String.

@@ -284,9 +284,10 @@ public class TestDefaultCertificateClient {
     X509Certificate cert1 = generateX509Cert(keyPair);
     X509Certificate cert2 = generateX509Cert(keyPair);
     X509Certificate cert3 = generateX509Cert(keyPair);
+    String component = DNCertificateClient.COMPONENT_NAME;
 
-    Path certPath = dnSecurityConfig.getCertificateLocation();
-    CertificateCodec codec = new CertificateCodec(dnSecurityConfig);
+    Path certPath = dnSecurityConfig.getCertificateLocation(component);
+    CertificateCodec codec = new CertificateCodec(dnSecurityConfig, component);
 
     // Certificate not found.
     LambdaTestUtils.intercept(CertificateException.class, "Error while" +
@@ -308,7 +309,7 @@ public class TestDefaultCertificateClient {
     codec.writeCertificate(certPath, "3.crt",
         getPEMEncodedString(cert3), true);
 
-    // Re instentiate DN client which will load certificates from filesystem.
+    // Re instantiate DN client which will load certificates from filesystem.
     dnCertClient = new DNCertificateClient(dnSecurityConfig, certSerialId);
 
     assertNotNull(dnCertClient.getCertificate(cert1.getSerialNumber()
@@ -392,11 +393,13 @@ public class TestDefaultCertificateClient {
     FileUtils.deleteQuietly(Paths.get(dnSecurityConfig.getKeyLocation()
         .toString(), dnSecurityConfig.getCertificateFileName()).toFile());
 
-    CertificateCodec omCertCodec = new CertificateCodec(omSecurityConfig);
+    CertificateCodec omCertCodec = new CertificateCodec(omSecurityConfig,
+        OMCertificateClient.COMPONENT_NAME);
     omCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
 
-    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig);
+    CertificateCodec dnCertCodec = new CertificateCodec(dnSecurityConfig,
+        DNCertificateClient.COMPONENT_NAME);
     dnCertCodec.writeCertificate(new X509CertificateHolder(
         x509Certificate.getEncoded()));
     // Check for DN.
