@@ -18,14 +18,18 @@
 
 package org.apache.hadoop.conf;
 
+import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
+
 import com.ctc.wstx.api.ReaderConfig;
 import com.ctc.wstx.io.StreamBootstrapper;
 import com.ctc.wstx.io.SystemId;
 import com.ctc.wstx.stax.WstxInputFactory;
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
 import com.google.common.annotations.VisibleForTesting;
-
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.gson.stream.JsonWriter;
 import java.io.BufferedInputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -51,7 +55,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
@@ -62,13 +65,12 @@ import java.util.StringTokenizer;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 import javax.annotation.Nullable;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -81,15 +83,13 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
-
-import com.google.common.base.Charsets;
 import org.apache.commons.collections.map.UnmodifiableMap;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.net.NetUtils;
@@ -105,12 +105,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-
-import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
-
-import static org.apache.commons.lang3.StringUtils.isBlank;
-import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 /**
  * Provides access to configuration parameters.
@@ -3679,14 +3673,11 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       throw new IllegalArgumentException("Property " +
           propertyName + " not found");
     } else {
-      JsonFactory dumpFactory = new JsonFactory();
-      JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
-      dumpGenerator.writeStartObject();
-      dumpGenerator.writeFieldName("property");
-      appendJSONProperty(dumpGenerator, config, propertyName,
-          new ConfigRedactor(config));
-      dumpGenerator.writeEndObject();
-      dumpGenerator.flush();
+      JsonWriter jsonWriter = new JsonWriter(out);
+      jsonWriter.beginObject().name("property");
+      appendJSONProperty(jsonWriter, config, propertyName,
+        new ConfigRedactor(config));
+      jsonWriter.endObject().flush();
     }
   }
 
@@ -3718,52 +3709,42 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
    */
   public static void dumpConfiguration(Configuration config,
       Writer out) throws IOException {
-    JsonFactory dumpFactory = new JsonFactory();
-    JsonGenerator dumpGenerator = dumpFactory.createGenerator(out);
-    dumpGenerator.writeStartObject();
-    dumpGenerator.writeFieldName("properties");
-    dumpGenerator.writeStartArray();
-    dumpGenerator.flush();
+    JsonWriter jsonWriter = new JsonWriter(out);
+    jsonWriter.beginObject().name("properties").beginArray().flush();
     ConfigRedactor redactor = new ConfigRedactor(config);
     synchronized (config) {
       for (Map.Entry<Object,Object> item: config.getProps().entrySet()) {
-        appendJSONProperty(dumpGenerator, config, item.getKey().toString(),
+        appendJSONProperty(jsonWriter, config, item.getKey().toString(),
             redactor);
       }
     }
-    dumpGenerator.writeEndArray();
-    dumpGenerator.writeEndObject();
-    dumpGenerator.flush();
+    jsonWriter.endArray().endObject().flush();
   }
 
   /**
    * Write property and its attributes as json format to given
-   * {@link JsonGenerator}.
+   * {@link JsonWriter}.
    *
-   * @param jsonGen json writer
+   * @param jsonWriter json writer
    * @param config configuration
    * @param name property name
    * @throws IOException
    */
-  private static void appendJSONProperty(JsonGenerator jsonGen,
+  private static void appendJSONProperty(JsonWriter jsonWriter,
       Configuration config, String name, ConfigRedactor redactor)
       throws IOException {
     // skip writing if given property name is empty or null
-    if(!Strings.isNullOrEmpty(name) && jsonGen != null) {
-      jsonGen.writeStartObject();
-      jsonGen.writeStringField("key", name);
-      jsonGen.writeStringField("value",
-          redactor.redact(name, config.get(name)));
-      jsonGen.writeBooleanField("isFinal",
-          config.finalParameters.contains(name));
+    if(!Strings.isNullOrEmpty(name) && jsonWriter != null) {
+      jsonWriter.beginObject().name("key").value(name).name("value")
+          .value(redactor.redact(name, config.get(name))).name("isFinal")
+          .value(config.finalParameters.contains(name));
       String[] resources = config.updatingResource != null ?
           config.updatingResource.get(name) : null;
       String resource = UNKNOWN_RESOURCE;
       if (resources != null && resources.length > 0) {
         resource = resources[0];
       }
-      jsonGen.writeStringField("resource", resource);
-      jsonGen.writeEndObject();
+      jsonWriter.name("resource").value(resource).endObject();
     }
   }
 

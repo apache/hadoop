@@ -18,25 +18,22 @@
 
 package org.apache.hadoop.fs.s3a.auth;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import static com.google.common.base.Preconditions.checkState;
+import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.s3a.S3AFileSystem;
-import org.apache.hadoop.util.JsonSerialization;
-
-import static com.google.common.base.Preconditions.checkState;
-import static java.util.Objects.requireNonNull;
 
 /**
  * Jackson Role Model for Role Properties, for API clients and tests.
@@ -55,20 +52,18 @@ public class RoleModel {
 
   public static final String BUCKET_RESOURCE_F = "arn:aws:s3:::%s/%s";
 
-
   private static final AtomicLong SID_COUNTER = new AtomicLong(0);
 
-
-  private final JsonSerialization<Policy> serialization =
-      new JsonSerialization<>(Policy.class, false, true);
+  private final ObjectMapper mapper;
 
   public RoleModel() {
-    ObjectMapper mapper = serialization.getMapper();
+    mapper = new ObjectMapper();
+    mapper.configure(SerializationFeature.INDENT_OUTPUT, true);
     mapper.enable(SerializationFeature.WRITE_SINGLE_ELEM_ARRAYS_UNWRAPPED);
   }
 
   public String toJson(Policy policy) throws JsonProcessingException {
-    return serialization.toJson(policy);
+    return mapper.writeValueAsString(policy);
   }
 
   /**

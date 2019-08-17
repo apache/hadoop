@@ -17,16 +17,6 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
-import org.apache.hadoop.classification.InterfaceAudience;
-import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.util.JsonSerialization;
-
-import javax.ws.rs.Produces;
-import javax.ws.rs.WebApplicationException;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.ext.MessageBodyWriter;
-import javax.ws.rs.ext.Provider;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -36,6 +26,15 @@ import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import javax.ws.rs.Produces;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.ext.MessageBodyWriter;
+import javax.ws.rs.ext.Provider;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.http.JettyUtils;
+import org.apache.hadoop.util.GsonSerialization;
 
 /**
  * Jersey provider that converts <code>Map</code>s and <code>List</code>s
@@ -66,7 +65,6 @@ public class KMSJSONWriter implements MessageBodyWriter<Object> {
       OutputStream outputStream) throws IOException, WebApplicationException {
     Writer writer = new OutputStreamWriter(outputStream, Charset
         .forName("UTF-8"));
-    JsonSerialization.writer().writeValue(writer, obj);
+    GsonSerialization.prettyWriter().toJson(obj, obj.getClass(), writer);
   }
-
 }

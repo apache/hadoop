@@ -57,9 +57,13 @@ import org.apache.hadoop.fs.Path;
  * {@code org.apache.hadoop.registry.client.binding.JsonSerDeser},
  * which is now a subclass of this class.
  * @param <T> Type to marshal.
+ * @deprecated Avoid using this class any more, as jackson has 
+ *             too many CVEs so far. Use gson and
+ *             {@link GsonSerialization} instead.
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
+@Deprecated
 public class JsonSerialization<T> {
 
   private static final Logger LOG =

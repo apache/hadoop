@@ -17,23 +17,27 @@
  */
 package org.apache.hadoop.mapreduce;
 
+import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
+
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.google.common.base.Charsets;
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
-
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
@@ -45,11 +49,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.QueueACL;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static org.apache.hadoop.mapred.QueueManager.toFullPropertyName;
-
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.protocol.ClientProtocol;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -59,11 +58,11 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.JsonSerialization;
+import org.apache.hadoop.util.GsonSerialization;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.yarn.api.records.ReservationId;
-
-import com.google.common.base.Charsets;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -401,14 +400,15 @@ class JobSubmitter {
       LOG.info("loading user's secret keys from " + tokensFileName);
       String localFileName = new Path(tokensFileName).toUri().getPath();
 
-      try {
+      try (BufferedReader reader = Files.newBufferedReader(
+        new File(localFileName).toPath(), StandardCharsets.UTF_8)) {
         // read JSON
-        Map<String, String> nm = JsonSerialization.mapReader().readValue(
-            new File(localFileName));
+        Map<String, String> nm =
+            GsonSerialization.reader().fromJson(reader, Map.class);
 
-        for(Map.Entry<String, String> ent: nm.entrySet()) {
-          credentials.addSecretKey(new Text(ent.getKey()), ent.getValue()
-              .getBytes(Charsets.UTF_8));
+        for (Map.Entry<String, String> ent : nm.entrySet()) {
+          credentials.addSecretKey(new Text(ent.getKey()),
+            ent.getValue().getBytes(Charsets.UTF_8));
         }
       } catch (JsonMappingException | JsonParseException e) {
         LOG.warn("couldn't parse Token Cache JSON file with user secret keys");
